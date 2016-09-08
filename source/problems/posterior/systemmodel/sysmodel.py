@@ -21,16 +21,33 @@ class SystemModel():
         raise NotImplementedError
 
     def set_lc_model():
+        """
+        Choose the lc_model to be used in the list of available lc model (_lc_models).
+        Define the number of planets.
+        """
         raise NotImplementedError
 
     def set_rv_model():
+        """
+        Choose the rv_model to be used in the list of available rv model (_rv_models).
+        Define the number of planets.
+        """
         raise NotImplementedError
 
     def get_lc():
+        """
+        Produce a simulated lc
+        """
         raise NotImplementedError
 
     def get_rv():
+        """
+        Produce simulated rv
+        """
         raise NotImplementedError
 
     def get_lc_and_rv():
+        """
+        Produce a simulated lc and rv
+        """
         raise NotImplementedError

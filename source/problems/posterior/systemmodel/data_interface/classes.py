@@ -15,12 +15,16 @@ class ExoP_timeserie():
 
     instrument_type = None
     instrument_name = None
-    data = None
+    data = None  # Pandas.Dataframe
     flags_list = []
     __mandatory_columns = ["time"]  # Not sure if I should put time here if pandas time serie
 
     def plot_data(self):
+        """
+        Plot the data.
+        """
         raise NotImplementedError
+
 
 class LightCurve(ExoP_timeserie):
     """
