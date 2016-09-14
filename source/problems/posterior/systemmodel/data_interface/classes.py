@@ -63,7 +63,7 @@ class LightCurve(ExoP_timeserie):
         self.lc_file = path+lcfile
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
+        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err","inst_flag"] ], index_col=0, skiprows= skip_lc_rows)
         # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
         # to have a  quick statistic summary of your data
         #lc.describe()
