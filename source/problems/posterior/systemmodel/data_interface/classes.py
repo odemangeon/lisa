@@ -46,47 +46,40 @@ class LightCurve(ExoP_timeserie):
     def likelihood(self, simulated_data):
         raise NotImplementedError
 
-    def readLC(lcfile):
+    def readLC(path, lcfile):
         """
         read light curve into a pandas database
-        path should alwasy be the same...organise
+        path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many raws to skip
         the name of the file is an identification of the filter but if 2 ground based instruments with same filter we might need to identified them as diferent
         """
-        nlc = len(lcfile)
-        path = always_the_same
+
+        if path == 0:
+            path =  always_the_same
+
         skip_lc_rows = 1
 
-        for i in lcfile:
+        self.lc_file = path+lcfile
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        lc1 = pd.read_table(path+i, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
+        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
         # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
         # to have a  quick statistic summary of your data
         #lc.describe()
-
-        #add column with filter
-        lc1['instr'] = lcfile
-        if (self.lc == 0):
-            self.lc = lc1
-        else:
-            self.lc = pd.concat([self.lc,lc1] )
+        self.lc["inst_flag"].fillna(0, inplace=True)
 
 
 
-#could do it in one line but we canot aapend instrments
-            pd.concat((pd.read_table(f , delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 ) for lcfile in all_files))
+    def plot_lc():
+        '''
+        this is not very pretty but it plots the flux versus time and the error bars
+        '''
+        self.lc.plot( y="flux", yerr=self.lc["flux_err"])
+        plt.show()
 
-#could do it in a faster way not checked but for me the first way is ok
 
-        np_array_list = []
-        for i in lcfile:
-            df = pd.read_table( path+i , delim_whitespace=True, index_col=0, skiprows=1 )
-            np_array_list.append(df.as_matrix())
 
-        comb_np_array = np.vstack(np_array_list)
-        big_frame = pd.DataFrame(comb_np_array, names=["time", "flux", "flux_err"])
 
 
 
