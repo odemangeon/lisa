@@ -59,19 +59,19 @@ class LightCurve(ExoP_timeserie):
         skip_lc_rows = 1
 
         for i in lcfile:
-        # we can also read the header from the file with
-        # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        lc1 = pd.read_table(path+i, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
-        # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
-        # to have a  quick statistic summary of your data
-        #lc.describe()
+            # we can also read the header from the file with
+            # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
+            lc1 = pd.read_table(path+i, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
+            # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
+            # to have a  quick statistic summary of your data
+            # lc.describe()
 
-        #add column with filter
-        lc1['instr'] = lcfile
-        if (self.lc == 0):
-            self.lc = lc1
-        else:
-            self.lc = pd.concat([self.lc,lc1] )
+            # add column with filter
+            lc1['instr'] = lcfile
+            if (self.lc == 0):
+                self.lc = lc1
+            else:
+                self.lc = pd.concat([self.lc,lc1] )
 
 
 
