@@ -6,7 +6,8 @@ Classes module.
 The objective of this package is to provides the data classes to store and manipulate radial
 velocity and light-curve data sets.
 """
-
+import pandas as pd
+import matplotlib.pyplot as plt
 
 class ExoP_timeserie():
     """
@@ -43,6 +44,31 @@ class LightCurve(ExoP_timeserie):
     def likelihood(self, simulated_data):
         raise NotImplementedError
 
+    def readLC(lcfile):
+        """
+        read light curve into a pandas database
+        path should alwasy be the same...organise
+        file name should denine the object and the run (type of analysis)
+        need to define format of file to know how many raws to skip
+        """
+
+        path = always_the_same
+        skip_lc_rows = 1
+        self.lcfile = path+lc_file
+        # we can also read the header from the file with
+        # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
+        self.lc = pd.read_table(self.lcfile, delim_whitespace=True, names=["time", "flux", "flux_err"], index_col=0, skiprows=1 )
+        # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
+        # to have a  quick statistic summary of your data
+        #lc.describe()
+
+
+
+    def plotLC():
+        '''
+        this is not very pretty but it plots the flux versus time and the error bars
+        '''
+        self.lc.plot( y="flux", yerr=self.lc["flux_err"])
 
 class RV(ExoP_timeserie):
     """
