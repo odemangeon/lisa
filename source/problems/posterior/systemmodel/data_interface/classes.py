@@ -46,7 +46,7 @@ class LightCurve(ExoP_timeserie):
     def likelihood(self, simulated_data):
         raise NotImplementedError
 
-    def readLC(path, lcfile):
+    def readLC(self,lcfile, path):
         """
         read light curve into a pandas database
         path should alwasy be the same...or given by person
@@ -63,18 +63,24 @@ class LightCurve(ExoP_timeserie):
         self.lc_file = path+lcfile
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err","inst_flag"] ], index_col=0, skiprows= skip_lc_rows)
+        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err","inst_flag"] , index_col=0, skiprows= skip_lc_rows)
         # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
+        # they will come indexit to the time but when we transformed them into numpy np.asarray(lc['inst_flag']) it is just the column
         # to have a  quick statistic summary of your data
         #lc.describe()
         self.lc["inst_flag"].fillna(0, inplace=True)
 
 
+<<<<<<< HEAD
     def plot_lc():
+=======
+
+    def plot_lc(self):
+>>>>>>> 0047775927eed04d3eab39d3747f087ca64194b1
         '''
         this is not very pretty but it plots the flux versus time and the error bars
         '''
-        self.lc.plot( y="flux", yerr=self.lc["flux_err"])
+        self.lc.plot( y="flux", yerr=self.lc["flux_err"]
         plt.show()
 
 
