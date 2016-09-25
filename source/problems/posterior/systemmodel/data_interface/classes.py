@@ -271,18 +271,23 @@ class LightCurve(ExoP_timeserie):
         self._read()
 
     def likelihood(self, simulated_data):
+        """
+        Method to define the likelihood function associated to a dataset.
+
+        Not Sure it's the right place though...
+        """
         raise NotImplementedError
 
     def _read(self, skip_rows=1):
         """
-        read light curve into a pandas database
+        Read light curve into a pandas database.
+
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
         the name of the file is an identification of the filter but if 2 ground based instruments
         with same filter we might need to identified them as diferent
         """
-
         file_path = os.path.join(self.folder, self.file_name)
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
@@ -299,9 +304,11 @@ class LightCurve(ExoP_timeserie):
         self.data["inst_flag"].fillna(0, inplace=True)
 
     def plot(self):
-        '''
-        this is not very pretty but it plots the flux versus time and the error bars
-        '''
+        """
+        Plot function to visualise the data.
+
+        This is not very pretty but it plots the flux versus time and the error bars
+        """
         self.data.plot(y="flux", yerr="flux_err")
         plt.show()
 
@@ -345,18 +352,23 @@ class RV(ExoP_timeserie):
         self._read()
 
     def likelihood(self):
+        """
+        Method to define the likelihood function associated to a dataset.
+
+        Not Sure it's the right place though...
+        """
         raise NotImplementedError
 
     def _read(self, skip_rows=1):
         """
-        read light curve into a pandas database
+        Read radial velocities into a pandas database.
+
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
         the name of the file is an identification of the filter but if 2 ground based instruments
         with same filter we might need to identified them as diferent
         """
-
         file_path = os.path.join(self.folder, self.file_name)
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
@@ -373,8 +385,10 @@ class RV(ExoP_timeserie):
         self.data["inst_flag"].fillna(0, inplace=True)
 
     def plot(self):
-        '''
-        this is not very pretty but it plots the flux versus time and the error bars
-        '''
+        """
+        Plot function to visualise the data.
+
+        This is not very pretty but it plots the flux versus time and the error bars
+        """
         self.data.plot(y="rv", yerr="rv_err")
         plt.show()
