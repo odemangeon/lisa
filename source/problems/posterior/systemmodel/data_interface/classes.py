@@ -133,6 +133,18 @@ class ExoP_datasets():
             except:
                 raise
 
+    def plot_LC():
+        """
+        Plot function to plot a given light-curve from the dataset or all the light-curves
+        """
+        raise NotImplementedError
+
+    def plot_RV():
+        """
+        Plot function to plot a given rv dataset from the dataset or all the rv
+        """
+        raise NotImplementedError
+
 
 class ExoP_timeserie():
     """
