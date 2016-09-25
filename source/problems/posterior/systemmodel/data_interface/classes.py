@@ -9,6 +9,129 @@ velocity and light-curve data sets.
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+import os.path
+from collections import OrderedDict
+import logging
+
+from .....software_parameters import input_data_folder
+
+logger = logging.getLogger()
+
+
+def interpret_data_filename(data_file_name):
+    """
+    Interpret data file name.
+
+    ----
+
+    Arguments:
+        data_file_name : string,
+            Data file name
+
+    Returns:
+        dictionnary with the interpration of the filename which contains the following keys:
+            - target : name of the target
+            - type : data type "LC", "RV" or "SED"
+            - instrument : instrument name
+            - number : give the number of the data file if there is several data files from the same
+            instrument
+    """
+    cuts = data_file_name.split("_")
+    cuts[-1] = cuts[-1].split(".")[0]
+    if len(cuts) < 3:
+        logging.warning("Data file name not recognized. Should be in the format "
+                        "type_target_instrument(_number).txt. Got: {}".format(data_file_name))
+        return None
+    result = {"target": cuts[1],
+              "type": cuts[0],
+              "instrument": cuts[2]}
+    if result["type"] not in ["LC", "RV", "SED"]:
+        logging.warning("Data type from file name not recognized. Should be in  "
+                        "['LC', 'RV', 'SED']. Got: {}".format(result["type"]))
+        return None
+    if len(cuts) > 3:
+        result["number"] = cuts[3]
+    return result
+
+
+class ExoP_datasets():
+    """
+    Exoplanet data sets.
+
+    Gather all the datasets from the different types:
+        - radial velocities
+        - light-curves
+        - spectral energy distribution
+    """
+    rv_datasets = OrderedDict()
+    lc_datasets = OrderedDict()
+    sed_datasets = OrderedDict()
+
+    target_name = None
+    folder = None
+
+    def __init__(self, target, main_data_folder=input_data_folder, data_folder=None):
+        """
+        Create an ExoP_datasets instance which will contains all the data on the studied target.
+
+        Look at the content of the folder provided as input and load the data file contained in it.
+        There is two ways to provide the input folder:
+            - main_data_folder: You provide the data_folder which is made to receive the data
+            from all the targets. It should contain a folder name after the target you want to
+            study and which contain all the data.
+            - data_folder: You provide directly the folder where the data are.
+
+        ----
+
+        Arguments:
+            target : string,
+                Name of the target studied.
+            main_data_folder : string, optional,
+                path to the data_folder which should contain a folder named after the target and
+                contain the data.
+            data_folder : string,
+                path to the folder which contain the data. If provided the data_folder argument is
+                ignored.
+        """
+        self.target_name = target
+
+        if data_folder is not None:
+            folder = data_folder
+        else:
+            folder = os.path.join(main_data_folder, target)
+        self.folder = folder
+
+        if not(os.path.isdir(folder)):
+            error_msg = "Folder doesn't exist: {}".format(folder)
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        logger.info("List the content of {}".format(folder))
+        folder_content = os.listdir(folder)
+        for content in folder_content:
+            if not(os.path.isfile(os.path.join(folder, content))):
+                logger.info("Content is not a file and is ignored: {}".format(content))
+            try:
+                filename_info = interpret_data_filename(content)
+                if filename_info is None:
+                    continue
+                if filename_info["target"] != self.target_name:
+                    logger.warning("Content target is not the provided target "
+                                   "and is ignored: {}".format(content))
+                    continue
+                key = filename_info["instrument"]
+                if "number" in filename_info.keys():
+                    key += filename_info["number"]
+                if filename_info["type"] == "LC":
+                    self.lc_datasets[key] = LightCurve(content, data_folder=folder)
+                elif filename_info["type"] == "RV":
+                    self.rv_datasets[key] = RV(content, data_folder=folder)
+                elif filename_info["type"] == "SED":
+                    logger.warning("Data file type SED not implemented yet.")
+                    continue
+            except:
+                raise
 
 
 class ExoP_timeserie():
@@ -16,11 +139,47 @@ class ExoP_timeserie():
     Exoplanet time-serie data class
     """
 
+    target_name = None
+    file_name = None
+    folder = None
     instrument_type = None
     instrument_name = None
     data = None  # Pandas.Dataframe
     flags_list = []
-    __mandatory_columns = ["time"]  # Not sure if I should put time here if pandas time serie
+    _mandatory_columns = ["time"]  # Not sure if I should put time here if pandas time serie
+
+    def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
+        """
+        Create an ExoP_timeserie instance.
+
+        This class is not supposed to be instanciate directly. Use the LightCurve or RV classes.
+
+        ----
+
+        Arguments:
+            filename : string
+                Name of file which contains the data
+            main_data_folder : string, optional,
+                path to the data_folder which should contain a folder named after the target and
+                contain the data. The name of the target is in the filename.
+            data_folder : string,
+                path to the folder which contain the data. If provided the data_folder argument is
+                ignored.
+        """
+        filename_info = interpret_data_filename(filename)
+
+        if filename_info is None:
+            raise ValueError("The file name doesn't correspond to the naming convention."
+                             "The creation of the instance is not possible.")
+
+        self.file_name = filename
+        self.target_name = filename_info["target"]
+
+        if data_folder is not None:
+            folder = data_folder
+        else:
+            folder = os.path.join(main_data_folder, self.target_name)
+        self.folder = folder
 
     def plot_data(self):
         """
@@ -31,61 +190,73 @@ class ExoP_timeserie():
 
 class LightCurve(ExoP_timeserie):
     """
-    Light-curve class
+    Light-curve class.
     """
 
     instrument_type = "transit"
-    ExoP_timeserie.__mandatory_columns.extend(["flux", "flux_err"])
+    ExoP_timeserie._mandatory_columns.extend(["flux", "flux_err"])
 
-    def __init__(self):
+    def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
-        Create Light-curve instance.
+        Create a LightCurve instance which contains the content of a LC data file.
+
+        Look at the content of the file given by filename provided as input. There is two ways to
+        provide the folder where filename is:
+            - main_data_folder and target: You provide the data_folder which is made to receive the
+            data from all the targets. It should contain a folder name after the target you want to
+            study and which contain all the data. The name of the target is in the filename
+            - data_folder: You provide directly the folder where the data are.
+
+        ----
+
+        Arguments:
+            filename : string
+                Name of file which contains the data
+            main_data_folder : string, optional,
+                path to the data_folder which should contain a folder named after the target and
+                contain the data. The name of the target is in the filename.
+            data_folder : string,
+                path to the folder which contain the data. If provided the data_folder argument is
+                ignored.
         """
-        raise NotImplementedError
+        ExoP_timeserie.__init__(self, filename, main_data_folder=main_data_folder,
+                                data_folder=data_folder)
+        self._read()
 
     def likelihood(self, simulated_data):
         raise NotImplementedError
 
-    def readLC(self,lcfile, path):
+    def _read(self, skip_rows=1):
         """
         read light curve into a pandas database
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
-        need to define format of file to know how many raws to skip
-        the name of the file is an identification of the filter but if 2 ground based instruments with same filter we might need to identified them as diferent
+        need to define format of file to know how many rows to skip
+        the name of the file is an identification of the filter but if 2 ground based instruments
+        with same filter we might need to identified them as diferent
         """
 
-        if path == 0:
-            path =  always_the_same
-
-        skip_lc_rows = 1
-
-        self.lc_file = path+lcfile
+        file_path = os.path.join(self.folder, self.file_name)
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        self.lc = pd.read_table(self.lc_file, delim_whitespace=True, names=["time", "flux", "flux_err","inst_flag"] , index_col=0, skiprows= skip_lc_rows)
+        self.data = pd.read_table(file_path,
+                                  delim_whitespace=True,
+                                  names=["time", "flux", "flux_err", "inst_flag"],
+                                  index_col=0,
+                                  skiprows=skip_rows)
         # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
-        # they will come indexit to the time but when we transformed them into numpy np.asarray(lc['inst_flag']) it is just the column
+        # they will come indexit to the time but when we transformed them into numpy
+        # np.asarray(lc['inst_flag']) it is just the column
         # to have a  quick statistic summary of your data
-        #lc.describe()
-        self.lc["inst_flag"].fillna(0, inplace=True)
-
-
-<<<<<<< HEAD
-    def plot_lc():
-=======
+        # lc.describe()
+        self.data["inst_flag"].fillna(0, inplace=True)
 
     def plot_lc(self):
->>>>>>> 0047775927eed04d3eab39d3747f087ca64194b1
         '''
         this is not very pretty but it plots the flux versus time and the error bars
         '''
-        self.lc.plot( y="flux", yerr=self.lc["flux_err"]
+        self.data.plot(y="flux", yerr="flux_err")
         plt.show()
-
-
-
-
 
 
 class RV(ExoP_timeserie):
@@ -94,13 +265,66 @@ class RV(ExoP_timeserie):
     """
 
     instrument_type = "rv"
-    ExoP_timeserie.__mandatory_columns.extend(["RV", "RV_err"])
+    ExoP_timeserie._mandatory_columns.extend(["RV", "RV_err"])
 
-    def __init__(self):
+    def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
-        Create Radial velocities instance.
+        Create a RV instance which contains the content of a Radial velocity data file.
+
+        Look at the content of the file given by filename provided as input. There is two ways to
+        provide the folder where filename is:
+            - main_data_folder and target: You provide the data_folder which is made to receive the
+            data from all the targets. It should contain a folder name after the target you want to
+            study and which contain all the data. The name of the target is in the filename
+            - data_folder: You provide directly the folder where the data are.
+
+        ----
+
+        Arguments:
+            filename : string
+                Name of file which contains the data
+            main_data_folder : string, optional,
+                path to the data_folder which should contain a folder named after the target and
+                contain the data. The name of the target is in the filename.
+            data_folder : string,
+                path to the folder which contain the data. If provided the data_folder argument is
+                ignored.
         """
-        raise NotImplementedError
+        ExoP_timeserie.__init__(self, filename, main_data_folder=main_data_folder,
+                                data_folder=data_folder)
+        self._read()
 
     def likelihood(self):
         raise NotImplementedError
+
+    def _read(self, skip_rows=1):
+        """
+        read light curve into a pandas database
+        path should alwasy be the same...or given by person
+        file name should denine the object and the run (type of analysis)
+        need to define format of file to know how many rows to skip
+        the name of the file is an identification of the filter but if 2 ground based instruments
+        with same filter we might need to identified them as diferent
+        """
+
+        file_path = os.path.join(self.folder, self.file_name)
+        # we can also read the header from the file with
+        # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
+        self.data = pd.read_table(file_path,
+                                  delim_whitespace=True,
+                                  names=["time", "rv", "rv_err", "inst_flag"],
+                                  index_col=0,
+                                  skiprows=skip_rows)
+        # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
+        # they will come indexit to the time but when we transformed them into numpy
+        # np.asarray(lc['inst_flag']) it is just the column
+        # to have a  quick statistic summary of your data
+        # lc.describe()
+        self.data["inst_flag"].fillna(0, inplace=True)
+
+    def plot_rv(self):
+        '''
+        this is not very pretty but it plots the flux versus time and the error bars
+        '''
+        self.data.plot(y="rv", yerr="rv_err")
+        plt.show()

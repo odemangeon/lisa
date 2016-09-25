@@ -51,6 +51,14 @@ class SystemModel():
         else:
             raise ValueError("rv_model should be in ['ajplanet']")
 
+        # Define the limb darkening model: I think we should have an argument to select the LD
+        # model here.
+        if self.transit_model == 'batman':
+            # it can be changed later but I dont know how to make it 0 string
+            self.limb_dark = "quadratic"  # if  batman limb darkening model
+        else:
+            self.limb_dark = 2  # if pyttransit , do we want to give the option now ?
+
         # Define the number of planets in the system
         if nb_planet >= 1:
             self.nb_planet = nb_planet
@@ -58,13 +66,7 @@ class SystemModel():
         if nb_star >= 1:
             self.nb_star = nb_star
 
-        # Define the limb darkening model: I think we should have an argument to select the LD
-        # model here.
-        if self.model == 'batman':
-            # it can be changed later but I dont know how to make it 0 string
-            self.limb_dark = "quadratic"  # if  batman limb darkening model
-        else:
-            self.limb_dark = 2  # if pyttransit , do we want to give the option now ?
+        ## The following will be filled when reading the text file.
 
         # transit parameters
         self.rp = 0.          # planet radius (in units of stellar radii)
@@ -104,6 +106,11 @@ class SystemModel():
         """
         raise NotImplementedError
 
+    def read_initfile():
+        """
+        Read the file and init the value of parameters and priors
+        """
+        raise NotImplementedError
 
     def set_lc_model():
         """
