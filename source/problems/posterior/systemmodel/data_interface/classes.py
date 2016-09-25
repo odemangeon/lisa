@@ -8,7 +8,7 @@ velocity and light-curve data sets.
 """
 import pandas as pd
 import matplotlib.pyplot as plt
-import numpy as np
+# import numpy as np
 import os
 import os.path
 from collections import OrderedDict
@@ -64,6 +64,7 @@ class ExoP_datasets():
         - light-curves
         - spectral energy distribution
     """
+
     rv_datasets = OrderedDict()
     lc_datasets = OrderedDict()
     sed_datasets = OrderedDict()
@@ -133,22 +134,58 @@ class ExoP_datasets():
             except:
                 raise
 
-    def plot_LC():
+    def get_LC_dataset_keys(self):
+        """Return the list of light-curve dataset_key available."""
+        return list(self.lc_datasets.keys())
+
+    def get_RV_dataset_keys(self):
+        """Return the list of light-curve dataset_key available."""
+        return list(self.rv_datasets.keys())
+
+    def get_dataset_keys(self):
+        """Return a dictionnary with the lists of LC, RV (and SED) dataset_key available."""
+        return {"LC": self.get_LC_dataset_keys(),
+                "RV": self.get_RV_dataset_keys()}
+
+    def plot_LC(dataset_key=None):
         """
-        Plot function to plot a given light-curve from the dataset or all the light-curves
+        Plot a specific light-curve data set or all of them.
+
+        To plot a specific LC dataset one should provide the dataset_key which is name of the
+        instrument (followed by _number is several datasets from the same instrument). For example
+        "K2".
+
+        Arguments:
+            dataset_key : string, optional,
+                Key indicating which dataset you want to plot. If not provided the function plot all
+                the LC dataset in different sub-windows.
         """
         raise NotImplementedError
 
     def plot_RV():
         """
-        Plot function to plot a given rv dataset from the dataset or all the rv
+        Plot a specific radial velocity data set or all of them.
+
+        To plot a specific RV dataset one should provide the dataset_key which is name of the
+        instrument (followed by _number is several datasets from the same instrument). For example
+        "SOPHIE".
+
+        Arguments:
+            dataset_key : string, optional,
+                Key indicating which dataset you want to plot. If not provided the function plot all
+                the RV dataset in different sub-windows.
         """
         raise NotImplementedError
 
 
 class ExoP_timeserie():
     """
-    Exoplanet time-serie data class
+    Exoplanet time-serie data class.
+
+    This class should not be instanciated directly it's a parent class for the classes LightCurve,
+    RV (and SED) to define common attributes and method for example the __init__ method of
+    ExoP_timeserie should be called at the beginning of the __init__ method of LightCurve and RV
+    classes.
     """
 
     target_name = None
@@ -193,16 +230,14 @@ class ExoP_timeserie():
             folder = os.path.join(main_data_folder, self.target_name)
         self.folder = folder
 
-    def plot_data(self):
-        """
-        Plot the data.
-        """
-        raise NotImplementedError
-
 
 class LightCurve(ExoP_timeserie):
     """
     Light-curve class.
+
+    Instances will contain the light-curve data of one dataset in the data attribute.
+    It also contains functions to visualize (plot) and manipulate the light-curve (cut around the
+    transit, detrend)
     """
 
     instrument_type = "transit"
@@ -263,7 +298,7 @@ class LightCurve(ExoP_timeserie):
         # lc.describe()
         self.data["inst_flag"].fillna(0, inplace=True)
 
-    def plot_lc(self):
+    def plot(self):
         '''
         this is not very pretty but it plots the flux versus time and the error bars
         '''
@@ -273,7 +308,10 @@ class LightCurve(ExoP_timeserie):
 
 class RV(ExoP_timeserie):
     """
-    Radial velocities class
+    Radial velocities class.
+
+    Instances will contain the radial velocity data of one dataset in the data attribute.
+    It also contains functions to visualize (plot) and manipulate the rvs (??)
     """
 
     instrument_type = "rv"
@@ -334,7 +372,7 @@ class RV(ExoP_timeserie):
         # lc.describe()
         self.data["inst_flag"].fillna(0, inplace=True)
 
-    def plot_rv(self):
+    def plot(self):
         '''
         this is not very pretty but it plots the flux versus time and the error bars
         '''
