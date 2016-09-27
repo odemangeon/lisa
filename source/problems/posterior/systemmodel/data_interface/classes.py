@@ -5,6 +5,10 @@ Classes module.
 
 The objective of this package is to provides the data classes to store and manipulate radial
 velocity and light-curve data sets.
+
+@TODO:
+    - plot_LC method of ExoP_datasets
+    - plot_RV method of ExoP_datasets
 """
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -39,7 +43,7 @@ def interpret_data_filename(data_file_name):
     """
     cuts = data_file_name.split("_")
     cuts[-1] = cuts[-1].split(".")[0]
-    if len(cuts) < 3:
+    if len(cuts) < 3 or len(cuts) > 4:
         logging.warning("Data file name not recognized. Should be in the format "
                         "type_target_instrument(_number).txt. Got: {}".format(data_file_name))
         return None
@@ -50,9 +54,62 @@ def interpret_data_filename(data_file_name):
         logging.warning("Data type from file name not recognized. Should be in  "
                         "['LC', 'RV', 'SED']. Got: {}".format(result["type"]))
         return None
-    if len(cuts) > 3:
+    if len(cuts) == 3:
         result["number"] = cuts[3]
+    elif len(cuts) == 4:
+        result["number"] = None
     return result
+
+
+def interpret_dataset_key(dataset_key):
+    """
+    Interpret dataset key.
+
+    ----
+
+    Arguments:
+        dataset_key : string,
+            dataset_key
+
+    Returns:
+        dictionnary with the interpration of the dataset key which contains the following keys:
+            - instrument : instrument name
+            - number : give the number of the data file if there is several data files from the same
+            instrument
+    """
+    cuts = dataset_key.split("_")
+    if len(cuts) > 2:
+        logging.warning("dataset_key not recognized. Should be in the format "
+                        "instrument_number. Got: {}".format(dataset_key))
+        return None
+    result = {"instrument": cuts[0]}
+    if len(cuts) == 2:
+        result["number"] = cuts[1]
+    elif len(cuts) == 1:
+        result["number"] = None
+    return result
+
+
+def build_dataset_key(instrument, number=None):
+    """
+    build dataset key.
+
+    ----
+
+    Arguments:
+        instrument : string,
+            instrument name
+        number : string, optional,
+            number of the dataset for this instrument
+
+    Returns:
+        dataset_key
+    """
+    separator = "_"
+    dataset_key = instrument
+    if number is not None:
+        dataset_key += separator + number
+    return dataset_key
 
 
 class ExoP_datasets():
@@ -92,8 +149,8 @@ class ExoP_datasets():
                 path to the data_folder which should contain a folder named after the target and
                 contain the data.
             data_folder : string,
-                path to the folder which contain the data. If provided the data_folder argument is
-                ignored.
+                path to the folder which contain the data. If provided the main_data_folder argument
+                is ignored.
         """
         self.target_name = target
 
@@ -121,9 +178,8 @@ class ExoP_datasets():
                     logger.warning("Content target is not the provided target "
                                    "and is ignored: {}".format(content))
                     continue
-                key = filename_info["instrument"]
-                if "number" in filename_info.keys():
-                    key += filename_info["number"]
+                key = build_dataset_key(filename_info["instrument"],
+                                        number=filename_info["number"])
                 if filename_info["type"] == "LC":
                     self.lc_datasets[key] = LightCurve(content, data_folder=folder)
                 elif filename_info["type"] == "RV":
@@ -146,6 +202,28 @@ class ExoP_datasets():
         """Return a dictionnary with the lists of LC, RV (and SED) dataset_key available."""
         return {"LC": self.get_LC_dataset_keys(),
                 "RV": self.get_RV_dataset_keys()}
+
+    def get_LC_dataset_keys_perinstrument(self):
+        """Return a dictionnary with the lists of LC dataset_key per isntrument."""
+        lc_keys = self.get_LC_dataset_keys()
+        result = {}
+        for key in lc_keys:
+            key_info = interpret_dataset_key(key)
+            if key_info["instrument"] in result.keys():
+                result[key_info["instrument"]].append(key)
+            else:
+                result[key_info["instrument"]] = [key]
+
+    def get_RV_dataset_keys_perinstrument(self):
+        """Return a dictionnary with the lists of LC dataset_key per isntrument."""
+        rv_keys = self.get_RV_dataset_keys()
+        result = {}
+        for key in rv_keys:
+            key_info = interpret_dataset_key(key)
+            if key_info["instrument"] in result.keys():
+                result[key_info["instrument"]].append(key)
+            else:
+                result[key_info["instrument"]] = [key]
 
     def plot_LC(dataset_key=None):
         """
@@ -270,14 +348,6 @@ class LightCurve(ExoP_timeserie):
                                 data_folder=data_folder)
         self._read()
 
-    def likelihood(self, simulated_data):
-        """
-        Method to define the likelihood function associated to a dataset.
-
-        Not Sure it's the right place though...
-        """
-        raise NotImplementedError
-
     def _read(self, skip_rows=1):
         """
         Read light curve into a pandas database.
@@ -350,14 +420,6 @@ class RV(ExoP_timeserie):
         ExoP_timeserie.__init__(self, filename, main_data_folder=main_data_folder,
                                 data_folder=data_folder)
         self._read()
-
-    def likelihood(self):
-        """
-        Method to define the likelihood function associated to a dataset.
-
-        Not Sure it's the right place though...
-        """
-        raise NotImplementedError
 
     def _read(self, skip_rows=1):
         """
