@@ -14,6 +14,8 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+    add Jeffreys prior Susana Barros 28 Sep 2016
 """
 
 from __future__ import division
@@ -40,7 +42,7 @@ class UniformPrior(Prior):
         self.lims = [vmin,vmax]
 
     def logpdf(self, x):
-        if x > self.vmin and x < self.vmax:
+        if x >= self.vmin and x <= self.vmax:
             return self.lnC
         else:
             return -inf
@@ -77,3 +79,18 @@ class LogNormPrior(Prior):
         mu = self.mu
         lnx = mt.log(x)
         return -lnx + self.C - ((lnx*lnx - mu*lnx + mu*mu)/self._B)
+
+
+class JeffreysPrior(Prior):
+    def __init__(self, vmin, vmax):
+        self.vmin = vmin
+        self.vmax = vmax
+        self.C = vmax/vmin
+        self.lnC = mt.log(self.C)
+        self.lims = [vmin,vmax]
+
+    def logpdf(self, x):
+        if x >= self.vmin and x <= self.vmax:
+            return np.log(1) - mt.log(x  *  self.lnC)
+        else:
+            return -inf
