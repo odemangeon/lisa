@@ -47,6 +47,9 @@ class UniformPrior(Prior):
         else:
             return -inf
 
+    def ravs(self):
+        return np.random.uniform(self.vmin, self.vmax)
+
 
 class NormalPrior(Prior):
     def __init__(self, mu, sigma, lims=None):
@@ -64,6 +67,10 @@ class NormalPrior(Prior):
         else:
             return self._lf1 -(x-self.mu)**2*self._f2 if self.vmin < x < self.vmax else -inf
 
+    def ravs(self):
+        return np.random.normal(self.mu, self.sigma)
+
+
 
 class LogNormPrior(Prior):
     def __init__(self, mu, sigma, lims=None):
@@ -80,6 +87,11 @@ class LogNormPrior(Prior):
         lnx = mt.log(x)
         return -lnx + self.C - ((lnx*lnx - mu*lnx + mu*mu)/self._B)
 
+    def ravs(self):
+        return np.random.lognormal(self.mu, self.sigma)
+
+
+
 
 class JeffreysPrior(Prior):
     def __init__(self, vmin, vmax):
@@ -94,3 +106,27 @@ class JeffreysPrior(Prior):
             return np.log(1) - mt.log(x  *  self.lnC)
         else:
             return -inf
+
+    def ravs(self):
+        from scipy import stats
+        x1  =   stats.reciprocal(self.vmin, self.vmax)
+        return x1.rvs()
+
+
+class SinePrior(Prior):
+    def __init__(self, vmin, vmax):
+        self.vmin = vmin
+        self.vmax = vmax
+        self.C =  1./( 180/pi*(np.cos(vmin*pi/180.0) - np.cos(vmax*pi/180.0)) )
+        self.lnC = mt.log(self.C)
+        self.lims = [vmin,vmax]
+
+    def logpdf(self, x):
+        if x >= self.vmin and x <= self.vmax:
+            return mt.log( np.sin(x * pi/180.0) ) + self.lnC
+        else:
+            return -inf
+
+    # a random angle x has a probability density function = sin(x)
+    def ravs(self):
+        return np.random.uniform(self.vmin, self.vmax)

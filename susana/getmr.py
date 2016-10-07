@@ -24,26 +24,26 @@ model.fit()
 #model.plot_samples('radius')
 #model.plot_samples('mass')
 
-rad, stats = model.prop_samples('radius')
+rad, sta = model.prop_samples('radius')
 model.plot_samples('radius')
 plt.show()
 
 
-med=stats[0]
+med=sta[0]
 print('med radius')
-print('%.2f^{+%.2f}_{-%.2f}' % (med, stats[1],stats[2]))
-#print('mode', stats.mode( rad))
+print('%.2f^{+%.2f}_{-%.2f}' % (med, sta[1],sta[2]))
+print('mode', stats.mode( rad))
 sigma =  np.std(rad)
 print('sigam', sigma)
 
-mass, stats = model.prop_samples('mass')
+mass, sta = model.prop_samples('mass')
 model.plot_samples('mass')
 
-med=stats[0]
+med=sta[0]
 print('med mass')
-print('%.2f^{+%.2f}_{-%.2f}' % (stats[0], stats[1],stats[2]))
+print('%.2f^{+%.2f}_{-%.2f}' % (sta[0], sta[1],sta[2]))
 print('mode')
-#print(stats.mode(mass))
+print(stats.mode(mass))
 sigma =  np.std(mass)
 print('sigam', sigma)
 
