@@ -5,8 +5,14 @@ Sysmodel module.
 
 The objective of this package is to provides the classes to create exo systems and function to
  provide simulated light-curve and radial velocities for these systems.
+
+@TODO:
+    - Implement LD_model argument in __init__ of SystemModel
 """
 import numpy as np
+
+from ....software_parameters import input_data_folder
+from .data_interface.classes import ExoP_datasets
 
 
 class SystemModel():
@@ -18,16 +24,26 @@ class SystemModel():
 
     nb_star = 0
     nb_planet = 0
+
     dynamic = False
+
     ## List of available rv models
     _rv_models = ["ajplanet"]
     rv_model = None
+
     ## List of available lc models
     _lc_models = ["batman", "pytransit"]
     transit_model = None
 
-    def __init__(self, data_set,
-                 transit_model=None, rv_model=None, LD_model=None,
+    ## List of available analysis
+    _analysis_types = ["lc", "rv", "lc+rv", "lc+rv+dynamic"]
+    analysis_type = None
+
+    datasets = None
+
+    def __init__(self,
+                 target, main_data_folder=input_data_folder, data_folder=None,
+                 analysis_type=None, transit_model=None, LD_model=None, rv_model=None,
                  nb_planet=1, nb_star=1):
         """
         Create SystemModel instance Object.
@@ -39,25 +55,49 @@ class SystemModel():
         If we want to produce the a template, we need to give the transit model, the LD model used,
         the rv model, the number of star and the number of planet and we need to have a
         data_set instance.
-        """
-        # Define the transit model used
-        if transit_model in self._lc_models:
-            self.transit_model = transit_model
-        else:
-            raise ValueError("transit_model should be in ['batman', 'pytransit']")
-        # Define the rv model used
-        if rv_model in self._rv_models:
-            self.rv_model = rv_model
-        else:
-            raise ValueError("rv_model should be in ['ajplanet']")
 
-        # Define the limb darkening model: I think we should have an argument to select the LD
-        # model here.
-        if self.transit_model == 'batman':
-            # it can be changed later but I dont know how to make it 0 string
-            self.limb_dark = "quadratic"  # if  batman limb darkening model
+        ----
+
+        Arguments:
+            target : string,
+                Name of the target studied.
+            main_data_folder : string, optional,
+                path to the data_folder which should contain a folder named after the target and
+                contain the data.
+            data_folder : string,
+                path to the folder which contain the data. If provided the main_data_folder argument
+                is ignored.
+        """
+        # Define the type of analysis
+        if analysis_type in self._analysis_types:
+            self.analysis_type = analysis_type
         else:
-            self.limb_dark = 2  # if pyttransit , do we want to give the option now ?
+            raise ValueError("analysis_type should be in ['lc', 'rv', 'lc+rv', 'lc+rv+dynamic']")
+
+        # Define the transit and limbdarkening model used if needed
+        if analysis_type in ['lc', 'lc+rv', 'lc+rv+dynamic']:
+            # transit
+            if transit_model in self._lc_models:
+                self.transit_model = transit_model
+            else:
+                raise ValueError("transit_model should be in ['batman', 'pytransit']")
+            # Define the limb darkening model: I think we should have an argument to select the LD
+            # model here.
+            if self.transit_model == 'batman':
+                # it can be changed later but I dont know how to make it 0 string
+                self.limb_dark = "quadratic"  # if  batman limb darkening model
+            else:
+                self.limb_dark = 2  # if pyttransit , do we want to give the option now ?
+
+        # Define the rv model used if needed
+        if analysis_type in ['rv', 'lc+rv']:
+            if rv_model in self._rv_models:
+                self.rv_model = rv_model
+            else:
+                raise ValueError("rv_model should be in ['ajplanet']")
+
+        if analysis_type == "lc+rv+dynamic":
+            raise NotImplementedError("Models with dynamic have not been implemented yet.")
 
         # Define the number of planets in the system
         if nb_planet >= 1:
@@ -65,6 +105,14 @@ class SystemModel():
         # Define the number of stars in the system
         if nb_star >= 1:
             self.nb_star = nb_star
+
+        # Create the ExoP_datasets instance and store it in the datasets attribute
+        self.datasets = ExoP_datasets(target,
+                                      main_data_folder=main_data_folder,
+                                      data_folder=data_folder)
+
+        # Choose the parametrization. I think that if we want to be able to choose the set of
+        # Jumping parameters, It's now. Don't clear right now how to do it.
 
         ## The following will be filled when reading the text file.
 
@@ -100,10 +148,11 @@ class SystemModel():
         self.t0 = 0.      # time of inferior conjunction
         self.period = 0.  # orbital period
 
-    def create_filetemplate():
+    def create_filetemplate(self):
         """
         Create template file to be filed with the initial parameter values and prior functions
         """
+
         raise NotImplementedError
 
     def read_initfile():

@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
     add Jeffreys prior Susana Barros 28 Sep 2016
+
+    @TODO: Implement a sine prior for the inclination
 """
 
 from __future__ import division

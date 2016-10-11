@@ -18,12 +18,12 @@ dar = Dartmouth_Isochrone()
 
 ages = np.linspace(3,10.,200)
 # give
-#mass,log10 (age),feh 
+#mass,log10 (age),feh
 track1 = dar(0.5,ages,feh[0], return_df=False) #return a dictionary instead of DataFrame
 track2 = dar(1.0,ages,feh[0], return_df=False)
 track3 = dar(1.5,ages,feh[0], return_df=False)
 
-#radius = 0.5*logl -2*log (teff) *lts1un  
+#radius = 0.5*logl -2*log (teff) *lts1un
 #radius[i,*]=10.^( 0.5*data[2,i*140: (i+1)*140-1 ]  -2.*data[1,i*140: (i+1)*140-1]+2.*ltsun)
 
 # this works and can be used in the interpolator maybe with better teff
