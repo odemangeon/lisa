@@ -32,6 +32,7 @@ for mass in masses:
     # we dont need to calculate the radius because it is alredy available in the dictionary I
     #was just tryign to see if the equations were ok so that we can use them in a fiting code if we need
     # In this code it does mater because we dont use the radius anyway
+    #
     l_radius.append((teffsun / track['Teff'])**2 * np.sqrt(10**track['logL']))
     l_density.append(mass / track['radius']**3.)
 
