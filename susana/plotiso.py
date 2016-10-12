@@ -15,8 +15,8 @@ teffsun = 5777.
 
 dar = Dartmouth_Isochrone()
 
-ages = np.linspace(1, 10., 200)
-masses = np.linspace(0.7, 1.5, 20)# [0.5, 1.0, 1.5]
+ages = np.linspace(0, 12., 200)
+masses = np.linspace(0.5, 1.5, 10)# [0.5, 1.0, 1.5]
 # give
 # mass,log10 (age),feh
 
@@ -29,8 +29,11 @@ for mass in masses:
     # radius = 0.5*logl -2*log (teff) *lts1un
     # radius[i,*]=10.^( 0.5*data[2,i*140: (i+1)*140-1 ]  -2.*data[1,i*140: (i+1)*140-1]+2.*ltsun)
     # this works and can be used in the interpolator maybe with better teff
+    # we dont need to calculate the radius because it is alredy available in the dictionary I
+    #was just tryign to see if the equations were ok so that we can use them in a fiting code if we need
+    # In this code it does mater because we dont use the radius anyway
     l_radius.append((teffsun / track['Teff'])**2 * np.sqrt(10**track['logL']))
-    l_density.append(0.5 / track['radius']**3.)
+    l_density.append(mass / track['radius']**3.)
 
 
 df = pd.DataFrame(data={"Mass": masses, "Track": l_track, "Radius": l_radius, "Density": l_density})
@@ -41,7 +44,7 @@ for index, row in df.iterrows():
 plt.xlabel('Teff')
 plt.ylabel('logg')
 plt.ylim((5,0))
-plt.legend(loc='lower right')
+plt.legend(loc='upper right')
 plt.errorbar(Teff[0], logg[0], xerr=Teff[1], yerr=logg[1])
 plt.show()
 
@@ -51,6 +54,7 @@ for index, row in df.iterrows():
 
 plt.xlabel('Teff')
 plt.ylabel('density')
+plt.ylim((3,0))
 plt.legend(loc='upper left')
 plt.show()
 
