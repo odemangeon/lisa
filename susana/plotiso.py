@@ -15,8 +15,8 @@ teffsun = 5777.
 
 dar = Dartmouth_Isochrone()
 
-ages = np.linspace(3, 10., 200)
-masses = [0.5, 1.0, 1.5]
+ages = np.linspace(1, 10., 200)
+masses = np.linspace(0.7, 1.5, 20)# [0.5, 1.0, 1.5]
 # give
 # mass,log10 (age),feh
 
@@ -40,6 +40,7 @@ for index, row in df.iterrows():
     plt.plot(row["Track"]['Teff'], row["Track"]['logg'], label="M={:.1f}".format(row["Mass"]))
 plt.xlabel('Teff')
 plt.ylabel('logg')
+plt.ylim((5,0))
 plt.legend(loc='lower right')
 plt.errorbar(Teff[0], logg[0], xerr=Teff[1], yerr=logg[1])
 plt.show()
@@ -50,7 +51,7 @@ for index, row in df.iterrows():
 
 plt.xlabel('Teff')
 plt.ylabel('density')
-plt.legend(loc='upper right')
+plt.legend(loc='upper left')
 plt.show()
 
 g = 6.67428e-11
