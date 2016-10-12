@@ -215,7 +215,7 @@ def rob_mom(data, center=None):
             spread = 0.5 * abs(data.flatten()[1] - data.flatten()[0])
         if n >= 3:
             x = sort(data)
-            g = abs(x[1:n - 1] - x[0:n - 2])
+            g = abs(x[1:n] - x[0:n - 1])
             w = arange(n - 1, dtype=float) + 1.0
             w = w * (n - w)
             spread = sqrt(pi) / (n * (n - 1)) * npsum(w * g)
