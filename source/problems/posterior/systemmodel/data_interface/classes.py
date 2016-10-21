@@ -42,6 +42,7 @@ def interpret_data_filename(data_file_name):
             instrument
     """
     cuts = data_file_name.split("_")
+    
     cuts[-1] = cuts[-1].split(".")[0]
     if len(cuts) < 3 or len(cuts) > 4:
         logging.warning("Data file name not recognized. Should be in the format "
