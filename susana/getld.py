@@ -4,6 +4,10 @@ from IPython.display import display, Latex
 from ldtk import LDPSetCreator, BoxcarFilter
 
 
+import ldtk
+# when I need to dowload a new file
+#ldtk.client.Client(update_server_file_list=True)
+
 
 #set filter example of box filters transmission as a function of wavelenght in nanometers.
 '''
@@ -11,9 +15,11 @@ filters = [BoxcarFilter('a',450,550),
            BoxcarFilter('b',650,750),
            BoxcarFilter('c',850,950)]
 '''
-# kepler
-filters = np.genfromtxt('kepler_response_hires1.txt', unpack=True)
 
+# kepler
+amp,tran  = np.genfromtxt('kepler_response_hires1.txt', unpack=True)
+
+filters=[amp,tran ]
 
 #set stellar parameters or read them
 teff = (5400,50)
@@ -30,7 +36,7 @@ ps = sc.create_profiles(nsamples=2000)
 ps.resample_linear_z()
 
 # not sure we need this line
-cp = cm.spectral(linspace(0.1,1.0,6))
+#cp = cm.spectral(linspace(0.1,1.0,6))
 
 
 
