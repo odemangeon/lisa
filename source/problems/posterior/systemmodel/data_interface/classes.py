@@ -55,9 +55,9 @@ def interpret_data_filename(data_file_name):
                         "['LC', 'RV', 'SED']. Got: {}".format(result["type"]))
         return None
     if len(cuts) == 3:
-        result["number"] = cuts[3]
+        result["number"] = None    
     elif len(cuts) == 4:
-        result["number"] = None
+        result["number"] = cuts[3]
     return result
 
 

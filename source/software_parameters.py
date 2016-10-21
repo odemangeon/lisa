@@ -7,4 +7,4 @@ The objective of this module is to define variables that are parameters of the s
 user can tune
 """
 
-input_data_folder = "/Users/sbarros/Documents/work/python/photodynamic/lisa/data"
+input_data_folder = "/Users/Oliv/Softwares/lisa/data"
