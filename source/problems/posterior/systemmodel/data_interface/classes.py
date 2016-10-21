@@ -2,10 +2,8 @@
 # -*- coding:  utf-8 -*-
 """
 Classes module.
-
 The objective of this package is to provides the data classes to store and manipulate radial
 velocity and light-curve data sets.
-
 @TODO:
     - plot_LC method of ExoP_datasets
     - plot_RV method of ExoP_datasets
@@ -26,13 +24,10 @@ logger = logging.getLogger()
 def interpret_data_filename(data_file_name):
     """
     Interpret data file name.
-
     ----
-
     Arguments:
         data_file_name : string,
             Data file name
-
     Returns:
         dictionnary with the interpration of the filename which contains the following keys:
             - target : name of the target
@@ -64,13 +59,10 @@ def interpret_data_filename(data_file_name):
 def interpret_dataset_key(dataset_key):
     """
     Interpret dataset key.
-
     ----
-
     Arguments:
         dataset_key : string,
             dataset_key
-
     Returns:
         dictionnary with the interpration of the dataset key which contains the following keys:
             - instrument : instrument name
@@ -93,15 +85,12 @@ def interpret_dataset_key(dataset_key):
 def build_dataset_key(instrument, number=None):
     """
     build dataset key.
-
     ----
-
     Arguments:
         instrument : string,
             instrument name
         number : string, optional,
             number of the dataset for this instrument
-
     Returns:
         dataset_key
     """
@@ -115,7 +104,6 @@ def build_dataset_key(instrument, number=None):
 class ExoP_datasets():
     """
     Exoplanet data sets.
-
     Gather all the datasets from the different types:
         - radial velocities
         - light-curves
@@ -132,16 +120,13 @@ class ExoP_datasets():
     def __init__(self, target, main_data_folder=input_data_folder, data_folder=None):
         """
         Create an ExoP_datasets instance which will contains all the data on the studied target.
-
         Look at the content of the folder provided as input and load the data file contained in it.
         There is two ways to provide the input folder:
             - main_data_folder: You provide the data_folder which is made to receive the data
             from all the targets. It should contain a folder name after the target you want to
             study and which contain all the data.
             - data_folder: You provide directly the folder where the data are.
-
         ----
-
         Arguments:
             target : string,
                 Name of the target studied.
@@ -228,11 +213,9 @@ class ExoP_datasets():
     def plot_LC(dataset_key=None):
         """
         Plot a specific light-curve data set or all of them.
-
         To plot a specific LC dataset one should provide the dataset_key which is name of the
         instrument (followed by _number is several datasets from the same instrument). For example
         "K2".
-
         Arguments:
             dataset_key : string, optional,
                 Key indicating which dataset you want to plot. If not provided the function plot all
@@ -243,11 +226,9 @@ class ExoP_datasets():
     def plot_RV():
         """
         Plot a specific radial velocity data set or all of them.
-
         To plot a specific RV dataset one should provide the dataset_key which is name of the
         instrument (followed by _number is several datasets from the same instrument). For example
         "SOPHIE".
-
         Arguments:
             dataset_key : string, optional,
                 Key indicating which dataset you want to plot. If not provided the function plot all
@@ -259,7 +240,6 @@ class ExoP_datasets():
 class ExoP_timeserie():
     """
     Exoplanet time-serie data class.
-
     This class should not be instanciated directly it's a parent class for the classes LightCurve,
     RV (and SED) to define common attributes and method for example the __init__ method of
     ExoP_timeserie should be called at the beginning of the __init__ method of LightCurve and RV
@@ -278,11 +258,8 @@ class ExoP_timeserie():
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create an ExoP_timeserie instance.
-
         This class is not supposed to be instanciate directly. Use the LightCurve or RV classes.
-
         ----
-
         Arguments:
             filename : string
                 Name of file which contains the data
@@ -312,7 +289,6 @@ class ExoP_timeserie():
 class LightCurve(ExoP_timeserie):
     """
     Light-curve class.
-
     Instances will contain the light-curve data of one dataset in the data attribute.
     It also contains functions to visualize (plot) and manipulate the light-curve (cut around the
     transit, detrend)
@@ -324,16 +300,13 @@ class LightCurve(ExoP_timeserie):
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create a LightCurve instance which contains the content of a LC data file.
-
         Look at the content of the file given by filename provided as input. There is two ways to
         provide the folder where filename is:
             - main_data_folder and target: You provide the data_folder which is made to receive the
             data from all the targets. It should contain a folder name after the target you want to
             study and which contain all the data. The name of the target is in the filename
             - data_folder: You provide directly the folder where the data are.
-
         ----
-
         Arguments:
             filename : string
                 Name of file which contains the data
@@ -351,7 +324,6 @@ class LightCurve(ExoP_timeserie):
     def _read(self, skip_rows=1):
         """
         Read light curve into a pandas database.
-
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
@@ -376,7 +348,6 @@ class LightCurve(ExoP_timeserie):
     def plot(self):
         """
         Plot function to visualise the data.
-
         This is not very pretty but it plots the flux versus time and the error bars
         """
         self.data.plot(y="flux", yerr="flux_err")
@@ -386,7 +357,6 @@ class LightCurve(ExoP_timeserie):
 class RV(ExoP_timeserie):
     """
     Radial velocities class.
-
     Instances will contain the radial velocity data of one dataset in the data attribute.
     It also contains functions to visualize (plot) and manipulate the rvs (??)
     """
@@ -397,16 +367,13 @@ class RV(ExoP_timeserie):
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create a RV instance which contains the content of a Radial velocity data file.
-
         Look at the content of the file given by filename provided as input. There is two ways to
         provide the folder where filename is:
             - main_data_folder and target: You provide the data_folder which is made to receive the
             data from all the targets. It should contain a folder name after the target you want to
             study and which contain all the data. The name of the target is in the filename
             - data_folder: You provide directly the folder where the data are.
-
         ----
-
         Arguments:
             filename : string
                 Name of file which contains the data
@@ -424,7 +391,6 @@ class RV(ExoP_timeserie):
     def _read(self, skip_rows=1):
         """
         Read radial velocities into a pandas database.
-
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
@@ -449,7 +415,6 @@ class RV(ExoP_timeserie):
     def plot(self):
         """
         Plot function to visualise the data.
-
         This is not very pretty but it plots the flux versus time and the error bars
         """
         self.data.plot(y="rv", yerr="rv_err")
