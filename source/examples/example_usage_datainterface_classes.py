@@ -25,6 +25,6 @@ K2_29_dataset.lc_datasets['K2'].data
 K2_29_dataset.lc_datasets['K2'].plot()
 
 # Same thing for the RVs
-K2_29_dataset.lc_datasets['SOPHIE']
-K2_29_dataset.lc_datasets['SOPHIE'].data
-K2_29_dataset.lc_datasets['SOPHIE'].plot()
+K2_29_dataset.rv_datasets['SOPHIE']
+K2_29_dataset.rv_datasets['SOPHIE'].data
+K2_29_dataset.rv_datasets['SOPHIE'].plot()
