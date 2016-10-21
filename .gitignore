@@ -3,9 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Common stuff
+source/software_parameters.py
 
-# my stuff
-source/software_parameters.py 
+# Olivier's stuff
+setenv_lisa.bash
 
 
 # C extensions
