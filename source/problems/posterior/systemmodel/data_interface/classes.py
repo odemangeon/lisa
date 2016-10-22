@@ -2,8 +2,10 @@
 # -*- coding:  utf-8 -*-
 """
 Classes module.
+
 The objective of this package is to provides the data classes to store and manipulate radial
 velocity and light-curve data sets.
+
 @TODO:
     - plot_LC method of ExoP_datasets
     - plot_RV method of ExoP_datasets
@@ -15,16 +17,47 @@ import os
 import os.path
 from collections import OrderedDict
 import logging
+import pdb
 
 from .....software_parameters import input_data_folder
 
 logger = logging.getLogger()
 
 
+def read_datasetsfile(filepath):
+    """
+    Read the datasets input file and return a list of dataset files to be used.
+
+    ----
+
+    Arguments:
+        filepath: string,
+            path to the datasets file.
+    """
+    if os.path.exists(filepath):
+        logger.debug("file exists: {}".format(filepath))
+        list_files = []
+        with open(filepath, 'r') as f:
+            for line in f.readlines():
+                line_striped = line.strip(" \n")
+                logger.debug("raw line: {}striped line: {}".format(line, line_striped))
+                if not(line_striped.startswith("#")) and (len(line_striped) > 0):
+                    logger.debug("line accepted as filename: {}".format(True))
+                    list_files.append(line_striped)
+                else:
+                    logger.debug("line accepted as filename: {}".format(False))
+    else:
+        error_msg = "file doesn't exist: {}".format(filepath)
+        raise ValueError(error_msg)
+    return list_files
+
+
 def interpret_data_filename(data_file_name):
     """
     Interpret data file name.
+
     ----
+
     Arguments:
         data_file_name : string,
             Data file name
@@ -59,7 +92,9 @@ def interpret_data_filename(data_file_name):
 def interpret_dataset_key(dataset_key):
     """
     Interpret dataset key.
+
     ----
+
     Arguments:
         dataset_key : string,
             dataset_key
@@ -85,7 +120,9 @@ def interpret_dataset_key(dataset_key):
 def build_dataset_key(instrument, number=None):
     """
     build dataset key.
+
     ----
+
     Arguments:
         instrument : string,
             instrument name
@@ -104,6 +141,7 @@ def build_dataset_key(instrument, number=None):
 class ExoP_datasets():
     """
     Exoplanet data sets.
+
     Gather all the datasets from the different types:
         - radial velocities
         - light-curves
@@ -116,17 +154,22 @@ class ExoP_datasets():
 
     target_name = None
     folder = None
+    datasets_file = None
 
-    def __init__(self, target, main_data_folder=input_data_folder, data_folder=None):
+    def __init__(self, target, main_data_folder=input_data_folder, data_folder=None,
+                 datasets_file=None):
         """
         Create an ExoP_datasets instance which will contains all the data on the studied target.
+
         Look at the content of the folder provided as input and load the data file contained in it.
         There is two ways to provide the input folder:
             - main_data_folder: You provide the data_folder which is made to receive the data
             from all the targets. It should contain a folder name after the target you want to
             study and which contain all the data.
             - data_folder: You provide directly the folder where the data are.
+
         ----
+
         Arguments:
             target : string,
                 Name of the target studied.
@@ -136,6 +179,12 @@ class ExoP_datasets():
             data_folder : string,
                 path to the folder which contain the data. If provided the main_data_folder argument
                 is ignored.
+            datasets_filename: string
+                Path to the datasets file. If this file is provided and exists and is not empty.
+                Only the datasets files mentioned in this file will be considered.
+
+        Returns:
+            ExoP_datasets instance
         """
         self.target_name = target
 
@@ -144,6 +193,18 @@ class ExoP_datasets():
         else:
             folder = os.path.join(main_data_folder, target)
         self.folder = folder
+
+        if datasets_file is not None:
+            self.datasets_file = datasets_file
+            l_files = read_datasetsfile(self.datasets_file)
+            if len(l_files) > 0:
+                logger.debug("Datasets file content: {}".format(l_files))
+                l_input_files_provided = True
+            else:
+                logger.debug("Datasets is empty.")
+                l_input_files_provided = False
+        else:
+            l_input_files_provided = False
 
         if not(os.path.isdir(folder)):
             error_msg = "Folder doesn't exist: {}".format(folder)
@@ -156,6 +217,11 @@ class ExoP_datasets():
             if not(os.path.isfile(os.path.join(folder, content))):
                 logger.info("Content is not a file and is ignored: {}".format(content))
             try:
+                if l_input_files_provided:
+                    if content not in l_files:
+                        logger.info("Content ignored because not in the datasets files: {}"
+                                    "".format(content))
+                        continue
                 filename_info = interpret_data_filename(content)
                 if filename_info is None:
                     continue
@@ -213,9 +279,13 @@ class ExoP_datasets():
     def plot_LC(dataset_key=None):
         """
         Plot a specific light-curve data set or all of them.
+
         To plot a specific LC dataset one should provide the dataset_key which is name of the
         instrument (followed by _number is several datasets from the same instrument). For example
         "K2".
+
+        ----
+
         Arguments:
             dataset_key : string, optional,
                 Key indicating which dataset you want to plot. If not provided the function plot all
@@ -226,9 +296,13 @@ class ExoP_datasets():
     def plot_RV():
         """
         Plot a specific radial velocity data set or all of them.
+
         To plot a specific RV dataset one should provide the dataset_key which is name of the
         instrument (followed by _number is several datasets from the same instrument). For example
         "SOPHIE".
+
+        ----
+
         Arguments:
             dataset_key : string, optional,
                 Key indicating which dataset you want to plot. If not provided the function plot all
@@ -240,6 +314,7 @@ class ExoP_datasets():
 class ExoP_timeserie():
     """
     Exoplanet time-serie data class.
+
     This class should not be instanciated directly it's a parent class for the classes LightCurve,
     RV (and SED) to define common attributes and method for example the __init__ method of
     ExoP_timeserie should be called at the beginning of the __init__ method of LightCurve and RV
@@ -258,8 +333,11 @@ class ExoP_timeserie():
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create an ExoP_timeserie instance.
+
         This class is not supposed to be instanciate directly. Use the LightCurve or RV classes.
+
         ----
+
         Arguments:
             filename : string
                 Name of file which contains the data
@@ -289,6 +367,7 @@ class ExoP_timeserie():
 class LightCurve(ExoP_timeserie):
     """
     Light-curve class.
+
     Instances will contain the light-curve data of one dataset in the data attribute.
     It also contains functions to visualize (plot) and manipulate the light-curve (cut around the
     transit, detrend)
@@ -300,13 +379,16 @@ class LightCurve(ExoP_timeserie):
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create a LightCurve instance which contains the content of a LC data file.
+
         Look at the content of the file given by filename provided as input. There is two ways to
         provide the folder where filename is:
             - main_data_folder and target: You provide the data_folder which is made to receive the
             data from all the targets. It should contain a folder name after the target you want to
             study and which contain all the data. The name of the target is in the filename
             - data_folder: You provide directly the folder where the data are.
+
         ----
+
         Arguments:
             filename : string
                 Name of file which contains the data
@@ -324,6 +406,7 @@ class LightCurve(ExoP_timeserie):
     def _read(self, skip_rows=1):
         """
         Read light curve into a pandas database.
+
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
