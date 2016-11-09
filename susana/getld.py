@@ -1,7 +1,8 @@
 import numpy as np
 from IPython.display import display, Latex
 
-from ldtk import LDPSetCreator, BoxcarFilter
+from ldtk import LDPSetCreator, BoxcarFilter,TabulatedFilter
+
 
 
 import ldtk
@@ -16,10 +17,22 @@ filters = [BoxcarFilter('a',450,550),
            BoxcarFilter('c',850,950)]
 '''
 
+
+
 # kepler
 amp,tran  = np.genfromtxt('kepler_response_hires1.txt', unpack=True)
 
-filters=[amp,tran ]
+#filters=[amp,tran ]
+
+# use this function
+#ldtk.filters.TabulatedFilter
+#check this
+#ldtk.filters.TabulatedFilter?
+
+
+filters= [TabulatedFilter('kepler' ,amp,  tm=tran, tmf=1.0)]
+
+
 
 #set stellar parameters or read them
 teff = (5400,50)
@@ -32,6 +45,7 @@ sc = LDPSetCreator(teff=teff,logg=logg , z=z, filters=filters)
 
 
 #create the limb darkening profiles with their uncertainties for each filter, all contained in an LDPSet object.
+# using an MCMC
 ps = sc.create_profiles(nsamples=2000)
 ps.resample_linear_z()
 
@@ -40,8 +54,11 @@ ps.resample_linear_z()
 
 
 
-# get quadratic limb darkening coeficients are errors
+# get quadratic limb darkening coeficients and errors
 qc,qe = ps.coeffs_qd()
+
+print(qc)
+print(qe)
 
 #other options are
 # linear ps.coeffs_ln()
@@ -50,9 +67,15 @@ qc,qe = ps.coeffs_qd()
 
 
 # print in the nice way the resutls
+# this doesnt work but the next line does
 for i,(c,e) in enumerate(zip(qc,qe)):
-    display(Latex('u$_{i:d} = {c[0]:5.4f} \pm {e[0]:5.4f}\quad$'
-                  'v$_{i:d} = {c[1]:5.4f} \pm {e[1]:5.4f}$'.format(i=i+1,c=c,e=e)))
+    print(display(Latex('u$_{i:d} = {c[0]:5.4f} \pm {e[0]:5.4f}\quad$'
+                  'v$_{i:d} = {c[1]:5.4f} \pm {e[1]:5.4f}$'.format(i=i+1,c=c,e=e))))
+
+for i,(c,e) in enumerate(zip(qc,qe)):
+    print('u$_{%.d} = %.4f \pm +%.4f$' % (i,  c[0],  e[0]))
+    print('v$_{%.d} = %.4f \pm +%.4f$' % (i,  c[1],  e[1]))
+
 
 
 # if we wasnt to use mcmc and a multipliver for the errors
@@ -66,3 +89,14 @@ qc,qe = ps.coeffs_qd(do_mc=True, n_mc_samples=10000)
 for i,(c,e) in enumerate(zip(qc,qe)):
     display(Latex('u$_{i:d} = {c[0]:5.4f} \pm {e[0]:5.4f}\quad$'
                   'v$_{i:d} = {c[1]:5.4f} \pm {e[1]:5.4f}$'.format(i=i+1,c=c,e=e)))
+
+
+for i,(c,e) in enumerate(zip(qc,qe)):
+    print('u$_{%.d} = %.4f \pm +%.4f$' % (i,  c[0],  e[0]))
+    print('v$_{%.d} = %.4f \pm +%.4f$' % (i,  c[1],  e[1]))
+
+
+'''
+compare with the result using IDL kepler and same stellar values
+0.47500001      0.21798000
+'''
