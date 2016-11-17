@@ -69,8 +69,8 @@ print(qe)
 # print in the nice way the resutls
 # this doesnt work but the next line does
 for i,(c,e) in enumerate(zip(qc,qe)):
-    print(display(Latex('u$_{i:d} = {c[0]:5.4f} \pm {e[0]:5.4f}\quad$'
-                  'v$_{i:d} = {c[1]:5.4f} \pm {e[1]:5.4f}$'.format(i=i+1,c=c,e=e))))
+    display(Latex('u$_{i:d} = {c[0]:5.4f} \pm {e[0]:5.4f}\quad$'
+                  'v$_{i:d} = {c[1]:5.4f} \pm {e[1]:5.4f}$'.format(i=i+1,c=c,e=e)))
 
 for i,(c,e) in enumerate(zip(qc,qe)):
     print('u$_{%.d} = %.4f \pm +%.4f$' % (i,  c[0],  e[0]))
