@@ -193,33 +193,35 @@ class SystemModel():
             self.params.ecc = self.ecc
             self.params.w = self.w
 
-            self.batman_model = batman.TransitModel(self.params, time, supersample_factor = self.supersample, exp_time = self.exp_time)
+            self.batman_model = batman.TransitModel(self.params,
+                                                    time,
+                                                    supersample_factor=self.supersample,
+                                                    exp_time=self.exp_time)
             light_curve = self.batman_model.light_curve(self.params)
 
         else:
             from pytransit import MandelAgol
-            model = MandelAgol(nldc = self.limb_dark ,exptime = self.exp_time, supersampling = self.supersample)
-            light_curve = model.evaluate(time, self.rp, self.u, self.t0, self.period, self.ar, self.inc * np.pi/180., self.ecc, self.w * np.pi/180.)
+            model = MandelAgol(nldc=self.limb_dark, exptime=self.exp_time,
+                               supersampling=self.supersample)
+            light_curve = model.evaluate(time, self.rp, self.u, self.t0, self.period, self.ar,
+                                         self.inc * np.pi / 180., self.ecc, self.w * np.pi / 180.)
 
         return light_curve
 
-
-
-
-    def get_rv(self,time):
+    def get_rv(self, time):
         """
         Produce simulated rv
         """
         from ajplanet import pl_rv_array
-        rv_model = pl_rv_array(time, self.rvsys, self.K, np.deg2rad(self.w), self.ecc, self.t0, self.period)
+        rv_model = pl_rv_array(time, self.rvsys, self.K, np.deg2rad(self.w), self.ecc, self.t0,
+                               self.period)
         return rv_model
-
 
     def get_lc_and_rv(self, time_lc, time_rv):
         """
         Produce a simulated lc and rv
         """
         light_curve = self.get_lc(time_lc)
-        rv_curve =  self.get_rv(time_rv)
+        rv_curve = self.get_rv(time_rv)
 
         return light_curve, rv_curve
