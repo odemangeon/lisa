@@ -124,20 +124,28 @@ class Parameter(object):
                 good alignment in the input file.
         """
         name = self.get_short_name()
+        entete_param = "{0} : {{".format(name)
+        space_entete_param = spacestring_like(entete_param)
+        text = ""
+        # First is the name of the parameter
         if texttab_1tline:
-            text = text_tab + "{0} = {{'free': True,\n".format(name)
-        else:
-            text = "{0} = {{'free': True,\n".format(name)
-        text += (text_tab + spacestring_like("{0} = {{".format(name)) +
-                 "'prior': {{'joint_prior': False, 'joint_prior_ref': None,\n".format(name))
-        text += (text_tab + spacestring_like("{0} = {{".format(name)) +
-                 spacestring_like("'prior': {") + "'type': None, 'args': {}\n")
-        text += (text_tab + spacestring_like("{0} = {{".format(name)) +
-                 spacestring_like("'prior': {") + "}\n")
-        text += (text_tab + spacestring_like("{0} = {{".format(name)) +
-                 "'value': None\n")
-        text += (text_tab + spacestring_like("{0} = {{".format(name)) +
-                 "}\n")
+            text += text_tab
+        text += entete_param
+        # First key of the parameter dictionnary is 'free' for free parameter or fixed.
+        text += "'free': True,\n".format(name)
+        # Second key is for the priors
+        entete_prior = "'prior': {"
+        space_entete_prior = spacestring_like(entete_prior)
+        text += text_tab + space_entete_param + entete_prior
+        # Classical marginal prior keys
+        text += "'type': None, 'args': { }\n"
+        # Joint prior keys (for later use, not implemented yet in what follows)
+        # text += (text_tab + space_entete_param + space_entete_prior +
+        #          "'joint_prior': False, 'joint_prior_ref': None,\n")
+        text += text_tab + space_entete_param + space_entete_prior + "}\n"
+        # Third and last key is the value
+        text += text_tab + space_entete_param + "'value': None\n"
+        text += text_tab + space_entete_param + "}\n"
         return text
 
     def get_short_name(self):
