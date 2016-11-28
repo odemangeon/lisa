@@ -49,6 +49,7 @@ def read_datasetsfile(filepath):
     else:
         error_msg = "file doesn't exist: {}".format(filepath)
         raise ValueError(error_msg)
+    logger.debug("List of files to use: {}".format(list_files))
     return list_files
 
 
@@ -148,14 +149,6 @@ class ExoP_datasets():
         - spectral energy distribution
     """
 
-    rv_datasets = OrderedDict()
-    lc_datasets = OrderedDict()
-    sed_datasets = OrderedDict()
-
-    target_name = None
-    folder = None
-    datasets_file = None
-
     def __init__(self, target, main_data_folder=input_data_folder, data_folder=None,
                  datasets_file=None):
         """
@@ -188,6 +181,10 @@ class ExoP_datasets():
         """
         self.target_name = target
 
+        self.rv_datasets = OrderedDict()
+        self.lc_datasets = OrderedDict()
+        self.sed_datasets = OrderedDict()
+
         if data_folder is not None:
             folder = data_folder
         else:
@@ -211,35 +208,40 @@ class ExoP_datasets():
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-        logger.info("List the content of {}".format(folder))
         folder_content = os.listdir(folder)
+        logger.info("List the content of {}:\n{}".format(folder, folder_content))
         for content in folder_content:
             if not(os.path.isfile(os.path.join(folder, content))):
                 logger.info("Content is not a file and is ignored: {}".format(content))
-            try:
-                if l_input_files_provided:
-                    if content not in l_files:
-                        logger.info("Content ignored because not in the datasets files: {}"
-                                    "".format(content))
+            else:
+                try:
+                    if l_input_files_provided:
+                        if content not in l_files:
+                            logger.info("Content ignored because not in the datasets files: {}"
+                                        "".format(content))
+                            continue
+                    filename_info = interpret_data_filename(content)
+                    if filename_info is None:
                         continue
-                filename_info = interpret_data_filename(content)
-                if filename_info is None:
-                    continue
-                if filename_info["target"] != self.target_name:
-                    logger.warning("Content target is not the provided target "
-                                   "and is ignored: {}".format(content))
-                    continue
-                key = build_dataset_key(filename_info["instrument"],
-                                        number=filename_info["number"])
-                if filename_info["type"] == "LC":
-                    self.lc_datasets[key] = LightCurve(content, data_folder=folder)
-                elif filename_info["type"] == "RV":
-                    self.rv_datasets[key] = RV(content, data_folder=folder)
-                elif filename_info["type"] == "SED":
-                    logger.warning("Data file type SED not implemented yet.")
-                    continue
-            except:
-                raise
+                    if filename_info["target"] != self.target_name:
+                        logger.warning("Content target is not the provided target "
+                                       "and is ignored: {}".format(content))
+                        continue
+                    key = build_dataset_key(filename_info["instrument"],
+                                            number=filename_info["number"])
+                    if filename_info["type"] == "LC":
+                        self.lc_datasets[key] = LightCurve(content, data_folder=folder)
+                        logger.info("Content accepted as LC datasets files and as been loaded: {}\n"
+                                    "".format(content))
+                    elif filename_info["type"] == "RV":
+                        self.rv_datasets[key] = RV(content, data_folder=folder)
+                        logger.info("Content accepted as RV datasets files and as been loaded: {}\n"
+                                    "".format(content))
+                    elif filename_info["type"] == "SED":
+                        logger.warning("Data file type SED not implemented yet.")
+                        continue
+                except:
+                    raise
 
     def get_LC_dataset_keys(self):
         """Return the list of light-curve dataset_key available."""
@@ -275,6 +277,14 @@ class ExoP_datasets():
                 result[key_info["instrument"]].append(key)
             else:
                 result[key_info["instrument"]] = [key]
+
+    def isin_LC_datasets(self, key):
+        """Indicate if the LC dataset designed by key is exisiting and loaded."""
+        return key in self.lc_datasets
+
+    def isin_RV_datasets(self, key):
+        """Indicate if the RV dataset designed by key is exisiting and loaded."""
+        return key in self.rv_datasets
 
     def plot_LC(dataset_key=None):
         """
@@ -431,6 +441,7 @@ class LightCurve(ExoP_timeserie):
     def plot(self):
         """
         Plot function to visualise the data.
+
         This is not very pretty but it plots the flux versus time and the error bars
         """
         self.data.plot(y="flux", yerr="flux_err")
@@ -440,6 +451,7 @@ class LightCurve(ExoP_timeserie):
 class RV(ExoP_timeserie):
     """
     Radial velocities class.
+
     Instances will contain the radial velocity data of one dataset in the data attribute.
     It also contains functions to visualize (plot) and manipulate the rvs (??)
     """
@@ -450,6 +462,7 @@ class RV(ExoP_timeserie):
     def __init__(self, filename, main_data_folder=input_data_folder, data_folder=None):
         """
         Create a RV instance which contains the content of a Radial velocity data file.
+
         Look at the content of the file given by filename provided as input. There is two ways to
         provide the folder where filename is:
             - main_data_folder and target: You provide the data_folder which is made to receive the
@@ -474,6 +487,7 @@ class RV(ExoP_timeserie):
     def _read(self, skip_rows=1):
         """
         Read radial velocities into a pandas database.
+
         path should alwasy be the same...or given by person
         file name should denine the object and the run (type of analysis)
         need to define format of file to know how many rows to skip
@@ -498,6 +512,7 @@ class RV(ExoP_timeserie):
     def plot(self):
         """
         Plot function to visualise the data.
+
         This is not very pretty but it plots the flux versus time and the error bars
         """
         self.data.plot(y="rv", yerr="rv_err")
