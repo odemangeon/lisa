@@ -5,6 +5,10 @@
   logg=4.5
   metal=0.0
 
+;;wsp103
+  teff=6110.
+  logg = 4.22
+  metal = 0.06 
 ;;filters   0=u,1=v,2=b,3=y,4=U,5=B,6=V,7=R,8=I,9=J,10=H,11=K 
   
 ;; ;;quadratic limb darkening from idl
