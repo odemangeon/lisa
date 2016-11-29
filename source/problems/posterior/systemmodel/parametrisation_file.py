@@ -57,11 +57,3 @@ jitter = {"free": True,
 
 # For LC each dataset
 bandwidth = [None, None]  # bandwidth in microns
-
-
-Star_A = {M_star:,
-          R_star: }
-
-Planet_b = {}
-
-LC_data

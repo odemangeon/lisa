@@ -10,6 +10,7 @@ Test script to creat the input parameter file.
 """
 import logging
 import os
+import sys
 # import pdb
 
 import source.problems.posterior.systemmodel.parameter as par
@@ -23,6 +24,13 @@ from source.software_parameters import input_run_folder
 
 logger = logging.getLogger()
 logger.setLevel("DEBUG")
+
+if len(logger.handlers) == 0:
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
 
 # Test the string production with only a parameter
 logger.info("\n#### Test the production of a string for only one parameter "
@@ -75,7 +83,7 @@ for param in instrument_test.get_list_params():
 logger.info("Show the string")
 print(instrument_test.get_paramfile_section())
 
-# Test the string production with only a Planet object
+# Test the string production with an instrument, a planet and a star
 logger.info("\n#### Test the production of a file in the run directory with an instrument, a planet"
             " , and a star and reading it after as we want to do we the input definition file.\n")
 logger.info("Select and create run_folder")
@@ -84,7 +92,8 @@ if not(os.path.isdir(run_folder)):
     logger.info("The run folder doesn't exist and is created: {}".format(run_folder))
     os.makedirs(run_folder)
 logger.info("Create file")
-with open(run_folder + "/" + "run_input_file.py", "x") as f_input:
+with open(os.path.join(run_folder, "run_input_file.py"), "w") as f_input:
     f_input.write(star_test.get_paramfile_section())
     f_input.write(planet_test.get_paramfile_section())
     f_input.write(instrument_test.get_paramfile_section())
+exec(open(os.path.join(run_folder, "run_input_file.py")).read())

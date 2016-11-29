@@ -55,7 +55,7 @@ class Planet(object):
         ## ecc . cos(w)
         self.ecosw = Parameter(name="ecosw")
         ## ecc . sin(w)
-        self.esinw = Parameter(name="ecosw")
+        self.esinw = Parameter(name="esinw")
         ## List of parameters
         self.parameter_list = [self.R, self.M, self.rho, self.age, self.period, self.a, self.ecc,
                                self.inc, self.b, self.w, self.Omega, self.t0, self.K, self.R_rat,
@@ -69,6 +69,11 @@ class Planet(object):
     def get_full_name(self):
         """Return the full name of the planet."""
         return self.host_star.get_short_name() + "_" + self.name
+
+    def get_full_name_code(self):
+        """Return the full name of the planet."""
+        name = self.get_full_name()
+        return name.replace("-", "")
 
     def get_parametrisation(self):
         """Return the list of main parameters (non redondant parameter)."""
@@ -92,7 +97,7 @@ class Planet(object):
                 text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
         """
-        name = self.get_full_name()
+        name = self.get_full_name_code()
         entete = "{0} = {{".format(name)
         text = text_tab + entete
         text_tab_param = spacestring_like(text_tab + entete)

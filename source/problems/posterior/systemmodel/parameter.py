@@ -124,7 +124,7 @@ class Parameter(object):
                 good alignment in the input file.
         """
         name = self.get_short_name()
-        entete_param = "{0} : {{".format(name)
+        entete_param = "'{0}': {{".format(name)
         space_entete_param = spacestring_like(entete_param)
         text = ""
         # First is the name of the parameter
@@ -142,10 +142,10 @@ class Parameter(object):
         # Joint prior keys (for later use, not implemented yet in what follows)
         # text += (text_tab + space_entete_param + space_entete_prior +
         #          "'joint_prior': False, 'joint_prior_ref': None,\n")
-        text += text_tab + space_entete_param + space_entete_prior + "}\n"
+        text += text_tab + space_entete_param + space_entete_prior + "},\n"
         # Third and last key is the value
         text += text_tab + space_entete_param + "'value': None\n"
-        text += text_tab + space_entete_param + "}\n"
+        text += text_tab + space_entete_param + "},\n"
         return text
 
     def get_short_name(self):

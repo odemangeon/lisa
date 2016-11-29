@@ -20,6 +20,7 @@ import logging
 import pdb
 
 from .....software_parameters import input_data_folder
+from ..instrument import Instrument
 
 logger = logging.getLogger()
 
@@ -181,16 +182,28 @@ class ExoP_datasets():
         """
         self.target_name = target
 
+        # Initialise instruments attributes
+        self.rv_instruments = OrderedDict()
+        self.lc_instruments = OrderedDict()
+        self.sed_instruments = OrderedDict()
+
+        # Initialise datasets attributes
         self.rv_datasets = OrderedDict()
         self.lc_datasets = OrderedDict()
         self.sed_datasets = OrderedDict()
 
+        # Initialise data_folder attribute
         if data_folder is not None:
             folder = data_folder
         else:
             folder = os.path.join(main_data_folder, target)
+        if not(os.path.isdir(folder)):
+            error_msg = "Folder doesn't exist: {}".format(folder)
+            logger.error(error_msg)
+            raise ValueError(error_msg)
         self.folder = folder
 
+        # Read datasets_file
         if datasets_file is not None:
             self.datasets_file = datasets_file
             l_files = read_datasetsfile(self.datasets_file)
@@ -203,11 +216,7 @@ class ExoP_datasets():
         else:
             l_input_files_provided = False
 
-        if not(os.path.isdir(folder)):
-            error_msg = "Folder doesn't exist: {}".format(folder)
-            logger.error(error_msg)
-            raise ValueError(error_msg)
-
+        # Examine data folder to look for available datasets
         folder_content = os.listdir(folder)
         logger.info("List the content of {}:\n{}".format(folder, folder_content))
         for content in folder_content:
@@ -215,31 +224,47 @@ class ExoP_datasets():
                 logger.info("Content is not a file and is ignored: {}".format(content))
             else:
                 try:
+                    # Check if filename is in the list of datasets specified by the datasets_files
                     if l_input_files_provided:
                         if content not in l_files:
                             logger.info("Content ignored because not in the datasets files: {}"
                                         "".format(content))
                             continue
                     filename_info = interpret_data_filename(content)
+                    # Check if filename is compatible with file name convention
                     if filename_info is None:
                         continue
+                    # Check if the target associated with the file is the good one
                     if filename_info["target"] != self.target_name:
                         logger.warning("Content target is not the provided target "
                                        "and is ignored: {}".format(content))
                         continue
+                    # Build a dataset (RV, LightCurve, ...) instance and store in datasets
+                    # dictionnaries
                     key = build_dataset_key(filename_info["instrument"],
                                             number=filename_info["number"])
-                    if filename_info["type"] == "LC":
+                    inst_type = filename_info["type"]
+                    if inst_type == "LC":
                         self.lc_datasets[key] = LightCurve(content, data_folder=folder)
                         logger.info("Content accepted as LC datasets files and as been loaded: {}\n"
                                     "".format(content))
-                    elif filename_info["type"] == "RV":
+                    elif inst_type == "RV":
                         self.rv_datasets[key] = RV(content, data_folder=folder)
                         logger.info("Content accepted as RV datasets files and as been loaded: {}\n"
                                     "".format(content))
-                    elif filename_info["type"] == "SED":
+                    elif inst_type == "SED":
                         logger.warning("Data file type SED not implemented yet.")
                         continue
+                    # Build an instrument instance (if needed) and store in isntruments
+                    # dictionnaries
+                    inst_name = filename_info["instrument"]
+                    inst_exist, _ = self.isin_instruments(inst_name)
+                    logger.info("Instrument {} exists already: {}".format(inst_name, inst_exist))
+                    if not inst_exist:
+                        if inst_type == "LC":
+                            self.lc_instruments[inst_name] = Instrument(inst_name, inst_type)
+                        elif inst_type == "RV":
+                            self.rv_instruments[inst_name] = Instrument(inst_name, inst_type)
                 except:
                     raise
 
@@ -248,13 +273,26 @@ class ExoP_datasets():
         return list(self.lc_datasets.keys())
 
     def get_RV_dataset_keys(self):
-        """Return the list of light-curve dataset_key available."""
+        """Return the list of radial velocity dataset_key available."""
         return list(self.rv_datasets.keys())
 
     def get_dataset_keys(self):
         """Return a dictionnary with the lists of LC, RV (and SED) dataset_key available."""
         return {"LC": self.get_LC_dataset_keys(),
                 "RV": self.get_RV_dataset_keys()}
+
+    def get_LC_instrument_keys(self):
+        """Return the list of light-curve instruments available."""
+        return list(self.lc_instruments.keys())
+
+    def get_RV_instrument_keys(self):
+        """Return the list of radial velocity instruments available."""
+        return list(self.rv_instruments.keys())
+
+    def get_instrument_keys(self):
+        """Return a dictionnary with the lists of LC, RV (and SED) isntrument_key available."""
+        return {"LC": self.get_LC_instrument_keys(),
+                "RV": self.get_RV_instrument_keys()}
 
     def get_LC_dataset_keys_perinstrument(self):
         """Return a dictionnary with the lists of LC dataset_key per isntrument."""
@@ -285,6 +323,32 @@ class ExoP_datasets():
     def isin_RV_datasets(self, key):
         """Indicate if the RV dataset designed by key is exisiting and loaded."""
         return key in self.rv_datasets
+
+    def isin_datasets(self, key):
+        """Indicate if the dataset designed by key is exisiting and loaded and if yes which type."""
+        if self.isin_LC_datasets(key):
+            return True, "LC"
+        elif self.isin_RV_datasets(key):
+            return True, "RV"
+        else:
+            return False, None
+
+    def isin_LC_instruments(self, key):
+        """Indicate if the LC instrument designed by key is exisiting."""
+        return key in self.lc_instruments
+
+    def isin_RV_instruments(self, key):
+        """Indicate if the RV instrument designed by key is exisiting."""
+        return key in self.rv_instruments
+
+    def isin_instruments(self, key):
+        """Indicate if the instrument designed by key is exisiting and if yes which type."""
+        if self.isin_LC_instruments(key):
+            return True, "LC"
+        elif self.isin_RV_instruments(key):
+            return True, "RV"
+        else:
+            return False, None
 
     def plot_LC(dataset_key=None):
         """
@@ -330,13 +394,6 @@ class ExoP_timeserie():
     ExoP_timeserie should be called at the beginning of the __init__ method of LightCurve and RV
     classes.
     """
-
-    target_name = None
-    file_name = None
-    folder = None
-    instrument_type = None
-    instrument_name = None
-    data = None  # Pandas.Dataframe
     flags_list = []
     _mandatory_columns = ["time"]  # Not sure if I should put time here if pandas time serie
 
@@ -366,6 +423,8 @@ class ExoP_timeserie():
 
         self.file_name = filename
         self.target_name = filename_info["target"]
+        self.instrument_type = filename_info["type"]
+        self.instrument_name = filename_info["instrument"]
 
         if data_folder is not None:
             folder = data_folder

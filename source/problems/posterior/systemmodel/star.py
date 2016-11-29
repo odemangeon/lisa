@@ -54,7 +54,7 @@ class Star(object):
         ## Metallicity
         self.feh = Parameter(name="feh")
         ## dict of the list of limb darkening coefficients for an instrument
-        limb_dark_coeff = {}
+        limb_dark_coeff = {}  # Dict or vector
         ## dict of limb darkening law for an instrument
         limb_dark_law = {}
         ## List of parameters
@@ -69,6 +69,11 @@ class Star(object):
     def get_full_name(self):
         """Return the full name of the star."""
         return self.name
+
+    def get_short_name_code(self):
+        """Return the full name of the planet."""
+        name = self.get_short_name()
+        return name.replace("-", "")
 
     def get_parametrisation(self):
         """Return the list of main parameters (non redondant parameter)."""
@@ -92,7 +97,7 @@ class Star(object):
                 text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
         """
-        name = self.get_short_name()
+        name = self.get_short_name_code()
         entete = "{0} = {{".format(name)
         text = text_tab + entete
         text_tab_param = spacestring_like(text_tab + entete)

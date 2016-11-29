@@ -31,13 +31,16 @@ K2_29_dataset = ExoP_datasets("K2-29", datasets_file=datasets_file)
 
 # The data are stored in OrderedDict whihc are behaving more or less like normal dict
 # This gives the keys of all the datasets available
-print(K2_29_dataset.get_dataset_keys())
+print("List of all datasets:{}".format(K2_29_dataset.get_dataset_keys()))
 
 # This gives the keys of all the LC datasets available
-print(K2_29_dataset.get_LC_dataset_keys())
+print("List of LC datasets:{}".format(K2_29_dataset.get_LC_dataset_keys()))
 
-# This gives the keys of all the LC datasets available
-print(K2_29_dataset.get_RV_dataset_keys())
+# This gives the keys of all the RV datasets available
+print("List of RV datasets:{}".format(K2_29_dataset.get_RV_dataset_keys()))
+
+# This gives the keys of all the RV datasets available
+print("List of all instruments:{}".format(K2_29_dataset.get_instrument_keys()))
 
 # If you want to access a particular LC dataset you do. This is a LightCurve Object.
 if K2_29_dataset.isin_LC_datasets("K2"):
@@ -46,12 +49,6 @@ if K2_29_dataset.isin_LC_datasets("K2"):
     print(K2_29_dataset.lc_datasets['K2'].data)
     print("Here is a plot of the data")
     K2_29_dataset.lc_datasets['K2'].plot()
-
-# The Dataframe containing the data, it's
-
-
-# If you want to plot the light-curve you do
-
 
 # Same thing for the RVs
 if K2_29_dataset.isin_RV_datasets("SOPHIE"):
