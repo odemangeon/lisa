@@ -19,8 +19,8 @@ from collections import OrderedDict
 import logging
 import pdb
 
-from .....software_parameters import input_data_folder
-from ..instrument import Instrument
+from ....software_parameters import input_data_folder
+from .instrument import Instrument
 
 logger = logging.getLogger()
 

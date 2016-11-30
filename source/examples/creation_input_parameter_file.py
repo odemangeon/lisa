@@ -4,19 +4,15 @@
 Test script to creat the input parameter file.
 
 @TODO:
-    - Do the creation of the string for the Instrument
-    - Compile instrument, star and planet string to create the full input parameter file
-    - Read and interpret the input parameter file
 """
 import logging
 import os
 import sys
 # import pdb
 
-import source.problems.posterior.systemmodel.parameter as par
-import source.problems.posterior.systemmodel.planet as pla
-import source.problems.posterior.systemmodel.star as sta
-import source.problems.posterior.systemmodel.instrument as ist
+from source.problems.posterior.systemmodel.core.parameter import Parameter
+from source.problems.posterior.systemmodel.gravgroup import GravGroup, Planet, Star
+from source.problems.posterior.systemmodel.instrument import Instrument
 
 from source.software_parameters import input_run_folder
 
@@ -37,10 +33,10 @@ logger.info("\n#### Test the production of a string for only one parameter "
             "for the input definition file.\n")
 
 logger.info("Create the parameter instance")
-param_test = par.Parameter(name="Param_Test", free=True, main=None, joint_prior=False,
-                           prior_type=None, prior_args=None,
-                           joint_prior_ref=None, joint_prior_pos=None,
-                           value=None)
+param_test = Parameter(name="Param_Test", free=True, main=None, joint_prior=False,
+                       prior_type=None, prior_args=None,
+                       joint_prior_ref=None, joint_prior_pos=None,
+                       value=None)
 logger.info("Show the string")
 print(param_test.get_paramfile_section())
 
@@ -48,9 +44,12 @@ print(param_test.get_paramfile_section())
 logger.info("\n#### Test the production of a string for a Star only "
             "for the input definition file.\n")
 
+# Create the GravGroup instance
+gravgroup_test = GravGroup(name="K2-19")
+
 # Create the star instance
 logger.info("Create the star instance")
-star_test = sta.Star(name="K2-19")
+star_test = Star(gravgroup=gravgroup_test, name="A")
 logger.info("Set parametrisation")
 for param in star_test.get_list_params():
     param.main = True
@@ -63,7 +62,7 @@ logger.info("\n#### Test the production of a string for a Planet only "
 
 # Create the planet instance
 logger.info("Create the planet instance")
-planet_test = pla.Planet(name="b", host_star=star_test)
+planet_test = Planet(gravgroup=gravgroup_test ,name="b")
 logger.info("Set parametrisation")
 for param in planet_test.get_list_params():
     param.main = True
@@ -75,8 +74,8 @@ logger.info("\n#### Test the production of a string for an instrument only "
             "for the input definition file.\n")
 
 # Create the instrument instance
-logger.info("Create the isntrument instance")
-instrument_test = ist.Instrument(name="SOPHIE", inst_type="RV")
+logger.info("Create the instrument instance")
+instrument_test = Instrument(name="SOPHIE", inst_type="RV")
 logger.info("Set parametrisation")
 for param in instrument_test.get_list_params():
     param.main = True
@@ -87,7 +86,7 @@ print(instrument_test.get_paramfile_section())
 logger.info("\n#### Test the production of a file in the run directory with an instrument, a planet"
             " , and a star and reading it after as we want to do we the input definition file.\n")
 logger.info("Select and create run_folder")
-run_folder = input_run_folder + "/" + star_test.get_short_name()
+run_folder = input_run_folder + "/" + gravgroup_test.get_name()
 if not(os.path.isdir(run_folder)):
     logger.info("The run folder doesn't exist and is created: {}".format(run_folder))
     os.makedirs(run_folder)

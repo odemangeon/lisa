@@ -4,9 +4,9 @@ import sys
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-from source.problems.posterior.systemmodel.data_interface.classes import ExoP_datasets
-from source.problems.posterior.systemmodel.data_interface.classes import LightCurve
-from source.problems.posterior.systemmodel.data_interface.classes import RV
+from source.problems.posterior.systemmodel.datasets import ExoP_datasets
+from source.problems.posterior.systemmodel.datasets import LightCurve
+from source.problems.posterior.systemmodel.datasets import RV
 from source.run import set_up_run
 
 # pdb.set_trace()

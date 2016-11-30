@@ -10,9 +10,19 @@ The objective of this package is to provides the classes to create exo systems a
     - Implement LD_model argument in __init__ of SystemModel
 """
 import numpy as np
+from string import ascii_lowercase
+from string import ascii_uppercase
 
-from ....software_parameters import input_data_folder
-from .data_interface.classes import ExoP_datasets
+from collections import OrderedDict
+
+from .planet import Planet
+from .star import Star
+
+
+def interpret_grav_group(grav_groups):
+    """
+
+    """
 
 
 class SystemModel():
@@ -25,26 +35,27 @@ class SystemModel():
     nb_star = 0
     nb_planet = 0
 
-    dynamic = False
-
-    ## List of available rv models
+    ## List of available rv models, the 1st element is used as default
     _rv_models = ["ajplanet"]
-    rv_model = None
 
-    ## List of available lc models
-    _lc_models = ["batman", "pytransit"]
-    transit_model = None
+    ## List of available lc models, the 1st element is used as default
+    _lc_models = ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"]
+
+    ## List of available limb-darkening models for each lc_models, the 1st element is used as
+    ## default
+    _ld_models = {"batman": ["quadratic", "nonlinear", "exponential", "logarithmic", "squareroot",
+                             "linear", "uniform", "custom"],
+                  "pytransit-MandelAgol": ["quadratic", "linear", "uniform"],
+                  "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
+                  }
 
     ## List of available analysis
     _analysis_types = ["lc", "rv", "lc+rv", "lc+rv+dynamic"]
-    analysis_type = None
 
-    datasets = None
-
-    def __init__(self,
-                 target, main_data_folder=input_data_folder, data_folder=None,
-                 analysis_type=None, transit_model=None, LD_model=None, rv_model=None,
-                 nb_planet=1, nb_star=1):
+    def __init__(self, system, analysis_type,
+                 transit_model=None, ld_model=None, rv_model=None,
+                 grav_groups=[{'stars': 1, 'planets': 1}, ]
+                 ):
         """
         Create SystemModel instance Object.
 
@@ -59,14 +70,8 @@ class SystemModel():
         ----
 
         Arguments:
-            target : string,
-                Name of the target studied.
-            main_data_folder : string, optional,
-                path to the data_folder which should contain a folder named after the target and
-                contain the data.
-            data_folder : string,
-                path to the folder which contain the data. If provided the main_data_folder argument
-                is ignored.
+            system : string,
+                Name of the system studied.
         """
         # Define the type of analysis
         if analysis_type in self._analysis_types:
@@ -79,37 +84,78 @@ class SystemModel():
             # transit
             if transit_model in self._lc_models:
                 self.transit_model = transit_model
+            elif transit_model is None:
+                self.transit_model = self._lc_models[0]
             else:
-                raise ValueError("transit_model should be in ['batman', 'pytransit']")
+                raise ValueError("transit_model should be in {}".format(self._lc_models))
             # Define the limb darkening model: I think we should have an argument to select the LD
             # model here.
-            if self.transit_model == 'batman':
-                # it can be changed later but I dont know how to make it 0 string
-                self.limb_dark = "quadratic"  # if  batman limb darkening model
+            if ld_model in self._ld_models[self.transit_model]:
+                self.ld_model = ld_model  # if  batman limb darkening model
+            elif ld_model is None:
+                self.ld_model = self._ld_models[self.transit_model][0]
             else:
-                self.limb_dark = 2  # if pyttransit , do we want to give the option now ?
+                raise ValueError("For transit model {}, ld_model should be in {}"
+                                 "".format(self.transit_model, self._ld_models[self.transit_model]))
 
         # Define the rv model used if needed
         if analysis_type in ['rv', 'lc+rv']:
             if rv_model in self._rv_models:
                 self.rv_model = rv_model
+            elif rv_model is None:
+                self.rv_model = self._rv_models[0]
             else:
-                raise ValueError("rv_model should be in ['ajplanet']")
+                raise ValueError("rv_model should be in {}".format(self._rv_models))
 
+        # Define if the model will use dynamic
         if analysis_type == "lc+rv+dynamic":
+            self.dynamic = True
             raise NotImplementedError("Models with dynamic have not been implemented yet.")
+        else:
+            self.dynamic = False
 
-        # Define the number of planets in the system
-        if nb_planet >= 1:
-            self.nb_planet = nb_planet
-        # Define the number of stars in the system
-        if nb_star >= 1:
-            self.nb_star = nb_star
+        # Define gravitational groups
+        interpret_grav_group(grav_groups=grav_groups)
+        ## TODO
 
-        # Create the ExoP_datasets instance and store it in the datasets attribute
-        self.datasets = ExoP_datasets(target,
-                                      main_data_folder=main_data_folder,
-                                      data_folder=data_folder)
+        # Initialise the stars in the system
+        self.stars = OrderedDict()
+        if isinstance(stars, int):
+            if stars >= 1:
+                if stars == 1:
+                    list_stars = []
+                else:
+                    list_stars = [L for L in ascii_uppercase[:stars]]
+            else:
+                raise ValueError("If you specify the number of stars, it should be "
+                                 "strictly positive ! Got {}".format(stars))
+        elif isinstance(stars, list) and isinstance(stars[0], str):
+            list_stars = stars
+        else:
+            raise ValueError("stars should be either a strictly positive int or a list of sting."
+                             "Got {}".format(stars))
+        if len(list_stars) == 0:
+            self.stars["A"] = Star(system=system)
+        else:
+            for L in list_stars:
+                self.stars["A"] = Star(system=system, name=L)
+
+        # Initialise the planets in the system
+        self.planets = OrderedDict()
+        if isinstance(planets, int):
+            if planets >= 1:
+                list_planets = [l for l in ascii_lowercase[1:planets + 1]]
+            else:
+                raise ValueError("If you specify the number of planets, it should be "
+                                 "strictly positive ! Got {}".format(planets))
+        elif isinstance(planets, list) and isinstance(planets[0], str):
+            list_planets = planets
+        elif
+        else:
+            raise ValueError("planets should be either a strictly positive int or a list of sting."
+                             "Got {}".format(planets))
+        for l in list_planets:
+            self.list_planets[l] = Planet(host_star=system + '_A', name=l)
 
         # Choose the parametrization. I think that if we want to be able to choose the set of
         # Jumping parameters, It's now. Don't clear right now how to do it.
