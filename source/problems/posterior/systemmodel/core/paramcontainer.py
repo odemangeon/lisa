@@ -17,13 +17,18 @@ logger = logging.getLogger()
 class ParamContainer(object):
     """docstring for ParamContainer."""
 
-    def __init__(self, name):
+    def __init__(self, name=""):
         """docstring ParamContainer init method."""
         super(ParamContainer, self).__init__()
         ## String: name of the instrument
         self.name = check_name(name)
         ## List of Parameter object
         self.parameter_list = []
+
+    def set_name(self, name):
+        """set the name of the ParamContainer."""
+        self.name = check_name(name)
+        logger.debug("Name of ParamContainer set to {}".format(check_name(name)))
 
     def get_name(self):
         """Return the name of the ParamContainer."""

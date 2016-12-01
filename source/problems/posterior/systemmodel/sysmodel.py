@@ -15,17 +15,11 @@ from string import ascii_uppercase
 
 from collections import OrderedDict
 
-from .planet import Planet
-from .star import Star
+from .gravgroup import GravGroup
+from tools.miscellaneous import check_name
 
 
-def interpret_grav_group(grav_groups):
-    """
-
-    """
-
-
-class SystemModel():
+class SystemModel(object):
     """
     Sysmodel class which defines the model used.
 
@@ -52,9 +46,9 @@ class SystemModel():
     ## List of available analysis
     _analysis_types = ["lc", "rv", "lc+rv", "lc+rv+dynamic"]
 
-    def __init__(self, system, analysis_type,
+    def __init__(self, name, analysis_type,
                  transit_model=None, ld_model=None, rv_model=None,
-                 grav_groups=[{'stars': 1, 'planets': 1}, ]
+                 gravgroups=None
                  ):
         """
         Create SystemModel instance Object.
@@ -70,9 +64,20 @@ class SystemModel():
         ----
 
         Arguments:
-            system : string,
+            name        : string,
                 Name of the system studied.
+            gravgroups  : OrderedDict or list, (default: None),
+                Defines the GravGroup of the system studied. Each entry correspond to a GravGroup.
+                The first one is the target GravGroup.
+                Each entry should contain a dict with two entries: "stars" and "planets".
+                Those entries should in turn contain list of stars/planets names in the GravGroup
+                The classical name for a star is 'A', 'B',...
+                The classical name for a planet is 'b', 'c',...
         """
+        super(SystemModel, self).__init__()
+        ## String: System name which is also the name of the target GravGroup
+        self.name = check_name(name)
+
         # Define the type of analysis
         if analysis_type in self._analysis_types:
             self.analysis_type = analysis_type
@@ -115,7 +120,14 @@ class SystemModel():
             self.dynamic = False
 
         # Define gravitational groups
-        interpret_grav_group(grav_groups=grav_groups)
+        self.gravgroups = OrderedDict()
+        if gravgroups is not None:
+            if isinstance(gravgroups, list):
+                if len(gravgroups) > 0:
+                    pass:
+                else:
+                    logger.warning("gravgroup has been ")
+        interpret_grav_group(gravgroups=gravgroups)
         ## TODO
 
         # Initialise the stars in the system
@@ -160,45 +172,27 @@ class SystemModel():
         # Choose the parametrization. I think that if we want to be able to choose the set of
         # Jumping parameters, It's now. Don't clear right now how to do it.
 
-        ## The following will be filled when reading the text file.
+    def add_GravGroup(self, name, stars_name, planets_name):
+        """Add a GravGroup to the system gravgroups attribute.
 
-        # transit parameters
-        self.rp = 0.          # planet radius (in units of stellar radii)
-        self.ar = 0.          # semi-major axis (in units of stellar radii)
-        self.inc = 0.         # orbital inclination (in degrees)
+        ----
 
-        '''
-        this will depend on how many LC data sets ..? how to set it?
-        '''
-        self.jitter_lc = 0.
-        self.u = [0., 0.]     # limb darkening coefficients
-        self.supersample = 0  # 21 supersampling factor needs to be defined for each light curve
-        self.exp_time = 0.5 / 24.  # if supersampling is done we need to define this for each light
-        # curve
-        # we can also calculate it but sometimes if we miss data this will be wrong
+        Arguments:
+            name        : string,
+                name of the GravGroup
+            stars_name  : list of string,
+                list containing the names of the stars in the GravGroup
+            planets_name  : list of string,
+                list containing the names of the planets in the GravGroup
+        """
+        self.gravgroups[name] = GravGroup()
+        
 
-        # rv parameters
-        self.rvsys = 0.      # radial velocity systematic velocity
-        self.K = 0.          # semi-amplitude
-        '''
-        this will depend on how many rv data sets ..? how to set it?
-        '''
-        self.jitter_rv = 0.
-
-        # parameters shared between transit and rv
-        self.ecc = 0.    # eccentricity
-        self.w = 0.      # longitude of periastron (in degrees)
-        '''
-        This will depend if we if we are fiting individual transit times
-        '''
-        self.t0 = 0.      # time of inferior conjunction
-        self.period = 0.  # orbital period
 
     def create_filetemplate(self):
         """
         Create template file to be filed with the initial parameter values and prior functions
         """
-
         raise NotImplementedError
 
     def read_initfile():

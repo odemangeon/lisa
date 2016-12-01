@@ -33,7 +33,7 @@ logger = logging.getLogger()
 class GravGroup(ParamContainer):
     """docstring for GravGroup."""
 
-    def __init__(self, name):
+    def __init__(self, name=None):
         """docstring Planet init method."""
         super(GravGroup, self).__init__(name)
         ## OrderedDict: dictionary of the stars in the grav group
@@ -44,6 +44,28 @@ class GravGroup(ParamContainer):
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
         ## separation binary star.
         self.subgravgroups = []
+
+    def add_star(self, name):
+        """Add a Star in the GravGroup."""
+        self.stars[name] = Star(name=name, gravgroup=self)
+
+    def add_planet(self, name):
+        """Add a Planet in the GravGroup."""
+        self.planets[name] = Planet(name=name, gravgroup=self)
+
+    def del_star(self, name):
+        """Delete a Star in the GravGroup."""
+        res = self.stars.pop(name, None)
+        if res is None:
+            logger.warning("The deletion of the star {} from the GravGroup has failed because this"
+                           "star was not found.".format(name))
+
+    def del_planet(self, name):
+        """Delete a Planet in the GravGroup."""
+        res = self.planets.pop(name, None)
+        if res is None:
+            logger.warning("The deletion of the planet {} from the GravGroup has failed because "
+                           "this star was not found.".format(name))
 
     def get_paramfile_section(self, text_tab=""):
         """Return the text to include in the parameter_file for this GravGroup.
@@ -64,14 +86,43 @@ class GravGroup(ParamContainer):
 class CelestialBody(ParamContainer):
     """docstring for CelestialBody."""
 
-    def __init__(self, gravgroup, name):
-        """docstring GravGroup init method."""
+    def __init__(self, gravgroup=None, name=""):
+        """docstring GravGroup init method.
+
+        ----
+
+        Arguments:
+            gravgroup   : GravGroup, (default: None),
+                Gravgroup instance to which the star belongs.
+            name        : String, (default: ""),
+                Name of the star (if the star is K2-19_A, its name will be 'A' and 'K2-19' would be
+                the name of the GravGroup)
+        """
         super(CelestialBody, self).__init__(name)
-        if not isinstance(gravgroup, GravGroup):
-            raise ValueError("gravgroup should be a GravGroup instance."
-                             " Got {}.".format(type(gravgroup)))
-        ## GravGroup: Gravtional group to which the celestial body belongs
-        self.gravgroup = gravgroup
+        if gravgroup is None:
+            logger.debug("CelestialBody instance created without providing a GravGroup.")
+        else:
+            self.set_gravgroup(gravgroup)
+
+    def set_gravgroup(self, gravgroup):
+        """Set the gravgroup attribute of a CelestialBody."""
+        if self.hasgravgroup:
+            logger.warning("The GravGroup to which the Celestial body belongs has already been "
+                           "defined. One should not redefined it so set_gravgroup command is "
+                           "ignored")
+        else:
+            if not isinstance(gravgroup, GravGroup):
+                logger.warning("gravgroup should be a GravGroup instance."
+                               " Got {}.".format(type(gravgroup)))
+            else:
+                ## GravGroup: Gravtional group to which the celestial body belongs
+                self.gravgroup = gravgroup
+                logger.debug("gravgroup of CelestialBody set. "
+                             "GravGroup name: {}".format(gravgroup.get_name()))
+
+    def hasgravgroup(self):
+        """Indicate if a CelestialBody instance has a attibute gravgroup defined."""
+        return hasattr(self, "gravgroup")
 
     def get_short_name(self):
         """Return the short name of the CelestialBody."""
@@ -79,7 +130,10 @@ class CelestialBody(ParamContainer):
 
     def get_name(self):
         """Return the full name of the CelestialBody."""
-        return self.gravgroup.get_name() + '_' + self.get_short_name()
+        if self.hasgravgroup():
+            return self.gravgroup.get_name() + '_' + self.get_short_name()
+        else:
+            return self.get_short_name()
 
     def get_name_code(self):
         """Return the full name of the CelestialBody."""
@@ -87,9 +141,19 @@ class CelestialBody(ParamContainer):
 
 
 class Planet(CelestialBody):
-    """docstring for Planet."""
+    """docstring for Planet.
 
-    def __init__(self, gravgroup, name):
+    ----
+
+    Arguments:
+        gravgroup   : GravGroup, (default: None),
+            Gravgroup instance to which the planet belongs.
+        name        : String, (default: ""),
+            Name of the planet (if the planet is K2-19_b, its name will be 'b' and 'K2-19' would be
+            the name of the GravGroup)
+    """
+
+    def __init__(self, gravgroup=None, name=""):
         """docstring Planet init method."""
         super(Planet, self).__init__(gravgroup, name)
         ## Radius of the planet
@@ -142,8 +206,18 @@ class Star(CelestialBody):
     only a non redundant set of parameters)
     """
 
-    def __init__(self, gravgroup, name):
-        """docstring Planet init method."""
+    def __init__(self, gravgroup=None, name=""):
+        """docstring Planet init method.
+
+        ----
+
+        Arguments:
+            gravgroup   : GravGroup, (default: None),
+                Gravgroup instance to which the star belongs.
+            name        : String, (default: ""),
+                Name of the star (if the star is K2-19_A, its name will be 'A' and 'K2-19' would be
+                the name of the GravGroup)
+        """
         super(Star, self).__init__(gravgroup, name)
         ## Radius of the star
         self.R = Parameter(name="R")
