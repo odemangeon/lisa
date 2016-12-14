@@ -12,7 +12,7 @@ sys.path.append('/Users/sbarros/Documents/work/python/photodynamic/lisa/')
 
 #from source.tools.stats.loc_scale_estimator import  rob_mom
 
-from source.tools.distribution_anali  import getconfi
+from source.tools.stats.distribution_anali  import getconfi
 
 #spectroscopic properties (value, uncertainty)
 Teff = (5770, 80)
