@@ -24,8 +24,10 @@ import numpy as np
 
 
 def getconfi(distri, level , centre = None):
-    # inputs distribution , sigma level we want can be 1,2,3
-    # optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mon will be used.
+    """
+    inputs distribution , sigma level we want can be 1,2,3
+    optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mon will be used.
+    """
     if level == 1:
         s1  =   np.percentile(distri, [16,84], axis=0)
 
