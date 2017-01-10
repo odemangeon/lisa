@@ -127,20 +127,20 @@ if __name__ == "__main__":
     y = ys.astype("float64")
     yerr = yerrs.astype("float64")
 
-    
+
 
     print("Fitting transit + GP ")
     data = (t, y, yerr)
-    
+
     # expected values
     truth_gp =  [-19.95, 2.161, -2.6733, 0, 0.1093, 2.978, 86.3]
 
-    
-    
+
+
     sampler = fit_gp(truth_gp, data)
 
 
-    
+
 
     #plot the chains
     nwalkers=32
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     gp.compute(t, yerr)
     # Compute the prediction conditioned on the observations and plot it.
     m = gp.sample_conditional(y - model( fitparams[0:4] , t), x) + model(fitparams[0:4], x)
-        pl.plot(x , m, color='red')
+    pl.plot(x , m, color='red')
     print('red',gp.lnlikelihood(y))
 
 
@@ -210,7 +210,7 @@ if __name__ == "__main__":
 
     sampler.acceptance_fraction
 
-    
+
 
     # results for real data
     #par -19.8312035855 2.09292629976 -2.67160144868
