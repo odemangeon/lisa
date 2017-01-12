@@ -10,9 +10,9 @@ import os
 import sys
 # import pdb
 
-from source.problems.posterior.systemmodel.core.parameter import Parameter
-from source.problems.posterior.systemmodel.gravgroup import GravGroup, Planet, Star
-from source.problems.posterior.systemmodel.instrument import Instrument
+from source.posterior.core.parameter import Parameter
+from source.posterior.gravgroup import GravGroup, Planet, Star
+from source.posterior.core.instrument import Instrument
 
 from source.software_parameters import input_run_folder
 
