@@ -24,6 +24,8 @@ class ParamContainer(object):
         self.name = check_name(name)
         ## List of Parameter object
         self.parameter_list = []
+        if type(self) is ParamContainer:
+            raise NotImplementedError("ParamContainer should not be instanciated !")
 
     def set_name(self, name):
         """set the name of the ParamContainer."""

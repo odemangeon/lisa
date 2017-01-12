@@ -19,12 +19,9 @@ class Parameter(object):
 
     ## Prior function: function
     prior_func = None
-    ## Give the type of prior: string, for example Gaussian, Uniform
-    prior_type = None
+
     ## Arguments of the prior function: dictionnary, for example for a gaussian {"mean": 0, "std":0}
     prior_args = None
-    ## Indicate if the prior function is a joint prior with another parameter: Boolean
-    joint_prior = None
     ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
     joint_prior_pos = None
 
@@ -84,7 +81,13 @@ class Parameter(object):
             ## Indicate if the prior of this parameter is a joint prior: Boolean or None
             self.joint_prior = joint_prior
         else:
-            raise ValueError("Joint_prior should be a booleanor None.")
+            raise ValueError("Joint_prior should be a boolean or None.")
+        # Set the prior_type attribute
+        if isinstance(prior_type, str) or (prior_type is None):
+            ## Give the type of prior: string, for example Gaussian, Uniform
+            self.prior_type = prior_type
+        else:
+            raise ValueError("Prior_type should be a str or None.")
         # Set the value of the parameter
         if isinstance(value, Number) or (value is None):
             ## Value of the parameter: float

@@ -103,6 +103,9 @@ class CelestialBody(ParamContainer):
             logger.debug("CelestialBody instance created without providing a GravGroup.")
         else:
             self.set_gravgroup(gravgroup)
+        # Make CelestialBody not instanciable (abstract class)
+        if type(self) is CelestialBody:
+            raise NotImplementedError("CelestialBody should not be instanciated !")
 
     def set_gravgroup(self, gravgroup):
         """Set the gravgroup attribute of a CelestialBody."""

@@ -9,8 +9,8 @@ The objective of this module is to define the Instrument classes.
     - Implement spectral_transmission in Instrument class
 
 """
-from .core.parameter import Parameter
-from .core.paramcontainer import ParamContainer
+from .parameter import Parameter
+from .paramcontainer import ParamContainer
 
 
 class Instrument(ParamContainer):

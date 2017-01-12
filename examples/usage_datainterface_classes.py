@@ -2,11 +2,9 @@ import logging
 import pdb
 import sys
 import matplotlib
-#matplotlib.use('Qt5Agg')
+matplotlib.use('Qt5Agg')
 
-from source.problems.posterior.systemmodel.datasets import ExoP_datasets
-from source.problems.posterior.systemmodel.datasets import LightCurve
-from source.problems.posterior.systemmodel.datasets import RV
+from source.posterior.datasets import ExoP_datasets, LightCurve, RV
 from source.run import set_up_run
 
 # pdb.set_trace()
