@@ -23,32 +23,36 @@ class Posterior(object):
         super(Posterior, self).__init__()
 
         ## Name of the object you are trying to modelize
-        self.object = object_name
+        self.__object = object_name
 
         ## Dataset dictionnary: Initialise it
-        self.dataset_dict = dict()
+        self.__dataset_dict = dict()
 
         ## Folder where the program should look for dataset files by default: Initialise it
-        self.data_folder = None
+        self.__data_folder = None
 
         ## Model: Initialise it
-        self.model = None
+        self.__model = None
 
         ## lnprior: Initialise it
-        self.lnprior = None
+        self.__lnprior = None
 
         ## lnlike: Initialise it
-        self.lnlike = None
+        self.__lnlike = None
 
         ## lnpost: Initialise it
-        self.lnpost = None
+        self.__lnpost = None
 
-    def isdefined_datafolder(self):
-        """Tells if the data_folder attribute is defined."""
-        return self.data_folder is not None
+    def __set_objectname(self, object_name):
+        """Define the name of the object studied."""
+        self.__object = object_name
 
-    def define_datafolder(self, data_folder=None):
-        """Define the data_folder attribute.
+    def get_objectname(self, object_name):
+        """Get the name of the object studied."""
+        return self.__object
+
+    def set_datafolder(self, data_folder=None):
+        """Set the data_folder attribute.
 
         The data_folder is the folder where the program will look for the dataset files. This folder
         can be provided in two ways:
@@ -68,10 +72,10 @@ class Posterior(object):
         if data_folder_provided:
             folder = data_folder
         else:
-            folder = os.path.join(main_data_folder, self.object)
+            folder = os.path.join(input_data_folder, self.object)
         folder_exist = os.path.isdir(folder)
         if folder_exist:
-            self.data_folder = folder
+            self.__data_folder = folder
             if data_folder_provided:
                 logger.info("Data_folder is defined as a specific folder: {}".format(folder))
             else:
@@ -88,20 +92,55 @@ class Posterior(object):
                 reply = QCM_utilisateur(msg, ["y", "n"])
                 if reply == "y":
                     os.makedirs(folder)
-                    self.data_folder = folder
+                    self.__data_folder = folder
                     logger.info("Data_folder not provided but standard folder has been created and "
                                 "is used: {}".format(folder))
                 else:
                     logger.info("Data_folder not provided and standard folder doesn't exist so no "
                                 "data_folder defined.")
 
-    def add_dataset():
+    def get_datafolder(self):
+        """Get the data_folder attributes."""
+        return self.__data_folder
+
+    def isset_datafolder(self):
+        """Tells if the data_folder attribute is defined."""
+        return self.get_datafolder() is not None
+
+    def add_dataset(self, dataset):
         """Add a dataset to the dataset_dict."""
-        raise NotImplementedError
+        dataset
+        self.__dataset_dict[dataset.]
 
     def rm_dataset():
         """Remove a dataset from the the dataset_dict."""
         raise NotImplementedError
+
+    def add_datasets_from_file(path_datasets_file):
+        """Add a dataset specified in a datafile.
+        ----
+        Arguments:
+            path_datasets_file: string,
+                path to the datasets file.
+        """
+        if os.path.exists(path_datasets_file):
+            logger.debug("file exists: {}".format(path_datasets_file))
+            list_files = []
+            with open(path_datasets_file, 'r') as f:
+                for line in f.readlines():
+                    line_striped = line.strip(" \n")
+                    logger.debug("raw line: {}striped line: {}".format(line, line_striped))
+                    if not(line_striped.startswith("#")) and (len(line_striped) > 0):
+                        logger.debug("line accepted as filename: {}".format(True))
+                        list_files.append(line_striped)
+                    else:
+                        logger.debug("line accepted as filename: {}".format(False))
+        else:
+            error_msg = "file doesn't exist: {}".format(path_datasets_file)
+            raise ValueError(error_msg)
+        logger.debug("List of files to use: {}".format(list_files))
+        for filepath in list_files:
+            self.add_dataset(filepath)
 
     def add_model():
         """Add a model."""

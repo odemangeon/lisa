@@ -26,6 +26,39 @@ from .core.instrument import Instrument
 
 logger = logging.getLogger()
 
+def interpret_data_filename(data_file_name):
+    """
+    Interpret data file name.
+    ----
+    Arguments:
+        data_file_name : string,
+            Data file name
+    Returns:
+        dictionnary with the interpration of the filename which contains the following keys:
+            - target : name of the target
+            - type : data type "LC", "RV" or "SED"
+            - instrument : instrument name
+            - number : give the number of the data file if there is several data files from the
+            same instrument
+    """
+    cuts = data_file_name.split("_")
+    cuts[-1] = cuts[-1].split(".")[0]
+    if len(cuts) < 3 or len(cuts) > 4:
+        logging.warning("Data file name not recognized. Should be in the format "
+                        "type_target_instrument(_number).txt. Got: {}".format(data_file_name))
+        return None
+    result = {"target": cuts[1],
+              "type": cuts[0],
+              "instrument": cuts[2]}
+    if result["type"] not in ["LC", "RV", "SED"]:
+        logging.warning("Data type from file name not recognized. Should be in  "
+                        "['LC', 'RV', 'SED']. Got: {}".format(result["type"]))
+        return None
+    if len(cuts) == 3:
+        result["number"] = None
+    elif len(cuts) == 4:
+        result["number"] = cuts[3]
+    return result
 
 class ExoP_datasets():
     """
