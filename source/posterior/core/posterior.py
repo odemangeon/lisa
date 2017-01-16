@@ -6,13 +6,12 @@ posterior module.
 The objective of this package is to provides the core Posterior class.
 
 @TODO:
-    - Update define_datafolder function so that it ask the questions if no folder provided and
-      standard folder doesn't exist.
 """
 import logging
 import os
 
 from ...software_parameters import input_data_folder
+from ...tools.human_machine_interface.QCM import QCM_utilisateur
 
 
 logger = logging.getLogger()
@@ -48,8 +47,22 @@ class Posterior(object):
         """Tells if the data_folder attribute is defined."""
         return self.data_folder is not None
 
-    def define_datafolder(self, main_data_folder=input_data_folder, data_folder=None):
-        """Define the datafolder, folder where the program will look for the dataset files."""
+    def define_datafolder(self, data_folder=None):
+        """Define the data_folder attribute.
+
+        The data_folder is the folder where the program will look for the dataset files. This folder
+        can be provided in two ways:
+            - Via the folder defined in software_parameters: In this case the data_folder is
+              automatically define as "input_data_folder/target". To use this you should not provide
+              the data_folder argument.
+            - Via the data_folder argument: You can provide any folder here via the data_folder
+              argument.
+        ----
+        Arguments:
+            data_folder : string,
+                path to the folder which contain the data. If provided the main_data_folder argument
+                is ignored.
+        """
         # Initialise data_folder attribute
         data_folder_provided = data_folder is not None
         if data_folder_provided:
@@ -72,8 +85,7 @@ class Posterior(object):
             else:
                 msg = ("You didn't provided any data_folder and the standard one doesn't exist."
                        "Do you want to create the folder (reply by 'y' or 'n'):\n{}".format(folder))
-                # TODO: Ask the question and if reply is y create otherwise don't
-                reply = "y"
+                reply = QCM_utilisateur(msg, ["y", "n"])
                 if reply == "y":
                     os.makedirs(folder)
                     self.data_folder = folder
