@@ -30,13 +30,13 @@ class TestMethods(unittest.TestCase):
         self.dataset_instance = _Basic_Dataset(self.file_path, "Instrument_instance")
 
     def test_manage_default_instrument_instance(self):
-        filepath = self.dataset_instance.get_filepath()
+        filepath = self.dataset_instance.filepath
         self.assertEqual(self.file_path, filepath)
-        filename = self.dataset_instance.get_filename()
+        filename = self.dataset_instance.filename
         self.assertEqual("LC_K2-19_K2.txt", filename)
-        objectname = self.dataset_instance.get_objectname()
+        objectname = self.dataset_instance.objectname
         self.assertEqual("K2-19", objectname)
-        instrument_instance = self.dataset_instance.get_instrument()
+        instrument_instance = self.dataset_instance.instrument
         self.assertEqual("Instrument_instance", instrument_instance)
         self.assertFalse(self.dataset_instance.is_data_stored())
         self.dataset_instance._set_data("some_data")

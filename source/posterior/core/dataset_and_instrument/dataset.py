@@ -8,13 +8,10 @@ and manipulate the data.
 
 @DONE:
     - Dataset.__init__: Doc an UT
-    - Dataset._set_filepath: Doc and UT
-    - Dataset.get_filepath: Doc and UT
-    - Dataset.get_filename: Doc and UT
-    - Dataset._set_instrument: Doc and UT
-    - Dataset.get_instrument: Doc and UT
-    - Dataset._set_objectname: Doc and UT
-    - Dataset.get_objectname: Doc and UT
+    - Dataset.filepath: Doc and UT
+    - Dataset.filename: Doc and UT
+    - Dataset.instrument: Doc and UT
+    - Dataset.objectname: Doc and UT
     - Dataset._rm_data: Doc and UT
     - Dataset.is_data_loaded: Doc and UT
     - Dataset.load_data: Doc
@@ -66,76 +63,45 @@ class Dataset(object):
         """
         super(Dataset, self).__init__()
         # 1.
-        self._set_filepath(file_path)
+        self.__filepath = file_path
         # 2.
-        filename = self.get_filename()
-        filename_info = interpret_data_filename(filename)
+        self.__filename = get_filename_from_file_path(self.filepath)
+        filename_info = interpret_data_filename(self.filename)
         # 3.
-        self._set_objectname(filename_info["object"])
+        self.__objectname = filename_info["object"]
         # 4.
-        self._set_instrument(instrument_instance)
+        self.__instrument = instrument_instance
         # 5.
         self._rm_data()
         # Make Dataset an abstract class
         if type(self) is Dataset:
             raise NotImplementedError("Dataset should not be instanciated!")
 
-    def _set_filepath(self, filepath):
-        """Define the path of the data file.
-        ----
-        Arguments:
-            filepath : string,
-                Path to the data file
-        """
-        self.__file_path = filepath
-
-    def get_filepath(self):
+    @property
+    def filepath(self):
         """Get the path of the data file."""
-        return self.__file_path
+        return self.__filepath
 
-    def get_filename(self):
+    @property
+    def filename(self):
         """Get the name of the data file."""
-        return get_filename_from_file_path(self.get_filepath())
+        return self.__filename
 
-    def _set_instrument(self, inst_instance):
-        """Define the instance of the Instrument Subclass defining the instrument used.
-        ----
-        instrument_instance : Instance of a Subclass of Instrument,
-            Instrument instance that describes the isntrument used to measure the data.
-        """
-        self.__instrument = inst_instance
-
-    def get_instrument(self):
-        """Return the instrument instance.
-        ----
-        Returns:
-            Instance of a Subclass of Instrument, Instrument instance that describes the isntrument
-                used to measure the data.
-        """
+    @property
+    def instrument(self):
+        """Return the instrument instance."""
         return self.__instrument
 
-    def _set_objectname(self, object_name):
-        """Define the name of the object the data are about.
-        ----
-        Arguments:
-            object_name : string,
-                name of the object the data are about
-        """
-        self.__object_name = object_name
-
-    def get_objectname(self):
-        """Return the name of the object the data are about.
-        ----
-        Returns:
-            object_name : string,
-                name of the object the data are about
-        """
-        return self.__object_name
+    @property
+    def objectname(self):
+        """Define the name of the object the data are about."""
+        return self.__objectname
 
     def _rm_data(self):
         """Remove data previously loaded or initialse the data attribute."""
         self.__data = None
-        logger.info("Data has been removed from {}.".format(self.get_filename()))
+        logger.info("Data attribute has been removed/initialise in dataset of {}."
+                    "".format(self.filename))
 
     def is_data_stored(self):
         """Tell if data has been stored.
@@ -212,7 +178,7 @@ class Dataset(object):
         # 2.
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        pandas_df = pd.read_table(self.get_filepath(),
+        pandas_df = pd.read_table(self.filepath,
                                   delim_whitespace=delim_whitespace,
                                   names=names,
                                   index_col=index_col,
@@ -267,7 +233,7 @@ class Dataset(object):
             except:
                 logger.warning("No data stored and method load_data failed to load datafile {}"
                                "\nprovided error: {}"
-                               "".format(self.get_filename(),
+                               "".format(self.filename,
                                          sys.exc_info()))
 
         return self.__data
