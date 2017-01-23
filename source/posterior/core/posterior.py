@@ -6,6 +6,7 @@ posterior module.
 The objective of this package is to provides the core Posterior class.
 
 @TODO:
+    - Function to add datasets from a folder.
 """
 import logging
 import os
@@ -15,6 +16,54 @@ from ...tools.human_machine_interface.QCM import QCM_utilisateur
 
 
 logger = logging.getLogger()
+
+def interpret_dataset_key(dataset_key):
+    """
+    Interpret dataset key.
+
+    ----
+
+    Arguments:
+        dataset_key : string,
+            dataset_key
+    Returns:
+        dictionnary with the interpration of the dataset key which contains the following keys:
+            - instrument : instrument name
+            - number : give the number of the data file if there is several data files from the same
+            instrument
+    """
+    cuts = dataset_key.split("_")
+    if len(cuts) > 2:
+        logging.warning("dataset_key not recognized. Should be in the format "
+                        "instrument_number. Got: {}".format(dataset_key))
+        return None
+    result = {"instrument": cuts[0]}
+    if len(cuts) == 2:
+        result["number"] = cuts[1]
+    elif len(cuts) == 1:
+        result["number"] = None
+    return result
+
+
+def build_dataset_key(instrument, number=None):
+    """
+    build dataset key.
+
+    ----
+
+    Arguments:
+        instrument : string,
+            instrument name
+        number : string, optional,
+            number of the dataset for this instrument
+    Returns:
+        dataset_key
+    """
+    separator = "_"
+    dataset_key = instrument
+    if number is not None:
+        dataset_key += separator + number
+    return dataset_key
 
 
 class Posterior(object):
@@ -109,7 +158,7 @@ class Posterior(object):
 
     def add_dataset(self, dataset):
         """Add a dataset to the dataset_dict."""
-        dataset
+        dataset_instance = Data
         self.__dataset_dict[dataset.]
 
     def rm_dataset():
@@ -161,3 +210,139 @@ class Posterior(object):
     def get_lnpost():
         """Get lnpost from a model and store it into lnpost."""
         raise NotImplementedError
+
+    # Code to add all datasets in a folder
+    # # Examine data folder to look for available datasets
+    # folder_content = os.listdir(folder)
+    # logger.info("List the content of {}:\n{}".format(folder, folder_content))
+    # for content in folder_content:
+    # if not(os.path.isfile(os.path.join(folder, content))):
+    #     logger.info("Content is not a file and is ignored: {}".format(content))
+    # else:
+    #     try:
+    #         # Check if filename is in the list of datasets specified by the datasets_files
+    #         if l_input_files_provided:
+    #             if content not in l_files:
+    #                 logger.info("Content ignored because not in the datasets files: {}"
+    #                             "".format(content))
+    #                 continue
+    #         filename_info = interpret_data_filename(content)
+    #         # Check if filename is compatible with file name convention
+    #         if filename_info is None:
+    #             continue
+    #         # Check if the target associated with the file is the good one
+    #         if filename_info["target"] != self.target_name:
+    #             logger.warning("Content target is not the provided target "
+    #                            "and is ignored: {}".format(content))
+    #             continue
+    #         # Build a dataset (RV, LightCurve, ...) instance and store in datasets
+    #         # dictionnaries
+    #         key = build_dataset_key(filename_info["instrument"],
+    #                                 number=filename_info["number"])
+    #         inst_type = filename_info["type"]
+    #         if inst_type == "LC":
+    #             self.lc_datasets[key] = LightCurve(content, data_folder=folder)
+    #             logger.info("Content accepted as LC datasets files and as been loaded: {}\n"
+    #                         "".format(content))
+    #         elif inst_type == "RV":
+    #             self.rv_datasets[key] = RV(content, data_folder=folder)
+    #             logger.info("Content accepted as RV datasets files and as been loaded: {}\n"
+    #                         "".format(content))
+    #         elif inst_type == "SED":
+    #             logger.warning("Data file type SED not implemented yet.")
+    #             continue
+    #         # Build an instrument instance (if needed) and store in isntruments
+    #         # dictionnaries
+    #         inst_name = filename_info["instrument"]
+    #         inst_exist, _ = self.isin_instruments(inst_name)
+    #         logger.info("Instrument {} exists already: {}".format(inst_name, inst_exist))
+    #         if not inst_exist:
+    #             if inst_type == "LC":
+    #                 self.lc_instruments[inst_name] = Instrument(inst_name, inst_type)
+    #             elif inst_type == "RV":
+    #                 self.rv_instruments[inst_name] = Instrument(inst_name, inst_type)
+    #     except:
+    #         raise}
+
+    # Possible function to interact with datasets.
+    # def get_LC_dataset_keys(self):
+    #     """Return the list of light-curve dataset_key available."""
+    #     return list(self.lc_datasets.keys())
+    #
+    # def get_RV_dataset_keys(self):
+    #     """Return the list of radial velocity dataset_key available."""
+    #     return list(self.rv_datasets.keys())
+    #
+    # def get_dataset_keys(self):
+    #     """Return a dictionnary with the lists of LC, RV (and SED) dataset_key available."""
+    #     return {"LC": self.get_LC_dataset_keys(),
+    #             "RV": self.get_RV_dataset_keys()}
+    #
+    # def get_LC_instrument_keys(self):
+    #     """Return the list of light-curve instruments available."""
+    #     return list(self.lc_instruments.keys())
+    #
+    # def get_RV_instrument_keys(self):
+    #     """Return the list of radial velocity instruments available."""
+    #     return list(self.rv_instruments.keys())
+    #
+    # def get_instrument_keys(self):
+    #     """Return a dictionnary with the lists of LC, RV (and SED) isntrument_key available."""
+    #     return {"LC": self.get_LC_instrument_keys(),
+    #             "RV": self.get_RV_instrument_keys()}
+    #
+    # def get_LC_dataset_keys_perinstrument(self):
+    #     """Return a dictionnary with the lists of LC dataset_key per isntrument."""
+    #     lc_keys = self.get_LC_dataset_keys()
+    #     result = {}
+    #     for key in lc_keys:
+    #         key_info = interpret_dataset_key(key)
+    #         if key_info["instrument"] in result.keys():
+    #             result[key_info["instrument"]].append(key)
+    #         else:
+    #             result[key_info["instrument"]] = [key]
+    #
+    # def get_RV_dataset_keys_perinstrument(self):
+    #     """Return a dictionnary with the lists of LC dataset_key per isntrument."""
+    #     rv_keys = self.get_RV_dataset_keys()
+    #     result = {}
+    #     for key in rv_keys:
+    #         key_info = interpret_dataset_key(key)
+    #         if key_info["instrument"] in result.keys():
+    #             result[key_info["instrument"]].append(key)
+    #         else:
+    #             result[key_info["instrument"]] = [key]
+    #
+    # def isin_LC_datasets(self, key):
+    #     """Indicate if the LC dataset designed by key is exisiting and loaded."""
+    #     return key in self.lc_datasets
+    #
+    # def isin_RV_datasets(self, key):
+    #     """Indicate if the RV dataset designed by key is exisiting and loaded."""
+    #     return key in self.rv_datasets
+    #
+    # def isin_datasets(self, key):
+    #     """Indicate if the dataset designed by key is exisiting and loaded and if yes which type."""
+    #     if self.isin_LC_datasets(key):
+    #         return True, "LC"
+    #     elif self.isin_RV_datasets(key):
+    #         return True, "RV"
+    #     else:
+    #         return False, None
+    #
+    # def isin_LC_instruments(self, key):
+    #     """Indicate if the LC instrument designed by key is exisiting."""
+    #     return key in self.lc_instruments
+    #
+    # def isin_RV_instruments(self, key):
+    #     """Indicate if the RV instrument designed by key is exisiting."""
+    #     return key in self.rv_instruments
+    #
+    # def isin_instruments(self, key):
+    #     """Indicate if the instrument designed by key is exisiting and if yes which type."""
+    #     if self.isin_LC_instruments(key):
+    #         return True, "LC"
+    #     elif self.isin_RV_instruments(key):
+    #         return True, "RV"
+    #     else:
+    #         return False, None

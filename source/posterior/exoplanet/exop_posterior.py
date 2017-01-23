@@ -24,3 +24,38 @@ class ExoP_Posterior(Posterior):
     def __init__(self, arg):
         super(ExoP_Posterior, self).__init__()
         self.arg = arg
+
+# Functions to plot
+# def plot_LC(dataset_key=None):
+#     """
+#     Plot a specific light-curve data set or all of them.
+#
+#     To plot a specific LC dataset one should provide the dataset_key which is name of the
+#     instrument (followed by _number is several datasets from the same instrument). For example
+#     "K2".
+#
+#     ----
+#
+#     Arguments:
+#         dataset_key : string, optional,
+#             Key indicating which dataset you want to plot. If not provided the function plot all
+#             the LC dataset in different sub-windows.
+#     """
+#     raise NotImplementedError
+#
+# def plot_RV():
+#     """
+#     Plot a specific radial velocity data set or all of them.
+#
+#     To plot a specific RV dataset one should provide the dataset_key which is name of the
+#     instrument (followed by _number is several datasets from the same instrument). For example
+#     "SOPHIE".
+#
+#     ----
+#
+#     Arguments:
+#         dataset_key : string, optional,
+#             Key indicating which dataset you want to plot. If not provided the function plot all
+#             the RV dataset in different sub-windows.
+#     """
+#     raise NotImplementedError
