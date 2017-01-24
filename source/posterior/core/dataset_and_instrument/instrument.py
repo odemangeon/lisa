@@ -8,10 +8,8 @@ to store information about the isntrument used to measurement the data stored in
 
 @DONE:
     - Instrument.__init__: Doc and UT
-    - Instrument._set_type: Doc and UT
-    - Instrument.get_type: Doc and UT
-    - Instrument._set_name: Doc and UT
-    - Instrument.get_name: Doc and UT
+    - Instrument.inst_type: Doc and UT
+    - Instrument.name: Doc and UT
     - _Default_Instrument: Doc and UT
 
 @TODO:

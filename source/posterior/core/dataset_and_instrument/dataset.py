@@ -20,6 +20,7 @@ and manipulate the data.
 
 @TODO:
     - Dataset.load_data: UT
+    - See if possible to transform data in a property.
 """
 import logging
 import sys
