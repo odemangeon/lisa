@@ -47,7 +47,8 @@ class Dataset(object):
                instrument name and type and eventually number of the dataset
             3. Store the name of the object observed with the data
             4. Define the instrument used to take the data
-            5. Initialise the data attribute
+            5. Set the number attribute (if several datasets from the same instrument)
+            6. Initialise the data attribute
         Remarks:
             - There is no need to check for the existance of the data file because it's done by
               the Manager_Inst_Dataset class who triggers the creation of the dataset subclass
@@ -72,6 +73,13 @@ class Dataset(object):
         self.__objectname = filename_info["object"]
         # 4.
         self.__instrument = instrument_instance
+        # 6.
+        if isinstance(filename_info["number"], int):
+            self.__number = filename_info["number"]
+        elif filename_info["number"] is None:
+            self.__number = 0
+        else:
+            raise ValueError("number should be an int or None")
         # 5.
         self._rm_data()
         # Make Dataset an abstract class
@@ -95,8 +103,13 @@ class Dataset(object):
 
     @property
     def objectname(self):
-        """Define the name of the object the data are about."""
+        """Return the name of the object the data are about."""
         return self.__objectname
+
+    @property
+    def number(self):
+        """Return the number of the dataset (if several dataset from the same instrument)."""
+        return self.__number
 
     def _rm_data(self):
         """Remove data previously loaded or initialse the data attribute."""
