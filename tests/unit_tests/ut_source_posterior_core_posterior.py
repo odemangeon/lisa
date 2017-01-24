@@ -125,7 +125,7 @@ class TestMethods(unittest.TestCase):
         with open(dataset_file, "x") as f:
             f.write(file1 + "\n")
             f.write(file2 + "\n")
-        self.posterior_instance.add_datasets_from_datasetsfile(path_datasets_file=dataset_file)
+        self.posterior_instance.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
         os.remove(file1)
         os.remove(file2)
         os.remove(dataset_file)

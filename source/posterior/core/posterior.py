@@ -16,7 +16,8 @@ The objective of this package is to provides the core Posterior class.
     - Posterior.add_a_dataset_from_path: Doc and UT
     - Posterior.add_datasets_from_datasetsfile: Doc and UT
 @TODO:
-    - Function to add datasets from a folder.
+    - functions to visualize the content of the dataset database
+    - function to add datasets from a folder.
     - add_model, rm_model
     - get_lnprior, get_lnlike, get_lnpost
 """
@@ -290,7 +291,7 @@ class Posterior(object):
         self._add_a_dataset(manager.create_dataset(path))
         logger.info("dataset added to the database: {}".format(datafile_path))
 
-    def add_datasets_from_datasetsfile(self, path_datasets_file, load_setup=False):
+    def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False):
         """Add the datasets specified in the datasets_file to the dataset database.
         ----
         Arguments:
