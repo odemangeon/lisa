@@ -30,7 +30,7 @@ class TestMethods(unittest.TestCase):
     def setUp(self):
         class FakeModel(Model):
             """docstring for FakeModel."""
-            model_type = "FakeModel"
+            _model_type = "FakeModel"
 
             def __init__(self):
                 super(FakeModel, self).__init__()
