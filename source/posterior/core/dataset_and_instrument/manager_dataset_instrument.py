@@ -13,7 +13,7 @@ The objective of this module is used to manage the subclasses of the Instrument 
     - __Mgr.get_available_inst_type: UT
     - __Mgr._reset_dataset_for_inst_type: Doc and UT
     - __Mgr.load_setup: Doc but No UT because depend on the content of the setup file
-    - __Mgr.get_dataset_subclass: UT an dUT
+    - __Mgr.get_dataset_subclass: Doc an dUT
     - __Mgr._reset_available_inst: Doc and UT
     - __Mgr.get_available_inst_name: Doc and UT
     - __Mgr.add_available_inst: Doc and UT
