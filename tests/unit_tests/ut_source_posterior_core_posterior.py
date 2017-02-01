@@ -99,7 +99,8 @@ class TestMethods(unittest.TestCase):
         dataset = self.manager.create_dataset(self.test_datafile)
         os.remove(self.test_datafile)
         self.posterior_instance._add_a_dataset(dataset)
-        self.assertEqual(dataset, self.posterior_instance.dataset_database["LC"]["K2"]["0"])
+        dataset_returned = self.posterior_instance.get_dataset("LC", "K2", 0)
+        self.assertEqual(dataset, dataset_returned)
         self.posterior_instance.rm_dataset("LC", "K2")
         self.assertDictEqual(self.posterior_instance.dataset_database, {})
 
@@ -116,7 +117,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(0, number)
         self.assertEqual(self.test_datafile, path)
 
-    def test_add_a_dataset_from_datasetsfile(self):
+    def test_add_a_dataset_from_datasetsfile_and_get_isntrument_types(self):
         file1 = "LC_K2-29_K2.txt"
         file2 = "RV_K2-29_SOPHIE-HE.txt"
         dataset_file = "test_datasetfile.txt"
@@ -146,7 +147,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual("SOPHIE-HE", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
-
+        self.assertCountEqual(["LC", "RV"], self.posterior_instance.get_instrument_types())
 
 
 if __name__ == '__main__':

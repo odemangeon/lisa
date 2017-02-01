@@ -321,7 +321,46 @@ class Posterior(object):
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath)
 
-    def add_model():
+    def get_dataset(self, inst_type, inst_name, number=0):
+        """Return a dataset from the dataset database.
+
+        Giving the caracteristics of the instrument used for the measurement and the number of the
+        dataset this function will return the corresponding dataset.
+
+        ----
+        inst_type   : string,
+            Type of instrument associated to the dataset you want to remove
+        inst_name   : string,
+            Name of the instrument associated to the dataset you want to remove
+        number      : int, (default: 0)
+            Number associated to the dataset you want to remove.
+        """
+        return self.dataset_database[inst_type][inst_name][str(number)]
+
+    def get_instrument_types(self):
+        """Return the list of the types of instruments associated to the dataset in the database."""
+        return list(self.dataset_database.keys())
+
+    @property
+    def model(self):
+        """Return the model."""
+        return self.__model
+
+    def define_model(self, model_type, **kwargs):
+        """Set/Initialize the model.
+
+        For now only assignement to None is possible.
+        This function should check that the model_type is an available Model Subclass
+
+        ----
+        Arguments:
+            model_type : string,
+                String which refers to an available Model Subclass that has been defined in the
+                model_setup_file.
+        """
+        raise NotImplementedError
+
+    def add_model(self):
         """Add a model."""
         raise NotImplementedError
 
