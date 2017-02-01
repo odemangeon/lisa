@@ -20,9 +20,12 @@ It could be:
 import logging
 
 from collections import OrderedDict
+from string import ascii_lowercase
+from string import ascii_uppercase
 
 from .core.parameter import Parameter
 from .core.paramcontainer import ParamContainer
+from .core.model.core_model import Model
 from source.tools.miscellaneous import check_name_code
 
 
@@ -30,37 +33,165 @@ from source.tools.miscellaneous import check_name_code
 logger = logging.getLogger()
 
 
-class GravGroup(ParamContainer):
+class GravGroup(Model):
     """docstring for GravGroup."""
 
-    def __init__(self, name=None):
+    ## model_type
+    _model_type = "ExoP_Standard"
+
+    ## List of available rv models, the 1st element is used as default
+    _rv_models = ["ajplanet"]
+
+    ## List of available lc models, the 1st element is used as default
+    _lc_models = ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"]
+
+    ## List of available limb-darkening models for each lc_models, the 1st element is used as
+    ## default
+    _ld_models = {"batman": ["quadratic", "nonlinear", "exponential", "logarithmic", "squareroot",
+                             "linear", "uniform", "custom"],
+                  "pytransit-MandelAgol": ["quadratic", "linear", "uniform"],
+                  "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
+                  }
+
+    def __init__(self, name, instruments, transit_model=None, ld_model=None, rv_model=None,
+                 stars=None, planets=None):
         """docstring Planet init method."""
-        super(GravGroup, self).__init__(name)
-        ## OrderedDict: dictionary of the stars in the grav group
-        self.stars = OrderedDict()
-        ## OrderedDict: dictionary of the planets in the grav group
+        super(GravGroup, self).__init__(name, instruments)
+        if "LC" in instruments:
+            # light-curve model
+            if transit_model in self._lc_models:
+                self.transit_model = transit_model
+            elif transit_model is None:
+                self.transit_model = self._lc_models[0]
+            else:
+                raise ValueError("transit_model should be in {}".format(self._lc_models))
+            # Limb darkening model
+            if ld_model in self._ld_models[self.transit_model]:
+                self.ld_model = ld_model  # if  batman limb darkening model
+            elif ld_model is None:
+                self.ld_model = self._ld_models[self.transit_model][0]
+            else:
+                raise ValueError("For transit model {}, ld_model should be in {}"
+                                 "".format(self.transit_model, self._ld_models[self.transit_model]))
+        if "RV" in instruments:
+            # radial velocities model
+            if rv_model in self._rv_models:
+                self.rv_model = rv_model
+            elif rv_model is None:
+                self.rv_model = self._rv_models[0]
+            else:
+                raise ValueError("rv_model should be in {}".format(self._rv_models))
+        # Initialise the stars in the system
+        ## stars: ordered dictionary of the stars in the grav group
+        self.__stars = OrderedDict()
+        if isinstance(stars, int):
+            if stars >= 1:
+                self.add_stars(number=stars)
+            else:
+                raise ValueError("If you specify the number of stars, it should be "
+                                 "strictly positive ! Got {}".format(stars))
+        elif isinstance(stars, list) and isinstance(stars[0], str):
+            self.add_stars(number=len(stars), names=stars)
+        elif stars is None:
+            pass
+        else:
+            raise ValueError("stars should be either a strictly positive int or a list of sting "
+                             "or None. {}".format(stars))
+        # Initialise the planets in the system
+        ## planets: ordered dictionary of the planets in the grav group
+        self.__planets = OrderedDict()
+        # Initialise the planets in the system
         self.planets = OrderedDict()
+        if isinstance(planets, int):
+            if planets >= 1:
+                self.add_planets(number=planets)
+            else:
+                raise ValueError("If you specify the number of planets, it should be "
+                                 "strictly positive ! Got {}".format(planets))
+        elif isinstance(planets, list) and isinstance(planets[0], str):
+            self.add_planets(number=len(planets), names=planets)
+        elif planets is None:
+            pass
+        else:
+            raise ValueError("planets should be either a strictly positive int or a list of sting "
+                             "or None. Got {}".format(planets))
         ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
-        ## separation binary star.
-        self.subgravgroups = []
+        ## separation binary star. This is kept for later.
+        # self.subgravgroups = []
 
-    def add_star(self, name):
+    @property
+    def stars(self):
+        """Returns an OrderedDict containing the stars in the GravGroup."""
+        return self.__stars
+
+    @property
+    def planets(self):
+        """Returns an OrderedDict containing the planets in the GravGroup."""
+        return self.__planets
+
+    def is_star(self, name):
+        """Returns True if a star of this name exists in the gravgroup."""
+        return name in self.stars
+
+    def add_a_star(self, name=None):
         """Add a Star in the GravGroup."""
+        if self.is_star(name):
+            logger.warning("A star with name {} already exists ! It will be overwritten"
+                           "".format(name))
+        if name is None:
+            for possible_name in ascii_uppercase:
+                if self.is_star(possible_name):
+                    continue
+                else:
+                    name = possible_name
+                    break
         self.stars[name] = Star(name=name, gravgroup=self)
 
-    def add_planet(self, name):
+    def add_stars(self, number, names=None):
+        """Add Stars in the GravGroup."""
+        if names is None:
+            for i in range(number):
+                self.add_a_star()
+        else:
+            for i in range(number):
+                self.add_a_star(names[i])
+
+    def is_planet(self, name):
+        """Returns True if a planet of this name exists in the gravgroup."""
+        return name in self.planets
+
+    def add_a_planet(self, name):
         """Add a Planet in the GravGroup."""
+        if self.is_planet(name):
+            logger.warning("A planet with name {} already exists ! It will be overwritten"
+                           "".format(name))
+        if name is None:
+            for possible_name in ascii_lowercase[1:]:
+                if self.is_planet(possible_name):
+                    continue
+                else:
+                    name = possible_name
+                    break
         self.planets[name] = Planet(name=name, gravgroup=self)
 
-    def del_star(self, name):
+    def add_planets(self, number, names=None):
+        """Add Planets in the GravGroup."""
+        if names is None:
+            for i in range(number):
+                self.add_a_planet()
+        else:
+            for i in range(number):
+                self.add_a_planet(names[i])
+
+    def del_a_star(self, name):
         """Delete a Star in the GravGroup."""
         res = self.stars.pop(name, None)
         if res is None:
             logger.warning("The deletion of the star {} from the GravGroup has failed because this"
                            "star was not found.".format(name))
 
-    def del_planet(self, name):
+    def del_a_planet(self, name):
         """Delete a Planet in the GravGroup."""
         res = self.planets.pop(name, None)
         if res is None:

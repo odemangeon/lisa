@@ -21,24 +21,22 @@ class ParamContainer(object):
         """docstring ParamContainer init method."""
         super(ParamContainer, self).__init__()
         ## String: name of the instrument
-        self.name = check_name(name)
+        self.__name = check_name(name)
+        logger.debug("Name set to {}".format(check_name(name)))
         ## List of Parameter object
         self.parameter_list = []
         if type(self) is ParamContainer:
             raise NotImplementedError("ParamContainer should not be instanciated !")
 
-    def set_name(self, name):
-        """set the name of the ParamContainer."""
-        self.name = check_name(name)
-        logger.debug("Name of ParamContainer set to {}".format(check_name(name)))
-
-    def get_name(self):
+    @property
+    def name(self):
         """Return the name of the ParamContainer."""
-        return self.name
+        return self.__name
 
-    def get_name_code(self):
-        """Return the name of the ParamContainer."""
-        return check_name_code(self.get_name())
+    @property
+    def name_code(self):
+        """Return the name of the ParamContainer that can be used in code."""
+        return check_name_code(self.name)
 
     def get_list_params(self):
         """Return the list of all parameters."""

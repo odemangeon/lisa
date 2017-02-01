@@ -13,6 +13,8 @@ The objective of this package is to provides the core Model class.
 """
 import logging
 
+from ..paramcontainer import ParamContainer
+
 ## Logger
 logger = logging.getLogger()
 
@@ -31,13 +33,13 @@ class Metaclass_Model(type):
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
 
 
-class Model(metaclass=Metaclass_Model):
+class Model(ParamContainer, metaclass=Metaclass_Model):
     """docstring for Model abstract class."""
     def __init__(self, model_name, instruments=None):
         """Model init method FOR INHERITANCE PURPOSES (as Model is an abstract class).
 
         This __init__ does:
-            1. Set name of the model
+            1. Set name of the model and add a list of parameter attribute
         ----
         Arguments:
             model_name  : string,
@@ -47,16 +49,10 @@ class Model(metaclass=Metaclass_Model):
                 each key contain the list of instrument instances associated to the instrument used
                 for this type of instrument.
         """
-        super(Model, self).__init__()
         # 1.
-        self.__name = model_name
+        super(Model, self).__init__(model_name)
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
-
-    @property
-    def name(self):
-        """Return the instrument type."""
-        return self.__name
 
     @property
     def model_type(self):

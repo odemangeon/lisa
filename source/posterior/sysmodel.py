@@ -9,6 +9,7 @@ The objective of this package is to provides the classes to create exo systems a
 @TODO:
     - Implement LD_model argument in __init__ of SystemModel
 """
+import logging
 import numpy as np
 from string import ascii_lowercase
 from string import ascii_uppercase
@@ -17,6 +18,9 @@ from collections import OrderedDict
 
 from .gravgroup import GravGroup
 from tools.miscellaneous import check_name
+
+## Logger
+logger = logging.getLogger()
 
 
 class SystemModel(object):
@@ -48,7 +52,8 @@ class SystemModel(object):
 
     def __init__(self, name, analysis_type,
                  transit_model=None, ld_model=None, rv_model=None,
-                 gravgroups=None
+                 gravgroups=None,
+                 stars, planets
                  ):
         """
         Create SystemModel instance Object.
@@ -124,7 +129,7 @@ class SystemModel(object):
         if gravgroups is not None:
             if isinstance(gravgroups, list):
                 if len(gravgroups) > 0:
-                    pass:
+                    pass
                 else:
                     logger.warning("gravgroup has been ")
         interpret_grav_group(gravgroups=gravgroups)
@@ -162,7 +167,6 @@ class SystemModel(object):
                                  "strictly positive ! Got {}".format(planets))
         elif isinstance(planets, list) and isinstance(planets[0], str):
             list_planets = planets
-        elif
         else:
             raise ValueError("planets should be either a strictly positive int or a list of sting."
                              "Got {}".format(planets))
@@ -186,8 +190,6 @@ class SystemModel(object):
                 list containing the names of the planets in the GravGroup
         """
         self.gravgroups[name] = GravGroup()
-        
-
 
     def create_filetemplate(self):
         """
