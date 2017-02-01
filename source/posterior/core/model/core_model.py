@@ -33,15 +33,19 @@ class Metaclass_Model(type):
 
 class Model(metaclass=Metaclass_Model):
     """docstring for Model abstract class."""
-    def __init__(self, model_name):
+    def __init__(self, model_name, instruments=None):
         """Model init method FOR INHERITANCE PURPOSES (as Model is an abstract class).
 
         This __init__ does:
             1. Set name of the model
         ----
         Arguments:
-            model_name : string,
+            model_name  : string,
                 Name of the Model
+            instruments : dict, (default: None)
+                Dictionnary with keys being the instrument types of the dataset to be modeled and
+                each key contain the list of instrument instances associated to the instrument used
+                for this type of instrument.
         """
         super(Model, self).__init__()
         # 1.

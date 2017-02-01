@@ -24,6 +24,8 @@ The objective of this package is to provides the core Posterior class.
 import logging
 import os
 
+from collections import OrderedDict
+
 from ...software_parameters import input_data_folder
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
 from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -242,7 +244,7 @@ class Posterior(object):
         if inst_type not in self.dataset_database:
             self.dataset_database.update({inst_type: {}})
         if inst_name not in self.dataset_database[inst_type]:
-            self.dataset_database[inst_type].update({inst_name: {}})
+            self.dataset_database[inst_type].update({inst_name: OrderedDict()})
         if str(number) in self.dataset_database[inst_type][inst_name]:
             raise ValueError("The number of the dataset is {}. This number correspond to an alredy"
                              "added dataset".format(number))
@@ -323,7 +325,7 @@ class Posterior(object):
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath)
 
-    def get_dataset(self, inst_type, inst_name, number=0):
+    def get_dataset(self, inst_type, inst_name, number=None):
         """Return a dataset from the dataset database.
 
         Giving the caracteristics of the instrument used for the measurement and the number of the
@@ -337,11 +339,21 @@ class Posterior(object):
         number      : int, (default: 0)
             Number associated to the dataset you want to remove.
         """
-        return self.dataset_database[inst_type][inst_name][str(number)]
+        if number is None:
+            str_number = list(self.dataset_database[inst_type][inst_name].keys())[0]
+        else:
+            str_number = str(number)
+        return self.dataset_database[inst_type][inst_name][str_number]
 
-    def get_instrument_types(self):
+    def get_instruments(self):
         """Return the list of the types of instruments associated to the dataset in the database."""
-        return list(self.dataset_database.keys())
+        instruments_dict = {}
+        for inst_type in list(self.dataset_database.keys()):
+            instruments_dict.update({inst_type: []})
+            for inst_name in self.dataset_database[inst_type].keys():
+                first_dataset = self.get_dataset(inst_type=inst_type, inst_name=inst_name)
+                instruments_dict[inst_type].append(first_dataset.instrument)
+        return instruments_dict
 
     @property
     def model(self):
@@ -364,7 +376,8 @@ class Posterior(object):
             manager_model.load_setup()
         if "model_name" not in kwargs:
             kwargs.update({"model_name": "default"})
-        self.__model = manager_model.get_model_subclass(model_type)(**kwargs)
+        model_subclass = manager_model.get_model_subclass(model_type)
+        self.__model = model_subclass(instruments=self.get_instruments(), **kwargs)
         logger.info("Model defined with name {} !".format(self.model.name))
 
     def rm_model(self):
@@ -498,7 +511,8 @@ class Posterior(object):
     #     return key in self.rv_datasets
     #
     # def isin_datasets(self, key):
-    #     """Indicate if the dataset designed by key is exisiting and loaded and if yes which type."""
+    #     """Indicate if the dataset designed by key is exisiting and loaded and if yes
+    #     which type."""
     #     if self.isin_LC_datasets(key):
     #         return True, "LC"
     #     elif self.isin_RV_datasets(key):

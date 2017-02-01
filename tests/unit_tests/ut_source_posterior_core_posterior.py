@@ -49,8 +49,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             _model_type = "FakeModel"
 
-            def __init__(self, model_name="default"):
-                super(FakeModel, self).__init__(model_name)
+            def __init__(self, model_name="default", instruments=None):
+                super(FakeModel, self).__init__(model_name, instruments)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -160,7 +160,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual("SOPHIE-HE", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
-        self.assertCountEqual(["LC", "RV"], self.posterior_instance.get_instrument_types())
+        self.assertCountEqual(["LC", "RV"], self.posterior_instance.get_instruments().keys())
 
     def test_model_operations(self):
         with self.assertRaises(AttributeError):
