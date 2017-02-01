@@ -13,7 +13,11 @@ from unittest.mock import patch
 import source.posterior.core.posterior as pst
 
 from source.software_parameters import input_data_folder
-import source.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
+from source.posterior.core.dataset_and_instrument.manager_dataset_instrument import \
+    Manager_Inst_Dataset
+from source.posterior.core.model.manager_model import \
+    Manager_Model
+from source.posterior.core.model.core_model import Model
 import source.posterior.exoplanet.dataset_and_instrument.lc as lc
 import source.posterior.exoplanet.dataset_and_instrument.rv as rv
 
@@ -33,12 +37,21 @@ class TestMethods(unittest.TestCase):
     def setUp(self):
         self.posterior_instance = pst.Posterior("K2-29")
         self.posterior_instance_test = pst.Posterior("test")
-        self.manager = mgr.Manager_Inst_Dataset()
-        self.manager.set_dataset_for_inst_type("LC", lc.LC_Dataset)
-        self.manager.add_available_inst(lc.K2)
-        self.manager.set_dataset_for_inst_type("RV", rv.RV_Dataset)
-        self.manager.add_available_inst(rv.SOPHIE_HE)
+        self.manager_dataset = Manager_Inst_Dataset()
+        self.manager_dataset.set_dataset_for_inst_type("LC", lc.LC_Dataset)
+        self.manager_dataset.add_available_inst(lc.K2)
+        self.manager_dataset.set_dataset_for_inst_type("RV", rv.RV_Dataset)
+        self.manager_dataset.add_available_inst(rv.SOPHIE_HE)
         self.test_datafile = "LC_K2-19_K2.txt"
+        self.manager_model = Manager_Model()
+
+        class FakeModel(Model):
+            """docstring for FakeModel."""
+            _model_type = "FakeModel"
+
+            def __init__(self, model_name="default"):
+                super(FakeModel, self).__init__(model_name)
+        self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
         self.assertEqual(self.posterior_instance.object_name, "K2-29")
@@ -96,7 +109,7 @@ class TestMethods(unittest.TestCase):
             raise ValueError("The file {} already exists. the unit test can't be performed or it "
                              " will damage it. Change current directory.")
         open(self.test_datafile, "x").close()
-        dataset = self.manager.create_dataset(self.test_datafile)
+        dataset = self.manager_dataset.create_dataset(self.test_datafile)
         os.remove(self.test_datafile)
         self.posterior_instance._add_a_dataset(dataset)
         dataset_returned = self.posterior_instance.get_dataset("LC", "K2", 0)
@@ -117,7 +130,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(0, number)
         self.assertEqual(self.test_datafile, path)
 
-    def test_add_a_dataset_from_datasetsfile_and_get_isntrument_types(self):
+    def test_add_a_dataset_from_datasetsfile_and_get_instrument_types(self):
         file1 = "LC_K2-29_K2.txt"
         file2 = "RV_K2-29_SOPHIE-HE.txt"
         dataset_file = "test_datasetfile.txt"
@@ -148,6 +161,17 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
         self.assertCountEqual(["LC", "RV"], self.posterior_instance.get_instrument_types())
+
+    def test_model_operations(self):
+        with self.assertRaises(AttributeError):
+            self.posterior_instance.model = "K2-28"
+        self.posterior_instance.rm_model()
+        self.assertFalse(self.posterior_instance.isdefined_model())
+        self.posterior_instance.define_model(model_type="FakeModel", model_name="test")
+        self.assertTrue(self.posterior_instance.isdefined_model())
+        self.posterior_instance.rm_model()
+        self.assertFalse(self.posterior_instance.isdefined_model())
+
 
 
 if __name__ == '__main__':

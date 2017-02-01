@@ -27,11 +27,13 @@ import os
 from ...software_parameters import input_data_folder
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
 from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-
+from .model.manager_model import Manager_Model
 
 logger = logging.getLogger()
-manager = Manager_Inst_Dataset()
-manager.load_setup()
+manager_dataset = Manager_Inst_Dataset()
+manager_dataset.load_setup()
+manager_model = Manager_Model()
+manager_model.load_setup()
 
 
 def interpret_dataset_key(dataset_key):
@@ -287,8 +289,8 @@ class Posterior(object):
         if not found:
             return ValueError("File {} not found".format(datafile_path))
         if load_setup:
-            manager.load_setup()
-        self._add_a_dataset(manager.create_dataset(path))
+            manager_dataset.load_setup()
+        self._add_a_dataset(manager_dataset.create_dataset(path))
         logger.info("dataset added to the database: {}".format(datafile_path))
 
     def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False):
@@ -317,7 +319,7 @@ class Posterior(object):
             raise ValueError(error_msg)
         logger.debug("List of files to use: {}".format(list_files))
         if load_setup:
-            manager.load_setup()
+            manager_dataset.load_setup()
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath)
 
@@ -346,7 +348,7 @@ class Posterior(object):
         """Return the model."""
         return self.__model
 
-    def define_model(self, model_type, **kwargs):
+    def define_model(self, model_type, load_setup=False, **kwargs):
         """Set/Initialize the model.
 
         For now only assignement to None is possible.
@@ -358,15 +360,20 @@ class Posterior(object):
                 String which refers to an available Model Subclass that has been defined in the
                 model_setup_file.
         """
-        raise NotImplementedError
+        if load_setup:
+            manager_model.load_setup()
+        if "model_name" not in kwargs:
+            kwargs.update({"model_name": "default"})
+        self.__model = manager_model.get_model_subclass(model_type)(**kwargs)
+        logger.info("Model defined with name {} !".format(self.model.name))
 
-    def add_model(self):
-        """Add a model."""
-        raise NotImplementedError
-
-    def rm_model():
+    def rm_model(self):
         """Remove a model."""
-        raise NotImplementedError
+        self.__model = None
+
+    def isdefined_model(self):
+        """Return true if a model is defined."""
+        return self.model is not None
 
     def get_lnprior():
         """Get lnprior from a model and store it into lnprior."""

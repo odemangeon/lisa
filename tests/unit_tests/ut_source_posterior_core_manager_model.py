@@ -32,8 +32,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             _model_type = "FakeModel"
 
-            def __init__(self):
-                super(FakeModel, self).__init__()
+            def __init__(self, model_name="default"):
+                super(FakeModel, self).__init__(model_name)
         self.fake_modelsubclass = FakeModel
 
     def test_manage_model_database(self):
