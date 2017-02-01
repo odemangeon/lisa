@@ -184,19 +184,25 @@ class GravGroup(Model):
             for i in range(number):
                 self.add_a_planet(names[i])
 
-    def del_a_star(self, name):
+    def rm_star(self, name):
         """Delete a Star in the GravGroup."""
         res = self.stars.pop(name, None)
         if res is None:
             logger.warning("The deletion of the star {} from the GravGroup has failed because this"
                            "star was not found.".format(name))
+        else:
+            logger.info("The star {} has been removed from the GravGroup."
+                        "".format(name))
 
-    def del_a_planet(self, name):
+    def rm_planet(self, name):
         """Delete a Planet in the GravGroup."""
         res = self.planets.pop(name, None)
         if res is None:
             logger.warning("The deletion of the planet {} from the GravGroup has failed because "
                            "this star was not found.".format(name))
+        else:
+            logger.info("The planet {} has been removed from the GravGroup."
+                        "".format(name))
 
     def get_paramfile_section(self, text_tab=""):
         """Return the text to include in the parameter_file for this GravGroup.
