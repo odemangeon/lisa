@@ -49,8 +49,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             _model_type = "FakeModel"
 
-            def __init__(self, model_name="default", instruments=None):
-                super(FakeModel, self).__init__(model_name, instruments)
+            def __init__(self, name="default", instruments=None):
+                super(FakeModel, self).__init__(name, instruments)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -61,14 +61,14 @@ class TestMethods(unittest.TestCase):
     def test_datafolder_isset(self):
         self.assertFalse(self.posterior_instance.isset_datafolder())
 
-    @patch('source.posterior.core.posterior.QCM_utilisateur', return_value="y")
+    @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_custom_datafolder_answer_yes(self, input):
         path = "testposteriordatafolder"
         self.posterior_instance.data_folder = path
         self.assertEqual(self.posterior_instance.data_folder, path)
         os.rmdir(path)
 
-    @patch('source.posterior.core.posterior.QCM_utilisateur', return_value="n")
+    @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_custom_datafolder_answer_no(self, input):
         path = "testposteriordatafolder"
         self.posterior_instance.data_folder = path
@@ -81,14 +81,14 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(self.posterior_instance.data_folder, path)
         os.rmdir(path)
 
-    @patch('source.posterior.core.posterior.QCM_utilisateur', return_value="y")
+    @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_default_datafolder_answer_yes(self, input):
         path = os.path.join(input_data_folder, "test")
         self.posterior_instance_test.data_folder = "default"
         self.assertEqual(self.posterior_instance_test.data_folder, path)
         os.rmdir(path)
 
-    @patch('source.posterior.core.posterior.QCM_utilisateur', return_value="n")
+    @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_default_datafolder_answer_no(self, input):
         self.posterior_instance_test.data_folder = "default"
         self.assertFalse(self.posterior_instance_test.isset_datafolder())
@@ -167,7 +167,7 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.model = "K2-28"
         self.posterior_instance.rm_model()
         self.assertFalse(self.posterior_instance.isdefined_model())
-        self.posterior_instance.define_model(model_type="FakeModel", model_name="test")
+        self.posterior_instance.define_model(model_type="FakeModel", name="test")
         self.assertTrue(self.posterior_instance.isdefined_model())
         self.posterior_instance.rm_model()
         self.assertFalse(self.posterior_instance.isdefined_model())

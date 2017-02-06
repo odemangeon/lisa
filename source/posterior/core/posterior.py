@@ -27,8 +27,12 @@ import os
 from collections import OrderedDict
 
 from ...software_parameters import input_data_folder
-from ...tools.human_machine_interface.QCM import QCM_utilisateur
+from ...software_parameters import input_run_folder
+from ...tools.miscellaneous import define_folder_withdefault, look4file_withdeffolder
 from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from .dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
+from .dataset_and_instrument.dataset import Dataset
+
 from .model.manager_model import Manager_Model
 
 logger = logging.getLogger()
@@ -38,53 +42,53 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-def interpret_dataset_key(dataset_key):
-    """
-    Interpret dataset key.
-
-    ----
-
-    Arguments:
-        dataset_key : string,
-            dataset_key
-    Returns:
-        dictionnary with the interpration of the dataset key which contains the following keys:
-            - instrument : instrument name
-            - number : give the number of the data file if there is several data files from the same
-            instrument
-    """
-    cuts = dataset_key.split("_")
-    if len(cuts) > 2:
-        logging.warning("dataset_key not recognized. Should be in the format "
-                        "instrument_number. Got: {}".format(dataset_key))
-        return None
-    result = {"instrument": cuts[0]}
-    if len(cuts) == 2:
-        result["number"] = cuts[1]
-    elif len(cuts) == 1:
-        result["number"] = None
-    return result
-
-
-def build_dataset_key(instrument, number=None):
-    """
-    build dataset key.
-
-    ----
-
-    Arguments:
-        instrument : string,
-            instrument name
-        number : string, optional,
-            number of the dataset for this instrument
-    Returns:
-        dataset_key
-    """
-    separator = "_"
-    dataset_key = instrument
-    if number is not None:
-        dataset_key += separator + number
-    return dataset_key
+# def interpret_dataset_key(dataset_key):
+#     """
+#     Interpret dataset key.
+#
+#     ----
+#
+#     Arguments:
+#         dataset_key : string,
+#             dataset_key
+#     Returns:
+#         dictionnary with the interpration of the dataset key which contains the following keys:
+#             - instrument : instrument name
+#             - number : give the number of the data file if there is several data files from the
+#               same instrument
+#     """
+#     cuts = dataset_key.split("_")
+#     if len(cuts) > 2:
+#         logging.warning("dataset_key not recognized. Should be in the format "
+#                         "instrument_number. Got: {}".format(dataset_key))
+#         return None
+#     result = {"instrument": cuts[0]}
+#     if len(cuts) == 2:
+#         result["number"] = cuts[1]
+#     elif len(cuts) == 1:
+#         result["number"] = None
+#     return result
+#
+#
+# def build_dataset_key(instrument, number=None):
+#     """
+#     build dataset key.
+#
+#     ----
+#
+#     Arguments:
+#         instrument : string,
+#             instrument name
+#         number : string, optional,
+#             number of the dataset for this instrument
+#     Returns:
+#         dataset_key
+#     """
+#     separator = "_"
+#     dataset_key = instrument
+#     if number is not None:
+#         dataset_key += separator + number
+#     return dataset_key
 
 
 class Posterior(object):
@@ -96,10 +100,11 @@ class Posterior(object):
             1. Define the name of the object studied
             2. Initialize the dataset database
             3. Initialize the data_folder
-            4. Initialise the model
-            5. Initialise the lnprior
-            6. Initialise the lnlike
-            7. Initialise the lnpost
+            4. Initialize the run_folder
+            5. Initialise the model
+            6. Initialise the lnprior
+            7. Initialise the lnlike
+            8. Initialise the lnpost
         ----
         Arguments:
             object_name : string,
@@ -116,6 +121,9 @@ class Posterior(object):
         # 3.
         ## Folder where the program should look for dataset files by default: Initialise it
         self.__data_folder = None
+        #
+        ## Folder where the program should look for config files by default: Initialise it
+        self.__run_folder = None
         # 4.
         ## Model: Initialise it
         self.__model = None
@@ -136,80 +144,51 @@ class Posterior(object):
 
     @property
     def data_folder(self):
-        """Get the data_folder attributes."""
-        return self.__data_folder
-
-    @data_folder.setter
-    def data_folder(self, data_folder="default"):
-        """Set the data_folder attribute.
-
-        The data_folder is the folder where the program will look for the dataset files.
+        """The data_folder is the folder where the program will look for the dataset files.
         It can be provided in two ways:
             - Via the folder defined in software_parameters: In this case the data_folder is
               automatically define as "input_data_folder/object_name". To use this you should assign
               "default"
             - Via the data_folder argument: You can provide any folder here via the data_folder
               argument.
-        This function does:
-            1. Check if the data_folder argument has been provided. If yes use this otherwise try
-                use a folder with the object name in the fodler designated by the input_data_folder
-                provided by the software_parameter module
-            2. Test is the folder selected in 1 exists
-            3. If yes, Set the data_folder attribute to be this folder
-            4. If no, Ask if the user want to create the folder selected.
-                4.1. If yes, create it and set the data_folder attribute
-                4.2. If no, don't create, don't set and put log warning message
-            5. log the definition of the data folder
-        ----
-        Arguments:
-            data_folder : string, (default: None),
-                path to the folder which contain the data. If provided the main_data_folder argument
-                is ignored.
+        If not defined, return None.
         """
-        # 1.
-        data_folder_provided = (data_folder != "default")
-        if data_folder_provided:
-            folder = data_folder
-        else:
-            folder = os.path.join(input_data_folder, self.object_name)
-        # 2.
-        folder_exist = os.path.isdir(folder)
-        # 3.
-        if folder_exist:
-            self.__data_folder = folder
-            data_folder_defined = True
-        # 4.
-        else:
-            if data_folder_provided:
-                error_msg = "Folder doesn't exist: {}".format(folder)
-                reply = QCM_utilisateur(error_msg + "\n Do you want to create it ? ['y', 'n']",
-                                        ['y', 'n'])
-            else:
-                msg = ("You didn't provided any data_folder and the standard one doesn't exist."
-                       "Do you want to create the folder (reply by 'y' or 'n'):\n{}".format(folder))
-                reply = QCM_utilisateur(msg, ["y", "n"])
-            # 4.1.
-            if reply == "y":
-                os.makedirs(folder)
-                self.__data_folder = folder
-                data_folder_defined = True
-                logger.info("Folder created: {}".format(folder))
-            # 4.2.
-            else:
-                data_folder_defined = False
-                logger.warning("Data_folder has not been defined because provided folder doesn't "
-                               "exist and has not been created.")
-        # 5.
-        if data_folder_defined:
-            if data_folder_provided:
-                logger.info("Data_folder is defined as a specific folder: {}".format(folder))
-            else:
-                logger.info("Data_folder not provided but standard fodler exist and is used:"
-                            " {}".format(folder))
+        return self.__data_folder
+
+    @data_folder.setter
+    def data_folder(self, data_folder="default"):
+        """Set the data_folder attribute."""
+        self.__data_folder = define_folder_withdefault(main_default_folder=input_data_folder,
+                                                       object_name=self.object_name,
+                                                       folder=data_folder)
+
+    @property
+    def run_folder(self):
+        """The run_folder is the folder where the program will look for config files and put
+        outputs. It can be provided in two ways:
+            - Via the folder defined in software_parameters: In this case the run_folder is
+              automatically define as "input_run_folder/object_name". To use this you should assign
+              "default"
+            - Via the run_folder argument: You can provide any folder here via the run_folder
+              argument.
+        If not defined, return None.
+        """
+        return self.__run_folder
+
+    @run_folder.setter
+    def run_folder(self, run_folder="default"):
+        """Set the run_folder attribute."""
+        self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
+                                                      object_name=self.object_name,
+                                                      folder=run_folder)
 
     def isset_datafolder(self):
         """Tells if the data_folder attribute is defined."""
         return self.data_folder is not None
+
+    def isset_runfolder(self):
+        """Tells if the run_folder attribute is defined."""
+        return self.run_folder is not None
 
     @property
     def dataset_database(self):
@@ -231,12 +210,14 @@ class Posterior(object):
         else:
             raise ValueError("For now only now an empty dict is accepted to reset the database.")
 
-    def _add_a_dataset(self, dataset):
+    def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.
         ----
         Arguments:
             dataset : Subclass of Dataset object,
                 Instance of a subclass of Dataset.
+            force   : boolean, (default: False),
+                True to force the addition of the dataset
         """
         inst_type = dataset.instrument.inst_type
         inst_name = dataset.instrument.name
@@ -246,9 +227,39 @@ class Posterior(object):
         if inst_name not in self.dataset_database[inst_type]:
             self.dataset_database[inst_type].update({inst_name: OrderedDict()})
         if str(number) in self.dataset_database[inst_type][inst_name]:
-            raise ValueError("The number of the dataset is {}. This number correspond to an alredy"
-                             "added dataset".format(number))
+            if not(force):
+                logger.error("Dataset {} already exist in the database, it will not be added.")
+                raise ValueError("The number of the dataset is {}. This number correspond to an "
+                                 "alredy added dataset".format(number))
+            else:
+                logger.error("Dataset {} already exist in the database, it will be replaced.")
         self.dataset_database[inst_type][inst_name][str(number)] = dataset
+
+    def isavailable_dataset(self, dataset):
+        """Return if filename correspond to a dataset that is in the database.
+        ----
+        Arguments:
+            filename : string,
+                filename of the dataset.
+        """
+        if isinstance(dataset, str):
+            filename_info = interpret_data_filename(interpret_data_filename)
+            inst_type = filename_info["inst_type"]
+            inst_name = filename_info["inst_name"]
+            number = filename_info["number"]
+        elif isinstance(dataset, Dataset):
+            inst_type = dataset.instrument.inst_type
+            inst_name = dataset.instrument.name
+            number = dataset.number
+        else:
+            raise ValueError("{} is neither a dataset instance nor a dataset file name."
+                             "".format(dataset))
+        if inst_type in self.dataset_database:
+            if inst_name in self.dataset_database[inst_type]:
+                if number in self.dataset_database[inst_type][inst_name]:
+                    return True
+        else:
+            return False
 
     def rm_dataset(self, inst_type, inst_name, number=0):
         """Remove a dataset from the the dataset database.
@@ -267,7 +278,7 @@ class Posterior(object):
             if len(self.dataset_database[inst_type]) == 0:
                 self.dataset_database.pop(inst_type)
 
-    def add_a_dataset_from_path(self, datafile_path, load_setup=False):
+    def add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
         """Add a dataset designated by its path to the dataset database.
         ----
         Arguments:
@@ -275,27 +286,26 @@ class Posterior(object):
                 path to the data file.
             load_setup      : bool, (default: False)
                 tell if you want to manager to laod the inst_and_dataset_setup file.
+            force           : boolean, (default: False),
+                True to force the addition of the dataset
         """
-        if os.path.isfile(datafile_path):
+        found = os.path.isfile(datafile_path)
+        if found:
             path = datafile_path
-            found = True
         else:
             if self.isset_datafolder:
-                if os.path.isfile(os.path.join(self.data_folder, datafile_path)):
-                    path = os.path.join(self.data_folder, datafile_path)
-                    found = True
-                else:
-                    found = False
-            else:
-                found = False
-        if not found:
-            return ValueError("File {} not found".format(datafile_path))
+                path = os.path.join(self.data_folder, datafile_path)
+                found = os.path.isfile(path)
+        if found:
+            logger.debug("Dataset file found at path: {}".format(path))
+        else:
+            raise ValueError("File {} not found".format(datafile_path))
         if load_setup:
             manager_dataset.load_setup()
-        self._add_a_dataset(manager_dataset.create_dataset(path))
+        self._add_a_dataset(manager_dataset.create_dataset(path), force=force)
         logger.info("dataset added to the database: {}".format(datafile_path))
 
-    def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False):
+    def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False, force=False):
         """Add the datasets specified in the datasets_file to the dataset database.
         ----
         Arguments:
@@ -303,11 +313,14 @@ class Posterior(object):
                 path to the datasets file.
             load_setup          : bool, (default: False)
                 tell if you want to manager to laod the inst_and_dataset_setup file.
+            force               : boolean, (default: False),
+                True to force the addition of the dataset
         """
-        if os.path.exists(path_datasets_file):
-            logger.debug("file exists: {}".format(path_datasets_file))
+        file_path = look4file_withdeffolder(file_path=path_datasets_file,
+                                            default_folder=self.run_folder)
+        if file_path is not None:
             list_files = []
-            with open(path_datasets_file, 'r') as f:
+            with open(file_path, 'r') as f:
                 for line in f.readlines():
                     line_striped = line.strip(" \n")
                     logger.debug("raw line: {}striped line: {}".format(line, line_striped))
@@ -323,7 +336,7 @@ class Posterior(object):
         if load_setup:
             manager_dataset.load_setup()
         for filepath in list_files:
-            self.add_a_dataset_from_path(filepath)
+            self.add_a_dataset_from_path(filepath, force=force)
 
     def get_dataset(self, inst_type, inst_name, number=None):
         """Return a dataset from the dataset database.
@@ -374,8 +387,8 @@ class Posterior(object):
         """
         if load_setup:
             manager_model.load_setup()
-        if "model_name" not in kwargs:
-            kwargs.update({"model_name": "default"})
+        if "name" not in kwargs:
+            kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(model_type)
         self.__model = model_subclass(instruments=self.get_instruments(), **kwargs)
         logger.info("Model defined with name {} !".format(self.model.name))

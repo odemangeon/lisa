@@ -71,6 +71,7 @@ class Manager_Model(object):
                 model_subclass : Subclass of Model,
                     Custom subclass of the Model Class that you want to add to the database.
             """
+            logger.debug("model_subclass type: {}".format(type(model_subclass)))
             if not(issubclass(model_subclass, Model)):
                 raise ValueError("The provided class is not a subclass of the Model class.")
             self.__models.update({model_subclass.model_type: model_subclass})

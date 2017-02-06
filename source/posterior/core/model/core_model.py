@@ -35,14 +35,14 @@ class Metaclass_Model(type):
 
 class Model(ParamContainer, metaclass=Metaclass_Model):
     """docstring for Model abstract class."""
-    def __init__(self, model_name, instruments=None):
+    def __init__(self, name, instruments=None):
         """Model init method FOR INHERITANCE PURPOSES (as Model is an abstract class).
 
         This __init__ does:
             1. Set name of the model and add a list of parameter attribute
         ----
         Arguments:
-            model_name  : string,
+            name  : string,
                 Name of the Model
             instruments : dict, (default: None)
                 Dictionnary with keys being the instrument types of the dataset to be modeled and
@@ -50,7 +50,9 @@ class Model(ParamContainer, metaclass=Metaclass_Model):
                 for this type of instrument.
         """
         # 1.
-        super(Model, self).__init__(model_name)
+        super(Model, self).__init__(name)
+        # 2.
+        self.__instruments = instruments
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -58,3 +60,13 @@ class Model(ParamContainer, metaclass=Metaclass_Model):
     def model_type(self):
         """Return the instrument type."""
         return self.__class__._model_type
+
+    @property
+    def instruments(self):
+        """Return the isntruments."""
+        return self.__instruments
+
+    @property
+    def datatypes_tosim(self):
+        """Return the list of data types to simulate."""
+        return list(self.__instruments.keys())
