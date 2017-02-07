@@ -62,7 +62,7 @@ logger.info("\n#### Test the production of a string for a Planet only "
 
 # Create the planet instance
 logger.info("Create the planet instance")
-planet_test = Planet(gravgroup=gravgroup_test ,name="b")
+planet_test = Planet(gravgroup=gravgroup_test, name="b")
 logger.info("Set parametrisation")
 for param in planet_test.get_list_params():
     param.main = True

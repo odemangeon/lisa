@@ -4,11 +4,14 @@
 Parameter module.
 
 The objective of this module is to define the Parameter class.
+
+TODO:
+    - Change the value.setter to check if value is within the prior
 """
 import logging
 from numbers import Number
 
-from source.tools.miscellaneous import spacestring_like
+from source.tools.miscellaneous import spacestring_like, check_name_code
 
 ## Logger Object
 logger = logging.getLogger()
@@ -25,10 +28,12 @@ class Parameter(object):
     ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
     joint_prior_pos = None
 
-    def __init__(self, name, free=None, main=None, joint_prior=None,
+    def __init__(self, name, name_prefix=None,
+                 free=True, main=True, joint_prior=False,
                  prior_type=None, prior_args=None,
                  joint_prior_ref=None, joint_prior_pos=None,
-                 value=None):
+                 value=None
+                 ):
         """Create a Parameter Instance.
 
         ----
@@ -63,52 +68,112 @@ class Parameter(object):
                 to define the initial value.
         """
         ## Name of the parameter: string
-        self.name = name
+        if not isinstance(name, str):
+            raise ValueError("Name should be a string")
+        self.__name = name
+        ## Name of the parameter: string
+        if not isinstance(name_prefix, str) and (name_prefix is not None):
+            raise ValueError("Name_prefix should be a string")
+        self.__name_prefix = name_prefix
         # Set the free attribute
-        if isinstance(free, bool) or (free is None):
-            ## Indicate if this parameter is free or fixed: Boolean or None
-            self.free = free
-        else:
-            raise ValueError("Free should be a boolean or None.")
+        self.free = free
         # Set the main attribute
-        if isinstance(main, bool) or (main is None):
-            ## Indicate if this parameter is main or auxiliary: Boolean or None
-            self.main = main
-        else:
-            raise ValueError("Main should be a boolean or None.")
+        self.main = main
         # Set the joint_prior attribute
-        if isinstance(joint_prior, bool) or (joint_prior is None):
-            ## Indicate if the prior of this parameter is a joint prior: Boolean or None
-            self.joint_prior = joint_prior
-        else:
-            raise ValueError("Joint_prior should be a boolean or None.")
+        self.joint_prior = joint_prior
         # Set the prior_type attribute
-        if isinstance(prior_type, str) or (prior_type is None):
-            ## Give the type of prior: string, for example Gaussian, Uniform
-            self.prior_type = prior_type
-        else:
-            raise ValueError("Prior_type should be a str or None.")
+        self.prior_type = prior_type
         # Set the value of the parameter
-        if isinstance(value, Number) or (value is None):
-            ## Value of the parameter: float
-            self.value = value
-        else:
-            raise ValueError("Value should be a number or None.")
+        self.value = value
+        ## Initialise the info regarding the content of the parametrisation file
+        self.__paramfile_info = {"caracteristics": ["free", "value"],
+                                 "prior": ["type", "args"]}
 
-    def value_isNone(self):
-        """Indicate is the value of the parameter is None."""
-        return self.value is None
-
-    def ismain(self):
+    @property
+    def name(self):
         """Indicate if the paramater is a main parameter."""
-        return self.main is True
+        return self.__name
 
-    def get_value(self):
+    @property
+    def name_code(self):
+        """Return the name of the ParamContainer that can be used in code."""
+        return check_name_code(self.name)
+
+    @property
+    def full_name(self):
+        """Indicate if the paramater is a main parameter."""
+        if self.__name_prefix is not None:
+            return self.__name_prefix + "_" + self.__name
+        else:
+            return self.__name
+
+    @property
+    def free(self):
+        """Indicate if the paramater is a free parameter."""
+        return self.__free
+
+    @free.setter
+    def free(self, boolean):
+        """Indicate if the paramater is a free parameter."""
+        if isinstance(boolean, bool):
+            ## Indicate if this parameter is main or auxiliary: Boolean
+            self.__free = boolean
+        else:
+            raise AssertionError("free should be a boolean.")
+
+    @property
+    def main(self):
+        """Indicate if the paramater is a main parameter."""
+        return self.__main
+
+    @main.setter
+    def main(self, boolean):
+        """Indicate if the paramater is a main parameter."""
+        if isinstance(boolean, bool):
+            ## Indicate if this parameter is main or auxiliary: Boolean
+            self.__main = boolean
+        else:
+            raise AssertionError("Main should be a boolean.")
+
+    @property
+    def value(self):
         """Return the value of the parameter."""
-        if self.value is None:
-            logger.warning("The current value of parameter {} is not specified. Returned None."
-                           "".format(self.name))
-        return self.value
+        return self.__value
+
+    @value.setter
+    def value(self, val):
+        """Set the value of the parameter."""
+        if isinstance(val, Number) or (val is None):
+            self.__value = val
+        else:
+            raise AssertionError("value should be a number or None.")
+
+    @property
+    def joint_prior(self):
+        """Indicate if the prior of the parameter is described by a joint prior."""
+        return self.__joint_prior
+
+    @joint_prior.setter
+    def joint_prior(self, boolean):
+        """Set the joint_prior attribute."""
+        if isinstance(boolean, bool):
+            self.__joint_prior = boolean
+        else:
+            raise AssertionError("joint_prior should be a boolean.")
+
+    @property
+    def prior_type(self):
+        """Type of prior associated to the parameter (str)."""
+        return self.__prior_type
+
+    @prior_type.setter
+    def prior_type(self, prior_str):
+        """Set the prior_type attribute."""
+        if isinstance(prior_str, str) or (prior_str is None):
+            ## Give the type of prior: string, for example Gaussian, Uniform
+            self.__prior_type = prior_str
+        else:
+            raise AssertionError("prior_type should be a str or None.")
 
     def get_prior_value(self):
         """Return the a priori density probability of parameter to be value."""
@@ -117,7 +182,13 @@ class Parameter(object):
                                  "parameter described by joint prior probability.")
         return self.prior_func(self.value)
 
-    def get_paramfile_section(self, text_tab="", texttab_1tline=True):
+    @property
+    def paramfile_info(self):
+        """Information about the content of the param file"""
+        return self.__paramfile_info
+
+    def get_paramfile_section(self, text_tab="", texttab_1tline=True,
+                              entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this parameter.
 
         ----
@@ -127,16 +198,18 @@ class Parameter(object):
                 text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
         """
-        name = self.get_short_name()
-        entete_param = "'{0}': {{".format(name)
-        space_entete_param = spacestring_like(entete_param)
+        if quote_name:
+            entete = "'{}'{}{{".format(self.name_code, entete_symb)
+        else:
+            entete = "{}{}{{".format(self.name_code, entete_symb)
+        space_entete_param = spacestring_like(entete)
         text = ""
         # First is the name of the parameter
         if texttab_1tline:
             text += text_tab
-        text += entete_param
+        text += entete
         # First key of the parameter dictionnary is 'free' for free parameter or fixed.
-        text += "'free': True,\n".format(name)
+        text += "'free': True,\n".format(self.name)
         # Second key is for the priors
         entete_prior = "'prior': {"
         space_entete_prior = spacestring_like(entete_prior)
@@ -152,10 +225,21 @@ class Parameter(object):
         text += text_tab + space_entete_param + "},\n"
         return text
 
-    def get_short_name(self):
-        """Return the short name of the parameter."""
-        return self.name
+    def load_config(self, dico_config):
+        """Load the configuration specified by the parameter dictionnary.
 
-    def get_full_name(self):
-        """Return the full name of the parameter."""
-        return self.name
+        ----
+
+        Arguments:
+            dico : dict,
+                dictionnary giving the configuration.
+        """
+        for carac in self.paramfile_info["caracteristics"]:
+            if carac in dico_config:
+                if getattr(self, carac) != dico_config[carac]:
+                    logger.debug("{} attribute of param {} changed from {} to {}"
+                                 "".format(carac,
+                                           self.full_name,
+                                           getattr(self, carac),
+                                           dico_config[carac]))
+                    setattr(self, carac, dico_config[carac])

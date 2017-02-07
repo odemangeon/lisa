@@ -44,15 +44,35 @@ def lnprior_ind(p):
         return -np.inf
     if not 0 < k < 30.0:
         return -np.inf
-    if not  0 <= w < 180:
+    if not  0 <= w < 360:
+    #if not  89.99 <= w < 90.01:
         return -np.inf
-    if not  0 <= ecc < 0.5:
+    if not  0 <= ecc < 0.2:
+    #if not  0 <= ecc < 0.001:
         return -np.inf
-    if not  7399.46948 - 0.08 < t0 < 7399.46948 +0.08:  # extrapolation gives 7399.46948  0.08 is an error of 2 hours
+    '''
+    if not  7399.46948 - 0.0166 < t0 < 7399.46948 + 0.0166:  # extrapolation gives 7399.46948  0.08 is an error of 2 hours
         return -np.inf
     if not  7.92008 - 0.0013 < period1 < 7.92008 + 0.0013: # error in the paper is 0.6 minutes i am allowng 2 minutes=0.0013
         return -np.inf
     return 0
+    '''
+
+    #prior_t01 = stats.norm(7423.26918, 0.02765*3)
+    #pt01 = prior_t01.logpdf(t0)
+
+    if not  7423.26918 - 0.02765*3 < t0 < 7423.26918 +0.03515*3:  # extrapolation gives 7399.46948  0.08 is an error of 2 hours
+    #if not  7421.0 < t0 < 7425.0:  # extrapolation gives 7399.46948  0.08 is an error of 2 hours
+        return -np.inf
+    #if not  7.92008 - 0.5 < period1 < 7.92008 + 0.5:
+    #    return -np.inf
+
+    prior_period1 = stats.norm(7.92008 ,  0.0013)
+    pperiod1= prior_period1.logpdf(period1)
+
+    return  pperiod1 #pt01 +
+
+
 # with priors of - 0.08 and 0.013 the t0 and the period are complitly unctrained within the prioir,
 # need to check what is more resonable to contrain more from the transits and see what we can leave a bit more free
 # with the 2 minutes error on the period the still unconstrained
@@ -113,9 +133,9 @@ if __name__ == "__main__":
     data = (t, y, yerr)
 
 
-    truth_par = [-8.295, 7340.0,  14.4, 90.0 ,0.01, 7399.46948,  7.92008]
+    truth_par = [-8.295, 7340.0,  14.4, 179.0 ,0.01, 7423.26918,  7.92008]
     #for granulation
-
+    truth_par = [-8.295, 7340.0,  14.4, 90. ,0.0, 7423.26918,  7.92008]
 
     sampler = fit_ind(truth_par, data)
 
@@ -150,8 +170,24 @@ if __name__ == "__main__":
     pl.ylabel(r"$y$")
     pl.xlabel(r"$t$")
     pl.xlim(t.min(),t.max())
-    pl.show()
+    pl.savefig("rvs_gp_pl_run10.png", dpi=150)
 
     labels = ["jitter","rvsys", "k", "w", "ecc", "t0", "period"]
     fig = corner.corner(samples[:, :], truths=truth_par, labels=labels)
-    fig.show()
+    fig.savefig("rvs_gp_corner_run10.png", dpi=150)
+    #fig.show()
+
+    for i in range(0,7):
+        s1  =   np.percentile(samples[:,i], [16, 50, 84], axis=0)
+        t0_right, t0_left =  s1[2]-fitparams[i] ,  fitparams[i] -s1[0]
+        print(labels[i])
+        print('%.5f^{+%.5f}_{-%.5f}' % ( fitparams[i], t0_right,t0_left))
+
+    '''
+    fp = open('respriorfit1.txt ', 'w')
+    for i in range(0,len(t)-1):
+        #fp.write('%.10f\t%f\t%f\n'%(t[i], y[i], yerr[i]))
+        fp.write('%.20f\t%.20f\t%.20f\n'%(t[i], y[i]-model(fitparams,t[i] ), yerr[i]))
+
+    fp.close()
+    '''
