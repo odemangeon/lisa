@@ -18,7 +18,7 @@ It could be:
     - Log info the creation of stars and planets in a model
     - Deal with fitting transit times individually
     - Deal with limb darkening coefficients parametrisation
-    - Redefine the get_parametrisation routine in gravgroup so that it give the parametrisation of
+    - Redefine the get_list_main_params routine in gravgroup so that it give the parametrisation of
       the planets and stars inside it.
     - Implement subgravgroups in GravGroup
     - Transform the attributes transit_model, rv_model and ld_model into set and get properties

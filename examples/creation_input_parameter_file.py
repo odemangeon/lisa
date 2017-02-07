@@ -51,7 +51,7 @@ gravgroup_test = GravGroup(name="K2-19")
 logger.info("Create the star instance")
 star_test = Star(gravgroup=gravgroup_test, name="A")
 logger.info("Set parametrisation")
-for param in star_test.get_list_params():
+for param in star_test.get_list_all_params():
     param.main = True
 logger.info("Show the string")
 print(star_test.get_paramfile_section())
@@ -64,7 +64,7 @@ logger.info("\n#### Test the production of a string for a Planet only "
 logger.info("Create the planet instance")
 planet_test = Planet(gravgroup=gravgroup_test, name="b")
 logger.info("Set parametrisation")
-for param in planet_test.get_list_params():
+for param in planet_test.get_list_all_params():
     param.main = True
 logger.info("Show the string")
 print(planet_test.get_paramfile_section())
@@ -77,7 +77,7 @@ logger.info("\n#### Test the production of a string for an instrument only "
 logger.info("Create the instrument instance")
 instrument_test = Instrument(name="SOPHIE", inst_type="RV")
 logger.info("Set parametrisation")
-for param in instrument_test.get_list_params():
+for param in instrument_test.get_list_all_params():
     param.main = True
 logger.info("Show the string")
 print(instrument_test.get_paramfile_section())

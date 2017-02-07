@@ -12,7 +12,8 @@ import logging
 
 from ...core.parameter import Parameter
 from ...core.paramcontainer import ParamContainer
-from source.tools.miscellaneous import check_name_code
+from ...core.prior.manager_prior import Manager_Prior
+from ....tools.miscellaneous import check_name_code
 
 
 ## Logger object
@@ -94,56 +95,51 @@ class Planet(CelestialBody):
         """docstring Planet init method."""
         super(Planet, self).__init__(gravgroup, name)
         ## Radius of the planet
-        self.R = Parameter(name="R", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="R", name_prefix=self.full_name, main=False))
         ## Mass of the planet
-        self.M = Parameter(name="M", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="M", name_prefix=self.full_name, main=False))
         ## Mean density of the planet
-        self.rho = Parameter(name="rho", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="rho", name_prefix=self.full_name, main=False))
         ## Age of the planet
-        self.age = Parameter(name="age", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="age", name_prefix=self.full_name, main=False))
         ## Orbital period
-        self.P = Parameter(name="P", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="P", name_prefix=self.full_name, main=False))
         ## log Orbital period
-        self.logP = Parameter(name="logP", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="logP", name_prefix=self.full_name, main=False))
         ## Semi-major axis
-        self.a = Parameter(name="a", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="a", name_prefix=self.full_name, main=False))
         ## Excentricity
-        self.ecc = Parameter(name="ecc", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="ecc", name_prefix=self.full_name, main=False))
         ## Inclination
-        self.inc = Parameter(name="inc", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="inc", name_prefix=self.full_name, main=False))
         ## Cos Inclination
-        self.cosinc = Parameter(name="inc", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="inc", name_prefix=self.full_name, main=False))
         ## Impact parameter
-        self.b = Parameter(name="b", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="b", name_prefix=self.full_name, main=False))
         ## Argument of periapsis
-        self.w = Parameter(name="w", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="w", name_prefix=self.full_name, main=False))
         ## Longitude of the acending node
-        self.Omega = Parameter(name="Omega", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="Omega", name_prefix=self.full_name, main=False))
         ## First Transit time
-        self.t0 = Parameter(name="t0", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="t0", name_prefix=self.full_name, main=False))
         ## Radial velocity semi-amplitude
-        self.K = Parameter(name="K", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## log Radial velocity semi-amplitude
-        self.logK = Parameter(name="K", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## Radius ratio planet over star
-        self.R_rat = Parameter(name="R_rat", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="R_rat", name_prefix=self.full_name, main=False))
         ## Mass ratio planet over star
-        self.M_rat = Parameter(name="M_rat", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="M_rat", name_prefix=self.full_name, main=False))
         ## a over R, ratio of semi-major axis over Radius of the host star
-        self.ar = Parameter(name="ar", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
         ## log a over R, ratio of semi-major axis over Radius of the host star
-        self.logar = Parameter(name="ar", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
         ## ecc . cos(w)
-        self.ecosw = Parameter(name="ecosw", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="ecosw", name_prefix=self.full_name, main=False))
         ## ecc . sin(w)
-        self.esinw = Parameter(name="esinw", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="esinw", name_prefix=self.full_name, main=False))
         ## transit times
         self.transit_times = {}
-        # Update List of parameters
-        super().extend_list_params([self.R, self.M, self.rho, self.age, self.P, self.a,
-                                    self.ecc, self.inc, self.b, self.w, self.Omega, self.t0,
-                                    self.K, self.R_rat, self.M_rat, self.ar, self.ecosw, self.esinw
-                                    ])
 
 
 class Star(CelestialBody):
@@ -167,39 +163,34 @@ class Star(CelestialBody):
         """
         super(Star, self).__init__(gravgroup, name)
         ## Radius of the star
-        self.R = Parameter(name="R", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="R", name_prefix=self.full_name, main=False))
         ## Mass of the star
-        self.M = Parameter(name="M", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="M", name_prefix=self.full_name, main=False))
         ## Mean density of the star
-        self.rho = Parameter(name="rho", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="rho", name_prefix=self.full_name, main=False))
         ## Age of the star
-        self.age = Parameter(name="age", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="age", name_prefix=self.full_name, main=False))
         ## logg
-        self.logg = Parameter(name="logg", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="logg", name_prefix=self.full_name, main=False))
         ## Effective temperature of the star
-        self.Teff = Parameter(name="Teff", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="Teff", name_prefix=self.full_name, main=False))
         ## Distance to observer
-        self.dist = Parameter(name="dist", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="dist", name_prefix=self.full_name, main=False))
         ## Extinction E(B-V)
-        self.ebmv = Parameter(name="ebmv", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="ebmv", name_prefix=self.full_name, main=False))
         ## Proper motion radial velocity contribution
-        self.v0 = Parameter(name="v0", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="v0", name_prefix=self.full_name, main=False))
         ## drift in the radial velocity signal
-        self.drift = Parameter(name="drift", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="drift", name_prefix=self.full_name, main=False))
         ## Mean Luminosity
-        self.L = Parameter(name="L", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="L", name_prefix=self.full_name, main=False))
         ## Mean Magnitude
-        self.mag = Parameter(name="mag", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="mag", name_prefix=self.full_name, main=False))
         ## Mean Flux
-        self.F = Parameter(name="F", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="F", name_prefix=self.full_name, main=False))
         ## Metallicity
-        self.feh = Parameter(name="feh", name_prefix=self.full_name, main=False)
+        self.add_parameter(Parameter(name="feh", name_prefix=self.full_name, main=False))
         ## dict of the list of limb darkening coefficients for an instrument
         self.ld_coeff = {}  # Dict or vector
         ## dict of limb darkening law for an instrument
         self.ld_models = {}
-        # Update List of parameters
-        super().extend_list_params([self.R, self.M, self.rho, self.age, self.logg, self.Teff,
-                                    self.dist, self.ebmv, self.v0, self.drift, self.L, self.mag,
-                                    self.F, self.feh
-                                    ])

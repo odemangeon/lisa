@@ -52,6 +52,8 @@ class Manager_Prior(object):
             Association prior type name and Prior_Function subclass.
             """
             exec(open(setupfile_prior).read())
+            logger.debug("Setup of Manager_Prior Loaded. Available priors: {}"
+                         "".format(self.get_available_priors()))
 
         def get_available_priors(self):
             """Returns the list of available prior types.

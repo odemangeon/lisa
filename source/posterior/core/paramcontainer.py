@@ -9,10 +9,11 @@ set of parameters. It could be a Planet or a Star for exoplanet models
 import logging
 import os
 
-from collections import Iterable
+from collections import OrderedDict
 
 from source.tools.miscellaneous import spacestring_like, check_name, check_name_code
 from source.tools.human_machine_interface.QCM import QCM_utilisateur
+from .parameter import Parameter
 
 ## Logger Object
 logger = logging.getLogger()
@@ -27,14 +28,21 @@ class ParamContainer(object):
         ## String: name of the instrument
         self.__name = check_name(name)
         logger.debug("Name set to {}".format(check_name(name)))
-        ## List of Parameter object
-        self.parameter_list = []
+        ## Parameters
+        self.__parameters = OrderedDict()
         ## Initialise path to parametrisation file
         self.__param_file = None
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = dict()
         if type(self) is ParamContainer:
             raise NotImplementedError("ParamContainer should not be instanciated !")
+
+    def __getattr__(self, name=""):
+        """Intercept attribute call to look first in the parameter list."""
+        if name in getattr(self, "get_list_all_paramnames")():
+            return getattr(self, "parameters")[name]
+        else:
+            return super().__getattr__(name)
 
     @property
     def name(self):
@@ -46,20 +54,39 @@ class ParamContainer(object):
         """Return the name of the ParamContainer that can be used in code."""
         return check_name_code(self.name)
 
-    def get_list_params(self):
+    @property
+    def parameters(self):
+        """Parameters contained in the ParamContainer."""
+        return self.__parameters
+
+    def get_list_all_params(self):
         """Return the list of all parameters."""
-        return self.parameter_list
+        return list(self.__parameters.values())
 
-    def extend_list_params(self, l_new_params):
-        """Extend the list of parameter with new paremeters given by l_new_params."""
-        self.parameter_list.extend(l_new_params)
+    def get_list_all_paramnames(self):
+        """Return the list of all parameters."""
+        return list(self.__parameters.keys())
 
-    def get_parametrisation(self):
+    def add_parameter(self, parameter):
+        """Add a parameter to the ParamContainer."""
+        if isinstance(parameter, Parameter):
+            self.__parameters[parameter.name] = parameter
+        else:
+            raise ValueError("parameter should be an instance of the Parameter class")
+
+    def get_list_main_params(self):
         """Return the list of main parameters (non redondant parameter)."""
         result = []
-        for param in self.get_list_params():
+        for param in self.get_list_all_params():
             if param.main:
                 result.append(param)
+        return result
+
+    def get_list_main_paramname(self):
+        """Return the list of main parameters names (non redondant parameter)."""
+        result = []
+        for param in self.get_list_main_params():
+            result.append(param.name)
         return result
 
     @property
@@ -89,7 +116,7 @@ class ParamContainer(object):
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
         self.paramfile_info.update({"Param names": [param.name for param in
-                                                    self.get_parametrisation()]})
+                                                    self.get_list_main_params()]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
                      "".format(self.name, self.paramfile_info))
 
@@ -110,7 +137,7 @@ class ParamContainer(object):
         text = text_tab + entete
         text_tab_param = spacestring_like(text_tab + entete)
         texttab_1tline = False
-        for param in self.get_parametrisation():
+        for param in self.get_list_main_params():
             text += param.get_paramfile_section(text_tab=text_tab_param,
                                                 texttab_1tline=texttab_1tline,
                                                 entete_symb=": ",

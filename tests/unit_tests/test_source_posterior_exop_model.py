@@ -8,6 +8,7 @@ import unittest
 import sys
 
 import source.posterior.exoplanet.model.gravgroup as exomdl
+import source.posterior.core.prior.manager_prior as mgrp
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -25,6 +26,8 @@ class TestMethods(unittest.TestCase):
     def setUp(self):
         self.instruments = {"LC": {"K2": "inst_K2", }, "RV": {"HARPS": "inst_HARPS"}}
         self.instruments_RVonly = {"RV": {"HARPS": "inst_HARPS", "SOPHIE": "inst_SOPHIE"}}
+        self.managerp = mgrp.Manager_Prior()
+        self.managerp.load_setup()
 
     def test_basics(self):
         gravgroup_model = exomdl.GravGroup(name="K2-19", instruments=self.instruments,
@@ -66,18 +69,25 @@ class TestMethods(unittest.TestCase):
         gravgroup_model = exomdl.GravGroup(name="K2-19", instruments=self.instruments_RVonly,
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
-        logger.info("Parametrisation : {}".format(gravgroup_model.stars["A"].get_parametrisation()))
-        logger.info("Parametrisation : {}".format(gravgroup_model.planets["b"].get_parametrisation()))
-        logger.info("Parametrisation : {}".format(gravgroup_model.planets["c"].get_parametrisation()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.stars["A"].get_list_main_params()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.planets["b"].get_list_main_params()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.planets["c"].get_list_main_params()))
         self.assertFalse(gravgroup_model.stars["A"].v0.main)
         gravgroup_model.apply_RV_EXOFAST_param()
         self.assertTrue(gravgroup_model.stars["A"].v0.main)
         self.assertTrue(gravgroup_model.planets["b"].K.main)
         self.assertTrue(gravgroup_model.planets["c"].K.main)
-        logger.info("Parametrisation : {}".format(gravgroup_model.stars["A"].get_parametrisation()))
-        logger.info("Parametrisation : {}".format(gravgroup_model.planets["b"].get_parametrisation()))
-        logger.info("Parametrisation : {}".format(gravgroup_model.planets["c"].get_parametrisation()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.stars["A"].get_list_main_params()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.planets["b"].get_list_main_params()))
+        logger.info("Parametrisation : {}"
+                    "".format(gravgroup_model.planets["c"].get_list_main_params()))
         logger.info("paramfile_section :\n{}".format(gravgroup_model.get_paramfile_section()))
+
 
 if __name__ == '__main__':
     unittest.main()
