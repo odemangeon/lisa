@@ -34,10 +34,9 @@ class Parameter(object):
     ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
     joint_prior_pos = None
 
-    def __init__(self, name, name_prefix=None,
-                 free=True, main=True, joint_prior=False,
-                 prior_type=None, prior_args=None,
-                 joint_prior_pos=None,
+    def __init__(self, name, name_prefix=None, unit="n/a",
+                 free=True, main=True,
+                 joint_prior=False, prior_type=None, prior_args=None,
                  value=None
                  ):
         """Create a Parameter Instance.
@@ -66,9 +65,6 @@ class Parameter(object):
             prior_args      : dict, optional (default: None),
                 Dictionnary which gives the value of the parameter of the prior probability function
                 that you want to use. The number of elements depends on the prior_type.
-            joint_prior_ref : reference or function used as joint prior probability function
-            joint_prior_pos : Index (or position) of this parameter in the list of parameter of the
-                joint prior function
             value           : number (float), optional (default:None)
                 Number giving the current value of the parameter, can be used in the initialization
                 to define the initial value.
@@ -77,7 +73,7 @@ class Parameter(object):
         if not isinstance(name, str):
             raise ValueError("Name should be a string")
         self.__name = name
-        ## Name of the parameter: string
+        ## Name Prefix of the parameter if needed
         if not isinstance(name_prefix, str) and (name_prefix is not None):
             raise ValueError("Name_prefix should be a string")
         self.__name_prefix = name_prefix
@@ -86,9 +82,17 @@ class Parameter(object):
         # Set the main attribute
         self.main = main
         # Initialise the prior_info dict
-        self.__prior_info = {"joint": False, "type": "uniform", "args": {"vmax": 0., "vmin": 1}}
+        self.__prior_info = {"joint": False, "type": None, "args": {}}
+        if prior_type is None:
+            self.set_prior(joint=False, prior_type="uniform", vmin=0., vmax=1.)
+        else:
+            self.set_prior(joint=joint_prior, prior_type=prior_type, **prior_args)
         # Set the value of the parameter
         self.value = value
+        ## Unit of the value
+        if not isinstance(unit, str):
+            raise ValueError("Unit should be a string")
+        self.__unit = unit
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = {"caracteristics": ["free", "value"],
                                  "prior": ["type", "args"]}
@@ -151,6 +155,11 @@ class Parameter(object):
             self.__value = val
         else:
             raise AssertionError("value should be a number or None.")
+
+    @property
+    def unit(self):
+        """Return the unit of the value of the parameter."""
+        return self.__unit
 
     @property
     def prior_info(self):
@@ -242,7 +251,10 @@ class Parameter(object):
         text += entete
         # First key of the parameter dictionnary is 'free' for free parameter or fixed.
         text += "'free': {},\n".format(self.free)
-        # Second key is for the priors
+        # Second key is the value
+        text += text_tab + space_entete_param + "'value': {},  # unit: {}\n".format(self.value,
+                                                                                    self.unit)
+        # Third and last key is for the priors
         entete_prior = "'prior': {"
         space_entete_prior = spacestring_like(entete_prior)
         text += text_tab + space_entete_param + entete_prior
@@ -251,9 +263,7 @@ class Parameter(object):
         # Joint prior keys (for later use, not implemented yet in what follows)
         # text += (text_tab + space_entete_param + space_entete_prior +
         #          "'joint_prior': False, 'joint_prior_ref': None,\n")
-        text += text_tab + space_entete_param + space_entete_prior + "},\n"
-        # Third and last key is the value
-        text += text_tab + space_entete_param + "'value': None\n"
+        text += text_tab + space_entete_param + space_entete_prior + "}\n"
         text += text_tab + space_entete_param + "},\n"
         return text
 

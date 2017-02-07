@@ -21,8 +21,10 @@ if logger.level != level_log:
 if len(logger.handlers) == 0:
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(level_hand)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    ch.setFormatter(formatter)
+    formatter_short = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter_detailled = logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s:%(lineno)s "
+                                            "- %(funcName)s() \n%(message)s")
+    ch.setFormatter(formatter_detailled)
     logger.addHandler(ch)
 else:
     ch = logger.handlers[0]
