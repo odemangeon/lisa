@@ -10,11 +10,17 @@ TODO:
 """
 import logging
 from numbers import Number
+from collections import Counter
 
 from source.tools.miscellaneous import spacestring_like, check_name_code
+from .prior.manager_prior import Manager_Prior
 
 ## Logger Object
 logger = logging.getLogger()
+
+## Prior manager
+manager = Manager_Prior()
+manager.load_setup()
 
 
 class Parameter(object):
@@ -31,7 +37,7 @@ class Parameter(object):
     def __init__(self, name, name_prefix=None,
                  free=True, main=True, joint_prior=False,
                  prior_type=None, prior_args=None,
-                 joint_prior_ref=None, joint_prior_pos=None,
+                 joint_prior_pos=None,
                  value=None
                  ):
         """Create a Parameter Instance.
@@ -79,10 +85,8 @@ class Parameter(object):
         self.free = free
         # Set the main attribute
         self.main = main
-        # Set the joint_prior attribute
-        self.joint_prior = joint_prior
-        # Set the prior_type attribute
-        self.prior_type = prior_type
+        # Initialise the prior_info dict
+        self.__prior_info = {"joint": False, "type": "uniform", "args": {"vmax": 0., "vmin": 1}}
         # Set the value of the parameter
         self.value = value
         ## Initialise the info regarding the content of the parametrisation file
@@ -149,38 +153,66 @@ class Parameter(object):
             raise AssertionError("value should be a number or None.")
 
     @property
+    def prior_info(self):
+        """Returns the prior info dict."""
+        return self.__prior_info
+
+    @property
     def joint_prior(self):
         """Indicate if the prior of the parameter is described by a joint prior."""
-        return self.__joint_prior
-
-    @joint_prior.setter
-    def joint_prior(self, boolean):
-        """Set the joint_prior attribute."""
-        if isinstance(boolean, bool):
-            self.__joint_prior = boolean
-        else:
-            raise AssertionError("joint_prior should be a boolean.")
+        return self.prior_info["joint"]
 
     @property
     def prior_type(self):
         """Type of prior associated to the parameter (str)."""
-        return self.__prior_type
+        return self.prior_info["type"]
 
-    @prior_type.setter
-    def prior_type(self, prior_str):
-        """Set the prior_type attribute."""
-        if isinstance(prior_str, str) or (prior_str is None):
-            ## Give the type of prior: string, for example Gaussian, Uniform
-            self.__prior_type = prior_str
+    @property
+    def prior_args(self):
+        """Arguments of the prior."""
+        return self.prior_info["args"]
+
+    def set_prior(self, joint=False, prior_type=None, **kwargs):
+        """Set the prior parameters: joint, type and args."""
+        if isinstance(joint, bool):
+            if joint:
+                raise NotImplementedError("Joint priors are not implemented yet")
         else:
-            raise AssertionError("prior_type should be a str or None.")
-
-    def get_prior_value(self):
-        """Return the a priori density probability of parameter to be value."""
-        if self.joint_prior:
-            raise AttributeError("Currently it is not possible to get the prior value for"
-                                 "parameter described by joint prior probability.")
-        return self.prior_func(self.value)
+            raise ValueError("joint should be a boolean.")
+        if isinstance(prior_type, str):
+            ## Give the type of prior: string, for example 'normal', 'uniform'
+            if manager.is_available_priortype(prior_type):
+                priorfunction_subclass = manager.get_priorfunc_subclass(prior_type)
+                priorfunction_subclass.check_args(list(kwargs.keys()))
+                if prior_type != self.__prior_info["type"]:
+                    logger.debug("Prior type attribute of param {} changed from {} to {}"
+                                 "".format(self.full_name, self.__prior_info["type"], prior_type))
+                    self.__prior_info["type"] = prior_type
+                    logger.debug("New prior args for param {}: {}"
+                                 "".format(self.full_name, kwargs))
+                    self.__prior_info["args"] = kwargs
+                else:
+                    for arg in priorfunction_subclass.all_args:
+                        if (arg in self.__prior_info["args"]) and (arg not in kwargs):
+                            logger.debug("Prior arg {} of param {} changed from {} to None"
+                                         "".format(arg, self.full_name,
+                                                   self.__prior_info["args"][arg]))
+                            self.__prior_info["args"].pop(arg)
+                        elif (arg not in self.__prior_info["args"]) and (arg in kwargs):
+                            logger.debug("Prior arg {} of param {} changed from None to {}"
+                                         "".format(arg, self.full_name, kwargs[arg]))
+                            self.__prior_info["args"][arg] = kwargs[arg]
+                        elif (arg in self.__prior_info["args"]) and (arg in kwargs):
+                            if self.__prior_info["args"][arg] != kwargs[arg]:
+                                logger.debug("Prior arg {} of param {} changed from {} to {}"
+                                             "".format(arg, self.full_name,
+                                                       self.__prior_info["args"][arg], kwargs[arg]))
+                                self.__prior_info["args"][arg] = kwargs[arg]
+            else:
+                raise ValueError("prior_type {} is not in the list of available prior types: {}"
+                                 "".format(prior_type, manager.get_available_priors()))
+        else:
+            raise ValueError("prior_type should be a str.")
 
     @property
     def paramfile_info(self):
@@ -209,13 +241,13 @@ class Parameter(object):
             text += text_tab
         text += entete
         # First key of the parameter dictionnary is 'free' for free parameter or fixed.
-        text += "'free': True,\n".format(self.name)
+        text += "'free': {},\n".format(self.free)
         # Second key is for the priors
         entete_prior = "'prior': {"
         space_entete_prior = spacestring_like(entete_prior)
         text += text_tab + space_entete_param + entete_prior
         # Classical marginal prior keys
-        text += "'type': None, 'args': { }\n"
+        text += "'type': '{}', 'args': {}\n".format(self.prior_type, self.prior_args)
         # Joint prior keys (for later use, not implemented yet in what follows)
         # text += (text_tab + space_entete_param + space_entete_prior +
         #          "'joint_prior': False, 'joint_prior_ref': None,\n")
@@ -225,7 +257,7 @@ class Parameter(object):
         text += text_tab + space_entete_param + "},\n"
         return text
 
-    def load_config(self, dico_config):
+    def load_config(self, dico_config, load_setup=False):
         """Load the configuration specified by the parameter dictionnary.
 
         ----
@@ -243,3 +275,12 @@ class Parameter(object):
                                            getattr(self, carac),
                                            dico_config[carac]))
                     setattr(self, carac, dico_config[carac])
+        if self.free:
+            if load_setup:
+                manager.load_setup()
+            dico_prior = dico_config["prior"]
+            if "joint" not in dico_prior:
+                joint = False
+            else:
+                joint = dico_prior["joint"]
+            self.set_prior(joint=joint, prior_type=dico_prior["type"], **dico_prior["args"])

@@ -273,16 +273,24 @@ class GravGroup(Model, GravGroup_Parametrisation):
         self.update_paramfile_info()
         return text
 
-    def update_paramfile_info(self):
+    def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
         self.paramfile_info.update({"stars": list(self.stars.keys())})
         self.paramfile_info.update({"planets": list(self.planets.keys())})
+        logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
+                     "".format(self.name, self.paramfile_info))
+        if recursive:
+            for star in self.stars.values():
+                star.update_paramfile_info()
+            for planet in self.planets.values():
+                planet.update_paramfile_info()
 
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
+        logger.debug("List of ParamContainer types: {}".format(self.paramfile_info.keys()))
         for paramcont_type in self.paramfile_info.keys():
             for paramcont_name in self.paramfile_info[paramcont_type]:
                 paramcont_dico = dico_config[paramcont_name]
-                logger.debug("Content of param dictionary for star {}: {}".format(paramcont_name,
-                                                                                  paramcont_dico))
+                logger.debug("Content of param dictionary for {} {}: {}"
+                             "".format(paramcont_type, paramcont_name, paramcont_dico))
                 getattr(self, paramcont_type)[paramcont_name].load_config(paramcont_dico)

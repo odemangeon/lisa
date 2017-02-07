@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 import source.posterior.core.prior.manager_prior as mgr
-from source.posterior.core.prior.prior_function import pf
+import source.posterior.core.prior.prior_function as pf
 
 manager = mgr.Manager_Prior()
 

@@ -49,11 +49,17 @@ class Metaclass_PriorFunction(type):
         """Return the name of the prior type."""
         return cls._mandatory_args
 
+    @property
+    def all_args(cls):
+        """Return the name of the prior type."""
+        return cls._mandatory_args + cls._extra_args
+
     def __init__(cls, name, bases, attrs):
         if cls.__name__ not in ["Prior_Function", ]:
             missing_attrs = ["{}".format(attr) for attr in ["prior_type",
                                                             "logpdf",
-                                                            "mandatory_args"]
+                                                            "mandatory_args",
+                                                            "_extra_args"]
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
@@ -72,28 +78,39 @@ class Prior_Function(object, metaclass=Metaclass_PriorFunction):
         return self.logpdf(*args)
 
     @property
-    def model_type(self):
+    def prior_type(self):
         """Return the instrument type."""
-        return self.__class__._model_type
+        return self.__class__._prior_type
 
     @property
     def mandatory_args(self):
         """Return the instrument type."""
         return self.__class__._mandatory_args
 
+    @property
+    def all_args(self):
+        """Return the instrument type."""
+        return self.__class__.all_args
+
     @classmethod
-    def check_mandatoryargs(cls, kwargs_list):
-        missing_args = ["{}".format(arg) for arg in cls.mandatory_args
-                        if arg not in kwargs_list]
-        if len(missing_args) > 0:
-            raise AttributeError("Prior function '{}' requires attribute {}".format(cls.__name__,
-                                                                                    missing_args))
+    def check_args(cls, kwargs_list):
+        missing_mandatoryargs = ["{}".format(arg) for arg in cls.mandatory_args
+                                 if arg not in kwargs_list]
+        if len(missing_mandatoryargs) > 0:
+            raise AttributeError("Prior function '{}' requires attribute(s) {}"
+                                 "".format(cls.__name__, missing_mandatoryargs))
+        unknown_args = ["{}".format(arg) for arg in kwargs_list
+                        if arg not in cls.all_args]
+        if len(unknown_args) > 0:
+            raise AttributeError("Prior function '{}' doesn't recognise attribute(s) {}"
+                                 "".format(cls.__name__, unknown_args))
 
 
 class UniformPrior(Prior_Function):
 
     _prior_type = "uniform"
     _mandatory_args = ["vmin", "vmax"]
+    _extra_args = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:
@@ -135,6 +152,7 @@ class NormalPrior(Prior_Function):
 
     _prior_type = "normal"
     _mandatory_args = ["mu", "sigma"]
+    _extra_args = ["lims"]
 
     def __init__(self, mu, sigma, lims=None):
         self.lims = np.array(lims) if lims is not None else np.array([-inf, inf])
@@ -181,6 +199,7 @@ class LogNormPrior(Prior_Function):
 
     _prior_type = "lognormal"
     _mandatory_args = ["mu", "sigma"]
+    _extra_args = ["lims"]
 
     def __init__(self, mu, sigma, lims=None):
         self.lims = np.array(lims) if lims is not None else np.array([0, inf])
@@ -233,6 +252,7 @@ class JeffreysPrior(Prior_Function):
 
     _prior_type = "jeffreys"
     _mandatory_args = ["vmin", "vmax"]
+    _extra_args = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:
@@ -278,6 +298,7 @@ class SinePrior(Prior_Function):
 
     _prior_type = "sine"
     _mandatory_args = ["vmin", "vmax"]
+    _extra_args = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:

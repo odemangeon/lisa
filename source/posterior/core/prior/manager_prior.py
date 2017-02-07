@@ -7,12 +7,12 @@ The objective of this module is to manage the priors.
 
 @DONE:
     - __Mgr.__init__: UT
-    - __Mgr._reset_models_database: Doc and UT
+    - __Mgr._reset_priors_database: Doc and UT
     - __Mgr.load_setup: Doc but No UT because depend on the content of the setup file
-    - __Mgr.get_available_models: Doc and UT
-    - __Mgr.add_available_model: Doc and UT
-    - __Mgr.get_model_subclass: Doc and UT
-    - __Mgr.is_available_modeltype: Doc and UT
+    - __Mgr.get_available_priors: Doc and UT
+    - __Mgr.add_available_prior: Doc and UT
+    - __Mgr.get_prior_subclass: Doc and UT
+    - __Mgr.is_available_priortype: Doc and UT
     - Manager_Prior.__init__: Doc and UT
     - Manager_Prior.__gettattr__: Doc and UT
 
@@ -21,7 +21,7 @@ The objective of this module is to manage the priors.
 """
 import logging
 from ....software_parameters import setupfile_prior
-from .core_prior import Prior_Function
+from .prior_function import Prior_Function
 
 ## Logger
 logger = logging.getLogger()
@@ -42,7 +42,7 @@ class Manager_Prior(object):
             """
             self.__priors = dict()
 
-        def _reset_models_database(self):
+        def _reset_priors_database(self):
             """Reset database of available prior functions."""
             self.__priors = dict()
 
@@ -59,7 +59,7 @@ class Manager_Prior(object):
             Returns:
                 list of string, giving the available prior types.
             """
-            return list(self.__models.keys())
+            return list(self.__priors.keys())
 
         def add_available_prior(self, priorfunction_subclass):
             """Add a Prior_Function subclass to database.
@@ -76,7 +76,7 @@ class Manager_Prior(object):
             if not(issubclass(priorfunction_subclass, Prior_Function)):
                 raise ValueError("The provided class is not a subclass of the Prior_Function"
                                  " class.")
-            self.__priors.update({priorfunction_subclass.model_type: priorfunction_subclass})
+            self.__priors.update({priorfunction_subclass.prior_type: priorfunction_subclass})
 
         def get_priorfunc_subclass(self, prior_type):
             """Return Prior_Function Subclass associated to a given prior type.
@@ -88,13 +88,13 @@ class Manager_Prior(object):
                 priorfunction_subclass : Subclass of Prior_Function,
                     Sub-class of Prior_Function associated with the prior type.
             """
-            if not self.is_available_modeltype(prior_type):
-                raise ValueError("The prior type {} is not amongst the available models {}"
+            if not self.is_available_priortype(prior_type):
+                raise ValueError("The prior type {} is not amongst the available priors {}"
                                  "".format(prior_type, self.get_available_priors()))
             return self.__priors[prior_type]
 
         def is_available_priortype(self, prior_type):
-            """Check if model_type refers to an available subclass of Model.
+            """Check if prior_type refers to an available subclass of prior.
             ----
             Arguments:
                 prior_type : string,
@@ -110,7 +110,7 @@ class Manager_Prior(object):
         """Manager_Prior init method (check if singleton exists and creates it if needed).
 
         The init method of the inside class does:
-            1. Initialise the database of available model types
+            1. Initialise the database of available prior types
         """
         if Manager_Prior.instance is None:
             Manager_Prior.instance = Manager_Prior.__Mgr()

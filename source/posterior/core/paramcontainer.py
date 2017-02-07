@@ -9,6 +9,8 @@ set of parameters. It could be a Planet or a Star for exoplanet models
 import logging
 import os
 
+from collections import Iterable
+
 from source.tools.miscellaneous import spacestring_like, check_name, check_name_code
 from source.tools.human_machine_interface.QCM import QCM_utilisateur
 
@@ -84,9 +86,12 @@ class ParamContainer(object):
         """Information about the content of the param file"""
         return self.__paramfile_info
 
-    def update_paramfile_info(self):
+    def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
-        self.paramfile_info.update({"Param names": self.get_parametrisation()})
+        self.paramfile_info.update({"Param names": [param.name for param in
+                                                    self.get_parametrisation()]})
+        logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
+                     "".format(self.name, self.paramfile_info))
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this CelestialBody.
@@ -122,6 +127,8 @@ class ParamContainer(object):
             question = ("File {} already exists. Do you want to overwrite it ? {}\n"
                         "".format(filepath, answers_list))
             reply = QCM_utilisateur(question, answers_list)
+        else:
+            reply = "y"
         if reply == "y":
             with open(filepath, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
@@ -131,6 +138,7 @@ class ParamContainer(object):
             logger.info("Parameter file created at path: {}".format(filepath))
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(filepath))
+            self.update_paramfile_info(recursive=True)
         self.param_file = filepath
 
     def read_parameter_file(self):
@@ -147,10 +155,12 @@ class ParamContainer(object):
 
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
-        for param in self.paramfile_info["Param names"]:
+        logger.debug("List of Param names: {}".format(self.paramfile_info["Param names"]))
+        for param_name in self.paramfile_info["Param names"]:
+            param = getattr(self, param_name)
             param.load_config(dico_config[param.name_code])
 
-    def load_parameter_file(self, dico_config):
+    def load_parameter_file(self):
         """load the parameter file."""
         dico_config = self.read_parameter_file()
         self.load_config(dico_config)
