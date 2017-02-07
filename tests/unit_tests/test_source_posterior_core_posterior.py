@@ -20,6 +20,7 @@ from source.posterior.core.model.manager_model import \
 from source.posterior.core.model.core_model import Model
 import source.posterior.exoplanet.dataset_and_instrument.lc as lc
 import source.posterior.exoplanet.dataset_and_instrument.rv as rv
+from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -49,8 +50,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             _model_type = "FakeModel"
 
-            def __init__(self, name="default", instruments=None):
-                super(FakeModel, self).__init__(name, instruments)
+            def __init__(self, name="default", dataset_database=None):
+                super(FakeModel, self).__init__(name, dataset_database)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -59,39 +60,39 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.object_name = "K2-28"
 
     def test_datafolder_isset(self):
-        self.assertFalse(self.posterior_instance.isset_datafolder())
+        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder())
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_custom_datafolder_answer_yes(self, input):
         path = "testposteriordatafolder"
-        self.posterior_instance.data_folder = path
-        self.assertEqual(self.posterior_instance.data_folder, path)
+        self.posterior_instance.dataset_db.data_folder = path
+        self.assertEqual(self.posterior_instance.dataset_db.data_folder, path)
         os.rmdir(path)
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_custom_datafolder_answer_no(self, input):
         path = "testposteriordatafolder"
-        self.posterior_instance.data_folder = path
-        self.assertFalse(self.posterior_instance.isset_datafolder())
+        self.posterior_instance.dataset_db.data_folder = path
+        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder())
 
     def test_set_custom_datafolder_alreadyexists(self):
         path = "testposteriordatafolder"
         os.makedirs(path)
-        self.posterior_instance.data_folder = path
-        self.assertEqual(self.posterior_instance.data_folder, path)
+        self.posterior_instance.dataset_db.data_folder = path
+        self.assertEqual(self.posterior_instance.dataset_db.data_folder, path)
         os.rmdir(path)
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_default_datafolder_answer_yes(self, input):
         path = os.path.join(input_data_folder, "test")
-        self.posterior_instance_test.data_folder = "default"
-        self.assertEqual(self.posterior_instance_test.data_folder, path)
+        self.posterior_instance_test.dataset_db.data_folder = "default"
+        self.assertEqual(self.posterior_instance_test.dataset_db.data_folder, path)
         os.rmdir(path)
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_default_datafolder_answer_no(self, input):
         self.posterior_instance_test.data_folder = "default"
-        self.assertFalse(self.posterior_instance_test.isset_datafolder())
+        self.assertFalse(self.posterior_instance_test.dataset_db.isset_datafolder())
 
     def test_set_default_datafolder_alreadyexists(self):
         path = os.path.join(input_data_folder, "test")
@@ -101,30 +102,30 @@ class TestMethods(unittest.TestCase):
         os.rmdir(path)
 
     def test_manage_basic_operation_of_dataset_database(self):
-        self.assertDictEqual(self.posterior_instance.dataset_database, {})
-        self.posterior_instance.dataset_database = {}
-        with self.assertRaises(ValueError):
-            self.posterior_instance.dataset_database = {"a": {}}
+        self.assertTrue(isinstance(self.posterior_instance.dataset_db, DatasetDatabase))
+        self.assertDictEqual(self.posterior_instance.dataset_db._database, {})
+        with self.assertRaises(AttributeError):
+            self.posterior_instance.dataset_db = {"a": {}}
         if os.path.isfile(self.test_datafile):
             raise ValueError("The file {} already exists. the unit test can't be performed or it "
                              " will damage it. Change current directory.")
         open(self.test_datafile, "x").close()
         dataset = self.manager_dataset.create_dataset(self.test_datafile)
         os.remove(self.test_datafile)
-        self.posterior_instance._add_a_dataset(dataset)
-        dataset_returned = self.posterior_instance.get_dataset("LC", "K2", 0)
+        self.posterior_instance.dataset_db._add_a_dataset(dataset)
+        dataset_returned = self.posterior_instance.dataset_db.get_dataset("LC", "K2", 0)
         self.assertEqual(dataset, dataset_returned)
-        self.posterior_instance.rm_dataset("LC", "K2")
-        self.assertDictEqual(self.posterior_instance.dataset_database, {})
+        self.posterior_instance.dataset_db.rm_dataset("LC", "K2")
+        self.assertDictEqual(self.posterior_instance.dataset_db._database, {})
 
     def test_add_a_dataset_from_path(self):
         open(self.test_datafile, "x").close()
-        self.posterior_instance.add_a_dataset_from_path(datafile_path=self.test_datafile)
+        self.posterior_instance.dataset_db.add_a_dataset_from_path(datafile_path=self.test_datafile)
         os.remove(self.test_datafile)
-        inst_type = self.posterior_instance.dataset_database["LC"]["K2"]["0"].instrument.inst_type
-        inst_name = self.posterior_instance.dataset_database["LC"]["K2"]["0"].instrument.name
-        number = self.posterior_instance.dataset_database["LC"]["K2"]["0"].number
-        path = self.posterior_instance.dataset_database["LC"]["K2"]["0"].filepath
+        inst_type = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.inst_type
+        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
+        number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
+        path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
         self.assertEqual("LC", inst_type)
         self.assertEqual("K2", inst_name)
         self.assertEqual(0, number)
@@ -139,28 +140,29 @@ class TestMethods(unittest.TestCase):
         with open(dataset_file, "x") as f:
             f.write(file1 + "\n")
             f.write(file2 + "\n")
-        self.posterior_instance.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
+        self.posterior_instance.dataset_db.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
         os.remove(file1)
         os.remove(file2)
         os.remove(dataset_file)
-        inst_type = self.posterior_instance.dataset_database["LC"]["K2"]["0"].instrument.inst_type
-        inst_name = self.posterior_instance.dataset_database["LC"]["K2"]["0"].instrument.name
-        number = self.posterior_instance.dataset_database["LC"]["K2"]["0"].number
-        path = self.posterior_instance.dataset_database["LC"]["K2"]["0"].filepath
+        inst_type = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.inst_type
+        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
+        number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
+        path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
         self.assertEqual("LC", inst_type)
         self.assertEqual("K2", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file1, path)
-        inst_type = (self.posterior_instance.dataset_database["RV"]["SOPHIE-HE"]["0"]
+        inst_type = (self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"]
                      .instrument.inst_type)
-        inst_name = self.posterior_instance.dataset_database["RV"]["SOPHIE-HE"]["0"].instrument.name
-        number = self.posterior_instance.dataset_database["RV"]["SOPHIE-HE"]["0"].number
-        path = self.posterior_instance.dataset_database["RV"]["SOPHIE-HE"]["0"].filepath
+        inst_name = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].instrument.name
+        number = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].number
+        path = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].filepath
         self.assertEqual("RV", inst_type)
         self.assertEqual("SOPHIE-HE", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
-        self.assertCountEqual(["LC", "RV"], self.posterior_instance.get_instruments().keys())
+        self.assertCountEqual(["LC", "RV"],
+                              self.posterior_instance.dataset_db.datatypes_tosim)
 
     def test_model_operations(self):
         with self.assertRaises(AttributeError):

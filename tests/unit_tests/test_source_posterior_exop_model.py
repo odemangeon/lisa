@@ -6,9 +6,11 @@ Unit tests for the source.posterior.exoplanet.model module.
 import logging
 import unittest
 import sys
+import os
 
 import source.posterior.exoplanet.model.gravgroup as exomdl
 import source.posterior.core.prior.manager_prior as mgrp
+from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -24,13 +26,37 @@ if len(logger.handlers) == 0:
 class TestMethods(unittest.TestCase):
 
     def setUp(self):
-        self.instruments = {"LC": {"K2": "inst_K2", }, "RV": {"HARPS": "inst_HARPS"}}
-        self.instruments_RVonly = {"RV": {"HARPS": "inst_HARPS", "SOPHIE": "inst_SOPHIE"}}
+        self.dataset_db = DatasetDatabase(object_name="K2-19")
+        self.dataset_db_RVonly = DatasetDatabase(object_name="K2-19")
+        file1 = "LC_K2-29_K2.txt"
+        file2 = "RV_K2-29_SOPHIE-HE.txt"
+        file3 = "RV_K2-29_HARPS.txt"
+        dataset_file = "test_datasetfile.txt"
+        dataset_file_RVonly = "test_datasetfile_RVonly.txt"
+        open(file1, "x").close()
+        open(file2, "x").close()
+        open(file3, "x").close()
+        with open(dataset_file, "x") as f:
+            f.write(file1 + "\n")
+            f.write(file2 + "\n")
+            f.write(file3 + "\n")
+        with open(dataset_file_RVonly, "x") as f:
+            f.write(file2 + "\n")
+            f.write(file3 + "\n")
+        self.dataset_db.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
+        self.dataset_db_RVonly.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
+        os.remove(file1)
+        os.remove(file2)
+        os.remove(file3)
+        os.remove(dataset_file)
+        os.remove(dataset_file_RVonly)
         self.managerp = mgrp.Manager_Prior()
         self.managerp.load_setup()
+        print(self.dataset_db.datatypes_tosim)
 
     def test_basics(self):
-        gravgroup_model = exomdl.GravGroup(name="K2-19", instruments=self.instruments,
+        gravgroup_model = exomdl.GravGroup(name="K2-19",
+                                           dataset_database=self.dataset_db,
                                            transit_model="batman", ld_model=None,
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
@@ -66,7 +92,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(gravgroup_model.planets["c"].full_name_code, "K219_c")
 
     def test_parmetrisationfile(self):
-        gravgroup_model = exomdl.GravGroup(name="K2-19", instruments=self.instruments_RVonly,
+        gravgroup_model = exomdl.GravGroup(name="K2-19", dataset_database=self.dataset_db_RVonly,
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
         logger.info("Parametrisation : {}"

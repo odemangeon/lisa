@@ -22,7 +22,7 @@ logger = logging.getLogger()
 class Metaclass_Model(type):
     @property
     def model_type(cls):
-        """Return the name of the instrument."""
+        """Return the type of the model."""
         return cls._model_type
 
     def __init__(cls, name, bases, attrs):
@@ -35,7 +35,7 @@ class Metaclass_Model(type):
 
 class Model(ParamContainer, metaclass=Metaclass_Model):
     """docstring for Model abstract class."""
-    def __init__(self, name, instruments=None):
+    def __init__(self, name, dataset_datase=None):
         """Model init method FOR INHERITANCE PURPOSES (as Model is an abstract class).
 
         This __init__ does:
@@ -52,7 +52,7 @@ class Model(ParamContainer, metaclass=Metaclass_Model):
         # 1.
         super(Model, self).__init__(name)
         # 2.
-        self.__instruments = instruments
+        self.__dataset_database = dataset_datase
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -62,11 +62,11 @@ class Model(ParamContainer, metaclass=Metaclass_Model):
         return self.__class__._model_type
 
     @property
-    def instruments(self):
-        """Return the isntruments."""
-        return self.__instruments
+    def dataset_database(self):
+        """Return the dataset_datase."""
+        return self.__dataset_database
 
     @property
     def datatypes_tosim(self):
         """Return the list of data types to simulate."""
-        return list(self.__instruments.keys())
+        return self.dataset_database.datatypes_tosim

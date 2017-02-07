@@ -42,7 +42,8 @@ class ParamContainer(object):
         if name in getattr(self, "get_list_all_paramnames")():
             return getattr(self, "parameters")[name]
         else:
-            return super().__getattr__(name)
+            # Default behaviour
+            raise AttributeError("{}".format(name))
 
     @property
     def name(self):

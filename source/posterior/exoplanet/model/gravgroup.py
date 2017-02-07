@@ -58,10 +58,10 @@ class GravGroup(Model, GravGroup_Parametrisation):
                   "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
                   }
 
-    def __init__(self, name, instruments, transit_model=None, ld_model=None, rv_model=None,
+    def __init__(self, name, dataset_database, transit_model=None, ld_model=None, rv_model=None,
                  stars=None, planets=None):
         """docstring Planet init method."""
-        super(GravGroup, self).__init__(name, instruments)
+        super(GravGroup, self).__init__(name, dataset_database)
         if "LC" in self.datatypes_tosim:
             # light-curve model
             self.transit_model = transit_model

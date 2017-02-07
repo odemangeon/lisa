@@ -36,13 +36,13 @@ logger.info("1. Create a Posterior instance and give it the name of the object s
 post_instance = cpost.Posterior(object_name="K2-19")
 
 logger.info("2. (Facultative) Define the folder where the data regarding this object are stored.")
-post_instance.data_folder = "default"
+post_instance.dataset_database.data_folder = "default"
 
 logger.info("2. (Facultative) Define the run folder where the config files and outputs will be.")
 post_instance.run_folder = "default"
 
 logger.info("3. Add datasets (from a file, their is otherways).")
-post_instance.add_datasets_from_datasetfile("datasets_K2-19.txt")
+post_instance.dataset_database.add_datasets_from_datasetfile("datasets_K2-19.txt")
 
 logger.info("4. Add a model")
 post_instance.define_model(model_type="ExoP_Standard", name="K2-19", stars=1, planets=2)
