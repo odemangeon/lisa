@@ -38,7 +38,7 @@ class Manager_Model(object):
         def __init__(self):
             """__Mgr init method.
 
-            For more information see Manager_Inst_Dataset init method.
+            For more information see Manager_Model init method.
             """
             self.__models = dict()
 
@@ -98,7 +98,7 @@ class Manager_Model(object):
                 model_type : string,
                     Type of the model.
             Returns:
-                True if inst_type is an available instrument instance. False otherwise.
+                True if model_type is an available Model subclass. False otherwise.
             """
             return model_type in self.get_available_models()
 

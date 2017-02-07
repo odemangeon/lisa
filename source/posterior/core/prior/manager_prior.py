@@ -1,0 +1,120 @@
+#!/usr/bin/python
+# -*- coding:  utf-8 -*-
+"""
+manager_prior module.
+
+The objective of this module is to manage the priors.
+
+@DONE:
+    - __Mgr.__init__: UT
+    - __Mgr._reset_models_database: Doc and UT
+    - __Mgr.load_setup: Doc but No UT because depend on the content of the setup file
+    - __Mgr.get_available_models: Doc and UT
+    - __Mgr.add_available_model: Doc and UT
+    - __Mgr.get_model_subclass: Doc and UT
+    - __Mgr.is_available_modeltype: Doc and UT
+    - Manager_Prior.__init__: Doc and UT
+    - Manager_Prior.__gettattr__: Doc and UT
+
+@TODO:
+    -
+"""
+import logging
+from ....software_parameters import setupfile_prior
+from .core_prior import Prior_Function
+
+## Logger
+logger = logging.getLogger()
+
+
+class Manager_Prior(object):
+    """docstring for Manager_Prior Singleton class."""
+
+    class __Mgr(object):
+        """docstring for __Mgr private class of Singleton class Manager_Prior.
+
+        For more information see Manager_Prior class.
+        """
+        def __init__(self):
+            """__Mgr init method.
+
+            For more information see Manager_Prior init method.
+            """
+            self.__priors = dict()
+
+        def _reset_models_database(self):
+            """Reset database of available prior functions."""
+            self.__priors = dict()
+
+        def load_setup(self):
+            """Load the configuration of priors defined in the setup file.
+
+            Association prior type name and Prior_Function subclass.
+            """
+            exec(open(setupfile_prior).read())
+
+        def get_available_priors(self):
+            """Returns the list of available prior types.
+            ----
+            Returns:
+                list of string, giving the available prior types.
+            """
+            return list(self.__models.keys())
+
+        def add_available_prior(self, priorfunction_subclass):
+            """Add a Prior_Function subclass to database.
+
+            This method checks that the priorfunction_subclass is indeed a Prior_Function subclass
+            before adding it to the database.
+            ----
+            Arguments:
+                priorfunction_subclass : Subclass of Prior_Function,
+                    Custom subclass of the Prior_Function Class that you want to add to the
+                    database.
+            """
+            logger.debug("priorfunction_subclass type: {}".format(type(priorfunction_subclass)))
+            if not(issubclass(priorfunction_subclass, Prior_Function)):
+                raise ValueError("The provided class is not a subclass of the Prior_Function"
+                                 " class.")
+            self.__priors.update({priorfunction_subclass.model_type: priorfunction_subclass})
+
+        def get_priorfunc_subclass(self, prior_type):
+            """Return Prior_Function Subclass associated to a given prior type.
+            ----
+            Arguments:
+                prior_type : string,
+                    Type of the prior function.
+            Returns:
+                priorfunction_subclass : Subclass of Prior_Function,
+                    Sub-class of Prior_Function associated with the prior type.
+            """
+            if not self.is_available_modeltype(prior_type):
+                raise ValueError("The prior type {} is not amongst the available models {}"
+                                 "".format(prior_type, self.get_available_priors()))
+            return self.__priors[prior_type]
+
+        def is_available_priortype(self, prior_type):
+            """Check if model_type refers to an available subclass of Model.
+            ----
+            Arguments:
+                prior_type : string,
+                    Type of the prior.
+            Returns:
+                True if prior_type is an available Prior_Function subclass. False otherwise.
+            """
+            return prior_type in self.get_available_priors()
+
+    instance = None
+
+    def __init__(self):
+        """Manager_Prior init method (check if singleton exists and creates it if needed).
+
+        The init method of the inside class does:
+            1. Initialise the database of available model types
+        """
+        if Manager_Prior.instance is None:
+            Manager_Prior.instance = Manager_Prior.__Mgr()
+
+    def __getattr__(self, name):
+        """Delegate every method or attribute call to the Singleton."""
+        return getattr(self.instance, name)

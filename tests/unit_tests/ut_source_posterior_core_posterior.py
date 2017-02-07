@@ -173,6 +173,5 @@ class TestMethods(unittest.TestCase):
         self.assertFalse(self.posterior_instance.isdefined_model())
 
 
-
 if __name__ == '__main__':
     unittest.main()
