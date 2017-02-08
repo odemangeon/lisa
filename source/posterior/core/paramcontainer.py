@@ -6,30 +6,28 @@ ParamContainer module.
 The objective of this module is to define the ParamContainer class wich is an object defined by a
 set of parameters. It could be a Planet or a Star for exoplanet models
 """
-import logging
 import os
-
+from logging import getLogger
 from collections import OrderedDict
 
-from source.tools.miscellaneous import spacestring_like, check_name, check_name_code
+from source.tools.name import Name
+from source.tools.miscellaneous import spacestring_like
 from source.tools.human_machine_interface.QCM import QCM_utilisateur
 from .parameter import Parameter
 
 ## Logger Object
-logger = logging.getLogger()
+logger = getLogger()
 
 
-class ParamContainer(object):
+class ParamContainer(Name):
     """docstring for ParamContainer."""
 
-    def __init__(self, name=""):
+    def __init__(self, name, name_prefix=None):
         """docstring ParamContainer init method."""
-        super(ParamContainer, self).__init__()
-        ## String: name of the instrument
-        self.__name = check_name(name)
-        logger.debug("Name set to {}".format(check_name(name)))
-        ## Parameters
+        ## Parameters WARNING, BECAUSE OF THE __GETATTR__ METHOD THIS HAS TO BE THE FIRST LINE !
         self.__parameters = OrderedDict()
+        #
+        super(ParamContainer, self).__init__(name=name, name_prefix=name_prefix)
         ## Initialise path to parametrisation file
         self.__param_file = None
         ## Initialise the info regarding the content of the parametrisation file
@@ -37,23 +35,13 @@ class ParamContainer(object):
         if type(self) is ParamContainer:
             raise NotImplementedError("ParamContainer should not be instanciated !")
 
-    def __getattr__(self, name=""):
+    def __getattr__(self, attr=""):
         """Intercept attribute call to look first in the parameter list."""
-        if name in getattr(self, "get_list_all_paramnames")():
-            return getattr(self, "parameters")[name]
+        if attr in self.get_list_all_paramnames():
+            return self.parameters[attr]
         else:
             # Default behaviour
-            raise AttributeError("{}".format(name))
-
-    @property
-    def name(self):
-        """Return the name of the ParamContainer."""
-        return self.__name
-
-    @property
-    def name_code(self):
-        """Return the name of the ParamContainer that can be used in code."""
-        return check_name_code(self.name)
+            raise AttributeError("{}".format(attr))
 
     @property
     def parameters(self):
@@ -62,16 +50,16 @@ class ParamContainer(object):
 
     def get_list_all_params(self):
         """Return the list of all parameters."""
-        return list(self.__parameters.values())
+        return list(self.parameters.values())
 
     def get_list_all_paramnames(self):
         """Return the list of all parameters."""
-        return list(self.__parameters.keys())
+        return list(self.parameters.keys())
 
     def add_parameter(self, parameter):
         """Add a parameter to the ParamContainer."""
         if isinstance(parameter, Parameter):
-            self.__parameters[parameter.name] = parameter
+            self.parameters[parameter.name] = parameter
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
 
@@ -100,7 +88,7 @@ class ParamContainer(object):
         """Path to the parametrisation file"""
         file_exists = os.path.isfile(path)
         if file_exists:
-            self.__param_file = path
+            self.param_file = path
         else:
             raise AssertionError("File {} doesn't exists".format(path))
 

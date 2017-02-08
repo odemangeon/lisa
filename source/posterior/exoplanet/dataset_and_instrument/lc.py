@@ -42,8 +42,8 @@ class LC_Instrument(Instrument):
 
     _inst_type = "LC"
 
-    def __init__(self, inst_name):
-        super(LC_Instrument, self).__init__(inst_name=inst_name)
+    def __init__(self, name):
+        super(LC_Instrument, self).__init__(name=name)
 
 
 K2 = LC_Instrument("K2")

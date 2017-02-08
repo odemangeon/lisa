@@ -8,16 +8,13 @@ The objective of this module is to define the CelestialBody, Star and Planet cla
 @TODO:
     - Make the adding of the name_prefix when a parameter is created in a ParamContainer
 """
-import logging
+from logging import getLogger
 
 from ...core.parameter import Parameter
 from ...core.paramcontainer import ParamContainer
-from ...core.prior.manager_prior import Manager_Prior
-from ....tools.miscellaneous import check_name_code
-
 
 ## Logger object
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class CelestialBody(ParamContainer):
@@ -35,47 +32,41 @@ class CelestialBody(ParamContainer):
                 Name of the star (if the star is K2-19_A, its name will be 'A' and 'K2-19' would be
                 the name of the GravGroup)
         """
-        super(CelestialBody, self).__init__(name)
-        if gravgroup is None:
-            logger.debug("CelestialBody instance created without providing a GravGroup.")
-        else:
-            self.set_gravgroup(gravgroup)
+        # name_prefix is set to None because it will be set when the gravgroup is set.
+        super(CelestialBody, self).__init__(name=name)
+        self.gravgroup = gravgroup
         # Make CelestialBody not instanciable (abstract class)
         if type(self) is CelestialBody:
             raise NotImplementedError("CelestialBody should not be instanciated !")
 
-    def set_gravgroup(self, gravgroup):
+    @property
+    def gravgroup(self):
+        """Return the GravGroup instance to which the Celestial Body belongs."""
+        return self.__gravgroup
+
+    @gravgroup.setter
+    def gravgroup(self, gravgroup):
         """Set the gravgroup attribute of a CelestialBody."""
-        if self.hasgravgroup():
+        if self.hasgravgroup:
             logger.warning("The GravGroup to which the Celestial body belongs has already been "
                            "defined. One should not redefined it so set_gravgroup command is "
                            "ignored")
         else:
-            self.gravgroup = gravgroup
-            logger.debug("gravgroup of CelestialBody set. "
-                         "GravGroup name: {}".format(gravgroup.name))
+            if gravgroup is None:
+                logger.debug("No Gravgroup provided for CelestialBody {}.".format(self.name))
+            else:
+                self.__gravgroup = gravgroup
+                self.name_prefix = gravgroup.name
+                logger.debug("gravgroup of CelestialBody {} set to {}."
+                             "".format(self.name, gravgroup.name))
 
+    @property
     def hasgravgroup(self):
         """Indicate if a CelestialBody instance has a attibute gravgroup defined."""
-        return hasattr(self, "gravgroup")
-
-    @property
-    def full_name(self):
-        """Return the full name of the CelestialBody."""
-        if self.hasgravgroup():
-            return self.gravgroup.name + '_' + self.name
+        if hasattr(self, "gravgroup"):
+            return self.gravgroup is not None
         else:
-            return self.name
-
-    @property
-    def name_code(self):
-        """Return the full name of the CelestialBody."""
-        return check_name_code(self.name)
-
-    @property
-    def full_name_code(self):
-        """Return the full name of the CelestialBody."""
-        return check_name_code(self.full_name)
+            return False
 
 
 class Planet(CelestialBody):

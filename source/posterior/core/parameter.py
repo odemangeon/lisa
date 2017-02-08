@@ -8,22 +8,22 @@ The objective of this module is to define the Parameter class.
 TODO:
     - Change the value.setter to check if value is within the prior
 """
-import logging
+from logging import getLogger
 from numbers import Number
-from collections import Counter
 
-from source.tools.miscellaneous import spacestring_like, check_name_code
+from source.tools.name import Name
+from source.tools.miscellaneous import spacestring_like
 from .prior.manager_prior import Manager_Prior
 
 ## Logger Object
-logger = logging.getLogger()
+logger = getLogger()
 
 ## Prior manager
 manager = Manager_Prior()
 manager.load_setup()
 
 
-class Parameter(object):
+class Parameter(Name):
     """docstring for Parameter."""
 
     ## Prior function: function
@@ -69,14 +69,7 @@ class Parameter(object):
                 Number giving the current value of the parameter, can be used in the initialization
                 to define the initial value.
         """
-        ## Name of the parameter: string
-        if not isinstance(name, str):
-            raise ValueError("Name should be a string")
-        self.__name = name
-        ## Name Prefix of the parameter if needed
-        if not isinstance(name_prefix, str) and (name_prefix is not None):
-            raise ValueError("Name_prefix should be a string")
-        self.__name_prefix = name_prefix
+        super(Parameter, self).__init__(name=name, name_prefix=name_prefix)
         # Set the free attribute
         self.free = free
         # Set the main attribute
@@ -96,24 +89,6 @@ class Parameter(object):
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = {"caracteristics": ["free", "value"],
                                  "prior": ["type", "args"]}
-
-    @property
-    def name(self):
-        """Indicate if the paramater is a main parameter."""
-        return self.__name
-
-    @property
-    def name_code(self):
-        """Return the name of the ParamContainer that can be used in code."""
-        return check_name_code(self.name)
-
-    @property
-    def full_name(self):
-        """Indicate if the paramater is a main parameter."""
-        if self.__name_prefix is not None:
-            return self.__name_prefix + "_" + self.__name
-        else:
-            return self.__name
 
     @property
     def free(self):

@@ -26,7 +26,7 @@ class TestMethods(unittest.TestCase):
         pass
 
     def test_instrument_and_default_isntrument(self):
-        inst_instance = inst._Default_Instrument(inst_type="LC", inst_name="K2")
+        inst_instance = inst._Default_Instrument(inst_type="LC", name="K2")
         self.assertEqual("LC", inst_instance.inst_type)
         self.assertEqual("K2", inst_instance.name)
 

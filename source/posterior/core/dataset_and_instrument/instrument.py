@@ -14,6 +14,12 @@ to store information about the isntrument used to measurement the data stored in
 
 @TODO:
 """
+from logging import getLogger
+
+from source.tools.name import Name
+
+## Logger object
+logger = getLogger()
 
 
 class Metaclass_Instrument(type):
@@ -30,33 +36,26 @@ class Metaclass_Instrument(type):
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
 
 
-class Instrument(metaclass=Metaclass_Instrument):
+class Instrument(Name, metaclass=Metaclass_Instrument):
     """docstring for Instrument abstract class."""
 
-    def __init__(self, inst_name):
+    def __init__(self, name):
         """Instrument init method FOR INHERITANCE PURPOSES (as Instrument is an abstract class).
 
         This __init__ does:
             1. Set name of the instrument
         ----
         Arguments:
-            inst_name : string,
+            name : string,
                 Name of the Instrument
         """
-        super(Instrument, self).__init__()
-        # 1.
-        self.__name = inst_name
+        super(Instrument, self).__init__(name=name)
         # IMPORTANT NOTE THE INSTRUMENT TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
         # Make Dataset an abstract class
         # if type(self) is Instrument:
         #     raise NotImplementedError("Dataset should not be instanciated!")
-
-    @property
-    def name(self):
-        """Return the instrument type."""
-        return self.__name
 
     @property
     def inst_type(self):
@@ -66,7 +65,7 @@ class Instrument(metaclass=Metaclass_Instrument):
 
 class _Default_Instrument(Instrument):
     """docstring for _Default_Instrument class (not abstract contrary to Instrument)."""
-    def __init__(self, inst_type, inst_name):
+    def __init__(self, inst_type, name):
         """Instrument init method FOR INHERITANCE PURPOSES (as Instrument is an abstract class).
 
         This __init__ does:
@@ -76,10 +75,10 @@ class _Default_Instrument(Instrument):
         Arguments:
             inst_type : string,
                 Type of the Instrument
-            inst_name : string,
+            name : string,
                 Name of the Instrument
         """
-        super(_Default_Instrument, self).__init__(inst_name)
+        super(_Default_Instrument, self).__init__(name)
         self._inst_type = inst_type
 
     @property

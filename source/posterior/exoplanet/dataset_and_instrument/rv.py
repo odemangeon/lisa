@@ -41,8 +41,8 @@ class RV_Instrument(Instrument):
 
     _inst_type = "RV"
 
-    def __init__(self, inst_name):
-        super(RV_Instrument, self).__init__(inst_name=inst_name)
+    def __init__(self, name):
+        super(RV_Instrument, self).__init__(name=name)
 
 
 HARPS = RV_Instrument("HARPS")

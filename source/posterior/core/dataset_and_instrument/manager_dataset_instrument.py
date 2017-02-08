@@ -178,7 +178,7 @@ class Manager_Inst_Dataset(object):
                                  ": {}".format(self.get_available_inst_type()))
             self.__available_inst.update({inst_instance.name: inst_instance})
 
-        def add_available_def_inst(self, inst_type, inst_name):
+        def add_available_def_inst(self, inst_type, name):
             """Add an instance of the _Default_Instrument class to the list of available instrument.
 
             This method checks that the instrument type provided is a valid one before adding the
@@ -187,10 +187,10 @@ class Manager_Inst_Dataset(object):
             Arguments:
                 inst_type           : string,
                     Type of instrument
-                inst_name           : string,
+                name           : string,
                     name of the instrument
             """
-            self.add_available_inst(_Default_Instrument(inst_type, inst_name))
+            self.add_available_inst(_Default_Instrument(inst_type, name))
 
         def get_instrument_instance(self, inst_name):
             """Return Instrument Subclass instance associated to a given instrument name.
