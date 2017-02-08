@@ -42,7 +42,8 @@ class Name(object):
     def __init__(self, name, name_prefix=None):
         # 1.
         self.__name = check_name(name)
-        logger.debug("Name of the instance set to {}.".format(self.name))
+        logger.debug("Name of the instance of class {} set to {}.".format(self.__class__.__name__,
+                                                                          self.name))
         # 2.
         self.name_prefix = name_prefix
         # 3.
@@ -75,10 +76,11 @@ class Name(object):
                                "One should not redefined it so set command is ignored.")
         else:
             if name_prefix is None:
-                logger.debug("No name_prefix provided for instance {}.".format(self.name))
+                logger.debug("No name_prefix provided for instance {} of class {}."
+                             "".format(self.name, self.__class__.__name__))
             else:
-                logger.debug("Name prefix of instance {} set to {}."
-                             "".format(self.name, name_prefix))
+                logger.debug("Name prefix of instance {} of class {} set to {}."
+                             "".format(self.name, self.__class__.__name__, name_prefix))
                 self.__name_prefix = name_prefix
 
     @property

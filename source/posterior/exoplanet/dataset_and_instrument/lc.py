@@ -41,8 +41,9 @@ class LC_Instrument(Instrument):
     """docstring for LC_Instrument."""
 
     _inst_type = "LC"
+    _params = {"jitter": {"unit": "wo unit"}}
 
-    def __init__(self, name):
+    def __init__(self, name, params_name=["jitter"], params_unit=["wo unit"]):
         super(LC_Instrument, self).__init__(name=name)
 
 

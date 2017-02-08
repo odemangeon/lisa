@@ -40,6 +40,7 @@ class RV_Instrument(Instrument):
     """docstring for RV_Instrument."""
 
     _inst_type = "RV"
+    _params_model = {"jitter": {"unit": "wo unit"}}
 
     def __init__(self, name):
         super(RV_Instrument, self).__init__(name=name)
