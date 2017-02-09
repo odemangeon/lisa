@@ -17,7 +17,7 @@ from source.posterior.core.dataset_and_instrument.manager_dataset_instrument imp
     Manager_Inst_Dataset
 from source.posterior.core.model.manager_model import \
     Manager_Model
-from source.posterior.core.model.core_model import Model
+from source.posterior.core.model.core_model import Core_Model
 import source.posterior.exoplanet.dataset_and_instrument.lc as lc
 import source.posterior.exoplanet.dataset_and_instrument.rv as rv
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
@@ -39,19 +39,19 @@ class TestMethods(unittest.TestCase):
         self.posterior_instance = pst.Posterior("K2-29")
         self.posterior_instance_test = pst.Posterior("test")
         self.manager_dataset = Manager_Inst_Dataset()
-        self.manager_dataset.set_dataset_for_inst_type("LC", lc.LC_Dataset)
+        self.manager_dataset.add_available_inst_category(lc.LC_Instrument, lc.LC_Dataset)
         self.manager_dataset.add_available_inst(lc.K2)
-        self.manager_dataset.set_dataset_for_inst_type("RV", rv.RV_Dataset)
+        self.manager_dataset.add_available_inst_category(rv.RV_Instrument, rv.RV_Dataset)
         self.manager_dataset.add_available_inst(rv.SOPHIE_HE)
         self.test_datafile = "LC_K2-19_K2.txt"
         self.manager_model = Manager_Model()
 
-        class FakeModel(Model):
+        class FakeModel(Core_Model):
             """docstring for FakeModel."""
-            _model_type = "FakeModel"
+            __category__ = "FakeModel"
 
-            def __init__(self, name="default", dataset_database=None):
-                super(FakeModel, self).__init__(name, dataset_database)
+            def __init__(self, name="default", dataset_db=None):
+                super(FakeModel, self).__init__(name, dataset_db)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -104,7 +104,7 @@ class TestMethods(unittest.TestCase):
     def test_manage_basic_operation_of_dataset_database(self):
         self.assertTrue(isinstance(self.posterior_instance.dataset_db, DatasetDatabase))
         self.assertDictEqual(self.posterior_instance.dataset_db._database, {})
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(Warning):
             self.posterior_instance.dataset_db = {"a": {}}
         if os.path.isfile(self.test_datafile):
             raise ValueError("The file {} already exists. the unit test can't be performed or it "
@@ -122,16 +122,16 @@ class TestMethods(unittest.TestCase):
         open(self.test_datafile, "x").close()
         self.posterior_instance.dataset_db.add_a_dataset_from_path(datafile_path=self.test_datafile)
         os.remove(self.test_datafile)
-        inst_type = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.inst_type
+        inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
         inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
         number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
         path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
-        self.assertEqual("LC", inst_type)
+        self.assertEqual("LC", inst_category)
         self.assertEqual("K2", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(self.test_datafile, path)
 
-    def test_add_a_dataset_from_datasetsfile_and_get_instrument_types(self):
+    def test_add_a_dataset_from_datasetsfile_and_get_instrument_categories(self):
         file1 = "LC_K2-29_K2.txt"
         file2 = "RV_K2-29_SOPHIE-HE.txt"
         dataset_file = "test_datasetfile.txt"
@@ -144,20 +144,20 @@ class TestMethods(unittest.TestCase):
         os.remove(file1)
         os.remove(file2)
         os.remove(dataset_file)
-        inst_type = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.inst_type
+        inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
         inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
         number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
         path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
-        self.assertEqual("LC", inst_type)
+        self.assertEqual("LC", inst_category)
         self.assertEqual("K2", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file1, path)
-        inst_type = (self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"]
-                     .instrument.inst_type)
+        inst_category = (self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"]
+                         .instrument.category)
         inst_name = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].instrument.name
         number = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].number
         path = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].filepath
-        self.assertEqual("RV", inst_type)
+        self.assertEqual("RV", inst_category)
         self.assertEqual("SOPHIE-HE", inst_name)
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
@@ -169,7 +169,7 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.model = "K2-28"
         self.posterior_instance.rm_model()
         self.assertFalse(self.posterior_instance.isdefined_model())
-        self.posterior_instance.define_model(model_type="FakeModel", name="test")
+        self.posterior_instance.define_model(category="FakeModel", name="test")
         self.assertTrue(self.posterior_instance.isdefined_model())
         self.posterior_instance.rm_model()
         self.assertFalse(self.posterior_instance.isdefined_model())

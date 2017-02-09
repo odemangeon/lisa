@@ -45,7 +45,7 @@ logger.info("3. Add datasets (from a file, their is otherways).")
 post_instance.dataset_db.add_datasets_from_datasetfile("datasets_K2-19.txt")
 
 logger.info("4. Add a model")
-post_instance.define_model(model_type="ExoP_Standard", name="K2-19", stars=1, planets=2)
+post_instance.define_model(category="GravitionalGroups", name="K2-19", stars=1, planets=2)
 
 logger.info("5. Apply a parametrisation to the model")
 post_instance.model.apply_RV_EXOFAST_param()

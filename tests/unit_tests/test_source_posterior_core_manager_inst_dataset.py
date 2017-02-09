@@ -9,6 +9,8 @@ import sys
 
 import source.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
 import source.posterior.core.dataset_and_instrument.instrument as inst
+from source.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument
+from source.posterior.exoplanet.dataset_and_instrument.rv import RV_Instrument
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -24,7 +26,7 @@ if len(logger.handlers) == 0:
 class TestMethods(unittest.TestCase):
 
     def setUp(self):
-        self.K2_inst = inst._Default_Instrument("LC", "K2")
+        self.K2_inst = inst.Default_Instrument("LC", "K2")
 
     def test_get_filename_from_filepath(self):
         file_path = "Users/olivier/Softwares/lisa/data/K2-19/EPIC201505350.rdb"
@@ -36,32 +38,32 @@ class TestMethods(unittest.TestCase):
         filename_2 = "RV_K2-3_HARPS_2.txt"
         dico_1 = mgr.interpret_data_filename(filename_1)
         dico_2 = mgr.interpret_data_filename(filename_2)
-        self.assertDictEqual(dico_1, {"inst_type": "LC",
+        self.assertDictEqual(dico_1, {"inst_category": "LC",
                                       "inst_name": "K2",
                                       "object": "K2-19",
                                       "number": None})
-        self.assertDictEqual(dico_2, {"inst_type": "RV",
+        self.assertDictEqual(dico_2, {"inst_category": "RV",
                                       "inst_name": "HARPS",
                                       "object": "K2-3",
                                       "number": '2'})
 
-    def test_manage_dataset_associated_to_inst_type_database(self):
+    def test_manage_dataset_associated_to_inst_category_database(self):
         manager = mgr.Manager_Inst_Dataset()
-        manager._reset_dataset_for_inst_type()
-        list_res = manager.get_available_inst_type()
-        logger.info("Available instrument types: {}".format(list_res))
-        self.assertSequenceEqual(manager.get_available_inst_type(), [])
-        manager.set_dataset_for_inst_type("LC", "DatasetSubclass")
-        list_res = manager.get_available_inst_type()
-        logger.info("Available instrument types: {}".format(list_res))
-        self.assertSequenceEqual(manager.get_available_inst_type(), ["LC"])
-        dataset_subclass = manager.get_dataset_subclass(inst_type="LC")
+        manager._reset_inst_categories()
+        list_res = manager.get_available_inst_category()
+        logger.info("Available instrument categories: {}".format(list_res))
+        self.assertSequenceEqual(manager.get_available_inst_category(), [])
+        manager.add_available_inst_category(LC_Instrument, "DatasetSubclass")
+        list_res = manager.get_available_inst_category()
+        logger.info("Available instrument categories: {}".format(list_res))
+        self.assertSequenceEqual(manager.get_available_inst_category(), ["LC"])
+        dataset_subclass = manager.get_dataset_subclass(inst_category="LC")
         self.assertEqual(dataset_subclass, "DatasetSubclass")
-        self.assertTrue(manager.validate_inst_type(inst_type="LC"))
-        self.assertFalse(manager.validate_inst_type(inst_type="Truc"))
-        manager._reset_dataset_for_inst_type()
-        list_res = manager.get_available_inst_type()
-        logger.info("Available instrument types: {}".format(list_res))
+        self.assertTrue(manager.validate_inst_category(inst_category="LC"))
+        self.assertFalse(manager.validate_inst_category(inst_category="Truc"))
+        manager._reset_inst_categories()
+        list_res = manager.get_available_inst_category()
+        logger.info("Available instrument categories: {}".format(list_res))
         self.assertSequenceEqual(list_res, [])
 
     def test_manage_instrument_instance_associated_to_inst_name_database(self):
@@ -70,7 +72,7 @@ class TestMethods(unittest.TestCase):
         list_res = manager.get_available_inst_name()
         logger.info("Available instruments: {}".format(list_res))
         self.assertSequenceEqual(manager.get_available_inst_name(), [])
-        manager.set_dataset_for_inst_type("LC", "DatasetSubclass")
+        manager.add_available_inst_category(LC_Instrument, "DatasetSubclass")
         manager.add_available_inst(self.K2_inst)
         list_res = manager.get_available_inst_name()
         logger.info("Available instruments: {}".format(list_res))
@@ -90,7 +92,7 @@ class TestMethods(unittest.TestCase):
         list_res = manager.get_available_inst_name()
         logger.info("Available instruments: {}".format(list_res))
         self.assertSequenceEqual(manager.get_available_inst_name(), [])
-        manager.set_dataset_for_inst_type("LC", "DatasetSubclass")
+        manager.add_available_inst_category(LC_Instrument, "DatasetSubclass")
         manager.add_available_def_inst("LC", "K2")
         list_res = manager.get_available_inst_name()
         logger.info("Available instruments: {}".format(list_res))

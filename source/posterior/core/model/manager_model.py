@@ -3,7 +3,7 @@
 """
 manager_model module.
 
-The objective of this module is to manage the subclasses of the Model classe.
+The objective of this module is to manage the subclasses of the Core_Model classe.
 
 @DONE:
     - __Mgr.__init__: UT
@@ -21,7 +21,7 @@ The objective of this module is to manage the subclasses of the Model classe.
 """
 import logging
 from ....software_parameters import setupfile_model
-from .core_model import Model
+from .core_model import Core_Model
 
 ## Logger
 logger = logging.getLogger()
@@ -49,9 +49,13 @@ class Manager_Model(object):
         def load_setup(self):
             """Load the configuration of models defined in the setup file.
 
-            Association model type name and Model subclass.
+            Association model type name and Core_Model subclass.
             """
-            exec(open(setupfile_model).read())
+            f = open(setupfile_model)
+            exec(f.read())
+            f.close()
+            logger.debug("Setup of Manager_Model Loaded. Available models: {}"
+                         "".format(self.get_available_models()))
 
         def get_available_models(self):
             """Returns the list of available model types.
@@ -62,45 +66,45 @@ class Manager_Model(object):
             return list(self.__models.keys())
 
         def add_available_model(self, model_subclass):
-            """Add a Model subclass to database.
+            """Add a Core_Model subclass to database.
 
             This method checks that the model_sublass is indeed a model subclass before adding it
             to the database.
             ----
             Arguments:
-                model_subclass : Subclass of Model,
-                    Custom subclass of the Model Class that you want to add to the database.
+                model_subclass : Subclass of Core_Model,
+                    Custom subclass of the Core_Model Class that you want to add to the database.
             """
             logger.debug("model_subclass type: {}".format(type(model_subclass)))
-            if not(issubclass(model_subclass, Model)):
-                raise ValueError("The provided class is not a subclass of the Model class.")
-            self.__models.update({model_subclass.model_type: model_subclass})
+            if not(issubclass(model_subclass, Core_Model)):
+                raise ValueError("The provided class is not a subclass of the Core_Model class.")
+            self.__models.update({model_subclass.category: model_subclass})
 
-        def get_model_subclass(self, model_type):
-            """Return Model Subclass associated to a given model type.
+        def get_model_subclass(self, category):
+            """Return Core_Model Subclass associated to a given model type.
             ----
             Arguments:
-                model_type : string,
+                category : string,
                     Type of the model.
             Returns:
-                model_subclass : Subclass of Model,
-                    Sub-class of Model associated with the model type.
+                model_subclass : Subclass of Core_Model,
+                    Sub-class of Core_Model associated with the model type.
             """
-            if not self.is_available_modeltype(model_type):
+            if not self.is_available_modeltype(category):
                 raise ValueError("The model type {} is not amongst the available models {}"
-                                 "".format(model_type, self.get_available_models()))
-            return self.__models[model_type]
+                                 "".format(category, self.get_available_models()))
+            return self.__models[category]
 
-        def is_available_modeltype(self, model_type):
-            """Check if model_type refers to an available subclass of Model.
+        def is_available_modeltype(self, category):
+            """Check if category refers to an available subclass of Core_Model.
             ----
             Arguments:
-                model_type : string,
+                category : string,
                     Type of the model.
             Returns:
-                True if model_type is an available Model subclass. False otherwise.
+                True if category is an available Core_Model subclass. False otherwise.
             """
-            return model_type in self.get_available_models()
+            return category in self.get_available_models()
 
     instance = None
 

@@ -21,7 +21,7 @@ The objective of this module is to manage the priors.
 """
 import logging
 from ....software_parameters import setupfile_prior
-from .prior_function import Prior_Function
+from .prior_function import Core_Prior_Function
 
 ## Logger
 logger = logging.getLogger()
@@ -51,7 +51,9 @@ class Manager_Prior(object):
 
             Association prior type name and Prior_Function subclass.
             """
-            exec(open(setupfile_prior).read())
+            f = open(setupfile_prior)
+            exec(f.read())
+            f.close()
             logger.debug("Setup of Manager_Prior Loaded. Available priors: {}"
                          "".format(self.get_available_priors()))
 
@@ -75,36 +77,36 @@ class Manager_Prior(object):
                     database.
             """
             logger.debug("priorfunction_subclass type: {}".format(type(priorfunction_subclass)))
-            if not(issubclass(priorfunction_subclass, Prior_Function)):
+            if not(issubclass(priorfunction_subclass, Core_Prior_Function)):
                 raise ValueError("The provided class is not a subclass of the Prior_Function"
                                  " class.")
-            self.__priors.update({priorfunction_subclass.prior_type: priorfunction_subclass})
+            self.__priors.update({priorfunction_subclass.category: priorfunction_subclass})
 
-        def get_priorfunc_subclass(self, prior_type):
+        def get_priorfunc_subclass(self, category):
             """Return Prior_Function Subclass associated to a given prior type.
             ----
             Arguments:
-                prior_type : string,
+                category : string,
                     Type of the prior function.
             Returns:
                 priorfunction_subclass : Subclass of Prior_Function,
                     Sub-class of Prior_Function associated with the prior type.
             """
-            if not self.is_available_priortype(prior_type):
+            if not self.is_available_priortype(category):
                 raise ValueError("The prior type {} is not amongst the available priors {}"
-                                 "".format(prior_type, self.get_available_priors()))
-            return self.__priors[prior_type]
+                                 "".format(category, self.get_available_priors()))
+            return self.__priors[category]
 
-        def is_available_priortype(self, prior_type):
-            """Check if prior_type refers to an available subclass of prior.
+        def is_available_priortype(self, category):
+            """Check if category refers to an available subclass of prior.
             ----
             Arguments:
-                prior_type : string,
+                category : string,
                     Type of the prior.
             Returns:
-                True if prior_type is an available Prior_Function subclass. False otherwise.
+                True if category is an available Prior_Function subclass. False otherwise.
             """
-            return prior_type in self.get_available_priors()
+            return category in self.get_available_priors()
 
     instance = None
 

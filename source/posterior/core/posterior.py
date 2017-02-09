@@ -7,7 +7,6 @@ The objective of this package is to provides the core Posterior class.
 
 @ DONE:
     - Posterior.__init__: Doc and UT
-    - Posterior.object_name: Doc and UT
     - Posterior.data_folder: Doc and UT
     - Posterior.isset_datafolder: Doc and UT
     - Posterior.dataset_db: Doc and UT
@@ -24,9 +23,9 @@ The objective of this package is to provides the core Posterior class.
 from logging import getLogger
 
 from ...tools.miscellaneous import define_folder_withdefault  # , look4file_withdeffolder
+from ...tools.name import Name
 from ...software_parameters import input_run_folder
-from .dataset_and_instrument.dataset_database import DatasetDatabase
-
+from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
 
 logger = getLogger()
@@ -35,7 +34,7 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-class Posterior(object):
+class Posterior(DatasetDbAttr, Name):
     """docstring for Posterior."""
     def __init__(self, object_name):
         """Init method for the Posterior class.
@@ -51,21 +50,17 @@ class Posterior(object):
             8. Initialise the lnpost
         ----
         Arguments:
-            object_name : string,
+            name : string,
                 Name of the object studied.
         """
-        super(Posterior, self).__init__()
         # 1.
-        ## Name of the object you are trying to modelize
-        self.__object_name = object_name
+        Name.__init__(self, name=object_name)
         # 2.
-        ## Dataset dictionnary: Initialise it
-        self.__dataset_db = DatasetDatabase(self.object_name)
-        #
+        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.name))
         ## Folder where the program should look for config files by default: Initialise it
         self.__run_folder = None
         # 4.
-        ## Model: Initialise it
+        ## model: Initialise it
         self.__model = None
         # 5.
         ## lnprior: Initialise it
@@ -80,7 +75,7 @@ class Posterior(object):
     @property
     def object_name(self):
         """Return the name of the object studied."""
-        return self.__object_name
+        return self.name
 
     @property
     def run_folder(self):
@@ -99,7 +94,7 @@ class Posterior(object):
     def run_folder(self, run_folder="default"):
         """Set the run_folder attribute."""
         self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
-                                                      object_name=self.object_name,
+                                                      object_name=self.name,
                                                       folder=run_folder)
         self.dataset_db.run_folder = self.run_folder
 
@@ -108,33 +103,28 @@ class Posterior(object):
         return self.run_folder is not None
 
     @property
-    def dataset_db(self):
-        """Return the dataset database."""
-        return self.__dataset_db
-
-    @property
     def model(self):
         """Return the model."""
         return self.__model
 
-    def define_model(self, model_type, load_setup=False, **kwargs):
+    def define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.
 
         For now only assignement to None is possible.
-        This function should check that the model_type is an available Model Subclass
+        This function should check that the category is an available Core_Model Subclass
 
         ----
         Arguments:
-            model_type : string,
-                String which refers to an available Model Subclass that has been defined in the
+            category : string,
+                String which refers to an available Core_Model Subclass that has been defined in the
                 model_setup_file.
         """
         if load_setup:
             manager_model.load_setup()
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
-        model_subclass = manager_model.get_model_subclass(model_type)
-        self.__model = model_subclass(dataset_database=self.dataset_db, **kwargs)
+        model_subclass = manager_model.get_model_subclass(category)
+        self.__model = model_subclass(dataset_db=self.dataset_db, **kwargs)
         logger.info("Model defined with name {} !".format(self.model.name))
 
     def rm_model(self):

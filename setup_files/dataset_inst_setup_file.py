@@ -8,8 +8,8 @@ from source.posterior.exoplanet.dataset_and_instrument.rv import HARPS, SOPHIE_H
 
 manager = mgr.Manager_Inst_Dataset()
 
-manager.set_dataset_for_inst_type(LC_Instrument.inst_type, LC_Dataset)
-manager.set_dataset_for_inst_type(RV_Instrument.inst_type, RV_Dataset)
+manager.add_available_inst_category(LC_Instrument, LC_Dataset)
+manager.add_available_inst_category(RV_Instrument, RV_Dataset)
 
 manager.add_available_inst(K2)
 manager.add_available_inst(Kepler)

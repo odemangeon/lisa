@@ -37,60 +37,42 @@ import math as mt
 import numpy as np
 from numpy import pi, inf
 
+from ....tools.metaclasses import  MandatoryReadOnlyAttr
 
-class Metaclass_PriorFunction(type):
-    @property
-    def prior_type(cls):
-        """Return the name of the prior type."""
-        return cls._prior_type
 
-    @property
-    def mandatory_args(cls):
-        """Return the name of the prior type."""
-        return cls._mandatory_args
+class Metaclass_PriorFunction(MandatoryReadOnlyAttr):
 
     @property
     def all_args(cls):
         """Return the name of the prior type."""
-        return cls._mandatory_args + cls._extra_args
+        return cls.mandatory_args + cls.extra_args
+
+    def __new__(cls, classname, bases, classdict):
+        classdict["all_args"] = property(cls.all_args)
+        return super(Metaclass_PriorFunction, cls).__new__(cls, classname, bases, classdict)
 
     def __init__(cls, name, bases, attrs):
-        if cls.__name__ not in ["Prior_Function", ]:
-            missing_attrs = ["{}".format(attr) for attr in ["prior_type",
-                                                            "logpdf",
-                                                            "mandatory_args",
-                                                            "_extra_args"]
+        super(Metaclass_PriorFunction, cls).__init__(name, bases, attrs)
+        if cls.__name__ not in ["Core_Prior_Function", ]:
+            missing_attrs = ["{}".format(attr) for attr in ["logpdf", ]
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
 
 
-class Prior_Function(object, metaclass=Metaclass_PriorFunction):
+class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
     """Docstring for Prior Prior function class."""
 
+    __mandatoryattrs__ = ["category", "mandatory_args", "extra_args"]
+
     def __init__(self):
-        super(Prior_Function, self).__init__()
+        super(Core_Prior_Function, self).__init__()
         # Make Prior_Function an abstract class
-        if type(self) is Prior_Function:
-            raise NotImplementedError("Prior_Function should not be instanciated!")
+        if type(self) is Core_Prior_Function:
+            raise NotImplementedError("Core_Prior_Function should not be instanciated!")
 
     def __call__(self, *args):
         return self.logpdf(*args)
-
-    @property
-    def prior_type(self):
-        """Return the instrument type."""
-        return self.__class__._prior_type
-
-    @property
-    def mandatory_args(self):
-        """Return the instrument type."""
-        return self.__class__._mandatory_args
-
-    @property
-    def all_args(self):
-        """Return the instrument type."""
-        return self.__class__.all_args
 
     @classmethod
     def check_args(cls, kwargs_list):
@@ -106,11 +88,11 @@ class Prior_Function(object, metaclass=Metaclass_PriorFunction):
                                  "".format(cls.__name__, unknown_args))
 
 
-class UniformPrior(Prior_Function):
+class UniformPrior(Core_Prior_Function):
 
-    _prior_type = "uniform"
-    _mandatory_args = ["vmin", "vmax"]
-    _extra_args = []
+    __category__ = "uniform"
+    __mandatory_args__ = ["vmin", "vmax"]
+    __extra_args__ = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:
@@ -148,11 +130,11 @@ class UniformPrior(Prior_Function):
         return np.random.uniform(self.vmin, self.vmax)
 
 
-class NormalPrior(Prior_Function):
+class NormalPrior(Core_Prior_Function):
 
-    _prior_type = "normal"
-    _mandatory_args = ["mu", "sigma"]
-    _extra_args = ["lims"]
+    __category__ = "normal"
+    __mandatory_args__ = ["mu", "sigma"]
+    __extra_args__ = ["lims"]
 
     def __init__(self, mu, sigma, lims=None):
         self.lims = np.array(lims) if lims is not None else np.array([-inf, inf])
@@ -195,11 +177,11 @@ class NormalPrior(Prior_Function):
         return val
 
 
-class LogNormPrior(Prior_Function):
+class LogNormPrior(Core_Prior_Function):
 
-    _prior_type = "lognormal"
-    _mandatory_args = ["mu", "sigma"]
-    _extra_args = ["lims"]
+    __category__ = "lognormal"
+    __mandatory_args__ = ["mu", "sigma"]
+    __extra_args__ = ["lims"]
 
     def __init__(self, mu, sigma, lims=None):
         self.lims = np.array(lims) if lims is not None else np.array([0, inf])
@@ -248,11 +230,11 @@ class LogNormPrior(Prior_Function):
         return val
 
 
-class JeffreysPrior(Prior_Function):
+class JeffreysPrior(Core_Prior_Function):
 
-    _prior_type = "jeffreys"
-    _mandatory_args = ["vmin", "vmax"]
-    _extra_args = []
+    __category__ = "jeffreys"
+    __mandatory_args__ = ["vmin", "vmax"]
+    __extra_args__ = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:
@@ -294,11 +276,11 @@ class JeffreysPrior(Prior_Function):
         return x1.rvs()
 
 
-class SinePrior(Prior_Function):
+class SinePrior(Core_Prior_Function):
 
-    _prior_type = "sine"
-    _mandatory_args = ["vmin", "vmax"]
-    _extra_args = []
+    __category__ = "sine"
+    __mandatory_args__ = ["vmin", "vmax"]
+    __extra_args__ = []
 
     def __init__(self, vmin, vmax):
         if vmin >= vmax:

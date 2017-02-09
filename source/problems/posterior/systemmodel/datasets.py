@@ -17,10 +17,10 @@ import os
 import os.path
 from collections import OrderedDict
 import logging
-import pdb
+# import pdb
 
 from ....software_parameters import input_data_folder
-from .instrument import Instrument
+from .instrument import Core_Instrument
 
 logger = logging.getLogger()
 
@@ -262,9 +262,9 @@ class ExoP_datasets():
                     logger.info("Instrument {} exists already: {}".format(inst_name, inst_exist))
                     if not inst_exist:
                         if inst_type == "LC":
-                            self.lc_instruments[inst_name] = Instrument(inst_name, inst_type)
+                            self.lc_instruments[inst_name] = Core_Instrument(inst_name, inst_type)
                         elif inst_type == "RV":
-                            self.rv_instruments[inst_name] = Instrument(inst_name, inst_type)
+                            self.rv_instruments[inst_name] = Core_Instrument(inst_name, inst_type)
                 except:
                     raise
 

@@ -6,19 +6,21 @@ Gravitational group (gravgroup) module.
 The objective of this module is to define the CelestialBody, Star and Planet class.
 
 @TODO:
-    - Make the adding of the name_prefix when a parameter is created in a ParamContainer
+    - Make the adding of the name_prefix when a parameter is created in a Core_ParamContainer
 """
 from logging import getLogger
 
 from ...core.parameter import Parameter
-from ...core.paramcontainer import ParamContainer
+from ...core.paramcontainer import Core_ParamContainer
 
 ## Logger object
 logger = getLogger()
 
 
-class CelestialBody(ParamContainer):
+class CelestialBody(Core_ParamContainer):
     """docstring for CelestialBody."""
+
+    __category__ = "celestialbodies"
 
     def __init__(self, gravgroup=None, name=""):
         """docstring GravGroup init method.
@@ -82,6 +84,8 @@ class Planet(CelestialBody):
             the name of the GravGroup)
     """
 
+    __category__ = "planets"
+
     def __init__(self, gravgroup=None, name=""):
         """docstring Planet init method."""
         super(Planet, self).__init__(gravgroup, name)
@@ -139,6 +143,8 @@ class Star(CelestialBody):
     The idea is to have a class attribute for every parameters that we could want to output (not
     only a non redundant set of parameters)
     """
+
+    __category__ = "stars"
 
     def __init__(self, gravgroup=None, name=""):
         """docstring Planet init method.

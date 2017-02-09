@@ -25,32 +25,32 @@ class GravGroup_Parametrisation(object):
         planets, the function chack first that the GravGroup is compliant.
         """
         # Check that there is just 1 star
-        if self.nb_of_stars != 1:
+        if self.nb_of_paramcontainers["stars"] != 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with exactly 1 star. This gravgroups has {} star(s)."
-                             "".format(self.nb_of_stars))
+                             "".format(self.nb_of_paramcontainers["stars"]))
         # Check that there is at least 1 planet
-        if self.nb_of_planets < 1:
+        if self.nb_of_paramcontainers["planet"] < 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with at least 1 planet. This gravgroups has {} planet(s)."
-                             "".format(self.nb_of_planets))
+                             "".format(self.nb_of_paramcontainers["planets"]))
         # Check that the data type to simulate are RV and LC
         if Counter(self.datatypes_tosim) != Counter(["RV", "LC"]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV and "
                            "transit data but you have to analyse {}.".format(self.datatypes_tosim))
         # Apply the parametrisation to the star parameters
-        star_name = list(self.stars.keys())[0]
-        self.stars[star_name].v0.main = True
+        star_name = list(self.paramcontainers.keys())[0]
+        self.paramcontainers["stars"][star_name].v0.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.planets.keys()):
-            self.planets[planet_name].R_rat.main = True
-            self.planets[planet_name].ecosw.main = True
-            self.planets[planet_name].esinw.main = True
-            self.planets[planet_name].P.main = True
-            self.planets[planet_name].K.main = True
-            self.planets[planet_name].t0.main = True
-            self.planets[planet_name].cosinc.main = True
-            self.planets[planet_name].ar.main = True
+            self.paramcontainers["planets"][planet_name].R_rat.main = True
+            self.paramcontainers["planets"][planet_name].ecosw.main = True
+            self.paramcontainers["planets"][planet_name].esinw.main = True
+            self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].K.main = True
+            self.paramcontainers["planets"][planet_name].t0.main = True
+            self.paramcontainers["planets"][planet_name].cosinc.main = True
+            self.paramcontainers["planets"][planet_name].ar.main = True
 
     def apply_RV_EXOFAST_param(self):
         """Apply the parametrisation for the fit of RV only.
@@ -61,28 +61,28 @@ class GravGroup_Parametrisation(object):
         planets, the function chack first that the GravGroup is compliant.
         """
         # Check that there is just 1 star
-        if self.nb_of_stars != 1:
+        if self.nb_of_paramcontainers["stars"] != 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with exactly 1 star. This gravgroups has {} star(s)."
-                             "".format(self.nb_of_stars))
+                             "".format(self.nb_of_paramcontainers["stars"]))
         # Check that there is at least 1 planet
-        if self.nb_of_planets < 1:
+        if self.nb_of_paramcontainers["planets"] < 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with at least 1 planet. This gravgroups has {} planet(s)."
-                             "".format(self.nb_of_planets))
+                             "".format(self.nb_of_paramcontainers["planets"]))
         if Counter(self.datatypes_tosim) != Counter(["RV", ]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV data "
                            "only but you have to analyse {}.".format(self.datatypes_tosim))
         # Apply the parametrisation to the star parameters
-        star_name = list(self.stars.keys())[0]
-        self.stars[star_name].v0.main = True
+        star_name = list(self.paramcontainers["stars"].keys())[0]
+        self.paramcontainers["stars"][star_name].v0.main = True
         # Apply the parametrisation to the planets parameters
-        for planet_name in list(self.planets.keys()):
-            self.planets[planet_name].ecosw.main = True
-            self.planets[planet_name].esinw.main = True
-            self.planets[planet_name].P.main = True
-            self.planets[planet_name].K.main = True
-            self.planets[planet_name].t0.main = True
+        for planet_name in list(self.paramcontainers["planets"].keys()):
+            self.paramcontainers["planets"][planet_name].ecosw.main = True
+            self.paramcontainers["planets"][planet_name].esinw.main = True
+            self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].K.main = True
+            self.paramcontainers["planets"][planet_name].t0.main = True
 
 # # transit parameters
 # self.rp = 0.          # planet radius (in units of stellar radii)

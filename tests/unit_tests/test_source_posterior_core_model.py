@@ -8,6 +8,8 @@ import unittest
 import sys
 
 import source.posterior.core.model.core_model as cmdl
+from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
+from source.posterior.core.prior.manager_prior import Manager_Prior
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -23,23 +25,40 @@ if len(logger.handlers) == 0:
 class TestMethods(unittest.TestCase):
 
     def setUp(self):
-        class FakeModel(cmdl.Model):
+        class FakeModel(cmdl.Core_Model):
             """docstring for FakeModel."""
-            _model_type = "FakeModel"
+            __category__ = "FakeModel"
 
             def __init__(self, model_name):
                 super(FakeModel, self).__init__(model_name)
         self.fake_modelsubclass = FakeModel
 
-    def test_instrument_and_default_isntrument(self):
+        manager = Manager_Prior()
+        manager.load_setup()
+        print(manager.get_available_priors())
+
+    def test_basics(self):
         mdl_instance = self.fake_modelsubclass(model_name="test")
-        # self.assertEqual("FakeModel", mdl_instance.model_type)
-        # self.assertEqual("FakeModel", self.fake_modelsubclass.model_type)
-        # self.assertEqual("test", mdl_instance.name)
-        # with self.assertRaises(AttributeError):
-        #     mdl_instance.name = "test"
-        # with self.assertRaises(AttributeError):
-        #     mdl_instance.model_type = "test"
+        self.assertEqual("FakeModel", mdl_instance.category)
+        self.assertEqual("FakeModel", self.fake_modelsubclass.category)
+        self.assertEqual("test", mdl_instance.name)
+        with self.assertRaises(AttributeError):
+            mdl_instance.name = "test"
+        with self.assertRaises(AttributeError):
+            mdl_instance.category = "test"
+
+    def test_manage_paramcontainers(self):
+        mdl_instance = self.fake_modelsubclass(model_name="test")
+        mdl_instance.add_a_paramcontainer(Star(name="A"))
+        mdl_instance.add_a_paramcontainer(Planet(name="b"))
+        mdl_instance.add_a_paramcontainer(Planet(name="c"))
+        self.assertTrue(mdl_instance.isavailable_paramcontainer(name="A", category="stars"))
+        self.assertTrue(mdl_instance.isavailable_paramcontainer(name="b", category="planets"))
+        self.assertTrue(mdl_instance.isavailable_paramcontainer(name="c", category="planets"))
+        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {"stars": 1, "planets": 2})
+        mdl_instance.rm_paramcontainer(name="c", category="planets")
+        self.assertFalse(mdl_instance.isavailable_paramcontainer(name="c", category="planets"))
+        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {"stars": 1, "planets": 1})
 
 
 if __name__ == '__main__':

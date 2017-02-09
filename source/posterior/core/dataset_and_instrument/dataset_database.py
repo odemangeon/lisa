@@ -20,6 +20,7 @@ from .dataset import Dataset
 from ....software_parameters import input_data_folder
 from ....software_parameters import input_run_folder
 from ....tools.miscellaneous import define_folder_withdefault, look4file_withdeffolder
+from ....tools.name import Name
 
 logger = getLogger()
 
@@ -27,13 +28,10 @@ manager_dataset = Manager_Inst_Dataset()
 manager_dataset.load_setup()
 
 
-class DatasetDatabase(object):
+class DatasetDatabase(Name):
     """docstring for DatasetDatabase."""
     def __init__(self, object_name):
-        super(DatasetDatabase, self).__init__()
-        # 1.
-        ## Name of the object you are trying to modelize
-        self.__object_name = object_name
+        super(DatasetDatabase, self).__init__(name=object_name)
         # 3.
         ## Folder where the program should look for dataset files by default: Initialise it
         self.__data_folder = None
@@ -49,7 +47,7 @@ class DatasetDatabase(object):
     @property
     def object_name(self):
         """Return the name of the object studied."""
-        return self.__object_name
+        return self.name
 
     @property
     def data_folder(self):
@@ -68,7 +66,7 @@ class DatasetDatabase(object):
     def data_folder(self, data_folder="default"):
         """Set the data_folder attribute."""
         self.__data_folder = define_folder_withdefault(main_default_folder=input_data_folder,
-                                                       object_name=self.object_name,
+                                                       object_name=self.name,
                                                        folder=data_folder)
 
     def isset_datafolder(self):
@@ -92,7 +90,7 @@ class DatasetDatabase(object):
     def run_folder(self, run_folder="default"):
         """Set the run_folder attribute."""
         self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
-                                                      object_name=self.object_name,
+                                                      object_name=self.name,
                                                       folder=run_folder)
 
     def isset_runfolder(self):
@@ -108,64 +106,66 @@ class DatasetDatabase(object):
             force   : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        inst_type = dataset.instrument.inst_type
+        inst_category = dataset.instrument.category
         inst_name = dataset.instrument.name
         number = dataset.number
-        if inst_type not in self._database:
-            self._database.update({inst_type: {}})
-        if inst_name not in self._database[inst_type]:
-            self._database[inst_type].update({inst_name: OrderedDict()})
-        if str(number) in self._database[inst_type][inst_name]:
+        if inst_category not in self._database:
+            self._database.update({inst_category: {}})
+        if inst_name not in self._database[inst_category]:
+            self._database[inst_category].update({inst_name: OrderedDict()})
+        if str(number) in self._database[inst_category][inst_name]:
             if not(force):
-                logger.error("Dataset {} already exist in the database, it will not be added.")
+                logger.error("Dataset {} already exist in the database, it will not be added."
+                             "".format(inst_category + '_' + inst_name + '_' + str(number)))
                 raise ValueError("The number of the dataset is {}. This number correspond to an "
                                  "alredy added dataset".format(number))
             else:
-                logger.error("Dataset {} already exist in the database, it will be replaced.")
-        self._database[inst_type][inst_name][str(number)] = dataset
+                logger.error("Dataset {} already exist in the database, it will be replaced."
+                             "".format(inst_category + '_' + inst_name + '_' + str(number)))
+        self._database[inst_category][inst_name][str(number)] = dataset
 
     def isavailable_dataset(self, dataset):
-        """Return if filename correspond to a dataset that is in the database.
+        """Return True sif filename correspond to a dataset that is in the database.
         ----
         Arguments:
-            filename : string,
-                filename of the dataset.
+            dataset : string or Instance of Dataset Subclass,
+                String giving the filename of the dataset or the dataset itself.
         """
         if isinstance(dataset, str):
             filename_info = interpret_data_filename(interpret_data_filename)
-            inst_type = filename_info["inst_type"]
+            inst_category = filename_info["inst_category"]
             inst_name = filename_info["inst_name"]
             number = filename_info["number"]
         elif isinstance(dataset, Dataset):
-            inst_type = dataset.instrument.inst_type
+            inst_category = dataset.instrument.category
             inst_name = dataset.instrument.name
             number = dataset.number
         else:
             raise ValueError("{} is neither a dataset instance nor a dataset file name."
                              "".format(dataset))
-        if inst_type in self._database:
-            if inst_name in self._database[inst_type]:
-                if number in self._database[inst_type][inst_name]:
+        if inst_category in self._database:
+            if inst_name in self._database[inst_category]:
+                if number in self._database[inst_category][inst_name]:
                     return True
         else:
             return False
 
-    def rm_dataset(self, inst_type, inst_name, number=0):
+    def rm_dataset(self, inst_category, inst_name, number=0):
         """Remove a dataset from the the dataset database.
         ----
         Arguments:
-            inst_type   : string,
+            inst_category   : string,
                 Type of instrument associated to the dataset you want to remove
             inst_name   : string,
                 Name of the instrument associated to the dataset you want to remove
             number      : int, (default: 0)
                 Number associated to the dataset you want to remove.
         """
-        self._database[inst_type][inst_name].pop(str(number))
-        if len(self._database[inst_type][inst_name]) == 0:
-            self._database[inst_type].pop(inst_name)
-            if len(self._database[inst_type]) == 0:
-                self._database.pop(inst_type)
+        self._database[inst_category][inst_name].pop(str(number))
+        if len(self._database[inst_category][inst_name]) == 0:
+            self._database[inst_category].pop(inst_name)
+            if len(self._database[inst_category]) == 0:
+                self._database.pop(inst_category)
 
     def add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
         """Add a dataset designated by its path to the dataset database.
@@ -227,14 +227,14 @@ class DatasetDatabase(object):
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath, force=force)
 
-    def get_dataset(self, inst_type, inst_name, number=None):
+    def get_dataset(self, inst_category, inst_name, number=None):
         """Return a dataset from the dataset database.
 
         Giving the caracteristics of the instrument used for the measurement and the number of the
         dataset this function will return the corresponding dataset.
 
         ----
-        inst_type   : string,
+        inst_category   : string,
             Type of instrument associated to the dataset you want to remove
         inst_name   : string,
             Name of the instrument associated to the dataset you want to remove
@@ -242,10 +242,10 @@ class DatasetDatabase(object):
             Number associated to the dataset you want to remove.
         """
         if number is None:
-            str_number = list(self._database[inst_type][inst_name].keys())[0]
+            str_number = list(self._database[inst_category][inst_name].keys())[0]
         else:
             str_number = str(number)
-        return self._database[inst_type][inst_name][str_number]
+        return self._database[inst_category][inst_name][str_number]
 
     @property
     def datatypes_tosim(self):
@@ -253,14 +253,75 @@ class DatasetDatabase(object):
         return list(self._database.keys())
 
     def get_instruments(self):
-        """Return the list of the types of instruments associated to the dataset in the database."""
+        """Return the dict of instruments used by the dataset in the database"""
         instruments_dict = {}
-        for inst_type in list(self._database.keys()):
-            instruments_dict.update({inst_type: []})
-            for inst_name in self._database[inst_type].keys():
-                first_dataset = self.get_dataset(inst_type=inst_type, inst_name=inst_name)
-                instruments_dict[inst_type].append(first_dataset.instrument)
+        for inst_category in list(self._database.keys()):
+            for inst_name in self._database[inst_category].keys():
+                first_dataset = self.get_dataset(inst_category=inst_category, inst_name=inst_name)
+                instruments_dict[inst_name] = first_dataset.instrument
         return instruments_dict
+
+    def get_datasetnbs(self, inst_name, inst_category=None):
+        """Return the dict of instruments used by the dataset in the database"""
+        if inst_category is None:
+            inst_category = self.get_instcat(inst_name)
+        return list(self._database[inst_category][inst_name].keys())
+
+    def get_instcat(self, inst_name):
+        """Return the dict of instruments used by the dataset in the database"""
+        for inst_cat in self._database.keys():
+            if inst_name in self._database[inst_cat]:
+                return inst_cat
+        raise ValueError("Instrument {} is not in the database".format(inst_name))
+
+
+class DatasetDbAttr(object):
+    """docstring for ProvideDatasetDbAttr."""
+    def __init__(self, dataset_db=None):
+        # 1.
+        self.dataset_db = dataset_db
+        # 2.
+        if type(self) is DatasetDbAttr:
+            raise NotImplementedError("DatasetDbAttr should not be instanciated !")
+
+    @property
+    def dataset_db(self):
+        """Return the dataset_datase."""
+        return self.__dataset_db
+
+    @dataset_db.setter
+    def dataset_db(self, dataset_db):
+        """Return the dataset_datase."""
+        if self.hasdataset_db:
+                logger.warning("The dataset database has already been defined for instance {} of "
+                               "class {}. One should not redefined it, so set command is ignored."
+                               "".format(self.name, self.__class__.__name__))
+                raise Warning("The dataset database has already been define set command Ignored")
+        else:
+            if dataset_db is None:
+                logger.debug("No dataset database provided for instance {} of class {}."
+                             "".format(self.name, self.__class__.__name__))
+            else:
+                if isinstance(dataset_db, DatasetDatabase):
+                    logger.debug("The dataset database of instance {} of class {} set to {}."
+                                 "".format(self.name, self.__class__.__name__, dataset_db))
+                    self.__dataset_db = dataset_db
+                else:
+                    raise ValueError("dataset_db should be a DatasetDatabase instance")
+
+    @property
+    def hasdataset_db(self):
+        """Return True if a dataset_db is defined."""
+        if hasattr(self, "dataset_db"):
+            return self.dataset_db is not None
+        else:
+            return False
+
+    @property
+    def datatypes_tosim(self):
+        """Return the list of data types to simulate."""
+        return self.dataset_db.datatypes_tosim
+
 
 
 # def interpret_dataset_key(dataset_key):

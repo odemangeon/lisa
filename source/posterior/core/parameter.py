@@ -36,7 +36,7 @@ class Parameter(Name):
 
     def __init__(self, name, name_prefix=None, unit="n/a",
                  free=True, main=True,
-                 joint_prior=False, prior_type=None, prior_args=None,
+                 joint_prior=False, prior_category=None, prior_args=None,
                  value=None
                  ):
         """Create a Parameter Instance.
@@ -59,12 +59,12 @@ class Parameter(Name):
                 True if the prior probability associated to the value of parameter is defined by a
                 joint prior probability function that depends on at least another parameter. False
                 if this parameter is considered as independant of the other free parameter a priori.
-            prior_type      : string, optional (default: None),
-                Gives the type of prior probability to use for this parameter, eg: gaussian, uniform
-                , ...
+            prior_category      : string, optional (default: None),
+                Gives the category of prior probability to use for this parameter, eg: gaussian,
+                uniform, ...
             prior_args      : dict, optional (default: None),
                 Dictionnary which gives the value of the parameter of the prior probability function
-                that you want to use. The number of elements depends on the prior_type.
+                that you want to use. The number of elements depends on the prior_category.
             value           : number (float), optional (default:None)
                 Number giving the current value of the parameter, can be used in the initialization
                 to define the initial value.
@@ -75,11 +75,11 @@ class Parameter(Name):
         # Set the main attribute
         self.main = main
         # Initialise the prior_info dict
-        self.__prior_info = {"joint": False, "type": None, "args": {}}
-        if prior_type is None:
-            self.set_prior(joint=False, prior_type="uniform", vmin=0., vmax=1.)
+        self.__prior_info = {"joint": False, "category": None, "args": {}}
+        if prior_category is None:
+            self.set_prior(joint=False, prior_category="uniform", vmin=0., vmax=1.)
         else:
-            self.set_prior(joint=joint_prior, prior_type=prior_type, **prior_args)
+            self.set_prior(joint=joint_prior, prior_category=prior_category, **prior_args)
         # Set the value of the parameter
         self.value = value
         ## Unit of the value
@@ -88,7 +88,7 @@ class Parameter(Name):
         self.__unit = unit
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = {"caracteristics": ["free", "value"],
-                                 "prior": ["type", "args"]}
+                                 "prior": ["category", "args"]}
 
     @property
     def free(self):
@@ -147,31 +147,32 @@ class Parameter(Name):
         return self.prior_info["joint"]
 
     @property
-    def prior_type(self):
+    def prior_category(self):
         """Type of prior associated to the parameter (str)."""
-        return self.prior_info["type"]
+        return self.prior_info["category"]
 
     @property
     def prior_args(self):
         """Arguments of the prior."""
         return self.prior_info["args"]
 
-    def set_prior(self, joint=False, prior_type=None, **kwargs):
-        """Set the prior parameters: joint, type and args."""
+    def set_prior(self, joint=False, prior_category=None, **kwargs):
+        """Set the prior parameters: joint, category and args."""
         if isinstance(joint, bool):
             if joint:
                 raise NotImplementedError("Joint priors are not implemented yet")
         else:
             raise ValueError("joint should be a boolean.")
-        if isinstance(prior_type, str):
-            ## Give the type of prior: string, for example 'normal', 'uniform'
-            if manager.is_available_priortype(prior_type):
-                priorfunction_subclass = manager.get_priorfunc_subclass(prior_type)
+        if isinstance(prior_category, str):
+            ## Give the category of prior: string, for example 'normal', 'uniform'
+            if manager.is_available_priortype(prior_category):
+                priorfunction_subclass = manager.get_priorfunc_subclass(prior_category)
                 priorfunction_subclass.check_args(list(kwargs.keys()))
-                if prior_type != self.__prior_info["type"]:
-                    logger.debug("Prior type attribute of param {} changed from {} to {}"
-                                 "".format(self.full_name, self.__prior_info["type"], prior_type))
-                    self.__prior_info["type"] = prior_type
+                if prior_category != self.__prior_info["category"]:
+                    logger.debug("Prior category attribute of param {} changed from {} to {}"
+                                 "".format(self.full_name, self.__prior_info["category"],
+                                           prior_category))
+                    self.__prior_info["category"] = prior_category
                     logger.debug("New prior args for param {}: {}"
                                  "".format(self.full_name, kwargs))
                     self.__prior_info["args"] = kwargs
@@ -193,10 +194,10 @@ class Parameter(Name):
                                                        self.__prior_info["args"][arg], kwargs[arg]))
                                 self.__prior_info["args"][arg] = kwargs[arg]
             else:
-                raise ValueError("prior_type {} is not in the list of available prior types: {}"
-                                 "".format(prior_type, manager.get_available_priors()))
+                raise ValueError("prior_category {} is not in the list of available prior types: {}"
+                                 "".format(prior_category, manager.get_available_priors()))
         else:
-            raise ValueError("prior_type should be a str.")
+            raise ValueError("prior_category should be a str.")
 
     @property
     def paramfile_info(self):
@@ -234,7 +235,7 @@ class Parameter(Name):
         space_entete_prior = spacestring_like(entete_prior)
         text += text_tab + space_entete_param + entete_prior
         # Classical marginal prior keys
-        text += "'type': '{}', 'args': {}\n".format(self.prior_type, self.prior_args)
+        text += "'category': '{}', 'args': {}\n".format(self.prior_category, self.prior_args)
         # Joint prior keys (for later use, not implemented yet in what follows)
         # text += (text_tab + space_entete_param + space_entete_prior +
         #          "'joint_prior': False, 'joint_prior_ref': None,\n")
@@ -268,4 +269,4 @@ class Parameter(Name):
                 joint = False
             else:
                 joint = dico_prior["joint"]
-            self.set_prior(joint=joint, prior_type=dico_prior["type"], **dico_prior["args"])
+            self.set_prior(joint=joint, prior_category=dico_prior["category"], **dico_prior["args"])

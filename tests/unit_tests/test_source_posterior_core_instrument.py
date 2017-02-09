@@ -26,20 +26,20 @@ class TestMethods(unittest.TestCase):
         pass
 
     def test_instrument_and_default_instrument(self):
-        inst_instance = inst._Default_Instrument(inst_type="LC", name="K2")
-        self.assertEqual("LC", inst_instance.inst_type)
+        inst_instance = inst.Default_Instrument(category="LC", name="K2")
+        self.assertEqual("LC", inst_instance.category)
         self.assertEqual("K2", inst_instance.name)
 
     def test_create_model_instance_without_params(self):
-        inst_instance = inst._Default_Instrument(inst_type="LC", name="K2")
+        inst_instance = inst.Default_Instrument(category="LC", name="K2")
         inst_model_def = inst_instance.create_model_instance(name="default")
         self.assertEqual(inst_model_def.instrument, inst_instance)
         self.assertEqual(inst_model_def.name, "default")
         self.assertEqual(inst_model_def.full_name, "K2_default")
 
     def test_create_model_instance_with_params(self):
-        inst_instance = inst._Default_Instrument(inst_type="LC", name="K2",
-                                                 params_model={"jitter": {"unit": "wo unit"}})
+        inst_instance = inst.Default_Instrument(category="LC", name="K2",
+                                                params_model={"jitter": {"unit": "wo unit"}})
         inst_model_def = inst_instance.create_model_instance(name="default")
         self.assertEqual(inst_model_def.instrument, inst_instance)
         self.assertEqual(inst_instance.full_name, "K2")

@@ -12,7 +12,7 @@ import sys
 
 import source.posterior.core.model.manager_model as mgr
 
-from source.posterior.core.model.core_model import Model
+from source.posterior.core.model.core_model import Core_Model
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -28,9 +28,9 @@ if len(logger.handlers) == 0:
 class TestMethods(unittest.TestCase):
 
     def setUp(self):
-        class FakeModel(Model):
+        class FakeModel(Core_Model):
             """docstring for FakeModel."""
-            _model_type = "FakeModel"
+            __category__ = "FakeModel"
 
             def __init__(self, model_name="default"):
                 super(FakeModel, self).__init__(model_name)
@@ -46,10 +46,10 @@ class TestMethods(unittest.TestCase):
         list_res = manager.get_available_models()
         logger.info("Available model types: {}".format(list_res))
         self.assertSequenceEqual(list_res, ["FakeModel", ])
-        self.assertTrue(manager.is_available_modeltype(model_type="FakeModel"))
-        model_subclass = manager.get_model_subclass(model_type="FakeModel")
+        self.assertTrue(manager.is_available_modeltype(category="FakeModel"))
+        model_subclass = manager.get_model_subclass(category="FakeModel")
         self.assertEqual(model_subclass, self.fake_modelsubclass)
-        self.assertFalse(manager.is_available_modeltype(model_type="Truc"))
+        self.assertFalse(manager.is_available_modeltype(category="Truc"))
         manager._reset_models_database()
         list_res = manager.get_available_models()
         logger.info("Available model types: {}".format(list_res))

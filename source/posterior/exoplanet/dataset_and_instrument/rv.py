@@ -11,7 +11,7 @@ import logging
 import matplotlib.pyplot as plt
 
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
-from source.posterior.core.dataset_and_instrument.instrument import Instrument
+from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
 ## Logger
 logger = logging.getLogger()
@@ -24,7 +24,7 @@ class RV_Dataset(Dataset):
     It contains functions to visualize (plot) and manipulate the radial velocities (detrend??)
     """
 
-    _mandatory_columns = ["time", "RV", "RV_err"]
+    __mandatory_columns__ = ["time", "RV", "RV_err"]
 
     def plot(self, y="RV", yerr="RV_err", **kwargs):
         """
@@ -36,11 +36,11 @@ class RV_Dataset(Dataset):
         plt.show()
 
 
-class RV_Instrument(Instrument):
+class RV_Instrument(Core_Instrument):
     """docstring for RV_Instrument."""
 
-    _inst_type = "RV"
-    _params_model = {"jitter": {"unit": "wo unit"}}
+    __category__ = "RV"
+    __params_model__ = {"jitter": {"unit": "wo unit"}}
 
     def __init__(self, name):
         super(RV_Instrument, self).__init__(name=name)

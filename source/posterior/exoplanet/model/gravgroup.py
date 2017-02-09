@@ -29,7 +29,7 @@ from collections import OrderedDict
 from string import ascii_lowercase
 from string import ascii_uppercase
 
-from ...core.model.core_model import Model
+from ...core.model.core_model import Core_Model
 from .celestial_bodies import Star, Planet
 from .parametrisation import GravGroup_Parametrisation
 
@@ -38,11 +38,11 @@ from .parametrisation import GravGroup_Parametrisation
 logger = logging.getLogger()
 
 
-class GravGroup(Model, GravGroup_Parametrisation):
+class GravGroup(Core_Model, GravGroup_Parametrisation):
     """docstring for GravGroup."""
 
-    ## model_type
-    _model_type = "ExoP_Standard"
+    ## category
+    __category__ = "GravitionalGroups"
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["ajplanet"]
@@ -58,10 +58,10 @@ class GravGroup(Model, GravGroup_Parametrisation):
                   "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
                   }
 
-    def __init__(self, name, dataset_database, transit_model=None, ld_model=None, rv_model=None,
+    def __init__(self, name, dataset_db, transit_model=None, ld_model=None, rv_model=None,
                  stars=None, planets=None):
         """docstring Planet init method."""
-        super(GravGroup, self).__init__(name, dataset_database)
+        super(GravGroup, self).__init__(name, dataset_db)
         if "LC" in self.datatypes_tosim:
             # light-curve model
             self.transit_model = transit_model
@@ -153,43 +153,19 @@ class GravGroup(Model, GravGroup_Parametrisation):
         else:
             raise AssertionError("rv_model should be in {}".format(self._rv_models))
 
-    @property
-    def stars(self):
-        """Returns an OrderedDict containing the stars in the GravGroup."""
-        return self.__stars
-
-    @property
-    def nb_of_stars(self):
-        """Returns the number of stars in the GravGroup."""
-        return len(self.__stars)
-
-    @property
-    def planets(self):
-        """Returns an OrderedDict containing the planets in the GravGroup."""
-        return self.__planets
-
-    @property
-    def nb_of_planets(self):
-        """Returns the number of planets in the GravGroup."""
-        return len(self.__planets)
-
-    def is_star(self, name):
-        """Returns True if a star of this name exists in the gravgroup."""
-        return name in self.stars
-
     def add_a_star(self, name=None):
         """Add a Star in the GravGroup."""
-        if self.is_star(name):
+        if self.isavailable_paramcontainer(name, category="stars"):
             logger.warning("A star with name {} already exists ! It will be overwritten"
                            "".format(name))
         if name is None:
             for possible_name in ascii_uppercase:
-                if self.is_star(possible_name):
+                if self.isavailable_paramcontainer(possible_name, category="stars"):
                     continue
                 else:
                     name = possible_name
                     break
-        self.stars[name] = Star(name=name, gravgroup=self)
+        self.add_a_paramcontainer(Star(name=name, gravgroup=self))
 
     def add_stars(self, number, names=None):
         """Add Stars in the GravGroup."""
@@ -200,23 +176,19 @@ class GravGroup(Model, GravGroup_Parametrisation):
             for i in range(number):
                 self.add_a_star(names[i])
 
-    def is_planet(self, name):
-        """Returns True if a planet of this name exists in the gravgroup."""
-        return name in self.planets
-
     def add_a_planet(self, name=None):
         """Add a Planet in the GravGroup."""
-        if self.is_planet(name):
+        if self.isavailable_paramcontainer(name, category="planets"):
             logger.warning("A planet with name {} already exists ! It will be overwritten"
                            "".format(name))
         if name is None:
             for possible_name in ascii_lowercase[1:]:
-                if self.is_planet(possible_name):
+                if self.isavailable_paramcontainer(possible_name, category="planets"):
                     continue
                 else:
                     name = possible_name
                     break
-        self.planets[name] = Planet(name=name, gravgroup=self)
+        self.add_a_paramcontainer(Planet(name=name, gravgroup=self))
 
     def add_planets(self, number, names=None):
         """Add Planets in the GravGroup."""
@@ -227,70 +199,54 @@ class GravGroup(Model, GravGroup_Parametrisation):
             for i in range(number):
                 self.add_a_planet(names[i])
 
-    def rm_star(self, name):
-        """Delete a Star in the GravGroup."""
-        res = self.stars.pop(name, None)
-        if res is None:
-            logger.warning("The deletion of the star {} from the GravGroup has failed because this"
-                           "star was not found.".format(name))
-        else:
-            logger.info("The star {} has been removed from the GravGroup."
-                        "".format(name))
-
-    def rm_planet(self, name):
-        """Delete a Planet in the GravGroup."""
-        res = self.planets.pop(name, None)
-        if res is None:
-            logger.warning("The deletion of the planet {} from the GravGroup has failed because "
-                           "this star was not found.".format(name))
-        else:
-            logger.info("The planet {} has been removed from the GravGroup."
-                        "".format(name))
-
-    def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
-        """Return the text to include in the parameter_file for this GravGroup.
-
-        ----
-
-        Arguments:
-            text_tab : string,
-                text giving the tabulation that needs to be added to this the text to obtain the
-                good alignment in the input file.
-        """
-        # entete = "{0} = {{".format(self.name_code)
-        # text = text_tab + entete + "\n"
-        # text_tab_param = spacestring_like(text_tab + "    ")
-        text = "{}# Stars".format(text_tab)
-        for star in self.stars.values():
-            text += "\n"
-            text += star.get_paramfile_section(text_tab=text_tab, entete_symb=entete_symb,
-                                               quote_name=quote_name)
-        text += "\n# Planets"
-        for planet in self.planets.values():
-            text += "\n"
-            text += planet.get_paramfile_section(text_tab=text_tab, entete_symb=entete_symb,
-                                                 quote_name=quote_name)
-        self.update_paramfile_info()
-        return text
-
-    def update_paramfile_info(self, recursive=False):
-        """Update the paramfile info attribute."""
-        self.paramfile_info.update({"stars": list(self.stars.keys())})
-        self.paramfile_info.update({"planets": list(self.planets.keys())})
-        logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
-                     "".format(self.name, self.paramfile_info))
-        if recursive:
-            for star in self.stars.values():
-                star.update_paramfile_info()
-            for planet in self.planets.values():
-                planet.update_paramfile_info()
-
-    def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
-        logger.debug("List of ParamContainer types: {}".format(self.paramfile_info.keys()))
-        for paramcont_type in self.paramfile_info.keys():
-            for paramcont_name in self.paramfile_info[paramcont_type]:
-                paramcont_dico = dico_config[paramcont_name]
-                logger.debug("Content of param dictionary for {} {}: {}"
-                             "".format(paramcont_type, paramcont_name, paramcont_dico))
-                getattr(self, paramcont_type)[paramcont_name].load_config(paramcont_dico)
+    # @property
+    # def stars(self):
+    #     """Returns an OrderedDict containing the stars in the GravGroup."""
+    #     if "stars" in self.paramcontainers:
+    #         return self.paramcontainers["stars"]
+    #     else:
+    #         logger.warning("There is no stars in the gravgroup ! Returned None")
+    #         return None
+    #
+    # @property
+    # def nb_of_stars(self):
+    #     """Returns the number of stars in the GravGroup."""
+    #     return len(self.__stars)
+    #
+    # @property
+    # def planets(self):
+    #     """Returns an OrderedDict containing the planets in the GravGroup."""
+    #     return self.__planets
+    #
+    # @property
+    # def nb_of_planets(self):
+    #     """Returns the number of planets in the GravGroup."""
+    #     return len(self.__planets)
+    #
+    # def is_star(self, name):
+    #     """Returns True if a star of this name exists in the gravgroup."""
+    #     return name in self.stars
+    #
+    # def is_planet(self, name):
+    #     """Returns True if a planet of this name exists in the gravgroup."""
+    #     return name in self.planets
+    #
+    # def rm_star(self, name):
+    #     """Delete a Star in the GravGroup."""
+    #     res = self.stars.pop(name, None)
+    #     if res is None:
+    #         logger.warning("The deletion of the star {} from the GravGroup has failed because "
+    #                        "this star was not found.".format(name))
+    #     else:
+    #         logger.info("The star {} has been removed from the GravGroup."
+    #                     "".format(name))
+    #
+    # def rm_planet(self, name):
+    #     """Delete a Planet in the GravGroup."""
+    #     res = self.planets.pop(name, None)
+    #     if res is None:
+    #         logger.warning("The deletion of the planet {} from the GravGroup has failed because "
+    #                        "this star was not found.".format(name))
+    #     else:
+    #         logger.info("The planet {} has been removed from the GravGroup."
+    #                     "".format(name))

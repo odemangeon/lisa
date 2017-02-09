@@ -57,8 +57,8 @@ class Dataset(object):
         Arguments:
             file_path           : string,
                 Path of file which contains the data
-            instrument_instance : Instance of a Subclass of Instrument,
-                Instrument instance that describes the isntrument used to measure the data.
+            instrument_instance : Instance of a Subclass of Core_Instrument,
+                Core_Instrument instance that describes the isntrument used to measure the data.
         Raises:
             NotImplementedError : 1 case,
                 -If you try to instanciate Dataset directly.
