@@ -131,6 +131,7 @@ class Posterior(DatasetDbAttr, Name):
     def rm_model(self):
         """Remove a model."""
         self.__model = None
+        self.dataset_db.freeze = False
 
     def isdefined_model(self):
         """Return true if a model is defined."""
