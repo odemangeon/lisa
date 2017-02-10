@@ -225,8 +225,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
                              "".format(text_tab + extra_tab, model_name, text_tab + extra_tab,
                                        text_tab + extra_tab, string4datasetdico))
                     text += "\n{}'{}': {{".format(text_tab + extra_tab, string4datasetdico)
-                    for datasetnbget in self.dataset_db.get_datasetnbs(inst_name=inst_name):
-                        text += "'{}': '{}', ".format(datasetnbget, model_name)
+                    for datasetname in self.dataset_db.get_datasetnames(inst_name=inst_name):
+                        number = interpret_data_filename(datasetname)["number"]
+                        model_name = self.instmodel4dataset[datasetname]
+                        text += "'{}': '{}', ".format(number, model_name)
                     text += "}}\n\n{}}}\n\n".format(text_tab + extra_tab)
             text += "\n"
         self.update_paramfile_info()
