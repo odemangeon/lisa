@@ -15,16 +15,20 @@ from logging import getLogger
 from collections import OrderedDict
 from os.path import isfile
 
-from ....tools.metaclasses import  MandatoryReadOnlyAttr
+from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ..paramcontainer import Core_ParamContainer
 from ..dataset_and_instrument.instrument import Core_Instrument, instrument_model_category
 from ..dataset_and_instrument.dataset_database import DatasetDbAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
+from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 
 
 ## Logger
 logger = getLogger()
+
+manager_inst = Manager_Inst_Dataset()
+manager_inst.load_setup()
 
 string4datasetdico = "Dataset"
 
@@ -159,6 +163,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
         logger.debug("Added instrument model {} in model {}"
                      "".format(inst_category + '_' + inst_name + '_' + name, self.name))
 
+    def rm_an_instrument_model(self, inst_cat, inst_name, inst_model):
+        """Remove an instrument model to the paramcontainers of this model."""
+        res = self.paramcontainers[inst_cat][inst_name].pop(inst_model)
+        if res is None:
+            logger.warning("The deletion of the instrument model {} from the model has failed "
+                           "because it was not found was not found."
+                           "".format(inst_cat + '_' + inst_name + "_" + inst_model))
+        else:
+            logger.info("The instrument model {} has been removed from the model."
+                        "".format(inst_cat + '_' + inst_name + "_" + inst_model))
+
     def __init_instruments_models(self):
         """Add an instrument model for each instrument used in the dataset database."""
         for inst in self.dataset_db.get_instruments().values():
@@ -250,10 +265,25 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
                     logger.debug("Content of param_file_info for {} {}: {}"
                                  "".format(paramcont_type, inst_name,
                                            self.paramfile_info[paramcont_type][inst_name]))
-                    for inst_model in self.paramfile_info[paramcont_type][inst_name]:
-                        if inst_model != string4datasetdico:
-                            paramcont_dico = dico_config[inst_name][inst_model]
-                            self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
+                    logger.debug("Content of dico_config for {} {}: {}"
+                                 "".format(paramcont_type, inst_name,
+                                           dico_config[inst_name]))
+                    set_paramfile_info = set(self.paramfile_info[paramcont_type][inst_name])
+                    set_dico_config = set(dico_config[inst_name].keys())
+                    for set_obj in [set_paramfile_info, set_dico_config]:
+                        set_obj.remove(string4datasetdico)
+                    for inst_model in (set_paramfile_info & set_dico_config):
+                        paramcont_dico = dico_config[inst_name][inst_model]
+                        self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
+                    for inst_model in (set_paramfile_info.difference(set_dico_config)):
+                        self.rm_an_instrument_model(paramcont_type, inst_name, inst_model)
+                        self.update_paramfile_info()
+                    for inst_model in (set_dico_config.difference(set_paramfile_info)):
+                        paramcont_dico = dico_config[inst_name][inst_model]
+                        instrument = manager_inst.get_instrument_instance(inst_name)
+                        self.add_an_instrument_model(instrument, inst_model)
+                        self.update_paramfile_info()
+                        self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
 
     @property
     def param_file(self):
