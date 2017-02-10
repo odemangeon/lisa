@@ -10,6 +10,7 @@ import sys
 import source.posterior.core.model.core_model as cmdl
 from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
 from source.posterior.core.prior.manager_prior import Manager_Prior
+from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -29,8 +30,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             __category__ = "FakeModel"
 
-            def __init__(self, model_name):
-                super(FakeModel, self).__init__(model_name)
+            def __init__(self, model_name, dataset_db):
+                super(FakeModel, self).__init__(model_name, dataset_db)
         self.fake_modelsubclass = FakeModel
 
         manager = Manager_Prior()
@@ -38,7 +39,8 @@ class TestMethods(unittest.TestCase):
         print(manager.get_available_priors())
 
     def test_basics(self):
-        mdl_instance = self.fake_modelsubclass(model_name="test")
+        mdl_instance = self.fake_modelsubclass(model_name="test",
+                                               dataset_db=DatasetDatabase("test"))
         self.assertEqual("FakeModel", mdl_instance.category)
         self.assertEqual("FakeModel", self.fake_modelsubclass.category)
         self.assertEqual("test", mdl_instance.name)
@@ -48,7 +50,8 @@ class TestMethods(unittest.TestCase):
             mdl_instance.category = "test"
 
     def test_manage_paramcontainers(self):
-        mdl_instance = self.fake_modelsubclass(model_name="test")
+        mdl_instance = self.fake_modelsubclass(model_name="test",
+                                               dataset_db=DatasetDatabase("test"))
         mdl_instance.add_a_paramcontainer(Star(name="A"))
         mdl_instance.add_a_paramcontainer(Planet(name="b"))
         mdl_instance.add_a_paramcontainer(Planet(name="c"))

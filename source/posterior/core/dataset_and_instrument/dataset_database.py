@@ -21,11 +21,12 @@ from ....software_parameters import input_data_folder
 from ....software_parameters import input_run_folder
 from ....tools.miscellaneous import define_folder_withdefault, look4file_withdeffolder
 from ....tools.name import Name
+from ....tools.dico_database import get_content_2ndlevel, get_content_3ndlevel
 
 logger = getLogger()
 
-manager_dataset = Manager_Inst_Dataset()
-manager_dataset.load_setup()
+manager_inst = Manager_Inst_Dataset()
+manager_inst.load_setup()
 
 
 class DatasetDatabase(Name):
@@ -40,6 +41,8 @@ class DatasetDatabase(Name):
         self.__run_folder = None
         ## Folder where the program should look for config files by default: Initialise it
         self._database = dict()
+        #
+        self.freeze = False
 
     def __getitem__(self, key):
         return self._database[key]
@@ -48,6 +51,18 @@ class DatasetDatabase(Name):
     def object_name(self):
         """Return the name of the object studied."""
         return self.name
+
+    @property
+    def freeze(self):
+        """Return True is the database in frozen."""
+        return self.__freeze
+
+    @freeze.setter
+    def freeze(self, boolean):
+        """Return True is the database in frozen."""
+        if not(isinstance(boolean, bool)):
+            raise ValueError("freeze should be a boolean")
+        self.__freeze = boolean
 
     @property
     def data_folder(self):
@@ -106,6 +121,8 @@ class DatasetDatabase(Name):
             force   : boolean, (default: False),
                 True to force the addition of the dataset
         """
+        if self.freeze:
+            raise ValueError("The dataset dabase has been freezed you can not add a new dataset.")
         inst_category = dataset.instrument.category
         inst_name = dataset.instrument.name
         number = dataset.number
@@ -161,6 +178,8 @@ class DatasetDatabase(Name):
             number      : int, (default: 0)
                 Number associated to the dataset you want to remove.
         """
+        if self.freeze:
+            raise ValueError("The dataset dabase has been freezed you can not remove datasets.")
         self._database[inst_category][inst_name].pop(str(number))
         if len(self._database[inst_category][inst_name]) == 0:
             self._database[inst_category].pop(inst_name)
@@ -190,8 +209,8 @@ class DatasetDatabase(Name):
         else:
             raise ValueError("File {} not found".format(datafile_path))
         if load_setup:
-            manager_dataset.load_setup()
-        self._add_a_dataset(manager_dataset.create_dataset(path), force=force)
+            manager_inst.load_setup()
+        self._add_a_dataset(manager_inst.create_dataset(path), force=force)
         logger.info("dataset added to the database: {}".format(datafile_path))
 
     def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False, force=False):
@@ -223,7 +242,7 @@ class DatasetDatabase(Name):
             raise ValueError(error_msg)
         logger.debug("List of files to use: {}".format(list_files))
         if load_setup:
-            manager_dataset.load_setup()
+            manager_inst.load_setup()
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath, force=force)
 
@@ -248,9 +267,18 @@ class DatasetDatabase(Name):
         return self._database[inst_category][inst_name][str_number]
 
     @property
-    def datatypes_tosim(self):
+    def inst_categories(self):
         """Return the list of the types of instruments associated to the dataset in the database."""
         return list(self._database.keys())
+
+    def get_instnames(self, inst_category=None):
+        """Return the names of instruments.
+
+        If inst_category provided return only the name of the instrument for this category.
+        Otherwise return a dict which associate the list of instrument names to each instrument
+        category available in the database.
+        """
+        return get_content_2ndlevel(dico_db=self._database, level1_key=inst_category)
 
     def get_instruments(self):
         """Return the dict of instruments used by the dataset in the database"""
@@ -261,18 +289,39 @@ class DatasetDatabase(Name):
                 instruments_dict[inst_name] = first_dataset.instrument
         return instruments_dict
 
-    def get_datasetnbs(self, inst_name, inst_category=None):
-        """Return the dict of instruments used by the dataset in the database"""
-        if inst_category is None:
-            inst_category = self.get_instcat(inst_name)
-        return list(self._database[inst_category][inst_name].keys())
+    def get_datasetnbs(self, inst_name=None, inst_category=None):
+        """Return the numbers of the datasets.
 
-    def get_instcat(self, inst_name):
+        If inst_name provided return only the list of numbers of the datasets for this instrument.
+        Else if inst_category provided (and not inst_name) return a dict giving for each instrument
+        in this category the list of numbers associated.
+        If neither inst_name nor inst_category, returns a 2 level dict giving for each category and
+        each instrument in this category the list of numbers associated.
+        """
+        if (inst_name is not None) and (inst_category is None):
+            inst_category = manager_inst.get_inst_category(inst_name=inst_name)
+        return get_content_3ndlevel(dico_db=self._database, level1_key=inst_category,
+                                    level2_key=inst_name)
+
+    def get_datasetnames(self, inst_name=None, inst_category=None):
         """Return the dict of instruments used by the dataset in the database"""
-        for inst_cat in self._database.keys():
-            if inst_name in self._database[inst_cat]:
-                return inst_cat
-        raise ValueError("Instrument {} is not in the database".format(inst_name))
+        if (inst_name is not None) and (inst_category is None):
+            inst_category = manager_inst.get_inst_category(inst_name=inst_name)
+        result = []
+        if inst_category is not None:
+            iter_instcat = [inst_category, ]
+        else:
+            iter_instcat = self.inst_categories
+        for cat in iter_instcat:
+            if inst_name is not None:
+                iter_inst_name = [inst_name, ]
+            else:
+                iter_inst_name = self.get_instnames(inst_category=cat)
+            for name in iter_inst_name:
+                nb_list = self.get_datasetnbs(inst_category=cat, inst_name=name)
+                for nb in nb_list:
+                    result.append("{}_{}_{}_{}".format(cat, self.object_name, name, nb))
+        return result
 
 
 class DatasetDbAttr(object):
@@ -316,13 +365,6 @@ class DatasetDbAttr(object):
             return self.dataset_db is not None
         else:
             return False
-
-    @property
-    def datatypes_tosim(self):
-        """Return the list of data types to simulate."""
-        return self.dataset_db.datatypes_tosim
-
-
 
 # def interpret_dataset_key(dataset_key):
 #     """

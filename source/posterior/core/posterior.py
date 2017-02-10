@@ -124,6 +124,7 @@ class Posterior(DatasetDbAttr, Name):
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(category)
+        self.dataset_db.freeze = True
         self.__model = model_subclass(dataset_db=self.dataset_db, **kwargs)
         logger.info("Model defined with name {} !".format(self.model.name))
 

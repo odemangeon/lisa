@@ -52,7 +52,7 @@ class TestMethods(unittest.TestCase):
         os.remove(dataset_file_RVonly)
         self.managerp = mgrp.Manager_Prior()
         self.managerp.load_setup()
-        print(self.dataset_db.datatypes_tosim)
+        print(self.dataset_db.inst_categories)
 
     def test_basics(self):
         gravgroup_model = exomdl.GravGroup(name="K2-19",

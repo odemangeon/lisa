@@ -19,12 +19,12 @@ The objective of this module is to manage the subclasses of the Core_Model class
 @TODO:
     -
 """
-import logging
+from logging import getLogger
 from ....software_parameters import setupfile_model
 from .core_model import Core_Model
 
 ## Logger
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class Manager_Model(object):

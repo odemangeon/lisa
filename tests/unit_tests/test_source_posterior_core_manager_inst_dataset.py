@@ -77,7 +77,7 @@ class TestMethods(unittest.TestCase):
         list_res = manager.get_available_inst_name()
         logger.info("Available instruments: {}".format(list_res))
         self.assertSequenceEqual(manager.get_available_inst_name(), ["K2"])
-        instrument_instance = manager.get_instrument_instance(inst_name="K2")
+        instrument_instance = manager.get_instrument(inst_name="K2")
         self.assertEqual(instrument_instance, self.K2_inst)
         self.assertTrue(manager.is_available_inst(inst_name="K2"))
         self.assertFalse(manager.is_available_inst(inst_name="Truc"))

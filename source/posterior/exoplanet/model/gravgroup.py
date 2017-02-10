@@ -62,12 +62,12 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                  stars=None, planets=None):
         """docstring Planet init method."""
         super(GravGroup, self).__init__(name, dataset_db)
-        if "LC" in self.datatypes_tosim:
+        if "LC" in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
             # Limb darkening model
             self.ld_model = ld_model
-        if "RV" in self.datatypes_tosim:
+        if "RV" in self.dataset_db.inst_categories:
             # radial velocities model
             self.rv_model = rv_model
         # Initialise the stars in the system

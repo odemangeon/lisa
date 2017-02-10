@@ -162,7 +162,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(0, number)
         self.assertEqual(file2, path)
         self.assertCountEqual(["LC", "RV"],
-                              self.posterior_instance.dataset_db.datatypes_tosim)
+                              self.posterior_instance.dataset_db.inst_categories)
 
     def test_model_operations(self):
         with self.assertRaises(AttributeError):

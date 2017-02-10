@@ -22,7 +22,7 @@ from ..dataset_and_instrument.dataset_database import DatasetDbAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-
+from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
 
 ## Logger
 logger = getLogger()
@@ -38,7 +38,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
     __mandatoryattrs__ = ["category"]
 
     """docstring for Core_Model abstract class."""
-    def __init__(self, name, dataset_db=None):
+    def __init__(self, name, dataset_db):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This __init__ does:
@@ -47,22 +47,28 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
         Arguments:
             name  : string,
                 Name of the Core_Model
-            instruments : dict, (default: None)
-                Dictionnary with keys being the instrument types of the dataset to be modeled and
-                each key contain the list of instrument instances associated to the instrument used
-                for this type of instrument.
+            dataset_db : DatasetDatabase instance,
+                DatasetDatabase giving the dataset to be modeled.
         """
         # 1.
         Core_ParamContainer.__init__(self, name)
         # 2.
         DatasetDbAttr.__init__(self, dataset_db)
+        if not(self.hasdataset_db):
+            raise ValueError("You need to provide a DatasetDatabase to create a model !")
         # 3.
         self._paramcontainers = OrderedDict()
         # 4.
-        if self.hasdataset_db:
-            self.__init_instruments_models()
+        self.__init_instruments_models()
+        # 5.
+        self.__instmodel4dataset = dict.fromkeys(self.dataset_db.get_datasetnames(), "default")
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
+
+    @property
+    def instmodel4dataset(self):
+        """Dictionnary giving which instrument model to use for which dataset."""
+        return self.__instmodel4dataset
 
     @property
     def paramcontainers(self):
@@ -220,7 +226,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
                                        text_tab + extra_tab, string4datasetdico))
                     text += "\n{}'{}': {{".format(text_tab + extra_tab, string4datasetdico)
                     for datasetnbget in self.dataset_db.get_datasetnbs(inst_name=inst_name):
-
                         text += "'{}': '{}', ".format(datasetnbget, model_name)
                     text += "}}\n\n{}}}\n\n".format(text_tab + extra_tab)
             text += "\n"
@@ -268,22 +273,35 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
                     logger.debug("Content of dico_config for {} {}: {}"
                                  "".format(paramcont_type, inst_name,
                                            dico_config[inst_name]))
+                    # Load config of instrument models
                     set_paramfile_info = set(self.paramfile_info[paramcont_type][inst_name])
                     set_dico_config = set(dico_config[inst_name].keys())
                     for set_obj in [set_paramfile_info, set_dico_config]:
                         set_obj.remove(string4datasetdico)
+                    # Load config of already existing instrument model
                     for inst_model in (set_paramfile_info & set_dico_config):
                         paramcont_dico = dico_config[inst_name][inst_model]
                         self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
+                    # Remove instrument model that are not in the param_file anymore
                     for inst_model in (set_paramfile_info.difference(set_dico_config)):
                         self.rm_an_instrument_model(paramcont_type, inst_name, inst_model)
                         self.update_paramfile_info()
+                    # Add instrument model are in the param_file but not yet in the model
                     for inst_model in (set_dico_config.difference(set_paramfile_info)):
                         paramcont_dico = dico_config[inst_name][inst_model]
-                        instrument = manager_inst.get_instrument_instance(inst_name)
+                        instrument = manager_inst.get_instrument(inst_name)
                         self.add_an_instrument_model(instrument, inst_model)
                         self.update_paramfile_info()
                         self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
+                    # Load which insstrument model to use for which dataset
+                    for dataset in self.dataset_db.get_datasetnames(inst_name=inst_name):
+                        number = interpret_data_filename(dataset)["number"]
+                        inst_model = dico_config[inst_name][string4datasetdico][number]
+                        if self.instmodel4dataset[dataset] != inst_model:
+                            logger.debug("Instrument model to use for dataset {} changed from {} "
+                                         "to {}.".format(dataset, self.instmodel4dataset[dataset],
+                                                         inst_model))
+                            self.instmodel4dataset[dataset] = inst_model
 
     @property
     def param_file(self):

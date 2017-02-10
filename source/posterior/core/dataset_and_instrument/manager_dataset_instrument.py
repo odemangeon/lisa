@@ -18,7 +18,7 @@ classes.
     - __Mgr._reset_available_inst: Doc and UT
     - __Mgr.get_available_inst_name: Doc and UT
     - __Mgr.add_available_inst: Doc and UT
-    - __Mgr.get_instrument_instance: Doc and UT
+    - __Mgr.get_instrument: Doc and UT
     - __Mgr.is_available_inst: Doc and UT
     - __Mgr.create_dataset: Doc
     - Manager_Inst_Dataset.__init__: Doc and UT
@@ -150,7 +150,7 @@ class Manager_Inst_Dataset(object):
                 name           : string,
                     name of the instrument
             """
-            params_model = self.get_instrument_subclass(inst_category).params_model
+            params_model = self.get_inst_subclass(inst_category).params_model
             self.add_available_inst(Default_Instrument(category=inst_category,
                                                        name=name,
                                                        params_model=params_model))
@@ -210,7 +210,7 @@ class Manager_Inst_Dataset(object):
             """
             return self.__dataset_for_inst[inst_category]
 
-        def get_instrument_instance(self, inst_name):
+        def get_instrument(self, inst_name):
             """Return Core_Instrument Subclass instance associated to a given instrument name.
             ----
             Arguments:
@@ -226,7 +226,7 @@ class Manager_Inst_Dataset(object):
                                  " instances".format(self.get_available_inst_name()))
             return self.__available_inst[inst_name]
 
-        def get_instrument_subclass(self, inst_category):
+        def get_inst_subclass(self, inst_category):
             """Return Core_Instrument Subclass associated to a given instrument category.
             ----
             Arguments:
@@ -240,6 +240,14 @@ class Manager_Inst_Dataset(object):
                 raise ValueError("Instrument named {} is not amongst the available instrument"
                                  " instances".format(self.get_available_inst_name()))
             return self.__available_inst_subclass[inst_category]
+
+        def get_inst_category(self, inst_name):
+            """Return instrument category of the instrument designated by inst_name.
+            ----
+            Arguments:
+            """
+            instrument = self.get_instrument(inst_name=inst_name)
+            return instrument.category
 
         def create_dataset(self, file_path):
             """Create the correct Dataset subclass instance from the file path.
@@ -284,7 +292,7 @@ class Manager_Inst_Dataset(object):
                 self.add_available_def_inst(filename_info["inst_category"],
                                             filename_info["inst_name"])
             # 6.
-            inst_instance = self.get_instrument_instance(filename_info["inst_name"])
+            inst_instance = self.get_instrument(filename_info["inst_name"])
             # 7
             Dataset_SubClass = self.get_dataset_subclass(filename_info["inst_category"])
             # 8

@@ -35,9 +35,9 @@ class GravGroup_Parametrisation(object):
                              "with at least 1 planet. This gravgroups has {} planet(s)."
                              "".format(self.nb_of_paramcontainers["planets"]))
         # Check that the data type to simulate are RV and LC
-        if Counter(self.datatypes_tosim) != Counter(["RV", "LC"]):
+        if Counter(self.dataset_db.inst_categories) != Counter(["RV", "LC"]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV and "
-                           "transit data but you have to analyse {}.".format(self.datatypes_tosim))
+                           "transit data but you have to analyse {}.".format(self.dataset_db.inst_categories))
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers.keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
@@ -70,9 +70,9 @@ class GravGroup_Parametrisation(object):
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with at least 1 planet. This gravgroups has {} planet(s)."
                              "".format(self.nb_of_paramcontainers["planets"]))
-        if Counter(self.datatypes_tosim) != Counter(["RV", ]):
+        if Counter(self.dataset_db.inst_categories) != Counter(["RV", ]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV data "
-                           "only but you have to analyse {}.".format(self.datatypes_tosim))
+                           "only but you have to analyse {}.".format(self.dataset_db.inst_categories))
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
