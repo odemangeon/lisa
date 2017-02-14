@@ -7,6 +7,7 @@ Test script giving an example of what to do to create a posterior
 """
 import logging
 import sys
+# from ipdb import set_trace
 
 import source.posterior.core.posterior as cpost
 
@@ -51,7 +52,7 @@ logger.info("5. Apply a parametrisation to the model")
 post_instance.model.apply_RV_EXOFAST_param()
 
 logger.info("6. Create and modify the paramerisation file")
-post_instance.model.create_parameter_file("/Users/olivier/Softwares/lisa/run/K2-19/param_file.py")
+post_instance.model.create_parameter_file("param_file.py")
 
 input("Modifiy the paramerisation file")
 

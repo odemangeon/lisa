@@ -13,7 +13,7 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from collections import OrderedDict
-from os.path import isfile
+from os.path import isfile, join
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ..paramcontainer import Core_ParamContainer
@@ -21,9 +21,11 @@ from ..dataset_and_instrument.instrument import Core_Instrument, instrument_mode
 from ..dataset_and_instrument.dataset_database import DatasetDbAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
+from ....tools.miscellaneous import define_folder_withdefault, look4file_withdeffolder
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
 from ..prior.core_prior import Prior
+from ....software_parameters import input_run_folder
 
 ## Logger
 logger = getLogger()
@@ -39,7 +41,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
     __mandatoryattrs__ = ["category"]
 
     """docstring for Core_Model abstract class."""
-    def __init__(self, name, dataset_db):
+    def __init__(self, name, dataset_db, run_folder=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This __init__ does:
@@ -65,6 +67,33 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         self.__instmodel4dataset = dict.fromkeys(self.dataset_db.get_datasetnames(), "default")
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
+        ## Folder where the program should look for config files by default: Initialise it
+        self.__run_folder = run_folder
+
+    @property
+    def run_folder(self):
+        """The run_folder is the folder where the program will look for config files and put
+        outputs. It can be provided in two ways:
+            - Via the folder defined in software_parameters: In this case the run_folder is
+              automatically define as "input_run_folder/object_name". To use this you should assign
+              "default"
+            - Via the run_folder argument: You can provide any folder here via the run_folder
+              argument.
+        If not defined, return None.
+        """
+        return self.__run_folder
+
+    @run_folder.setter
+    def run_folder(self, run_folder="default"):
+        """Set the run_folder attribute."""
+        self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
+                                                      object_name=self.name,
+                                                      folder=run_folder)
+
+    @property
+    def isset_runfolder(self):
+        """Tells if the run_folder attribute is defined."""
+        return self.run_folder is not None
 
     @property
     def instmodel4dataset(self):
@@ -355,26 +384,44 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         """Return True is the attribute param_file has been defined."""
         return self.param_file is not None
 
-    def create_parameter_file(self, filepath):
+    def create_parameter_file(self, paramfile_path):
         """Create the parameter file."""
-        if isfile(filepath):
-            answers_list = ['y', 'n']
+        file_path = look4file_withdeffolder(file_path=paramfile_path,
+                                            default_folder=self.run_folder)
+        if file_path is not None:
+            answers_list_yn = ['y', 'n']
             question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                        "".format(filepath, answers_list))
-            reply = QCM_utilisateur(question, answers_list)
+                        "".format(file_path, answers_list_yn))
+            reply = QCM_utilisateur(question, answers_list_yn)
         else:
+            answers_list_create = ["absolute", "error"]
+            question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
+                        "{}".format(paramfile_path, paramfile_path))
+            if self.isset_runfolder:
+                answers_list_create.append("run_folder")
+                run_folder_path = join(self.run_folder, paramfile_path)
+                question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
+            question += "\nNot create it and raise an 'error' ? {}".format(answers_list_create)
+            reply = QCM_utilisateur(question, answers_list_create)
+            if reply == "absolute":
+                file_path = paramfile_path
+            elif reply == "run_folder":
+                file_path = run_folder_path
+            else:
+                raise ValueError("File {} doesn't exist and the user doesn't want to create it."
+                                 "".format(paramfile_path))
             reply = "y"
         if reply == "y":
-            with open(filepath, 'w') as f:
+            with open(file_path, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
                 f.write("# Parametrisation file of {}\n\n".format(self.name))
                 f.write("# Parameters\n")
                 f.write(self.get_paramfile_section())
-            logger.info("Parameter file created at path: {}".format(filepath))
+            logger.info("Parameter file created at path: {}".format(file_path))
         else:
-            logger.info("Parameter file already existing and not overwritten: {}".format(filepath))
+            logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
             self.update_paramfile_info(recursive=True)
-        self.param_file = filepath
+        self.param_file = file_path
 
     def read_parameter_file(self):
         """Read the content of the parameter file."""

@@ -61,9 +61,9 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                   }
 
     def __init__(self, name, dataset_db, transit_model=None, ld_model=None, rv_model=None,
-                 stars=None, planets=None):
+                 stars=None, planets=None, run_folder=None):
         """docstring Planet init method."""
-        super(GravGroup, self).__init__(name, dataset_db)
+        super(GravGroup, self).__init__(name, dataset_db, run_folder)
         if "LC" in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model

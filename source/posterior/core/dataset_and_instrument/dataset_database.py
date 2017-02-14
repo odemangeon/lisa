@@ -84,6 +84,7 @@ class DatasetDatabase(Name):
                                                        object_name=self.name,
                                                        folder=data_folder)
 
+    @property
     def isset_datafolder(self):
         """Tells if the data_folder attribute is defined."""
         return self.data_folder is not None
@@ -108,6 +109,7 @@ class DatasetDatabase(Name):
                                                       object_name=self.name,
                                                       folder=run_folder)
 
+    @property
     def isset_runfolder(self):
         """Tells if the run_folder attribute is defined."""
         return self.run_folder is not None

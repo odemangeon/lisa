@@ -96,8 +96,11 @@ class Posterior(DatasetDbAttr, Name):
         self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
                                                       object_name=self.name,
                                                       folder=run_folder)
-        self.dataset_db.run_folder = self.run_folder
+        self.dataset_db.run_folder = self.__run_folder
+        if self.isdefined_model:
+            self.model.run_folder = self.__run_folder
 
+    @property
     def isset_runfolder(self):
         """Tells if the run_folder attribute is defined."""
         return self.run_folder is not None
@@ -125,7 +128,8 @@ class Posterior(DatasetDbAttr, Name):
             kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(category)
         self.dataset_db.freeze = True
-        self.__model = model_subclass(dataset_db=self.dataset_db, **kwargs)
+        self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
+                                      **kwargs)
         logger.info("Model defined with name {} !".format(self.model.name))
 
     def rm_model(self):
@@ -133,6 +137,7 @@ class Posterior(DatasetDbAttr, Name):
         self.__model = None
         self.dataset_db.freeze = False
 
+    @property
     def isdefined_model(self):
         """Return true if a model is defined."""
         return self.model is not None

@@ -50,8 +50,8 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             __category__ = "FakeModel"
 
-            def __init__(self, name="default", dataset_db=None):
-                super(FakeModel, self).__init__(name, dataset_db)
+            def __init__(self, name="default", dataset_db=None, run_folder=None):
+                super(FakeModel, self).__init__(name, dataset_db, run_folder)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -60,7 +60,7 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.object_name = "K2-28"
 
     def test_datafolder_isset(self):
-        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder())
+        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder)
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_custom_datafolder_answer_yes(self, input):
@@ -73,7 +73,7 @@ class TestMethods(unittest.TestCase):
     def test_set_custom_datafolder_answer_no(self, input):
         path = "testposteriordatafolder"
         self.posterior_instance.dataset_db.data_folder = path
-        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder())
+        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder)
 
     def test_set_custom_datafolder_alreadyexists(self):
         path = "testposteriordatafolder"
@@ -92,7 +92,7 @@ class TestMethods(unittest.TestCase):
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_default_datafolder_answer_no(self, input):
         self.posterior_instance_test.data_folder = "default"
-        self.assertFalse(self.posterior_instance_test.dataset_db.isset_datafolder())
+        self.assertFalse(self.posterior_instance_test.dataset_db.isset_datafolder)
 
     def test_set_default_datafolder_alreadyexists(self):
         path = os.path.join(input_data_folder, "test")
@@ -168,11 +168,11 @@ class TestMethods(unittest.TestCase):
         with self.assertRaises(AttributeError):
             self.posterior_instance.model = "K2-28"
         self.posterior_instance.rm_model()
-        self.assertFalse(self.posterior_instance.isdefined_model())
+        self.assertFalse(self.posterior_instance.isdefined_model)
         self.posterior_instance.define_model(category="FakeModel", name="test")
-        self.assertTrue(self.posterior_instance.isdefined_model())
+        self.assertTrue(self.posterior_instance.isdefined_model)
         self.posterior_instance.rm_model()
-        self.assertFalse(self.posterior_instance.isdefined_model())
+        self.assertFalse(self.posterior_instance.isdefined_model)
 
 
 if __name__ == '__main__':
