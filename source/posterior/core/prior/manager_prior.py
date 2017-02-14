@@ -19,12 +19,12 @@ The objective of this module is to manage the priors.
 @TODO:
     -
 """
-import logging
+from logging import getLogger
 from ....software_parameters import setupfile_prior
 from .prior_function import Core_Prior_Function
 
 ## Logger
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class Manager_Prior(object):

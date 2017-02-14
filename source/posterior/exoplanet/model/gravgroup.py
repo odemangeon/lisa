@@ -33,6 +33,8 @@ from ...core.model.core_model import Core_Model
 from .celestial_bodies import Star, Planet
 from .parametrisation import GravGroup_Parametrisation
 
+from pdb import set_trace
+
 
 ## Logger object
 logger = logging.getLogger()
@@ -72,7 +74,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             self.rv_model = rv_model
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
-        self.__stars = OrderedDict()
         if isinstance(stars, int):
             if stars >= 1:
                 self.add_stars(number=stars)
@@ -88,7 +89,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                              "or None. {}".format(stars))
         # Initialise the planets in the system
         ## planets: ordered dictionary of the planets in the grav group
-        self.__planets = OrderedDict()
         if isinstance(planets, int):
             if planets >= 1:
                 self.add_planets(number=planets)

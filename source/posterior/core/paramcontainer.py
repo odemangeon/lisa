@@ -38,7 +38,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
 
     def __getattr__(self, attr=""):
         """Intercept attribute call to look first in the parameter list."""
-        if attr in self.get_list_all_paramnames():
+        if attr in Core_ParamContainer.get_list_all_paramnames(self):
             return self.parameters[attr]
         else:
             # Default behaviour
@@ -55,7 +55,17 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
 
     def get_list_all_paramnames(self):
         """Return the list of all parameters."""
-        return list(self.parameters.keys())
+        result = []
+        for param in Core_ParamContainer.get_list_all_params(self):
+            result.append(param.name)
+        return result
+
+    def get_list_all_paramfullnames(self):
+        """Return the list of all parameters."""
+        result = []
+        for param in self.get_list_all_params():
+            result.append(param.full_name)
+        return result
 
     def add_parameter(self, parameter):
         """Add a parameter to the Core_ParamContainer."""
@@ -72,11 +82,18 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
                 result.append(param)
         return result
 
-    def get_list_main_paramname(self):
+    def get_list_main_paramnames(self):
         """Return the list of main parameters names (non redondant parameter)."""
         result = []
         for param in self.get_list_main_params():
             result.append(param.name)
+        return result
+
+    def get_list_main_paramfullnames(self):
+        """Return the list of main parameters names (non redondant parameter)."""
+        result = []
+        for param in self.get_list_main_params():
+            result.append(param.full_name)
         return result
 
     @property

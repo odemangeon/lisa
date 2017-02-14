@@ -23,6 +23,7 @@ from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
+from ..prior.core_prior import Prior
 
 ## Logger
 logger = getLogger()
@@ -33,7 +34,7 @@ manager_inst.load_setup()
 string4datasetdico = "Dataset"
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnlyAttr):
+class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryReadOnlyAttr):
 
     __mandatoryattrs__ = ["category"]
 
@@ -184,6 +185,30 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, metaclass=MandatoryReadOnly
         """Add an instrument model for each instrument used in the dataset database."""
         for inst in self.dataset_db.get_instruments().values():
             self.add_an_instrument_model(inst, name="default")
+
+    @property
+    def paramcontainers_categories(self):
+        """Return the list of the paramcontainer categories used in this model."""
+        return list(self.paramcontainers.keys())
+
+    def get_list_all_params(self):
+        """Return the list of all parameters."""
+        result = []
+        result.extend(super(Core_Model, self).get_list_all_params())
+        for paramcont_cat in self.paramcontainers_categories:
+            if paramcont_cat == instrument_model_category:
+                pass
+            else:
+                for param_cont in self.paramcontainers[paramcont_cat].values():
+                    result.extend(param_cont.get_list_all_params())
+        return result
+
+    def get_list_all_paramnames(self):
+        """Return the list of all parameters."""
+        result = []
+        for param in self.get_list_all_params():
+            result.append(param.name)
+        return result
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.

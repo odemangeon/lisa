@@ -44,7 +44,7 @@ class TestMethods(unittest.TestCase):
             f.write(file2 + "\n")
             f.write(file3 + "\n")
         self.dataset_db.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
-        self.dataset_db_RVonly.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
+        self.dataset_db_RVonly.add_datasets_from_datasetfile(path_datasets_file=dataset_file_RVonly)
         os.remove(file1)
         os.remove(file2)
         os.remove(file3)

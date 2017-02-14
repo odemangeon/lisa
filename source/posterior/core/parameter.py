@@ -142,8 +142,8 @@ class Parameter(Name):
         return self.__prior_info
 
     @property
-    def joint_prior(self):
-        """Indicate if the prior of the parameter is described by a joint prior."""
+    def joint(self):
+        """Return True if the prior of the parameter is described by a joint prior."""
         return self.prior_info["joint"]
 
     @property
