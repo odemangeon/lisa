@@ -15,7 +15,7 @@ import source.posterior.core.posterior as cpost
 logger = logging.getLogger()
 
 level_log = logging.DEBUG
-level_hand = logging.DEBUG
+level_hand = logging.INFO
 
 if logger.level != level_log:
     logger.setLevel(level_log)

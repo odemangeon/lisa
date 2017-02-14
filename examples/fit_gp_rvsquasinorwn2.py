@@ -54,19 +54,24 @@ def lnprior_gp(p):
     lna, lngamma, lnperiod, lntau = p[:4]
 
 
-    if not -10 < lna <  1.0: # 4 give weird results
+    if not -10 < lna <  3.0: # 4 give weird results
+    #if not -10 < lna <  -9: # 4 give weird results
         return -np.inf
 
     if not 10 < lntau <  19:
         return -np.inf
 
     prior_lngamma = stats.norm(0.59575, 0.04)
+    #prior_lngamma = stats.norm(0.59575, 0.00004)
     plngamma = prior_lngamma.logpdf(lngamma)
 
-    prior_lntau = stats.norm(14.39904, 2.5)
+    #prior_lntau = stats.norm(14.39904, 2.5)
+    prior_lntau = stats.norm(14.39904, 0.05)
+    #prior_lntau = stats.norm(14.39904, 0.00005)
     plntau = prior_lntau.logpdf(lntau)
 
     prior_lnperiod = stats.norm(20.36978, 0.05)
+    #prior_lnperiod = stats.norm(20.36978, 0.00005)
     plnperiod = prior_lnperiod.logpdf(lnperiod)
 
 
@@ -123,7 +128,7 @@ def lnprior_ind(p):
 
     if not 0 <= k2 < 40.0:
         return -np.inf
-    if not  0 <= w2 < 360:
+    if not  -180 <= w2 < 180:
         return -np.inf
     if not  0 <= ecc2 < 0.5:
         return -np.inf
@@ -143,15 +148,15 @@ def lnprior_ind(p):
     #prior_ecc2 = stats.norm(0.095, 0.1)
     #pecc2 = prior_ecc2.logpdf(ecc2)
 
-    #prior_t02 = stats.norm(24.27004, 0.15345)
-    prior_t02 = stats.norm(24.27004, 0.01)
+    prior_t02 = stats.norm(24.27004, 0.15345)
+    #prior_t02 = stats.norm(24.27004, 0.01)
     pt02 = prior_t02.logpdf(t02)
 
     #if not  24.27004 - 0.15345*3.0 < t02 < 24.27004 +0.15345*3.0:  # extrapolation gives 7399.46948  0.08 is an error of 2 hours
     #    return -np.inf
 
     #prior_period2 = stats.norm(11.9068, 0.000026)
-    prior_period2 = stats.norm(11.9068, 0.000026)
+    prior_period2 = stats.norm(11.9068, 0.0026)
     pperiod2 = prior_period2.logpdf(period2)
 
 
@@ -171,10 +176,10 @@ def lnprob_gp(p, t, y, yerr):
 
 def fit_gp(initial, data, nwalkers=32):
     ndim = len(initial)
-    p0 = [np.array(initial) + 1e-8 * np.random.randn(ndim)
+    p0 = [np.array(initial) + 1e-6 * np.random.randn(ndim)
           for i in range(nwalkers)]
     p0 = np.array(p0)
-    p0[:, 11] = np.random.rand(nwalkers)*360.0
+    p0[:, 11] = np.random.rand(nwalkers)*360.0-180.0
     p0[:, 6] = np.random.rand(nwalkers)*360.0
     p0[:, 5] = np.random.rand(nwalkers)*40.0
     p0[:, 10] = np.random.rand(nwalkers)*40.0
@@ -183,17 +188,18 @@ def fit_gp(initial, data, nwalkers=32):
 
 
     print("Running burn-in")
-    p0, lnp, _ = sampler.run_mcmc(p0, 2000)
+    p0, lnp, _ = sampler.run_mcmc(p0, 1000)
+
     sampler.reset()
 
     print("Running second burn-in")
     p = p0[np.argmax(lnp)]
     p0 = [p + 1e-8 * np.random.randn(ndim) for i in range(nwalkers)]
-    p0, _, _ = sampler.run_mcmc(p0, 500)
+    p0, _, _ = sampler.run_mcmc(p0, 3000)
     sampler.reset()
 
     print("Running production")
-    p0, _, _ = sampler.run_mcmc(p0, 5000)
+    p0, _, _ = sampler.run_mcmc(p0, 2000)
 
     return sampler
 
@@ -224,6 +230,7 @@ if __name__ == "__main__":
 
     #truth_gp = [ np.log(0.9), 0.59575, 20.36978 , 14.39904,  40.0,  14.4,179,0.119,  23.26918,  7.92008, 4.8, 237, 0.095 , 24.27004 ,11.9068    ]
     truth_gp = [ 0.1, 0.59575, 20.36978 , 14.39904,  40.0,  14.4,90.0,0.119,  23.26918,  7.92008, 4.8, 16.3, 0.095 , 24.27004 ,11.9068    ]
+    #truth_gp = [ -9.5, 0.59575, 20.36978 , 14.39904,  40.0,  14.4,90.0,0.119,  23.26918,  7.92008, 4.8, 16.3, 0.095 , 24.27004 ,11.9068    ]
 
     #for granulation
     #t, y , yerr = np.genfromtxt('cutact3.txt', unpack=True)
@@ -251,7 +258,7 @@ if __name__ == "__main__":
 
     samples = sampler.flatchain
 
-    pickle.dump(sampler, open("rvs1_gp_run11.pkl", 'wb'),  4)
+    pickle.dump(sampler, open("rvs1_gp_run16.pkl", 'wb'),  4)
 
     #a, gamma, period
 
@@ -313,7 +320,7 @@ if __name__ == "__main__":
     pl.title("results with Gaussian process noise model")
     #pl.savefig("../_static/model/gp-results.png", dpi=150)
     #pl.show()
-    pl.savefig("rvs1_gp_pl_run11.png", dpi=150)
+    pl.savefig("rvs1_gp_pl_run16.png", dpi=150)
 
 
 
@@ -327,7 +334,7 @@ if __name__ == "__main__":
     fig = corner.corner(samples[:, :], truths=truth_gp[ :], labels=labels[ :])
     #fig.show()
 
-    fig.savefig("rvs1_gp_corner_run11.png", dpi=150)
+    fig.savefig("rvs1_gp_corner_run16.png", dpi=150)
 
 
     sampler.acceptance_fraction

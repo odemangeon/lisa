@@ -170,11 +170,11 @@ if __name__ == "__main__":
     pl.ylabel(r"$y$")
     pl.xlabel(r"$t$")
     pl.xlim(t.min(),t.max())
-    pl.savefig("rvs_gp_pl_run10.png", dpi=150)
+    pl.savefig("rvs_pl_run10.png", dpi=150)
 
     labels = ["jitter","rvsys", "k", "w", "ecc", "t0", "period"]
     fig = corner.corner(samples[:, :], truths=truth_par, labels=labels)
-    fig.savefig("rvs_gp_corner_run10.png", dpi=150)
+    fig.savefig("rvs_corner_run10.png", dpi=150)
     #fig.show()
 
     for i in range(0,7):
@@ -184,7 +184,7 @@ if __name__ == "__main__":
         print('%.5f^{+%.5f}_{-%.5f}' % ( fitparams[i], t0_right,t0_left))
 
     '''
-    fp = open('respriorfit1.txt ', 'w')
+    fp = open('respriorfit1.txt', 'w')
     for i in range(0,len(t)-1):
         #fp.write('%.10f\t%f\t%f\n'%(t[i], y[i], yerr[i]))
         fp.write('%.20f\t%.20f\t%.20f\n'%(t[i], y[i]-model(fitparams,t[i] ), yerr[i]))
