@@ -14,7 +14,7 @@ import source.posterior.core.posterior as cpost
 logger = logging.getLogger()
 
 level_log = logging.DEBUG
-level_hand = logging.DEBUG
+level_hand = logging.INFO
 
 if logger.level != level_log:
     logger.setLevel(level_log)
@@ -51,7 +51,7 @@ logger.info("5. Apply a parametrisation to the model")
 post_instance.model.apply_RV_EXOFAST_param()
 
 logger.info("6. Create and modify the paramerisation file")
-post_instance.model.create_parameter_file("/Users/olivier/Softwares/lisa/run/K2-19/param_file.py")
+post_instance.model.create_parameter_file("/Users/sbarros/Documents/work/python/photodynamic/lisa/run/K2-19/param_file.py")
 
 input("Modifiy the paramerisation file")
 
