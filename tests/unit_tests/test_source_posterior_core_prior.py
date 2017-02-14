@@ -9,7 +9,7 @@ from logging import DEBUG
 from sys import stdout
 from os import remove
 # from ipdb import set_trace
-
+from numpy import zeros
 
 from source.posterior.core.prior.core_prior import Prior
 from source.posterior.core.prior.manager_prior import Manager_Prior
@@ -74,6 +74,9 @@ class TestMethods(TestCase):
         priors = gravgroup_model.create_individual_lnpriors()
         logger.info("priors['marginal'].keys(): {}".format(list(priors['marginal'].keys())))
         joint_prior, priors = gravgroup_model.create_joint_lnprior(gravgroup_model.get_list_main_paramfullnames())
+        param_val = zeros(len(gravgroup_model.get_list_main_paramfullnames()))
+        logger.info("param_val: {}".format(param_val))
+        logger.info("joint prior for param_val: {}".format(joint_prior(param_val)))
 
 
 if __name__ == '__main__':

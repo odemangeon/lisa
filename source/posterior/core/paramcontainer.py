@@ -49,30 +49,26 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         """Parameters contained in the Core_ParamContainer."""
         return self.__parameters
 
-    def get_list_all_params(self):
-        """Return the list of all parameters."""
-        return list(self.parameters.values())
-
-    def get_list_all_paramnames(self):
-        """Return the list of all parameters."""
-        result = []
-        for param in Core_ParamContainer.get_list_all_params(self):
-            result.append(param.name)
-        return result
-
-    def get_list_all_paramfullnames(self):
-        """Return the list of all parameters."""
-        result = []
-        for param in self.get_list_all_params():
-            result.append(param.full_name)
-        return result
-
     def add_parameter(self, parameter):
         """Add a parameter to the Core_ParamContainer."""
         if isinstance(parameter, Parameter):
             self.parameters[parameter.name] = parameter
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
+
+    def get_list_all_params(self):
+        """Return the list of all parameters."""
+        return list(self.parameters.values())
+
+    def get_list_all_paramnames(self, full_name=False):
+        """Return the list of all parameters."""
+        result = []
+        for param in Core_ParamContainer.get_list_all_params(self):
+            if full_name:
+                result.append(param.full_name)
+            else:
+                result.append(param.name)
+        return result
 
     def get_list_main_params(self):
         """Return the list of main parameters (non redondant parameter)."""
@@ -82,18 +78,32 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
                 result.append(param)
         return result
 
-    def get_list_main_paramnames(self):
+    def get_list_main_paramnames(self, full_name=False):
         """Return the list of main parameters names (non redondant parameter)."""
         result = []
         for param in self.get_list_main_params():
-            result.append(param.name)
+            if full_name:
+                result.append(param.full_name)
+            else:
+                result.append(param.name)
         return result
 
-    def get_list_main_paramfullnames(self):
-        """Return the list of main parameters names (non redondant parameter)."""
+    def get_list_mainfree_params(self):
+        """Return the list of main free parameters (non redondant parameter)."""
         result = []
-        for param in self.get_list_main_params():
-            result.append(param.full_name)
+        for param in self.get_list_all_params():
+            if param.main and param.free:
+                result.append(param)
+        return result
+
+    def get_list_mainfree_paramnames(self, full_name=False):
+        """Return the list of main parameters (non redondant parameter)."""
+        result = []
+        for param in self.get_list_mainfree_params():
+            if full_name:
+                result.append(param.full_name)
+            else:
+                result.append(param.name)
         return result
 
     @property

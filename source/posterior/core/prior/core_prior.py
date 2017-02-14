@@ -88,8 +88,8 @@ class Prior(object):
 
         def joint_lnprior(param_values):
             res = 0
-            for i in list_lnpriors:
-                res += list_lnpriors[i](param_values[i])
+            for i, ln_prior in enumerate(list_lnpriors):
+                res += ln_prior(param_values[i])
             return res
 
         return joint_lnprior, priors
