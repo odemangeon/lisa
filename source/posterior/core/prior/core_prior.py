@@ -49,12 +49,11 @@ class Prior(object):
         # 1.
         marginal = OrderedDict()
         joint = OrderedDict()
-        for param in self.get_list_all_params():
-            if param.main:
-                if param.joint:
-                    joint[param.full_name] = param
-                else:
-                    marginal[param.full_name] = param
+        for param in self.get_list_params(main=True, free=True):
+            if param.joint:
+                joint[param.full_name] = param
+            else:
+                marginal[param.full_name] = param
         # 2.
         priors = {"marginal": {}, "joint": []}
         # 3.

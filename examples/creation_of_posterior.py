@@ -57,3 +57,6 @@ input("Modifiy the paramerisation file")
 
 logger.info("7. Load the paramerisation file")
 post_instance.model.load_parameter_file()
+
+logger.info("7. Create prior functions")
+joint_lnprior, lnpriors = post_instance.model.create_joint_lnprior(post_instance.model.get_list_paramnames(main=True, free=True, full_name=True))

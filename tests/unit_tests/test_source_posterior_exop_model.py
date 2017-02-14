@@ -98,22 +98,22 @@ class TestMethods(unittest.TestCase):
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_params(main=True)))
         self.assertFalse(gravgroup_model.paramcontainers["stars"]["A"].v0.main)
         gravgroup_model.apply_RV_EXOFAST_param()
         self.assertTrue(gravgroup_model.paramcontainers["stars"]["A"].v0.main)
         self.assertTrue(gravgroup_model.paramcontainers["planets"]["b"].K.main)
         self.assertTrue(gravgroup_model.paramcontainers["planets"]["c"].K.main)
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_main_params()))
+                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_params(main=True)))
         logger.info("paramfile_section :\n{}".format(gravgroup_model.get_paramfile_section()))
 
 

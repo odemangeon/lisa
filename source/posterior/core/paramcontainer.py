@@ -38,7 +38,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
 
     def __getattr__(self, attr=""):
         """Intercept attribute call to look first in the parameter list."""
-        if attr in Core_ParamContainer.get_list_all_paramnames(self):
+        if attr in Core_ParamContainer.__get_list_all_paramnames(self):
             return self.parameters[attr]
         else:
             # Default behaviour
@@ -56,50 +56,31 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
 
-    def get_list_all_params(self):
+    def __get_list_all_params(self):
         """Return the list of all parameters."""
         return list(self.parameters.values())
 
-    def get_list_all_paramnames(self, full_name=False):
+    def __get_list_all_paramnames(self):
+        """Return the list of all parameters."""
+        return list(self.parameters.keys())
+
+    def get_list_params(self, main=False, free=False):
+        """Return the list of all parameters."""
+        if main:
+            result = []
+            for param in Core_ParamContainer.__get_list_all_params(self):
+                if free and (param.main) and (param.free):
+                    result.append(param)
+                elif not(free) and param.main:
+                    result.append(param)
+            return result
+        else:
+            return Core_ParamContainer.__get_list_all_params(self)
+
+    def get_list_paramnames(self, main=False, free=False, full_name=False):
         """Return the list of all parameters."""
         result = []
-        for param in Core_ParamContainer.get_list_all_params(self):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
-        return result
-
-    def get_list_main_params(self):
-        """Return the list of main parameters (non redondant parameter)."""
-        result = []
-        for param in self.get_list_all_params():
-            if param.main:
-                result.append(param)
-        return result
-
-    def get_list_main_paramnames(self, full_name=False):
-        """Return the list of main parameters names (non redondant parameter)."""
-        result = []
-        for param in self.get_list_main_params():
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
-        return result
-
-    def get_list_mainfree_params(self):
-        """Return the list of main free parameters (non redondant parameter)."""
-        result = []
-        for param in self.get_list_all_params():
-            if param.main and param.free:
-                result.append(param)
-        return result
-
-    def get_list_mainfree_paramnames(self, full_name=False):
-        """Return the list of main parameters (non redondant parameter)."""
-        result = []
-        for param in self.get_list_mainfree_params():
+        for param in Core_ParamContainer.get_list_params(self, main=main, free=free):
             if full_name:
                 result.append(param.full_name)
             else:
@@ -114,7 +95,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
         self.paramfile_info.update({"Param names": [param.name for param in
-                                                    self.get_list_main_params()]})
+                                                    self.get_list_params(main=True)]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
                      "".format(self.name, self.paramfile_info))
 
@@ -139,7 +120,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
             text += text_tab
         text += entete
         texttab_1tline_param = False
-        for param in self.get_list_main_params():
+        for param in self.get_list_params(main=True):
             text += param.get_paramfile_section(text_tab=text_tab + space_entete_param,
                                                 texttab_1tline=texttab_1tline_param,
                                                 entete_symb=": ",

@@ -6,6 +6,7 @@ Unit tests for the source.posterior.exoplanet.model module.
 import logging
 import unittest
 import sys
+# from ipdb import set_trace
 
 import source.posterior.exoplanet.model.celestial_bodies as cb
 
@@ -26,6 +27,7 @@ class TestMethods(unittest.TestCase):
         pass
 
     def test_basics(self):
+        # set_trace()
         star_instance = cb.Star(name="K2-19")
         star_instance.M
         star_instance.R

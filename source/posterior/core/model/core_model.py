@@ -191,23 +191,29 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         """Return the list of the paramcontainer categories used in this model."""
         return list(self.paramcontainers.keys())
 
-    def get_list_all_params(self):
+    def get_list_params(self, main=False, free=False):
         """Return the list of all parameters."""
         result = []
-        result.extend(super(Core_Model, self).get_list_all_params())
+        result.extend(super(Core_Model, self).get_list_params(main=main, free=free))
         for paramcont_cat in self.paramcontainers_categories:
             if paramcont_cat == instrument_model_category:
-                pass
+                for dataset_name, mod_name in self.instmodel4dataset.items():
+                    file_info = interpret_data_filename(dataset_name)
+                    mod = self.paramcontainers[paramcont_cat][file_info["inst_name"]][mod_name]
+                    result.extend(mod.get_list_params(main=main, free=free))
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
-                    result.extend(param_cont.get_list_all_params())
+                    result.extend(param_cont.get_list_params(main=main, free=free))
         return result
 
-    def get_list_all_paramnames(self):
+    def get_list_paramnames(self, main=False, free=False, full_name=False):
         """Return the list of all parameters."""
         result = []
-        for param in self.get_list_all_params():
-            result.append(param.name)
+        for param in self.get_list_params(main=main, free=free):
+            if full_name:
+                result.append(param.full_name)
+            else:
+                result.append(param.name)
         return result
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
