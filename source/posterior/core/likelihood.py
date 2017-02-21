@@ -26,8 +26,7 @@ ln_categories = ["wo jitter", "jitter dfm", "jitter multiplicative", "jitter mul
                  "jitter additive", "jitter additive baluev"]
 
 
-def create_lnlikelihood(datasimulator, data, data_err,
-                        category="wo jitter", jitter_param=None):
+def create_lnlikelihood(datasimulator, category="wo jitter", jitter_param=None):
                         # **kwarg_data):
     """Return the log likelihood function."""
 

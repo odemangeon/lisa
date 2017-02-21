@@ -57,8 +57,7 @@ class TestMethods(TestCase):
         # datasim_func = self.datasimulator.function
         logger.info("\n\nStart test_create_lnlikelihood")
         logger.info("Test create_lnlikelihood with category='wo jitter'")
-        lnlike = create_lnlikelihood(self.datasimulator, self.data_nonoise, self.data_err,
-                                     category="wo jitter", jitter_param=None)
+        lnlike = create_lnlikelihood(self.datasimulator, category="wo jitter")
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([self.a, self.b], self.data_nonoise, self.data_err, x=self.x)
         logger.info("lnlike value with good parameters:\n{}".format(res_good))
@@ -67,8 +66,7 @@ class TestMethods(TestCase):
         logger.info("lnlike value with slightly off parameters:\n{}".format(res_off))
 
         logger.info("Test create_lnlikelihood with category='jitter multiplicative'")
-        lnlike = create_lnlikelihood(self.datasimulator, self.data, self.data_err,
-                                     category="jitter multiplicative",
+        lnlike = create_lnlikelihood(self.datasimulator, category="jitter multiplicative",
                                      jitter_param=self.jitter_multi)
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([0., self.a, self.b], self.data, self.data_err, x=self.x)
