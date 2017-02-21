@@ -9,7 +9,8 @@ The objective of this package is to provides the core Core_Model class.
     -
 
 @TODO:
-    -
+    - See if it's possible to put or at leat partially put get_paramfile_section,
+    update_paramfile_info, load_config in paramcontainers_database
 """
 from logging import getLogger
 from os.path import isfile, join
@@ -24,8 +25,9 @@ from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dat
 from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
 from ..prior.core_prior import Prior
 from ....tools.default_folders_data_run import RunFolder
-from ..likelihood import create_lnlikelihood as _create_lnlikelihood
+from ..likelihood import LikelihoodCreator
 from .paramcontainers_database import ParamContainerDatabase
+from .datasimulator import DatasimulatorCreator
 
 ## Logger
 logger = getLogger()
@@ -37,6 +39,7 @@ string4datasetdico = "Dataset"
 
 
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
+                 LikelihoodCreator, DatasimulatorCreator,
                  metaclass=MandatoryReadOnlyAttr):
 
     __mandatoryattrs__ = ["category"]
@@ -313,9 +316,3 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """load the parameter file."""
         dico_config = self.read_parameter_file()
         self.load_config(dico_config)
-
-    def create_lnlikelihood(self):
-        """create the loglikelihood function"""
-        # _create_lnlikelihood()create_lnlikelihood(datasimulator
-        #                         category="wo jitter", jitter_param=None)
-        pass

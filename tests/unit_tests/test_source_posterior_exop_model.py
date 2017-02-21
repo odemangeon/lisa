@@ -110,22 +110,28 @@ class TestMethods(TestCase):
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["stars"]["A"].
+                              get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["planets"]["b"].
+                              get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["planets"]["c"].
+                              get_list_params(main=True)))
         self.assertFalse(gravgroup_model.paramcontainers["stars"]["A"].v0.main)
         gravgroup_model.apply_RV_EXOFAST_param()
         self.assertTrue(gravgroup_model.paramcontainers["stars"]["A"].v0.main)
         self.assertTrue(gravgroup_model.paramcontainers["planets"]["b"].K.main)
         self.assertTrue(gravgroup_model.paramcontainers["planets"]["c"].K.main)
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["stars"]["A"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["stars"]["A"].
+                              get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["b"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["planets"]["b"].
+                              get_list_params(main=True)))
         logger.info("Parametrisation : {}"
-                    "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_params(main=True)))
+                    "".format(gravgroup_model.paramcontainers["planets"]["c"].
+                              get_list_params(main=True)))
         logger.info("paramfile_section :\n{}".format(gravgroup_model.get_paramfile_section()))
 
     def test_creation_datasimulator(self):
@@ -134,13 +140,14 @@ class TestMethods(TestCase):
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
         gravgroup_model.apply_RV_EXOFAST_param()
-        res = gravgroup_model.create_datasimulators()
+        res = gravgroup_model._create_datasimulator_RV()
         logger.info("Dictionnary containing the datasimulator DocFunction:\n{}".format(res))
         logger.info("arg_list of the system datasimulator:\n{}"
                     "".format(res[gravgroup_model.name].arg_list))
         logger.info("function of the system datasimulator:\n{}"
                     "".format(res[gravgroup_model.name].function))
-        # ["amp","gamma", "period","tau", "trvsys", "k", "w", "ecc", "t0", "period1", "k2", "w2", "ecc2", "t02", "period2" ]
+        # ["amp","gamma", "period","tau", "trvsys", "k", "w", "ecc", "t0", "period1", "k2", "w2",
+        #  "ecc2", "t02", "period2" ]
         p = [0.0, 14.4, 0.119 * np.cos(90.0 * np.pi / 180.), 0.119 * np.sin(90.0 * np.pi / 180.),
              66.8503, 7.92008, 4.8, 0.095 * np.cos(16.3 * np.pi / 180.),
              0.095 * np.sin(16.3 * np.pi / 180.), 67.19487, 11.9068]

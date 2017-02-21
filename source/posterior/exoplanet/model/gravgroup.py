@@ -218,7 +218,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def nb_planets(self):
         return self.nb_of_paramcontainers["planets"]
 
-    def create_datasimulators(self):
+    def _create_datasimulator_RV(self, inst_model=None):
         """Return datasimulator functions.
 
         A datasimualtor function is created for the whole dataset_database and for each instrument
@@ -234,138 +234,86 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             - 3 levels dictionary with instrument category, instrument name, instrument model
             containing function that take parameters values and return simulated data.
         """
-        if "RV" in self.dataset_db.inst_categories:
-            # Need to know which parametrisation is used
-            star = self.stars[list(self.stars.keys())[0]]
-            l_f = []
-            l_docf = []
-            text_def_func = {}
-            param_nb = {}
-            arg_list = {}
-            function_name = "RV_simulator"
-            text_def_func[self.name] = "def {}(p, t):\n".format(function_name)
-            arg_list[self.name] = OrderedDict()
-            arg_list[self.name]["param"] = []
-            arg_list[self.name]["kwargs"] = []
-            param_nb[self.name] = 0
-            text_return = "    return {}"
-            if star.v0.free:
-                text_param_v0 = "p[{}]".format(param_nb[self.name])
-                param_nb[self.name] += 1
-                arg_list[self.name]["param"].append(star.v0.full_name)
-            else:
-                text_param_v0 = "{}".format(star.v0.value)
-            text_def_func[self.name] += text_return.format(text_param_v0)
-            param_nb_before = param_nb[self.name]
-            arg_list_before = arg_list[self.name]["param"].copy()
-            for i, planet in enumerate(self.planets.values()):
-                text_def_func[planet.full_name] = "def {}(p, t):\n".format(function_name)
-                arg_list[planet.full_name] = OrderedDict()
-                arg_list[planet.full_name]["param"] = []
-                arg_list[planet.full_name]["kwargs"] = []
-                text_def_func[planet.full_name] += text_return.format(text_param_v0)
-                param_nb[planet.full_name] = param_nb_before
-                arg_list[planet.full_name]["param"] = arg_list_before
-                text_pl_rv_array = " + pl_rv_array(t, 0."
-                text_def_func[planet.full_name] += text_pl_rv_array
-                text_def_func[self.name] += text_pl_rv_array
-                for param in [planet.K, [planet.ecosw, planet.esinw], planet.t0, planet.P]:
-                    if param == [planet.ecosw, planet.esinw]:
-                        test_param = (", getomega_fast({0[0]}, {0[1]}), "
-                                      "getecc_fast({0[0]}, {0[1]})")
-                        text_sys = []
-                        text_planet = []
-                        for par in param:
-                            if par.free:
-                                text = "p[{}]"
-                                text_sys.append(text.format(param_nb[self.name]))
-                                param_nb[self.name] += 1
-                                arg_list[self.name]["param"].append(par.full_name)
-                                text_planet.append(text.format(param_nb[planet.full_name]))
-                                param_nb[planet.full_name] += 1
-                                arg_list[planet.full_name]["param"].append(par.full_name)
-                            else:
-                                text = "{}"
-                                text_sys.append(text.format(par.value))
-                                text_planet.append(text.format(par.value))
-                    else:
-                        test_param = ", {}"
-                        if param.free:
+
+        # Need to know which parametrisation is used
+        star = self.stars[list(self.stars.keys())[0]]
+        text_def_func = {}
+        param_nb = {}
+        arg_list = {}
+        function_name = "RV_simulator"
+        text_def_func[self.name] = "def {}(p, t):\n".format(function_name)
+        arg_list[self.name] = OrderedDict()
+        arg_list[self.name]["param"] = []
+        arg_list[self.name]["kwargs"] = []
+        param_nb[self.name] = 0
+        text_return = "    return {}"
+        if star.v0.free:
+            text_param_v0 = "p[{}]".format(param_nb[self.name])
+            param_nb[self.name] += 1
+            arg_list[self.name]["param"].append(star.v0.full_name)
+        else:
+            text_param_v0 = "{}".format(star.v0.value)
+        text_def_func[self.name] += text_return.format(text_param_v0)
+        param_nb_before = param_nb[self.name]
+        arg_list_before = arg_list[self.name]["param"].copy()
+        for i, planet in enumerate(self.planets.values()):
+            text_def_func[planet.full_name] = "def {}(p, t):\n".format(function_name)
+            arg_list[planet.full_name] = OrderedDict()
+            arg_list[planet.full_name]["param"] = []
+            arg_list[planet.full_name]["kwargs"] = []
+            text_def_func[planet.full_name] += text_return.format(text_param_v0)
+            param_nb[planet.full_name] = param_nb_before
+            arg_list[planet.full_name]["param"] = arg_list_before
+            text_pl_rv_array = " + pl_rv_array(t, 0."
+            text_def_func[planet.full_name] += text_pl_rv_array
+            text_def_func[self.name] += text_pl_rv_array
+            for param in [planet.K, [planet.ecosw, planet.esinw], planet.t0, planet.P]:
+                if param == [planet.ecosw, planet.esinw]:
+                    test_param = (", getomega_fast({0[0]}, {0[1]}), "
+                                  "getecc_fast({0[0]}, {0[1]})")
+                    text_sys = []
+                    text_planet = []
+                    for par in param:
+                        if par.free:
                             text = "p[{}]"
-                            text_sys = text.format(param_nb[self.name])
+                            text_sys.append(text.format(param_nb[self.name]))
                             param_nb[self.name] += 1
-                            arg_list[self.name]["param"].append(param.full_name)
-                            text_planet = text.format(param_nb[planet.full_name])
+                            arg_list[self.name]["param"].append(par.full_name)
+                            text_planet.append(text.format(param_nb[planet.full_name]))
                             param_nb[planet.full_name] += 1
-                            arg_list[planet.full_name]["param"].append(param.full_name)
+                            arg_list[planet.full_name]["param"].append(par.full_name)
                         else:
-                            text_sys = "{}".format(param.value)
-                            text_planet = text_sys
-                    text_def_func[self.name] += test_param.format(text_sys)
-                    text_def_func[planet.full_name] += test_param.format(text_planet)
-                text_def_func[self.name] += ")"
-                text_def_func[planet.full_name] += ")"
-                arg_list[planet.full_name]["kwargs"].append("time")
-            arg_list[self.name]["kwargs"].append("time")
-            logger.debug("Dictionnary containing the texts of the futur datasimulator functions :\n"
-                         "{}".format(text_def_func))
-            dico_docf = dict.fromkeys(text_def_func.keys(), None)
-
-            for key in dico_docf:
-                exec(text_def_func[key])
-                dico_docf[key] = DocFunction(function=locals()[function_name],
-                                             arg_list=arg_list[key])
+                            text = "{}"
+                            text_sys.append(text.format(par.value))
+                            text_planet.append(text.format(par.value))
+                else:
+                    test_param = ", {}"
+                    if param.free:
+                        text = "p[{}]"
+                        text_sys = text.format(param_nb[self.name])
+                        param_nb[self.name] += 1
+                        arg_list[self.name]["param"].append(param.full_name)
+                        text_planet = text.format(param_nb[planet.full_name])
+                        param_nb[planet.full_name] += 1
+                        arg_list[planet.full_name]["param"].append(param.full_name)
+                    else:
+                        text_sys = "{}".format(param.value)
+                        text_planet = text_sys
+                text_def_func[self.name] += test_param.format(text_sys)
+                text_def_func[planet.full_name] += test_param.format(text_planet)
+            text_def_func[self.name] += ")"
+            text_def_func[planet.full_name] += ")"
+            arg_list[planet.full_name]["kwargs"].append("time")
+        arg_list[self.name]["kwargs"].append("time")
+        logger.debug("Dictionnary containing the texts of the futur datasimulator functions :\n"
+                     "{}".format(text_def_func))
+        dico_docf = dict.fromkeys(text_def_func.keys(), None)
+        for key in dico_docf:
+            exec(text_def_func[key])
+            dico_docf[key] = DocFunction(function=locals()[function_name],
+                                         arg_list=arg_list[key])
         return dico_docf
-            # if star.v0.free:
-            #     arglist_RV.append(star.v0.full_name)
-            #
-            #
-            # for i, planet in enumerate(self.planets.values()):
-            #     if self.rv_model == "ajplanet":
-            #         def f(p, t):
-            #             return pl_rv_array(t, 0., p[0], self.getomega_fast(p[1], p[2]),
-            #                                self.getecc_fast(p[1], p[2]), p[3], p[4])
-            #         arglist_P = [planet.K.full_name, planet.ecosw.full_name, planet.esinw.full_name,
-            #                      planet.t0.full_name, planet.P.full_name]
-            #         arglist_RV.extend(arglist_P)
-            #         docf = DocFunction(function=f, arg_list=["time"] + arglist_P)
-            #         l_f.append(f)
-            #         l_docf.append(docf)
-            #
-            # def f_RV(p, t):
-            #     res = p[0]
-            #     for i, f in enumerate(l_f):
-            #         res += f(p[1 + i:1 + (i * nb_param_planet)], t)
-            #     return res
-            # doc_fRV = DocFunction(function=f_RV, arg_list=arglist_RV)
 
-
-
-
-    # @property
-    # def stars(self):
-    #     """Returns an OrderedDict containing the stars in the GravGroup."""
-    #     if "stars" in self.paramcontainers:
-    #         return self.paramcontainers["stars"]
-    #     else:
-    #         logger.warning("There is no stars in the gravgroup ! Returned None")
-    #         return None
-    #
-    # @property
-    # def nb_of_stars(self):
-    #     """Returns the number of stars in the GravGroup."""
-    #     return len(self.__stars)
-    #
-    # @property
-    # def planets(self):
-    #     """Returns an OrderedDict containing the planets in the GravGroup."""
-    #     return self.__planets
-    #
-    # @property
-    # def nb_of_planets(self):
-    #     """Returns the number of planets in the GravGroup."""
-    #     return len(self.__planets)
-    #
     # def is_star(self, name):
     #     """Returns True if a star of this name exists in the gravgroup."""
     #     return name in self.stars

@@ -7,7 +7,7 @@ from collections import OrderedDict
 import numpy as np
 # import matplotlib.pyplot as plt
 
-from source.posterior.core.likelihood import create_lnlikelihood
+from source.posterior.core.likelihood import LikelihoodCreator
 from source.tools.function_w_doc import DocFunction
 from source.posterior.core.parameter import Parameter
 
@@ -52,12 +52,13 @@ class TestMethods(TestCase):
                                       free=True, main=True,
                                       joint_prior=False, prior_category=None, prior_args=None,
                                       value=0.)
+        self.instance = LikelihoodCreator()
 
     def test_create_lnlikelihood(self):
         # datasim_func = self.datasimulator.function
         logger.info("\n\nStart test_create_lnlikelihood")
         logger.info("Test create_lnlikelihood with category='wo jitter'")
-        lnlike = create_lnlikelihood(self.datasimulator, category="wo jitter")
+        lnlike = self.instance._create_lnlikelihood(self.datasimulator, category="wo jitter")
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([self.a, self.b], self.data_nonoise, self.data_err, x=self.x)
         logger.info("lnlike value with good parameters:\n{}".format(res_good))
@@ -66,8 +67,9 @@ class TestMethods(TestCase):
         logger.info("lnlike value with slightly off parameters:\n{}".format(res_off))
 
         logger.info("Test create_lnlikelihood with category='jitter multiplicative'")
-        lnlike = create_lnlikelihood(self.datasimulator, category="jitter multiplicative",
-                                     jitter_param=self.jitter_multi)
+        lnlike = self.instance._create_lnlikelihood(self.datasimulator,
+                                                    category="jitter multiplicative",
+                                                    jitter_param=self.jitter_multi)
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([0., self.a, self.b], self.data, self.data_err, x=self.x)
         logger.info("lnlike value with good parameters and good jitter:\n{}".format(res_good))
