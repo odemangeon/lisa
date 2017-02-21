@@ -38,6 +38,7 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
         4. If no, Ask if the user want to create the folder selected.
             4.1. If yes, create it and return the folder selected
             4.2. If no, don't create, don't return and put log warning message
+        5. Log the result of the execution
     ----
     Arguments:
         main_default_folder : string,

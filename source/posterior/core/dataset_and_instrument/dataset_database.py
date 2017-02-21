@@ -17,11 +17,9 @@ from os.path import join, isfile
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from .manager_dataset_instrument import interpret_data_filename
 from .dataset import Dataset
-from ....software_parameters import input_data_folder
-from ....software_parameters import input_run_folder
-from ....tools.miscellaneous import define_folder_withdefault, look4file_withdeffolder
 from ....tools.name import Name
 from ....tools.dico_database import get_content_2ndlevel, get_content_3ndlevel
+from ....tools.default_folders_data_run import RunFolder, DataFolder
 
 logger = getLogger()
 
@@ -29,19 +27,18 @@ manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
 
 
-class DatasetDatabase(Name):
+class DatasetDatabase(Name, RunFolder, DataFolder):
     """docstring for DatasetDatabase."""
     def __init__(self, object_name):
-        super(DatasetDatabase, self).__init__(name=object_name)
+        # 1.
+        Name.__init__(self, name=object_name)
+        # 2.
+        RunFolder.__init__(self, run_folder=None)
         # 3.
-        ## Folder where the program should look for dataset files by default: Initialise it
-        self.__data_folder = None
-        #
-        ## Folder where the program should look for config files by default: Initialise it
-        self.__run_folder = None
-        ## Folder where the program should look for config files by default: Initialise it
+        DataFolder.__init__(self, data_folder=None)
+        # 4.
         self._database = dict()
-        #
+        # 5.
         self.freeze = False
 
     def __getitem__(self, key):
@@ -63,56 +60,6 @@ class DatasetDatabase(Name):
         if not(isinstance(boolean, bool)):
             raise ValueError("freeze should be a boolean")
         self.__freeze = boolean
-
-    @property
-    def data_folder(self):
-        """The data_folder is the folder where the program will look for the dataset files.
-        It can be provided in two ways:
-            - Via the folder defined in software_parameters: In this case the data_folder is
-              automatically define as "input_data_folder/object_name". To use this you should assign
-              "default"
-            - Via the data_folder argument: You can provide any folder here via the data_folder
-              argument.
-        If not defined, return None.
-        """
-        return self.__data_folder
-
-    @data_folder.setter
-    def data_folder(self, data_folder="default"):
-        """Set the data_folder attribute."""
-        self.__data_folder = define_folder_withdefault(main_default_folder=input_data_folder,
-                                                       object_name=self.name,
-                                                       folder=data_folder)
-
-    @property
-    def isset_datafolder(self):
-        """Tells if the data_folder attribute is defined."""
-        return self.data_folder is not None
-
-    @property
-    def run_folder(self):
-        """The run_folder is the folder where the program will look for config files and put
-        outputs. It can be provided in two ways:
-            - Via the folder defined in software_parameters: In this case the run_folder is
-              automatically define as "input_run_folder/object_name". To use this you should assign
-              "default"
-            - Via the run_folder argument: You can provide any folder here via the run_folder
-              argument.
-        If not defined, return None.
-        """
-        return self.__run_folder
-
-    @run_folder.setter
-    def run_folder(self, run_folder="default"):
-        """Set the run_folder attribute."""
-        self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
-                                                      object_name=self.name,
-                                                      folder=run_folder)
-
-    @property
-    def isset_runfolder(self):
-        """Tells if the run_folder attribute is defined."""
-        return self.run_folder is not None
 
     def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.
@@ -203,7 +150,7 @@ class DatasetDatabase(Name):
         if found:
             path = datafile_path
         else:
-            if self.isset_datafolder:
+            if self.hasdata_folder:
                 path = join(self.data_folder, datafile_path)
                 found = isfile(path)
         if found:
@@ -226,8 +173,7 @@ class DatasetDatabase(Name):
             force               : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        file_path = look4file_withdeffolder(file_path=path_datasets_file,
-                                            default_folder=self.run_folder)
+        file_path = self.look4datafile(file_path=path_datasets_file)
         if file_path is not None:
             list_files = []
             with open(file_path, 'r') as f:

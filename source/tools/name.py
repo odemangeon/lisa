@@ -6,6 +6,8 @@ name module.
 Provide the Name interface Class.
 
 @TODO:
+    - See if it's not better to do a try catch in hasnameprefix instead of using the hasattr
+      function as in default_folders_data_run.
 """
 from logging import getLogger
 
@@ -63,10 +65,7 @@ class Name(object):
     @property
     def hasnameprefix(self):
         """Return True is name_prefix has been set already, False otherwise."""
-        if hasattr(self, "name_prefix"):
-            return self.name_prefix is not None
-        else:
-            return False
+        return hasattr(self, "name_prefix")
 
     @name_prefix.setter
     def name_prefix(self, name_prefix):

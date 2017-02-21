@@ -8,7 +8,7 @@ The objective of this package is to provides the core Posterior class.
 @ DONE:
     - Posterior.__init__: Doc and UT
     - Posterior.data_folder: Doc and UT
-    - Posterior.isset_datafolder: Doc and UT
+    - Posterior.hasdata_folder: Doc and UT
     - Posterior.dataset_db: Doc and UT
     - Posterior._add_a_dataset: Doc and UT
     - Posterior.rm_dataset: Doc and UT
@@ -22,9 +22,8 @@ The objective of this package is to provides the core Posterior class.
 """
 from logging import getLogger
 
-from ...tools.miscellaneous import define_folder_withdefault  # , look4file_withdeffolder
 from ...tools.name import Name
-from ...software_parameters import input_run_folder
+from ...tools.default_folders_data_run import RunFolder
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
 
@@ -34,9 +33,9 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-class Posterior(DatasetDbAttr, Name):
+class Posterior(DatasetDbAttr, Name, RunFolder):
     """docstring for Posterior."""
-    def __init__(self, object_name):
+    def __init__(self, object_name, run_folder=None):
         """Init method for the Posterior class.
 
         This function does:
@@ -57,8 +56,8 @@ class Posterior(DatasetDbAttr, Name):
         Name.__init__(self, name=object_name)
         # 2.
         DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.name))
-        ## Folder where the program should look for config files by default: Initialise it
-        self.__run_folder = None
+        # 3.
+        RunFolder.__init__(self, run_folder=run_folder)
         # 4.
         ## model: Initialise it
         self.__model = None
@@ -88,22 +87,16 @@ class Posterior(DatasetDbAttr, Name):
               argument.
         If not defined, return None.
         """
-        return self.__run_folder
+        return super(Posterior, self).run_folder
 
     @run_folder.setter
     def run_folder(self, run_folder="default"):
         """Set the run_folder attribute."""
-        self.__run_folder = define_folder_withdefault(main_default_folder=input_run_folder,
-                                                      object_name=self.name,
-                                                      folder=run_folder)
-        self.dataset_db.run_folder = self.__run_folder
-        if self.isdefined_model:
-            self.model.run_folder = self.__run_folder
-
-    @property
-    def isset_runfolder(self):
-        """Tells if the run_folder attribute is defined."""
-        return self.run_folder is not None
+        super(Posterior, self.__class__).run_folder.fset(self, run_folder)
+        if self.hasrun_folder:
+            self.dataset_db.run_folder = self.run_folder
+            if self.isdefined_model:
+                self.model.run_folder = self.run_folder
 
     @property
     def model(self):

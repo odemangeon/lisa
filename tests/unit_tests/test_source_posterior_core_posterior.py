@@ -60,7 +60,7 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.object_name = "K2-28"
 
     def test_datafolder_isset(self):
-        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder)
+        self.assertFalse(self.posterior_instance.dataset_db.hasdata_folder)
 
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="y")
     def test_set_custom_datafolder_answer_yes(self, input):
@@ -73,7 +73,7 @@ class TestMethods(unittest.TestCase):
     def test_set_custom_datafolder_answer_no(self, input):
         path = "testposteriordatafolder"
         self.posterior_instance.dataset_db.data_folder = path
-        self.assertFalse(self.posterior_instance.dataset_db.isset_datafolder)
+        self.assertFalse(self.posterior_instance.dataset_db.hasdata_folder)
 
     def test_set_custom_datafolder_alreadyexists(self):
         path = "testposteriordatafolder"
@@ -92,7 +92,7 @@ class TestMethods(unittest.TestCase):
     @patch('source.tools.miscellaneous.QCM_utilisateur', return_value="n")
     def test_set_default_datafolder_answer_no(self, input):
         self.posterior_instance_test.data_folder = "default"
-        self.assertFalse(self.posterior_instance_test.dataset_db.isset_datafolder)
+        self.assertFalse(self.posterior_instance_test.dataset_db.hasdata_folder)
 
     def test_set_default_datafolder_alreadyexists(self):
         path = os.path.join(input_data_folder, "test")
