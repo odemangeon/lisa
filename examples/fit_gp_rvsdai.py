@@ -216,7 +216,7 @@ if __name__ == "__main__":
     ts, ys , yerrs = np.genfromtxt('/Users/sbarros/Documents/work/python/photodynamic/lisa/data/K2-19/all_dai.txt', unpack=True)
 
     # data already in meters per second but with full time
-    t = ts.astype("float64")- 2457000.0
+    t = ts.astype("float64") - 2457000.0
     y = ys.astype("float64")
     yerr = yerrs.astype("float64")
 

@@ -26,6 +26,7 @@ from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dat
 from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
 from ..prior.core_prior import Prior
 from ....software_parameters import input_run_folder
+from ..likelihood import create_lnlikelihood as _create_lnlikelihood
 
 ## Logger
 logger = getLogger()
@@ -179,25 +180,25 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         if not(isinstance(instrument, Core_Instrument)):
             raise ValueError("instrument should be an instance of a subclass of "
                              "Core_Instrument.")
-        inst_category = instrument.Instrument_Model.__category__
-        if inst_category not in self.paramcontainers:
-            self.paramcontainers.update({inst_category: dict()})
+        if instrument_model_category not in self.paramcontainers:
+            self.paramcontainers.update({instrument_model_category: dict()})
         inst_name = instrument.name
-        if inst_name not in self.paramcontainers[inst_category]:
-            self.paramcontainers[inst_category].update({inst_name: OrderedDict()})
-        if name in self.paramcontainers[inst_category][inst_name]:
+        if inst_name not in self.paramcontainers[instrument_model_category]:
+            self.paramcontainers[instrument_model_category].update({inst_name: OrderedDict()})
+        if name in self.paramcontainers[instrument_model_category][inst_name]:
             if not(force):
                 error_msg = ("Intrument model {} already exist in the model, it will not be "
-                             "added.".format(inst_category + '_' + inst_name + '_' + name))
+                             "added.".format(instrument_model_category + '_' + inst_name + '_' +
+                                             name))
                 raise ValueError(error_msg)
             else:
                 warning_msg = ("Intrument model {} already exist in the model, it will be replaced."
-                               "".format(inst_category + '_' + inst_name + '_' + name))
+                               "".format(instrument_model_category + '_' + inst_name + '_' + name))
                 logger.warning(warning_msg)
         inst_model = instrument.create_model_instance(name=name)
-        self.paramcontainers[inst_category][inst_name].update({name: inst_model})
+        self.paramcontainers[instrument_model_category][inst_name].update({name: inst_model})
         logger.debug("Added instrument model {} in model {}"
-                     "".format(inst_category + '_' + inst_name + '_' + name, self.name))
+                     "".format(instrument_model_category + '_' + inst_name + '_' + name, self.name))
 
     def rm_an_instrument_model(self, inst_cat, inst_name, inst_model):
         """Remove an instrument model to the paramcontainers of this model."""
@@ -214,6 +215,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         """Add an instrument model for each instrument used in the dataset database."""
         for inst in self.dataset_db.get_instruments().values():
             self.add_an_instrument_model(inst, name="default")
+
+    @property
+    def instruments(self):
+        """Return the instruments an Orderedict with the instrument models of the model."""
+        return self.paramcontainers[instrument_model_category]
 
     @property
     def paramcontainers_categories(self):
@@ -439,3 +445,9 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, metaclass=MandatoryR
         """load the parameter file."""
         dico_config = self.read_parameter_file()
         self.load_config(dico_config)
+
+    def create_lnlikelihood(self):
+        """create the loglikelihood function"""
+        # _create_lnlikelihood()create_lnlikelihood(datasimulator, data, data_err,
+        #                         category="wo jitter", jitter_param=None)
+        pass

@@ -5,18 +5,25 @@ parametrisation module
 
 The Objective of this file is to define the different type of parametrisation available.
 """
-import logging
-
+from logging import getLogger
 from collections import Counter
 
+from ....tools.convert import getecc_fast, getomega_fast
+
 ## Logger Object
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
-    def apply_RV_LC_EXOFAST_param(self):
+    def make_instmodel_jitter_main(self):
+        """Make all the jitter arguments of all the isntrument models main parameters."""
+        for inst_name in list(self.instruments.keys()):
+            for inst_model_name in self.instruments[inst_name]:
+                self.instruments[inst_name][inst_model_name].jitter.main = True
+
+    def apply_RV_LC_EXOFAST_param(self, with_jitter=False):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -51,8 +58,10 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].t0.main = True
             self.paramcontainers["planets"][planet_name].cosinc.main = True
             self.paramcontainers["planets"][planet_name].ar.main = True
+        if with_jitter:
+            self.make_instmodel_jitter_main()
 
-    def apply_RV_EXOFAST_param(self):
+    def apply_RV_EXOFAST_param(self, with_jitter=False):
         """Apply the parametrisation for the fit of RV only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -83,6 +92,11 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].t0.main = True
+        if with_jitter:
+            self.make_instmodel_jitter_main()
+
+        self.getecc_fast = getecc_fast
+        self.getomega_fast = getomega_fast
 
 # # transit parameters
 # self.rp = 0.          # planet radius (in units of stellar radii)

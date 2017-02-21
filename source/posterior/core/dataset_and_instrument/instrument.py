@@ -15,7 +15,7 @@ to store information about the isntrument used to measurement the data stored in
 from logging import getLogger
 
 from ....tools.name import Name
-from ....tools.metaclasses import  MandatoryReadOnlyAttr
+from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ..paramcontainer import Core_ParamContainer
 from ..parameter import Parameter
 

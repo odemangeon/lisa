@@ -20,12 +20,15 @@ Module to convert system parameters
 
 
 import numpy as np
+import math
 #import math
 #import scipy.constants as konst
 #Code that converts the fitted parameters to the ones we want
 import matplotlib.pyplot as plt
 
 import astropy.constants as const
+
+from IPython import get_ipython
 
 #http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7
@@ -181,3 +184,41 @@ def getcirtime(per, mstar, rstar, mp, rp):
     #print(a0/au)
     tau5 = 0.63 * mp * ((1./mstar)**1.5) * ((a0/(rsun*10.))**6.5 ) * ((1./rprjup)**5.) *0.1
     return tau5
+
+
+def getecc(ecosw, esinw):
+    """Get eccentricity from e.cos(omega) and e.sin(omega).
+
+    This method works with np.array as input.
+    """
+    return np.sqrt(ecosw**2 + esinw**2)
+
+
+def getecc_fast(ecosw, esinw):
+    """Get eccentricity from e.cos(omega) and e.sin(omega).
+
+    This method only works with numbers as input (not arrays).
+    """
+    return math.sqrt(ecosw * ecosw + esinw * esinw)
+
+
+def getomega(ecosw, esinw):
+    """Get omego from e.cos(omega) and e.sin(omega)."""
+    return np.arctan(esinw / ecosw)
+
+
+def getomega_fast(ecosw, esinw):
+    """Get omego from e.cos(omega) and e.sin(omega)."""
+    return math.atan(esinw / ecosw)
+
+
+if __name__ == "__main__":
+    ipython = get_ipython()
+    print("Time it for getecc(0.1, 0.2)")
+    ipython.magic("timeit getecc(0.1, 0.2)")
+    print("Time it for getecc_fast(0.1, 0.2)")
+    ipython.magic("timeit getecc_fast(0.1, 0.2)")
+    print("\nTime it for getomega(0.1, 0.2)")
+    ipython.magic("timeit getomega(0.1, 0.2)")
+    print("Time it for getomega_fast(0.1, 0.2)")
+    ipython.magic("timeit getomega_fast(0.1, 0.2)")

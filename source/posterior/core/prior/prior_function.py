@@ -37,7 +37,7 @@ import math as mt
 import numpy as np
 from numpy import pi, inf
 
-from ....tools.metaclasses import  MandatoryReadOnlyAttr
+from ....tools.metaclasses import MandatoryReadOnlyAttr
 
 
 class Metaclass_PriorFunction(MandatoryReadOnlyAttr):

@@ -3,27 +3,37 @@
 """
 Unit tests for the source.posterior.exoplanet.model module.
 """
-import logging
-import unittest
-import sys
+from unittest import TestCase, main
+from logging import getLogger, StreamHandler, Formatter
+from logging import DEBUG, INFO
+from sys import stdout
+
 import os
+import numpy as np
 
 import source.posterior.exoplanet.model.gravgroup as exomdl
 import source.posterior.core.prior.manager_prior as mgrp
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 
-logger = logging.getLogger()
-if logger.level > logging.DEBUG:
-    logger.setLevel(logging.DEBUG)
+level_logger = DEBUG
+level_handler = INFO
+
+logger = getLogger()
+if logger.level != level_logger:
+    logger.setLevel(level_logger)
 if len(logger.handlers) == 0:
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = StreamHandler(stdout)
+    ch.setLevel(level_handler)
+    formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+else:
+    ch = logger.handlers[0]
+    if ch.level != level_handler:
+        ch.setLevel(level_handler)
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods(TestCase):
 
     def setUp(self):
         self.dataset_db = DatasetDatabase(object_name="K2-19")
@@ -55,6 +65,7 @@ class TestMethods(unittest.TestCase):
         print(self.dataset_db.inst_categories)
 
     def test_basics(self):
+        logger.info("\n\nStart test_basics")
         gravgroup_model = exomdl.GravGroup(name="K2-19",
                                            dataset_db=self.dataset_db,
                                            transit_model="batman", ld_model=None,
@@ -94,6 +105,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(gravgroup_model.paramcontainers["planets"]["c"].full_name_code, "K219_c")
 
     def test_parmetrisationfile(self):
+        logger.info("\n\nStart test_parmetrisationfile")
         gravgroup_model = exomdl.GravGroup(name="K2-19", dataset_db=self.dataset_db_RVonly,
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
@@ -116,6 +128,25 @@ class TestMethods(unittest.TestCase):
                     "".format(gravgroup_model.paramcontainers["planets"]["c"].get_list_params(main=True)))
         logger.info("paramfile_section :\n{}".format(gravgroup_model.get_paramfile_section()))
 
+    def test_creation_datasimulator(self):
+        logger.info("\n\nStart test_creation_datasimulator")
+        gravgroup_model = exomdl.GravGroup(name="K2-19", dataset_db=self.dataset_db_RVonly,
+                                           rv_model="ajplanet",
+                                           stars=1, planets=2)
+        gravgroup_model.apply_RV_EXOFAST_param()
+        res = gravgroup_model.create_datasimulators()
+        logger.info("Dictionnary containing the datasimulator DocFunction:\n{}".format(res))
+        logger.info("arg_list of the system datasimulator:\n{}"
+                    "".format(res[gravgroup_model.name].arg_list))
+        logger.info("function of the system datasimulator:\n{}"
+                    "".format(res[gravgroup_model.name].function))
+        # ["amp","gamma", "period","tau", "trvsys", "k", "w", "ecc", "t0", "period1", "k2", "w2", "ecc2", "t02", "period2" ]
+        p = [0.0, 14.4, 0.119 * np.cos(90.0 * np.pi / 180.), 0.119 * np.sin(90.0 * np.pi / 180.),
+             66.8503, 7.92008, 4.8, 0.095 * np.cos(16.3 * np.pi / 180.),
+             0.095 * np.sin(16.3 * np.pi / 180.), 67.19487, 11.9068]
+        simu_data = res[gravgroup_model.name].function(p, np.arange(66., 80.))
+        logger.info("Simulated data:\n{}".format(simu_data))
+
 
 if __name__ == '__main__':
-    unittest.main()
+    main()
