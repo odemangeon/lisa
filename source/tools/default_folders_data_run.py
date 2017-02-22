@@ -58,8 +58,8 @@ class RunFolder(object):
                                             folder=run_folder)
             if res is not None:
                 self.__run_folder = res
-                logger.debug("Run folder of the instance of class {} set to {}."
-                             "".format(self.__class__.__name__, self.run_folder))
+                logger.info("Run folder of the instance of class {} set to {}."
+                            "".format(self.__class__.__name__, self.run_folder))
 
     @property
     def hasrun_folder(self):
@@ -109,7 +109,7 @@ class DataFolder(object):
                                             folder=data_folder)
             if res is not None:
                 self.__data_folder = res
-                logger.debug("Data folder of the instance of class {} set to {}."
+                logger.info("Data folder of the instance of class {} set to {}."
                              "".format(self.__class__.__name__, self.data_folder))
 
     @property

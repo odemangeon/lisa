@@ -173,7 +173,7 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
             force               : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        file_path = self.look4datafile(file_path=path_datasets_file)
+        file_path = self.look4runfile(file_path=path_datasets_file)
         if file_path is not None:
             list_files = []
             with open(file_path, 'r') as f:

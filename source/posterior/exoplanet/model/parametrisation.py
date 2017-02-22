@@ -19,9 +19,17 @@ class GravGroup_Parametrisation(object):
 
     def make_instmodel_jitter_main(self):
         """Make all the jitter arguments of all the isntrument models main parameters."""
-        for inst_name in list(self.instruments.keys()):
-            for inst_model_name in self.instruments[inst_name]:
-                self.instruments[inst_name][inst_model_name].jitter.main = True
+        list_instmodel = self.get_list_instmodel()
+        for inst_model in list_instmodel:
+            inst_model.jitter.main = True
+
+    def instmodel_RV_parametrisation(self, jitter_main=True, drift_main=True):
+        """Make all the jitter arguments of all the isntrument models main parameters."""
+        if jitter_main or drift_main:
+            list_instmodel = self.get_list_instmodel(inst_category="RV")
+            for inst_model in list_instmodel:
+                inst_model.jitter.main = True
+                inst_model.drift.main = True
 
     def apply_RV_LC_EXOFAST_param(self, with_jitter=False):
         """Apply the parametrisation for the fit of LC and RV.
@@ -44,7 +52,8 @@ class GravGroup_Parametrisation(object):
         # Check that the data type to simulate are RV and LC
         if Counter(self.dataset_db.inst_categories) != Counter(["RV", "LC"]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV and "
-                           "transit data but you have to analyse {}.".format(self.dataset_db.inst_categories))
+                           "transit data but you have to analyse {}."
+                           "".format(self.dataset_db.inst_categories))
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers.keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
@@ -61,7 +70,7 @@ class GravGroup_Parametrisation(object):
         if with_jitter:
             self.make_instmodel_jitter_main()
 
-    def apply_RV_EXOFAST_param(self, with_jitter=False):
+    def apply_RV_EXOFAST_param(self, with_jitter=False, with_drift=False):
         """Apply the parametrisation for the fit of RV only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -81,7 +90,8 @@ class GravGroup_Parametrisation(object):
                              "".format(self.nb_of_paramcontainers["planets"]))
         if Counter(self.dataset_db.inst_categories) != Counter(["RV", ]):
             logger.warning("You are using a paprametrisation that has been defined to fit RV data "
-                           "only but you have to analyse {}.".format(self.dataset_db.inst_categories))
+                           "only but you have to analyse {}."
+                           "".format(self.dataset_db.inst_categories))
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
@@ -92,8 +102,7 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].t0.main = True
-        if with_jitter:
-            self.make_instmodel_jitter_main()
+            self.instmodel_RV_parametrisation(jitter_main=with_jitter, drift_main=with_drift)
 
         self.getecc_fast = getecc_fast
         self.getomega_fast = getomega_fast

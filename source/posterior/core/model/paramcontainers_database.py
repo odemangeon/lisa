@@ -175,3 +175,16 @@ class ParamContainerDatabase(object):
             else:
                 result.append(param.name)
         return result
+
+    def get_list_instmodel(self, inst_category=None):
+        """Return the list of all parameters."""
+        result = []
+        for inst_name in list(self.instruments.keys()):
+            for inst_model_name in self.instruments[inst_name]:
+                inst_model = self.instruments[inst_name][inst_model_name]
+                if inst_category is None:
+                    result.append(inst_model)
+                else:
+                    if inst_model.instrument.category == inst_category:
+                        result.append(inst_model)
+        return result

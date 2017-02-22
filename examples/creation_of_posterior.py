@@ -49,7 +49,7 @@ logger.info("4. Add a model")
 post_instance.define_model(category="GravitionalGroups", name="K2-19", stars=1, planets=2)
 
 logger.info("5. Apply a parametrisation to the model")
-post_instance.model.apply_RV_EXOFAST_param()
+post_instance.model.apply_RV_EXOFAST_param(with_jitter=True, with_drift=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")
@@ -60,4 +60,7 @@ logger.info("7. Load the paramerisation file")
 post_instance.model.load_parameter_file()
 
 logger.info("7. Create prior functions")
-joint_lnprior, lnpriors = post_instance.model.create_joint_lnprior(post_instance.model.get_list_paramnames(main=True, free=True, full_name=True))
+joint_lnprior, lnpriors = (post_instance.model.
+                           create_joint_lnprior(post_instance.model.
+                                                get_list_paramnames(main=True, free=True,
+                                                                    full_name=True)))

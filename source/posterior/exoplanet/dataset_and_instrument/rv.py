@@ -40,7 +40,7 @@ class RV_Instrument(Core_Instrument):
     """docstring for RV_Instrument."""
 
     __category__ = "RV"
-    __params_model__ = {"jitter": {"unit": "wo unit"}}
+    __params_model__ = {"jitter": {"unit": "wo unit"}, "drift": {"unit": "[K]/day"}}
 
     def __init__(self, name):
         super(RV_Instrument, self).__init__(name=name)

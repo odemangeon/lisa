@@ -90,9 +90,21 @@ class LikelihoodCreator(object):
         if category in self._lnlikelihoods.keys():
             text_func = self._lnlikelihoods[category]
             if category == "wo jitter":
-                return finalize_and_create_lnlike(datasimulator, text_func)
+                jitter_cat_ok = jitter_param is None
+                if not(jitter_cat_ok):
+                    jitter_cat_ok = not(jitter_param.main)
+                if jitter_cat_ok:
+                    return finalize_and_create_lnlike(datasimulator, text_func)
+                else:
+                    raise ValueError("For likelihood '{}' the jitter parameter should not be a main"
+                                     "parameter.".format(category))
             else:
-                return finalize_and_create_lnlike(datasimulator, text_func, jitter_param)
+                jitter_cat_ok = jitter_param.main
+                if jitter_cat_ok:
+                    return finalize_and_create_lnlike(datasimulator, text_func, jitter_param)
+                else:
+                    raise ValueError("For likelihood '{}' the jitter parameter should be a main"
+                                     "parameter.".format(category))
         else:
             raise ValueError("Category {} not recognized. Avalaible categories are {}"
                              "".format(self._ln_categories))

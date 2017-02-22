@@ -28,6 +28,7 @@ import logging
 from collections import OrderedDict
 from string import ascii_lowercase
 from string import ascii_uppercase
+from copy import deepcopy
 from ajplanet import pl_rv_array
 
 from ...core.model.core_model import Core_Model
@@ -218,7 +219,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def nb_planets(self):
         return self.nb_of_paramcontainers["planets"]
 
-    def _create_datasimulator_RV(self, inst_model=None):
+    def _create_datasimulator_RV(self, inst_model):
         """Return datasimulator functions.
 
         A datasimualtor function is created for the whole dataset_database and for each instrument
@@ -234,36 +235,38 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             - 3 levels dictionary with instrument category, instrument name, instrument model
             containing function that take parameters values and return simulated data.
         """
-
         # Need to know which parametrisation is used
         star = self.stars[list(self.stars.keys())[0]]
         text_def_func = {}
         param_nb = {}
         arg_list = {}
         function_name = "RV_simulator"
-        text_def_func[self.name] = "def {}(p, t):\n".format(function_name)
+        text_def_func[self.name] = "def {}(p, t):\n    return ".format(function_name)
         arg_list[self.name] = OrderedDict()
         arg_list[self.name]["param"] = []
         arg_list[self.name]["kwargs"] = []
         param_nb[self.name] = 0
-        text_return = "    return {}"
+        if inst_model.drift.main:
+            if inst_model.drift.free:
+                text_param_drift = "p[{}] * t + ".format(param_nb[self.name])
+                param_nb[self.name] += 1
+                arg_list[self.name]["param"].append(inst_model.drift.full_name)
+            else:
+                text_param_drift = "{} * t + ".format(inst_model.drift.value)
+            text_def_func[self.name] += text_param_drift
         if star.v0.free:
             text_param_v0 = "p[{}]".format(param_nb[self.name])
             param_nb[self.name] += 1
             arg_list[self.name]["param"].append(star.v0.full_name)
         else:
             text_param_v0 = "{}".format(star.v0.value)
-        text_def_func[self.name] += text_return.format(text_param_v0)
+        text_def_func[self.name] += text_param_v0
         param_nb_before = param_nb[self.name]
-        arg_list_before = arg_list[self.name]["param"].copy()
+        arg_list_before = deepcopy(arg_list[self.name])
         for i, planet in enumerate(self.planets.values()):
-            text_def_func[planet.full_name] = "def {}(p, t):\n".format(function_name)
-            arg_list[planet.full_name] = OrderedDict()
-            arg_list[planet.full_name]["param"] = []
-            arg_list[planet.full_name]["kwargs"] = []
-            text_def_func[planet.full_name] += text_return.format(text_param_v0)
+            text_def_func[planet.full_name] = text_def_func[self.name]
+            arg_list[planet.full_name] = arg_list_before
             param_nb[planet.full_name] = param_nb_before
-            arg_list[planet.full_name]["param"] = arg_list_before
             text_pl_rv_array = " + pl_rv_array(t, 0."
             text_def_func[planet.full_name] += text_pl_rv_array
             text_def_func[self.name] += text_pl_rv_array

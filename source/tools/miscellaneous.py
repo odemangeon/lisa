@@ -83,10 +83,10 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
     # 5.
     if folder_defined:
         if folder_provided:
-            logger.info("folder is defined as a specific folder: {}".format(folder))
+            logger.debug("folder is defined as a specific folder: {}".format(folder_selected))
         else:
-            logger.info("folder not provided but standard folder exist and is used:"
-                        " {}".format(folder))
+            logger.debug("folder not provided but standard folder exist and is used:"
+                         " {}".format(folder_selected))
         return folder_selected
     else:
         return None
