@@ -21,6 +21,7 @@ from ....tools.dico_database import get_content_2ndlevel, get_content_3ndlevel
 from ....tools.default_folders_data_run import RunFolder, DataFolder
 from ....tools.miscellaneous import interpret_data_filename
 
+## Logger object
 logger = getLogger()
 
 manager_inst = Manager_Inst_Dataset()

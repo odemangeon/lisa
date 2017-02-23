@@ -37,7 +37,7 @@ from .parametrisation import GravGroup_Parametrisation
 from ....tools.function_w_doc import DocFunction
 from ....tools.convert import getecc_fast, getomega_fast
 
-from pdb import set_trace
+# from pdb import set_trace
 
 
 ## Logger object
@@ -358,8 +358,12 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                      "{}".format(text_def_func))
         dico_docf = dict.fromkeys(text_def_func.keys(), None)
         for key in dico_docf:
-            exec(text_def_func[key])
-            dico_docf[key] = DocFunction(function=locals()[function_name],
+            ldict = locals().copy()
+            ldict["getecc_fast"] = getecc_fast
+            ldict["getomega_fast"] = getomega_fast
+            ldict["pl_rv_array"] = pl_rv_array
+            exec(text_def_func[key], ldict)
+            dico_docf[key] = DocFunction(function=ldict[function_name],
                                          arg_list=arg_list[key])
         return dico_docf
 

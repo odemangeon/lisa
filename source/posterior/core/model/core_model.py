@@ -30,6 +30,7 @@ from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import interpret_data_filename
 from ....tools.default_folders_data_run import RunFolder
+from ....tools.database_with_instrument_level import DatabaseInstLevel
 
 ## Logger
 logger = getLogger()
@@ -122,6 +123,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             else:
                 result.append(param.name)
         return result
+
+    def _create_database_func_instlevel(object_name, database_name):
+        """Create a database to store the datasimulator, likelihood, posterior functions."""
+        return DatabaseInstLevel(object_name=object_name, database_name=database_name)
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.

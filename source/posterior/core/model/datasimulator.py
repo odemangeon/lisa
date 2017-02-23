@@ -32,4 +32,5 @@ class DatasimulatorCreator(object):
 
     def create_datasimulators(self):
         """Return the datasimulator for each instrument model used."""
-        pass
+        db = self._create_database_func_instlevel(object_name=self.object_name,
+                                                  database_name="datasimulator")
