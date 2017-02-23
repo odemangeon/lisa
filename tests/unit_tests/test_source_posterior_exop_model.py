@@ -146,7 +146,7 @@ class TestMethods(TestCase):
                                                                    planets.keys())))
         gravgroup_model.apply_RV_EXOFAST_param(with_jitter=True, with_drift=True)
         res = gravgroup_model._create_datasimulator_RV(gravgroup_model.
-                                                       instruments["HARPS"]["default"])
+                                                       instruments["RV"]["HARPS"]["default"])
         logger.info("Dictionnary containing the datasimulator DocFunction:\n{}".format(res))
         logger.info("arg_list of the system datasimulator:\n{}"
                     "".format(res[gravgroup_model.name].arg_list))

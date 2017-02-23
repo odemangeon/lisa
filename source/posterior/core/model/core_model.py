@@ -15,27 +15,27 @@ The objective of this package is to provides the core Core_Model class.
 from logging import getLogger
 from os.path import isfile, join
 
-from ....tools.metaclasses import MandatoryReadOnlyAttr
-from ..paramcontainer import Core_ParamContainer
-from ..dataset_and_instrument.instrument import instrument_model_category
-from ..dataset_and_instrument.dataset_database import DatasetDbAttr
-from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.miscellaneous import spacestring_like
-from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..dataset_and_instrument.manager_dataset_instrument import interpret_data_filename
-from ..prior.core_prior import Prior
-from ....tools.default_folders_data_run import RunFolder
-from ..likelihood import LikelihoodCreator
-from .paramcontainers_database import ParamContainerDatabase
 from .datasimulator import DatasimulatorCreator
+from .paramcontainers_database import ParamContainerDatabase
+from ..paramcontainer import Core_ParamContainer
+from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from ..dataset_and_instrument.dataset_database import DatasetDbAttr
+from ..dataset_and_instrument.instrument import instrument_model_category as instmod_cat
+from ..dataset_and_instrument.instrument import load_instrument_config
+from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
+from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
+from ..likelihood import LikelihoodCreator
+from ..prior.core_prior import Prior
+from ....tools.metaclasses import MandatoryReadOnlyAttr
+from ....tools.human_machine_interface.QCM import QCM_utilisateur
+from ....tools.miscellaneous import interpret_data_filename
+from ....tools.default_folders_data_run import RunFolder
 
 ## Logger
 logger = getLogger()
 
 manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
-
-string4datasetdico = "Dataset"
 
 
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
@@ -104,7 +104,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         result = []
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
         for paramcont_cat in self.paramcontainers_categories:
-            if paramcont_cat == instrument_model_category:
+            if paramcont_cat == instmod_cat:
                 result.extend(ParamContainerDatabase.
                               get_list_params(self, main=main, free=free,
                                               inst_models=self.name_instmodel_used))
@@ -134,41 +134,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         text = ""
         for parcont_type in self.paramcont_categories:
             text += "{}# {}\n".format(text_tab, parcont_type)
-            if parcont_type != instrument_model_category:
+            if parcont_type != instmod_cat:
                 for parcont in self.paramcontainers[parcont_type].values():
                     text += parcont.get_paramfile_section(text_tab=text_tab,
                                                           entete_symb=entete_symb,
                                                           quote_name=quote_name)
                     text += "\n\n"
             else:
-                for inst_name in self.paramcontainers[parcont_type].keys():
-                    if quote_name:
-                        entete_inst_name = "'{}'{}{{".format(inst_name, entete_symb)
-                    else:
-                        entete_inst_name = "{}{}{{".format(inst_name, entete_symb)
-                    extra_tab = spacestring_like(entete_inst_name)
-                    text += text_tab + entete_inst_name
-                    texttab_1tline = False
-                    for parcont in self.paramcontainers[parcont_type][inst_name].values():
-                        text += parcont.get_paramfile_section(text_tab=text_tab + extra_tab,
-                                                              texttab_1tline=texttab_1tline,
-                                                              entete_symb=": ",
-                                                              quote_name=True)
-                        texttab_1tline = True
-                        text += ",\n"
-                    model_name = list(self.paramcontainers[parcont_type][inst_name].keys())[0]
-                    text += ("{}# By default all the datasets of an instrument are associated to "
-                             "{}.\n{}# If you want to model some datasets with another instrument "
-                             "model copy paste it,\n{}# give it a new name and file the {} dict."
-                             "".format(text_tab + extra_tab, model_name, text_tab + extra_tab,
-                                       text_tab + extra_tab, string4datasetdico))
-                    text += "\n{}'{}': {{".format(text_tab + extra_tab, string4datasetdico)
-                    for datasetname in self.dataset_db.get_datasetnames(inst_name=inst_name):
-                        number = interpret_data_filename(datasetname)["number"]
-                        model_name = self.instmodel4dataset[datasetname]
-                        text += "'{}': '{}', ".format(number, model_name)
-                    text += "}}\n\n{}}}\n\n".format(text_tab + extra_tab)
-            text += "\n"
+                text += get_instrument_paramfilesection(model_instance=self,
+                                                        inst_db=self.paramcontainers[parcont_type],
+                                                        text_tab=text_tab, entete_symb=entete_symb,
+                                                        quote_name=quote_name)
         self.update_paramfile_info()
         return text
 
@@ -176,20 +152,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Update the paramfile info attribute."""
         self.paramfile_info.clear()
         for parcont_type in self.paramcont_categories:
-            if parcont_type != instrument_model_category:
+            if parcont_type != instmod_cat:
                 self.paramfile_info[parcont_type] = []
                 for parcont_name, parcont in self.paramcontainers[parcont_type].items():
                     self.paramfile_info[parcont_type].append(parcont_name)
                     parcont.update_paramfile_info()
             else:
-                self.paramfile_info[parcont_type] = {}
-                for inst_name in self.paramcontainers[parcont_type].keys():
-                    self.paramfile_info[parcont_type][inst_name] = []
-                    for inst_model in self.paramcontainers[parcont_type][inst_name].keys():
-                        self.paramfile_info[parcont_type][inst_name].append(inst_model)
-                        self.paramcontainers[parcont_type][inst_name][inst_model].update_paramfile_info()
-                    self.paramfile_info[parcont_type][inst_name].append(string4datasetdico)
-        logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
+                self.paramfile_info[instmod_cat] = {}
+                update_instrument_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat],
+                                                 inst_db=self.paramcontainers[parcont_type])
+
+        logger.debug("Updated paramfile info for {}.\nParamfile_info: {}"
                      "".format(self.name, self.paramfile_info))
 
     def load_config(self, dico_config):
@@ -199,49 +172,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         for paramcont_type in self.paramfile_info.keys():
             logger.debug("Content of param_file_info for {}: {}"
                          "".format(paramcont_type, self.paramfile_info[paramcont_type]))
-            if paramcont_type != instrument_model_category:
+            if paramcont_type != instmod_cat:
                 for paramcont_name in self.paramfile_info[paramcont_type]:
                     paramcont_dico = dico_config[paramcont_name]
                     logger.debug("Content of param dictionary for {} {}: {}"
                                  "".format(paramcont_type, paramcont_name, paramcont_dico))
                     self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico)
             else:
-                for inst_name in self.paramfile_info[paramcont_type].keys():
-                    logger.debug("Content of param_file_info for {} {}: {}"
-                                 "".format(paramcont_type, inst_name,
-                                           self.paramfile_info[paramcont_type][inst_name]))
-                    logger.debug("Content of dico_config for {} {}: {}"
-                                 "".format(paramcont_type, inst_name,
-                                           dico_config[inst_name]))
-                    # Load config of instrument models
-                    set_paramfile_info = set(self.paramfile_info[paramcont_type][inst_name])
-                    set_dico_config = set(dico_config[inst_name].keys())
-                    for set_obj in [set_paramfile_info, set_dico_config]:
-                        set_obj.remove(string4datasetdico)
-                    # Load config of already existing instrument model
-                    for inst_model in (set_paramfile_info & set_dico_config):
-                        paramcont_dico = dico_config[inst_name][inst_model]
-                        self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
-                    # Remove instrument model that are not in the param_file anymore
-                    for inst_model in (set_paramfile_info.difference(set_dico_config)):
-                        self.rm_an_instrument_model(paramcont_type, inst_name, inst_model)
-                        self.update_paramfile_info()
-                    # Add instrument model are in the param_file but not yet in the model
-                    for inst_model in (set_dico_config.difference(set_paramfile_info)):
-                        paramcont_dico = dico_config[inst_name][inst_model]
-                        instrument = manager_inst.get_instrument(inst_name)
-                        self.add_an_instrument_model(instrument, inst_model)
-                        self.update_paramfile_info()
-                        self.paramcontainers[paramcont_type][inst_name][inst_model].load_config(paramcont_dico)
-                    # Load which insstrument model to use for which dataset
-                    for dataset in self.dataset_db.get_datasetnames(inst_name=inst_name):
-                        number = interpret_data_filename(dataset)["number"]
-                        inst_model = dico_config[inst_name][string4datasetdico][number]
-                        if self.instmodel4dataset[dataset] != inst_model:
-                            logger.debug("Instrument model to use for dataset {} changed from {} "
-                                         "to {}.".format(dataset, self.instmodel4dataset[dataset],
-                                                         inst_model))
-                            self.instmodel4dataset[dataset] = inst_model
+                load_instrument_config(dico_config=dico_config,
+                                       inst_db_info=self.paramfile_info[paramcont_type],
+                                       inst_db=self.paramcontainers[paramcont_type],
+                                       model_instance=self)
 
     @property
     def param_file(self):

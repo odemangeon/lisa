@@ -26,7 +26,8 @@ import logging
 import sys
 import pandas as pd
 
-from .manager_dataset_instrument import get_filename_from_file_path, interpret_data_filename
+from .manager_dataset_instrument import get_filename_from_file_path
+from ....tools.miscellaneous import interpret_data_filename
 
 ## Logger
 logger = logging.getLogger()

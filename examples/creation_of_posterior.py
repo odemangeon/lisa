@@ -15,7 +15,7 @@ import source.posterior.core.posterior as cpost
 logger = logging.getLogger()
 
 level_log = logging.DEBUG
-level_hand = logging.INFO
+level_hand = logging.DEBUG
 
 if logger.level != level_log:
     logger.setLevel(level_log)
@@ -49,7 +49,7 @@ logger.info("4. Add a model")
 post_instance.define_model(category="GravitionalGroups", name="K2-19", stars=1, planets=2)
 
 logger.info("5. Apply a parametrisation to the model")
-post_instance.model.apply_RV_EXOFAST_param(with_jitter=True, with_drift=True)
+post_instance.model.apply_RV_EXOFAST_param(with_jitter=True, with_drift=True, with_DeltaRV=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")

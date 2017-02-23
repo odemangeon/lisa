@@ -76,6 +76,12 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         if "RV" in self.dataset_db.inst_categories:
             # radial velocities model
             self.rv_model = rv_model
+            # Initialise the dictionary giving the RV zero point RV_references
+            self.__RV_references = dict.fromkeys(self.get_list_inst_name("RV"), None)
+            self.__RV_references["global"] = list(self.__RV_references.keys())[0]
+            for key in self.__RV_references:
+                if key != "global":
+                    self.__RV_references[key] = self.get_list_instmodel_name("RV", key)[0]
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
         if isinstance(stars, int):
@@ -219,6 +225,23 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def nb_planets(self):
         return self.nb_of_paramcontainers["planets"]
 
+    @property
+    def RV_references(self):
+        return self.__RV_references
+
+    @property
+    def RV_globalref_instname(self):
+        return self.__RV_references["global"]
+
+    def set_RV_globalref_instname(self, inst_name):
+        self.__RV_references["global"] = inst_name
+
+    def get_RVref4inst_modname(self, inst_name):
+        return self.__RV_references[inst_name]
+
+    def set_RVref4inst_modname(self, inst_name, inst_model_name):
+        self.__RV_references[inst_name] = inst_model_name
+
     def _create_datasimulator_RV(self, inst_model):
         """Return datasimulator functions.
 
@@ -246,6 +269,36 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         arg_list[self.name]["param"] = []
         arg_list[self.name]["kwargs"] = []
         param_nb[self.name] = 0
+        text_mean_RV = ""
+        inst_name = inst_model.instrument.name
+        RVrefglobal_instname = self.RV_globalref_instname
+        RVref4inst_modname = self.get_RVref4inst_modname(inst_name)
+        RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
+        if inst_name != RVrefglobal_instname:
+            instmod_gobalRVref = self.get_instmodel(RVrefglobal_instname, RVrefglobal_modname)
+            if instmod_gobalRVref.DeltaRV.main:
+                if instmod_gobalRVref.DeltaRV.free:
+                    text_mean_RV = "p[{}] + ".format(param_nb[self.name])
+                    param_nb[self.name] += 1
+                    arg_list[self.name]["param"].append(instmod_gobalRVref.DeltaRV.full_name)
+                else:
+                    text_mean_RV = "{} + ".format(instmod_gobalRVref.DeltaRV.value)
+        if inst_model.name != RVref4inst_modname:
+            instmod_RVref4inst = self.get_instmodel(inst_name, RVref4inst_modname)
+            if instmod_RVref4inst.DeltaRV.main:
+                if instmod_RVref4inst.DeltaRV.free:
+                    text_mean_RV = "p[{}] + ".format(param_nb[self.name])
+                    param_nb[self.name] += 1
+                    arg_list[self.name]["param"].append(instmod_RVref4inst.DeltaRV.full_name)
+                else:
+                    text_mean_RV = "{} + ".format(instmod_RVref4inst.DeltaRV.value)
+        if star.v0.free:
+            text_mean_RV = "p[{}] + ".format(param_nb[self.name])
+            param_nb[self.name] += 1
+            arg_list[self.name]["param"].append(star.v0.full_name)
+        else:
+            text_mean_RV = "{} + ".format(star.v0.value)
+        text_def_func[self.name] += text_mean_RV
         if inst_model.drift.main:
             if inst_model.drift.free:
                 text_param_drift = "p[{}] * t + ".format(param_nb[self.name])
@@ -254,13 +307,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             else:
                 text_param_drift = "{} * t + ".format(inst_model.drift.value)
             text_def_func[self.name] += text_param_drift
-        if star.v0.free:
-            text_param_v0 = "p[{}]".format(param_nb[self.name])
-            param_nb[self.name] += 1
-            arg_list[self.name]["param"].append(star.v0.full_name)
-        else:
-            text_param_v0 = "{}".format(star.v0.value)
-        text_def_func[self.name] += text_param_v0
         param_nb_before = param_nb[self.name]
         arg_list_before = deepcopy(arg_list[self.name])
         for i, planet in enumerate(self.planets.values()):

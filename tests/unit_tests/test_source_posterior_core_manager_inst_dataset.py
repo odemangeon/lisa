@@ -33,20 +33,6 @@ class TestMethods(unittest.TestCase):
         file_name = mgr.get_filename_from_file_path(file_path)
         self.assertEqual(file_name, "EPIC201505350.rdb")
 
-    def test_interpret_data_filename(self):
-        filename_1 = "LC_K2-19_K2.txt"
-        filename_2 = "RV_K2-3_HARPS_2.txt"
-        dico_1 = mgr.interpret_data_filename(filename_1)
-        dico_2 = mgr.interpret_data_filename(filename_2)
-        self.assertDictEqual(dico_1, {"inst_category": "LC",
-                                      "inst_name": "K2",
-                                      "object": "K2-19",
-                                      "number": None})
-        self.assertDictEqual(dico_2, {"inst_category": "RV",
-                                      "inst_name": "HARPS",
-                                      "object": "K2-3",
-                                      "number": '2'})
-
     def test_manage_dataset_associated_to_inst_category_database(self):
         manager = mgr.Manager_Inst_Dataset()
         manager._reset_inst_categories()

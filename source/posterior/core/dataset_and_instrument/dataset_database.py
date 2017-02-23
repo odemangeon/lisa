@@ -15,11 +15,11 @@ from collections import OrderedDict
 from os.path import join, isfile
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
-from .manager_dataset_instrument import interpret_data_filename
 from .dataset import Dataset
 from ....tools.name import Name
 from ....tools.dico_database import get_content_2ndlevel, get_content_3ndlevel
 from ....tools.default_folders_data_run import RunFolder, DataFolder
+from ....tools.miscellaneous import interpret_data_filename
 
 logger = getLogger()
 

@@ -107,27 +107,30 @@ class ParamContainerDatabase(object):
                              "Core_Instrument.")
         if instrument_model_category not in self.paramcontainers:
             self.paramcontainers.update({instrument_model_category: dict()})
+        inst_db = self.paramcontainers[instrument_model_category]
+        inst_cat = instrument.category
         inst_name = instrument.name
-        if inst_name not in self.paramcontainers[instrument_model_category]:
-            self.paramcontainers[instrument_model_category].update({inst_name: OrderedDict()})
-        if name in self.paramcontainers[instrument_model_category][inst_name]:
+        if inst_cat not in inst_db:
+            inst_db.update({inst_cat: OrderedDict()})
+        if inst_name not in inst_db[inst_cat]:
+            inst_db[inst_cat].update({inst_name: OrderedDict()})
+        if name in inst_db[inst_cat][inst_name]:
             if not(force):
                 error_msg = ("Intrument model {} already exist in the model, it will not be "
-                             "added.".format(instrument_model_category + '_' + inst_name + '_' +
-                                             name))
+                             "added.".format(inst_cat + '_' + inst_name + '_' + name))
                 raise ValueError(error_msg)
             else:
                 warning_msg = ("Intrument model {} already exist in the model, it will be replaced."
-                               "".format(instrument_model_category + '_' + inst_name + '_' + name))
+                               "".format(inst_cat + '_' + inst_name + '_' + name))
                 logger.warning(warning_msg)
         inst_model = instrument.create_model_instance(name=name)
-        self.paramcontainers[instrument_model_category][inst_name].update({name: inst_model})
+        inst_db[inst_cat][inst_name].update({name: inst_model})
         logger.debug("Added instrument model {} in model {}"
-                     "".format(instrument_model_category + '_' + inst_name + '_' + name, self.name))
+                     "".format(inst_cat + '_' + inst_name + '_' + name, self.name))
 
     def rm_an_instrument_model(self, inst_cat, inst_name, inst_model):
         """Remove an instrument model to the paramcontainers of this model."""
-        res = self.paramcontainers[inst_cat][inst_name].pop(inst_model)
+        res = self.paramcontainers[instrument_model_category][inst_cat][inst_name].pop(inst_model)
         if res is None:
             logger.warning("The deletion of the instrument model {} from the model has failed "
                            "because it was not found was not found."
@@ -159,7 +162,7 @@ class ParamContainerDatabase(object):
             if paramcont_cat == instrument_model_category:
                 for inst_name, list_mod_name in inst_models.items():
                     for inst_mod_name in list_mod_name:
-                        mod = self.paramcontainers[paramcont_cat][inst_name][inst_mod_name]
+                        mod = self.get_instmodel(inst_name, inst_mod_name)
                         result.extend(mod.get_list_params(main=main, free=free))
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
@@ -176,15 +179,42 @@ class ParamContainerDatabase(object):
                 result.append(param.name)
         return result
 
-    def get_list_instmodel(self, inst_category=None):
-        """Return the list of all parameters."""
+    def get_list_instmodel(self, inst_category=None, inst_name=None):
+        """Return the list of instrument model."""
         result = []
-        for inst_name in list(self.instruments.keys()):
-            for inst_model_name in self.instruments[inst_name]:
-                inst_model = self.instruments[inst_name][inst_model_name]
-                if inst_category is None:
-                    result.append(inst_model)
-                else:
-                    if inst_model.instrument.category == inst_category:
-                        result.append(inst_model)
+        for inst_cat in list(self.instruments.keys()):
+            if inst_cat == inst_category or (inst_category is None):
+                for name_inst in self.instruments[inst_cat]:
+                    if name_inst == inst_name or (inst_name is None):
+                        for inst_model_name in self.instruments[inst_cat][name_inst]:
+                            inst_model = self.instruments[inst_cat][name_inst][inst_model_name]
+                            result.append(inst_model)
+        return result
+
+    def get_list_instmodel_name(self, inst_category=None, inst_name=None):
+        """Return the list of instrument model."""
+        result = []
+        for inst_model in self.get_list_instmodel(inst_category=inst_category, inst_name=inst_name):
+            result.append(inst_model.name)
+        return result
+
+    def get_instmodel(self, inst_name, inst_model_name):
+        """Return the instrument model paramcontainer designated by its name.
+
+        Return None if inst_name not found and an error if inst_name found but not inst_model_name.
+        """
+        for inst_cat in list(self.instruments.keys()):
+            for name_inst in self.instruments[inst_cat]:
+                if name_inst == inst_name:
+                    return self.instruments[inst_cat][inst_name][inst_model_name]
+        logger.warning("Instrument model {}_{} not found !".format(inst_name, inst_model_name))
+        return None
+
+    def get_list_inst_name(self, inst_category=None):
+        """Return the list of instrument name."""
+        result = []
+        for inst_cat in list(self.instruments.keys()):
+            if inst_cat == inst_category or (inst_category is None):
+                for inst_name in self.instruments[inst_cat]:
+                    result.append(inst_name)
         return result

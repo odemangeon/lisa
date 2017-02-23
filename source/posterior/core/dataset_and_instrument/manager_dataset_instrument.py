@@ -30,7 +30,7 @@ classes.
 import logging
 import os.path
 from ....software_parameters import setupfile_dataset_inst
-from .instrument import Default_Instrument
+from ....tools.miscellaneous import interpret_data_filename
 
 ## Logger
 logger = logging.getLogger()
@@ -50,41 +50,6 @@ def get_filename_from_file_path(file_path):
     return os.path.basename(file_path)
 
 
-def interpret_data_filename(data_file_name):
-    """
-    Interpret data file name.
-
-    If the format of the data file name is recognized the function return a dictionnary (see
-    Returns below) otherwise return None.
-    ----
-    Arguments:
-        data_file_name : string,
-            Data file name, should be in the format instcategory_object_instname(_number).*
-
-    Returns:
-        dictionnary with the interpration of the filename which contains the following keys:
-            - object : name of the object observed with the data
-            - inst_category : category of instrument used to take the data. e.g. "LC", "RV" or "SED"
-            - inst_name : instrument name
-            - number : give the number of the data file if there is several data files of the
-                same object observed with the same instrument
-    """
-    cuts = data_file_name.split("_")   # List of fields that were separated by "_"
-    cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
-    if len(cuts) < 3 or len(cuts) > 4:
-        logging.warning("Data file name not recognized. Should be in the format "
-                        "category_target_instrument(_number).txt. Got: {}".format(data_file_name))
-        return None
-    result = {"object": cuts[1],
-              "inst_category": cuts[0],
-              "inst_name": cuts[2]}
-    if len(cuts) == 3:
-        result["number"] = None
-    elif len(cuts) == 4:
-        result["number"] = cuts[3]
-    return result
-
-
 class Manager_Inst_Dataset(object):
     """docstring for Manager_Inst_Dataset Singleton class."""
 
@@ -101,6 +66,7 @@ class Manager_Inst_Dataset(object):
             self.__dataset_for_inst = dict()
             self.__available_inst = dict()
             self.__available_inst_subclass = dict()
+            self._Default_Instrument = None
 
         def _reset_inst_categories(self):
             """Reset database giving Dataset subclass associated to instrument category."""
@@ -138,6 +104,11 @@ class Manager_Inst_Dataset(object):
                                  "categories: {}".format(self.get_available_inst_category()))
             self.__available_inst.update({inst_instance.name: inst_instance})
 
+        def define_def_instrument_class(self, Default_Inst_class):
+            """Define the class to be used for default instruments.
+            """
+            self._Default_Instrument = Default_Inst_class
+
         def add_available_def_inst(self, inst_category, name):
             """Add an instance of the Default_Instrument class to the list of available instrument.
 
@@ -151,9 +122,9 @@ class Manager_Inst_Dataset(object):
                     name of the instrument
             """
             params_model = self.get_inst_subclass(inst_category).params_model
-            self.add_available_inst(Default_Instrument(category=inst_category,
-                                                       name=name,
-                                                       params_model=params_model))
+            self.add_available_inst(self._Default_Instrument(category=inst_category,
+                                                             name=name,
+                                                             params_model=params_model))
 
         def load_setup(self):
             """Load the configuration of instruments and datasets define in the setup file.
