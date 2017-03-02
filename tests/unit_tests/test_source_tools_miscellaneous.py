@@ -8,7 +8,8 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-from source.tools.miscellaneous import interpret_data_filename
+from source.tools.miscellaneous import (interpret_data_filename, get_filename_from_file_path,
+                                        spacestring_like, get_filename_woext_from_filename)
 
 level_logger = DEBUG
 level_handler = INFO
@@ -32,6 +33,19 @@ class TestMethods(TestCase):
 
     def setUp(self):
         pass
+
+    def test_spacestring_like(self):
+        self.assertEqual(spacestring_like("test"), "    ")
+
+    def test_get_filename_from_filepath(self):
+        file_path = "Users/olivier/Softwares/lisa/data/K2-19/EPIC201505350.rdb"
+        file_name = get_filename_from_file_path(file_path)
+        self.assertEqual(file_name, "EPIC201505350.rdb")
+
+    def test_get_filename_woext_from_filename(self):
+        file_name = "EPIC201505350.rdb"
+        file_name_woext = get_filename_woext_from_filename(file_name)
+        self.assertEqual(file_name_woext, "EPIC201505350")
 
     def test_interpret_data_filename(self):
         filename_1 = "LC_K2-19_K2.txt"

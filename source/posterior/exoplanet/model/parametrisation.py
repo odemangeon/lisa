@@ -28,7 +28,7 @@ class GravGroup_Parametrisation(object):
         if DeltaRV_main:
             RVrefglobal_instname = self.RV_globalref_instname
             RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
-        list_instmodel = self.get_list_instmodel(inst_category="RV")
+        list_instmodel = self.get_instmodel_objs(inst_cat="RV")
         for inst_model in list_instmodel:
             inst_name = inst_model.instrument.name
             inst_model.jitter.main = jitter_main

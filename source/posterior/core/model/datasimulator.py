@@ -34,3 +34,4 @@ class DatasimulatorCreator(object):
         """Return the datasimulator for each instrument model used."""
         db = self._create_database_func_instlevel(object_name=self.object_name,
                                                   database_name="datasimulator")
+        # Get the list of used instrument model

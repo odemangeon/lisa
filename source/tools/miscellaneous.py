@@ -7,18 +7,38 @@ Provide toolbox with miscellaneous tools.
 
 @TODO:
 """
-import logging
+from logging import getLogger
+from os.path import basename, splitext
 import os
 
 from .human_machine_interface.QCM import QCM_utilisateur
 
 ## Logger object
-logger = logging.getLogger()
+logger = getLogger()
 
 
 def spacestring_like(string):
     """Return an empty string with the same size than string."""
     return " " * len(string)
+
+
+def get_filename_from_file_path(file_path):
+    """Return the filename from the file path.
+    ----
+    Arguments:
+        file_path   : string,
+            Path to the dataset file.
+
+    Returns:
+        file_name   : string,
+            Name of the file extracted from the file_path.
+    """
+    return basename(file_path)
+
+
+def get_filename_woext_from_filename(file_name):
+    """Return the filename without extension from the filename with extension."""
+    return splitext(file_name)[0]
 
 
 def interpret_data_filename(data_file_name):

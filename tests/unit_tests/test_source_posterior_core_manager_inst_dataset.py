@@ -3,35 +3,38 @@
 """
 Unit tests for the source.posterior.core.dataset_and_instrument.manager_dataset_instrument module.
 """
-import logging
-import unittest
-import sys
+from unittest import TestCase, main
+from logging import getLogger, StreamHandler, Formatter
+from logging import DEBUG, INFO
+from sys import stdout
+
 
 import source.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
 import source.posterior.core.dataset_and_instrument.instrument as inst
 from source.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument
-from source.posterior.exoplanet.dataset_and_instrument.rv import RV_Instrument
 
-logger = logging.getLogger()
-if logger.level > logging.DEBUG:
-    logger.setLevel(logging.DEBUG)
+level_logger = DEBUG
+level_handler = INFO
+
+logger = getLogger()
+if logger.level != level_logger:
+    logger.setLevel(level_logger)
 if len(logger.handlers) == 0:
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = StreamHandler(stdout)
+    ch.setLevel(level_handler)
+    formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+else:
+    ch = logger.handlers[0]
+    if ch.level != level_handler:
+        ch.setLevel(level_handler)
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods(TestCase):
 
     def setUp(self):
         self.K2_inst = inst.Default_Instrument("LC", "K2")
-
-    def test_get_filename_from_filepath(self):
-        file_path = "Users/olivier/Softwares/lisa/data/K2-19/EPIC201505350.rdb"
-        file_name = mgr.get_filename_from_file_path(file_path)
-        self.assertEqual(file_name, "EPIC201505350.rdb")
 
     def test_manage_dataset_associated_to_inst_category_database(self):
         manager = mgr.Manager_Inst_Dataset()
@@ -86,4 +89,4 @@ class TestMethods(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()

@@ -9,7 +9,7 @@ a set of parameters. It could be a Planet or a Star for exoplanet models
 from logging import getLogger
 from collections import OrderedDict
 
-from ...tools.metaclasses import  MandatoryReadOnlyAttr
+from ...tools.metaclasses import MandatoryReadOnlyAttr
 from ...tools.name import Name
 from ...tools.miscellaneous import spacestring_like
 from .parameter import Parameter

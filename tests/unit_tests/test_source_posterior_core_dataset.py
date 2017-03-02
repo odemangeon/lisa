@@ -8,6 +8,7 @@ import unittest
 import sys
 
 import source.posterior.core.dataset_and_instrument.dataset as dst
+from source.posterior.exoplanet.dataset_and_instrument.lc import K2
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -27,19 +28,21 @@ class TestMethods(unittest.TestCase):
             pass
 
         self.file_path = "/Users/olivier/Softwares/lisa/data/K2-19/LC_K2-19_K2.txt"
-        self.dataset_instance = _Basic_Dataset(self.file_path, "Instrument_instance")
+        self.dataset_instance = _Basic_Dataset(self.file_path, K2)
 
     def test_manage_default_instrument_instance(self):
         filepath = self.dataset_instance.filepath
         self.assertEqual(self.file_path, filepath)
         filename = self.dataset_instance.filename
         self.assertEqual("LC_K2-19_K2.txt", filename)
-        objectname = self.dataset_instance.objectname
+        objectname = self.dataset_instance.object_name
         self.assertEqual("K2-19", objectname)
         instrument_instance = self.dataset_instance.instrument
-        self.assertEqual("Instrument_instance", instrument_instance)
+        self.assertEqual(K2, instrument_instance)
         self.assertFalse(self.dataset_instance.is_data_stored())
         self.dataset_instance._set_data("some_data")
+        dataset_name = self.dataset_instance.dataset_name
+        self.assertEqual("LC_K2-19_K2_0", dataset_name)
         data = self.dataset_instance.get_data()
         self.assertTrue(self.dataset_instance.is_data_stored())
         self.assertEqual("some_data", data)

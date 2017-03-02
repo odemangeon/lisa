@@ -24,57 +24,45 @@ if len(logger.handlers) == 0:
 class TestMethods(TestCase):
 
     def setUp(self):
-        pass
-
-    def test_creation(self):
-        DatabaseInstLevel(object_name="K2-19", database_name="datasimulator")
+        self.db = DatabaseInstLevel(object_stored="datasimulator", database_name="K2-19")
 
     def test_add_rm_get_instcatlevel(self):
-        db = DatabaseInstLevel(object_name="K2-19", database_name="datasimulator")
-        db.add_instcat(inst_cat="RV")
-        db.add_instcat(inst_cat="LC")
-        self.assertCountEqual(db.inst_categories, ["RV", "LC"])
-        db.rm_instcat("RV")
-        self.assertCountEqual(db.inst_categories, ["LC"])
+        self.db["RV"]
+        self.db["LC"]
+        self.assertCountEqual(self.db.inst_categories, ["RV", "LC"])
+        self.db.pop("RV")
+        self.assertCountEqual(self.db.inst_categories, ["LC"])
 
     def test_add_rm_get_instnamelevel(self):
-        db = DatabaseInstLevel(object_name="K2-19", database_name="datasimulator")
-        db.add_instcat(inst_cat="RV")
-        db.add_instcat(inst_cat="LC")
-        db.add_instname(inst_cat="RV", inst_name="HARPS")
-        db.add_instname(inst_cat="RV", inst_name="SOPHIE")
-        db.add_instname(inst_cat="LC", inst_name="CoRoT")
-        db.add_instname(inst_cat="LC", inst_name="Kepler")
-        self.assertCountEqual(db.get_instnames(inst_cat="RV"), ["HARPS", "SOPHIE"])
-        self.assertCountEqual(db.get_instnames(inst_cat="LC"), ["CoRoT", "Kepler"])
-        db.rm_instname("RV", "HARPS")
-        self.assertCountEqual(db.get_instnames(inst_cat="RV"), ["SOPHIE"])
+        self.db["RV"]["HARPS"]
+        self.db["RV"]["SOPHIE"]
+        self.db["LC"]["CoRoT"]
+        self.db["LC"]["Kepler"]
+        self.assertCountEqual(self.db.get_instnames(inst_cat="RV"), ["HARPS", "SOPHIE"])
+        self.assertCountEqual(self.db.get_instnames(inst_cat="LC"), ["CoRoT", "Kepler"])
+        self.db["RV"].pop("HARPS")
+        self.assertCountEqual(self.db.get_instnames(inst_cat="RV"), ["SOPHIE"])
 
     def test_add_rm_get_instmodellevel(self):
-        db = DatabaseInstLevel(object_name="K2-19", database_name="datasimulator")
-        db.add_instcat(inst_cat="RV")
-        db.add_instcat(inst_cat="LC")
-        db.add_instname(inst_cat="RV", inst_name="HARPS")
-        db.add_instname(inst_cat="RV", inst_name="SOPHIE")
-        db.add_instname(inst_cat="LC", inst_name="CoRoT")
-        db.add_instname(inst_cat="LC", inst_name="Kepler")
-        db.add_instmodel(inst_cat="RV", inst_name="HARPS", inst_model="default")
-        db.add_instmodel(inst_cat="RV", inst_name="HARPS", inst_model="test")
-        db.add_instmodel(inst_cat="LC", inst_name="CoRoT", inst_model="default")
-        db.add_instmodel(inst_cat="LC", inst_name="Kepler", inst_model="default")
-        db.add_instmodel(inst_cat="LC", inst_name="Kepler", inst_model="test")
-        self.assertCountEqual(db.get_instmodels(inst_cat="RV", inst_name="HARPS"),
+        self.db["RV"]["HARPS"]["default"]
+        self.db["RV"]["HARPS"]["test"]
+        self.db["LC"]["CoRoT"]["default"]
+        self.db["LC"]["Kepler"]["default"]
+        self.db["LC"]["Kepler"]["test"]
+        self.assertCountEqual(self.db.get_instmodels(inst_cat="RV", inst_name="HARPS"),
                               ["default", "test"])
-        self.assertCountEqual(db.get_instmodels(inst_cat="RV", inst_name="SOPHIE"), [])
-        self.assertCountEqual(db.get_instmodels(inst_cat="LC", inst_name="CoRoT"), ["default"])
-        db.rm_instmodel("RV", "HARPS", "test")
-        self.assertCountEqual(db.get_instmodels(inst_cat="RV", inst_name="HARPS"),
+        self.assertCountEqual(self.db.get_instmodels(inst_cat="RV", inst_name="SOPHIE"), [])
+        self.assertCountEqual(self.db.get_instmodels(inst_cat="LC", inst_name="CoRoT"), ["default"])
+        self.db["RV"]["HARPS"].pop("test")
+        self.assertCountEqual(self.db.get_instmodels(inst_cat="RV", inst_name="HARPS"),
                               ["default"])
 
-    def test_add_object(self):
-        db = DatabaseInstLevel(object_name="K2-19", database_name="datasimulator")
-        db.add_object(inst_cat="RV", inst_name="HARPS", inst_model="default", object="test")
-        self.assertEqual(db["RV"]["HARPS"]["default"], "test")
+    def test_addget_object(self):
+        self.db["RV"]["HARPS"]["default"] = "test"
+        self.assertEqual(self.db["RV"]["HARPS"]["default"], "test")
+        self.assertEqual(self.db["HARPS_default"], "test")
+        self.assertEqual(self.db["RV"]["HARPS_default"], "test")
+        self.assertEqual(self.db["HARPS"]["default"], "test")
 
 
 if __name__ == '__main__':

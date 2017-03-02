@@ -11,13 +11,14 @@ The objective of this package is to provides the core DatasetDatabase class.
     -
 """
 from logging import getLogger
-from collections import OrderedDict
+from collections import defaultdict
 from os.path import join, isfile
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from .dataset import Dataset
 from ....tools.name import Name
-from ....tools.dico_database import get_content_2ndlevel, get_content_3ndlevel
+from ....tools.dico_database import Nesteddict_wfixellvlnb, init_result, add_obj_in_result
+from ....tools.database_with_instrument_level import check_instcat
 from ....tools.default_folders_data_run import RunFolder, DataFolder
 from ....tools.miscellaneous import interpret_data_filename
 
@@ -28,7 +29,25 @@ manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
 
 
-class DatasetDatabase(Name, RunFolder, DataFolder):
+class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
+
+    def __getitem__(self, key):
+        if ((len(self) == 1) and (key == ".")) or (key == "1st"):
+            return self[list(self.keys())[0]]
+        else:
+            if isinstance(key, int):
+                return self[str(key)]
+            else:
+                return super(Nesteddict_defgetitem, self).__getitem__(key)
+
+    def __missing__(self, key, cls=None):
+        if key == ".":
+            raise KeyError("'.' can only be used when the len of the dictionnary is 1.")
+        else:
+            return super(Nesteddict_defgetitem, self).__missing__(key, cls)
+
+
+class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
     """docstring for DatasetDatabase."""
     def __init__(self, object_name):
         # 1.
@@ -38,12 +57,12 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
         # 3.
         DataFolder.__init__(self, data_folder=None)
         # 4.
-        self._database = dict()
+        Nesteddict_wfixellvlnb.__init__(self, nb_lvl=3, ordered=True)
         # 5.
         self.freeze = False
 
-    def __getitem__(self, key):
-        return self._database[key]
+    def __missing__(self, key, cls=None):
+        return super(DatasetDatabase, self).__missing__(key, cls=Nesteddict_defgetitem)
 
     @property
     def object_name(self):
@@ -76,11 +95,7 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
         inst_category = dataset.instrument.category
         inst_name = dataset.instrument.name
         number = dataset.number
-        if inst_category not in self._database:
-            self._database.update({inst_category: {}})
-        if inst_name not in self._database[inst_category]:
-            self._database[inst_category].update({inst_name: OrderedDict()})
-        if str(number) in self._database[inst_category][inst_name]:
+        if str(number) in self[inst_category][inst_name]:
             if not(force):
                 logger.error("Dataset {} already exist in the database, it will not be added."
                              "".format(inst_category + '_' + inst_name + '_' + str(number)))
@@ -89,7 +104,7 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
             else:
                 logger.error("Dataset {} already exist in the database, it will be replaced."
                              "".format(inst_category + '_' + inst_name + '_' + str(number)))
-        self._database[inst_category][inst_name][str(number)] = dataset
+        self[inst_category][inst_name][str(number)] = dataset
 
     def isavailable_dataset(self, dataset):
         """Return True sif filename correspond to a dataset that is in the database.
@@ -110,9 +125,9 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
         else:
             raise ValueError("{} is neither a dataset instance nor a dataset file name."
                              "".format(dataset))
-        if inst_category in self._database:
-            if inst_name in self._database[inst_category]:
-                if number in self._database[inst_category][inst_name]:
+        if inst_category in self:
+            if inst_name in self[inst_category]:
+                if number in self[inst_category][inst_name]:
                     return True
         else:
             return False
@@ -130,11 +145,11 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
         """
         if self.freeze:
             raise ValueError("The dataset dabase has been freezed you can not remove datasets.")
-        self._database[inst_category][inst_name].pop(str(number))
-        if len(self._database[inst_category][inst_name]) == 0:
-            self._database[inst_category].pop(inst_name)
-            if len(self._database[inst_category]) == 0:
-                self._database.pop(inst_category)
+        self[inst_category][inst_name].pop(str(number))
+        if len(self[inst_category][inst_name]) == 0:
+            self[inst_category].pop(inst_name)
+            if len(self[inst_category]) == 0:
+                self.pop(inst_category)
 
     def add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
         """Add a dataset designated by its path to the dataset database.
@@ -195,81 +210,68 @@ class DatasetDatabase(Name, RunFolder, DataFolder):
         for filepath in list_files:
             self.add_a_dataset_from_path(filepath, force=force)
 
-    def get_dataset(self, inst_category, inst_name, number=None):
-        """Return a dataset from the dataset database.
-
-        Giving the caracteristics of the instrument used for the measurement and the number of the
-        dataset this function will return the corresponding dataset.
-
-        ----
-        inst_category   : string,
-            Type of instrument associated to the dataset you want to remove
-        inst_name   : string,
-            Name of the instrument associated to the dataset you want to remove
-        number      : int, (default: 0)
-            Number associated to the dataset you want to remove.
-        """
-        if number is None:
-            str_number = list(self._database[inst_category][inst_name].keys())[0]
-        else:
-            str_number = str(number)
-        return self._database[inst_category][inst_name][str_number]
+    def get_datasets(self, inst_name=None, inst_cat=None, sortby_instcat=False,
+                     sortby_instname=False, sortby_nb=False):
+        """Return datasets from the dataset database."""
+        return self.get_lvl3_values(level1_key=inst_cat, level2_key=inst_name,
+                                    sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
+                                    sortby_lvl3key=sortby_nb)
 
     @property
     def inst_categories(self):
         """Return the list of the types of instruments associated to the dataset in the database."""
-        return list(self._database.keys())
+        return list(self.keys())
 
-    def get_instnames(self, inst_category=None):
+    def get_instnames(self, inst_cat=None, sortby_instcat=False):
         """Return the names of instruments.
 
         If inst_category provided return only the name of the instrument for this category.
         Otherwise return a dict which associate the list of instrument names to each instrument
         category available in the database.
         """
-        return get_content_2ndlevel(dico_db=self._database, level1_key=inst_category)
+        return self.get_lvl2_keys(level1_key=inst_cat, sortby_lvl1key=sortby_instcat)
 
-    def get_instruments(self):
+    def get_instruments(self, inst_name=None, inst_cat=None,
+                        sortby_instname=False, sortby_instcat=False):
         """Return the dict of instruments used by the dataset in the database"""
-        instruments_dict = {}
-        for inst_category in list(self._database.keys()):
-            for inst_name in self._database[inst_category].keys():
-                first_dataset = self.get_dataset(inst_category=inst_category, inst_name=inst_name)
-                instruments_dict[inst_name] = first_dataset.instrument
-        return instruments_dict
-
-    def get_datasetnbs(self, inst_name=None, inst_category=None):
-        """Return the numbers of the datasets.
-
-        If inst_name provided return only the list of numbers of the datasets for this instrument.
-        Else if inst_category provided (and not inst_name) return a dict giving for each instrument
-        in this category the list of numbers associated.
-        If neither inst_name nor inst_category, returns a 2 level dict giving for each category and
-        each instrument in this category the list of numbers associated.
-        """
-        if (inst_name is not None) and (inst_category is None):
-            inst_category = manager_inst.get_inst_category(inst_name=inst_name)
-        return get_content_3ndlevel(dico_db=self._database, level1_key=inst_category,
-                                    level2_key=inst_name)
-
-    def get_datasetnames(self, inst_name=None, inst_category=None):
-        """Return the dict of instruments used by the dataset in the database"""
-        if (inst_name is not None) and (inst_category is None):
-            inst_category = manager_inst.get_inst_category(inst_name=inst_name)
-        result = []
-        if inst_category is not None:
-            iter_instcat = [inst_category, ]
+        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
+        result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
+                             default_value=[])
+        if inst_name is None:
+            iter_instnames = self.get_instnames(inst_cat=inst_cat, sortby_instcat=True)
         else:
-            iter_instcat = self.inst_categories
-        for cat in iter_instcat:
-            if inst_name is not None:
-                iter_inst_name = [inst_name, ]
-            else:
-                iter_inst_name = self.get_instnames(inst_category=cat)
-            for name in iter_inst_name:
-                nb_list = self.get_datasetnbs(inst_category=cat, inst_name=name)
-                for nb in nb_list:
-                    result.append("{}_{}_{}_{}".format(cat, self.object_name, name, nb))
+            iter_instnames = {inst_cat: [inst_name]}
+        # instnames_bycat = self.get_instnames(inst_cat=inst_cat, sortby_instcat)
+        for inst_cat, l_instname in iter_instnames.items():
+            for inst_name in l_instname:
+                instrument = self[inst_cat][inst_name]["1st"].instrument
+                add_obj_in_result(result, instrument, lvl1_key=inst_cat, lvl2_key=inst_name,
+                                  type_finallvl=list)
+        if not(sortby_instname or sortby_instcat):
+            if len(result) == 1:
+                return result[0]
+        return result
+
+    def get_datasetnbs(self, inst_name=None, inst_cat=None,
+                       sortby_instcat=False, sortby_instname=False):
+        """Return the numbers of the datasets."""
+        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
+        return self.get_lvl3_keys(level1_key=inst_cat, level2_key=inst_name,
+                                  sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
+
+    def get_datasetnames(self, inst_name=None, inst_cat=None,
+                         sortby_instcat=False, sortby_instname=False):
+        """Return the dict of instruments used by the dataset in the database"""
+        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
+        result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
+                             default_value=[])
+        list_dataset = self.get_datasets(inst_name=inst_name, inst_cat=inst_cat,
+                                         sortby_instcat=False, sortby_instname=False,
+                                         sortby_nb=False)
+        for dataset in list_dataset:
+            instrument = dataset.instrument
+            add_obj_in_result(result, dataset.dataset_name, lvl1_key=instrument.category,
+                              lvl2_key=instrument.name, type_finallvl=list)
         return result
 
 
@@ -314,51 +316,3 @@ class DatasetDbAttr(object):
             return self.dataset_db is not None
         else:
             return False
-
-# def interpret_dataset_key(dataset_key):
-#     """
-#     Interpret dataset key.
-#
-#     ----
-#
-#     Arguments:
-#         dataset_key : string,
-#             dataset_key
-#     Returns:
-#         dictionnary with the interpration of the dataset key which contains the following keys:
-#             - instrument : instrument name
-#             - number : give the number of the data file if there is several data files from the
-#               same instrument
-#     """
-#     cuts = dataset_key.split("_")
-#     if len(cuts) > 2:
-#         logging.warning("dataset_key not recognized. Should be in the format "
-#                         "instrument_number. Got: {}".format(dataset_key))
-#         return None
-#     result = {"instrument": cuts[0]}
-#     if len(cuts) == 2:
-#         result["number"] = cuts[1]
-#     elif len(cuts) == 1:
-#         result["number"] = None
-#     return result
-#
-#
-# def build_dataset_key(instrument, number=None):
-#     """
-#     build dataset key.
-#
-#     ----
-#
-#     Arguments:
-#         instrument : string,
-#             instrument name
-#         number : string, optional,
-#             number of the dataset for this instrument
-#     Returns:
-#         dataset_key
-#     """
-#     separator = "_"
-#     dataset_key = instrument
-#     if number is not None:
-#         dataset_key += separator + number
-#     return dataset_key

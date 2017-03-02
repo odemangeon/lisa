@@ -103,7 +103,7 @@ class TestMethods(unittest.TestCase):
 
     def test_manage_basic_operation_of_dataset_database(self):
         self.assertTrue(isinstance(self.posterior_instance.dataset_db, DatasetDatabase))
-        self.assertDictEqual(self.posterior_instance.dataset_db._database, {})
+        self.assertDictEqual(self.posterior_instance.dataset_db, {})
         with self.assertRaises(Warning):
             self.posterior_instance.dataset_db = {"a": {}}
         if os.path.isfile(self.test_datafile):
@@ -113,10 +113,10 @@ class TestMethods(unittest.TestCase):
         dataset = self.manager_dataset.create_dataset(self.test_datafile)
         os.remove(self.test_datafile)
         self.posterior_instance.dataset_db._add_a_dataset(dataset)
-        dataset_returned = self.posterior_instance.dataset_db.get_dataset("LC", "K2", 0)
+        dataset_returned = self.posterior_instance.dataset_db["LC"]["K2"][0]
         self.assertEqual(dataset, dataset_returned)
         self.posterior_instance.dataset_db.rm_dataset("LC", "K2")
-        self.assertDictEqual(self.posterior_instance.dataset_db._database, {})
+        self.assertDictEqual(self.posterior_instance.dataset_db, {})
 
     def test_add_a_dataset_from_path(self):
         open(self.test_datafile, "x").close()

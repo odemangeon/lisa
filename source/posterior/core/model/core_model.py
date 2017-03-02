@@ -14,6 +14,7 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
+from collections import defaultdict
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
@@ -31,6 +32,8 @@ from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import interpret_data_filename
 from ....tools.default_folders_data_run import RunFolder
 from ....tools.database_with_instrument_level import DatabaseInstLevel
+from ....tools.dico_database import init_result, add_obj_in_result
+
 
 ## Logger
 logger = getLogger()
@@ -88,30 +91,46 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     @property
     def name_instmodel_used(self):
         """Return a dict which for each instrument name give the instrument models to use."""
-        result = {}
-        result = dict.fromkeys(self.dataset_db.get_instruments().keys(), [])
+        result = defaultdict(list)
         for dataset_name, mod_name in self.instmodel4dataset.items():
             file_info = interpret_data_filename(dataset_name)
             result[file_info["inst_name"]].append(mod_name)
         return result
 
+    def get_instmodel_used(self, inst_name=None, inst_cat=None,
+                           sortby_instcat=False, sortby_instname=False):
+        """Return the dictionnary of instrument models used."""
+        result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
+                             default_value=[])
+        for mod_fullname in self.instmodel4dataset.values():
+            inst_model_obj = self.instruments[mod_fullname]
+            inst_model = inst_model_obj.name
+            inst_cat = inst_model_obj.instrument.category
+            inst_name = inst_model_obj.instrument.name
+            add_obj_in_result(result, inst_model_obj, lvl3_key=inst_model, lvl2_key=inst_name,
+                              lvl1_key=inst_cat,
+                              sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
+        return result
+
     def __init_instruments_models(self):
         """Add an instrument model for each instrument used in the dataset database."""
-        for inst in self.dataset_db.get_instruments().values():
+        for inst in self.dataset_db.get_instruments():
             self.add_an_instrument_model(inst, name="default")
 
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters."""
         result = []
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
-        for paramcont_cat in self.paramcontainers_categories:
-            if paramcont_cat == instmod_cat:
-                result.extend(ParamContainerDatabase.
-                              get_list_params(self, main=main, free=free,
-                                              inst_models=self.name_instmodel_used))
-            else:
-                for param_cont in self.paramcontainers[paramcont_cat].values():
-                    result.extend(param_cont.get_list_params(main=main, free=free))
+        result.extend(ParamContainerDatabase.get_list_params(self, main=main, free=free,
+                                                             inst_models=self.name_instmodel_used))
+        # for paramcont_cat in self.paramcontainers_categories:
+        #     if paramcont_cat == instmod_cat:
+        #         result.extend(ParamContainerDatabase.
+        #                       get_list_params(self, main=main, free=free,
+        #                                       inst_models=self.name_instmodel_used))
+        #     else:
+        #         for param_cont in self.paramcontainers[paramcont_cat].values():
+        #             result.extend(param_cont.get_list_params(main=main, free=free))
         return result
 
     def get_list_paramnames(self, main=False, free=False, full_name=False):

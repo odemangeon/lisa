@@ -27,27 +27,13 @@ classes.
 @TODO:
     - UT __Mgr.create_dataset
 """
-import logging
-import os.path
+from logging import getLogger
+from os.path import exists
 from ....software_parameters import setupfile_dataset_inst
-from ....tools.miscellaneous import interpret_data_filename
+from ....tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
 
 ## Logger
-logger = logging.getLogger()
-
-
-def get_filename_from_file_path(file_path):
-    """Return the filename of a dataset given its file_path.
-    ----
-    Arguments:
-        file_path   : string,
-            Path to the dataset file.
-
-    Returns:
-        file_name   : string,
-            Name of the file extracted from the file_path.
-    """
-    return os.path.basename(file_path)
+logger = getLogger()
 
 
 class Manager_Inst_Dataset(object):
@@ -244,7 +230,7 @@ class Manager_Inst_Dataset(object):
                     indicated by the name of the data file.
             """
             # 1
-            if not(os.path.exists(file_path)):
+            if not(exists(file_path)):
                 raise ValueError("file doesn't exist: {}".format(file_path))
             # 2
             file_name = get_filename_from_file_path(file_path)

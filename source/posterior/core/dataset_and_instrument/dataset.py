@@ -22,15 +22,15 @@ and manipulate the data.
     - Dataset.load_data: UT
     - See if possible to transform data in a property.
 """
-import logging
-import sys
-import pandas as pd
+from logging import getLogger
+from sys import exc_info
+from pandas import read_table
 
 from .manager_dataset_instrument import get_filename_from_file_path
 from ....tools.miscellaneous import interpret_data_filename
 
 ## Logger
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class Dataset(object):
@@ -98,12 +98,18 @@ class Dataset(object):
         return self.__filename
 
     @property
+    def dataset_name(self):
+        """Get the name of the data file."""
+        return "{}_{}_{}_{}".format(self.instrument.category, self.object_name,
+                                    self.instrument.name, self.number)
+
+    @property
     def instrument(self):
         """Return the instrument instance."""
         return self.__instrument
 
     @property
-    def objectname(self):
+    def object_name(self):
         """Return the name of the object the data are about."""
         return self.__objectname
 
@@ -193,14 +199,14 @@ class Dataset(object):
         # 2.
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
-        pandas_df = pd.read_table(self.filepath,
-                                  delim_whitespace=delim_whitespace,
-                                  names=names,
-                                  index_col=index_col,
-                                  skiprows=skip_rows,
-                                  skip_blank_lines=skip_blank_lines,
-                                  comment=comment,
-                                  **kargs)
+        pandas_df = read_table(self.filepath,
+                               delim_whitespace=delim_whitespace,
+                               names=names,
+                               index_col=index_col,
+                               skiprows=skip_rows,
+                               skip_blank_lines=skip_blank_lines,
+                               comment=comment,
+                               **kargs)
         # to acces the colum values lc['time'], lc['flux'], lc['flux_err']
         # they will come indexit to the time but when we transformed them into numpy
         # np.asarray(lc['inst_flag']) it is just the column
@@ -249,6 +255,6 @@ class Dataset(object):
                 logger.warning("No data stored and method load_data failed to load datafile {}"
                                "\nprovided error: {}"
                                "".format(self.filename,
-                                         sys.exc_info()))
+                                         exc_info()))
 
         return self.__data

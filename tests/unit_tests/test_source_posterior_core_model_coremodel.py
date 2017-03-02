@@ -3,27 +3,34 @@
 """
 Unit tests for the source.posterior.core.model.core_model module.
 """
-import logging
-import unittest
-import sys
+from logging import getLogger, StreamHandler, Formatter, DEBUG, INFO
+from unittest import TestCase, main
+from sys import stdout
 
 import source.posterior.core.model.core_model as cmdl
 from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
 from source.posterior.core.prior.manager_prior import Manager_Prior
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 
-logger = logging.getLogger()
-if logger.level > logging.DEBUG:
-    logger.setLevel(logging.DEBUG)
+log_level = DEBUG
+ch_level = INFO
+
+logger = getLogger()
+if logger.level != log_level:
+    logger.setLevel(log_level)
 if len(logger.handlers) == 0:
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = StreamHandler(stdout)
+    ch.setLevel(ch_level)
+    formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
+else:
+    ch = logger.handlers[0]
+    if ch.level != ch_level:
+        ch.setLevel(ch_level)
 
 
-class TestMethods(unittest.TestCase):
+class TestMethods(TestCase):
 
     def setUp(self):
         class FakeModel(cmdl.Core_Model):
@@ -65,4 +72,4 @@ class TestMethods(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    main()

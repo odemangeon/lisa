@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
-from source.posterior.core.dataset_and_instrument.instrument import key_inst
+
+
 ## Logger
 logger = logging.getLogger()
 
@@ -49,8 +50,8 @@ class RV_Instrument(Core_Instrument):
 
     @classmethod
     def _get_inst_paramfilesection(cls, text_tab, model_instance, inst_name):
-        def_instmod_name = (model_instance.get_list_instmodel_name(inst_category=cls.category,
-                                                                   inst_name=inst_name)[0])
+        def_instmod_name = (model_instance.get_instmodel_names(inst_name=inst_name,
+                                                               inst_cat=cls.category)[0])
         return "{}'{}': '{}',\n".format(text_tab, cls.__name_RV_ref_var__, def_instmod_name)
 
     @classmethod
