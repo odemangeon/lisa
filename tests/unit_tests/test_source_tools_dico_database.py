@@ -11,7 +11,7 @@ from sys import stdout
 import source.tools.dico_database as ddb
 
 level_logger = DEBUG
-level_handler = DEBUG
+level_handler = INFO
 
 logger = getLogger()
 if logger.level != level_logger:
@@ -34,10 +34,6 @@ class TestMethods(TestCase):
         self.ndict = ddb.Nesteddict()
         self.ndictwlvl = ddb.Nesteddict_wlvl()
         self.ndictwflvlnb = ddb.Nesteddict_wfixellvlnb(nb_lvl=3)
-        # self.dico1level = {"a": 1, "b": 2}
-        # self.dico2level = {"a": {"1": 1, "2": 2}, "b": {"1": 1, "2": 2}}
-        # self.dico3level = {"a": {"1": {"i": "i", "j": "j"}, "2": {"i": "i", "j": "j"}},
-        #                    "b": {"1": {"i": "i", "j": "j"}, "2": {"i": "i", "j": "j"}}}
 
     def test_Nesteddict_wlvl(self):
         self.assertEqual(self.ndictwlvl.lvl, 0)
@@ -79,21 +75,6 @@ class TestMethods(TestCase):
                               {"A": [{"i": 1}, {"ii": 2}]})
         self.assertCountEqual(d3lvl.get_lvl2_values(level1_key="A", sortby_lvl2key=True),
                               {"a": [{"i": 1}], "b": [{"ii": 2}]})
-        # self.assertCountEqual(d3lvl.get_lvl2_values(level1_key="A", sortby_lvl1key=False), ["a", "b"])
-        # self.assertCountEqual(d3lvl.get_lvl2_values(level1_key="A", sortby_lvl1key=True),
-        #                       {"A": ["a", "b"]})
-    #     res = ddb.get_content_2ndlevel(self.dico1level, level1_key="a")
-    #     self.assertEqual(res, 1)
-    #     res = ddb.get_content_2ndlevel(self.dico1level)
-    #     self.assertEqual(res, self.dico1level)
-    #     res = ddb.get_content_2ndlevel(self.dico2level, level1_key="a")
-    #     self.assertCountEqual(res, ["1", "2"])
-    #     res = ddb.get_content_2ndlevel(self.dico2level)
-    #     self.assertCountEqual(res, {"a": ["1", "2"], "b": ["1", "2"]})
-    #     res = ddb.get_content_2ndlevel(self.dico3level, level1_key="a")
-    #     self.assertCountEqual(res, ["1", "2"])
-    #     res = ddb.get_content_2ndlevel(self.dico3level)
-    #     self.assertCountEqual(res, {"a": ["1", "2"], "b": ["1", "2"]})
 
     def test_Nesteddict_wfixellvlnb_get_lvl3_keys(self):
         d3lvl = ddb.Nesteddict_wfixellvlnb(nb_lvl=3)
@@ -218,6 +199,18 @@ class TestMethods(TestCase):
         expec = [1]
         logger.info("lvl2 = 'ii' no sort:\nres: {}\nexpected: {}".format(res, expec))
         self.assertCountEqual(res, expec)
+
+    def test_lock(self):
+        d3lvl = ddb.Nesteddict_wfixellvlnb(nb_lvl=3)
+        d3lvl["A"]["a"]["i"] = 1
+        d3lvl["A"]["b"]["ii"] = 2
+        d3lvl["B"]["b"]["ii"] = 2
+        d3lvl["C"]["c"]["iii"] = 3
+        d3lvl.lock()
+        d3lvl["C"]["c"]["iii"] = 2
+        with self.assertRaises(KeyError):
+            d3lvl["C"]["c"]["iv"]
+        d3lvl.unlock()
 
 
 if __name__ == '__main__':

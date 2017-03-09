@@ -16,6 +16,7 @@ from numpy import sum as npsum
 from numpy import log as nplog
 from math import exp
 
+from .database_func import DatabaseFunc
 from ...tools.function_w_doc import DocFunction
 
 
@@ -85,8 +86,6 @@ class LikelihoodCreator(object):
             doc_f = DocFunction(function=ldict[function_name], arg_list=arg_list)
             return doc_f
 
-        # lnlikelihood_test()
-
         if category in self._lnlikelihoods.keys():
             text_func = self._lnlikelihoods[category]
             if category == "wo jitter":
@@ -109,6 +108,27 @@ class LikelihoodCreator(object):
             raise ValueError("Category {} not recognized. Avalaible categories are {}"
                              "".format(self._ln_categories))
 
-    def create_lnlikelihoods(self):
+    def create_lnlikelihoods(self, datasim_db=None, category="wo jitter"):
         """Return the likelihood for each instrument model used."""
-        pass
+        db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
+                          instmodel4dataset=self.instmodel4dataset, instordered=False)
+        if datasim_db is None:
+            datasim_db = self.create_datasimulators()
+        # Create the instrument_db entries
+        for inst_cat in datasim_db:
+            for inst_name in datasim_db[inst_cat]:
+                for inst_model in datasim_db[inst_cat][inst_name]:
+                    db.instrument_db[inst_cat][inst_name][inst_model] = {}
+                    for obj in datasim_db[inst_cat][inst_name][inst_model]:
+                        datasim = datasim_db[inst_cat][inst_name][inst_model][obj]
+                        instmod_obj = (self.paramcontainers.
+                                       instruments[inst_cat][inst_name][inst_model])
+                        if instmod_obj.has_parameter(name="jitter", main=True):
+                            jitter_param = instmod_obj.jitter
+                        else:
+                            jitter_param = None
+                        (db.instrument_db[inst_cat][inst_name][inst_model]
+                         ) = self._create_lnlikelihood(datasim, category=category,
+                                                       jitter_param=jitter_param)
+        # TODO: Create the dataset_db entries
+        return db

@@ -110,7 +110,7 @@ class DataFolder(object):
             if res is not None:
                 self.__data_folder = res
                 logger.info("Data folder of the instance of class {} set to {}."
-                             "".format(self.__class__.__name__, self.data_folder))
+                            "".format(self.__class__.__name__, self.data_folder))
 
     @property
     def hasdata_folder(self):

@@ -50,8 +50,10 @@ class TestMethods(unittest.TestCase):
             """docstring for FakeModel."""
             __category__ = "FakeModel"
 
-            def __init__(self, name="default", dataset_db=None, run_folder=None):
-                super(FakeModel, self).__init__(name, dataset_db, run_folder)
+            def __init__(self, name="default", dataset_db=None, run_folder=None,
+                         instmodel4dataset=None, lock=None):
+                super(FakeModel, self).__init__(name, dataset_db, run_folder,
+                                                instmodel4dataset=instmodel4dataset)
         self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
@@ -103,7 +105,7 @@ class TestMethods(unittest.TestCase):
 
     def test_manage_basic_operation_of_dataset_database(self):
         self.assertTrue(isinstance(self.posterior_instance.dataset_db, DatasetDatabase))
-        self.assertDictEqual(self.posterior_instance.dataset_db, {})
+        self.assertCountEqual(self.posterior_instance.dataset_db, {})
         with self.assertRaises(Warning):
             self.posterior_instance.dataset_db = {"a": {}}
         if os.path.isfile(self.test_datafile):
@@ -116,7 +118,7 @@ class TestMethods(unittest.TestCase):
         dataset_returned = self.posterior_instance.dataset_db["LC"]["K2"][0]
         self.assertEqual(dataset, dataset_returned)
         self.posterior_instance.dataset_db.rm_dataset("LC", "K2")
-        self.assertDictEqual(self.posterior_instance.dataset_db, {})
+        self.assertCountEqual(self.posterior_instance.dataset_db, {})
 
     def test_add_a_dataset_from_path(self):
         open(self.test_datafile, "x").close()
@@ -140,7 +142,8 @@ class TestMethods(unittest.TestCase):
         with open(dataset_file, "x") as f:
             f.write(file1 + "\n")
             f.write(file2 + "\n")
-        self.posterior_instance.dataset_db.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
+        (self.posterior_instance.dataset_db.
+         add_datasets_from_datasetfile(path_datasets_file=dataset_file))
         os.remove(file1)
         os.remove(file2)
         os.remove(dataset_file)

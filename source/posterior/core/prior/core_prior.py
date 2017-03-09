@@ -13,8 +13,9 @@ The objective of this module is to define the Prior class which will generate th
 """
 from logging import getLogger
 from collections import OrderedDict
-from .manager_prior import Manager_Prior
 
+from .manager_prior import Manager_Prior
+from ....tools.function_w_doc import DocFunction
 
 ## logger object
 logger = getLogger()
@@ -65,20 +66,22 @@ class Prior(object):
                                       "implemented yet.")
         return priors
 
-    def create_joint_lnprior(self, list_paramnames):
+    def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
 
         The parameters have to be provided through their full names.
         This function does:
-            1. For each parameter in the list_parameters, check
-        """
-        priors = self.create_individual_lnpriors()
+            1.
 
+        TODO: Implement DocFunction
+        """
+        if individual_priors is None:
+            individual_priors = self.create_individual_lnpriors()
         # 1.
         list_lnpriors = []
         for param_name in list_paramnames:
-            if param_name in priors["marginal"]:
-                list_lnpriors.append(priors['marginal'][param_name])
+            if param_name in individual_priors["marginal"]:
+                list_lnpriors.append(individual_priors['marginal'][param_name])
             else:
                 logger.error("You try to acces the prior funciton of an unknown parameter or a "
                              "joint parameter: {}".format(param_name))
@@ -91,4 +94,4 @@ class Prior(object):
                 res += ln_prior(param_values[i])
             return res
 
-        return joint_lnprior, priors
+        return joint_lnprior

@@ -22,10 +22,16 @@ The objective of this package is to provides the core Posterior class.
 """
 from logging import getLogger
 
-from ...tools.name import Name
-from ...tools.default_folders_data_run import RunFolder
+from .instmodel4dataset import Instmodel4DatasetAttr
+from .dataset_database_locks import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
+from .database_func import DatabaseFunc
+from ...tools.name import Name
+from ...tools.default_folders_data_run import RunFolder
+from ...tools.function_w_doc import DocFunction
+# from ...tools.lockable_dict import LockableDict
+
 
 logger = getLogger()
 
@@ -33,43 +39,57 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-class Posterior(DatasetDbAttr, Name, RunFolder):
+class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr):
     """docstring for Posterior."""
+
+    msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
+
     def __init__(self, object_name, run_folder=None):
         """Init method for the Posterior class.
 
         This function does:
             1. Define the name of the object studied
-            2. Initialize the dataset database
-            3. Initialize the data_folder
-            4. Initialize the run_folder
-            5. Initialise the model
-            6. Initialise the lnprior
-            7. Initialise the lnlike
-            8. Initialise the lnpost
+            2. Define two locks: dataset_lock and database_lock
+            3. Initialize the dataset database attribute and assign it dataset_lock
+            4. Initialize the run_folder attribute
+            5. Initialie instmodel4dataset attribute and assign it dataset_lock
+            6. Initialise the model attribute
+            7. Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
+               datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         ----
         Arguments:
             name : string,
                 Name of the object studied.
         """
-        # 1.
-        Name.__init__(self, name=object_name)
-        # 2.
-        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.name))
-        # 3.
-        RunFolder.__init__(self, run_folder=run_folder)
-        # 4.
-        ## model: Initialise it
-        self.__model = None
-        # 5.
-        ## lnprior: Initialise it
-        self.__lnprior = None
-        # 6.
-        ## lnlike: Initialise it
-        self.__lnlike = None
-        # 7.
-        ## lnpost: Initialise it
-        self.__lnpost = None
+        Name.__init__(self, name=object_name)  # 1
+        DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)  # 2
+        DatasetDbAttr.__init__(self,  # 3
+                               dataset_db=DatasetDatabase(self.name,
+                                                          lock=self.get_dataset_Lock_instance()))
+        RunFolder.__init__(self, run_folder=run_folder)  # 4
+        Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())  # 5
+        self.__model = None  # 6
+        self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
+                                         instmodel4dataset=self.instmodel4dataset,
+                                         instordered=False, use_samelock=self.samelock,
+                                         lock_dataset=self.get_dataset_Lock_instance(),
+                                         lock_database=self.get_database_Lock_instance())  # 7
+        self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
+                                        instmodel4dataset=self.instmodel4dataset,
+                                        instordered=False, use_samelock=self.samelock,
+                                        lock_dataset=self.get_dataset_Lock_instance(),
+                                        lock_database=self.get_database_Lock_instance())  # 7
+        self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
+                                        instmodel4dataset=self.instmodel4dataset,
+                                        instordered=False, use_samelock=self.samelock,
+                                        lock_dataset=self.get_dataset_Lock_instance(),
+                                        lock_database=self.get_database_Lock_instance())  # 7
+        self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
+                                         instmodel4dataset=self.instmodel4dataset,
+                                         database_name=self.object_name, instordered=False,
+                                         use_samelock=self.samelock,
+                                         lock_dataset=self.get_dataset_Lock_instance(),
+                                         lock_database=self.get_database_Lock_instance())  # 7
 
     @property
     def object_name(self):
@@ -120,32 +140,137 @@ class Posterior(DatasetDbAttr, Name, RunFolder):
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(category)
-        self.dataset_db.freeze = True
         self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
+                                      instmodel4dataset=self.instmodel4dataset,
                                       **kwargs)
+        self.lock()
         logger.info("Model defined with name {} !".format(self.model.name))
+
+    def lock(self):
+        """Lock the dataset_db and update instmodel4dataset attributes.
+
+        1. update datasets in instmodel4dataset attribute in model.
+        2. update datasets in model.
+        3. update datasets in datasim_db.
+        4. update datasets in lnprior_db.
+        5. update datasets in lnlike_db.
+        6. update datasets in lnpost_db.
+        7. Lock everything
+        """
+        list_datasetnames = self.dataset_db.get_datasetnames()
+        self.instmodel4dataset.update_datasets(list_datasetnames)  # 1.
+        self.model.init_missinginstmodels()  # 2. TODO: It should be more, see init of model
+        self.datasimulators.update_datasets()  # 3.
+        self.lnpriors.update_datasets()  # 4.
+        self.lnlikelihoods.update_datasets()  # 5.
+        self.lnposteriors.update_datasets()  # 6.
+        super(Posterior, self).dataset_lock()  # 7.
+
+    def unlock(self):
+        """Unlock the dataset_db."""
+        super(Posterior, self).unlock()
+
+    @property
+    def islocked_dataset_db(self):
+        """Return True if dataset_db is frozen."""
+        return self.dataset_db.locked
 
     def rm_model(self):
         """Remove a model."""
         self.__model = None
-        self.dataset_db.freeze = False
+        self.dataset_db.unlock()
 
     @property
     def isdefined_model(self):
         """Return true if a model is defined."""
         return self.model is not None
 
-    def get_lnprior():
-        """Get lnprior from a model and store it into lnprior."""
-        raise NotImplementedError
+    @property
+    def lnpriors(self):
+        """Return the current content lnprior database."""
+        return self.__lnprior_db
 
-    def get_lnlike():
-        """Get lnlike from a model and store it into lnlike."""
-        raise NotImplementedError
+    def get_individal_lnpriors(self):
+        """Get individual lnpriors from the model and store them into lnpriors."""
+        if self.islocked_dataset_db:
+            self.lnprior_db.individual = self.model.create_individual_lnpriors()
+        else:
+            raise AssertionError(self.msg_err_datasetdb_notlocked)
 
-    def get_lnpost():
-        """Get lnpost from a model and store it into lnpost."""
-        raise NotImplementedError
+    @property
+    def datasimulators(self):
+        """Return the current content lnprior database."""
+        return self.__datasim_db
+
+    def get_datasimulators(self):
+        """Get datasimulators from the model and store them into datasimulators."""
+        if self.islocked_dataset_db:
+            self.__datasim_db.instrument_db.update(self.model.create_datasimulators())
+        else:
+            raise AssertionError(self.msg_err_datasetdb_notlocked)
+
+    @property
+    def lnlikelihoods(self):
+        """Return the current content lnprior database."""
+        return self.__lnlike_db
+
+    def get_lnlikelihoods(self, category="wo jitter"):
+        """Get lnlikes from the model and store them into lnlikelihoods."""
+        if self.islocked_dataset_db:
+            self.__lnlike_db.instrument_db = (self.model.
+                                              create_lnlikelihoods(datasim_db=self.__datasim_db,
+                                                                   category=category))
+        else:
+            raise AssertionError(self.msg_err_datasetdb_notlocked)
+
+    @property
+    def lnposteriors(self):
+        """Return the current content lnprior database."""
+        return self.__lnpost_db
+
+    def get_lnposteriors_lnpriors(self):
+        """Get lnposts from the model and store them into lnposteriors."""
+        if self.islocked_dataset_db:
+            (self.__lnpost_db,
+             self.__lnprior_db["instrument"]) = (self.create_lnposteriors_lnpriors(
+                                                 lnlike_db=self.lnlikelihoods,
+                                                 datasim_db=self.datasimulators))
+        else:
+            raise AssertionError(self.msg_err_datasetdb_notlocked)
+
+    def _create_lnposterior_lnprior(self, lnlikelihood):
+                            # **kwarg_data):
+        """Return the log posterior function."""
+        arg_list = lnlikelihood.arg_list.copy()
+        joint_lnprior = (self.model.
+                         create_joint_lnprior(list_paramnames=arg_list["params"],
+                                              individual_priors=self.lnpriors["individual"]))
+
+        def lnpost(p, data, data_err, **kwarg_data):
+            return (lnlikelihood.function(p, data, data_err, **kwarg_data) +
+                    joint_lnprior.function(p))
+
+        return DocFunction(function=lnpost, arg_list=arg_list), joint_lnprior
+
+    def create_lnposteriors_lnpriors(self, lnlike_db=None, datasim_db=None, category="wo jitter"):
+        """Return the posterior for each instrument model used."""
+        db_post = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
+                               instmodel4dataset=self.model.instmodel4dataset, instordered=False)
+        db_prior = self.model_create_database_func_instlevel(object_stored="prior",
+                                                             database_name=self.object_name)
+        if lnlike_db is None:
+            lnlike_db = self.model.create_lnlikelihoods(datasim_db=datasim_db, category="wo jitter")
+        for inst_cat in lnlike_db:
+            for inst_name in lnlike_db[inst_cat]:
+                for inst_model in lnlike_db[inst_cat][inst_name]:
+                    db_post[inst_cat][inst_name][inst_model] = {}
+                    db_prior[inst_cat][inst_name][inst_model] = {}
+                    for obj in lnlike_db[inst_cat][inst_name][inst_model]:
+                        lnlike = lnlike_db[inst_cat][inst_name][inst_model][obj]
+                        lnpost, lnprior = self._create_lnposterior_lnprior(lnlikelihood=lnlike)
+                        db_post[inst_cat][inst_name][inst_model][obj] = lnpost
+                        db_prior[inst_cat][inst_name][inst_model][obj] = lnprior
+        return db_post, db_prior
 
     # Code to add all datasets in a folder
     # # Examine data folder to look for available datasets

@@ -11,7 +11,6 @@ The objective of this package is to provides the core DatasetDatabase class.
     -
 """
 from logging import getLogger
-from collections import defaultdict
 from os.path import join, isfile
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
@@ -49,7 +48,7 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
 
 class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
     """docstring for DatasetDatabase."""
-    def __init__(self, object_name):
+    def __init__(self, object_name, lock=None):
         # 1.
         Name.__init__(self, name=object_name)
         # 2.
@@ -57,9 +56,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
         # 3.
         DataFolder.__init__(self, data_folder=None)
         # 4.
-        Nesteddict_wfixellvlnb.__init__(self, nb_lvl=3, ordered=True)
-        # 5.
-        self.freeze = False
+        Nesteddict_defgetitem.__init__(self, nb_lvl=3, lock=lock, ordered=True)
 
     def __missing__(self, key, cls=None):
         return super(DatasetDatabase, self).__missing__(key, cls=Nesteddict_defgetitem)
@@ -68,18 +65,6 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
     def object_name(self):
         """Return the name of the object studied."""
         return self.name
-
-    @property
-    def freeze(self):
-        """Return True is the database in frozen."""
-        return self.__freeze
-
-    @freeze.setter
-    def freeze(self, boolean):
-        """Return True is the database in frozen."""
-        if not(isinstance(boolean, bool)):
-            raise ValueError("freeze should be a boolean")
-        self.__freeze = boolean
 
     def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.
@@ -90,8 +75,8 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             force   : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        if self.freeze:
-            raise ValueError("The dataset dabase has been freezed you can not add a new dataset.")
+        if self.locked:
+            raise ValueError("The dataset dabase has been locked you can not add a new dataset.")
         inst_category = dataset.instrument.category
         inst_name = dataset.instrument.name
         number = dataset.number
@@ -143,8 +128,8 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             number      : int, (default: 0)
                 Number associated to the dataset you want to remove.
         """
-        if self.freeze:
-            raise ValueError("The dataset dabase has been freezed you can not remove datasets.")
+        if self.locked:
+            raise ValueError("The dataset dabase has been locked you can not remove datasets.")
         self[inst_category][inst_name].pop(str(number))
         if len(self[inst_category][inst_name]) == 0:
             self[inst_category].pop(inst_name)
@@ -292,7 +277,7 @@ class DatasetDbAttr(object):
     @dataset_db.setter
     def dataset_db(self, dataset_db):
         """Return the dataset_datase."""
-        if self.hasdataset_db:
+        if self.isdefined_datasetdb:
                 logger.warning("The dataset database has already been defined for instance {} of "
                                "class {}. One should not redefined it, so set command is ignored."
                                "".format(self.name, self.__class__.__name__))
@@ -310,7 +295,7 @@ class DatasetDbAttr(object):
                     raise ValueError("dataset_db should be a DatasetDatabase instance")
 
     @property
-    def hasdataset_db(self):
+    def isdefined_datasetdb(self):
         """Return True if a dataset_db is defined."""
         if hasattr(self, "dataset_db"):
             return self.dataset_db is not None

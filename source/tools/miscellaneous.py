@@ -63,8 +63,8 @@ def interpret_data_filename(data_file_name):
     cuts = data_file_name.split("_")   # List of fields that were separated by "_"
     cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
     if len(cuts) < 3 or len(cuts) > 4:
-        logging.warning("Data file name not recognized. Should be in the format "
-                        "category_target_instrument(_number).txt. Got: {}".format(data_file_name))
+        logger.warning("Data file name not recognized. Should be in the format "
+                       "category_target_instrument(_number).txt. Got: {}".format(data_file_name))
         return None
     result = {"object": cuts[1],
               "inst_category": cuts[0],
@@ -74,6 +74,7 @@ def interpret_data_filename(data_file_name):
     elif len(cuts) == 4:
         result["number"] = cuts[3]
     return result
+
 
 def define_folder_withdefault(main_default_folder, object_name, folder="default"):
     """Return the selected folder.

@@ -11,8 +11,9 @@ The objective of this package is to provides a toolbox to manipulate dico_datase
     -
 """
 from logging import getLogger
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from copy import deepcopy
+from .lockable_dict import LockableDict, Lock
 
 
 ## logger object
@@ -101,42 +102,37 @@ def add_obj_in_result(result, obj, lvl1_key=None, lvl2_key=None, lvl3_key=None,
     return result
 
 
-class Nesteddict(dict):
+class Nesteddict(LockableDict):
+    def __init__(self, ordered=False, lock=None):
+        super(Nesteddict, self).__init__(ordered=ordered, lock=lock)
+
     def __missing__(self, key):
-        value = self[key] = type(self)()  # retain local pointer to value
-        return value                      # faster to return than dict lookup
+        value = self[key] = type(self)(ordered=self.ordered, lock=self.get_Lock_instance())
+        return value
 
 
-class NestedOrdrereddict(OrderedDict, Nesteddict):
-    pass
-
-
-class Nesteddict_wlvl(NestedOrdrereddict):
+class Nesteddict_wlvl(Nesteddict):
     """docstring for Nesteddict_wlvl."""
-    def __init__(self, lvl=0, ordered=False):
-        if ordered:
-            super(Nesteddict_wlvl, self).__init__()
-        else:
-            super(NestedOrdrereddict, self).__init__()
+    def __init__(self, lvl=0, ordered=False, lock=None):
+        super(Nesteddict_wlvl, self).__init__(ordered=ordered, lock=lock)
         self.__lvl = lvl
-        self.__ordered = ordered
 
     def __missing__(self, key, cls=None):
         # for Inheritance when you don't to create instance of the subclass
         if cls is None:
             cls = type(self)
         # retain local pointer to value
-        value = self[key] = cls(self.lvl + 1, ordered=self.ordered)
+        value = self[key] = cls(self.lvl + 1, ordered=self.ordered, lock=self.get_Lock_instance())
         return value                      # faster to return than dict lookup
 
     def __copy__(self):
-        new = type(self)(lvl=self.lvl, ordered=self.ordered)
+        new = type(self)(lvl=self.lvl, ordered=self.ordered, lock=self.lock)
         for key, value in self.items():
             new[key] = value
         return new
 
     def __deepcopy__(self, memo={}):
-        new = type(self)(lvl=self.lvl, ordered=self.ordered)
+        new = type(self)(lvl=self.lvl, ordered=self.ordered, lock=self.lock)
         for key, value in self.items():
             new[key] = deepcopy(value, memo)
         return new
@@ -146,16 +142,11 @@ class Nesteddict_wlvl(NestedOrdrereddict):
         """Return the current level number."""
         return self.__lvl
 
-    @property
-    def ordered(self):
-        """Return the current level number."""
-        return self.__lvl
-
 
 class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
     """docstring for Nesteddict_wfixellvlnb."""
-    def __init__(self, nb_lvl, lvl=0, ordered=False, default=None):
-        super(Nesteddict_wfixellvlnb, self).__init__(lvl=lvl, ordered=ordered)
+    def __init__(self, nb_lvl, lvl=0, ordered=False, default=None, lock=None):
+        super(Nesteddict_wfixellvlnb, self).__init__(lvl=lvl, ordered=ordered, lock=lock)
         self.__nb_lvl = nb_lvl
         self.__default = default
 
@@ -164,9 +155,10 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
             cls = type(self)
         if self.lvl < (self.nb_lvl - 1):
             value = self[key] = cls(nb_lvl=self.nb_lvl, lvl=self.lvl + 1,
-                                    ordered=self.ordered, default=self.default)
+                                    ordered=self.ordered, default=self.default,
+                                    lock=self.get_Lock_instance())
         else:
-            value = self.setdefault(key, self.default)
+            value = self[key] = self.default
         return value
 
     def __copy__(self):

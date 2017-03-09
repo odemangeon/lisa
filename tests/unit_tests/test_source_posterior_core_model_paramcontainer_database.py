@@ -48,13 +48,16 @@ class TestMethods(TestCase):
 
     def test_operations_standardparamcontainers(self):
         self.assertCountEqual(self.parcont_db.paramcont_categories,
-                              [self.star_A.category, self.planet_b.category])
-        self.assertDictEqual(self.parcont_db.nb_of_paramcontainers, {self.star_A.category: 1,
+                              [instrument_model_category, self.star_A.category,
+                               self.planet_b.category])
+        self.assertDictEqual(self.parcont_db.nb_of_paramcontainers, {instrument_model_category: 0,
+                                                                     self.star_A.category: 1,
                                                                      self.planet_b.category: 2})
         self.parcont_db.rm_paramcontainer(self.star_A.name, self.star_A.category)
         self.assertCountEqual(self.parcont_db.paramcont_categories,
-                              [self.planet_b.category])
-        self.assertDictEqual(self.parcont_db.nb_of_paramcontainers, {self.planet_b.category: 2})
+                              [instrument_model_category, self.planet_b.category])
+        self.assertDictEqual(self.parcont_db.nb_of_paramcontainers, {instrument_model_category: 0,
+                                                                     self.planet_b.category: 2})
         self.assertTrue(self.parcont_db.isavailable_paramcontainer(self.planet_b.name,
                                                                    self.planet_b.category))
         self.assertFalse(self.parcont_db.isavailable_paramcontainer(self.star_A.name,

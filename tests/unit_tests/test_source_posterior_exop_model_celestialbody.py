@@ -33,6 +33,5 @@ class TestMethods(unittest.TestCase):
         star_instance.R
 
 
-
 if __name__ == '__main__':
     unittest.main()

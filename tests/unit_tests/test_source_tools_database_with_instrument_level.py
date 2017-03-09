@@ -64,6 +64,16 @@ class TestMethods(TestCase):
         self.assertEqual(self.db["RV"]["HARPS_default"], "test")
         self.assertEqual(self.db["HARPS"]["default"], "test")
 
+    def test_hasatleast1instmod(self):
+        self.db["RV"]["HARPS"]["default"] = "test"
+        self.db["RV"]["SOPHIE"]
+        self.assertTrue(self.db.hasatleast1instmod())
+        self.assertTrue(self.db.hasatleast1instmod(inst_name="HARPS", inst_cat="RV"))
+        self.assertTrue(self.db.hasatleast1instmod(inst_cat="RV"))
+        self.assertTrue(self.db.hasatleast1instmod(inst_name="HARPS"))
+        self.assertFalse(self.db.hasatleast1instmod(inst_name="SOPHIE"))
+        self.assertFalse(self.db.hasatleast1instmod(inst_name="LC"))
+
 
 if __name__ == '__main__':
     main()

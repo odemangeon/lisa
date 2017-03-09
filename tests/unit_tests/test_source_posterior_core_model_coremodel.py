@@ -11,6 +11,8 @@ import source.posterior.core.model.core_model as cmdl
 from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
 from source.posterior.core.prior.manager_prior import Manager_Prior
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+from source.posterior.core.dataset_and_instrument.instrument import instrument_model_category
+
 
 log_level = DEBUG
 ch_level = INFO
@@ -65,10 +67,12 @@ class TestMethods(TestCase):
         self.assertTrue(mdl_instance.isavailable_paramcontainer(name="A", category="stars"))
         self.assertTrue(mdl_instance.isavailable_paramcontainer(name="b", category="planets"))
         self.assertTrue(mdl_instance.isavailable_paramcontainer(name="c", category="planets"))
-        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {"stars": 1, "planets": 2})
+        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {instrument_model_category: 0,
+                                                                  "stars": 1, "planets": 2})
         mdl_instance.rm_paramcontainer(name="c", category="planets")
         self.assertFalse(mdl_instance.isavailable_paramcontainer(name="c", category="planets"))
-        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {"stars": 1, "planets": 1})
+        self.assertDictEqual(mdl_instance.nb_of_paramcontainers, {instrument_model_category: 0,
+                                                                  "stars": 1, "planets": 1})
 
 
 if __name__ == '__main__':

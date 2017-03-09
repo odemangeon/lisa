@@ -26,6 +26,10 @@ class ParamContainerDatabase(object):
     def __init__(self):
         # super(ParamContainerDatabase, self).__init__()
         self._paramcontainers = OrderedDict()
+        # Init the instruments
+        self.paramcontainers.update({instrument_model_category:
+                                     DatabaseInstLevel(object_stored="instmodobj",
+                                                       database_name=self.name)})
 
     @property
     def name(self):
@@ -111,10 +115,6 @@ class ParamContainerDatabase(object):
         if not(isinstance(instrument, Core_Instrument)):
             raise ValueError("instrument should be an instance of a subclass of "
                              "Core_Instrument.")
-        if instrument_model_category not in self.paramcontainers:
-            self.paramcontainers.update({instrument_model_category:
-                                         DatabaseInstLevel(object_stored="instmod_obj",
-                                                           database_name=self.name)})
         inst_cat = instrument.category
         inst_name = instrument.name
         inst_model_obj = instrument.create_model_instance(name=name)
@@ -140,16 +140,6 @@ class ParamContainerDatabase(object):
     def instruments_categories(self):
         """Return the list of instruments categories in this ParamContainerDatabase."""
         return self.instruments.inst_categories
-
-    # def get_instmodel_obj(self, inst_model=None, inst_name=None, inst_cat=None, **kwargs):
-    #     """Return an instrument model in the paramcontainer.
-    #
-    #     Your can provide and the instrument name and the instrument model name through inst_model
-    #     and inst_name. You can also provide them through instmod_fullname = "inst_model"_"inst_name"
-    #     """
-    #     inst_model, inst_name, inst_cat = check_args(inst_model=inst_model, inst_name=inst_name,
-    #                                                  inst_cat=inst_cat, **kwargs)
-    #     self.instruments[inst_cat][inst_name][inst_model]
 
     def get_instmodel_objs(self, inst_model=None, inst_name=None, inst_cat=None,
                            sortby_instcat=False, sortby_instname=False, sortby_instmodel=False,
@@ -200,3 +190,7 @@ class ParamContainerDatabase(object):
             else:
                 result.append(param.name)
         return result
+
+    def instrumenthasatleast1model(self, inst_name, inst_cat=None):
+        """Return True if there is at least one instrument model for the instrument."""
+        return self.instruments.hasatleast1instmod(inst_name=inst_name, inst_cat=inst_cat)

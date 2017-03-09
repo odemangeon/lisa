@@ -14,10 +14,10 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-from collections import defaultdict
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
+from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from ..paramcontainer import Core_ParamContainer
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..dataset_and_instrument.dataset_database import DatasetDbAttr
@@ -29,10 +29,7 @@ from ..likelihood import LikelihoodCreator
 from ..prior.core_prior import Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.miscellaneous import interpret_data_filename
 from ....tools.default_folders_data_run import RunFolder
-from ....tools.database_with_instrument_level import DatabaseInstLevel
-from ....tools.dico_database import init_result, add_obj_in_result
 
 
 ## Logger
@@ -43,13 +40,16 @@ manager_inst.load_setup()
 
 
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
-                 LikelihoodCreator, DatasimulatorCreator,
+                 Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
                  metaclass=MandatoryReadOnlyAttr):
 
     __mandatoryattrs__ = ["category"]
 
+    ## Key to use in DatabaseFunc for the function that will concern the whole object to model
+    key_whole = "whole"
+
     """docstring for Core_Model abstract class."""
-    def __init__(self, name, dataset_db, run_folder=None):
+    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This __init__ does:
@@ -65,16 +65,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         Core_ParamContainer.__init__(self, name)
         # 2.
         DatasetDbAttr.__init__(self, dataset_db)
-        if not(self.hasdataset_db):
+        if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
         # 3.
         RunFolder.__init__(self, run_folder=run_folder)
         # 4.
         ParamContainerDatabase.__init__(self)
         # 5.
-        self.__init_instruments_models()
+        self.init_missinginstmodels()
         # 6.
-        self.__instmodel4dataset = dict.fromkeys(self.dataset_db.get_datasetnames(), "default")
+        if instmodel4dataset is None:
+            instmodel4dataset = Instmodel4Dataset(list_datasetnames=(self.dataset_db.
+                                                                     get_datasetnames()))
+        Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
+                                       lock="instmodel4dataset")
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -83,51 +87,31 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Return the name of the object studied."""
         return self.name
 
-    @property
-    def instmodel4dataset(self):
-        """Dictionnary giving which instrument model to use for which dataset."""
-        return self.__instmodel4dataset
+    def init_missinginstmodels(self):
+        """If necessary, add a default instrument model for each instrument used.
 
-    @property
-    def name_instmodel_used(self):
-        """Return a dict which for each instrument name give the instrument models to use."""
-        result = defaultdict(list)
-        for dataset_name, mod_name in self.instmodel4dataset.items():
-            file_info = interpret_data_filename(dataset_name)
-            result[file_info["inst_name"]].append(mod_name)
-        return result
-
-    def get_instmodel_used(self, inst_name=None, inst_cat=None,
-                           sortby_instcat=False, sortby_instname=False):
-        """Return the dictionnary of instrument models used."""
-        result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
-                             default_value=[])
-        for mod_fullname in self.instmodel4dataset.values():
-            inst_model_obj = self.instruments[mod_fullname]
-            inst_model = inst_model_obj.name
-            inst_cat = inst_model_obj.instrument.category
-            inst_name = inst_model_obj.instrument.name
-            add_obj_in_result(result, inst_model_obj, lvl3_key=inst_model, lvl2_key=inst_name,
-                              lvl1_key=inst_cat,
-                              sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
-        return result
-
-    def __init_instruments_models(self):
-        """Add an instrument model for each instrument used in the dataset database."""
-        for inst in self.dataset_db.get_instruments():
-            self.add_an_instrument_model(inst, name="default")
+        1. For each instrument used in the dataset database
+            2. Check if there is at least one instrument model associated
+                2a. If no, add one called default
+                2b. If yes, do nothing
+        """
+        for inst in self.dataset_db.get_instruments():  # 1.
+            if not(self.instrumenthasatleast1model(inst_name=inst.name,
+                                                   inst_cat=inst.category)):  # 2.
+                self.add_an_instrument_model(inst, name="default")
 
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters."""
         result = []
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
-        result.extend(ParamContainerDatabase.get_list_params(self, main=main, free=free,
-                                                             inst_models=self.name_instmodel_used))
+        result.extend(ParamContainerDatabase.
+                      get_list_params(self, main=main, free=free,
+                                      inst_models=self.name_instmodels_used(sortby_instname=True)))
         # for paramcont_cat in self.paramcontainers_categories:
         #     if paramcont_cat == instmod_cat:
         #         result.extend(ParamContainerDatabase.
         #                       get_list_params(self, main=main, free=free,
-        #                                       inst_models=self.name_instmodel_used))
+        #                                       inst_models=self.name_instmodels_used))
         #     else:
         #         for param_cont in self.paramcontainers[paramcont_cat].values():
         #             result.extend(param_cont.get_list_params(main=main, free=free))
@@ -142,10 +126,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             else:
                 result.append(param.name)
         return result
-
-    def _create_database_func_instlevel(object_name, database_name):
-        """Create a database to store the datasimulator, likelihood, posterior functions."""
-        return DatabaseInstLevel(object_name=object_name, database_name=database_name)
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.

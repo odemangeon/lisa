@@ -64,10 +64,12 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                   "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
                   }
 
-    def __init__(self, name, dataset_db, transit_model=None, ld_model=None, rv_model=None,
+    def __init__(self, name, dataset_db, instmodel4dataset=None,
+                 transit_model=None, ld_model=None, rv_model=None,
                  stars=None, planets=None, run_folder=None):
         """docstring Planet init method."""
-        super(GravGroup, self).__init__(name, dataset_db, run_folder)
+        super(GravGroup, self).__init__(name, dataset_db, run_folder,
+                                        instmodel4dataset=instmodel4dataset)
         if "LC" in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
@@ -265,11 +267,11 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         param_nb = {}
         arg_list = {}
         function_name = "RV_simulator"
-        text_def_func[self.name] = "def {}(p, t):\n    return ".format(function_name)
-        arg_list[self.name] = OrderedDict()
-        arg_list[self.name]["param"] = []
-        arg_list[self.name]["kwargs"] = []
-        param_nb[self.name] = 0
+        text_def_func[self.key_whole] = "def {}(p, t):\n    return ".format(function_name)
+        arg_list[self.key_whole] = OrderedDict()
+        arg_list[self.key_whole]["param"] = []
+        arg_list[self.key_whole]["kwargs"] = []
+        param_nb[self.key_whole] = 0
         text_mean_RV = ""
         inst_name = inst_model.instrument.name
         RVrefglobal_instname = self.RV_globalref_instname
@@ -279,44 +281,44 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             instmod_gobalRVref = self.instruments["RV"][RVrefglobal_instname][RVrefglobal_modname]
             if instmod_gobalRVref.DeltaRV.main:
                 if instmod_gobalRVref.DeltaRV.free:
-                    text_mean_RV = "p[{}] + ".format(param_nb[self.name])
-                    param_nb[self.name] += 1
-                    arg_list[self.name]["param"].append(instmod_gobalRVref.DeltaRV.full_name)
+                    text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
+                    param_nb[self.key_whole] += 1
+                    arg_list[self.key_whole]["param"].append(instmod_gobalRVref.DeltaRV.full_name)
                 else:
                     text_mean_RV = "{} + ".format(instmod_gobalRVref.DeltaRV.value)
         if inst_model.name != RVref4inst_modname:
             instmod_RVref4inst = self.self.instruments["RV"][inst_name][RVref4inst_modname]
             if instmod_RVref4inst.DeltaRV.main:
                 if instmod_RVref4inst.DeltaRV.free:
-                    text_mean_RV = "p[{}] + ".format(param_nb[self.name])
-                    param_nb[self.name] += 1
-                    arg_list[self.name]["param"].append(instmod_RVref4inst.DeltaRV.full_name)
+                    text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
+                    param_nb[self.key_whole] += 1
+                    arg_list[self.key_whole]["param"].append(instmod_RVref4inst.DeltaRV.full_name)
                 else:
                     text_mean_RV = "{} + ".format(instmod_RVref4inst.DeltaRV.value)
         if star.v0.free:
-            text_mean_RV = "p[{}] + ".format(param_nb[self.name])
-            param_nb[self.name] += 1
-            arg_list[self.name]["param"].append(star.v0.full_name)
+            text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
+            param_nb[self.key_whole] += 1
+            arg_list[self.key_whole]["param"].append(star.v0.full_name)
         else:
             text_mean_RV = "{} + ".format(star.v0.value)
-        text_def_func[self.name] += text_mean_RV
+        text_def_func[self.key_whole] += text_mean_RV
         if inst_model.drift.main:
             if inst_model.drift.free:
-                text_param_drift = "p[{}] * t + ".format(param_nb[self.name])
-                param_nb[self.name] += 1
-                arg_list[self.name]["param"].append(inst_model.drift.full_name)
+                text_param_drift = "p[{}] * t + ".format(param_nb[self.key_whole])
+                param_nb[self.key_whole] += 1
+                arg_list[self.key_whole]["param"].append(inst_model.drift.full_name)
             else:
                 text_param_drift = "{} * t + ".format(inst_model.drift.value)
-            text_def_func[self.name] += text_param_drift
-        param_nb_before = param_nb[self.name]
-        arg_list_before = deepcopy(arg_list[self.name])
+            text_def_func[self.key_whole] += text_param_drift
+        param_nb_before = param_nb[self.key_whole]
+        arg_list_before = deepcopy(arg_list[self.key_whole])
         for i, planet in enumerate(self.planets.values()):
-            text_def_func[planet.full_name] = text_def_func[self.name]
-            arg_list[planet.full_name] = arg_list_before
-            param_nb[planet.full_name] = param_nb_before
+            text_def_func[planet.name] = text_def_func[self.key_whole]
+            arg_list[planet.name] = arg_list_before
+            param_nb[planet.name] = param_nb_before
             text_pl_rv_array = " + pl_rv_array(t, 0."
-            text_def_func[planet.full_name] += text_pl_rv_array
-            text_def_func[self.name] += text_pl_rv_array
+            text_def_func[planet.name] += text_pl_rv_array
+            text_def_func[self.key_whole] += text_pl_rv_array
             for param in [planet.K, [planet.ecosw, planet.esinw], planet.t0, planet.P]:
                 if param == [planet.ecosw, planet.esinw]:
                     test_param = (", getomega_fast({0[0]}, {0[1]}), "
@@ -326,12 +328,12 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                     for par in param:
                         if par.free:
                             text = "p[{}]"
-                            text_sys.append(text.format(param_nb[self.name]))
-                            param_nb[self.name] += 1
-                            arg_list[self.name]["param"].append(par.full_name)
-                            text_planet.append(text.format(param_nb[planet.full_name]))
-                            param_nb[planet.full_name] += 1
-                            arg_list[planet.full_name]["param"].append(par.full_name)
+                            text_sys.append(text.format(param_nb[self.key_whole]))
+                            param_nb[self.key_whole] += 1
+                            arg_list[self.key_whole]["param"].append(par.full_name)
+                            text_planet.append(text.format(param_nb[planet.name]))
+                            param_nb[planet.name] += 1
+                            arg_list[planet.name]["param"].append(par.full_name)
                         else:
                             text = "{}"
                             text_sys.append(text.format(par.value))
@@ -340,21 +342,21 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                     test_param = ", {}"
                     if param.free:
                         text = "p[{}]"
-                        text_sys = text.format(param_nb[self.name])
-                        param_nb[self.name] += 1
-                        arg_list[self.name]["param"].append(param.full_name)
-                        text_planet = text.format(param_nb[planet.full_name])
-                        param_nb[planet.full_name] += 1
-                        arg_list[planet.full_name]["param"].append(param.full_name)
+                        text_sys = text.format(param_nb[self.key_whole])
+                        param_nb[self.key_whole] += 1
+                        arg_list[self.key_whole]["param"].append(param.full_name)
+                        text_planet = text.format(param_nb[planet.name])
+                        param_nb[planet.name] += 1
+                        arg_list[planet.name]["param"].append(param.full_name)
                     else:
                         text_sys = "{}".format(param.value)
                         text_planet = text_sys
-                text_def_func[self.name] += test_param.format(text_sys)
-                text_def_func[planet.full_name] += test_param.format(text_planet)
-            text_def_func[self.name] += ")"
-            text_def_func[planet.full_name] += ")"
-            arg_list[planet.full_name]["kwargs"].append("time")
-        arg_list[self.name]["kwargs"].append("time")
+                text_def_func[self.key_whole] += test_param.format(text_sys)
+                text_def_func[planet.name] += test_param.format(text_planet)
+            text_def_func[self.key_whole] += ")"
+            text_def_func[planet.name] += ")"
+            arg_list[planet.name]["kwargs"].append("t")
+        arg_list[self.key_whole]["kwargs"].append("t")
         logger.debug("Dictionnary containing the texts of the futur datasimulator functions :\n"
                      "{}".format(text_def_func))
         dico_docf = dict.fromkeys(text_def_func.keys(), None)

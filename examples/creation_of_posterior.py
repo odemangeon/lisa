@@ -15,7 +15,7 @@ import source.posterior.core.posterior as cpost
 logger = logging.getLogger()
 
 level_log = logging.DEBUG
-level_hand = logging.DEBUG
+level_hand = logging.INFO
 
 if logger.level != level_log:
     logger.setLevel(level_log)
@@ -59,8 +59,5 @@ input("Modifiy the paramerisation file")
 logger.info("7. Load the paramerisation file")
 post_instance.model.load_parameter_file()
 
-logger.info("8. Create prior functions")
-joint_lnprior, lnpriors = (post_instance.model.
-                           create_joint_lnprior(post_instance.model.
-                                                get_list_paramnames(main=True, free=True,
-                                                                    full_name=True)))
+logger.info("8. Create datasimulator functions")
+post_instance.get_datasimulators()

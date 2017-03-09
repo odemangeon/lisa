@@ -87,6 +87,10 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
                 result.append(param.name)
         return result
 
+    def has_parameter(self, name, main=False, free=False, full_name=False):
+        """Return True in the parameter exists."""
+        return name in self.get_list_paramnames(main=main, free=free, full_name=full_name)
+
     @property
     def paramfile_info(self):
         """Information about the content of the param file"""

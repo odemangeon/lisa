@@ -7,6 +7,7 @@ from unittest import TestCase, main
 from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
+# from ipdb import set_trace
 
 import os
 import numpy as np
@@ -105,8 +106,9 @@ class TestMethods(TestCase):
         self.assertEqual(gravgroup_model.paramcontainers["planets"]["c"].full_name, "K2-19_c")
         self.assertEqual(gravgroup_model.paramcontainers["planets"]["c"].full_name_code, "K219_c")
 
-    def test_parmetrisationfile(self):
+    def test_parametrisationfile(self):
         logger.info("\n\nStart test_parmetrisationfile")
+        # set_trace()
         gravgroup_model = exomdl.GravGroup(name="K2-19", dataset_db=self.dataset_db_RVonly,
                                            rv_model="ajplanet",
                                            stars=1, planets=2)
@@ -133,6 +135,8 @@ class TestMethods(TestCase):
         logger.info("Parametrisation : {}"
                     "".format(gravgroup_model.paramcontainers["planets"]["c"].
                               get_list_params(main=True)))
+        logger.info("List dataset names in model.instmodel4dataset: {}"
+                    "".format(gravgroup_model.instmodel4dataset.list_datasets))
         logger.info("paramfile_section :\n{}".format(gravgroup_model.get_paramfile_section()))
 
     def test_creation_datasimulator(self):

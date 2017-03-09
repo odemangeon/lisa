@@ -11,7 +11,6 @@ from os import remove
 # from ipdb import set_trace
 from numpy import zeros
 
-from source.posterior.core.prior.core_prior import Prior
 from source.posterior.core.prior.manager_prior import Manager_Prior
 from source.posterior.exoplanet.model.gravgroup import GravGroup
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
@@ -70,11 +69,17 @@ class TestMethods(TestCase):
         logger.info("name: {}".format(gravgroup_model.name))
         gravgroup_model.apply_RV_EXOFAST_param()
         logger.info("All params: {}".format(gravgroup_model.get_list_paramnames(full_name=True)))
-        logger.info("Main params: {}".format(gravgroup_model.get_list_paramnames(main=True, full_name=True)))
-        logger.info("Main free params: {}".format(gravgroup_model.get_list_paramnames(main=True, free=True, full_name=True)))
+        logger.info("Main params: {}".format(gravgroup_model.
+                                             get_list_paramnames(main=True, full_name=True)))
+        logger.info("Main free params: {}".format(gravgroup_model.
+                                                  get_list_paramnames(main=True, free=True,
+                                                                      full_name=True)))
         priors = gravgroup_model.create_individual_lnpriors()
         logger.info("priors['marginal'].keys(): {}".format(list(priors['marginal'].keys())))
-        joint_prior, priors = gravgroup_model.create_joint_lnprior(gravgroup_model.get_list_paramnames(main=True, free=True, full_name=True))
+        joint_prior = (gravgroup_model.
+                       create_joint_lnprior(gravgroup_model.
+                                            get_list_paramnames(main=True, free=True,
+                                                                full_name=True)))
         param_val = zeros(len(gravgroup_model.get_list_paramnames(main=True, full_name=True)))
         logger.info("param_val: {}".format(param_val))
         logger.info("joint prior for param_val: {}".format(joint_prior(param_val)))
