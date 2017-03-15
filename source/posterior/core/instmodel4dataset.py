@@ -74,6 +74,12 @@ class Instmodel4Dataset(LockableDict):
                     result.append("{}_{}".format(file_info["inst_name"], mod_name))
         return result
 
+    def get_instmod_fullname(self, dataset_name):
+        """Return the full name of the instrument model used for the specified dataset."""
+        instmod_name = self[dataset_name]
+        file_info = interpret_data_filename(dataset_name)
+        return "{}_{}".format(file_info["inst_name"], instmod_name)
+
     @property
     def list_datasets(self):
         """Return the lsit of dataset names currently in instmodel4dataset attribute."""
@@ -207,6 +213,21 @@ class Instmodel4DatasetAttr(object):
         """
         return self.instmodel4dataset.name_instmodels_used(inst_name=inst_name,
                                                            sortby_instname=sortby_instname)
+
+    def get_instmod_fullname(self, dataset_name):
+        """Return the full name of the instrument model used for the specified dataset.
+
+        For more details see instmodel4dataset.name_instmodels_used
+        """
+        return self.get_instmod_fullname(dataset_name=dataset_name)
+
+    def get_instmod(self, dataset_name):
+        """Return the instrument model used for the specified dataset.
+
+        For more details see instmodel4dataset.name_instmodels_used
+        """
+        instmodel_fullname = self.get_instmod_fullname(dataset_name=dataset_name)
+        return self.instruments[instmodel_fullname]
 
     @property
     def __isdefined_instmodel4dataset(self):

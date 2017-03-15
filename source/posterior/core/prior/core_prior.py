@@ -15,6 +15,7 @@ from logging import getLogger
 from collections import OrderedDict
 
 from .manager_prior import Manager_Prior
+from ..database_func import DatabaseFunc, DatabaseInstLvlDataset
 from ....tools.function_w_doc import DocFunction
 
 ## logger object
@@ -87,6 +88,9 @@ class Prior(object):
                              "joint parameter: {}".format(param_name))
                 raise NotImplementedError("Joint prior as individual prior for parameters is not "
                                           "implemented yet.")
+        arg_list = OrderedDict()
+        arg_list["param"] = list_paramnames.copy()
+        arg_list["kwargs"] = []
 
         def joint_lnprior(param_values):
             res = 0
@@ -94,4 +98,65 @@ class Prior(object):
                 res += ln_prior(param_values[i])
             return res
 
-        return joint_lnprior
+        docf = DocFunction(function=joint_lnprior, arg_list=arg_list)
+
+        return docf
+
+    def create_lnpriors(self, lnlike_db, individual_priors=None, affectinstmodel4dataset=False,
+                        lock_db=False):
+        """Create the joint prior function from the list of parameters of the lnlike functions."""
+        if individual_priors is None:
+            individual_priors = self.create_individual_lnpriors()
+        if affectinstmodel4dataset:
+            instmodel4dataset = self.instmodel4dataset.copy()
+        else:
+            instmodel4dataset = None
+        db = DatabaseInstLvlDataset(object_stored="lnpriors", database_name=self.object_name,
+                                    instmodel4dataset=instmodel4dataset, ordered=False)
+        db.database_unlock()
+        for inst_cat in lnlike_db:
+            for inst_name in lnlike_db[inst_cat]:
+                for inst_model in lnlike_db[inst_cat][inst_name]:
+                    db[inst_cat][inst_name][inst_model] = {}
+                    for obj in lnlike_db[inst_cat][inst_name][inst_model]:
+                        arg_list = lnlike_db[inst_cat][inst_name][inst_model][obj].arg_list["param"]
+                        (db[inst_cat][inst_name][inst_model][obj]
+                         ) = self.create_joint_lnprior(arg_list,
+                                                       individual_priors=individual_priors)
+        if lock_db:
+            db.lock()
+        return db
+
+    def create_lnpriors_perdataset(self, lnprior_db, instmodel4dataset):
+        """Create the log likelihood function with the data hardcoded."""
+        db = {}
+        l_func = []
+        l_params = []
+        l_params_idx = []
+        l_allparams = []
+        for dataset_name in instmodel4dataset:
+            instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
+            l_func.append(lnprior_db[instmod_fullname]["whole"].function)
+            l_params.append(lnprior_db[instmod_fullname]["whole"].arg_list)
+            idx_par = []
+            for par in lnprior_db[instmod_fullname]["whole"].arg_list["param"]:
+                if par not in l_allparams:
+                    l_allparams.append(par)
+                idx_par.append(l_allparams.index(par))
+            l_params_idx.append(idx_par)
+
+            db[dataset_name] = lnprior_db[instmod_fullname]["whole"]
+
+        def lnprior_all(p):
+            res = 0
+            for func, idxs in zip(l_func, l_params_idx):
+                res += func(p[idxs])
+            return res
+
+        arg_list_all = OrderedDict()
+        arg_list_all["param"] = l_allparams
+        arg_list_all["kwargs"] = []
+
+        db["all"] = DocFunction(function=lnprior_all, arg_list=arg_list_all)
+
+        return db

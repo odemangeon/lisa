@@ -36,6 +36,12 @@ class RV_Dataset(Dataset):
         self.get_data().plot(y=y, yerr=yerr, **kwargs)
         plt.show()
 
+    def get_kwargs(self):
+        pandas_df = self.get_data()
+        return {"data": pandas_df["RV"],
+                "data_err": pandas_df["RV_err"],
+                "t": pandas_df["time"]}
+
 
 class RV_Instrument(Core_Instrument):
     """docstring for RV_Instrument."""

@@ -153,18 +153,18 @@ class TestMethods(TestCase):
                                                        instruments["RV"]["HARPS"]["default"])
         logger.info("Dictionnary containing the datasimulator DocFunction:\n{}".format(res))
         logger.info("arg_list of the system datasimulator:\n{}"
-                    "".format(res[gravgroup_model.name].arg_list))
+                    "".format(res["whole"].arg_list))
         logger.info("arg_list of planet b datasimulator:\n{}"
-                    "".format(res[gravgroup_model.planets["b"].full_name].arg_list))
+                    "".format(res[gravgroup_model.planets["b"].name].arg_list))
         logger.info("function of the system datasimulator:\n{}"
-                    "".format(res[gravgroup_model.name].function))
+                    "".format(res["whole"].function))
         # ["amp","gamma", "period","tau", "trvsys", "k", "w", "ecc", "t0", "period1", "k2", "w2",
         #  "ecc2", "t02", "period2" ]
         p = [0.0, 0.0, 14.4, 0.119 * np.cos(90.0 * np.pi / 180.),
              0.119 * np.sin(90.0 * np.pi / 180.), 66.8503, 7.92008, 4.8,
              0.095 * np.cos(16.3 * np.pi / 180.), 0.095 * np.sin(16.3 * np.pi / 180.), 67.19487,
              11.9068]
-        simu_data = res[gravgroup_model.name].function(p, np.arange(66., 80.))
+        simu_data = res["whole"].function(p, np.arange(66., 80.))
         logger.info("Simulated data:\n{}".format(simu_data))
 
 

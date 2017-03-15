@@ -61,3 +61,13 @@ post_instance.model.load_parameter_file()
 
 logger.info("8. Create datasimulator functions")
 post_instance.get_datasimulators()
+
+logger.info("9. Create likelihood functions")
+post_instance.get_lnlikelihoods(category="jitter multiplicative")
+
+logger.info("10. Create prior functions")
+post_instance.get_individal_lnpriors()
+post_instance.get_lnpriors()
+
+logger.info("11. Create posterior functions")
+post_instance.get_lnposteriors()

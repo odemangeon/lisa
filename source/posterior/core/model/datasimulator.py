@@ -38,11 +38,8 @@ class DatasimulatorCreator(object):
             instmodel4dataset = self.instmodel4dataset.copy()
         else:
             instmodel4dataset = None
-        db = DatabaseInstLvlDataset(object_stored="datasimulator",
-                                    database_name=self.object_name,
-                                    instmodel4dataset=instmodel4dataset,
-                                    ordered=False)
-
+        db = DatabaseInstLvlDataset(object_stored="datasimulator", database_name=self.object_name,
+                                    instmodel4dataset=instmodel4dataset, ordered=False)
         db.database_unlock()
         # Get the list of used instrument model
         for instmod_obj in self.get_instmodels_used():

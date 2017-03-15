@@ -134,12 +134,12 @@ class Dataset(object):
 
     def load_data(self, store=False,
                   delim_whitespace=True,
-                  skip_rows=1,
+                  skip_rows=0,
                   comment="#",
                   names="mandatory",
                   index_col=None,
                   skip_blank_lines=True,
-                  header=None,
+                  header=0,
                   **kargs):
         """
         Read the light curve into a pandas database using the pandas.read_table function.
