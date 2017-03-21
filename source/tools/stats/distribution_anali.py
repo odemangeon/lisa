@@ -22,7 +22,7 @@ from source.tools.stats.loc_scale_estimator import rob_mom
 import numpy as np
 
 
-def getconfi(distri, level, centre=None):
+def getconfi(distri, level, centre=None, l_param_names=None):
     """
     inputs distribution , sigma level we want can be 1,2,3
     optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mom
@@ -44,5 +44,12 @@ def getconfi(distri, level, centre=None):
         loc = centre
 
     dis_right, dis_left = s1[1] - loc, loc - s1[0]
+
+    for i in range(distri.shape[1]):
+        if l_param_names is not None:
+            param_name = l_param_names[i] + ": "
+        else:
+            param_name = ""
+        print("{}{} +{} -{}".format(param_name, loc[i], dis_right[i], dis_left[i]))
 
     return dis_right, loc, dis_left
