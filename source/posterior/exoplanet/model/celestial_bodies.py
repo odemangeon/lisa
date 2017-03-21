@@ -130,9 +130,9 @@ class Planet(CelestialBody):
         ## log a over R, ratio of semi-major axis over Radius of the host star
         self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
         ## ecc . cos(w)
-        self.add_parameter(Parameter(name="ecosw", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="secosw", name_prefix=self.full_name, main=False))
         ## ecc . sin(w)
-        self.add_parameter(Parameter(name="esinw", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="sesinw", name_prefix=self.full_name, main=False))
         ## transit times
         self.transit_times = {}
 

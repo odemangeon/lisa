@@ -278,29 +278,36 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         RVref4inst_modname = self.get_RVref4inst_modname(inst_name)
         RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
         if inst_name != RVrefglobal_instname:
-            instmod_gobalRVref = self.instruments["RV"][RVrefglobal_instname][RVrefglobal_modname]
-            if instmod_gobalRVref.DeltaRV.main:
-                if instmod_gobalRVref.DeltaRV.free:
-                    text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
-                    param_nb[self.key_whole] += 1
-                    arg_list[self.key_whole]["param"].append(instmod_gobalRVref.DeltaRV.full_name)
-                else:
-                    text_mean_RV = "{} + ".format(instmod_gobalRVref.DeltaRV.value)
-        if inst_model.name != RVref4inst_modname:
-            instmod_RVref4inst = self.self.instruments["RV"][inst_name][RVref4inst_modname]
+            instmod_RVref4inst = self.instruments["RV"][inst_name][RVref4inst_modname]
             if instmod_RVref4inst.DeltaRV.main:
                 if instmod_RVref4inst.DeltaRV.free:
-                    text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
+                    text_mean_RV += "p[{}] + ".format(param_nb[self.key_whole])
                     param_nb[self.key_whole] += 1
                     arg_list[self.key_whole]["param"].append(instmod_RVref4inst.DeltaRV.full_name)
                 else:
-                    text_mean_RV = "{} + ".format(instmod_RVref4inst.DeltaRV.value)
+                    text_mean_RV += "{} + ".format(instmod_RVref4inst.DeltaRV.value)
+            # instmod_gobalRVref = self.instruments["RV"][RVrefglobal_instname][RVrefglobal_modname]
+            # if instmod_gobalRVref.DeltaRV.main:
+            #     if instmod_gobalRVref.DeltaRV.free:
+            #         text_mean_RV += "p[{}] + ".format(param_nb[self.key_whole])
+            #         param_nb[self.key_whole] += 1
+            #         arg_list[self.key_whole]["param"].append(instmod_gobalRVref.DeltaRV.full_name)
+            #     else:
+            #         text_mean_RV += "{} + ".format(instmod_gobalRVref.DeltaRV.value)
+        if inst_model.name != RVref4inst_modname:
+            if inst_model.DeltaRV.main:
+                if inst_model.DeltaRV.free:
+                    text_mean_RV += "p[{}] + ".format(param_nb[self.key_whole])
+                    param_nb[self.key_whole] += 1
+                    arg_list[self.key_whole]["param"].append(inst_model.DeltaRV.full_name)
+                else:
+                    text_mean_RV += "{} + ".format(inst_model.DeltaRV.value)
         if star.v0.free:
-            text_mean_RV = "p[{}] + ".format(param_nb[self.key_whole])
+            text_mean_RV += "p[{}] + ".format(param_nb[self.key_whole])
             param_nb[self.key_whole] += 1
             arg_list[self.key_whole]["param"].append(star.v0.full_name)
         else:
-            text_mean_RV = "{} + ".format(star.v0.value)
+            text_mean_RV += "{} + ".format(star.v0.value)
         text_def_func[self.key_whole] += text_mean_RV
         if inst_model.drift.main:
             if inst_model.drift.free:
@@ -319,8 +326,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             text_pl_rv_array = " + pl_rv_array(t, 0."
             text_def_func[planet.name] += text_pl_rv_array
             text_def_func[self.key_whole] += text_pl_rv_array
-            for param in [planet.K, [planet.ecosw, planet.esinw], planet.t0, planet.P]:
-                if param == [planet.ecosw, planet.esinw]:
+            for param in [planet.K, [planet.secosw, planet.sesinw], planet.t0, planet.P]:
+                if param == [planet.secosw, planet.sesinw]:
                     test_param = (", getomega_fast({0[0]}, {0[1]}), "
                                   "getecc_fast({0[0]}, {0[1]})")
                     text_sys = []

@@ -17,7 +17,7 @@ from numpy import log as nplog
 from math import exp
 from collections import OrderedDict
 
-from .database_func import DatabaseFunc, DatabaseInstLvlDataset
+from .database_func import DatabaseInstLvlDataset
 from ...tools.function_w_doc import DocFunction
 from ...tools.miscellaneous import interpret_data_filename
 
@@ -148,9 +148,9 @@ class LikelihoodCreator(object):
         """Create the log likelihood function with the data hardcoded."""
         db = {}
         l_func = []
-        l_params = []
         l_params_idx = []
         l_allparams = []
+        l_params = []
         for dataset_name in instmodel4dataset:
             instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
             lnlike_func = lnlike_db[instmod_fullname]["whole"].function
@@ -163,13 +163,22 @@ class LikelihoodCreator(object):
             kwargs = dataset.get_kwargs()
             arg_list_new = OrderedDict()
             arg_list_new["param"] = arg_list["param"]
+            l_params.append(arg_list["param"])
             arg_list_new["kwargs"] = []
 
-            def lnlike_withdataset(p):
-                return lnlike_func(p, **kwargs)
+            # The creator is needed for enclosure on func, arg_list and kwargs and avoid issue with
+            # the late binding enclosure
+            def lnlike_withdataset_creator(func, arg_list, kwargs):
+                def lnlike_withdataset(p):
+                    # logger.debug("paramnames likewdst ({}): {}\nparams likewdst ({}): {}"
+                    #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
+                    return func(p, **kwargs)
+                return DocFunction(function=lnlike_withdataset, arg_list=arg_list)
 
-            l_func.append(lnlike_withdataset)
-            l_params.append(arg_list_new["param"])
+            db[dataset_name] = lnlike_withdataset_creator(func=lnlike_func, arg_list=arg_list_new,
+                                                          kwargs=kwargs)
+
+            l_func.append(db[dataset_name])
             idx_par = []
             for par in arg_list_new["param"]:
                 if par not in l_allparams:
@@ -177,11 +186,14 @@ class LikelihoodCreator(object):
                 idx_par.append(l_allparams.index(par))
             l_params_idx.append(idx_par)
 
-            db[dataset_name] = DocFunction(function=lnlike_withdataset, arg_list=arg_list_new)
-
         def lnlike_all(p):
             res = 0
-            for func, idxs in zip(l_func, l_params_idx):
+            # logger.debug("paramnames like ({}): {}\nparams like ({}): {}"
+            #              "".format(len(arg_list_all["param"]), arg_list_all["param"], len(p), p))
+            for func, param, idxs in zip(l_func, l_params, l_params_idx):
+                # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): {}"
+                #              "".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
+                #                        len(param), param))
                 res += func(p[idxs])
             return res
 

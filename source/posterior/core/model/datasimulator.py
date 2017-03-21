@@ -14,6 +14,7 @@ The objective of this module is to define the class DatasimulatorCreator.
 from logging import getLogger
 
 from ..database_func import DatabaseInstLvlDataset
+from ....tools.miscellaneous import interpret_data_filename
 
 
 ## logger object
@@ -49,4 +50,20 @@ class DatasimulatorCreator(object):
             db[inst_cat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
         if lock_db:
             db.lock()
+        return db
+
+    def create_datasimulators_perdataset(self, datasim_db, dataset_db, instmodel4dataset):
+        """Create the datasimulator function for each dataset."""
+        db = {}
+        for dataset_name in instmodel4dataset:
+            instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
+            fileinfo = interpret_data_filename(dataset_name)
+            inst_cat = fileinfo["inst_category"]
+            inst_name = fileinfo["inst_name"]
+            number = fileinfo["number"]
+            dataset = dataset_db[inst_cat][inst_name][number]
+            db[dataset_name] = {}
+            for obj in datasim_db[instmod_fullname]:
+                datasim_func = datasim_db[instmod_fullname][obj]
+                db[dataset_name][obj] = dataset.create_datasimulator_for_dataset(datasim_func)
         return db

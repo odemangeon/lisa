@@ -21,6 +21,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from logging import getLogger
+from numpy import inf
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .dataset_database_locks import DstDbLockAttr
@@ -205,7 +206,8 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                                individual_priors=self.lnpriors.individual)))
             (self.lnpriors.dataset_db.
              update(self.model.
-                    create_lnpriors_perdataset(lnprior_db=self.lnpriors.instrument_db,
+                    create_lnpriors_perdataset(individual_priors=self.lnpriors.individual,
+                                               lnprior_db=self.lnpriors.instrument_db,
                                                instmodel4dataset=self.instmodel4dataset)))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
@@ -218,7 +220,12 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
     def get_datasimulators(self):
         """Get datasimulators from the model and store them into datasimulators."""
         if self.islocked_dataset_db:
-            self.__datasim_db.instrument_db.update(self.model.create_datasimulators())
+            self.datasimulators.instrument_db.update(self.model.create_datasimulators())
+            (self.datasimulators.dataset_db.
+             update(self.model.
+                    create_datasimulators_perdataset(datasim_db=self.datasimulators.instrument_db,
+                                                     dataset_db=self.dataset_db,
+                                                     instmodel4dataset=self.instmodel4dataset)))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
@@ -300,14 +307,27 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Create the log likelihood function with the data hardcoded."""
         db = {}
         for dataset_name in lnprior_db_dtset:
-            lnlike_func = lnprior_db_dtset[dataset_name].function
-            lnprior_func = lnlike_db_dtset[dataset_name].function
+            lnprior_func = lnprior_db_dtset[dataset_name].function
+            lnlike_func = lnlike_db_dtset[dataset_name].function
             arg_list_new = lnprior_db_dtset[dataset_name].arg_list.copy()
 
-            def lnpost_withdataset(p):
-                return lnlike_func(p) + lnprior_func(p)
+            def lnpost_withdataset_creator(prior_func, like_func, arg_list):
+                def lnpost_withdataset(p):
+                    # logger.debug("paramnames lnpost ({}): {}\nparams lnpost ({}): {}"
+                    #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
+                    lnprior_val = prior_func(p)
+                    # logger.debug("lnprior: {}".format(lnprior_val))
+                    if lnprior_val == -inf:
+                        return -inf
+                    else:
+                        # lnlike_val = like_func(p)
+                        # logger.debug("lnlike: {}".format(lnlike_val))
+                        return like_func(p) + lnprior_val
+                return DocFunction(function=lnpost_withdataset, arg_list=arg_list_new)
 
-            db[dataset_name] = DocFunction(function=lnpost_withdataset, arg_list=arg_list_new)
+            db[dataset_name] = lnpost_withdataset_creator(prior_func=lnprior_func,
+                                                          like_func=lnlike_func,
+                                                          arg_list=arg_list_new)
 
         return db
 

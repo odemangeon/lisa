@@ -15,7 +15,7 @@ from logging import getLogger
 from collections import OrderedDict
 
 from .manager_prior import Manager_Prior
-from ..database_func import DatabaseFunc, DatabaseInstLvlDataset
+from ..database_func import DatabaseInstLvlDataset
 from ....tools.function_w_doc import DocFunction
 
 ## logger object
@@ -92,10 +92,13 @@ class Prior(object):
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
 
-        def joint_lnprior(param_values):
+        def joint_lnprior(p):
             res = 0
+            # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
+            #                                                 arg_list["param"]))
+            # logger.debug("params prior ({}): {}".format(len(p), p))
             for i, ln_prior in enumerate(list_lnpriors):
-                res += ln_prior(param_values[i])
+                res += ln_prior(p[i])
             return res
 
         docf = DocFunction(function=joint_lnprior, arg_list=arg_list)
@@ -127,7 +130,7 @@ class Prior(object):
             db.lock()
         return db
 
-    def create_lnpriors_perdataset(self, lnprior_db, instmodel4dataset):
+    def create_lnpriors_perdataset(self, individual_priors, lnprior_db, instmodel4dataset):
         """Create the log likelihood function with the data hardcoded."""
         db = {}
         l_func = []
@@ -147,11 +150,7 @@ class Prior(object):
 
             db[dataset_name] = lnprior_db[instmod_fullname]["whole"]
 
-        def lnprior_all(p):
-            res = 0
-            for func, idxs in zip(l_func, l_params_idx):
-                res += func(p[idxs])
-            return res
+        lnprior_all = self.create_joint_lnprior(l_allparams, individual_priors=individual_priors)
 
         arg_list_all = OrderedDict()
         arg_list_all["param"] = l_allparams

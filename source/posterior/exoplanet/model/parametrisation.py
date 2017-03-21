@@ -24,7 +24,7 @@ class GravGroup_Parametrisation(object):
             inst_model.jitter.main = True
 
     def instmodel_RV_parametrisation(self, jitter_main=False, drift_main=False, DeltaRV_main=False):
-        """Make all the jitter arguments of all the isntrument models main parameters."""
+        """Make all the jitter arguments of all the instrument models main parameters."""
         if DeltaRV_main:
             RVrefglobal_instname = self.RV_globalref_instname
             RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
@@ -68,8 +68,8 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.planets.keys()):
             self.paramcontainers["planets"][planet_name].R_rat.main = True
-            self.paramcontainers["planets"][planet_name].ecosw.main = True
-            self.paramcontainers["planets"][planet_name].esinw.main = True
+            self.paramcontainers["planets"][planet_name].secosw.main = True
+            self.paramcontainers["planets"][planet_name].sesinw.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].t0.main = True
@@ -105,8 +105,8 @@ class GravGroup_Parametrisation(object):
         self.paramcontainers["stars"][star_name].v0.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
-            self.paramcontainers["planets"][planet_name].ecosw.main = True
-            self.paramcontainers["planets"][planet_name].esinw.main = True
+            self.paramcontainers["planets"][planet_name].secosw.main = True
+            self.paramcontainers["planets"][planet_name].sesinw.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].t0.main = True

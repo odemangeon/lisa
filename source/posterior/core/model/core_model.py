@@ -14,6 +14,8 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
+from collections import OrderedDict
+from numpy import array
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
@@ -27,6 +29,7 @@ from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
 from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..likelihood import LikelihoodCreator
 from ..prior.core_prior import Prior
+from ..prior.manager_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder
@@ -37,6 +40,7 @@ logger = getLogger()
 
 manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
+manager_prior = Manager_Prior()
 
 
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
@@ -100,6 +104,25 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
                                                    inst_cat=inst.category)):  # 2.
                 self.add_an_instrument_model(inst, name="default")
 
+    def get_param(self, full_name):
+        """Return the instance of the Parameter designated by full_name."""
+        logger.debug("Parameter full name: {}".format(full_name))
+        for paramcont_cat in self.paramcont_categories:
+            if paramcont_cat is not instmod_cat:
+                obj_name, subobj_name, param_name = full_name.split("_")
+                if subobj_name in self.paramcontainers[paramcont_cat]:
+                    if (self.paramcontainers[paramcont_cat][subobj_name].
+                       has_parameter(name=param_name)):
+                            return (self.paramcontainers[paramcont_cat][subobj_name].
+                                    parameters[param_name])
+
+            else:
+                inst_name, inst_model, param_name = full_name.split("_")
+                inst_db = self.instruments
+                inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
+                if inst_model is not None:
+                    return inst_model.parameters[param_name]
+
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters."""
         result = []
@@ -126,6 +149,37 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             else:
                 result.append(param.name)
         return result
+
+    def get_initial_values(self, list_paramnames=None, sortby_paramfullname=False):
+        """Return intial values for the parameter.
+
+        If value is provided for the parameter this value is returned otherwise a value is stochas-
+        tically drawn from the prior.
+        """
+        if list_paramnames is None:
+            l_param_main_free = self.get_list_params(main=True, free=True)
+        else:
+            l_param_main_free = []
+            for param_name in list_paramnames:
+                l_param_main_free.append(self.get_param(param_name))
+        if sortby_paramfullname:
+            res = OrderedDict()
+        else:
+            res = []
+        for param in l_param_main_free:
+            if param.value is None:
+                prior_func_cls = manager_prior.get_priorfunc_subclass(param.prior_category)
+                value = prior_func_cls(**param.prior_args).ravs()
+            else:
+                value = param.value
+            if sortby_paramfullname:
+                res[param.full_name] = value
+            else:
+                res.append(value)
+        if sortby_paramfullname:
+            return res
+        else:
+            return array(res)
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.

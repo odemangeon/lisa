@@ -29,7 +29,8 @@ class ParamContainerDatabase(object):
         # Init the instruments
         self.paramcontainers.update({instrument_model_category:
                                      DatabaseInstLevel(object_stored="instmodobj",
-                                                       database_name=self.name)})
+                                                       database_name=self.name,
+                                                       ordered=True)})
 
     @property
     def name(self):

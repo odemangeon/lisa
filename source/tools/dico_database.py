@@ -13,7 +13,7 @@ The objective of this package is to provides a toolbox to manipulate dico_datase
 from logging import getLogger
 from collections import defaultdict
 from copy import deepcopy
-from .lockable_dict import LockableDict, Lock
+from .lockable_dict import LockableDict
 
 
 ## logger object

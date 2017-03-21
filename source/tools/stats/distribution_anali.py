@@ -18,24 +18,24 @@ if centre is given it is used for the limits otherwise the rob_mon is used and r
 @todo:
 """
 
-from source.tools.stats.loc_scale_estimator import  rob_mom
+from source.tools.stats.loc_scale_estimator import rob_mom
 import numpy as np
 
 
-
-def getconfi(distri, level , centre = None):
+def getconfi(distri, level, centre=None):
     """
     inputs distribution , sigma level we want can be 1,2,3
-    optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mon will be used.
+    optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mom
+    will be used.
     """
     if level == 1:
-        s1  =   np.percentile(distri, [16,84], axis=0)
+        s1 = np.percentile(distri, [16, 84], axis=0)
 
     if level == 2:
-        s1  =   np.percentile(distri, [5,95], axis=0)
+        s1 = np.percentile(distri, [5, 95], axis=0)
 
     if level == 3:
-        s1  =   np.percentile(distri, [0.3,99.7], axis=0)
+        s1 = np.percentile(distri, [0.3, 99.7], axis=0)
 
     # If center is provided, take it as cen, otherwise use the median value of the data.
     if centre is None:
@@ -43,6 +43,6 @@ def getconfi(distri, level , centre = None):
     else:
         loc = centre
 
-    dis_right, dis_left =  s1[1]-loc,  loc-s1[0]
+    dis_right, dis_left = s1[1] - loc, loc - s1[0]
 
     return dis_right, loc, dis_left

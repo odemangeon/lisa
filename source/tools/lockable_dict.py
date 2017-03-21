@@ -110,6 +110,9 @@ class LockableDict(MutableMapping, LockableAttr):
     def __str__(self):
         return str(self.__data)
 
+    def get_data(self):
+        return self.__data
+
     @property
     def ordered(self):
         return self.__ordered

@@ -7,15 +7,16 @@ The objective of this package is to provides the RV_Instrument and RV_Dataset cl
 
 @TODO:
 """
-import logging
+from logging import getLogger
 import matplotlib.pyplot as plt
+from numpy import array
 
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
 
 ## Logger
-logger = logging.getLogger()
+logger = getLogger()
 
 
 class RV_Dataset(Dataset):
@@ -38,9 +39,35 @@ class RV_Dataset(Dataset):
 
     def get_kwargs(self):
         pandas_df = self.get_data()
-        return {"data": pandas_df["RV"],
-                "data_err": pandas_df["RV_err"],
-                "t": pandas_df["time"]}
+        return {"data": array(pandas_df["RV"]),
+                "data_err": array(pandas_df["RV_err"]),
+                "t": array(pandas_df["time"])}
+
+    def get_time(self):
+        pandas_df = self.get_data()
+        return array(pandas_df["time"])
+
+    def create_datasimulator_for_dataset(self, datasim_func):
+        # t_dtst = self.get_time()
+        # tmin = t_dtst.min()
+        # tmax = t_dtst.max()
+        # nt = len(t_dtst)
+        # oversamp = 10
+        # tsamp = (tmax - tmin) / (nt * oversamp)
+        # tmin_moins = tmin - oversamp * tsamp
+        # tmax_plus = tmax + oversamp * tsamp
+        # func = datasim_func.function
+        # arg_list = datasim_func.arg_list
+        # arg_list_new = OrderedDict()
+        # arg_list_new["param"] = arg_list["param"]
+        # arg_list_new["kwargs"] = ["tsamp", "tmin", "tmax"]
+
+        # def datasim_func_fordataset(p, tsamp=tsamp, tmin=tmin_moins, tmax=tmax_plus):
+        #     t = linspace(tmin, tmax, (tmax - tmin) / tsamp)
+        #     return func(p, t=t)
+        #
+        # return DocFunction(function=datasim_func_fordataset, arg_list=arg_list_new)
+        return datasim_func
 
 
 class RV_Instrument(Core_Instrument):

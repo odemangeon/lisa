@@ -36,6 +36,7 @@ from __future__ import division
 import math as mt
 import numpy as np
 from numpy import pi, inf
+from scipy.stats import reciprocal
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 
@@ -172,7 +173,7 @@ class NormalPrior(Core_Prior_Function):
 
     def ravs(self):
         val = self.vmin
-        while not(self.vmin > val) and not(self.vmax < val):
+        while not((self.vmin < val) and (self.vmax > val)):
             val = np.random.normal(self.mu, self.sigma)
         return val
 
@@ -225,7 +226,7 @@ class LogNormPrior(Core_Prior_Function):
 
     def ravs(self):
         val = self.vmin
-        while not(self.vmin > val) and not(self.vmax < val):
+        while not((self.vmin < val) and (self.vmax > val)):
             val = np.random.lognormal(self.mu, self.sigma)
         return val
 
@@ -271,8 +272,7 @@ class JeffreysPrior(Core_Prior_Function):
             return -inf
 
     def ravs(self):
-        from scipy import stats
-        x1 = stats.reciprocal(self.vmin, self.vmax)
+        x1 = reciprocal(self.vmin, self.vmax)
         return x1.rvs()
 
 
