@@ -16,6 +16,7 @@ from numpy import sum as npsum
 from numpy import log as nplog
 from math import exp
 from collections import OrderedDict
+from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 
 from .database_func import DatabaseInstLvlDataset
 from ...tools.function_w_doc import DocFunction
@@ -57,7 +58,13 @@ class LikelihoodCreator(object):
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * {})))
             Bualev_coeff = 1.0 / (1 - (len(p) - 1)/len(data))
             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                 nplog(inv_sigma2)))"""}
+                                 nplog(inv_sigma2)))""",
+        "ExpSquared+ExpSine": """def {}(p, data, data_err, **kwarg_data):
+            model = datasim_func({}, **kwarg_data)
+            gp = george.GP({})  # Define the kernel of the GP
+            gp.compute(t, yerr)  # Pre-compute the factorization of the matrix.
+            return gp.lnlikelihood(data - model)
+            """}
 
     def _create_lnlikelihood(self, datasimulator, category="wo jitter", jitter_param=None):
                             # **kwarg_data):
@@ -66,7 +73,7 @@ class LikelihoodCreator(object):
         datasim_func = datasimulator.function
         function_name = "lnlikelihood"
 
-        def finalize_and_create_lnlike(datasimulator, text_func, jitter_param=None):
+        def finalize_and_create_lnlike_jitter(datasimulator, text_func, jitter_param=None):
             arg_list = datasimulator.arg_list.copy()
             if jitter_param is not None:
                 if jitter_param.free:
@@ -76,6 +83,30 @@ class LikelihoodCreator(object):
                     text = text_func.format(function_name, "p", jitter_param.value)
             else:
                 text = text_func.format(function_name)
+            arg_list["kwargs"] = ["data", "data_err"] + arg_list["kwargs"]
+            logger.debug("Log likelihood function text: {}".format(text))
+            logger.debug("Log likelihood arg_list: {}".format(arg_list))
+            ldict = locals().copy()
+            ldict["datasim_func"] = datasim_func
+            ldict["exp"] = exp
+            ldict["nplog"] = nplog
+            ldict["npsum"] = npsum
+            ExpSquaredKernel
+            exec(text, ldict)
+            doc_f = DocFunction(function=ldict[function_name], arg_list=arg_list)
+            return doc_f
+
+        def finalize_and_create_lnlike_gp(datasimulator, text_func, gp_type):
+            arg_list = datasimulator.arg_list.copy()
+            if gp_type is "ExpSquared+ExpSine":
+                kernel_text = ("exp(p[0])**2.0 * ExpSquaredKernel(p[1]**2) * "
+                               "ExpSine2Kernel(2. / (p[2])**2.0, p[3])")
+                model_param_text = "p[4:]"
+            text_func.format(function_name, model_param_text, kernel_text)
+                # define the kernel
+
+                # Pre-compute the factorization of the matrix.
+                # Compute the log likelihood
             arg_list["kwargs"] = ["data", "data_err"] + arg_list["kwargs"]
             logger.debug("Log likelihood function text: {}".format(text))
             logger.debug("Log likelihood arg_list: {}".format(arg_list))
@@ -95,14 +126,14 @@ class LikelihoodCreator(object):
                 if not(jitter_cat_ok):
                     jitter_cat_ok = not(jitter_param.main)
                 if jitter_cat_ok:
-                    return finalize_and_create_lnlike(datasimulator, text_func)
+                    return finalize_and_create_lnlike_jitter(datasimulator, text_func)
                 else:
                     raise ValueError("For likelihood '{}' the jitter parameter should not be a main"
                                      "parameter.".format(category))
             else:
                 jitter_cat_ok = jitter_param.main
                 if jitter_cat_ok:
-                    return finalize_and_create_lnlike(datasimulator, text_func, jitter_param)
+                    return finalize_and_create_lnlike_jitter(datasimulator, text_func, jitter_param)
                 else:
                     raise ValueError("For likelihood '{}' the jitter parameter should be a main"
                                      "parameter.".format(category))
