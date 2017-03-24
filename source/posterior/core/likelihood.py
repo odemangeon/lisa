@@ -16,7 +16,7 @@ from numpy import sum as npsum
 from numpy import log as nplog
 from math import exp
 from collections import OrderedDict
-from george.kernels import ExpSquaredKernel, ExpSine2Kernel
+
 
 from .database_func import DatabaseInstLvlDataset
 from ...tools.function_w_doc import DocFunction
@@ -30,7 +30,7 @@ logger = getLogger()
 class LikelihoodCreator(object):
     """docstring for LikelihoodCreator."""
 
-    _lnlikelihoods = {
+    _lnlikelihoods_jitter = {
         "wo jitter": """def {}(p, data, data_err, **kwarg_data):
             model = datasim_func(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2)
@@ -58,15 +58,9 @@ class LikelihoodCreator(object):
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * {})))
             Bualev_coeff = 1.0 / (1 - (len(p) - 1)/len(data))
             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                 nplog(inv_sigma2)))""",
-        "ExpSquared+ExpSine": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            gp = george.GP({})  # Define the kernel of the GP
-            gp.compute(t, yerr)  # Pre-compute the factorization of the matrix.
-            return gp.lnlikelihood(data - model)
-            """}
+                                 nplog(inv_sigma2)))"""}
 
-    def _create_lnlikelihood(self, datasimulator, category="wo jitter", jitter_param=None):
+    def _create_lnlikelihood(self, datasimulator, category="wo jitter", **kwargs):
                             # **kwarg_data):
         """Return the log likelihood function."""
 
@@ -91,52 +85,39 @@ class LikelihoodCreator(object):
             ldict["exp"] = exp
             ldict["nplog"] = nplog
             ldict["npsum"] = npsum
-            ExpSquaredKernel
             exec(text, ldict)
             doc_f = DocFunction(function=ldict[function_name], arg_list=arg_list)
             return doc_f
 
-        def finalize_and_create_lnlike_gp(datasimulator, text_func, gp_type):
-            arg_list = datasimulator.arg_list.copy()
-            if gp_type is "ExpSquared+ExpSine":
-                kernel_text = ("exp(p[0])**2.0 * ExpSquaredKernel(p[1]**2) * "
-                               "ExpSine2Kernel(2. / (p[2])**2.0, p[3])")
-                model_param_text = "p[4:]"
-            text_func.format(function_name, model_param_text, kernel_text)
-                # define the kernel
-
-                # Pre-compute the factorization of the matrix.
-                # Compute the log likelihood
-            arg_list["kwargs"] = ["data", "data_err"] + arg_list["kwargs"]
-            logger.debug("Log likelihood function text: {}".format(text))
-            logger.debug("Log likelihood arg_list: {}".format(arg_list))
-            ldict = locals().copy()
-            ldict["datasim_func"] = datasim_func
-            ldict["exp"] = exp
-            ldict["nplog"] = nplog
-            ldict["npsum"] = npsum
-            exec(text, ldict)
-            doc_f = DocFunction(function=ldict[function_name], arg_list=arg_list)
-            return doc_f
-
-        if category in self._lnlikelihoods.keys():
-            text_func = self._lnlikelihoods[category]
+        if category in self._lnlikelihoods_jitter.keys():
+            text_func = self._lnlikelihoods_jitter[category]
+            jitter_param_provided = ("jitter_param" in kwargs)
+            if jitter_param_provided:
+                jitter_param_main = kwargs["jitter_param"].main
             if category == "wo jitter":
-                jitter_cat_ok = jitter_param is None
-                if not(jitter_cat_ok):
-                    jitter_cat_ok = not(jitter_param.main)
-                if jitter_cat_ok:
-                    return finalize_and_create_lnlike_jitter(datasimulator, text_func)
-                else:
-                    raise ValueError("For likelihood '{}' the jitter parameter should not be a main"
-                                     "parameter.".format(category))
+                if jitter_param_provided:
+                    if jitter_param_main:
+                        raise ValueError("For likelihood '{}' the jitter parameter should not be a "
+                                         "main parameter.".format(category))
+                return finalize_and_create_lnlike_jitter(datasimulator, text_func)
             else:
-                jitter_cat_ok = jitter_param.main
-                if jitter_cat_ok:
-                    return finalize_and_create_lnlike_jitter(datasimulator, text_func, jitter_param)
-                else:
-                    raise ValueError("For likelihood '{}' the jitter parameter should be a main"
-                                     "parameter.".format(category))
+                if jitter_param_provided:
+                    if jitter_param_main:
+                        return finalize_and_create_lnlike_jitter(datasimulator, text_func,
+                                                                 kwargs["jitter_param"])
+                raise ValueError("For likelihood '{}' the jitter parameter should be a main"
+                                 "parameter.".format(category))
+        elif category == "GP":
+            text_func = """def {func_name}(p, data, data_err, **kwarg_data):
+                model = datasim_func({{p_datasim}}, **kwarg_data)
+                gp = george.GP({{p_GP}})  # Define the kernel of the GP
+                gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
+                return gp.lnlikelihood(data - model)
+                """
+            text_func = text_func.format(func_name=function_name)
+            # Get the function form the model instance named finalize and create lnlike_gp and
+            # return the result. The definition has to be made on a case by case analysis.
+            # There is no more general scheme.
         else:
             raise ValueError("Category {} not recognized. Avalaible categories are {}"
                              "".format(self._ln_categories))
