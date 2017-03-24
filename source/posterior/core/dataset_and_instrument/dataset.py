@@ -80,7 +80,7 @@ class Dataset(object):
         elif filename_info["number"] is None:
             self.__number = 0
         else:
-            raise ValueError("number should be an int or None")
+            self.__number = int(filename_info["number"])
         # 5.
         self._rm_data()
         # Make Dataset an abstract class

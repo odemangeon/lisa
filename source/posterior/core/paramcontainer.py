@@ -139,4 +139,8 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         logger.debug("List of Param names: {}".format(self.paramfile_info["Param names"]))
         for param_name in self.paramfile_info["Param names"]:
             param = getattr(self, param_name)
-            param.load_config(dico_config[param.name_code])
+            if param.name_code in dico_config:
+                param.main = True
+                param.load_config(dico_config[param.name_code])
+            else:
+                param.main = False

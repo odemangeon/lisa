@@ -179,8 +179,8 @@ class Manager_Inst_Dataset(object):
                     provided.
             """
             if not self.is_available_inst(inst_name):
-                raise ValueError("Instrument named {} is not amongst the available instrument"
-                                 " instances".format(self.get_available_inst_name()))
+                raise ValueError("Instrument named '{}' is not amongst the available instrument"
+                                 " instances {}".format(inst_name, self.get_available_inst_name()))
             return self.__available_inst[inst_name]
 
         def get_inst_subclass(self, inst_category):
@@ -194,8 +194,9 @@ class Manager_Inst_Dataset(object):
                     Sub-class of Core_Instrument associated with the instrument category provided.
             """
             if not self.validate_inst_category(inst_category):
-                raise ValueError("Instrument named {} is not amongst the available instrument"
-                                 " instances".format(self.get_available_inst_name()))
+                raise ValueError("Instrument category '{}' is not amongst the available instrument"
+                                 " categories {}".format(inst_category,
+                                                         self.get_available_inst_category()))
             return self.__available_inst_subclass[inst_category]
 
         def get_inst_category(self, inst_name):

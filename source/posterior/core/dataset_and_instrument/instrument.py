@@ -180,6 +180,8 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
 
     It updates things introduced by get_allinst_paramfilesection in paramfile_info.
     """
+    logger.debug("Categories of instruments in the param_file_info: {}"
+                 "".format(list(inst_db_info.keys())))
     for inst_cat in inst_db_info.keys():
         inst_subclass = manager_inst.get_inst_subclass(inst_cat)
         logger.debug("Content of param_file_info for {} {}: {}"
@@ -205,21 +207,28 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
                 if instcat_hasspecifickeys:
                     for key in listspecifickeys:
                         set_obj.remove(key)
+            logger.debug("Set of inst model before the loading: {}\n"
+                         "Set of inst model in the paramfile: {}".format(set_paramfile_info,
+                                                                         set_dico_config))
             # Load config of already existing instrument model
             for inst_model in (set_paramfile_info & set_dico_config):
+                logger.debug("Instmodel to be updated: {}".format(inst_model))
                 paramcont_dico = dico_config[inst_name][inst_model]
                 inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
             # Remove instrument model that are not in the param_file anymore
             for inst_model in (set_paramfile_info.difference(set_dico_config)):
-                model_instance.rm_an_instrument_model(inst_cat, inst_name, inst_model)
+                logger.debug("Instmodel to be suppressed: {}".format(inst_model))
+                model_instance.rm_an_instrument_model(inst_model=inst_model, inst_name=inst_name,
+                                                      inst_cat=inst_cat)
                 model_instance.update_paramfile_info()
             # Add instrument model are in the param_file but not yet in the model
             for inst_model in (set_dico_config.difference(set_paramfile_info)):
+                logger.debug("Instmodel to be added: {}".format(inst_model))
                 paramcont_dico = dico_config[inst_name][inst_model]
                 instrument = manager_inst.get_instrument(inst_name)
-                model_instance.add_an_instrument_model(instrument, inst_model)
+                model_instance.add_an_instrument_model(instrument=instrument, name=inst_model)
                 model_instance.update_paramfile_info()
-                inst_db[inst_name][inst_model].load_config(paramcont_dico)
+                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
             # Load which instrument model to use for which dataset
             for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
                 number = interpret_data_filename(dataset)["number"]
