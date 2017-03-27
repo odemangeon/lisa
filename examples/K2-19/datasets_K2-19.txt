@@ -1,0 +1,7 @@
+# Datasets file: List below all the files you want to use for this run
+RV_K2-19_SOPHIE.txt
+RV_K2-19_HARPS.rdb
+RV_K2-19_FIES.txt
+RV_K2-19_HARPS_1.txt
+RV_K2-19_HARPSN.txt
+RV_K2-19_PFS.txt
