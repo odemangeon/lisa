@@ -15,15 +15,23 @@ from sys import stdout
 logger = getLogger()
 
 
-def explore(sampler, p0, nsteps, width=50, save_to_file=None):
-    f = open(save_to_file, "w")
-    f.close()
-    for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=False)):
-        position = result[0]
-        f = open(save_to_file, "a")
-        for k in range(position.shape[0]):
-            f.write("{0:4d} {1:s}\n".format(k, " ".join(position[k])))
-        f.close()
+# The incremental saving doesn't work because, it writes to the fiel but then I don't know how to
+# load it.
+# def explore(sampler, p0, nsteps, width=50, save_to_file=None):
+#     f = open(save_to_file, "w")
+#     f.close()
+#     for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=False)):
+#         position = result[0]
+#         f = open(save_to_file, "a")
+#         for k in range(position.shape[0]):
+#             f.write("{0:4d} {1:s}\n".format(k, " ".join([str(x) for x in position[k]])))
+#         f.close()
+#         n = int((width + 1) * float(i) / nsteps)
+#         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
+#     stdout.write("\n")
+
+def explore(sampler, p0, nsteps, width=50):
+    for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
         n = int((width + 1) * float(i) / nsteps)
         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
     stdout.write("\n")
