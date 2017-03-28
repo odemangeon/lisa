@@ -65,7 +65,11 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         return list(self.parameters.keys())
 
     def get_list_params(self, main=False, free=False):
-        """Return the list of all parameters."""
+        """Return the list of all parameters.
+
+        If main is True returns only the main parameters, if free is True returns only the free
+        parameters.
+        """
         if main:
             result = []
             for param in Core_ParamContainer.__get_list_all_params(self):

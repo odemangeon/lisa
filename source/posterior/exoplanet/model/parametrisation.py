@@ -19,8 +19,7 @@ class GravGroup_Parametrisation(object):
 
     def make_instmodel_jitter_main(self):
         """Make all the jitter arguments of all the isntrument models main parameters."""
-        list_instmodel = self.get_list_instmodel()
-        for inst_model in list_instmodel:
+        for inst_model in self.get_list_instmodel():  # For each inst_model set jitter as main param
             inst_model.jitter.main = True
 
     def instmodel_RV_parametrisation(self, jitter_main=False, drift_main=False, DeltaRV_main=False):

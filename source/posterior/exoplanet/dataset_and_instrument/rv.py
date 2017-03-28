@@ -11,6 +11,8 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
+from ..exoplanet_parameters import stelact_GP_noisemodel
+
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
@@ -78,6 +80,8 @@ class RV_Instrument(Core_Instrument):
                         "drift": {"unit": "[K]/day"},
                         "DeltaRV": {"unit": "[K]"},
                         }
+    __available_noise_models__ = Core_Instrument.available_noise_models.copy()
+    __available_noise_models__.extend([stelact_GP_noisemodel, ])
     __name_RV_ref_var__ = "RVref"
     __name_RV_ref_global_var__ = "RVrefGlob"
 

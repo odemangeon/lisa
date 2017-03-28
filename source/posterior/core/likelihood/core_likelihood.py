@@ -30,6 +30,10 @@ logger = getLogger()
 class LikelihoodCreator(object):
     """docstring for LikelihoodCreator."""
 
+    __available_noise_models__ = ["wo jitter", "jitter dfm", "jitter multiplicative",
+                                  "jitter multiplicative baluev", "jitter additive",
+                                  "jitter additive baluev"]
+
     _lnlikelihoods_jitter = {
         "wo jitter": """def {}(p, data, data_err, **kwarg_data):
             model = datasim_func(p, **kwarg_data)

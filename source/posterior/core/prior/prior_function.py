@@ -55,7 +55,7 @@ class Metaclass_PriorFunction(MandatoryReadOnlyAttr):
     def __init__(cls, name, bases, attrs):
         super(Metaclass_PriorFunction, cls).__init__(name, bases, attrs)
         if cls.__name__ not in ["Core_Prior_Function", ]:
-            missing_attrs = ["{}".format(attr) for attr in ["logpdf", ]
+            missing_attrs = ["{}".format(attr) for attr in ["logpdf", "ravs"]
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))

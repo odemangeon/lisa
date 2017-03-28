@@ -36,10 +36,51 @@ key_inst = "inst_dic"
 key_misc = "misc"
 
 
+class Instrument_Model(Core_ParamContainer):
+    """Docstring of Instrument_Model class."""
+
+    __category__ = instrument_model_category
+
+    def __init__(self, instrument, name, noise_model="wo jitter"):
+        """Docstring of the Instrument_Model init method."""
+        # name_prefix is set to None because it will be set when the gravgroup is set.
+        super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
+        self.__instrument = instrument
+        self.noise_model = noise_model
+        for name, dico in instrument.params_model.items():
+            self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
+                                         **dico))
+
+    @property
+    def available_noise_models(self):
+        """Return the list of available noise models."""
+        return self.instrument.available_noise_models
+
+    @property
+    def noise_model(self):
+        """Return the noise model used for this instrument model."""
+        return self.__noise_model
+
+    @noise_model.setter
+    def noise_model(self, nm):
+        """Set the noise model to use for this instrument model."""
+        if nm not in self.available_noise_models:
+            raise ValueError("{} is not an available noise model.".format(nm))
+        self.__noise_model = nm
+
+    @property
+    def instrument(self):
+        return self.__instrument
+
+
 class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Instrument abstract class."""
 
-    __mandatoryattrs__ = ["category", "params_model"]
+    __mandatoryattrs__ = ["category", "params_model", "available_noise_models"]
+
+    __available_noise_models__ = ["wo jitter", "jitter dfm", "jitter multiplicative",
+                                  "jitter multiplicative baluev", "jitter additive",
+                                  "jitter additive baluev"]
 
     def __init__(self, name):
         """Core_Instrument init method FOR INHERITANCE PURPOSES (as Core_Instrument is an abstract class).
@@ -52,24 +93,6 @@ class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
                 Name of the Instrument
         """
         super(Core_Instrument, self).__init__(name=name)
-
-        class Instrument_Model(Core_ParamContainer):
-            """Docstring of Instrument_Model class."""
-
-            __category__ = instrument_model_category
-
-            def __init__(self, instrument, name):
-                """Docstring of the Instrument_Model init method."""
-                # name_prefix is set to None because it will be set when the gravgroup is set.
-                super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
-                self.__instrument = instrument
-                for name, dico in instrument.params_model.items():
-                    self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
-                                                 **dico))
-
-            @property
-            def instrument(self):
-                return self.__instrument
 
         self.Instrument_Model = Instrument_Model
         # IMPORTANT: THE INSTRUMENT TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
