@@ -11,7 +11,8 @@ The objective of this package is to provides the core DatasetDatabase class.
     -
 """
 from logging import getLogger
-from os.path import join, isfile
+# from os.path import join, isfile
+# from re import split
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from .dataset import Dataset
@@ -136,7 +137,9 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             if len(self[inst_category]) == 0:
                 self.pop(inst_category)
 
-    def add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
+    # Now I request the addition of dataset to be done with the dataset file because like that I can
+    # specify and pass the information about the name of the instrument model and the noise model
+    def _add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
         """Add a dataset designated by its path to the dataset database.
         ----
         Arguments:
@@ -147,23 +150,15 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             force           : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        found = isfile(datafile_path)
-        if found:
-            path = datafile_path
-        else:
-            if self.hasdata_folder:
-                path = join(self.data_folder, datafile_path)
-                found = isfile(path)
-        if found:
-            logger.debug("Dataset file found at path: {}".format(path))
-        else:
+        file_path = self.look4datafile(datafile_path)
+        if file_path is None:
             raise ValueError("File {} not found".format(datafile_path))
         if load_setup:
             manager_inst.load_setup()
-        self._add_a_dataset(manager_inst.create_dataset(path), force=force)
+        self._add_a_dataset(manager_inst.create_dataset(file_path), force=force)
         logger.info("dataset added to the database: {}".format(datafile_path))
 
-    def add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False, force=False):
+    def _add_datasets_from_listdatasetpath(self, l_dataset_path, force=False):
         """Add the datasets specified in the datasets_file to the dataset database.
         ----
         Arguments:
@@ -174,26 +169,31 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             force               : boolean, (default: False),
                 True to force the addition of the dataset
         """
-        file_path = self.look4runfile(file_path=path_datasets_file)
-        if file_path is not None:
-            list_files = []
-            with open(file_path, 'r') as f:
-                for line in f.readlines():
-                    line_striped = line.strip(" \n")
-                    logger.debug("raw line: {}striped line: {}".format(line, line_striped))
-                    if not(line_striped.startswith("#")) and (len(line_striped) > 0):
-                        logger.debug("line accepted as filename: {}".format(True))
-                        list_files.append(line_striped)
-                    else:
-                        logger.debug("line accepted as filename: {}".format(False))
-        else:
-            error_msg = "file doesn't exist: {}".format(path_datasets_file)
-            raise ValueError(error_msg)
-        logger.debug("List of files to use: {}".format(list_files))
-        if load_setup:
-            manager_inst.load_setup()
-        for filepath in list_files:
-            self.add_a_dataset_from_path(filepath, force=force)
+        for filepath in l_dataset_path:
+            self._add_a_dataset_from_path(filepath, force=force)
+
+    # The idea is that now this is dealt by the posterior instance that read the datasetsfile and
+    # update the datasetsfile_db and trigger the filling of the dataset_db
+    # with _add_datasets_from_listdatasetpath
+    # def _add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False, force=False):
+    #     """Add the datasets specified in the datasets_file to the dataset database.
+    #     ----
+    #     Arguments:
+    #         path_datasets_file  : string,
+    #             path to the datasets file.
+    #         load_setup          : bool, (default: False)
+    #             tell if you want to manager to laod the inst_and_dataset_setup file.
+    #         force               : boolean, (default: False),
+    #             True to force the addition of the dataset
+    #     """
+    #     file_path = self.look4runfile(file_path=path_datasets_file)
+    #     list_files = list(read_datafile(file_path).keys())
+    #     logger.debug("List of files to use: {}".format(list_files))
+    #     if load_setup:
+    #         manager_inst.load_setup()
+    #     for filepath in list_files:
+    #         self._add_a_dataset_from_path(filepath, force=force)
+    #     self.datasets_file = file_path
 
     def get_datasets(self, inst_name=None, inst_cat=None, sortby_instcat=False,
                      sortby_instname=False, sortby_nb=False):

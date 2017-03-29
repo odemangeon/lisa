@@ -80,8 +80,6 @@ class RV_Instrument(Core_Instrument):
                         "drift": {"unit": "[K]/day"},
                         "DeltaRV": {"unit": "[K]"},
                         }
-    __available_noise_models__ = Core_Instrument.available_noise_models.copy()
-    __available_noise_models__.extend([stelact_GP_noisemodel, ])
     __name_RV_ref_var__ = "RVref"
     __name_RV_ref_global_var__ = "RVrefGlob"
 

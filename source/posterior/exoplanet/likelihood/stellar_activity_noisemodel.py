@@ -17,10 +17,12 @@ from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from math import exp
 
-from .celestial_bodies import Star
+from ..model.celestial_bodies import Star
 from ..exoplanet_parameters import amp_RV, evol_timescal, periodic_timescal, period
+from ..exoplanet_parameters import stelact_GP_noisemodel
 from ...core.likelihood.noise_model import Core_Noise_Model
 from ....tools.function_w_doc import DocFunction
+
 
 ## logger object
 logger = getLogger()
@@ -28,6 +30,8 @@ logger = getLogger()
 
 class StellarActNoiseModel(Core_Noise_Model):
     """docstring for StellarActNoiseModel."""
+
+    __category__ = stelact_GP_noisemodel
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")

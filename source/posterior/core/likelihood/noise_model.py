@@ -30,7 +30,7 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
 
     def __init__(cls, name, bases, attrs):
         super(Metaclass_NoiseModel, cls).__init__(name, bases, attrs)
-        if cls.__name__ not in ["Core_NoiseModel", ]:
+        if cls.__name__ not in ["Core_Noise_Model", ]:
             missing_attrs = ["{}".format(attr) for attr in ["lnlike_creator", "lnlike"]
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
@@ -68,7 +68,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 class GaussianNoiseModel(Core_Noise_Model):
     """docstring for GaussianNoiseModel."""
 
-    __category__ = "Gaussian"
+    __category__ = "gaussian"
 
     def __init__(self, datasimulator, instmodel_obj):
         super(GaussianNoiseModel, self).__init__(datasimulator)
@@ -106,7 +106,7 @@ class GaussianNoiseModel(Core_Noise_Model):
 class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     """docstring for GaussianNoiseModel_wdfmjitter."""
 
-    __category__ = "Gaussian jitter dfm"
+    __category__ = "gaussian_jitter_dfm"
 
     def __init__(self, datasimulator, instmodel_obj):
         super(GaussianNoiseModel_wdfmjitter, self).__init__(datasimulator, instmodel_obj)
@@ -161,7 +161,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
 class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjittermulti."""
 
-    __category__ = "Gaussian jitter multi"
+    __category__ = "gaussian_jitter_multi"
 
     def lnlike_creator(self):
         datasim_func, arg_list = self._extract_func_and_arglist()
@@ -193,7 +193,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjittermultiBaluev."""
 
-    __category__ = "Gaussian jitter multi Baluev"
+    __category__ = "gaussian_jitter_multi_Baluev"
 
     def lnlike_creator(self):
         datasim_func, arg_list = self._extract_func_and_arglist()
@@ -231,7 +231,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
 class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjitteradd."""
 
-    __category__ = "Gaussian jitter add"
+    __category__ = "gaussian_jitter_add"
 
     def lnlike_creator(self):
         datasim_func, arg_list = self._extract_func_and_arglist()
@@ -263,7 +263,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
 class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjitteraddBaluev."""
 
-    __category__ = "Gaussian jitter add Baluev"
+    __category__ = "gaussian_jitter_add_Baluev"
 
     def lnlike_creator(self):
         datasim_func, arg_list = self._extract_func_and_arglist()

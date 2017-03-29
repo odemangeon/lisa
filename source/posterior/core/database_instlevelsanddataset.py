@@ -12,7 +12,11 @@ The objective of this package is to provides the class
 """
 from logging import getLogger
 
+from .instmodel4dataset import Instmodel4DatasetAttr
 from ...tools.lockable_dict import LockableAttr, Lock
+from ...tools.database_with_instrument_level import DatabaseInstLevel
+from ...tools.miscellaneous import interpret_data_filename
+
 
 ## logger object
 logger = getLogger()
@@ -115,3 +119,42 @@ class DstDbLockAttr(LockableAttr):
 
     def database_unlock(self):
         self.__db_lock.unlock()
+
+
+class DatabaseInstLvlDataset(DatabaseInstLevel, Instmodel4DatasetAttr, DstDbLockAttr):
+    """docstring for DatabaseInstLvlDataset.
+
+    This class is database, sublass of DatabaseInstLevel (lockable nested dictionnary database with
+    levels: inst_cat, inst_name, inst_model), associated with a Instmodel4Dataset attribute that
+    allows to access convert the dataset_name into a instrument model name and access the
+    corresponding value in the database. There can be two different locks for the database and the
+    Instmodel4Dataset attribute.
+    """
+
+    def __init__(self, object_stored, database_name, instmodel4dataset=None, list_datasetnames=None,
+                 ordered=False, use_samelock=False, lock_dataset=None, lock_database=None):
+        """doctstring of DatabaseInstLvlDataset __init__ method."""
+        DstDbLockAttr.__init__(self, use_samelock=use_samelock, lock_dataset=lock_dataset,
+                               lock_database=lock_database)
+        Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
+                                       list_datasetnames=list_datasetnames,
+                                       lock=self.get_dataset_Lock_instance())
+        DatabaseInstLevel.__init__(self, object_stored=object_stored,
+                                   database_name=database_name, ordered=ordered,
+                                   lock=self.get_database_Lock_instance(), default={"all": None})
+
+    def __getitem__(self, key):
+        if key in self.instmodel4dataset:
+            inst_model = self.instmodel4dataset[key]
+            dataset_info = interpret_data_filename(key)
+            instmodel_fullname = "{}_{}".format(dataset_info["inst_name"], inst_model)
+            return self[instmodel_fullname]
+        else:
+            return super(DatabaseInstLvlDataset, self).__getitem__(key)
+
+    @property
+    def locked(self):  # Allow the __setitem__ method of Lockabledict to know use self.locked
+        return self.database_locked
+
+    def get_Lock_instance(self):  # Allow the __missing__ method of dico_database to know use
+        return self.get_database_Lock_instance()  # self.get_Lock_instance

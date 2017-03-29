@@ -24,14 +24,14 @@ from logging import getLogger
 from numpy import inf
 
 from .instmodel4dataset import Instmodel4DatasetAttr
-from .dataset_database_locks import DstDbLockAttr
+from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
+from .datasetsfile_db import DatasetsFileDbAttr
 from ...tools.name import Name
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
-# from ...tools.lockable_dict import LockableDict
 
 
 logger = getLogger()
@@ -40,7 +40,8 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr):
+class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
+                DatasetsFileDbAttr):
     """docstring for Posterior."""
 
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
@@ -69,6 +70,8 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                                           lock=self.get_dataset_Lock_instance()))
         RunFolder.__init__(self, run_folder=run_folder)  # 4
         Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())  # 5
+        DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
+                                    instmodel4dataset=self.instmodel4dataset)
         self.__model = None  # 6
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
                                          instmodel4dataset=self.instmodel4dataset,
@@ -123,6 +126,11 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
     def model(self):
         """Return the model."""
         return self.__model
+
+    def load_datasets_file(self, path_datasets_file, load_setup=False, force=False):
+        file_path = self.look4runfile(file_path=path_datasets_file)
+        self.datasetsfile_db.load(file_path)
+        self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
 
     def define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.

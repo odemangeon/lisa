@@ -27,7 +27,8 @@ from ..dataset_and_instrument.instrument import instrument_model_category as ins
 from ..dataset_and_instrument.instrument import load_instrument_config
 from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
 from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
-from ..likelihood import LikelihoodCreator
+from ..dataset_and_instrument.instrument import interpret_instmod_fullname
+from ..likelihood.core_likelihood import LikelihoodCreator
 from ..prior.core_prior import Prior
 from ..prior.manager_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -53,7 +54,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     key_whole = "whole"
 
     """docstring for Core_Model abstract class."""
-    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None):
+    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None,
+                 noisemod4instmodfullname=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This __init__ does:
@@ -76,13 +78,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         # 4.
         ParamContainerDatabase.__init__(self)
         # 5.
-        self.init_missinginstmodels()
+        self.init_instmodels_w_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
         # 6.
         if instmodel4dataset is None:
             instmodel4dataset = Instmodel4Dataset(list_datasetnames=(self.dataset_db.
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
+        self
         # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -91,18 +94,23 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Return the name of the object studied."""
         return self.name
 
-    def init_missinginstmodels(self):
+    def init_instmodels_w_noisemodels(self, noisemod4instmodfullname):
         """If necessary, add a default instrument model for each instrument used.
-
         1. For each instrument used in the dataset database
             2. Check if there is at least one instrument model associated
                 2a. If no, add one called default
                 2b. If yes, do nothing
+        ----
+        Arguments:
+            noisemod4instmodfullname: dict,
+                Give the noise model name associated to the instrument model full name
         """
-        for inst in self.dataset_db.get_instruments():  # 1.
-            if not(self.instrumenthasatleast1model(inst_name=inst.name,
-                                                   inst_cat=inst.category)):  # 2.
-                self.add_an_instrument_model(inst, name="default")
+        logger.debug("noisemod4instmodfullname: {}".format(noisemod4instmodfullname))
+        for instmod_fullname, noise_model in noisemod4instmodfullname.items():
+            inst_mod_info = interpret_instmod_fullname(instmod_fullname)
+            inst = manager_inst.get_instrument(inst_mod_info["inst_name"])
+            self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
+            self.instruments[instmod_fullname].noise_model = noise_model
 
     def get_param(self, full_name):
         """Return the instance of the Parameter designated by full_name."""

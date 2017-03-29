@@ -20,6 +20,7 @@ from ..parameter import Parameter
 from ....tools.name import Name
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.miscellaneous import spacestring_like, interpret_data_filename
+from ..likelihood.manager_noise_model import Manager_NoiseModel
 
 
 ## Logger object
@@ -27,6 +28,7 @@ logger = getLogger()
 
 ## Instrument manager
 manager_inst = Manager_Inst_Dataset()
+manager_noisemodel = Manager_NoiseModel()
 
 instrument_model_category = "instruments"
 
@@ -34,6 +36,13 @@ string4datasetdico = "Dataset"
 
 key_inst = "inst_dic"
 key_misc = "misc"
+
+
+def interpret_instmod_fullname(instmod_fullname):
+    """Return the instrument name associated to the instrument model full_name."""
+    res = {}
+    res["inst_name"], res["inst_model"] = instmod_fullname.split("_")[0]
+    return res
 
 
 class Instrument_Model(Core_ParamContainer):
@@ -52,11 +61,6 @@ class Instrument_Model(Core_ParamContainer):
                                          **dico))
 
     @property
-    def available_noise_models(self):
-        """Return the list of available noise models."""
-        return self.instrument.available_noise_models
-
-    @property
     def noise_model(self):
         """Return the noise model used for this instrument model."""
         return self.__noise_model
@@ -64,8 +68,10 @@ class Instrument_Model(Core_ParamContainer):
     @noise_model.setter
     def noise_model(self, nm):
         """Set the noise model to use for this instrument model."""
-        if nm not in self.available_noise_models:
-            raise ValueError("{} is not an available noise model.".format(nm))
+        available_noisemodels = manager_noisemodel.get_available_noisemodels()
+        if nm not in available_noisemodels:
+            raise ValueError("{} is not an available noise model: {}"
+                             "".format(nm, available_noisemodels))
         self.__noise_model = nm
 
     @property
@@ -76,7 +82,7 @@ class Instrument_Model(Core_ParamContainer):
 class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Instrument abstract class."""
 
-    __mandatoryattrs__ = ["category", "params_model", "available_noise_models"]
+    __mandatoryattrs__ = ["category", "params_model"]
 
     __available_noise_models__ = ["wo jitter", "jitter dfm", "jitter multiplicative",
                                   "jitter multiplicative baluev", "jitter additive",

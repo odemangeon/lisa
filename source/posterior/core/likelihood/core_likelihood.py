@@ -18,9 +18,9 @@ from math import exp
 from collections import OrderedDict
 
 
-from .database_func import DatabaseInstLvlDataset
-from ...tools.function_w_doc import DocFunction
-from ...tools.miscellaneous import interpret_data_filename
+from ..database_func import DatabaseInstLvlDataset
+from ....tools.function_w_doc import DocFunction
+from ....tools.miscellaneous import interpret_data_filename
 
 
 ## logger object
@@ -29,10 +29,6 @@ logger = getLogger()
 
 class LikelihoodCreator(object):
     """docstring for LikelihoodCreator."""
-
-    __available_noise_models__ = ["wo jitter", "jitter dfm", "jitter multiplicative",
-                                  "jitter multiplicative baluev", "jitter additive",
-                                  "jitter additive baluev"]
 
     _lnlikelihoods_jitter = {
         "wo jitter": """def {}(p, data, data_err, **kwarg_data):

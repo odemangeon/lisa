@@ -16,3 +16,5 @@ amp_RV = "lnAmpSARV"
 evol_timescal = "tauESA"
 periodic_timescal = "tauPSA"
 period = "PSA"
+
+stelact_GP_noisemodel = "stellar_activity"
