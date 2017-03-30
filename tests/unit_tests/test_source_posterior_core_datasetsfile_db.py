@@ -9,7 +9,7 @@ from logging import DEBUG, INFO
 from sys import stdout
 from os import remove
 
-import source.posterior.core.datafile_tools as dt
+import source.posterior.core.datasetsfile_db as dfdb
 
 level_logger = DEBUG
 level_handler = INFO
@@ -39,13 +39,13 @@ class TestMethods(TestCase):
         with open(filepath, "w") as f:
             f.write("RV_K2-19_HARPS.txt default\tgaussian\n")
             f.write("RV_K2-19_SOPHIE.txt   \t  default1\tstellar_activity\n")
-        dico_res = dt.read_datafile(filepath)
+        dico_res = dfdb.read_datasets_file(filepath)
         remove(filepath)
         logger.debug("Result of the reading process: {}".format(dico_res))
-        expected_dict = {"RV_K2-19_HARPS.txt": {dt.dico_df_k["instmod"]: "default",
-                                                dt.dico_df_k["noisemod"]: "gaussian"},
-                         "RV_K2-19_SOPHIE.txt": {dt.dico_df_k["instmod"]: "default1",
-                                                 dt.dico_df_k["noisemod"]: "stellar_activity"}
+        expected_dict = {"RV_K2-19_HARPS.txt": {"inst_mod": "default",
+                                                "noise_mod": "gaussian"},
+                         "RV_K2-19_SOPHIE.txt": {"inst_mod": "default1",
+                                                 "noise_mod": "stellar_activity"}
                          }
         logger.debug("Expected result of the reading process: {}".format(expected_dict))
         self.assertDictEqual(dico_res, expected_dict)

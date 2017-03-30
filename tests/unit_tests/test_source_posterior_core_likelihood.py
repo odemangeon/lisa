@@ -7,10 +7,12 @@ from collections import OrderedDict
 import numpy as np
 # import matplotlib.pyplot as plt
 
-from source.posterior.core.likelihood import LikelihoodCreator
+from source.posterior.core.likelihood.core_likelihood import LikelihoodCreator
+from source.posterior.core.likelihood.jitter_noise_model import GaussianNoiseModel
+from source.posterior.core.likelihood.jitter_noise_model import GaussianNoiseModel_wjittermulti
 from source.tools.function_w_doc import DocFunction
-from source.posterior.core.parameter import Parameter
-
+from source.posterior.core.dataset_and_instrument.instrument import Default_Instrument
+from source.posterior.core.model.jitter import jitter_name
 
 level_logger = DEBUG
 level_handler = INFO
@@ -48,28 +50,31 @@ class TestMethods(TestCase):
         arg_list["param"] = ["a", "b"]
         arg_list["kwargs"] = ["x"]
         self.datasimulator = DocFunction(function=f, arg_list=arg_list)
-        self.jitter_multi = Parameter("jitter multi", unit="n/a",
-                                      free=True, main=True,
-                                      joint_prior=False, prior_category=None, prior_args=None,
-                                      value=0.)
+        inst = Default_Instrument(category="RV", name="HARPS",
+                                  params_model={jitter_name: {"unit": "wo_unit"}})
+        self.inst_mod_obj = inst.create_model_instance(name="default")
         self.instance = LikelihoodCreator()
 
     def test_create_lnlikelihood(self):
         # datasim_func = self.datasimulator.function
         logger.info("\n\nStart test_create_lnlikelihood")
-        logger.info("Test create_lnlikelihood with category='wo jitter'")
-        lnlike = self.instance._create_lnlikelihood(self.datasimulator, category="wo jitter")
+        logger.info("Test create_lnlikelihood with GaussianNoiseModel not pickleable")
+        self.inst_mod_obj.noise_model = GaussianNoiseModel.category
+        lnlike = self.instance._create_lnlikelihood(datasim_docfunc=self.datasimulator,
+                                                    inst_model_obj=self.inst_mod_obj,
+                                                    pickleable=False)
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([self.a, self.b], self.data_nonoise, self.data_err, x=self.x)
         logger.info("lnlike value with good parameters:\n{}".format(res_good))
         res_off = lnlike.function([self.a - 0.01, self.b - 0.01], self.data_nonoise, self.data_err,
                                   x=self.x)
         logger.info("lnlike value with slightly off parameters:\n{}".format(res_off))
-
-        logger.info("Test create_lnlikelihood with category='jitter multiplicative'")
+        logger.info("Test create_lnlikelihood with GaussianNoiseModel_wjittermulti not pickleable")
+        self.inst_mod_obj.noise_model = GaussianNoiseModel_wjittermulti.category
+        self.inst_mod_obj.parameters[jitter_name].main = True
         lnlike = self.instance._create_lnlikelihood(self.datasimulator,
-                                                    category="jitter multiplicative",
-                                                    jitter_param=self.jitter_multi)
+                                                    self.inst_mod_obj,
+                                                    pickleable=False)
         logger.info("Arg_list of the lnlike function:\n{}".format(lnlike.arg_list))
         res_good = lnlike.function([0., self.a, self.b], self.data, self.data_err, x=self.x)
         logger.info("lnlike value with good parameters and good jitter:\n{}".format(res_good))

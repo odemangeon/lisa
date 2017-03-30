@@ -38,7 +38,7 @@ class Instmodel4Dataset(LockableDict):
     def __init__(self, list_datasetnames=None, list_instmodels=None, lock=None):
         super(Instmodel4Dataset, self).__init__(ordered=False, lock=lock)
         if list_datasetnames is not None:
-            self.update_datasets(list_datasetnames, list_instmodels)
+            self.update(list_datasetnames, list_instmodels)
 
     # The idea behind commenting it is that maybe I can used the inherited update method.
     # def update_content_instmodel4dataset(self, instmodel4dataset):
