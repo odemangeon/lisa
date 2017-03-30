@@ -17,7 +17,7 @@ from numpy import log as nplog
 from math import exp
 
 from .core_noise_model import Core_Noise_Model
-from ..model.jitter import check_parametrisation_jitter
+from ..model.jitter import check_parametrisation_jitter, jitter_name
 from ..dataset_and_instrument.instrument import Instrument_Model
 from ....tools.function_w_doc import DocFunction
 
@@ -31,16 +31,16 @@ class GaussianNoiseModel(Core_Noise_Model):
 
     __category__ = "gaussian"
 
-    def __init__(self, datasimulator, instmodel_obj):
-        super(GaussianNoiseModel, self).__init__(datasimulator)
-        if isinstance(instmodel_obj, Instrument_Model):
-            self.instmodel_obj = instmodel_obj
-        else:
-            raise ValueError("instmodel_obj should be a Instrument_Model instance. Got {}"
-                             "".format(type(instmodel_obj)))
-        if self.instmodel_obj.jitter.main:
-            raise ValueError("For GaussianNoiseModel instmodel_obj.jitter should not be a "
-                             "main paramater")
+    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+        super(GaussianNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
+                                                 model_instance=model_instance,
+                                                 instmodel_obj=instmodel_obj)
+        if jitter_name in instmodel_obj.parameters:
+            logger.warning("The noise model of instrument model {} being Gaussian, it should not "
+                           "have a {} parameter !".format(instmodel_obj.full_name, jitter_name))
+            if instmodel_obj.parameters[jitter_name].main:
+                raise ValueError("For GaussianNoiseModel instmodel_obj.jitter should not be a "
+                                 "main paramater")
 
     def lnlike_creator(self):
         datasim_func = self.datasim_function
@@ -69,12 +69,18 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
 
     __category__ = "gaussian_jitter_dfm"
 
-    def __init__(self, datasimulator, instmodel_obj):
-        super(GaussianNoiseModel_wdfmjitter, self).__init__(datasimulator, instmodel_obj)
-
+    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+        super(GaussianNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
+                                                 model_instance=model_instance,
+                                                 instmodel_obj=instmodel_obj)
+        self.__instmodel_obj = instmodel_obj
         if not(instmodel_obj.jitter.main):
             raise ValueError("For GaussianNoiseModels with jitter instmodel_obj.jitter should be a "
                              "main paramater")
+
+    @property
+    def instmodel_obj(self):
+        return self.__instmodel_obj
 
     @property
     def jitterfree(self):
@@ -87,7 +93,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         return self.instmodel_obj.jitter.value
 
     def lnlike_creator(self):
-        datasim_func, arg_list = self._extract_func_and_arglist()
+        datasim_func = self.datasim_function
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -132,7 +138,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_multi"
 
     def lnlike_creator(self):
-        datasim_func, arg_list = self._extract_func_and_arglist()
+        datasim_func = self.datasim_function
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -164,7 +170,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_multi_Baluev"
 
     def lnlike_creator(self):
-        datasim_func, arg_list = self._extract_func_and_arglist()
+        datasim_func = self.datasim_function
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -202,7 +208,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_add"
 
     def lnlike_creator(self):
-        datasim_func, arg_list = self._extract_func_and_arglist()
+        datasim_func = self.datasim_function
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -234,7 +240,7 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_add_Baluev"
 
     def lnlike_creator(self):
-        datasim_func, arg_list = self._extract_func_and_arglist()
+        datasim_func = self.datasim_function
         jitter_value = self.jittervalue
 
         if self.jitterfree:

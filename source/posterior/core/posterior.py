@@ -245,12 +245,11 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the current content lnprior database."""
         return self.__lnlike_db
 
-    def get_lnlikelihoods(self, category="wo jitter"):
+    def get_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
             (self.lnlikelihoods.instrument_db.
-             update(self.model.create_lnlikelihoods(datasim_db=self.datasimulators.instrument_db,
-                                                    category=category)))
+             update(self.model.create_lnlikelihoods(datasim_db=self.datasimulators.instrument_db)))
             (self.lnlikelihoods.dataset_db.
              update(self.model.
                     create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,

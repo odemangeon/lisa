@@ -39,7 +39,13 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
     __mandatoryattrs__ = ["category", ]
 
-    def __init__(self, datasim_docfunc):
+    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+        """Initialise a Core_Noise_Model subclass instance.
+
+        The model_instance and instmod_full_name arguments are not used in the function below but
+        they are here to remind us that datasim_docfunc, model_instance, inst_model_obj are the
+        only possible arguments for a init method a Core_Noise_Model subclass.
+        """
         if isinstance(datasim_docfunc, DocFunction):
             self.datasim_docfunc = datasim_docfunc
         else:
@@ -59,7 +65,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
     @property
     def arg_list(self):
-        return deepcopy(self.datasim_docfunc)
+        return deepcopy(self.datasim_docfunc.arg_list)
 
     @classmethod
     def check_parametrisation(cls, model_instance, instmod_fullname):

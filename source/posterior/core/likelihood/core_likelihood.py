@@ -12,12 +12,10 @@ The objective of this module is to define the class LikelihoodCreator.
     -
 """
 from logging import getLogger
-from numpy import sum as npsum
-from numpy import log as nplog
-from math import exp
 from collections import OrderedDict
 
 
+from .manager_noise_model import Manager_NoiseModel
 from ..database_func import DatabaseInstLvlDataset
 from ....tools.function_w_doc import DocFunction
 from ....tools.miscellaneous import interpret_data_filename
@@ -26,104 +24,28 @@ from ....tools.miscellaneous import interpret_data_filename
 ## logger object
 logger = getLogger()
 
+mgr_noisemodel = Manager_NoiseModel()
+mgr_noisemodel.load_setup()
+
 
 class LikelihoodCreator(object):
     """docstring for LikelihoodCreator."""
 
-    _lnlikelihoods_jitter = {
-        "wo jitter": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func(p, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2)
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))""",
-        "jitter dfm": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * {}))
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))""",
-        "jitter multiplicative": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2 * exp(2 * {}))
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))""",
-        "jitter multiplicative baluev": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2 * exp(2 * {}))
-            Bualev_coeff = 1.0 / (1 - len(p)/len(data))
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                 nplog(inv_sigma2)))""",
-        "jitter additive": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * {})))
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))""",
-        "jitter additive baluev": """def {}(p, data, data_err, **kwarg_data):
-            model = datasim_func({}, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * {})))
-            Bualev_coeff = 1.0 / (1 - (len(p) - 1)/len(data))
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                 nplog(inv_sigma2)))"""}
-
-    def _create_lnlikelihood(self, datasimulator, category="wo jitter", **kwargs):
+    def _create_lnlikelihood(self, datasim_docfunc, inst_model_obj, pickleable=False):
                             # **kwarg_data):
         """Return the log likelihood function."""
-
-        datasim_func = datasimulator.function
-        function_name = "lnlikelihood"
-
-        def finalize_and_create_lnlike_jitter(datasimulator, text_func, jitter_param=None):
-            arg_list = datasimulator.arg_list.copy()
-            if jitter_param is not None:
-                if jitter_param.free:
-                    text = text_func.format(function_name, "p[1:]", "p[0]")
-                    arg_list["param"] = [jitter_param.full_name] + arg_list["param"]
-                else:
-                    text = text_func.format(function_name, "p", jitter_param.value)
-            else:
-                text = text_func.format(function_name)
-            arg_list["kwargs"] = ["data", "data_err"] + arg_list["kwargs"]
-            logger.debug("Log likelihood function text: {}".format(text))
-            logger.debug("Log likelihood arg_list: {}".format(arg_list))
-            ldict = locals().copy()
-            ldict["datasim_func"] = datasim_func
-            ldict["exp"] = exp
-            ldict["nplog"] = nplog
-            ldict["npsum"] = npsum
-            exec(text, ldict)
-            doc_f = DocFunction(function=ldict[function_name], arg_list=arg_list)
-            return doc_f
-
-        if category in self._lnlikelihoods_jitter.keys():
-            text_func = self._lnlikelihoods_jitter[category]
-            jitter_param_provided = ("jitter_param" in kwargs)
-            if jitter_param_provided:
-                jitter_param_main = kwargs["jitter_param"].main
-            if category == "wo jitter":
-                if jitter_param_provided:
-                    if jitter_param_main:
-                        raise ValueError("For likelihood '{}' the jitter parameter should not be a "
-                                         "main parameter.".format(category))
-                return finalize_and_create_lnlike_jitter(datasimulator, text_func)
-            else:
-                if jitter_param_provided:
-                    if jitter_param_main:
-                        return finalize_and_create_lnlike_jitter(datasimulator, text_func,
-                                                                 kwargs["jitter_param"])
-                raise ValueError("For likelihood '{}' the jitter parameter should be a main"
-                                 "parameter.".format(category))
-        elif category == "GP":
-            text_func = """def {func_name}(p, data, data_err, **kwarg_data):
-                model = datasim_func({{p_datasim}}, **kwarg_data)
-                gp = george.GP({{p_GP}})  # Define the kernel of the GP
-                gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
-                return gp.lnlikelihood(data - model)
-                """
-            text_func = text_func.format(func_name=function_name)
-            # Get the function form the model instance named finalize and create lnlike_gp and
-            # return the result. The definition has to be made on a case by case analysis.
-            # There is no more general scheme.
+        noise_model_subclass = mgr_noisemodel.get_noisemodel_subclass(inst_model_obj.noise_model)
+        noise_model_instance = noise_model_subclass(datasim_docfunc=datasim_docfunc,
+                                                    model_instance=self,
+                                                    instmodel_obj=inst_model_obj)
+        if pickleable:
+            return DocFunction(function=noise_model_instance.lnlike,
+                               arg_list=noise_model_instance.arg_list)
         else:
-            raise ValueError("Category {} not recognized. Avalaible categories are {}"
-                             "".format(self._ln_categories))
+            return noise_model_instance.lnlike_creator()
 
-    def create_lnlikelihoods(self, datasim_db, category="wo jitter",
-                             affectinstmodel4dataset=False, lock_db=False):
+    def create_lnlikelihoods(self, datasim_db,
+                             affectinstmodel4dataset=False, lock_db=False, pickleable=False):
         """Return the likelihood for each instrument model used.
 
         datasim_db : DatabaseInstLvlDataset or DatabaseInstLevel instance
@@ -132,26 +54,25 @@ class LikelihoodCreator(object):
             instmodel4dataset = self.instmodel4dataset.copy()
         else:
             instmodel4dataset = None
-        db = DatabaseInstLvlDataset(object_stored="datasimulator", database_name=self.object_name,
+        db = DatabaseInstLvlDataset(object_stored="lnlikelihoods", database_name=self.object_name,
                                     instmodel4dataset=instmodel4dataset, ordered=False)
         db.database_unlock()
-        # if datasim_db is None:
-        #     datasim_db = self.create_datasimulators()
         # Create the instrument_db entries
         for inst_cat in datasim_db:
             for inst_name in datasim_db[inst_cat]:
                 for inst_model in datasim_db[inst_cat][inst_name]:
                     db[inst_cat][inst_name][inst_model] = {}
+                    instmod_obj = self.instruments[inst_cat][inst_name][inst_model]
+                    logger.info("Creating likelihoods for instrument model {}"
+                                "".format(instmod_obj.full_name))
                     for obj in datasim_db[inst_cat][inst_name][inst_model]:
+                        logger.info("Creating likelihood for instrument model {} and obj {}"
+                                    "".format(instmod_obj.full_name, obj))
                         datasim = datasim_db[inst_cat][inst_name][inst_model][obj]
-                        instmod_obj = self.instruments[inst_cat][inst_name][inst_model]
-                        if instmod_obj.has_parameter(name="jitter", main=True):
-                            jitter_param = instmod_obj.jitter
-                        else:
-                            jitter_param = None
                         (db[inst_cat][inst_name][inst_model][obj]
-                         ) = self._create_lnlikelihood(datasim, category=category,
-                                                       jitter_param=jitter_param)
+                         ) = self._create_lnlikelihood(datasim_docfunc=datasim,
+                                                       inst_model_obj=instmod_obj,
+                                                       pickleable=pickleable)
         if lock_db:
             db.lock()
         return db

@@ -124,7 +124,7 @@ class Prior(object):
                     for obj in lnlike_db[inst_cat][inst_name][inst_model]:
                         arg_list = lnlike_db[inst_cat][inst_name][inst_model][obj].arg_list["param"]
                         (db[inst_cat][inst_name][inst_model][obj]
-                         ) = self.create_joint_lnprior(arg_list,
+                         ) = self.create_joint_lnprior(list_paramnames=arg_list,
                                                        individual_priors=individual_priors)
         if lock_db:
             db.lock()

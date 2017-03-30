@@ -45,10 +45,15 @@ class StellarActNoiseModel(Core_Noise_Model):
         """
     function_name = "lnlike"
 
-    def __init__(self, datasim_docfunc, star):
-        super(StellarActNoiseModel, self).__init__(datasim_docfunc)
+    __star_param_GP_names = [amp_RV, evol_timescal, periodic_timescal, period]
+
+    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+        super(StellarActNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
+                                                   model_instance=model_instance,
+                                                   instmodel_obj=instmodel_obj)
+        star = model_instance.stars[list(model_instance.stars.keys())[0]]
         if isinstance(star, Star):
-            self.star = star
+            self.__star = star
         else:
             raise ValueError("star should be a Star instance. Got {}".format(type(star)))
 
@@ -56,7 +61,8 @@ class StellarActNoiseModel(Core_Noise_Model):
         datasim_func = self.datasim_function
         nb_free = self.nb_params_GP_free
         dico = {}
-        for param_name, free, idxorval in zip(self.star_param_GP_names, self.star_params_GP_isfree,
+        for param_name, free, idxorval in zip(self.__star_param_GP_names,
+                                              self.star_params_GP_isfree,
                                               self.star_param_GP_indexorval):
             if free:
                 dico[param_name] = "p[{}]".format(idxorval)
@@ -88,8 +94,16 @@ class StellarActNoiseModel(Core_Noise_Model):
         return gp.lnlikelihood(data - model)
 
     @property
-    def star_param_GP_names(self):
-        return [amp_RV, evol_timescal, periodic_timescal, period]
+    def star(self):
+        """Return the star object used for this stellar activity noise modelling."""
+        return self.__star
+
+    def get_star_param_GP_names(self, free=False, full_name=False):
+        """Return the list of the names of the paramaters of the GP model."""
+        if full_name:
+            return [param.full_name for param in self.get_star_params_GP(free=free)]
+        else:
+            return [param.name for param in self.get_star_params_GP(free=free)]
 
     def get_star_params_GP(self, free=False):
         """Return the list of GP parameters.
@@ -97,9 +111,10 @@ class StellarActNoiseModel(Core_Noise_Model):
         If free is True returns only the free parameters.
         """
         if free:
-            l_param = [getattr(self, par) for par in self.star_param_GP_names
-                       if getattr(self, par).free]
-        return l_param
+            return [getattr(self.star, par) for par in self.__star_param_GP_names
+                    if getattr(self.star, par).free]
+        else:
+            return [getattr(self.star, par) for par in self.__star_param_GP_names]
 
     @property
     def star_params_GP_isfree(self):
@@ -126,7 +141,8 @@ class StellarActNoiseModel(Core_Noise_Model):
     @property
     def arg_list(self):
         arg_list = super(StellarActNoiseModel, self).arg_list
-        arg_list["param"] = self.get_star_params_GP(free=True) + arg_list["param"]
+        arg_list["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
+                             arg_list["param"])
         arg_list["kwargs"] = ["data", "data_err", "t"]
         return arg_list
 
