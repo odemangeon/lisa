@@ -13,7 +13,7 @@ The objective of this module is to manage the noise models.
 """
 from logging import getLogger
 from ....software_parameters import setupfile_noise_model
-from .noise_model import Core_Noise_Model
+from .core_noise_model import Core_Noise_Model
 
 ## Logger
 logger = getLogger()

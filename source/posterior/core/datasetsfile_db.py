@@ -19,11 +19,13 @@ from .database_instlevelsanddataset import DatabaseInstLvlDataset
 from ...tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
 from ...tools.lockable_dict import LockableDict
 from .likelihood.manager_noise_model import Manager_NoiseModel
+from .dataset_and_instrument.instrument import build_instmod_fullname
 
 ## Logger object
 logger = getLogger()
 
 mgr_noisemodel = Manager_NoiseModel()
+mgr_noisemodel.load_setup()
 
 
 def read_datasets_file(datasetsfile_path):
@@ -59,7 +61,7 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
         object_stored = "dataset, inst_model and noise model subclass"
         super(DatasetsFileDb, self).__init__(object_stored=object_stored, database_name=object_name,
                                              instmodel4dataset=instmodel4dataset, ordered=False,
-                                             use_samelock=True, lock_dataset=lock)
+                                             use_samelock=True, lock_dataset=lock, default=None)
         self.__path4name = LockableDict(lock=self.get_Lock_instance())
 
     @property
@@ -77,15 +79,20 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
         """Return the list of the paths to the datasets."""
         return list(self.path4name.values())
 
-    def load(self, datasetsfile_path):
+    def load(self, datasetsfile_path, load_setup=False):
         """Load the datasets provided in the datasets file into the dataset database.
 
         Also update the datasetsfile_content.
         """
+        if load_setup:
+            mgr_noisemodel.load_setup()
         dico_df = read_datasets_file(datasetsfile_path)
+        logger.debug("Content of the datasets file: {}".format(dico_df))
         for dataset_filepath in dico_df:
             dataset_filename = get_filename_from_file_path(dataset_filepath)
             dataset_name = dataset_name_from_file_name(dataset_filename)
+            logger.debug("load info regarding dataset {} at path: {}".format(dataset_name,
+                                                                             dataset_filepath))
             self.path4name[dataset_name] = dataset_filepath
             dataset_info = interpret_data_filename(dataset_filename)
             inst_cat = dataset_info["inst_category"]
@@ -96,6 +103,17 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
             self[inst_cat][inst_name][inst_model] = (mgr_noisemodel.
                                                      get_noisemodel_subclass(noise_model))
         self.__datasetsfile_path = datasetsfile_path
+
+    def get_noisemod4instmodfullname(self):
+        """Return the dictionary giving the noise model name for each instrument model full_name."""
+        res = {}
+        for inst_cat in self:
+            for inst_name in self[inst_cat]:
+                for inst_model in self[inst_cat][inst_name]:
+                    instmod_fullname = build_instmod_fullname(inst_model=inst_model,
+                                                              inst_name=inst_name)
+                    res[instmod_fullname] = self[inst_cat][inst_name][inst_model].category
+        return res
 
 
 class DatasetsFileDbAttr(object):

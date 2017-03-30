@@ -92,7 +92,7 @@ class GravGroup_Parametrisation(object):
         if with_jitter:
             self.make_instmodel_jitter_main()
 
-    def apply_RV_EXOFAST_param(self, with_jitter=False, with_drift=False, with_DeltaRV=False):
+    def apply_RV_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
         """Apply the parametrisation for the fit of RV only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -124,8 +124,7 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].t0.main = True
-        self.instmodel_RV_parametrisation(jitter_main=with_jitter, drift_main=with_drift,
-                                          DeltaRV_main=with_DeltaRV)
+        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
 
         self.getecc_fast = getecc_fast
         self.getomega_fast = getomega_fast

@@ -132,7 +132,8 @@ class DatabaseInstLvlDataset(DatabaseInstLevel, Instmodel4DatasetAttr, DstDbLock
     """
 
     def __init__(self, object_stored, database_name, instmodel4dataset=None, list_datasetnames=None,
-                 ordered=False, use_samelock=False, lock_dataset=None, lock_database=None):
+                 ordered=False, use_samelock=False, lock_dataset=None, lock_database=None,
+                 default={"all": None}):
         """doctstring of DatabaseInstLvlDataset __init__ method."""
         DstDbLockAttr.__init__(self, use_samelock=use_samelock, lock_dataset=lock_dataset,
                                lock_database=lock_database)
@@ -141,7 +142,7 @@ class DatabaseInstLvlDataset(DatabaseInstLevel, Instmodel4DatasetAttr, DstDbLock
                                        lock=self.get_dataset_Lock_instance())
         DatabaseInstLevel.__init__(self, object_stored=object_stored,
                                    database_name=database_name, ordered=ordered,
-                                   lock=self.get_database_Lock_instance(), default={"all": None})
+                                   lock=self.get_database_Lock_instance(), default=default)
 
     def __getitem__(self, key):
         if key in self.instmodel4dataset:

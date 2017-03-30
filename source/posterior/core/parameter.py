@@ -35,7 +35,7 @@ class Parameter(Name):
     joint_prior_pos = None
 
     def __init__(self, name, name_prefix=None, unit="n/a",
-                 free=True, main=True,
+                 free=True, main=False,
                  joint_prior=False, prior_category=None, prior_args=None,
                  value=None
                  ):

@@ -11,14 +11,14 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from ..exoplanet_parameters import stelact_GP_noisemodel
-
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
 
 ## Logger
 logger = getLogger()
+
+RV_inst_cat = "RV"
 
 
 class RV_Dataset(Dataset):
@@ -75,9 +75,8 @@ class RV_Dataset(Dataset):
 class RV_Instrument(Core_Instrument):
     """docstring for RV_Instrument."""
 
-    __category__ = "RV"
-    __params_model__ = {"jitter": {"unit": "wo unit"},
-                        "drift": {"unit": "[K]/day"},
+    __category__ = RV_inst_cat
+    __params_model__ = {"drift": {"unit": "[K]/day"},
                         "DeltaRV": {"unit": "[K]"},
                         }
     __name_RV_ref_var__ = "RVref"

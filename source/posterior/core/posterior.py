@@ -127,7 +127,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the model."""
         return self.__model
 
-    def load_datasets_file(self, path_datasets_file, load_setup=False, force=False):
+    def load_datasetsfile(self, path_datasets_file):
         file_path = self.look4runfile(file_path=path_datasets_file)
         self.datasetsfile_db.load(file_path)
         self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
@@ -149,9 +149,12 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(category)
+        noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
         self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
                                       instmodel4dataset=self.instmodel4dataset,
+                                      l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
                                       **kwargs)
+        self.model.set_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
         self.lock()
         logger.info("Model defined with name {} !".format(self.model.name))
 
@@ -167,8 +170,8 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         7. Lock everything
         """
         list_datasetnames = self.dataset_db.get_datasetnames()
-        self.instmodel4dataset.update_datasets(list_datasetnames)  # 1.
-        self.model.init_missinginstmodels()  # 2. TODO: It should be more, see init of model
+        self.instmodel4dataset.update(list_datasetnames)  # 1.
+        # self.model.init_missinginstmodels()  # 2. TODO: Provide a noisemod4instmodfullname
         self.datasimulators.update_datasets()  # 3.
         self.lnpriors.update_datasets()  # 4.
         self.lnlikelihoods.update_datasets()  # 5.

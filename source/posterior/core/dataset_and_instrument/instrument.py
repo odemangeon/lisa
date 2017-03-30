@@ -41,8 +41,13 @@ key_misc = "misc"
 def interpret_instmod_fullname(instmod_fullname):
     """Return the instrument name associated to the instrument model full_name."""
     res = {}
-    res["inst_name"], res["inst_model"] = instmod_fullname.split("_")[0]
+    res["inst_name"], res["inst_model"] = instmod_fullname.split("_")
     return res
+
+
+def build_instmod_fullname(inst_model, inst_name):
+    """Return the instrument name associated to the instrument model full_name."""
+    return "{}_{}".format(inst_name, inst_model)
 
 
 class Instrument_Model(Core_ParamContainer):
@@ -50,12 +55,15 @@ class Instrument_Model(Core_ParamContainer):
 
     __category__ = instrument_model_category
 
-    def __init__(self, instrument, name, noise_model="wo jitter"):
+    def __init__(self, instrument, name, noise_model=None):
         """Docstring of the Instrument_Model init method."""
         # name_prefix is set to None because it will be set when the gravgroup is set.
         super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
         self.__instrument = instrument
-        self.noise_model = noise_model
+        if noise_model is None:
+            self.__noise_model = noise_model
+        else:
+            self.noise_model = noise_model
         for name, dico in instrument.params_model.items():
             self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
                                          **dico))
@@ -83,10 +91,6 @@ class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Instrument abstract class."""
 
     __mandatoryattrs__ = ["category", "params_model"]
-
-    __available_noise_models__ = ["wo jitter", "jitter dfm", "jitter multiplicative",
-                                  "jitter multiplicative baluev", "jitter additive",
-                                  "jitter additive baluev"]
 
     def __init__(self, name):
         """Core_Instrument init method FOR INHERITANCE PURPOSES (as Core_Instrument is an abstract class).
@@ -159,7 +163,7 @@ def get_instrument_paramfilesection(model_instance, inst_db, text_tab="", entete
             for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
                 number = interpret_data_filename(datasetname)["number"]
                 model_name = model_instance.instmodel4dataset[datasetname]
-                text_instmod4dataset += "'{}': '{}', ".format(number, model_name)
+                text_instmod4dataset += "{}: '{}', ".format(number, model_name)
             text += ("{0}# By default all the datasets of an instrument are associated "
                      "to {1}.\n{0}# If you want to model some datasets with another "
                      "instrument model copy paste it,\n{0}# give it a new name and "

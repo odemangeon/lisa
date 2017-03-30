@@ -12,7 +12,7 @@ The objective of this package is to provides a toolbox to manipulate dico_datase
 """
 from logging import getLogger
 from collections import defaultdict
-from copy import deepcopy
+from copy import deepcopy, copy
 from .lockable_dict import LockableDict
 
 
@@ -183,7 +183,10 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
     @property
     def default(self):
         """Return the default value for the last level."""
-        return self.__default
+        if callable(self.__default):
+            return self.__default()
+        else:
+            return copy(self.__default)
 
     def get_lvl2_keys(self, level1_key=None, sortby_lvl1key=False):
         """Return the keys of the 2nd level in the nested dictionary.
@@ -296,7 +299,7 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
                              "The result is the self itself or self[level1_key]([level2_key])!")
         else:
             result = init_result(sortby_lvl1key=sortby_lvl1key, sortby_lvl2key=sortby_lvl2key,
-                                 sortby_lvl3key=sortby_lvl3key, default_value=[])
+                                 sortby_lvl3key=sortby_lvl3key, default_value=list)
         if level1_key is None:
             iter_level1key = self.keys()
         else:

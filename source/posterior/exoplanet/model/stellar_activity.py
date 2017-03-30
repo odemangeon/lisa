@@ -14,39 +14,35 @@ model the residuals.
 """
 from logging import getLogger
 
-from ..exoplanet_parameters import stelact_GP_noisemodel
-from ..exoplanet_parameters import amp_RV, evol_timescal, periodic_timescal, period
+from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.parameter import Parameter
 
 
 ## logger object
 logger = getLogger()
 
+amp_RV = "lnAmpSARV"
+amp_LC = "lnAmpSALC"
+evol_timescal = "tauESA"
+periodic_timescal = "tauPSA"
+period = "PSA"
 
-class StellarActivity(object):
-    """docstring for StellarActivityGP.
 
-    This is an interface class for the gravgroup class
-    """
-
-    def model_stelact_w_GP(self, model_RV=True, model_LC=True):
-        """Function to call to model stellar activity with a GP.
-        ----
-        model_RV    : bool, (default: True), NOT IMPLEMENTED,
-            Indicate if you want to use this model for the RV
-        model_LC    : bool, (default: True), NOT IMPLEMENTED,
-            Indicate if you want to use this model for the LC
-        """
-        star = self.stars[list(self.stars.keys())[0]]
+def check_parametrisation_stellar_activity(model_instance, instmod_fullname):
+    """Check that there is a jitter main parameter in the instrument model."""
+    star = model_instance.stars[list(model_instance.stars.keys())[0]]
+    star.add_parameter(Parameter(name=evol_timescal, name_prefix=star.full_name, main=True))
+    star.add_parameter(Parameter(name=periodic_timescal, name_prefix=star.full_name,
+                                 main=True))
+    star.add_parameter(Parameter(name=period, name_prefix=star.full_name, main=True))
+    inst_model_obj = model_instance.instruments[instmod_fullname]
+    inst = inst_model_obj.instrument
+    inst_cat = inst.category
+    if inst_cat == RV_inst_cat:
         star.add_parameter(Parameter(name=amp_RV, name_prefix=star.full_name, main=True))
-        star.add_parameter(Parameter(name=evol_timescal, name_prefix=star.full_name, main=True))
-        star.add_parameter(Parameter(name=periodic_timescal, name_prefix=star.full_name,
-                                     main=True))
-        star.add_parameter(Parameter(name=period, name_prefix=star.full_name, main=True))
-        for inst_model in self.get_list_instmodel():  # Set the noise model of the instruments
-            if inst_model.instrument.category == "RV":
-                if model_RV:
-                    inst_model.noise_model = stelact_GP_noisemodel
-            if inst_model.instrument.category == "LC":
-                if model_LC:
-                    inst_model.noise_model = stelact_GP_noisemodel
+    elif inst_cat == RV_inst_cat:
+        raise NotImplementedError("Stellar activity noise model for LC instrument is not yet"
+                                  "implemented")
+    else:
+        raise ValueError("Stellar activity noise model cannot be used for instrument category {}"
+                         "".format(inst_cat))

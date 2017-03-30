@@ -15,54 +15,15 @@ from logging import getLogger
 from numpy import sum as npsum
 from numpy import log as nplog
 from math import exp
-from copy import deepcopy
 
-from ....tools.metaclasses import MandatoryReadOnlyAttr
-from ....tools.function_w_doc import DocFunction
+from .core_noise_model import Core_Noise_Model
+from ..model.jitter import check_parametrisation_jitter
 from ..dataset_and_instrument.instrument import Instrument_Model
+from ....tools.function_w_doc import DocFunction
 
 
 ## Logger
 logger = getLogger()
-
-
-class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
-
-    def __init__(cls, name, bases, attrs):
-        super(Metaclass_NoiseModel, cls).__init__(name, bases, attrs)
-        if cls.__name__ not in ["Core_Noise_Model", ]:
-            missing_attrs = ["{}".format(attr) for attr in ["lnlike_creator", "lnlike"]
-                             if not hasattr(cls, attr)]
-            if len(missing_attrs) > 0:
-                raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
-
-
-class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
-    """Docstring for Core_Noise_Model class."""
-
-    __mandatoryattrs__ = ["category", ]
-
-    def __init__(self, datasim_docfunc):
-        if isinstance(datasim_docfunc, DocFunction):
-            self.datasim_docfunc = datasim_docfunc
-        else:
-            raise ValueError("datasim_docfunc should be a DocFunction instance. Got {}"
-                             "".format(type(datasim_docfunc)))
-        # Make Core_NoiseModel an abstract class
-        if type(self) is Core_Noise_Model:
-            raise NotImplementedError("Core_NoiseModel should not be instanciated!")
-
-    def __call__(self, p, data, data_err, **kwarg_data):
-        return self.lnlike(p, data, data_err, **kwarg_data)
-
-    @property
-    def datasim_function(self):
-        """Return the datasim function."""
-        return self.datasim_docfunc.function
-
-    @property
-    def arg_list(self):
-        return deepcopy(self.datasim_docfunc)
 
 
 class GaussianNoiseModel(Core_Noise_Model):
@@ -110,6 +71,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
 
     def __init__(self, datasimulator, instmodel_obj):
         super(GaussianNoiseModel_wdfmjitter, self).__init__(datasimulator, instmodel_obj)
+
         if not(instmodel_obj.jitter.main):
             raise ValueError("For GaussianNoiseModels with jitter instmodel_obj.jitter should be a "
                              "main paramater")
@@ -156,6 +118,12 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         if self.jitterfree:
             arg_list["param"] = [self.instmodel_obj.jitter.full_name] + arg_list["param"]
         return arg_list
+
+    @classmethod
+    def check_parametrisation(cls, model_instance, instmod_fullname):
+        """For more information see check_parametrisation_jitter."""
+        check_parametrisation_jitter(model_instance=model_instance,
+                                     instmod_fullname=instmod_fullname)
 
 
 class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):

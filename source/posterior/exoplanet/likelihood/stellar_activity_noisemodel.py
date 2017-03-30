@@ -18,14 +18,16 @@ from george import GP
 from math import exp
 
 from ..model.celestial_bodies import Star
-from ..exoplanet_parameters import amp_RV, evol_timescal, periodic_timescal, period
-from ..exoplanet_parameters import stelact_GP_noisemodel
-from ...core.likelihood.noise_model import Core_Noise_Model
+from ..model.stellar_activity import amp_RV, evol_timescal, periodic_timescal, period
+from ..model.stellar_activity import check_parametrisation_stellar_activity
+from ...core.likelihood.core_noise_model import Core_Noise_Model
 from ....tools.function_w_doc import DocFunction
 
 
 ## logger object
 logger = getLogger()
+
+stelact_GP_noisemodel = "stellar_activity"
 
 
 class StellarActNoiseModel(Core_Noise_Model):
@@ -127,3 +129,9 @@ class StellarActNoiseModel(Core_Noise_Model):
         arg_list["param"] = self.get_star_params_GP(free=True) + arg_list["param"]
         arg_list["kwargs"] = ["data", "data_err", "t"]
         return arg_list
+
+    @classmethod
+    def check_parametrisation(cls, model_instance, instmod_fullname):
+        """For more information see check_parametrisation_stellar_activity."""
+        check_parametrisation_stellar_activity(model_instance=model_instance,
+                                               instmod_fullname=instmod_fullname)
