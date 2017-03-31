@@ -81,6 +81,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             self.rv_model = rv_model
             # Initialise the dictionary giving the RV zero point RV_references
             self.__RV_references = dict.fromkeys(self.get_inst_names("RV"), None)
+            logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
             self.__RV_references["global"] = list(self.__RV_references.keys())[0]
             for key in self.__RV_references:
                 if key != "global":

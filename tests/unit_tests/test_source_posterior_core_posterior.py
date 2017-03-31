@@ -123,7 +123,8 @@ class TestMethods(unittest.TestCase):
 
     def test_add_a_dataset_from_path(self):
         open(self.test_datafile, "x").close()
-        self.posterior_instance.dataset_db.add_a_dataset_from_path(datafile_path=self.test_datafile)
+        (self.posterior_instance.dataset_db.
+         _add_a_dataset_from_path(datafile_path=self.test_datafile))
         os.remove(self.test_datafile)
         inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
         inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
@@ -137,7 +138,7 @@ class TestMethods(unittest.TestCase):
     def test_add_a_dataset_from_datasetsfile_and_get_instrument_categories(self):
         file1 = "LC_K2-29_K2.txt"
         line1 = "{}  default  {}".format(file1, GaussianNoiseModel.category)
-        file2 = "RV_K2-29_SOPHIE-HE.txt "
+        file2 = "RV_K2-29_SOPHIE-HE.txt"
         line2 = "{}  default  {}".format(file2, GaussianNoiseModel.category)
         dataset_file = "test_datasetfile.txt"
         open(file1, "x").close()

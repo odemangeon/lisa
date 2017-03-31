@@ -28,7 +28,10 @@ def init_result(sortby_lvl1key=False, sortby_lvl2key=False, sortby_lvl3key=False
     elif sum([sortby_lvl1key, sortby_lvl2key, sortby_lvl3key]) == 2:
         result = Nesteddict_wfixellvlnb(nb_lvl=2, default=default_value)
     elif sum([sortby_lvl1key, sortby_lvl2key, sortby_lvl3key]) == 1:
-        result = defaultdict(type(default_value))
+        if isinstance(default_value, type):
+            result = defaultdict(default_value)
+        else:
+            result = defaultdict(type(default_value))
     else:
         result = []
     logger.debug("Result initialised with {}".format(result))
@@ -183,7 +186,7 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
     @property
     def default(self):
         """Return the default value for the last level."""
-        if callable(self.__default):
+        if isinstance(self.__default, type):
             return self.__default()
         else:
             return copy(self.__default)

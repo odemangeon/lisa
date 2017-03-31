@@ -14,6 +14,7 @@ from numpy import zeros
 from source.posterior.core.prior.manager_prior import Manager_Prior
 from source.posterior.exoplanet.model.gravgroup import GravGroup
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+from source.posterior.core.datasetsfile_db import DatasetsFileDb
 
 
 logger = getLogger()
@@ -35,20 +36,36 @@ class TestMethods(TestCase):
         file1 = "LC_K2-29_K2.txt"
         file2 = "RV_K2-29_SOPHIE-HE.txt"
         file3 = "RV_K2-29_HARPS.txt"
+        instmod_name = "default"
+        noisemod_name = "gaussian"
+        line1 = "{}  {}  {}".format(file1, instmod_name, noisemod_name)
+        line2 = "{}  {}  {}".format(file2, instmod_name, noisemod_name)
+        line3 = "{}  {}  {}".format(file3, instmod_name, noisemod_name)
         dataset_file = "test_datasetfile.txt"
         dataset_file_RVonly = "test_datasetfile_RVonly.txt"
         open(file1, "x").close()
         open(file2, "x").close()
         open(file3, "x").close()
         with open(dataset_file, "x") as f:
-            f.write(file1 + "\n")
-            f.write(file2 + "\n")
-            f.write(file3 + "\n")
+            f.write(line1 + "\n")
+            f.write(line2 + "\n")
+            f.write(line3 + "\n")
         with open(dataset_file_RVonly, "x") as f:
-            f.write(file2 + "\n")
-            f.write(file3 + "\n")
-        self.dataset_db.add_datasets_from_datasetfile(path_datasets_file=dataset_file)
-        self.dataset_db_RVonly.add_datasets_from_datasetfile(path_datasets_file=dataset_file_RVonly)
+            f.write(line2 + "\n")
+            f.write(line3 + "\n")
+        self.datasetsfile_db = DatasetsFileDb(object_name="K2-29")
+        self.datasetsfile_db_RV_only = DatasetsFileDb(object_name="K2-29")
+        self.datasetsfile_db.load(datasetsfile_path=dataset_file)
+        self.datasetsfile_db_RV_only.load(datasetsfile_path=dataset_file_RVonly)
+        (self.dataset_db.
+         _add_datasets_from_listdatasetpath(l_dataset_path=self.datasetsfile_db.dataset_filepaths))
+        (self.dataset_db_RVonly.
+         _add_datasets_from_listdatasetpath(l_dataset_path=(self.datasetsfile_db_RV_only.
+                                                            dataset_filepaths)))
+        noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
+        self.l_instmod_fullnames = list(noisemod4instmodfullname.keys())
+        noisemod4instmodfullname_RVonly = self.datasetsfile_db_RV_only.get_noisemod4instmodfullname()
+        self.l_instmod_fullnames_RVonly = list(noisemod4instmodfullname_RVonly.keys())
         remove(file1)
         remove(file2)
         remove(file3)
@@ -62,6 +79,7 @@ class TestMethods(TestCase):
         # set_trace()
         gravgroup_model = GravGroup(name="K2-19",
                                     dataset_db=self.dataset_db_RVonly,
+                                    l_instmod_fullnames=self.l_instmod_fullnames_RVonly,
                                     transit_model="batman", ld_model=None,
                                     rv_model="ajplanet",
                                     stars=1, planets=2)
