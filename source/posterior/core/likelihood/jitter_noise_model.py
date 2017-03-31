@@ -18,7 +18,6 @@ from math import exp
 
 from .core_noise_model import Core_Noise_Model
 from ..model.jitter import check_parametrisation_jitter, jitter_name
-from ..dataset_and_instrument.instrument import Instrument_Model
 from ....tools.function_w_doc import DocFunction
 
 
@@ -30,6 +29,7 @@ class GaussianNoiseModel(Core_Noise_Model):
     """docstring for GaussianNoiseModel."""
 
     __category__ = "gaussian"
+    __allow_multidataset__ = False
 
     def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
         super(GaussianNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
@@ -43,7 +43,7 @@ class GaussianNoiseModel(Core_Noise_Model):
                                  "main paramater")
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
 
         def lnlike(p, data, data_err, **kwarg_data):
             model = datasim_func(p, **kwarg_data)
@@ -53,7 +53,7 @@ class GaussianNoiseModel(Core_Noise_Model):
         return DocFunction(function=lnlike, arg_list=self.arg_list)
 
     def lnlike(self, p, data, data_err, **kwarg_data):
-        model = self.datasim_function(p, **kwarg_data)
+        model = self.get_datasim_function()(p, **kwarg_data)
         inv_sigma2 = 1.0 / (data_err**2)
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
 
@@ -93,7 +93,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         return self.instmodel_obj.jitter.value
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -111,10 +111,10 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
 
     def lnlike(self, p, data, data_err, **kwarg_data):
         if self.jitterfree:
-            model = self.datasim_function(p[1:], **kwarg_data)
+            model = self.get_datasim_function()(p[1:], **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * p[0]))
         else:
-            model = self.datasim_function(p, **kwarg_data)
+            model = self.get_datasim_function()(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * self.jittervalue))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
@@ -138,7 +138,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_multi"
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -156,10 +156,10 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 
     def lnlike(self, p, data, data_err, **kwarg_data):
         if self.jitterfree:
-            model = self.datasim_function(p[1:], **kwarg_data)
+            model = self.get_datasim_function()(p[1:], **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
         else:
-            model = self.datasim_function(p, **kwarg_data)
+            model = self.get_datasim_function()(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.jittervalue))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
@@ -170,7 +170,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_multi_Baluev"
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -192,10 +192,10 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
 
     def lnlike(self, p, data, data_err, **kwarg_data):
         if self.jitterfree:
-            model = self.datasim_function(p[1:], **kwarg_data)
+            model = self.get_datasim_function()(p[1:], **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
         else:
-            model = self.datasim_function(p, **kwarg_data)
+            model = self.get_datasim_function()(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.jittervalue))
         Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
@@ -208,7 +208,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_add"
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -226,10 +226,10 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
 
     def lnlike(self, p, data, data_err, **kwarg_data):
         if self.jitterfree:
-            model = self.datasim_function(p[1:], **kwarg_data)
+            model = self.get_datasim_function()(p[1:], **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
         else:
-            model = self.datasim_function(p, **kwarg_data)
+            model = self.get_datasim_function()(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * self.jitter_value)))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
@@ -240,7 +240,7 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
     __category__ = "gaussian_jitter_add_Baluev"
 
     def lnlike_creator(self):
-        datasim_func = self.datasim_function
+        datasim_func = self.get_datasim_function()
         jitter_value = self.jittervalue
 
         if self.jitterfree:
@@ -262,10 +262,10 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
 
     def lnlike(self, p, data, data_err, **kwarg_data):
         if self.jitterfree:
-            model = self.datasim_function(p[1:], **kwarg_data)
+            model = self.get_datasim_function()(p[1:], **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
         else:
-            model = self.datasim_function(p, **kwarg_data)
+            model = self.get_datasim_function()(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * self.jitter_value)))
         Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
