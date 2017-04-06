@@ -113,7 +113,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         for instmod_fullname, noise_model in noisemod4instmodfullname.items():
             self.instruments[instmod_fullname].noise_model = noise_model
             noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(noise_model)
-            noise_model_subclass.check_parametrisation(self, instmod_fullname)
+            noise_model_subclass.apply_parametrisation(model_instance=self,
+                                                       instmod_fullname=instmod_fullname)
 
     def get_param(self, full_name):
         """Return the instance of the Parameter designated by full_name."""

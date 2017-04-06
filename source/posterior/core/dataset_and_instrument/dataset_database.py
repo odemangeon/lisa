@@ -32,13 +32,25 @@ manager_inst.load_setup()
 class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
 
     def __getitem__(self, key):
-        if ((len(self) == 1) and (key == ".")) or (key == "1st"):
-            return self[list(self.keys())[0]]
+        if key in self:
+            return super(Nesteddict_defgetitem, self).__getitem__(key)
         else:
-            if isinstance(key, int):
+            if ((len(self) == 1) and (key == ".")) or (key == "1st"):
+                return self[list(self.keys())[0]]
+            elif (self.lvl == 2) and isinstance(key, int):
                 return self[str(key)]
             else:
-                return super(Nesteddict_defgetitem, self).__getitem__(key)
+                try:
+                    if self.lvl == 0:
+                        fileinfo = interpret_data_filename(key)
+                        inst_cat = fileinfo["inst_category"]
+                        inst_name = fileinfo["inst_name"]
+                        number = fileinfo["number"]
+                        return self[inst_cat][inst_name][number]
+                    else:
+                        raise KeyError
+                except:
+                    return super(Nesteddict_defgetitem, self).__getitem__(key)
 
     def __missing__(self, key, cls=None):
         if key == ".":

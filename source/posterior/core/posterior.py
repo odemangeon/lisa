@@ -248,13 +248,19 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
     def get_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
+            datasim_db = self.datasimulators.instrument_db
             (self.lnlikelihoods.instrument_db.
-             update(self.model.create_lnlikelihoods(datasim_db=self.datasimulators.instrument_db)))
+             update(self.model.create_lnlikelihoods(datasim_db=datasim_db)))
             (self.lnlikelihoods.dataset_db.
              update(self.model.
                     create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
                                                     dataset_db=self.dataset_db,
                                                     instmodel4dataset=self.instmodel4dataset)))
+            (self.lnlikelihoods.dataset_db['all'], self.lnlikelihoods.l_param_idxs
+             ) = (self.model.
+                  create_lnlikelihood_alldataset(datasim_db=datasim_db,
+                                                 dataset_db=self.dataset_db,
+                                                 instmodel4dataset=self.instmodel4dataset))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 

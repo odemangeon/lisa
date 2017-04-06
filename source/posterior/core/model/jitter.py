@@ -23,7 +23,7 @@ logger = getLogger()
 jitter_name = "jitter"
 
 
-def check_parametrisation_jitter(model_instance, instmod_fullname):
+def apply_parametrisation_jitter(model_instance, instmod_fullname):
     """Check that there is a jitter main parameter in the instrument model."""
     inst_model_obj = model_instance.instruments[instmod_fullname]
     if jitter_name in inst_model_obj.parameters:

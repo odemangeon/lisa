@@ -17,11 +17,11 @@ from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from math import exp
 from numpy import concatenate
-from collections import OrderedDict
+# from collections import OrderedDict
 
 from ..model.celestial_bodies import Star
 from ..model.stellar_activity import amp_RV, evol_timescal, periodic_timescal, period
-from ..model.stellar_activity import check_parametrisation_stellar_activity
+from ..model.stellar_activity import apply_parametrisation_stellar_activity
 from ...core.likelihood.core_noise_model import Core_Noise_Model
 from ....tools.function_w_doc import DocFunction
 
@@ -36,7 +36,6 @@ class StellarActNoiseModel(Core_Noise_Model):
     """docstring for StellarActNoiseModel."""
 
     __category__ = stelact_GP_noisemodel
-    __allow_multidataset__ = True
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")
@@ -58,25 +57,27 @@ class StellarActNoiseModel(Core_Noise_Model):
     __star_param_GP_names = [amp_RV, evol_timescal, periodic_timescal, period]
 
     def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+        star = model_instance.stars[list(model_instance.stars.keys())[0]]
+        if isinstance(star, Star):
+            self.__star = star  # This needs to be done before the init for check_parametrisation
+        else:
+            raise ValueError("star should be a Star instance. Got {}".format(type(star)))
         super(StellarActNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
                                                    model_instance=model_instance,
                                                    instmodel_obj=instmodel_obj)
-        star = model_instance.stars[list(model_instance.stars.keys())[0]]
-        if isinstance(star, Star):
-            self.__star = star
-        else:
-            raise ValueError("star should be a Star instance. Got {}".format(type(star)))
-        if self.multidataset:
-            self.__odict_param_idxs = self.__get_odico_indexes()
+
+    @property
+    def star(self):
+        """Return the star object used for this stellar activity noise modelling."""
+        return self.__star
 
     def lnlike_creator(self):
         ldict = locals().copy()
         nb_free = self.nb_params_GP_free
         ker = self.__get_text_define_GP()
         if self.multidataset:
-            l_idx_param = [idx_params for idx_params in self.param_idxs.values()]
-            ldict["l_idx_param"] = l_idx_param
-            ldict["l_func"] = [datasim.function for datasim in self.datasim_docfunc.values()]
+            ldict["l_idx_param"] = [self.get_param_idxs(dataset) for dataset in self.l_dataset]
+            ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
             text_func = self.lnlikefunc_text_multidataset
         else:
             datasim_func = self.get_datasim_function()
@@ -88,7 +89,7 @@ class StellarActNoiseModel(Core_Noise_Model):
         ldict["exp"] = exp
         ldict["GP"] = GP
         exec(func, ldict)
-        return DocFunction(function=ldict[self.function_name], arg_list=self.arg_list)
+        return DocFunction(function=ldict[self.function_name], arg_list=self.get_arg_list())
 
     def lnlike(self, p, data, data_err, t):
         if self.multidataset:
@@ -105,20 +106,6 @@ class StellarActNoiseModel(Core_Noise_Model):
             gp = self.__define_GP(p)
             gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
             return gp.lnlikelihood(data - model)
-
-    def __get_odico_indexes(self):
-        res = OrderedDict()
-        for dataset_key in self.datasim_docfunc:
-            idx_par = []
-            for par in self.datasim_docfunc[dataset_key].arg_list["param"]:
-                idx_par.append(self.arg_list["param"].index(par))
-            res[dataset_key].append(idx_par)
-        return res
-
-    @property
-    def param_idxs(self):
-        """Return the OrderedDict of param indexes"""
-        return self.__odict_param_idxs
 
     def __define_GP(self, p):
         l_val = [p[idxorval] if free else idxorval
@@ -141,11 +128,6 @@ class StellarActNoiseModel(Core_Noise_Model):
                                       periodic_timescal=dico[periodic_timescal],
                                       period=dico[period])
         return ker
-
-    @property
-    def star(self):
-        """Return the star object used for this stellar activity noise modelling."""
-        return self.__star
 
     def get_star_param_GP_names(self, free=False, full_name=False):
         """Return the list of the names of the paramaters of the GP model."""
@@ -187,15 +169,27 @@ class StellarActNoiseModel(Core_Noise_Model):
                 l.append(param.value)
         return l
 
-    @property
-    def arg_list(self):
-        arg_list = super(StellarActNoiseModel, self).arg_list
-        arg_list["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
-                             arg_list["param"])
-        return arg_list
+    def _get_arg_list_one_dataset(self, dataset_key=None):
+        arg_list_new = super(StellarActNoiseModel,
+                             self)._get_arg_list_one_dataset(dataset_key)
+        arg_list_new["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
+                                 arg_list_new["param"])
+        return arg_list_new
 
     @classmethod
-    def check_parametrisation(cls, model_instance, instmod_fullname):
-        """For more information see check_parametrisation_stellar_activity."""
-        check_parametrisation_stellar_activity(model_instance=model_instance,
+    def apply_parametrisation(cls, model_instance, instmod_fullname):
+        """For more information see apply_parametrisation_stellar_activity."""
+        apply_parametrisation_stellar_activity(model_instance=model_instance,
                                                instmod_fullname=instmod_fullname)
+
+    def _check_parametrisation_dataset(self, model_instance, dataset_key=None):
+        instmod_obj = self.get_instmodel_obj(dataset_key)
+        err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
+                   "{} parameter !")
+        for param in self.get_star_params_GP():
+            if param.name not in self.star.parameters:
+                raise ValueError(err_msg.format(instmod_obj.full_name, self.category,
+                                                param.full_name, ""))
+            if not(param.main):
+                raise ValueError(err_msg.format(instmod_obj.full_name, self.category,
+                                                param.full_name, "main"))

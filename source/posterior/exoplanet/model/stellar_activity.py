@@ -28,7 +28,7 @@ periodic_timescal = "tauPSA"
 period = "PSA"
 
 
-def check_parametrisation_stellar_activity(model_instance, instmod_fullname):
+def apply_parametrisation_stellar_activity(model_instance, instmod_fullname):
     """Check that there is a jitter main parameter in the instrument model."""
     star = model_instance.stars[list(model_instance.stars.keys())[0]]
     star.add_parameter(Parameter(name=evol_timescal, name_prefix=star.full_name, main=True))
