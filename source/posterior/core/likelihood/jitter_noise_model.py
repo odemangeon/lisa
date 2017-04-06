@@ -37,7 +37,7 @@ class GaussianNoiseModel(Core_Noise_Model):
         def lnlike_gaussian(p, data, data_err, **kwarg_data):
             model = datasim_func(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2)
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
         return lnlike_gaussian
 
@@ -72,7 +72,7 @@ class GaussianNoiseModel(Core_Noise_Model):
     def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
         inv_sigma2 = 1.0 / (data_err**2)
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 +
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 -
                              nplog(inv_sigma2)))
 
     def lnlike(self, p, data, data_err, **kwarg_data):
@@ -136,12 +136,12 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             def lnlike_dfmjitter(p, data, data_err, **kwarg_data):
                 model = datasim_func(p[1:], **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * p[0]))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         else:
             def lnlike_dfmjitter(p, data, data_err, **kwarg_data):
                 model = datasim_func(p, **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         return lnlike_dfmjitter
 
     def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
@@ -152,8 +152,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 +
                                 model**2 * exp(2 * self.get_jitterparam(dataset_key).value))
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 +
-                             nplog(inv_sigma2)))
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
     @classmethod
     def apply_parametrisation(cls, model_instance, instmod_fullname):
@@ -185,12 +184,12 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
             def lnlike_jittermulti(p, data, data_err, **kwarg_data):
                 model = datasim_func(p[1:], **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         else:
             def lnlike_jittermulti(p, data, data_err, **kwarg_data):
                 model = datasim_func(p, **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         return lnlike_jittermulti
 
     def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
@@ -200,8 +199,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
         else:
             model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.get_jitterparam(dataset_key).value))
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 +
-                             nplog(inv_sigma2)))
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
 
 class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
@@ -218,14 +216,14 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
                 model = datasim_func(p[1:], **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
                 Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
                                      nplog(inv_sigma2)))
         else:
             def lnlike_jittermultiBaluev(p, data, data_err, **kwarg_data):
                 model = datasim_func(p, **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
                 Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
                                      nplog(inv_sigma2)))
         return lnlike_jittermultiBaluev
 
@@ -237,8 +235,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
             model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.get_jitterparam(dataset_key).value))
         Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
-                             nplog(inv_sigma2)))
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(inv_sigma2)))
 
 
 class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
@@ -254,12 +251,12 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
             def lnlike_jitteradd(p, data, data_err, **kwarg_data):
                 model = datasim_func(p[1:], **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         else:
             def lnlike_jitteradd(p, data, data_err, **kwarg_data):
                 model = datasim_func(p, **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
         return lnlike_jitteradd
 
     def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
@@ -270,8 +267,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
             model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 * (1 +
                                                exp(2 * self.get_jitterparam(dataset_key).value)))
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 +
-                             nplog(inv_sigma2)))
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
 
 class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
@@ -288,14 +284,14 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
                 model = datasim_func(p[1:], **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
                 Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
                                      nplog(inv_sigma2)))
         else:
             def lnlike_jitteraddBaluev(p, data, data_err, **kwarg_data):
                 model = datasim_func(p, **kwarg_data)
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
                 Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
                                      nplog(inv_sigma2)))
         return lnlike_jitteraddBaluev
 
@@ -308,5 +304,5 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
             inv_sigma2 = 1.0 / (data_err**2 * (1 +
                                                exp(2 * self.get_jitterparam(dataset_key).value)))
         Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff +
+        return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
                              nplog(inv_sigma2)))
