@@ -33,7 +33,7 @@ class LikelihoodCreator(object):
         "wo jitter": """def {}(p, data, data_err, **kwarg_data):
             model = datasim_func(p, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2)
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 + nplog(inv_sigma2)))""",
+            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))""",
         "jitter dfm": """def {}(p, data, data_err, **kwarg_data):
             model = datasim_func({}, **kwarg_data)
             inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * {}))
