@@ -43,8 +43,8 @@ class LikelihoodCreator(object):
             return DocFunction(function=noise_model_instance.lnlike,
                                arg_list=noise_model_instance.arg_list)
         else:
-            docf, _ = noise_model_instance.lnlike_creator()
-            return docf
+            # docf, _ = noise_model_instance.lnlike_creator()
+            return noise_model_instance.lnlike_creator()
 
     def create_lnlikelihoods(self, datasim_db,
                              affectinstmodel4dataset=False, lock_db=False, pickleable=False):
@@ -158,7 +158,7 @@ class LikelihoodCreator(object):
         l_params_idx = []
         l_allkwargs = []
         l_allparams = []
-        dico_params_idx_all = OrderedDict()
+        # dico_params_idx_all = OrderedDict()
         for noise_model in dico_noisemodel:
             noisemodel_subclass = mgr_noisemodel.get_noisemodel_subclass(noise_model)  # Create a
             datasim_docfuncs = dico_noisemodel[noisemodel_name]["datasim_docfunc"]  # noise model
@@ -166,7 +166,8 @@ class LikelihoodCreator(object):
             noisemodel_instance = noisemodel_subclass(datasim_docfunc=datasim_docfuncs,
                                                       model_instance=self,
                                                       instmodel_obj=instmodel_objs)
-            doc_func, dico_params_idx_all[noise_model] = noisemodel_instance.lnlike_creator()  # Get the lnlike doc function
+            # doc_func, dico_params_idx_all[noise_model] = noisemodel_instance.lnlike_creator()  # Get the lnlike doc function
+            doc_func = noisemodel_instance.lnlike_creator()
             l_func.append(doc_func.function)
             all_kwargs = defaultdict(list)  # Get the kwargs (data, data_err, and the rest)
             for dataset_name in noisemodel_instance.l_dataset:
@@ -203,6 +204,6 @@ class LikelihoodCreator(object):
         arg_list_all["kwargs"] = []
         doc_f = lnlike_withalldataset_creator(l_func=l_func, l_params_idx=l_params_idx,
                                               l_allkwargs=l_allkwargs, arg_list=arg_list_all)
-        return doc_f, dico_params_idx_all
+        return doc_f  # , dico_params_idx_all
 
         # Then create the lnlike filling the kwargs and final sum them

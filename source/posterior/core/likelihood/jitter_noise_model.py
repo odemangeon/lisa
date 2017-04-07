@@ -46,12 +46,12 @@ class GaussianNoiseModel(Core_Noise_Model):
             l_func = []
             l_param_idx = []
             l_kwarg_idx = []
-            dico_params_idx = OrderedDict()
+            # dico_params_idx = OrderedDict()
             for i, dataset in enumerate(self.l_dataset):
                 l_kwarg_idx.append(i)
                 l_func.append(self._lnlike_dataset_creator(dataset))
                 l_param_idx.append(self.get_param_idxs(dataset))
-                dico_params_idx[dataset] = self.get_param_idxs(dataset)
+                # dico_params_idx[dataset] = self.get_param_idxs(dataset)
 
             def lnlike(p, data, data_err, **kwarg_data):
                 res = 0
@@ -65,9 +65,9 @@ class GaussianNoiseModel(Core_Noise_Model):
 
         else:
             lnlike = self._lnlike_dataset_creator()
-            dico_params_idx = None
+            # dico_params_idx = None
 
-        return DocFunction(function=lnlike, arg_list=self.get_arg_list()), dico_params_idx
+        return DocFunction(function=lnlike, arg_list=self.get_arg_list())  # , dico_params_idx
 
     def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)

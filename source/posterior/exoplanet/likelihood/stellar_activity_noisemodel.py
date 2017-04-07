@@ -45,6 +45,13 @@ class StellarActNoiseModel(Core_Noise_Model):
         gp.compute(t, data_err, sort=True)
         return gp.lnlikelihood(data - model)
         """
+
+    # logger.debug("model: {{}}".format(model))
+    # logger.debug("data: {{}}".format(data))
+    # logger.debug("data_err: {{}}".format(data_err))
+    # logger.debug("t: {{}}".format(t))
+    # logger.debug("l_idx_param: {{}}".format(l_idx_param))
+
     lnlikefunc_text_multidataset = """def {func_name}(p, data, data_err, t):
         model = [datasim_func(p[indexes_dataset], t_dataset)
                  for datasim_func, indexes_dataset, t_dataset in zip(l_func, l_idx_param, t)]
@@ -76,8 +83,17 @@ class StellarActNoiseModel(Core_Noise_Model):
         nb_free = self.nb_params_GP_free
         ker = self.__get_text_define_GP()
         if self.multidataset:
-            ldict["l_idx_param"] = [self.get_param_idxs(dataset) for dataset in self.l_dataset]
+            l_idx_param = []
+            l_param_all = self.get_arg_list()["param"]
+            for dataset in self.l_dataset:
+                idx_par = []
+                for par in self.get_datasim_arg_list(dataset)["param"]:
+                    idx_par.append(l_param_all.index(par))
+                l_idx_param.append(idx_par)
+            ldict["l_idx_param"] = l_idx_param
             ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
+            ldict["concatenate"] = concatenate
+            ldict["logger"] = logger
             text_func = self.lnlikefunc_text_multidataset
         else:
             datasim_func = self.get_datasim_function()
