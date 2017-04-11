@@ -94,6 +94,12 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())  # 7
+        self.__noisemodel_db = DatabaseFunc(object_stored="noise model",
+                                            instmodel4dataset=self.instmodel4dataset,
+                                            database_name=self.object_name, instordered=False,
+                                            use_samelock=self.samelock,
+                                            lock_dataset=self.get_dataset_Lock_instance(),
+                                            lock_database=self.get_database_Lock_instance())
 
     @property
     def object_name(self):
@@ -176,6 +182,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         self.lnpriors.update_datasets()  # 4.
         self.lnlikelihoods.update_datasets()  # 5.
         self.lnposteriors.update_datasets()  # 6.
+        self.noisemodels.update_datasets()  # 6.
         super(Posterior, self).dataset_lock()  # 7.
 
     def unlock(self):
@@ -245,6 +252,11 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the current content lnprior database."""
         return self.__lnlike_db
 
+    @property
+    def noisemodels(self):
+        """Return the current content noisemodels database."""
+        return self.__noisemodel_db
+
     def get_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
@@ -256,12 +268,13 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                     create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
                                                     dataset_db=self.dataset_db,
                                                     instmodel4dataset=self.instmodel4dataset)))
-            # (self.lnlikelihoods.dataset_db['all'], self.lnlikelihoods.l_param_idxs
-            (self.lnlikelihoods.dataset_db['all']
+            (self.lnlikelihoods.dataset_db['all'],
+             dico_noisemodel_instance
              ) = (self.model.
                   create_lnlikelihood_alldataset(datasim_db=datasim_db,
                                                  dataset_db=self.dataset_db,
                                                  instmodel4dataset=self.instmodel4dataset))
+            self.noisemodels.dataset_db.update(dico_noisemodel_instance)
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 

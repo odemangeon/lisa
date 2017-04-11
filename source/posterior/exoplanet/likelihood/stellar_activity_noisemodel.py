@@ -36,6 +36,7 @@ class StellarActNoiseModel(Core_Noise_Model):
     """docstring for StellarActNoiseModel."""
 
     __category__ = stelact_GP_noisemodel
+    __has_GP__ = True
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")
@@ -84,12 +85,8 @@ class StellarActNoiseModel(Core_Noise_Model):
         ker = self.__get_text_define_GP()
         if self.multidataset:
             l_idx_param = []
-            l_param_all = self.get_arg_list()["param"]
             for dataset in self.l_dataset:
-                idx_par = []
-                for par in self.get_datasim_arg_list(dataset)["param"]:
-                    idx_par.append(l_param_all.index(par))
-                l_idx_param.append(idx_par)
+                l_idx_param.append(self.get_param_idxs_datasim(dataset))
             ldict["l_idx_param"] = l_idx_param
             ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
             ldict["concatenate"] = concatenate
@@ -109,17 +106,16 @@ class StellarActNoiseModel(Core_Noise_Model):
 
     def lnlike(self, p, data, data_err, t):
         if self.multidataset:
-            arg_list = self.arg_list
             model = []
-            for dataset_key, t_dataset in zip(arg_list["kwargs"]["data"], t):
-                model.append(self.get_datasim_function(dataset_key)(p[self.param_idxs[dataset_key]],
-                                                                    t_dataset))
-            gp = self.__define_GP(p)
+            for dataset_key, t_dataset in zip(self.l_dataset, t):
+                model.append(self.get_datasim_function(dataset_key)
+                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+            gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(concatenate(t), concatenate(data_err))
             return gp.lnlikelihood(concatenate(data) - concatenate(model))
         else:
-            model = self.get_datasim_function()(p[self.nb_params_GP_free:], t)
-            gp = self.__define_GP(p)
+            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+            gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
             return gp.lnlikelihood(data - model)
 
@@ -191,6 +187,45 @@ class StellarActNoiseModel(Core_Noise_Model):
         arg_list_new["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
                                  arg_list_new["param"])
         return arg_list_new
+
+    def gp_simulator(self, p, tsim, data, data_err, t):
+        if self.multidataset:
+            model = []
+            for dataset_key, t_dataset in zip(self.l_dataset, t):
+                model.append(self.get_datasim_function(dataset_key)
+                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+            gp = self.__define_GP(p[self.get_param_idxs_GP()])
+            gp.compute(concatenate(t), concatenate(data_err))
+            return gp.sample_conditional(concatenate(data) - concatenate(model), tsim)
+        else:
+            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+            gp = self.__define_GP(p[self.get_param_idxs_GP()])
+            gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
+            return gp.sample_conditional(data - model, tsim)
+
+    def get_param_idxs_datasim(self, dataset_key=None):
+        """Return the list of param indexes for a datasimulator.
+
+        If multidataset dataset_key should not be None, because then you should do it for each
+        dataset.
+        """
+        # Get list of param names for the likelihood then for the datasimulator and final get the
+        # list of indexes for the datasimulator params
+        l_param_all = self.get_arg_list()["param"]
+        l_idx_param = []
+        for par in self.get_datasim_arg_list(dataset_key)["param"]:
+            l_idx_param.append(l_param_all.index(par))
+        return l_idx_param
+
+    def get_param_idxs_GP(self):
+        """Return the list of param indexes for the GP model."""
+        # Get list of param names for the likelihood then for the datasimulator and final get the
+        # list of indexes for the datasimulator params
+        l_param_all = self.get_arg_list()["param"]
+        l_idx_param = []
+        for par in self.get_star_param_GP_names(free=True, full_name=True):
+            l_idx_param.append(l_param_all.index(par))
+        return l_idx_param
 
     @classmethod
     def apply_parametrisation(cls, model_instance, instmod_fullname):

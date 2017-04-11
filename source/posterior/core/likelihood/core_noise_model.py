@@ -40,7 +40,7 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
 class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     """Docstring for Core_Noise_Model class."""
 
-    __mandatoryattrs__ = ["category", ]
+    __mandatoryattrs__ = ["category", "has_GP"]
 
     def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
         """Initialise a Core_Noise_Model subclass instance.

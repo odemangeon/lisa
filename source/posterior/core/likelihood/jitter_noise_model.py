@@ -15,7 +15,7 @@ from logging import getLogger
 from numpy import sum as npsum
 from numpy import log as nplog
 from math import exp
-from collections import OrderedDict
+# from collections import OrderedDict
 
 from .core_noise_model import Core_Noise_Model
 from ..model.jitter import apply_parametrisation_jitter, jitter_name
@@ -30,6 +30,7 @@ class GaussianNoiseModel(Core_Noise_Model):
     """docstring for GaussianNoiseModel."""
 
     __category__ = "gaussian"
+    __has_GP__ = False
 
     def _lnlike_dataset_creator(self, dataset_key=None):
         datasim_func = self.get_datasim_function(dataset_key)

@@ -141,6 +141,8 @@ class LikelihoodCreator(object):
 
     def create_lnlikelihood_alldataset(self, datasim_db, dataset_db, instmodel4dataset):
 
+        # Create a dict dico_noisemodel which for each noise model give the dataset_name using this
+        # noise model and the associated instrument model and datasimulator
         def dicts_factory():
             return deepcopy({"datasim_docfunc": OrderedDict(), "instmodel_obj": OrderedDict()})
 
@@ -149,15 +151,23 @@ class LikelihoodCreator(object):
             instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
             instmod_obj = self.instruments[instmod_fullname]
             noisemodel_name = instmod_obj.noise_model
-            dico_noisemodel[noisemodel_name]["datasim_docfunc"]
+            # dico_noisemodel[noisemodel_name]["datasim_docfunc"]
             (dico_noisemodel[noisemodel_name]["datasim_docfunc"]
              [dataset_name]) = datasim_db[instmod_fullname]["whole"]
             (dico_noisemodel[noisemodel_name]["instmodel_obj"]
              [dataset_name]) = instmod_obj
+
+        # Create and fill the list of likelihood function (one for each noise model)
         l_func = []
+        # The list of list with the associated param indexes
         l_params_idx = []
+        # The list of dictionnary giving the associated kwargs (data, data_err, ...)
         l_allkwargs = []
+        # The list of all the parameters names (all noise model param in one list)
         l_allparams = []
+        # Create and fill the dictionary giving the noise model instances for each dataset_name in
+        # in the all datasets likelihood
+        dico_noisemodel_instance = OrderedDict()
         # dico_params_idx_all = OrderedDict()
         for noise_model in dico_noisemodel:
             noisemodel_subclass = mgr_noisemodel.get_noisemodel_subclass(noise_model)  # Create a
@@ -171,6 +181,7 @@ class LikelihoodCreator(object):
             l_func.append(doc_func.function)
             all_kwargs = defaultdict(list)  # Get the kwargs (data, data_err, and the rest)
             for dataset_name in noisemodel_instance.l_dataset:
+                dico_noisemodel_instance[dataset_name] = noisemodel_instance
                 dataset = dataset_db[dataset_name]
                 kwargs = dataset.get_kwargs()
                 for karg_type, kwarg_value in kwargs.items():
@@ -204,6 +215,6 @@ class LikelihoodCreator(object):
         arg_list_all["kwargs"] = []
         doc_f = lnlike_withalldataset_creator(l_func=l_func, l_params_idx=l_params_idx,
                                               l_allkwargs=l_allkwargs, arg_list=arg_list_all)
-        return doc_f  # , dico_params_idx_all
+        return doc_f, dico_noisemodel_instance # , dico_params_idx_all
 
         # Then create the lnlike filling the kwargs and final sum them
