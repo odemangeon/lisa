@@ -36,6 +36,8 @@ class TestMethods(TestCase):
         logger.info("Db: {}".format(db))
         self.assertEqual(db["RV"]["SOPHIE"][0], dataset_SOPHIE)
         self.assertEqual(db["RV"]["SOPHIE"]["1st"], dataset_SOPHIE)
+        self.assertEqual(db["RV_K2-19_SOPHIE_0"], dataset_SOPHIE)
+        self.assertEqual(db["RV_K2-19_SOPHIE"], dataset_SOPHIE)
         with self.assertRaises(KeyError):
             db["."]["."]["."]
 

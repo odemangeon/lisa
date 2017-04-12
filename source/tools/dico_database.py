@@ -12,7 +12,7 @@ The objective of this package is to provides a toolbox to manipulate dico_datase
 """
 from logging import getLogger
 from collections import defaultdict
-from copy import deepcopy
+from copy import deepcopy, copy
 from .lockable_dict import LockableDict
 
 
@@ -28,7 +28,10 @@ def init_result(sortby_lvl1key=False, sortby_lvl2key=False, sortby_lvl3key=False
     elif sum([sortby_lvl1key, sortby_lvl2key, sortby_lvl3key]) == 2:
         result = Nesteddict_wfixellvlnb(nb_lvl=2, default=default_value)
     elif sum([sortby_lvl1key, sortby_lvl2key, sortby_lvl3key]) == 1:
-        result = defaultdict(type(default_value))
+        if isinstance(default_value, type):
+            result = defaultdict(default_value)
+        else:
+            result = defaultdict(type(default_value))
     else:
         result = []
     logger.debug("Result initialised with {}".format(result))
@@ -183,7 +186,10 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
     @property
     def default(self):
         """Return the default value for the last level."""
-        return self.__default
+        if isinstance(self.__default, type):
+            return self.__default()
+        else:
+            return copy(self.__default)
 
     def get_lvl2_keys(self, level1_key=None, sortby_lvl1key=False):
         """Return the keys of the 2nd level in the nested dictionary.
@@ -296,7 +302,7 @@ class Nesteddict_wfixellvlnb(Nesteddict_wlvl):
                              "The result is the self itself or self[level1_key]([level2_key])!")
         else:
             result = init_result(sortby_lvl1key=sortby_lvl1key, sortby_lvl2key=sortby_lvl2key,
-                                 sortby_lvl3key=sortby_lvl3key, default_value=[])
+                                 sortby_lvl3key=sortby_lvl3key, default_value=list)
         if level1_key is None:
             iter_level1key = self.keys()
         else:

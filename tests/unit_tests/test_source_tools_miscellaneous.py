@@ -55,11 +55,11 @@ class TestMethods(TestCase):
         self.assertDictEqual(dico_1, {"inst_category": "LC",
                                       "inst_name": "K2",
                                       "object": "K2-19",
-                                      "number": None})
+                                      "number": 0})
         self.assertDictEqual(dico_2, {"inst_category": "RV",
                                       "inst_name": "HARPS",
                                       "object": "K2-3",
-                                      "number": '2'})
+                                      "number": 2})
 
 
 if __name__ == '__main__':

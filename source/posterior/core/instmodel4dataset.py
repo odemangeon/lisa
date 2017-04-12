@@ -35,10 +35,10 @@ class Instmodel4Dataset(LockableDict):
     4. If list_datasetnames provided, we create a new LockableDict to be set to instmodel4dataset
        and update it with the datasets provided.
     """
-    def __init__(self, list_datasetnames=None, lock=None):
+    def __init__(self, list_datasetnames=None, list_instmodels=None, lock=None):
         super(Instmodel4Dataset, self).__init__(ordered=False, lock=lock)
         if list_datasetnames is not None:
-            self.update_datasets(list_datasetnames)
+            self.update(list_datasetnames, list_instmodels)
 
     # The idea behind commenting it is that maybe I can used the inherited update method.
     # def update_content_instmodel4dataset(self, instmodel4dataset):
@@ -85,7 +85,7 @@ class Instmodel4Dataset(LockableDict):
         """Return the lsit of dataset names currently in instmodel4dataset attribute."""
         return list(self.keys())
 
-    def update_datasets(self, list_datasetnames):
+    def update(self, list_datasetnames, list_instmodels=None):
         """Update the datasets in instmodel4dataset.
 
         1a. Get datasetnames that are in list_datasetnames but not currently in instmodel4dataset
@@ -98,7 +98,12 @@ class Instmodel4Dataset(LockableDict):
         set_add = set_new - set_old  # 1a
         set_delete = set_old - set_new  # 2a
         for dataset_name in set_add:
-            self[dataset_name] = "default"  # 1b
+            if list_instmodels is None:
+                inst_model = "default"
+            else:
+                idx = list_datasetnames.index(dataset_name)
+                inst_model = list_instmodels[idx]
+            self[dataset_name] = inst_model  # 1b
         for dataset_name in set_delete:
             self.pop(dataset_name)  # 2b
 

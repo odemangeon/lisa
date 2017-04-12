@@ -21,6 +21,7 @@ from source.posterior.core.model.core_model import Core_Model
 import source.posterior.exoplanet.dataset_and_instrument.lc as lc
 import source.posterior.exoplanet.dataset_and_instrument.rv as rv
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+from source.posterior.core.likelihood.jitter_noise_model import GaussianNoiseModel
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:
@@ -51,7 +52,7 @@ class TestMethods(unittest.TestCase):
             __category__ = "FakeModel"
 
             def __init__(self, name="default", dataset_db=None, run_folder=None,
-                         instmodel4dataset=None, lock=None):
+                         instmodel4dataset=None, l_instmod_fullnames=None, lock=None):
                 super(FakeModel, self).__init__(name, dataset_db, run_folder,
                                                 instmodel4dataset=instmodel4dataset)
         self.manager_model.add_available_model(FakeModel)
@@ -110,7 +111,7 @@ class TestMethods(unittest.TestCase):
             self.posterior_instance.dataset_db = {"a": {}}
         if os.path.isfile(self.test_datafile):
             raise ValueError("The file {} already exists. the unit test can't be performed or it "
-                             " will damage it. Change current directory.")
+                             "will damage it. Change current directory.".format(self.test_datafile))
         open(self.test_datafile, "x").close()
         dataset = self.manager_dataset.create_dataset(self.test_datafile)
         os.remove(self.test_datafile)
@@ -122,7 +123,8 @@ class TestMethods(unittest.TestCase):
 
     def test_add_a_dataset_from_path(self):
         open(self.test_datafile, "x").close()
-        self.posterior_instance.dataset_db.add_a_dataset_from_path(datafile_path=self.test_datafile)
+        (self.posterior_instance.dataset_db.
+         _add_a_dataset_from_path(datafile_path=self.test_datafile))
         os.remove(self.test_datafile)
         inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
         inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
@@ -135,15 +137,16 @@ class TestMethods(unittest.TestCase):
 
     def test_add_a_dataset_from_datasetsfile_and_get_instrument_categories(self):
         file1 = "LC_K2-29_K2.txt"
+        line1 = "{}  default  {}".format(file1, GaussianNoiseModel.category)
         file2 = "RV_K2-29_SOPHIE-HE.txt"
+        line2 = "{}  default  {}".format(file2, GaussianNoiseModel.category)
         dataset_file = "test_datasetfile.txt"
         open(file1, "x").close()
         open(file2, "x").close()
         with open(dataset_file, "x") as f:
-            f.write(file1 + "\n")
-            f.write(file2 + "\n")
-        (self.posterior_instance.dataset_db.
-         add_datasets_from_datasetfile(path_datasets_file=dataset_file))
+            f.write(line1 + "\n")
+            f.write(line2 + "\n")
+        self.posterior_instance.load_datasetsfile(path_datasets_file=dataset_file)
         os.remove(file1)
         os.remove(file2)
         os.remove(dataset_file)

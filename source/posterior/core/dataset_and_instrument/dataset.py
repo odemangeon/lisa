@@ -26,11 +26,17 @@ from logging import getLogger
 from sys import exc_info
 from pandas import read_table
 
-from .manager_dataset_instrument import get_filename_from_file_path
-from ....tools.miscellaneous import interpret_data_filename
+from ....tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
 
 ## Logger
 logger = getLogger()
+
+
+def dataset_name_from_file_name(dataset_filename):
+    """Return the dataset_name associated to the filename of a dataset."""
+    filename_info = interpret_data_filename(dataset_filename)
+    return "{}_{}_{}_{}".format(filename_info["inst_category"], filename_info["object"],
+                                filename_info["inst_name"], filename_info["number"])
 
 
 class Dataset(object):
@@ -70,14 +76,13 @@ class Dataset(object):
         # 2.
         self.__filename = get_filename_from_file_path(self.filepath)
         filename_info = interpret_data_filename(self.filename)
+        logger.debug("Interpretation of the datafile name: {}".format(filename_info))
         # 3.
         self.__objectname = filename_info["object"]
         # 4.
         self.__instrument = instrument_instance
         # 6.
-        if isinstance(filename_info["number"], int):
-            self.__number = filename_info["number"]
-        elif filename_info["number"] is None:
+        if filename_info["number"] is None:
             self.__number = 0
         else:
             self.__number = int(filename_info["number"])
@@ -100,8 +105,7 @@ class Dataset(object):
     @property
     def dataset_name(self):
         """Get the name of the data file."""
-        return "{}_{}_{}_{}".format(self.instrument.category, self.object_name,
-                                    self.instrument.name, self.number)
+        return dataset_name_from_file_name(self.filename)
 
     @property
     def instrument(self):

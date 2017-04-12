@@ -67,7 +67,10 @@ class RunFolder(object):
         return self.run_folder is not None
 
     def look4runfile(self, file_path):
-        """Look for a file in absolute or in the default folder."""
+        """Look for a file in absolute or in the default folder.
+
+        Return None if file is not found.
+        """
         return look4file_withdeffolder(file_path=file_path, default_folder=self.run_folder)
 
 

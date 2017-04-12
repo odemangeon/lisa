@@ -20,6 +20,7 @@ from ..parameter import Parameter
 from ....tools.name import Name
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.miscellaneous import spacestring_like, interpret_data_filename
+from ..likelihood.manager_noise_model import Manager_NoiseModel
 
 
 ## Logger object
@@ -27,6 +28,7 @@ logger = getLogger()
 
 ## Instrument manager
 manager_inst = Manager_Inst_Dataset()
+manager_noisemodel = Manager_NoiseModel()
 
 instrument_model_category = "instruments"
 
@@ -34,6 +36,55 @@ string4datasetdico = "Dataset"
 
 key_inst = "inst_dic"
 key_misc = "misc"
+
+
+def interpret_instmod_fullname(instmod_fullname):
+    """Return the instrument name associated to the instrument model full_name."""
+    res = {}
+    res["inst_name"], res["inst_model"] = instmod_fullname.split("_")
+    return res
+
+
+def build_instmod_fullname(inst_model, inst_name):
+    """Return the instrument name associated to the instrument model full_name."""
+    return "{}_{}".format(inst_name, inst_model)
+
+
+class Instrument_Model(Core_ParamContainer):
+    """Docstring of Instrument_Model class."""
+
+    __category__ = instrument_model_category
+
+    def __init__(self, instrument, name, noise_model=None):
+        """Docstring of the Instrument_Model init method."""
+        # name_prefix is set to None because it will be set when the gravgroup is set.
+        super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
+        self.__instrument = instrument
+        if noise_model is None:
+            self.__noise_model = noise_model
+        else:
+            self.noise_model = noise_model
+        for name, dico in instrument.params_model.items():
+            self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
+                                         **dico))
+
+    @property
+    def noise_model(self):
+        """Return the noise model used for this instrument model."""
+        return self.__noise_model
+
+    @noise_model.setter
+    def noise_model(self, nm):
+        """Set the noise model to use for this instrument model."""
+        available_noisemodels = manager_noisemodel.get_available_noisemodels()
+        if nm not in available_noisemodels:
+            raise ValueError("{} is not an available noise model: {}"
+                             "".format(nm, available_noisemodels))
+        self.__noise_model = nm
+
+    @property
+    def instrument(self):
+        return self.__instrument
 
 
 class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
@@ -52,24 +103,6 @@ class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
                 Name of the Instrument
         """
         super(Core_Instrument, self).__init__(name=name)
-
-        class Instrument_Model(Core_ParamContainer):
-            """Docstring of Instrument_Model class."""
-
-            __category__ = instrument_model_category
-
-            def __init__(self, instrument, name):
-                """Docstring of the Instrument_Model init method."""
-                # name_prefix is set to None because it will be set when the gravgroup is set.
-                super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
-                self.__instrument = instrument
-                for name, dico in instrument.params_model.items():
-                    self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
-                                                 **dico))
-
-            @property
-            def instrument(self):
-                return self.__instrument
 
         self.Instrument_Model = Instrument_Model
         # IMPORTANT: THE INSTRUMENT TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
@@ -130,7 +163,7 @@ def get_instrument_paramfilesection(model_instance, inst_db, text_tab="", entete
             for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
                 number = interpret_data_filename(datasetname)["number"]
                 model_name = model_instance.instmodel4dataset[datasetname]
-                text_instmod4dataset += "'{}': '{}', ".format(number, model_name)
+                text_instmod4dataset += "{}: '{}', ".format(number, model_name)
             text += ("{0}# By default all the datasets of an instrument are associated "
                      "to {1}.\n{0}# If you want to model some datasets with another "
                      "instrument model copy paste it,\n{0}# give it a new name and "

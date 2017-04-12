@@ -7,9 +7,14 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger
-from matplotlib.pyplot import subplots  # , figure, plot, show
+from matplotlib.pyplot import subplots, subplot, figure, legend  # , figure, plot, show
 from numpy import linspace
 from sys import stdout
+import matplotlib.gridspec as gridspec
+from matplotlib.gridspec import GridSpec
+from copy import deepcopy
+from collections import defaultdict
+
 
 ## Logger Object
 logger = getLogger()
@@ -53,19 +58,44 @@ def plot_chains(sampler, l_param_names, flat=False,
     fig.tight_layout(**kwargs_tl)
 
 
-def overplot_data_model(param, l_param_names, datasim_db, dataset_db, oversamp=10,
+def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
                         plot_height=2, plot_width=8, **kwargs_tl):
     """param        np.array
        datasim_db   dataset_db in datasimulators
        dataset_db   dataset_db
+       noisemod_db  dictionary giving the noise model instance for each dataset name
     """
+    # Get the list of all datasets names and the number of datasets
     l_datasets = dataset_db.get_datasets()
     ndataset = len(l_datasets)
-    fig, ax = subplots(nrows=ndataset, figsize=(plot_width, ndataset * plot_height))
+
+    # Create the figure and grid which will harbor the plots for each dataset
+    fig = figure(figsize=(plot_width, ndataset * plot_height))
+    gs = GridSpec(nrows=ndataset, ncols=1)
+
+    # Create and fill the dictionary which for each noise_model_name return the dict of kwargs.
+    dico_noisemod_allkwargs = dict()
+    for dataset_name, noise_mod in noisemod_db.items():
+        if noise_mod is None:
+            continue
+        dico_noisemod_allkwargs[noise_mod.category] = defaultdict(list)
+        if noise_mod.has_GP:
+            for dataset_name in noise_mod.l_dataset:
+                dataset = dataset_db[dataset_name]
+                kwargs = dataset.get_kwargs()
+                for karg_type, kwarg_value in kwargs.items():
+                    dico_noisemod_allkwargs[noise_mod.category][karg_type].append(kwarg_value)
+
     for i, dataset in enumerate(l_datasets):
-        ax[i].set_title(l_datasets[i])
+        # Create the two Axes for the comparison data/model and the residuals and set the title.
+        ax_data, ax_resi = add_twoaxeswithsharex(gs[i], gs_from_sps_kw={"height_ratios": (3, 1)})
+        ax_data.set_title(dataset.dataset_name)
+
+        # plot the data
         kwargs = dataset.get_kwargs()
-        ax[i].errorbar(kwargs["t"], kwargs["data"], kwargs["data_err"], fmt=".", color="b")
+        ax_data.errorbar(kwargs["t"], kwargs["data"], kwargs["data_err"], fmt=".", color="b")
+
+        # plot the model and residuals
         tmin = kwargs["t"].min()
         tmax = kwargs["t"].max()
         nt = len(kwargs["t"])
@@ -73,11 +103,54 @@ def overplot_data_model(param, l_param_names, datasim_db, dataset_db, oversamp=1
         tmin_moins = tmin - oversamp * tsamp
         tmax_plus = tmax + oversamp * tsamp
         t = linspace(tmin_moins, tmax_plus, nt * oversamp)
+        noise_model = noisemod_db[dataset.dataset_name]
         idx_par = []
         datasim_function = datasim_db[dataset.dataset_name]["whole"].function
         datasim_paramnames = datasim_db[dataset.dataset_name]["whole"].arg_list["param"]
         for par in datasim_paramnames:
             idx_par.append(l_param_names.index(par))
-        ax[i].plot(t, datasim_function(param[idx_par], t), "r-")
-        ax[i].set_title(dataset.dataset_name)
+        datasim_t = datasim_function(param[idx_par], t)
+        datasim_tdata = datasim_function(param[idx_par], kwargs["t"])
+        ax_data.plot(t, datasim_t, "g-", label="model")
+        ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_tdata, kwargs["data_err"],
+                         fmt=".", color="g")
+        if noise_model.has_GP:
+            gpsim_func = noise_model.gp_simulator
+            datasim_GP_t = (datasim_t +
+                            gpsim_func(param, t, **dico_noisemod_allkwargs[noise_model.category]))
+            datasim_GP_tdata = (datasim_tdata +
+                                gpsim_func(param, kwargs["t"],
+                                           **dico_noisemod_allkwargs[noise_model.category]))
+            ax_data.plot(t, datasim_GP_t, "r-", label="model+GP")
+            ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_GP_tdata, kwargs["data_err"],
+                             fmt=".", color="r")
+        ax_data.legend(loc='upper right', shadow=True)
+        # Draw a line y=0 for the residuals
+        xmin, xmax = ax_resi.get_xlim()
+        ax_resi.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
+        ax_resi.set_xlim(xmin, xmax)
     fig.tight_layout(**kwargs_tl)
+
+
+def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
+    """Add two axes to a subplotspec (created with gridspec) for data and residual plot. """
+    # Set the default values for GridSpecFromSubplotSpec
+    kw = dict() if gs_from_sps_kw is None else gs_from_sps_kw.copy()
+    if "hspace" not in kw:
+        kw["hspace"] = 0.1
+    if "height_ratios" not in kw:
+        kw["height_ratios"] = (4, 1)
+
+    # Create the two axes, share x axis and set the ticks and ticks label properties
+    gs = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=subplotspec, **kw)
+    ax0 = subplot(gs[0])
+    ax1 = subplot(gs[1], sharex=ax0)
+    ax0.tick_params(axis="both", which="both", direction="in", length=2, bottom="on", left="on",
+                    top="on", right="on", reset=True, labelbottom="off")
+    ax0.locator_params(axis="y", tight=True, nbins=3)
+    ax1.tick_params(axis="both", which="both", direction="in", length=2, bottom="on", left="on",
+                    top="on", right="on", reset=True)
+    ax1.locator_params(axis="y", tight=True, nbins=3)
+
+    # Return the two axes
+    return ax0, ax1

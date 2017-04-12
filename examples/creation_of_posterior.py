@@ -15,7 +15,7 @@ import source.posterior.core.posterior as cpost
 logger = logging.getLogger()
 
 level_log = logging.DEBUG
-level_hand = logging.INFO
+level_hand = logging.DEBUG
 
 if logger.level != level_log:
     logger.setLevel(level_log)
@@ -43,13 +43,13 @@ logger.info("2. (Facultative) Define the run folder where the config files and o
 post_instance.run_folder = "default"
 
 logger.info("3. Add datasets (from a file, their is otherways).")
-post_instance.dataset_db.add_datasets_from_datasetfile("datasets_K2-19.txt")
+post_instance.load_datasetsfile("datasets_K2-19.txt")
 
 logger.info("4. Add a model")
 post_instance.define_model(category="GravitionalGroups", name="K2-19", stars=1, planets=2)
 
 logger.info("5. Apply a parametrisation to the model")
-post_instance.model.apply_RV_EXOFAST_param(with_jitter=True, with_drift=True, with_DeltaRV=True)
+post_instance.model.apply_RV_EXOFAST_param(with_drift=False, with_DeltaRV=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")
@@ -63,7 +63,7 @@ logger.info("8. Create datasimulator functions")
 post_instance.get_datasimulators()
 
 logger.info("9. Create likelihood functions")
-post_instance.get_lnlikelihoods(category="jitter multiplicative")
+post_instance.get_lnlikelihoods()
 
 logger.info("10. Create prior functions")
 post_instance.get_individal_lnpriors()

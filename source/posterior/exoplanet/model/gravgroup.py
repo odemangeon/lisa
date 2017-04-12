@@ -64,12 +64,13 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                   "pytransit-Gimenez": ["quadratic", "linear", "uniform"]
                   }
 
-    def __init__(self, name, dataset_db, instmodel4dataset=None,
+    def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
                  transit_model=None, ld_model=None, rv_model=None,
                  stars=None, planets=None, run_folder=None):
         """docstring Planet init method."""
         super(GravGroup, self).__init__(name, dataset_db, run_folder,
-                                        instmodel4dataset=instmodel4dataset)
+                                        instmodel4dataset=instmodel4dataset,
+                                        l_instmod_fullnames=l_instmod_fullnames)
         if "LC" in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
@@ -80,6 +81,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             self.rv_model = rv_model
             # Initialise the dictionary giving the RV zero point RV_references
             self.__RV_references = dict.fromkeys(self.get_inst_names("RV"), None)
+            logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
             self.__RV_references["global"] = list(self.__RV_references.keys())[0]
             for key in self.__RV_references:
                 if key != "global":

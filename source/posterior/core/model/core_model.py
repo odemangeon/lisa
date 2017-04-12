@@ -27,7 +27,9 @@ from ..dataset_and_instrument.instrument import instrument_model_category as ins
 from ..dataset_and_instrument.instrument import load_instrument_config
 from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
 from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
-from ..likelihood import LikelihoodCreator
+from ..dataset_and_instrument.instrument import interpret_instmod_fullname
+from ..likelihood.core_likelihood import LikelihoodCreator
+from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ..prior.core_prior import Prior
 from ..prior.manager_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -41,6 +43,9 @@ logger = getLogger()
 manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
 manager_prior = Manager_Prior()
+manager_prior.load_setup()
+manager_noisemodel = Manager_NoiseModel()
+manager_noisemodel.load_setup()
 
 
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
@@ -53,7 +58,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     key_whole = "whole"
 
     """docstring for Core_Model abstract class."""
-    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None):
+    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None,
+                 l_instmod_fullnames=[]):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This __init__ does:
@@ -65,25 +71,19 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             dataset_db : DatasetDatabase instance,
                 DatasetDatabase giving the dataset to be modeled.
         """
-        # 1.
-        Core_ParamContainer.__init__(self, name)
-        # 2.
-        DatasetDbAttr.__init__(self, dataset_db)
+        Core_ParamContainer.__init__(self, name)  # 1.
+        DatasetDbAttr.__init__(self, dataset_db)  # 2.
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
-        # 3.
-        RunFolder.__init__(self, run_folder=run_folder)
-        # 4.
-        ParamContainerDatabase.__init__(self)
-        # 5.
-        self.init_missinginstmodels()
-        # 6.
-        if instmodel4dataset is None:
+        RunFolder.__init__(self, run_folder=run_folder)  # 3.
+        ParamContainerDatabase.__init__(self)  # 4.
+        self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)  # 5.
+        if instmodel4dataset is None:  # 6.
             instmodel4dataset = Instmodel4Dataset(list_datasetnames=(self.dataset_db.
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
-        # IMPORTANT NOTE THE MODEL TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
+        # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
     @property
@@ -91,18 +91,30 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Return the name of the object studied."""
         return self.name
 
-    def init_missinginstmodels(self):
-        """If necessary, add a default instrument model for each instrument used.
+    def init_instmodels(self, l_instmod_fullnames):
+        """Create the instrument models."""
+        for instmod_fullname in l_instmod_fullnames:
+            inst_mod_info = interpret_instmod_fullname(instmod_fullname)
+            inst = manager_inst.get_instrument(inst_mod_info["inst_name"])
+            self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
 
+    def set_noisemodels(self, noisemod4instmodfullname):
+        """If necessary, add a default instrument model for each instrument used.
         1. For each instrument used in the dataset database
             2. Check if there is at least one instrument model associated
                 2a. If no, add one called default
                 2b. If yes, do nothing
+        ----
+        Arguments:
+            noisemod4instmodfullname: dict,
+                Give the noise model name associated to the instrument model full name
         """
-        for inst in self.dataset_db.get_instruments():  # 1.
-            if not(self.instrumenthasatleast1model(inst_name=inst.name,
-                                                   inst_cat=inst.category)):  # 2.
-                self.add_an_instrument_model(inst, name="default")
+        logger.debug("noisemod4instmodfullname: {}".format(noisemod4instmodfullname))
+        for instmod_fullname, noise_model in noisemod4instmodfullname.items():
+            self.instruments[instmod_fullname].noise_model = noise_model
+            noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(noise_model)
+            noise_model_subclass.apply_parametrisation(model_instance=self,
+                                                       instmod_fullname=instmod_fullname)
 
     def get_param(self, full_name):
         """Return the instance of the Parameter designated by full_name."""

@@ -24,14 +24,14 @@ from logging import getLogger
 from numpy import inf
 
 from .instmodel4dataset import Instmodel4DatasetAttr
-from .dataset_database_locks import DstDbLockAttr
+from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
+from .datasetsfile_db import DatasetsFileDbAttr
 from ...tools.name import Name
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
-# from ...tools.lockable_dict import LockableDict
 
 
 logger = getLogger()
@@ -40,7 +40,8 @@ manager_model = Manager_Model()
 manager_model.load_setup()
 
 
-class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr):
+class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
+                DatasetsFileDbAttr):
     """docstring for Posterior."""
 
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
@@ -69,6 +70,8 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                                           lock=self.get_dataset_Lock_instance()))
         RunFolder.__init__(self, run_folder=run_folder)  # 4
         Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())  # 5
+        DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
+                                    instmodel4dataset=self.instmodel4dataset)
         self.__model = None  # 6
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
                                          instmodel4dataset=self.instmodel4dataset,
@@ -91,6 +94,12 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())  # 7
+        self.__noisemodel_db = DatabaseFunc(object_stored="noise model",
+                                            instmodel4dataset=self.instmodel4dataset,
+                                            database_name=self.object_name, instordered=False,
+                                            use_samelock=self.samelock,
+                                            lock_dataset=self.get_dataset_Lock_instance(),
+                                            lock_database=self.get_database_Lock_instance())
 
     @property
     def object_name(self):
@@ -124,6 +133,11 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the model."""
         return self.__model
 
+    def load_datasetsfile(self, path_datasets_file):
+        file_path = self.look4runfile(file_path=path_datasets_file)
+        self.datasetsfile_db.load(file_path)
+        self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
+
     def define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.
 
@@ -141,9 +155,12 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
         model_subclass = manager_model.get_model_subclass(category)
+        noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
         self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
                                       instmodel4dataset=self.instmodel4dataset,
+                                      l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
                                       **kwargs)
+        self.model.set_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
         self.lock()
         logger.info("Model defined with name {} !".format(self.model.name))
 
@@ -159,12 +176,13 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         7. Lock everything
         """
         list_datasetnames = self.dataset_db.get_datasetnames()
-        self.instmodel4dataset.update_datasets(list_datasetnames)  # 1.
-        self.model.init_missinginstmodels()  # 2. TODO: It should be more, see init of model
+        self.instmodel4dataset.update(list_datasetnames)  # 1.
+        # self.model.init_missinginstmodels()  # 2. TODO: Provide a noisemod4instmodfullname
         self.datasimulators.update_datasets()  # 3.
         self.lnpriors.update_datasets()  # 4.
         self.lnlikelihoods.update_datasets()  # 5.
         self.lnposteriors.update_datasets()  # 6.
+        self.noisemodels.update_datasets()  # 6.
         super(Posterior, self).dataset_lock()  # 7.
 
     def unlock(self):
@@ -234,17 +252,29 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the current content lnprior database."""
         return self.__lnlike_db
 
-    def get_lnlikelihoods(self, category="wo jitter"):
+    @property
+    def noisemodels(self):
+        """Return the current content noisemodels database."""
+        return self.__noisemodel_db
+
+    def get_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
+            datasim_db = self.datasimulators.instrument_db
             (self.lnlikelihoods.instrument_db.
-             update(self.model.create_lnlikelihoods(datasim_db=self.datasimulators.instrument_db,
-                                                    category=category)))
+             update(self.model.create_lnlikelihoods(datasim_db=datasim_db)))
             (self.lnlikelihoods.dataset_db.
              update(self.model.
                     create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
                                                     dataset_db=self.dataset_db,
                                                     instmodel4dataset=self.instmodel4dataset)))
+            (self.lnlikelihoods.dataset_db['all'],
+             dico_noisemodel_instance
+             ) = (self.model.
+                  create_lnlikelihood_alldataset(datasim_db=datasim_db,
+                                                 dataset_db=self.dataset_db,
+                                                 instmodel4dataset=self.instmodel4dataset))
+            self.noisemodels.dataset_db.update(dico_noisemodel_instance)
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
