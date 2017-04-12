@@ -61,6 +61,16 @@ def geta0(per, ms, mp):
     a0 = ((P / (2. * np.pi))**2. * gm * (ms + mp / msunjup))**(1. / 3.)
     return a0
 
+def getper(a0, ms, mp):
+    """
+    get period in days using kepler equation
+    inputs are a0 in meters (SI), stellar mass in solar masses, plabet mass in jupiter masses
+    call getper(a, ms,mp)
+    """
+    p =  (  (2. * np.pi)**2. *a0**3. /( gm * (ms + mp / msunjup) )   )**(1. / 2.)
+
+    return p/(24. * 3600.0 )
+
 
 def getb(inc, ar, ecc, omega):
     """
@@ -225,6 +235,32 @@ def getomega(secosw, sesinw):
 def getomega_fast(secosw, sesinw):
     """Get omego from e.cos(omega) and e.sin(omega)."""
     return math.atan(sesinw / secosw)
+
+def getkamp(per, ms, mp, inc, ecc):
+    """
+    semi amplitude in meter /s
+    inputs, per in days ,ms=stellar mass in msun,  mp planet mass in Jupiter masses,
+    inclination in degrees, eccentricity
+    from equation
+    http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+    """
+
+    semia = 28.4329 * mp  * np.sin(np.deg2rad(inc)) * (mp/msunjup + ms)**(-2.0/3.0) * (per/365.25) **(-1.0/3.0) /np.sqrt (1.0-ecc**2.0)
+    return semia
+
+def gettimeperi(per, t0, ecc, omega ):
+    """
+    convert t0 into tp
+    inputs , per in days, t0 in days, ecc, omega in degress
+    if ecc is zero the code aplies convention correction which is in agremment with if calculated through formula
+    """
+    if ecc == 0 :
+        return  t0 - per/4.
+    f = np.pi*0.5 - np.deg2rad(omega)
+    E = 2.0*np.arctan(np.sqrt( (1.0 - ecc)/(1.0 + ecc) ) * np.tan(f/2.0))
+    mshift = E - ecc * np.sin(E)
+    return  t0 - per*mshift/(2.0*np.pi)
+
 
 
 if __name__ == "__main__":
