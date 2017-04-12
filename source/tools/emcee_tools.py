@@ -87,7 +87,7 @@ def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_d
 
     for i, dataset in enumerate(l_datasets):
         # Create the two Axes for the comparison data/model and the residuals and set the title.
-        ax_data, ax_resi = add_twoaxeswithsharex(gs[i])
+        ax_data, ax_resi = add_twoaxeswithsharex(gs[i], gs_from_sps_kw={"height_ratios": (3, 1)})
         ax_data.set_title(dataset.dataset_name)
 
         # plot the data
@@ -103,26 +103,26 @@ def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_d
         tmax_plus = tmax + oversamp * tsamp
         t = linspace(tmin_moins, tmax_plus, nt * oversamp)
         noise_model = noisemod_db[dataset.dataset_name]
-        print(dataset.dataset_name, noise_model)
         idx_par = []
         datasim_function = datasim_db[dataset.dataset_name]["whole"].function
         datasim_paramnames = datasim_db[dataset.dataset_name]["whole"].arg_list["param"]
         for par in datasim_paramnames:
             idx_par.append(l_param_names.index(par))
-        ax_data.plot(t, datasim_function(param[idx_par], t), "g-", label="model")
-        ax_resi.errorbar(kwargs["t"],
-                         kwargs["data"] - datasim_function(param[idx_par], kwargs["t"]),
-                         kwargs["data_err"],
-                         fmt=".", color="b")
+        datasim_t = datasim_function(param[idx_par], t)
+        datasim_tdata = datasim_function(param[idx_par], kwargs["t"])
+        ax_data.plot(t, datasim_t, "g-", label="model")
+        ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_tdata, kwargs["data_err"],
+                         fmt=".", color="g")
         if noise_model.has_GP:
             gpsim_func = noise_model.gp_simulator
-            ax_data.plot(t, datasim_function(param[idx_par], t) +
-                         gpsim_func(param, t, **dico_noisemod_allkwargs[noise_model.category]),
-                         "r-", label="model+GP")
-            ax_resi.errorbar(kwargs["t"],
-                             kwargs["data"] - datasim_function(param[idx_par], kwargs["t"]),
-                             kwargs["data_err"],
-                             fmt=".", color="b")
+            datasim_GP_t = (datasim_t +
+                            gpsim_func(param, t, **dico_noisemod_allkwargs[noise_model.category]))
+            datasim_GP_tdata = (datasim_tdata +
+                                gpsim_func(param, kwargs["t"],
+                                           **dico_noisemod_allkwargs[noise_model.category]))
+            ax_data.plot(t, datasim_GP_t, "r-", label="model+GP")
+            ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_GP_tdata, kwargs["data_err"],
+                             fmt=".", color="r")
         ax_data.legend(loc='upper right', shadow=True)
         # Draw a line y=0 for the residuals
         xmin, xmax = ax_resi.get_xlim()
