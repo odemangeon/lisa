@@ -14,6 +14,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
 from copy import deepcopy
 from collections import defaultdict
+from tqdm import tqdm
 
 
 ## Logger Object
@@ -35,11 +36,12 @@ logger = getLogger()
 #         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
 #     stdout.write("\n")
 
-def explore(sampler, p0, nsteps, width=50):
-    for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
-        n = int((width + 1) * float(i) / nsteps)
-        stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
-    stdout.write("\n")
+def explore(sampler, p0, nsteps):
+    with tqdm(total=nsteps) as pbar:
+        previous_i = -1
+        for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
+            pbar.update(i - previous_i)
+            previous_i = i
 
 
 def plot_chains(sampler, l_param_names, flat=False,

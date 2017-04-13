@@ -30,6 +30,7 @@ import math
 import astropy.constants as const
 
 from IPython import get_ipython
+from numpy import pi
 
 # http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7
@@ -220,9 +221,10 @@ def getecc(secosw, sesinw):
 
 
 def getecc_fast(secosw, sesinw):
-    """Get eccentricity from e.cos(omega) and e.sin(omega).
+    """Returns eccentricity as a float.
 
-    This method only works with numbers as input (not arrays).
+    :param float secosw: sqrt(eccentricity).cos(omega)
+    :param float sesinw: sqrt(eccentricity).sin(omega)
     """
     return secosw * secosw + sesinw * sesinw
 
@@ -233,8 +235,13 @@ def getomega(secosw, sesinw):
 
 
 def getomega_fast(secosw, sesinw):
-    """Get omego from e.cos(omega) and e.sin(omega)."""
+    """Returns omega as a float radian.
+
+    :param float secosw: sqrt(eccentricity).cos(omega)
+    :param float sesinw: sqrt(eccentricity).sin(omega)
+    """
     return math.atan(sesinw / secosw)
+
 
 def getkamp(per, ms, mp, inc, ecc):
     """
@@ -244,23 +251,46 @@ def getkamp(per, ms, mp, inc, ecc):
     from equation
     http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
     """
+    return (28.4329 * mp * np.sin(np.deg2rad(inc)) * (mp / msunjup + ms)**(-2.0 / 3.0) *
+            (per / 365.25)**(-1.0 / 3.0) / np.sqrt(1.0 - ecc**2.0))
 
-    semia = 28.4329 * mp  * np.sin(np.deg2rad(inc)) * (mp/msunjup + ms)**(-2.0/3.0) * (per/365.25) **(-1.0/3.0) /np.sqrt (1.0-ecc**2.0)
-    return semia
 
-def gettimeperi(per, t0, ecc, omega ):
+def gettp(P, tc, ecc, omega):
+    """Returns tp (time of periastron passage).
+
+    :param float/numpy.ndarray P: period in [time unit]
+    :param float/numpy.ndarray tc: time of conjonction in [time unit]
+    :param float/numpy.ndarray ecc: eccentricity
+    :param float/numpy.ndarray omega: argument of periastron in radian
+
+    If eccentricity is zero the code applies convention correction which is in agrement with if
+    calculated through formula
     """
-    convert t0 into tp
-    inputs , per in days, t0 in days, ecc, omega in degress
-    if ecc is zero the code aplies convention correction which is in agremment with if calculated through formula
-    """
-    if ecc == 0 :
-        return  t0 - per/4.
-    f = np.pi*0.5 - np.deg2rad(omega)
-    E = 2.0*np.arctan(np.sqrt( (1.0 - ecc)/(1.0 + ecc) ) * np.tan(f/2.0))
+    if ecc == 0.:
+        return tc - P / 4.
+    f = pi * 0.5 - omega
+    E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
     mshift = E - ecc * np.sin(E)
-    return  t0 - per*mshift/(2.0*np.pi)
+    return tc - P * mshift / (2.0 * pi)
 
+
+def gettp_fast(P, tc, ecc, omega):
+    """Returns tp (time of periastron passage).
+
+    :param float P: period in [time unit]
+    :param float tc: time of conjonction in [time unit]
+    :param float ecc: eccentricity
+    :param float omega: argument of periastron in radian
+
+    If eccentricity is zero the code applies convention correction which is in agrement with if
+    calculated through formula
+    """
+    if ecc == 0.:
+        return tc - P / 4.
+    f = pi * 0.5 - omega
+    E = 2.0 * math.atan(math.sqrt((1.0 - ecc) / (1.0 + ecc)) * math.tan(f / 2.0))
+    mshift = E - ecc * math.sin(E)
+    return tc - P * mshift / (2.0 * pi)
 
 
 if __name__ == "__main__":
