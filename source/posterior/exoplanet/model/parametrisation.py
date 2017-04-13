@@ -17,11 +17,6 @@ logger = getLogger()
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
-    # def make_instmodel_jitter_main(self):
-    #     """Make all the jitter arguments of all the isntrument models main parameters."""
-    #     for inst_model in self.get_list_instmodel():  # For each inst_model set jitter as main param
-    #         inst_model.jitter.main = True
-
     def instmodel_RV_parametrisation(self, drift_main=False, DeltaRV_main=False):
         """Make all the jitter arguments of all the instrument models main parameters."""
         if DeltaRV_main:
@@ -37,23 +32,7 @@ class GravGroup_Parametrisation(object):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
 
-    # def instmodel_RV_parametrisation(self, jitter_main=False, drift_main=False, DeltaRV_main=False):
-    #     """Make all the jitter arguments of all the instrument models main parameters."""
-    #     if DeltaRV_main:
-    #         RVrefglobal_instname = self.RV_globalref_instname
-    #         RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
-    #     list_instmodel = self.get_instmodel_objs(inst_cat="RV")
-    #     for inst_model in list_instmodel:
-    #         inst_name = inst_model.instrument.name
-    #         inst_model.jitter.main = jitter_main
-    #         inst_model.drift.main = drift_main
-    #         inst_model.DeltaRV.main = DeltaRV_main
-    #         if DeltaRV_main:
-    #             if (inst_name == RVrefglobal_instname) and (inst_model.name == RVrefglobal_modname):
-    #                 inst_model.DeltaRV.free = False
-    #                 inst_model.DeltaRV.value = 0.0
-
-    def apply_RV_LC_EXOFAST_param(self, with_jitter=False):
+    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -89,8 +68,6 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].t0.main = True
             self.paramcontainers["planets"][planet_name].cosinc.main = True
             self.paramcontainers["planets"][planet_name].ar.main = True
-        if with_jitter:
-            self.make_instmodel_jitter_main()
 
     def apply_RV_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
         """Apply the parametrisation for the fit of RV only.

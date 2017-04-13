@@ -32,6 +32,7 @@ import astropy.constants as const
 from IPython import get_ipython
 from numpy import pi
 
+
 # http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7
 g = const.G.value
@@ -61,6 +62,7 @@ def geta0(per, ms, mp):
     P = per * 24. * 3600.0  # change P to seconds for SI
     a0 = ((P / (2. * np.pi))**2. * gm * (ms + mp / msunjup))**(1. / 3.)
     return a0
+
 
 def getper(a0, ms, mp):
     """
@@ -230,7 +232,11 @@ def getecc_fast(secosw, sesinw):
 
 
 def getomega(secosw, sesinw):
-    """Get omego from e.cos(omega) and e.sin(omega)."""
+    """Get omego from e.cos(omega) and e.sin(omega).
+
+    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    """
     return np.arctan(sesinw / secosw)
 
 
@@ -240,7 +246,10 @@ def getomega_fast(secosw, sesinw):
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
     """
-    return math.atan(sesinw / secosw)
+    if secosw == 0.:
+        return math.copysign(math.pi / 2, sesinw)
+    else:
+        return math.atan(sesinw / secosw)
 
 
 def getkamp(per, ms, mp, inc, ecc):
@@ -255,19 +264,19 @@ def getkamp(per, ms, mp, inc, ecc):
             (per / 365.25)**(-1.0 / 3.0) / np.sqrt(1.0 - ecc**2.0))
 
 
-def gettp(P, tc, ecc, omega):
+def gettp(P, tc, secosw, sesinw):
     """Returns tp (time of periastron passage).
 
-    :param float/numpy.ndarray P: period in [time unit]
-    :param float/numpy.ndarray tc: time of conjonction in [time unit]
-    :param float/numpy.ndarray ecc: eccentricity
-    :param float/numpy.ndarray omega: argument of periastron in radian
+    :param numpy.ndarray P: period in [time unit]
+    :param numpy.ndarray tc: time of conjonction in [time unit]
+    :param numpy.ndarray ecc: eccentricity
+    :param numpy.ndarray omega: argument of periastron in radian
 
     If eccentricity is zero the code applies convention correction which is in agrement with if
     calculated through formula
     """
-    if ecc == 0.:
-        return tc - P / 4.
+    omega = getomega(secosw, sesinw)
+    ecc = getecc(secosw, sesinw)
     f = pi * 0.5 - omega
     E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
     mshift = E - ecc * np.sin(E)
@@ -285,8 +294,8 @@ def gettp_fast(P, tc, ecc, omega):
     If eccentricity is zero the code applies convention correction which is in agrement with if
     calculated through formula
     """
-    if ecc == 0.:
-        return tc - P / 4.
+    # if ecc == 0.:
+    #     return tc - P / 4.
     f = pi * 0.5 - omega
     E = 2.0 * math.atan(math.sqrt((1.0 - ecc) / (1.0 + ecc)) * math.tan(f / 2.0))
     mshift = E - ecc * math.sin(E)

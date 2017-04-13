@@ -45,16 +45,18 @@ def explore(sampler, p0, nsteps):
 
 
 def plot_chains(sampler, l_param_names, flat=False,
-                plot_height=2, plot_width=8, **kwargs_tl):
-    nwalk = sampler.chain.shape[0]
+                plot_height=2, plot_width=8, l_walker=None, **kwargs_tl):
     fig, ax = subplots(nrows=sampler.dim + 1, sharex=True, squeeze=True,
-                       figsize=(plot_width, nwalk * plot_height))
-    for k in range(nwalk):
+                       figsize=(plot_width, sampler.dim * plot_height))
+    if l_walker is None:
+        nwalk = sampler.chain.shape[0]
+        l_walker = range(nwalk)
+    for k in l_walker:
         ax[0].set_title("lnpost")
         ax[0].plot(sampler.lnprobability[k, :], alpha=0.5)
     for i in range(sampler.dim):
         ax[i + 1].set_title(l_param_names[i])
-        for k in range(nwalk):
+        for k in l_walker:
             ax[i + 1].plot(sampler.chain[k, :, i], alpha=0.5)
     ax[sampler.dim].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
