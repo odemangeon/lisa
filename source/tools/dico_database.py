@@ -34,7 +34,7 @@ def init_result(sortby_lvl1key=False, sortby_lvl2key=False, sortby_lvl3key=False
             result = defaultdict(type(default_value))
     else:
         result = []
-    logger.debug("Result initialised with {}".format(result))
+    # logger.debug("Result initialised with {}".format(result))
     return result
 
 

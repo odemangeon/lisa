@@ -368,6 +368,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         """
         template_planet_rv = ("+ pl_rv_array(t, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet},"
                               " {P})")
+        whole_planets_rv = ""
         for i, planet in enumerate(self.planets.values()):
             # Initialise arg_list and param_nb for the current planet
             arg_list[planet.name] = arg_list_before
@@ -397,19 +398,18 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             # Create the preambule text that compute intermediate variables
             preambule_planet = (dedent(template_preambule).
                                 format(planet=planet.name, secosw=params_planet["secosw"],
-                                       sesinw=params_planet["secosw"], P=params_planet["P"],
+                                       sesinw=params_planet["sesinw"], P=params_planet["P"],
                                        tc=params_planet["tc"], tab=tab))
             preambule_whole += (dedent(template_preambule).
                                 format(planet=planet.name, secosw=params_whole["secosw"],
-                                       sesinw=params_whole["secosw"], P=params_whole["P"],
+                                       sesinw=params_whole["sesinw"], P=params_whole["P"],
                                        tc=params_whole["tc"], tab=tab))
 
             # planets RV contribution (planet_rv and whole_planets_rv)
             planet_rv = template_planet_rv.format(planet=planet.name, K=params_planet["K"],
-                                                  P=params_planet["K"])
-            whole_planets_rv = template_planet_rv.format(planet=planet.name, K=params_whole["K"],
-                                                         P=params_whole["K"])
-
+                                                  P=params_planet["P"])
+            whole_planets_rv += template_planet_rv.format(planet=planet.name, K=params_whole["K"],
+                                                          P=params_whole["P"])
             # Finalise the  text of planet RV simulator function
             text_def_func[planet.name] = (template_function.
                                           format(object=planet.name, preambule=preambule_planet,
