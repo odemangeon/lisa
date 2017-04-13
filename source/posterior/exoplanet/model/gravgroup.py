@@ -370,7 +370,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                               " {P})")
         for i, planet in enumerate(self.planets.values()):
             # Initialise arg_list and param_nb for the current planet
-            arg_list[planet.name] = arg_list_before
+            arg_list[planet.name] = deepcopy(arg_list_before)
             param_nb[planet.name] = param_nb_before
 
             # Create two dictionaries which will contain the text for each planet parameter for the

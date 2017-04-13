@@ -122,13 +122,13 @@ class Planet(CelestialBody):
         ## log Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## Radius ratio planet over star
-        self.add_parameter(Parameter(name="R_rat", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="Rrat", name_prefix=self.full_name, main=False))
         ## Mass ratio planet over star
-        self.add_parameter(Parameter(name="M_rat", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="Mrat", name_prefix=self.full_name, main=False))
         ## a over R, ratio of semi-major axis over Radius of the host star
-        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="aR", name_prefix=self.full_name, main=False))
         ## log a over R, ratio of semi-major axis over Radius of the host star
-        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
+        # self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
         ## ecc . cos(w)
         self.add_parameter(Parameter(name="secosw", name_prefix=self.full_name, main=False))
         ## ecc . sin(w)

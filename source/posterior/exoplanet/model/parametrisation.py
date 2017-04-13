@@ -17,6 +17,70 @@ logger = getLogger()
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
+    def apply_RV_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
+        """Apply the parametrisation for the fit of RV only.
+
+        Apply the parametrisation for Radial Velocity data described in Eastman, J., et
+         al., 2013, Publications of the Astronomical Society of the Pacific, Volume 125, Number 923.
+        As this parametrisation should be applied only to a GravGroup with one star and one or more
+        planets, the function chack first that the GravGroup is compliant.
+        """
+        # Check that there is just 1 star
+        self.__check_only1star()
+
+        # Check that there is at least 1 planet
+        self.__check_atleast1planet()
+
+        # Check that the instrument category of all the datasets is "RV" otherwise raise a warning
+        self.__check_dataset_instcat(["RV", ])
+
+        # Apply the parametrisation to the star parameters
+        star_name = list(self.paramcontainers["stars"].keys())[0]
+        self.paramcontainers["stars"][star_name].v0.main = True
+        # Apply the parametrisation to the planets parameters
+        for planet_name in list(self.paramcontainers["planets"].keys()):
+            self.paramcontainers["planets"][planet_name].secosw.main = True
+            self.paramcontainers["planets"][planet_name].sesinw.main = True
+            self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].K.main = True
+            self.paramcontainers["planets"][planet_name].t0.main = True
+        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
+
+        self.getecc_fast = getecc_fast
+        self.getomega_fast = getomega_fast
+
+    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
+        """Apply the parametrisation for the fit of LC and RV.
+
+        Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
+         al., 2013, Publications of the Astronomical Society of the Pacific, Volume 125, Number 923.
+        As this parametrisation should be applied only to a GravGroup with one star and one or more
+        planets, the function chack first that the GravGroup is compliant.
+        """
+        # Check that there is just 1 star
+        self.__check_only1star()
+
+        # Check that there is at least 1 planet
+        self.__check_atleast1planet()
+
+        # Check that the instrument categories of all the datasets are "RV" or "LC" otherwise raise
+        # a warning
+        self.__check_dataset_instcat(["RV", "LC"])
+
+        # Apply the parametrisation to the star parameters
+        star_name = list(self.paramcontainers.keys())[0]
+        self.paramcontainers["stars"][star_name].v0.main = True
+        # Apply the parametrisation to the planets parameters
+        for planet_name in list(self.planets.keys()):
+            self.paramcontainers["planets"][planet_name].Rrat.main = True
+            self.paramcontainers["planets"][planet_name].secosw.main = True
+            self.paramcontainers["planets"][planet_name].sesinw.main = True
+            self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].K.main = True
+            self.paramcontainers["planets"][planet_name].t0.main = True
+            self.paramcontainers["planets"][planet_name].cosinc.main = True
+            self.paramcontainers["planets"][planet_name].aR.main = True
+
     def instmodel_RV_parametrisation(self, drift_main=False, DeltaRV_main=False):
         """Make all the jitter arguments of all the instrument models main parameters."""
         if DeltaRV_main:
@@ -32,79 +96,26 @@ class GravGroup_Parametrisation(object):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
 
-    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
-        """Apply the parametrisation for the fit of LC and RV.
-
-        Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
-         al., 2013, Publications of the Astronomical Society of the Pacific, Volume 125, Number 923.
-        As this parametrisation should be applied only to a GravGroup with one star and one or more
-        planets, the function chack first that the GravGroup is compliant.
-        """
-        # Check that there is just 1 star
+    def __check_only1star(self):
+        """Raise an error if there is more than 1 star in the gravgroup."""
         if self.nb_of_paramcontainers["stars"] != 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with exactly 1 star. This gravgroups has {} star(s)."
                              "".format(self.nb_of_paramcontainers["stars"]))
-        # Check that there is at least 1 planet
-        if self.nb_of_paramcontainers["planet"] < 1:
-            raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
-                             "with at least 1 planet. This gravgroups has {} planet(s)."
-                             "".format(self.nb_of_paramcontainers["planets"]))
-        # Check that the data type to simulate are RV and LC
-        if Counter(self.dataset_db.inst_categories) != Counter(["RV", "LC"]):
-            logger.warning("You are using a paprametrisation that has been defined to fit RV and "
-                           "transit data but you have to analyse {}."
-                           "".format(self.dataset_db.inst_categories))
-        # Apply the parametrisation to the star parameters
-        star_name = list(self.paramcontainers.keys())[0]
-        self.paramcontainers["stars"][star_name].v0.main = True
-        # Apply the parametrisation to the planets parameters
-        for planet_name in list(self.planets.keys()):
-            self.paramcontainers["planets"][planet_name].R_rat.main = True
-            self.paramcontainers["planets"][planet_name].secosw.main = True
-            self.paramcontainers["planets"][planet_name].sesinw.main = True
-            self.paramcontainers["planets"][planet_name].P.main = True
-            self.paramcontainers["planets"][planet_name].K.main = True
-            self.paramcontainers["planets"][planet_name].t0.main = True
-            self.paramcontainers["planets"][planet_name].cosinc.main = True
-            self.paramcontainers["planets"][planet_name].ar.main = True
 
-    def apply_RV_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
-        """Apply the parametrisation for the fit of RV only.
-
-        Apply the parametrisation for Radial Velocity data described in Eastman, J., et
-         al., 2013, Publications of the Astronomical Society of the Pacific, Volume 125, Number 923.
-        As this parametrisation should be applied only to a GravGroup with one star and one or more
-        planets, the function chack first that the GravGroup is compliant.
-        """
-        # Check that there is just 1 star
-        if self.nb_of_paramcontainers["stars"] != 1:
-            raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
-                             "with exactly 1 star. This gravgroups has {} star(s)."
-                             "".format(self.nb_of_paramcontainers["stars"]))
-        # Check that there is at least 1 planet
+    def __check_atleast1planet(self):
+        """Raise an error if there is more than 1 star in the gravgroup."""
         if self.nb_of_paramcontainers["planets"] < 1:
             raise ValueError("The RV_LC_EXOFAST parametrisation can only be applied to gravgroups "
                              "with at least 1 planet. This gravgroups has {} planet(s)."
                              "".format(self.nb_of_paramcontainers["planets"]))
-        if Counter(self.dataset_db.inst_categories) != Counter(["RV", ]):
-            logger.warning("You are using a paprametrisation that has been defined to fit RV data "
-                           "only but you have to analyse {}."
-                           "".format(self.dataset_db.inst_categories))
-        # Apply the parametrisation to the star parameters
-        star_name = list(self.paramcontainers["stars"].keys())[0]
-        self.paramcontainers["stars"][star_name].v0.main = True
-        # Apply the parametrisation to the planets parameters
-        for planet_name in list(self.paramcontainers["planets"].keys()):
-            self.paramcontainers["planets"][planet_name].secosw.main = True
-            self.paramcontainers["planets"][planet_name].sesinw.main = True
-            self.paramcontainers["planets"][planet_name].P.main = True
-            self.paramcontainers["planets"][planet_name].K.main = True
-            self.paramcontainers["planets"][planet_name].t0.main = True
-        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
 
-        self.getecc_fast = getecc_fast
-        self.getomega_fast = getomega_fast
+    def __check_dataset_instcat(self, l_instcat_expected):
+        """Raise aa warning if the instrument categories of the dataset are not as expected."""
+        if Counter(self.dataset_db.inst_categories) != Counter(l_instcat_expected):
+            raise ValueError("You are using a paprametrisation that has been defined to fit {}"
+                             "but you have to analyse {}."
+                             "".format(l_instcat_expected, self.dataset_db.inst_categories))
 
 # # transit parameters
 # self.rp = 0.          # planet radius (in units of stellar radii)
