@@ -22,7 +22,8 @@ logger = getLogger()
 class CoreLD(Core_ParamContainer):
     """docstring for CoreLD."""
 
-    __category__ = "limbdarkening"
+    __category__ = "LDs"
+    __ld_type__ = None
 
     def __init__(self, star=None, name=""):
         super(CoreLD, self).__init__(name=name)
@@ -50,6 +51,11 @@ class CoreLD(Core_ParamContainer):
                              "".format(self.name, star.name))
 
     @property
+    def ld_type(self):
+        """Return a string giving the type of limb darkening parametrisation (eg: "quadratic")."""
+        return self.__ld_type__
+
+    @property
     def hasstar(self):
         """Indicate if a CoreLD instance has a attibute star defined."""
         if hasattr(self, "star"):
@@ -57,8 +63,92 @@ class CoreLD(Core_ParamContainer):
         else:
             return False
 
+
+class LinearLD(CoreLD):
+    """docstring for LinearLD."""
+
+    __ld_type__ = "linear"
+
+    def __init__(self, star=None, name=""):
+        super(LinearLD, self).__init__(star=star, name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+
+
 class QuadraticLD(CoreLD):
     """docstring for QuadraticLD."""
+
+    __ld_type__ = "quadratic"
+
     def __init__(self, star=None, name=""):
-        super(QuadraticLD, self).__init__(star, name)
-        
+        super(QuadraticLD, self).__init__(star=star, name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+
+class SquareRootLD(CoreLD):
+    """docstring for SquareRootLD."""
+
+    __ld_type__ = "squareroot"
+
+    def __init__(self, star=None, name=""):
+        super(SquareRootLD, self).__init__(star=star, name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+
+class LogarithmicLD(CoreLD):
+    """docstring for LogarithmicLD."""
+
+    __ld_type = "logarithmic"
+
+    def __init__(self, star=None, name=""):
+        super(SquareRootLD, self).__init__(star=star, name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+
+class ExponentialLD(CoreLD):
+    """docstring for ExponentialLD."""
+
+    __ld_type__ = "exponential"
+
+    def __init__(self, star=None, name=""):
+        super(SquareRootLD, self).__init__(star=star, ld_type="exponential", name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+
+class NonLinearLD(CoreLD):
+    """docstring for NonLinearLD."""
+
+    __ld_type__ = "nonlinear"
+
+    def __init__(self, star=None, name=""):
+        super(SquareRootLD, self).__init__(star=star, ld_type="nonlinear", name=name)
+        ## Radius of the planet
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc3", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc4", name_prefix=self.full_name, main=False))
+
+
+## Dictionary relating the LD model name to the LD param container class
+dic_paramcont_class = {'linear': LinearLD,
+                       'quadratic': QuadraticLD,
+                       'squareroot': SquareRootLD,
+                       'logarithmic': LogarithmicLD,
+                       'exponential': ExponentialLD,
+                       'nonlinear': NonLinearLD
+                       }
+
+
+class Manager_LD(object):
+    """docstring for Manager_LD."""
+
+    def get_LD_parcont_subclass(self, ld_mod_name):
+        return dic_paramcont_class[ld_mod_name]

@@ -199,7 +199,6 @@ def update_instrument_paramfile_info(inst_db_info, inst_db):
                 inst_db_info[inst_cat][key_inst][inst_name].append(inst_model)
                 inst_db[inst_cat][inst_name][inst_model].update_paramfile_info()
             inst_db_info[inst_cat][key_inst][inst_name].append(string4datasetdico)
-            # TODO: DELEGATE TO INSTRUMENT CLASS METHOD
             if hasattr(inst_subclass, "_update_inst_paramfile_info"):
                 func = getattr(inst_subclass, "_update_inst_paramfile_info")
                 func(inst_db_info[inst_cat][key_inst][inst_name])

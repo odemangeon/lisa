@@ -265,10 +265,10 @@ def getkamp(per, ms, mp, inc, ecc):
 
 
 def gettp(P, tc, secosw, sesinw):
-    """Returns tp (time of periastron passage).
+    """Returns tp (time of periastron passage) of the body (star or planet).
 
     :param numpy.ndarray P: period in [time unit]
-    :param numpy.ndarray tc: time of conjonction in [time unit]
+    :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
     :param numpy.ndarray ecc: eccentricity
     :param numpy.ndarray omega: argument of periastron in radian
 
@@ -284,12 +284,12 @@ def gettp(P, tc, secosw, sesinw):
 
 
 def gettp_fast(P, tc, ecc, omega):
-    """Returns tp (time of periastron passage).
+    """Returns tp (time of periastron passage) of the body (star or planet).
 
     :param float P: period in [time unit]
-    :param float tc: time of conjonction in [time unit]
+    :param float tc: time of conjonction of the planet in [time unit]
     :param float ecc: eccentricity
-    :param float omega: argument of periastron in radian
+    :param float omega: argument of periastron of the body (star or planet) in radian
 
     If eccentricity is zero the code applies convention correction which is in agrement with if
     calculated through formula
