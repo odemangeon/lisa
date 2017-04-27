@@ -8,13 +8,15 @@ results.
 """
 from logging import getLogger
 from matplotlib.pyplot import subplots, subplot, figure, legend  # , figure, plot, show
-from numpy import linspace
+from numpy import linspace, median, where, array, append, argmax, unravel_index, ones, nan, sqrt
 from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
 from copy import deepcopy
 from collections import defaultdict
 from tqdm import tqdm
+from PyAstronomy.pyasl import foldAt
+from .stats.loc_scale_estimator import mad
 
 
 ## Logger Object
@@ -44,25 +46,33 @@ def explore(sampler, p0, nsteps):
             previous_i = i
 
 
-def plot_chains(sampler, l_param_names, flat=False,
-                plot_height=2, plot_width=8, l_walker=None, **kwargs_tl):
+def plot_chains(sampler, l_param_name=None, l_walker=None, l_burnin=None,
+                plot_height=2, plot_width=8, **kwargs_tl):
     fig, ax = subplots(nrows=sampler.dim + 1, sharex=True, squeeze=True,
                        figsize=(plot_width, sampler.dim * plot_height))
-    if l_walker is None:
-        nwalk = sampler.chain.shape[0]
-        l_walker = range(nwalk)
-    for k in l_walker:
+    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+    l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=sampler.dim)
+    l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
+    lnprob_min = sampler.lnprobability[l_walker, ...].min()
+    lnprob_max = sampler.lnprobability[l_walker, ...].max()
+    for walker, burnin in zip(l_walker, l_burnin):
         ax[0].set_title("lnpost")
-        ax[0].plot(sampler.lnprobability[k, :], alpha=0.5)
+        line = ax[0].plot(sampler.lnprobability[walker, :], alpha=0.5)
+        ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
+                     alpha=0.5)
     for i in range(sampler.dim):
-        ax[i + 1].set_title(l_param_names[i])
-        for k in l_walker:
-            ax[i + 1].plot(sampler.chain[k, :, i], alpha=0.5)
+        ax[i + 1].set_title(l_param_name[i])
+        vmin = sampler.chain[l_walker, :, i].min()
+        vmax = sampler.chain[l_walker, :, i].max()
+        for walker, burnin in zip(l_walker, l_burnin):
+            line = ax[i + 1].plot(sampler.chain[walker, :, i], alpha=0.5)
+            ax[i + 1].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
+                             alpha=0.5)
     ax[sampler.dim].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
 
 
-def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
+def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
                         plot_height=2, plot_width=8, **kwargs_tl):
     """param        np.array
        datasim_db   dataset_db in datasimulators
@@ -112,7 +122,7 @@ def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_d
         datasim_function = datasim_db[dataset.dataset_name]["whole"].function
         datasim_paramnames = datasim_db[dataset.dataset_name]["whole"].arg_list["param"]
         for par in datasim_paramnames:
-            idx_par.append(l_param_names.index(par))
+            idx_par.append(l_param_name.index(par))
         datasim_t = datasim_function(param[idx_par], t)
         datasim_tdata = datasim_function(param[idx_par], kwargs["t"])
         ax_data.plot(t, datasim_t, "g-", label="model")
@@ -134,6 +144,10 @@ def overplot_data_model(param, l_param_names, datasim_db, dataset_db, noisemod_d
         ax_resi.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
         ax_resi.set_xlim(xmin, xmax)
     fig.tight_layout(**kwargs_tl)
+
+
+def plot_phase_folded_lc():
+    pass
 
 
 def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
@@ -158,3 +172,203 @@ def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
 
     # Return the two axes
     return ax0, ax1
+
+
+def apply_mask(x = None):
+    '''
+    Returns the outlier mask, an array of indices corresponding to the non-outliers.
+
+    :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead. Default :py:obj:`None`
+
+    '''
+
+    if x is None:
+      return np.delete(np.arange(len(self.time)), self.mask)
+    else:
+      return np.delete(x, self.mask, axis=0)
+
+
+def acceptancefraction_selection(sampler, sig_fact=3., verbose=1):
+    """Return selected walker based on the acceptance fraction.
+
+    :param emcee.EnsembleSampler sampler:
+    :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
+    :param int verbose: if 1 speaks otherwise not
+    """
+    median_acceptance_frac = median(sampler.acceptance_fraction)
+    mad_acceptance_frac = mad(sampler.acceptance_fraction)
+    if verbose == 1:
+        logger.info("Acceptance fraction of the walker: {}\nmedian: {}, MAD:{}"
+                    "".format(sampler.acceptance_fraction, median_acceptance_frac,
+                              mad_acceptance_frac))
+    l_selected_walker = where(sampler.acceptance_fraction > (median_acceptance_frac -
+                                                             sig_fact * mad_acceptance_frac))[0]
+    nb_rejected = sampler.chain.shape[0] - len(l_selected_walker)
+    if verbose == 1:
+        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, sampler.chain.shape[0]))
+    return l_selected_walker, nb_rejected
+
+
+def get_fitted_values(sampler, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
+                      verbose=1):
+    """Return the fitted values from the sampler.
+
+    :param emcee.EnsembleSampler sampler:
+    :param string method: method used to extract the fitted values ["MAP", "median"]
+    :param int_iteratable l_walkers: list of valid walkers
+    :param int burnin: index of the first iteration to consider.
+    :param int verbose: if 1 speaks otherwise not
+    """
+    ndim = sampler.dim
+    if method == "median":
+        res = median(get_clean_flatchain(sampler, l_walker=l_walker, l_burnin=l_burnin), axis=0)
+    elif method == "MAP":
+        if (l_walker is not None) or (l_burnin is not None):
+            logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
+        walker, it = unravel_index(argmax(sampler.lnprobability), dims=sampler.lnprobability.shape)
+        res = array([sampler.chain[walker, it, dim] for dim in range(ndim)])
+    else:
+        raise ValueError("Method {} is not recognised".format(method))
+    if verbose == 1:
+        l_param_names = __get_default_l_param_name(l_param_name, ndim)
+        text = "\n"
+        for i, param_name in enumerate(l_param_names):
+            text += "{} = {}\n".format(param_name, res[i])
+        logger.info(text)
+    return res
+
+
+def get_clean_flatchain(sampler, l_walker=None, l_burnin=None):
+    """Return a flatchain with only the selected walkers and iteration after the burnin.
+
+    :param emcee.EnsembleSampler sampler:
+    :param int_iteratable l_walkers: list of valid walkers
+    :param int_iteratable l_burnin: list of burnin iterations for each valid walker
+    """
+    if (l_walker is None) and (l_burnin is None):
+        return sampler.flatchain
+    else:
+        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+    if l_burnin is None:
+        s = sampler.chain[l_walker, ...].shape
+        return sampler.chain[l_walker, ...].reshape(s[0] * s[1], s[2])
+    else:
+        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
+    ndim = sampler.dim
+    res = []
+    for dim in range(ndim):
+        res.append([])
+        for walker, burnin in zip(l_walker, l_burnin):
+            res[dim].extend(sampler.chain[walker, burnin:, dim])
+    return array(res).transpose()
+
+
+def geweke_multi(sampler, first=0.1, last=0.5, intervals=20, l_walker=None):
+    """Adapted the geweke test for multiple wlaker exploration.
+
+    :param emcee.EnsembleSampler sampler:
+    :param float last: first portion of the chain to be used in the Geweke diagnostic.
+        Default to 0.1 (i.e. first 10 % of the chain)
+    :param float last: last portion of the chain to be used in the Geweke diagnostic.
+        Default to 0.5 (i.e. last 50 % of the chain)
+    :param int intervals: Number of sub-chains to analyze. Defaults to 20.
+    :param int_iteratable l_walker: list of valid walkers
+    """
+    # Get the list of valid walkers (l_walker), the number of parameters (ndim) and the number of
+    # steps for each walker (nsteps)
+    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+    nwalker = len(l_walker)
+    ndim = sampler.dim
+    nsteps = sampler.chain.shape[1]
+
+    # Compute the start step of the last part of the chain and compute median and MAD of the last
+    # part of the chain for each parameter
+    last_start_step = int(nsteps * last)
+    l_med_last = [median(sampler.chain[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    print("l_med_last: {}".format(l_med_last))
+    l_mad_last = [mad(sampler.chain[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    print("l_mad_last: {}".format(l_mad_last))
+
+    # Compute the start steps of all the first parts of the chains that we will use for the Geweke
+    # diagnostic (first_start_steps) and length of those first part (first_length).
+    first_start_steps = [int(i * (last_start_step / intervals)) for i in range(intervals)]
+    first_length = int(nsteps * first)
+    # Then for each parameter and for each walker and for each first part compute the Geweke z-score
+    zscores = ones((nwalker, intervals, ndim)) * nan
+    for dim, med_last, mad_last in zip(range(ndim), l_med_last, l_mad_last):
+        for i, walker in enumerate(l_walker):
+            for j, first_start in enumerate(first_start_steps):
+                med_first = median(sampler.chain[walker, first_start:(first_start + first_length),
+                                                 dim])
+                mad_first = mad(sampler.chain[walker, first_start:(first_start + first_length),
+                                              dim])
+                zscores[i, j, dim] = (med_first - med_last) / (sqrt(mad_first**2 + mad_last**2))
+    return zscores, first_start_steps
+
+
+def geweke_plot(zscores, first_steps=None, l_param_name=None,
+                plot_height=2, plot_width=8, **kwargs_tl):
+    ndim = zscores.shape[-1]
+    nwalker = zscores.shape[0]
+    fig, ax = subplots(nrows=ndim, sharex=True, squeeze=True,
+                       figsize=(plot_width, ndim * plot_height))
+    l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
+    first_steps = __get_default_first_steps(first_steps=first_steps, intervals=zscores.shape[1])
+    xmin = min(first_steps)
+    xmax = max(first_steps)
+    for i in range(ndim):
+        ax[i].set_title(l_param_name[i])
+        for k in range(nwalker):
+            ax[i].plot(first_steps, zscores[k, :, i], alpha=0.5)
+
+        ax[i].hlines([-2, 2], xmin, xmax, linestyles="dashed")
+    ax[ndim - 1].set_xlabel("iteration")
+    fig.tight_layout(**kwargs_tl)
+
+
+def geweke_selection(zscores, first_steps=None, geweke_thres=2., l_walker=None, verbose=1):
+    """Compute the burnin for each valid walker based on their zscores.
+
+    :param numpy.ndarray zscores:
+    :param int_iteratable l_walker: list of valid walkers
+    """
+    res = abs(zscores) <= geweke_thres
+    nwalker = zscores.shape[0]
+    intervals = zscores.shape[1]
+    first_steps = __get_default_first_steps(first_steps=first_steps, intervals=intervals)
+    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
+    l_burnin = []
+    l_walker_new = []
+    for i in range(nwalker):
+        for j in range(intervals):
+            if res[i, j:, :].all():
+                l_burnin.append(first_steps[j])
+                l_walker_new.append(l_walker[i])
+                break
+    if verbose == 1:
+        logger.info("List of burnin for valid walker: {}".format(dict(zip(l_walker, l_burnin))))
+        logger.info("Number of walkers invalid walkers found: {}/{}"
+                    "".format(len(l_walker) - len(l_walker_new), len(l_walker)))
+    return l_burnin, l_walker_new
+
+
+def __get_default_l_walker(l_walker, nwalker):
+    if l_walker is None:
+        l_walker = [i for i in range(nwalker)]
+    return l_walker
+
+
+def __get_default_l_param_name(l_param_name, ndim):
+    if l_param_name is None:
+        l_param_name = [str(i) for i in range(ndim)]
+    return l_param_name
+
+
+def __get_default_l_burnin(l_burnin, nwalker):
+    if l_burnin is None:
+        l_burnin = [0 for i in range(nwalker)]
+    return l_burnin
+
+
+def __get_default_first_steps(first_steps, intervals):
+    return __get_default_l_walker(first_steps, intervals)

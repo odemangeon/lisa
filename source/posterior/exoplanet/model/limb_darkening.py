@@ -24,6 +24,7 @@ class CoreLD(Core_ParamContainer):
 
     __category__ = "LDs"
     __ld_type__ = None
+    __ordered_paramname_list__ = None
 
     def __init__(self, star=None, name=""):
         super(CoreLD, self).__init__(name=name)
@@ -63,11 +64,29 @@ class CoreLD(Core_ParamContainer):
         else:
             return False
 
+    def __get_list_all_paramnames(self):
+        """Return the list of all parameters names."""
+        if self.__ordered_paramname_list__ is None:
+            raise ValueError("Can't use ordered=True if __ordered_paramname_list__ is not "
+                             "defined")
+        else:
+            if (set(self.__ordered_paramname_list__) ==
+               set(super(CoreLD, self).get_list_paramnames())):
+                return self.__ordered_paramname_list__
+            else:
+                raise ValueError("__ordered_paramname_list__ doesn't contain all the "
+                                 "parameters")
+
+    def __get_list_all_params(self):
+        """Return the list of all parameters."""
+        return [self.parameters[paramname] for paramname in self.__get_list_all_paramnames()]
+
 
 class LinearLD(CoreLD):
     """docstring for LinearLD."""
 
     __ld_type__ = "linear"
+    __ordered_paramname_list__ = ["ldc1"]
 
     def __init__(self, star=None, name=""):
         super(LinearLD, self).__init__(star=star, name=name)
@@ -79,6 +98,7 @@ class QuadraticLD(CoreLD):
     """docstring for QuadraticLD."""
 
     __ld_type__ = "quadratic"
+    __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
     def __init__(self, star=None, name=""):
         super(QuadraticLD, self).__init__(star=star, name=name)
@@ -91,6 +111,7 @@ class SquareRootLD(CoreLD):
     """docstring for SquareRootLD."""
 
     __ld_type__ = "squareroot"
+    __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
     def __init__(self, star=None, name=""):
         super(SquareRootLD, self).__init__(star=star, name=name)
@@ -103,6 +124,7 @@ class LogarithmicLD(CoreLD):
     """docstring for LogarithmicLD."""
 
     __ld_type = "logarithmic"
+    __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
     def __init__(self, star=None, name=""):
         super(SquareRootLD, self).__init__(star=star, name=name)
@@ -115,6 +137,7 @@ class ExponentialLD(CoreLD):
     """docstring for ExponentialLD."""
 
     __ld_type__ = "exponential"
+    __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
     def __init__(self, star=None, name=""):
         super(SquareRootLD, self).__init__(star=star, ld_type="exponential", name=name)
@@ -127,6 +150,7 @@ class NonLinearLD(CoreLD):
     """docstring for NonLinearLD."""
 
     __ld_type__ = "nonlinear"
+    __ordered_paramname_list__ = ["ldc1", "ldc2", "ldc3", "ldc4"]
 
     def __init__(self, star=None, name=""):
         super(SquareRootLD, self).__init__(star=star, ld_type="nonlinear", name=name)

@@ -232,12 +232,21 @@ def getecc_fast(secosw, sesinw):
 
 
 def getomega(secosw, sesinw):
-    """Get omego from e.cos(omega) and e.sin(omega).
+    """Get omego in radians from e.cos(omega) and e.sin(omega).
 
     :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
     :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
     """
     return np.arctan(sesinw / secosw)
+
+
+def getomega_deg(secosw, sesinw):
+    """Get omego in degrees from e.cos(omega) and e.sin(omega).
+
+    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    """
+    return np.degrees(np.arctan(sesinw / secosw))
 
 
 def getomega_fast(secosw, sesinw):
@@ -250,6 +259,18 @@ def getomega_fast(secosw, sesinw):
         return math.copysign(math.pi / 2, sesinw)
     else:
         return math.atan(sesinw / secosw)
+
+
+def getomega_deg_fast(secosw, sesinw):
+    """Returns omega as a float degrees.
+
+    :param float secosw: sqrt(eccentricity).cos(omega)
+    :param float sesinw: sqrt(eccentricity).sin(omega)
+    """
+    if secosw == 0.:
+        return math.degrees(math.copysign(math.pi / 2, sesinw))
+    else:
+        return math.degrees(math.atan(sesinw / secosw))
 
 
 def getkamp(per, ms, mp, inc, ecc):

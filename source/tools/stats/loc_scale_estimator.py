@@ -83,7 +83,7 @@ def estimator_loc_scale(data, norm=None, **kwargs):
         raise ValueError("Norm argument should be in {}".format(_estimators_dico.keys()))
 
 
-def mad(data, **kwargs):
+def mad(data, axis=None, **kwargs):
     """
     Median absolute deviation.
 
@@ -92,8 +92,10 @@ def mad(data, **kwargs):
     @author Olivier Demangeon LAM
 
     Arguments:
-        data : iterable
+        data : numpy.ndarray
             data on which to compute the mad
+        axis : None or int
+            if None flatten the array before computing the mad otherwise apply on specified axis
 
     Keyword arguments:
         center : float, optional
@@ -104,7 +106,10 @@ def mad(data, **kwargs):
     Returns:
         result : value of the mad
     """
-    return sm.robust.mad(data, **kwargs)
+    if axis == None:
+        return sm.robust.mad(data.flatten(), **kwargs)
+    else:
+        return sm.robust.mad(data, **kwargs)
 
 
 def rob_mom(data, center=None):
