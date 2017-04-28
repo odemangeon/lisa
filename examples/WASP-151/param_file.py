@@ -69,7 +69,7 @@ EulerCam = {'default': {'jitter': {'free': False,
             # give it a new name and file the Dataset dict.
             'Dataset': {0: 'default', 1: 'default', },            }
 
-K2 = {'default': {'jitter': {'free': True,
+K2 = {'default': {'jitter': {'free': False,
                              'value': None,  # unit: n/a
                              'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.2}
                                        }

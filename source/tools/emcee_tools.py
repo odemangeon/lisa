@@ -8,7 +8,8 @@ results.
 """
 from logging import getLogger
 from matplotlib.pyplot import subplots, subplot, figure, legend  # , figure, plot, show
-from numpy import linspace, median, where, array, append, argmax, unravel_index, ones, nan, sqrt
+from numpy import linspace, median, where, array, append, argmax, unravel_index, ones, nan, sqrt, argsort
+from numpy import abs as npabs
 from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -146,11 +147,33 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
     fig.tight_layout(**kwargs_tl)
 
 
-def plot_phase_folded_lc():
+def plot_phase_folded_lc(dataset, P, tc, ax=None):
+    """Plot a phase folded representation of a lc
+
+    :param Dataset dataset: LC dataset
+    :param float P: Period of the planet
+    :param float tc: Time of inferior conjuction of the planet
+
+    P and tc needs to have the same unit than the time in dataset.
     """
-    TODO
-    """
-    pass
+    # Get the data from dataset
+    kwargs = dataset.get_kwargs()
+
+    # Obtain the phases with respect to some ephemerid P and tc
+    phases = foldAt(kwargs["t"], P, T0=(tc + P / 2))
+
+    # Sort with respect to phase
+    # First, get the order of indices ...
+    sortIndi = argsort(phases)
+    # ... and, second, rearrange the arrays.
+    phases = phases[sortIndi] - 0.5
+    flux = kwargs["data"][sortIndi]
+    flux_err = kwargs["data_err"][sortIndi]
+
+    # Plot the result
+    if ax is None:
+        fig, ax = subplots(nrows=1, ncols=1, squeeze=True)
+    ax.errorbar(phases, flux, flux_err, fmt=".", color="b")
 
 
 def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
@@ -202,11 +225,32 @@ def acceptancefraction_selection(sampler, sig_fact=3., verbose=1):
     median_acceptance_frac = median(sampler.acceptance_fraction)
     mad_acceptance_frac = mad(sampler.acceptance_fraction)
     if verbose == 1:
-        logger.info("Acceptance fraction of the walker: {}\nmedian: {}, MAD:{}"
+        logger.info("Acceptance fraction of the walkers: {}\nmedian: {}, MAD:{}"
                     "".format(sampler.acceptance_fraction, median_acceptance_frac,
                               mad_acceptance_frac))
     l_selected_walker = where(sampler.acceptance_fraction > (median_acceptance_frac -
                                                              sig_fact * mad_acceptance_frac))[0]
+    nb_rejected = sampler.chain.shape[0] - len(l_selected_walker)
+    if verbose == 1:
+        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, sampler.chain.shape[0]))
+    return l_selected_walker, nb_rejected
+
+
+def lnposterior_selection(sampler, sig_fact=3., verbose=1):
+    """Return selected walker based on the acceptance fraction.
+
+    :param emcee.EnsembleSampler sampler:
+    :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
+    :param int verbose: if 1 speaks otherwise not
+    """
+    median_lnposterior = median(sampler.lnprobability)
+    mad_lnposterior = mad(sampler.lnprobability)
+    walkers_median_lnposterior = median(sampler.lnprobability, axis=1)
+    if verbose == 1:
+        logger.info("lnposterior of the walkers: {}\nmedian: {}, MAD:{}"
+                    "".format(walkers_median_lnposterior, median_lnposterior, mad_lnposterior))
+    l_selected_walker = where(walkers_median_lnposterior >
+                              (median_lnposterior - (sig_fact * mad_lnposterior)))[0]
     nb_rejected = sampler.chain.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, sampler.chain.shape[0]))

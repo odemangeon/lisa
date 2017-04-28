@@ -109,10 +109,14 @@ p0 = [post_instance.model.get_initial_values(list_paramnames=arg_list["param"])
       for i in range(nwalkers)]
 # logger.debug("Initial p0 values: {}".format(p0))
 et.explore(sampler, p0, nsteps=10000)
-l_walker, _ = et.acceptancefraction_selection(sampler, sig_fact=3., verbose=1)
+l_walker_acceptfrac, _ = et.acceptancefraction_selection(sampler, sig_fact=2., verbose=1)
+l_walker_lnpost, _ = et.lnposterior_selection(sampler, sig_fact=2., verbose=1)
+l_walker = list(set(l_walker_acceptfrac) & set(l_walker_lnpost))
+logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
+            "".format((sampler.chain.shape[0] - len(l_walker)), sampler.chain.shape[0]))
 zscores, first_steps = et.geweke_multi(sampler, first=0.1, last=0.40, intervals=50,
                                        l_walker=l_walker)
-l_burnin, l_walker_geweke = et.geweke_selection(zscores, first_steps=first_steps, geweke_thres=1.0,
+l_burnin, l_walker_geweke = et.geweke_selection(zscores, first_steps=first_steps, geweke_thres=1.6,
                                                 l_walker=l_walker)
 fitted_values = et.get_fitted_values(sampler, method="median", l_param_name=l_param_name,
                                      l_walker=l_walker_geweke, l_burnin=l_burnin)
