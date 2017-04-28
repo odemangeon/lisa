@@ -106,7 +106,7 @@ def mad(data, axis=None, **kwargs):
     Returns:
         result : value of the mad
     """
-    if axis == None:
+    if axis is None:
         return sm.robust.mad(data.flatten(), **kwargs)
     else:
         return sm.robust.mad(data, **kwargs)

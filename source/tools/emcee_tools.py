@@ -147,6 +147,9 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
 
 
 def plot_phase_folded_lc():
+    """
+    TODO
+    """
     pass
 
 
@@ -180,6 +183,7 @@ def apply_mask(x = None):
 
     :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead. Default :py:obj:`None`
 
+    WORK IN PROGRESS
     '''
 
     if x is None:
