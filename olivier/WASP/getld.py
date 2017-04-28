@@ -34,8 +34,9 @@ filt_Kepler = TabulatedFilter('Kepler', wl_Kepler, tm=T_Kepler, tmf=1.0)
 filt_z = TabulatedFilter('Sloan z', wl_z, tm=T_z, tmf=1e-2)
 filt_i = TabulatedFilter('Sloan i', wl_i, tm=T_i, tmf=1e-2)
 filt_R = TabulatedFilter('Johnson R', wl_R, tm=T_R, tmf=1.0)
+filt_NG = BoxcarFilter('NGTS', 520, 890)
 
-filters = [filt_Kepler, filt_z, filt_i, filt_R]
+filters = [filt_Kepler, filt_z, filt_i, filt_R, filt_NG]
 
 # set stellar parameters or read them
 teff_WASP151 = (5871, 57)

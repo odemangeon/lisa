@@ -37,6 +37,7 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
+
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].secosw.main = True
@@ -44,10 +45,9 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].tc.main = True
-        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
 
-        # self.getecc_fast = getecc_fast
-        # self.getomega_fast = getomega_fast
+        # Apply the parametrisation to the RV instrument models parameters
+        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
 
     def apply_LC_EXOFAST_param(self, with_DeltaOOT=False):
         """Apply the parametrisation for the fit of LC only.
@@ -66,9 +66,6 @@ class GravGroup_Parametrisation(object):
         # Check that the instrument category of all the datasets is "RV" otherwise raise a warning
         self.__check_dataset_instcat(["LC", ])
 
-        # Apply the parametrisation to the star parameters
-        # star_name = list(self.paramcontainers["stars"].keys())[0]
-        # self.paramcontainers["stars"][star_name].v0.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].Rrat.main = True
@@ -78,13 +75,14 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].cosinc.main = True
             self.paramcontainers["planets"][planet_name].secosw.main = True
             self.paramcontainers["planets"][planet_name].sesinw.main = True
+
+        # Apply the parametrisation to the LC instrument models parameters
         self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT)
+
+        # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
 
-        # self.getecc_fast = getecc_fast
-        # self.getomega_fast = getomega_fast
-
-    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
+    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False, with_DeltaOOT=False):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -103,7 +101,7 @@ class GravGroup_Parametrisation(object):
         self.__check_dataset_instcat(["RV", "LC"])
 
         # Apply the parametrisation to the star parameters
-        star_name = list(self.paramcontainers.keys())[0]
+        star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.planets.keys()):
@@ -115,6 +113,15 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].tc.main = True
             self.paramcontainers["planets"][planet_name].cosinc.main = True
             self.paramcontainers["planets"][planet_name].aR.main = True
+
+        # Apply the parametrisation to the RV instrument models parameters
+        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
+
+        # Apply the parametrisation to the LC instrument models parameters
+        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT)
+
+        # Apply the parametrisation to the Limb darkening models parameters
+        self.limbdarkening_parametrisation()
 
     def __check_only1star(self):
         """Raise an error if there is more than 1 star in the gravgroup."""
