@@ -9,6 +9,7 @@ The objective of this package is to provides the LC_Instrument and LC_Dataset cl
 """
 import logging
 import matplotlib.pyplot as plt
+from numpy import array
 
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
@@ -36,12 +37,25 @@ class LC_Dataset(Dataset):
         self.get_data().plot(y=y, yerr=yerr, **kwargs)
         plt.show()
 
+    def get_kwargs(self):
+        pandas_df = self.get_data()
+        return {"data": array(pandas_df["flux"]),
+                "data_err": array(pandas_df["flux_err"]),
+                "t": array(pandas_df["time"])}
+
+    def get_time(self):
+        pandas_df = self.get_data()
+        return array(pandas_df["time"])
+
+    def create_datasimulator_for_dataset(self, datasim_func):
+        return datasim_func
+
 
 class LC_Instrument(Core_Instrument):
     """docstring for LC_Instrument."""
 
     __category__ = "LC"
-    __params_model__ = {"jitter": {"unit": "wo unit"}}
+    __params_model__ = {"DeltaOOT": {"unit": "wo unit"}}
 
     def __init__(self, name):
         super(LC_Instrument, self).__init__(name=name)

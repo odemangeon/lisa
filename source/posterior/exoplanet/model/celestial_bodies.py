@@ -108,27 +108,27 @@ class Planet(CelestialBody):
         ## Inclination
         self.add_parameter(Parameter(name="inc", name_prefix=self.full_name, main=False))
         ## Cos Inclination
-        self.add_parameter(Parameter(name="inc", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="cosinc", name_prefix=self.full_name, main=False))
         ## Impact parameter
         self.add_parameter(Parameter(name="b", name_prefix=self.full_name, main=False))
-        ## Argument of periapsis
+        ## Argument of periastron of star (= argument of periastron of planet + pi)
         self.add_parameter(Parameter(name="w", name_prefix=self.full_name, main=False))
         ## Longitude of the acending node
         self.add_parameter(Parameter(name="Omega", name_prefix=self.full_name, main=False))
         ## First Transit time
-        self.add_parameter(Parameter(name="t0", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="tc", name_prefix=self.full_name, main=False))
         ## Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## log Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## Radius ratio planet over star
-        self.add_parameter(Parameter(name="R_rat", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="Rrat", name_prefix=self.full_name, main=False))
         ## Mass ratio planet over star
-        self.add_parameter(Parameter(name="M_rat", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="Mrat", name_prefix=self.full_name, main=False))
         ## a over R, ratio of semi-major axis over Radius of the host star
-        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="aR", name_prefix=self.full_name, main=False))
         ## log a over R, ratio of semi-major axis over Radius of the host star
-        self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
+        # self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
         ## ecc . cos(w)
         self.add_parameter(Parameter(name="secosw", name_prefix=self.full_name, main=False))
         ## ecc . sin(w)

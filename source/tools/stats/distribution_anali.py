@@ -17,12 +17,15 @@ if centre is given it is used for the limits otherwise the rob_mon is used and r
 @version 1.0
 @todo:
 """
-
+from logging import getLogger
 from source.tools.stats.loc_scale_estimator import rob_mom
 import numpy as np
 
 
-def getconfi(distri, level, centre=None, l_param_names=None):
+logger = getLogger()
+
+
+def getconfi(distri, level, centre=None, l_param_name=None):
     """
     inputs distribution , sigma level we want can be 1,2,3
     optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mom
@@ -45,11 +48,13 @@ def getconfi(distri, level, centre=None, l_param_names=None):
 
     dis_right, dis_left = s1[1] - loc, loc - s1[0]
 
+    text = "\n"
     for i in range(distri.shape[1]):
-        if l_param_names is not None:
-            param_name = l_param_names[i] + ": "
+        if l_param_name is not None:
+            param_name = l_param_name[i] + ": "
         else:
             param_name = ""
-        print("{}{} +{} -{}".format(param_name, loc[i], dis_right[i], dis_left[i]))
+        text += "{}{} +{} -{}\n".format(param_name, loc[i], dis_right[i], dis_left[i])
+    logger.info(text)
 
     return dis_right, loc, dis_left

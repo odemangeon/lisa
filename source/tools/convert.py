@@ -232,12 +232,21 @@ def getecc_fast(secosw, sesinw):
 
 
 def getomega(secosw, sesinw):
-    """Get omego from e.cos(omega) and e.sin(omega).
+    """Get omego in radians from e.cos(omega) and e.sin(omega).
 
     :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
     :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
     """
     return np.arctan(sesinw / secosw)
+
+
+def getomega_deg(secosw, sesinw):
+    """Get omego in degrees from e.cos(omega) and e.sin(omega).
+
+    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    """
+    return np.degrees(np.arctan(sesinw / secosw))
 
 
 def getomega_fast(secosw, sesinw):
@@ -250,6 +259,18 @@ def getomega_fast(secosw, sesinw):
         return math.copysign(math.pi / 2, sesinw)
     else:
         return math.atan(sesinw / secosw)
+
+
+def getomega_deg_fast(secosw, sesinw):
+    """Returns omega as a float degrees.
+
+    :param float secosw: sqrt(eccentricity).cos(omega)
+    :param float sesinw: sqrt(eccentricity).sin(omega)
+    """
+    if secosw == 0.:
+        return math.degrees(math.copysign(math.pi / 2, sesinw))
+    else:
+        return math.degrees(math.atan(sesinw / secosw))
 
 
 def getkamp(per, ms, mp, inc, ecc):
@@ -265,10 +286,10 @@ def getkamp(per, ms, mp, inc, ecc):
 
 
 def gettp(P, tc, secosw, sesinw):
-    """Returns tp (time of periastron passage).
+    """Returns tp (time of periastron passage) of the body (star or planet).
 
     :param numpy.ndarray P: period in [time unit]
-    :param numpy.ndarray tc: time of conjonction in [time unit]
+    :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
     :param numpy.ndarray ecc: eccentricity
     :param numpy.ndarray omega: argument of periastron in radian
 
@@ -284,12 +305,12 @@ def gettp(P, tc, secosw, sesinw):
 
 
 def gettp_fast(P, tc, ecc, omega):
-    """Returns tp (time of periastron passage).
+    """Returns tp (time of periastron passage) of the body (star or planet).
 
     :param float P: period in [time unit]
-    :param float tc: time of conjonction in [time unit]
+    :param float tc: time of conjonction of the planet in [time unit]
     :param float ecc: eccentricity
-    :param float omega: argument of periastron in radian
+    :param float omega: argument of periastron of the body (star or planet) in radian
 
     If eccentricity is zero the code applies convention correction which is in agrement with if
     calculated through formula

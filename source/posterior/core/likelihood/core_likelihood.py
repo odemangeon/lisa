@@ -176,7 +176,8 @@ class LikelihoodCreator(object):
             noisemodel_instance = noisemodel_subclass(datasim_docfunc=datasim_docfuncs,
                                                       model_instance=self,
                                                       instmodel_obj=instmodel_objs)
-            # doc_func, dico_params_idx_all[noise_model] = noisemodel_instance.lnlike_creator()  # Get the lnlike doc function
+            # Get the lnlike doc function
+            # doc_func, dico_params_idx_all[noise_model] = noisemodel_instance.lnlike_creator()
             doc_func = noisemodel_instance.lnlike_creator()
             l_func.append(doc_func.function)
             all_kwargs = defaultdict(list)  # Get the kwargs (data, data_err, and the rest)
@@ -200,10 +201,11 @@ class LikelihoodCreator(object):
             def lnlike_all(p):
                 res = 0
                 # logger.debug("paramnames like ({}): {}\nparams like ({}): {}"
-                #              "".format(len(arg_list_all["param"]), arg_list_all["param"], len(p), p))
+                #              "".format(len(arg_list_all["param"]), arg_list_all["param"],
+                #                        len(p), p))
                 for func, idxs, kwargs in zip(l_func, l_params_idx, l_allkwargs):
-                    # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): {}"
-                    #              "".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
+                    # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): "
+                    #              "{}".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
                     #                        len(param), param))
                     res += func(p[idxs], **kwargs)
                 return res
@@ -215,6 +217,6 @@ class LikelihoodCreator(object):
         arg_list_all["kwargs"] = []
         doc_f = lnlike_withalldataset_creator(l_func=l_func, l_params_idx=l_params_idx,
                                               l_allkwargs=l_allkwargs, arg_list=arg_list_all)
-        return doc_f, dico_noisemodel_instance # , dico_params_idx_all
+        return doc_f, dico_noisemodel_instance  # , dico_params_idx_all
 
         # Then create the lnlike filling the kwargs and final sum them
