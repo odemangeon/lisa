@@ -17,7 +17,7 @@ logger = getLogger()
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
-    def apply_RV_EXOFAST_param(self, with_drift=False, with_DeltaRV=False):
+    def apply_RV_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False):
         """Apply the parametrisation for the fit of RV only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -47,7 +47,7 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].tc.main = True
 
         # Apply the parametrisation to the RV instrument models parameters
-        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
+        self.instmodel_RV_parametrisation(driftRV_main=with_driftRV, DeltaRV_main=with_DeltaRV)
 
     def apply_LC_EXOFAST_param(self, with_DeltaOOT=False):
         """Apply the parametrisation for the fit of LC only.
@@ -82,7 +82,8 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
 
-    def apply_RV_LC_EXOFAST_param(self, with_drift=False, with_DeltaRV=False, with_DeltaOOT=False):
+    def apply_RV_LC_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False, with_DeltaOOT=False,
+                                  with_driftOOT=False):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -115,10 +116,10 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].aR.main = True
 
         # Apply the parametrisation to the RV instrument models parameters
-        self.instmodel_RV_parametrisation(drift_main=with_drift, DeltaRV_main=with_DeltaRV)
+        self.instmodel_RV_parametrisation(DeltaRV_main=with_DeltaRV, driftRV_main=with_driftRV)
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT)
+        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
@@ -144,7 +145,7 @@ class GravGroup_Parametrisation(object):
                              "but you have to analyse {}."
                              "".format(l_instcat_expected, self.dataset_db.inst_categories))
 
-    def instmodel_RV_parametrisation(self, drift_main=False, DeltaRV_main=False):
+    def instmodel_RV_parametrisation(self, DeltaRV_main=False, driftRV_main=False):
         """Make all the jitter arguments of all the RV instrument models main parameters."""
         if DeltaRV_main:
             RVrefglobal_instname = self.RV_globalref_instname
@@ -152,18 +153,19 @@ class GravGroup_Parametrisation(object):
         list_instmodel = self.get_instmodel_objs(inst_cat="RV")
         for inst_model in list_instmodel:
             inst_name = inst_model.instrument.name
-            inst_model.drift.main = drift_main
+            inst_model.driftRV.main = driftRV_main
             inst_model.DeltaRV.main = DeltaRV_main
             if DeltaRV_main:
                 if (inst_name == RVrefglobal_instname) and (inst_model.name == RVrefglobal_modname):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
 
-    def instmodel_LC_parametrisation(self, DeltaOOT_main=False):
+    def instmodel_LC_parametrisation(self, DeltaOOT_main=False, driftOOT_main=False):
         """Make all the DeltaOOT arguments of all the LC instrument models main parameters."""
         list_instmodel = self.get_instmodel_objs(inst_cat="LC")
         for inst_model in list_instmodel:
             inst_model.DeltaOOT.main = DeltaOOT_main
+            inst_model.driftOOT.main = driftOOT_main
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

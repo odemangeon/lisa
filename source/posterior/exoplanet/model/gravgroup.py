@@ -554,13 +554,13 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                     delta_inst_rv += "{} + ".format(inst_model.DeltaRV.value)
 
         # Create the text for the istrument RV drift (drift_rv)
-        if inst_model.drift.main:
-            if inst_model.drift.free:
+        if inst_model.driftRV.main:
+            if inst_model.driftRV.free:
                 drift_rv = "p[{}] * t + ".format(param_nb[self.key_whole])
                 param_nb[self.key_whole] += 1
-                arg_list[self.key_whole]["param"].append(inst_model.drift.full_name)
+                arg_list[self.key_whole]["param"].append(inst_model.driftRV.full_name)
             else:
-                drift_rv = "{} * t + ".format(inst_model.drift.value)
+                drift_rv = "{} * t + ".format(inst_model.driftRV.value)
         else:
             drift_rv = ""
 
@@ -710,7 +710,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         template_function = """
         def {function_name}(p, t):
         {{tab}}{{preambule}}
-        {{tab}}return 1 {{delta_oot}} {{planets_lc}}
+        {{tab}}return 1 {{delta_oot}} {{drift_oot}} {{planets_lc}}
         """.format(function_name=function_name)
         tab = "    "
         template_function = dedent(template_function)
@@ -732,6 +732,17 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                 delta_oot = "+ {}".format(inst_model.DeltaOOT.value)
         else:
             delta_oot = ""  # If no deltaOOT is main, I still need an empty string
+
+        # Create the text for the instrument OOT drift (drift_oot)
+        if inst_model.driftOOT.main:
+            if inst_model.driftOOT.free:
+                drift_oot = "+ p[{}] * (t - t.min())".format(param_nb[self.key_whole])
+                param_nb[self.key_whole] += 1
+                arg_list[self.key_whole]["param"].append(inst_model.driftOOT.full_name)
+            else:
+                drift_oot = "+ {} * (t - t.min())".format(inst_model.driftOOT.value)
+        else:
+            drift_oot = ""
 
         # Create the template preambule
         if self.transit_model == "batman":
@@ -881,8 +892,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             # Finalise the  text of planet LC simulator function
             text_def_func[planet.name] = (template_function.
                                           format(object=planet.name, preambule=preambule_planet,
-                                                 delta_oot=delta_oot, planets_lc=planet_lc,
-                                                 tab=tab))
+                                                 delta_oot=delta_oot, drift_oot=drift_oot,
+                                                 planets_lc=planet_lc, tab=tab))
             logger.debug("text of {object} LC simulator function :\n{text_func}"
                          "".format(object=planet.name, text_func=text_def_func[planet.name]))
 
@@ -892,8 +903,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         # Finalise the  text of whole system RV simulator function
         text_def_func[self.key_whole] = (template_function.
                                          format(object=self.key_whole, preambule=preambule_whole,
-                                                delta_oot=delta_oot, planets_lc=whole_planets_lc,
-                                                tab=tab))
+                                                delta_oot=delta_oot, drift_oot=drift_oot,
+                                                planets_lc=whole_planets_lc, tab=tab))
         logger.debug("text of {object} LC simulator function :\n{text_func}"
                      "".format(object=self.key_whole, text_func=text_def_func[self.key_whole]))
 

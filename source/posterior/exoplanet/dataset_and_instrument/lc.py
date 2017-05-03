@@ -55,7 +55,8 @@ class LC_Instrument(Core_Instrument):
     """docstring for LC_Instrument."""
 
     __category__ = "LC"
-    __params_model__ = {"DeltaOOT": {"unit": "wo unit"}}
+    __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
+                        "driftOOT": {"unit": "wo unit/s"}}
 
     def __init__(self, name):
         super(LC_Instrument, self).__init__(name=name)

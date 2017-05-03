@@ -7,13 +7,12 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger
-from matplotlib.pyplot import subplots, subplot, figure, legend  # , figure, plot, show
-from numpy import linspace, median, where, array, append, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import abs as npabs
-from sys import stdout
+from matplotlib.pyplot import subplots, subplot, figure  # , figure, plot, show
+from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
+# from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
-from copy import deepcopy
+# from copy import deepcopy
 from collections import defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
@@ -73,13 +72,14 @@ def plot_chains(sampler, l_param_name=None, l_walker=None, l_burnin=None,
     fig.tight_layout(**kwargs_tl)
 
 
-def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
-                        plot_height=2, plot_width=8, **kwargs_tl):
+def overplot_data_model_init(param, l_param_name, datasim_db, dataset_db, noisemod_db=None,
+                             oversamp=10, plot_height=2, plot_width=8, **kwargs_tl):
     """param        np.array
        datasim_db   dataset_db in datasimulators
        dataset_db   dataset_db
        noisemod_db  dictionary giving the noise model instance for each dataset name
     """
+    raise Warning("This function is depreceated and has been replaced by overplot_data_model")
     # Get the list of all datasets names and the number of datasets
     l_datasets = dataset_db.get_datasets()
     ndataset = len(l_datasets)
@@ -147,7 +147,201 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
     fig.tight_layout(**kwargs_tl)
 
 
-def plot_phase_folded_lc(dataset, P, tc, ax=None):
+def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
+                        phasefold=False, phasefold_kwargs=None,
+                        plot_height=2, plot_width=8, **kwargs_tl):
+    """param        np.array
+       datasim_db   dataset_db in datasimulators
+       dataset_db   dataset_db
+       noisemod_db  dictionary giving the noise model instance for each dataset name
+    """
+    # Check that if phasefold is True phasefold_kwargs is not None
+    if phasefold and (phasefold_kwargs is None):
+        raise ValueError("If you want to phase fold, you have to provide the phasefold_kwargs")
+
+    # Get the list of all datasets names and the number of datasets
+    l_datasets = dataset_db.get_datasets()
+    ndataset = len(l_datasets)
+
+    # Create the figure and grid which will harbor the plots for each dataset
+    fig = figure(figsize=(plot_width, ndataset * plot_height))
+    gs = GridSpec(nrows=ndataset, ncols=1)
+
+    # Create and fill the dictionary which for each noise_model_name return the dict of kwargs.
+    dico_noisemod_allkwargs = dict()
+    for dataset_name, noise_mod in noisemod_db.items():
+        if noise_mod is None:
+            continue
+        dico_noisemod_allkwargs[noise_mod.category] = defaultdict(list)
+        if noise_mod.has_GP:
+            for dataset_name in noise_mod.l_dataset:
+                dataset = dataset_db[dataset_name]
+                kwargs = dataset.get_kwargs()
+                for karg_type, kwarg_value in kwargs.items():
+                    dico_noisemod_allkwargs[noise_mod.category][karg_type].append(kwarg_value)
+
+    for i, dataset in enumerate(l_datasets):
+        datasim_db_docfunc = datasim_db[dataset.dataset_name]["whole"]
+        noise_model = noisemod_db[dataset.dataset_name]
+        noisemod_allkwargs = dico_noisemod_allkwargs[noise_model.category]
+        kwargs = dataset.get_kwargs()
+        t = kwargs["t"]
+        nt = len(t)
+        data = kwargs["data"]
+        data_err = kwargs["data_err"]
+        if phasefold:
+            # Create the Axes for the comparison data/model and the residuals and set the title.
+            # and plot the data
+            (axes_data,
+             axes_resi) = add_twoaxeswithsharex_perplanet(gs[i],
+                                                          nplanet=len(phasefold_kwargs["planets"]),
+                                                          gs_from_sps_kw={"height_ratios": (3, 1)})
+            title_printed = False
+            for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
+                                                            phasefold_kwargs["P"],
+                                                            phasefold_kwargs["tc"],
+                                                            axes_data, axes_resi):
+                if not(title_printed):
+                    ax_data.set_title(dataset.dataset_name)
+                    title_printed = True
+                # Plot the data
+                errorbar_kwarg = {"color": "b", "fmt": "."}
+                _, phases = plot_phase_folded_timeserie(t=t, data=data, P=P, tc=tc,
+                                                        data_err=data_err, ax=ax_data,
+                                                        errorbar_kwarg=errorbar_kwarg)
+
+                # Plot the model
+                phasemin = phases.min()
+                phasemax = phases.max()
+                tmin = tc + P * phasemin
+                tmax = tc + P * phasemax
+                plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name,
+                           oversamp=oversamp,
+                           plot_phase=True, P=P, tc=tc,
+                           noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
+                           ax=ax_data)
+                # Plot the model and residuals
+                plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
+                               plot_phase=True, P=P, tc=tc,
+                               noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
+                               ax=ax_resi)
+        else:
+            # Create the Axes for the comparison data/model and the residuals and set the title.
+            # and plot the data
+            ax_data, ax_resi = add_twoaxeswithsharex(gs[i],
+                                                     gs_from_sps_kw={"height_ratios": (3, 1)})
+            ax_data.set_title(dataset.dataset_name)
+
+            # Plot the data
+            ax_data.errorbar(t, data, data_err, fmt=".", color="b")
+
+            # Plot the model
+            tmin = t.min()
+            tmax = t.max()
+            plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, oversamp=oversamp,
+                       plot_phase=False,
+                       noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
+                       ax=ax_data)
+
+            # Plot the residuals
+            plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
+                           plot_phase=False,
+                           noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
+                           ax=ax_resi)
+
+        # Plot the legend
+        ax_data.legend(loc='upper right', shadow=True)
+
+    fig.tight_layout(**kwargs_tl)
+
+
+def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, oversamp=1,
+               plot_phase=False, P=None, tc=None,
+               noise_model=None, noisemod_allkwargs=None,
+               ax=None):
+    # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
+    # tmax_plus), the model time vector (t)
+    tsamp = (tmax - tmin) / (nt * oversamp)
+    tmin_moins = tmin - oversamp * tsamp
+    tmax_plus = tmax + oversamp * tsamp
+    t = linspace(tmin_moins, tmax_plus, nt * oversamp)
+
+    # Compute the model values for each time
+    idx_par = []
+    datasim_function = datasim_db_docfunc.function
+    datasim_paramnames = datasim_db_docfunc.arg_list["param"]
+    for par in datasim_paramnames:
+        idx_par.append(l_param_name.index(par))
+    model = datasim_function(param[idx_par], t)
+
+    # Create a new figure and ax if needed
+    ax = __get_default_ax(ax=ax)
+
+    # Plot the model
+    errorbar_kwarg = {"label": "model", "color": "g", "fmt": "-"}
+    if plot_phase:
+        plot_phase_folded_timeserie(t, model, P, tc, ax=ax, errorbar_kwarg=errorbar_kwarg)
+    else:
+        ax.errorbar(t, model, **errorbar_kwarg)
+
+    # Plot the model + GP
+    if noise_model is not None:
+        if noise_model.has_GP:
+            gpsim_func = noise_model.gp_simulator
+            model_wGP = model + gpsim_func(param, t, **noisemod_allkwargs)
+            errorbar_kwarg = {"label": "model+GP", "color": "r", "fmt": "-"}
+            if plot_phase:
+                plot_phase_folded_timeserie(t, model_wGP, P, tc, ax=ax,
+                                            errorbar_kwarg=errorbar_kwarg)
+            else:
+                ax.errorbar(t, model_wGP, **errorbar_kwarg)
+
+
+def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=None,
+                   plot_phase=False, P=None, tc=None,
+                   noise_model=None, noisemod_allkwargs=None,
+                   ax=None):
+
+    # Compute the residuals values for each time
+    idx_par = []
+    datasim_function = datasim_db_docfunc.function
+    datasim_paramnames = datasim_db_docfunc.arg_list["param"]
+    for par in datasim_paramnames:
+        idx_par.append(l_param_name.index(par))
+    model = datasim_function(param[idx_par], t)
+    residual = data - model
+
+    # Create a new figure and ax if needed
+    ax = __get_default_ax(ax=ax)
+
+    # Plot the residuals
+    errorbar_kwarg = {"label": "model", "color": "g", "fmt": "."}
+    if plot_phase:
+        plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err, ax=ax,
+                                    errorbar_kwarg=errorbar_kwarg)
+    else:
+        ax.errorbar(t, residual, data_err, **errorbar_kwarg)
+
+    # Plot the model + GP
+    if noise_model is not None:
+        if noise_model.has_GP:
+            gpsim_func = noise_model.gp_simulator
+            model_wGP = model + gpsim_func(param, t, **noisemod_allkwargs)
+            residual_wGP = data - model_wGP
+            errorbar_kwarg = {"label": "model+GP", "color": "r", "fmt": "."}
+            if plot_phase:
+                plot_phase_folded_timeserie(t, residual_wGP, P, tc, ax=ax,
+                                            errorbar_kwarg=errorbar_kwarg)
+            else:
+                ax.errorbar(t, residual_wGP, data_err, **errorbar_kwarg)
+
+    # Draw a line y=0 for the residuals
+    xmin, xmax = ax.get_xlim()
+    ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
+    ax.set_xlim(xmin, xmax)
+
+
+def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar_kwarg=None):
     """Plot a phase folded representation of a lc
 
     :param Dataset dataset: LC dataset
@@ -156,24 +350,34 @@ def plot_phase_folded_lc(dataset, P, tc, ax=None):
 
     P and tc needs to have the same unit than the time in dataset.
     """
-    # Get the data from dataset
-    kwargs = dataset.get_kwargs()
-
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(kwargs["t"], P, T0=(tc + P / 2))
+    phases = foldAt(t, P, T0=(tc + P / 2))
 
     # Sort with respect to phase
     # First, get the order of indices ...
     sortIndi = argsort(phases)
     # ... and, second, rearrange the arrays.
     phases = phases[sortIndi] - 0.5
-    flux = kwargs["data"][sortIndi]
-    flux_err = kwargs["data_err"][sortIndi]
+    flux = data[sortIndi]
+    if data_err is not None:
+        flux_err = data_err[sortIndi]
 
-    # Plot the result
-    if ax is None:
-        fig, ax = subplots(nrows=1, ncols=1, squeeze=True)
-    ax.errorbar(phases, flux, flux_err, fmt=".", color="b")
+    # Create a new figure and ax if needed
+    ax = __get_default_ax(ax=ax)
+
+    # Check the errorbar kwargs
+    kw = dict() if errorbar_kwarg is None else errorbar_kwarg.copy()
+    if "fmt" not in kw:
+        kw["fmt"] = "-"
+    if "color" not in kw:
+        kw["color"] = "r"
+
+    # Plot the phase folded data
+    if data_err is not None:
+        line = ax.errorbar(phases, flux, flux_err, **kw)
+    else:
+        line = ax.errorbar(phases, flux, **kw)
+    return line, phases
 
 
 def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
@@ -200,19 +404,36 @@ def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
     return ax0, ax1
 
 
-def apply_mask(x = None):
+def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, gs_from_sps_kw=None):
+    """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
+    """
+    # Create the nplanet axes
+    gs = gridspec.GridSpecFromSubplotSpec(1, nplanet, subplot_spec=subplotspec)
+
+    # Create the two axes for the data and the residuals for each planet
+    axes_data = []
+    axes_resi = []
+    for gs_elem in gs:
+        ax_data, ax_resi = add_twoaxeswithsharex(gs_elem, gs_from_sps_kw=gs_from_sps_kw)
+        axes_data.append(ax_data)
+        axes_resi.append(ax_resi)
+    return axes_data, axes_resi
+
+
+def apply_mask(x=None):
     '''
     Returns the outlier mask, an array of indices corresponding to the non-outliers.
 
-    :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead. Default :py:obj:`None`
+    :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead.
+       Default :py:obj:`None`
 
     WORK IN PROGRESS
     '''
 
     if x is None:
-      return np.delete(np.arange(len(self.time)), self.mask)
+        return np.delete(np.arange(len(self.time)), self.mask)
     else:
-      return np.delete(x, self.mask, axis=0)
+        return np.delete(x, self.mask, axis=0)
 
 
 def acceptancefraction_selection(sampler, sig_fact=3., verbose=1):
@@ -420,3 +641,9 @@ def __get_default_l_burnin(l_burnin, nwalker):
 
 def __get_default_first_steps(first_steps, intervals):
     return __get_default_l_walker(first_steps, intervals)
+
+
+def __get_default_ax(ax):
+    if ax is None:
+        fig, ax = subplots(nrows=1, ncols=1, squeeze=True)
+    return ax

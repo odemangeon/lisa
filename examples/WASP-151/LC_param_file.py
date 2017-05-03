@@ -20,8 +20,8 @@ LDs = {'A': {'IAC80_default': 'LDz',
        }
 
 # Supersampling and exposure_time
-SuperSamps = {'IAC80_default': {'supersamp':  1, 'exptime': 0.02043402778},
-              'EulerCam_default': {'supersamp':  1, 'exptime': 0.02043402778},
-              'K2_default': {'supersamp':  10, 'exptime': 0.02043402778},
-              'TRAPPIST_default': {'supersamp':  1, 'exptime': 0.02043402778},
+SuperSamps = {'IAC80_default': {'supersamp': 1, 'exptime': 0.02043402778},
+              'EulerCam_default': {'supersamp': 1, 'exptime': 0.02043402778},
+              'K2_default': {'supersamp': 10, 'exptime': 0.02043402778},
+              'TRAPPIST_default': {'supersamp': 1, 'exptime': 0.02043402778},
               }

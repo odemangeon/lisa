@@ -76,7 +76,7 @@ class RV_Instrument(Core_Instrument):
     """docstring for RV_Instrument."""
 
     __category__ = RV_inst_cat
-    __params_model__ = {"drift": {"unit": "[K]/day"},
+    __params_model__ = {"driftRV": {"unit": "[K]/day"},
                         "DeltaRV": {"unit": "[K]"},
                         }
     __name_RV_ref_var__ = "RVref"
