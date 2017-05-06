@@ -175,7 +175,7 @@ def get_instrument_paramfilesection(model_instance, inst_db, text_tab="", entete
                 func = getattr(inst_subclass, "_get_inst_paramfilesection")
                 text += func(text_tab=text_tab + extra_tab, model_instance=model_instance,
                              inst_name=inst_name)
-            text += "{}}}\n\n".format(text_tab + extra_tab)
+            text += "\n{}}}\n\n".format(text_tab + extra_tab)
         if hasattr(inst_subclass, "_get_instcat_paramfilesection"):
             func = getattr(inst_subclass, "_get_instcat_paramfilesection")
             text += func(text_tab=text_tab, model_instance=model_instance)

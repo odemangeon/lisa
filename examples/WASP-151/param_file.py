@@ -47,18 +47,75 @@ CORALIE = {'default': {'DeltaRV': {'free': True,
 RVrefGlob = 'SOPHIE'
 
 # instruments LC
-IAC80 = {'default': {'jitter': {'free': False,
-                                'value': 0.0,  # unit: n/a
-                                'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
-                                          }
-                                },
-                     },
-         # By default all the datasets of an instrument are associated to default.
+IAC80 = {'default0': {'DeltaOOT': {'free': True,
+                                   'value': None,  # unit: wo unit
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.005, 'sigma': 0.01}
+                                             }
+                                   },
+                      'driftOOT': {'free': True,
+                                   'value': None,  # unit: wo unit/s
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.33}
+                                             }
+                                   },
+                      'jitter': {'free': False,
+                                 'value': 0.0,  # unit: n/a
+                                 'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                           }
+                                 },
+                      },
+         'default1': {'DeltaOOT': {'free': True,
+                                   'value': None,  # unit: wo unit
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.01}
+                                             }
+                                   },
+                      'driftOOT': {'free': True,
+                                   'value': None,  # unit: wo unit/s
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1}
+                                             }
+                                   },
+                      'jitter': {'free': False,
+                                 'value': 0.0,  # unit: n/a
+                                 'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                           }
+                                 },
+                      },
+         # By default all the datasets of an instrument are associated to default0.
          # If you want to model some datasets with another instrument model copy paste it,
          # give it a new name and file the Dataset dict.
-         'Dataset': {0: 'default', 1: 'default', },         }
+         'Dataset': {1: 'default1', 0: 'default0', },         }
 
-EulerCam = {'default': {'jitter': {'free': False,
+K2 = {'default': {'DeltaOOT': {'free': False,
+                               'value': 0.0,  # unit: wo unit
+                               'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                         }
+                               },
+                  'driftOOT': {'free': False,
+                               'value': 0.0,  # unit: wo unit/s
+                               'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                         }
+                               },
+                  'jitter': {'free': False,
+                             'value': 1.596557332287149,  # unit: n/a
+                             'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.2}
+                                       }
+                             },
+                  },
+      # By default all the datasets of an instrument are associated to default.
+      # If you want to model some datasets with another instrument model copy paste it,
+      # give it a new name and file the Dataset dict.
+      'Dataset': {0: 'default', },      }
+
+EulerCam = {'default': {'DeltaOOT': {'free': False,
+                                     'value': 0.0,  # unit: wo unit
+                                     'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                               }
+                                     },
+                        'driftOOT': {'free': False,
+                                     'value': 0.0,  # unit: wo unit/s
+                                     'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                               }
+                                     },
+                        'jitter': {'free': False,
                                    'value': 0.0,  # unit: n/a
                                    'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
                                              }
@@ -69,18 +126,17 @@ EulerCam = {'default': {'jitter': {'free': False,
             # give it a new name and file the Dataset dict.
             'Dataset': {0: 'default', 1: 'default', },            }
 
-K2 = {'default': {'jitter': {'free': False,
-                             'value': None,  # unit: n/a
-                             'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.2}
-                                       }
-                             },
-                  },
-      # By default all the datasets of an instrument are associated to default.
-      # If you want to model some datasets with another instrument model copy paste it,
-      # give it a new name and file the Dataset dict.
-      'Dataset': {0: 'default', },      }
-
-TRAPPIST = {'default': {'jitter': {'free': False,
+TRAPPIST = {'default': {'DeltaOOT': {'free': False,
+                                     'value': 0.0,  # unit: wo unit
+                                     'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                               }
+                                     },
+                        'driftOOT': {'free': False,
+                                     'value': 0.0,  # unit: wo unit/s
+                                     'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
+                                               }
+                                     },
+                        'jitter': {'free': False,
                                    'value': 0.0,  # unit: n/a
                                    'prior': {'category': 'uniform', 'args': {'vmax': 1.0, 'vmin': 0.0}
                                              }
@@ -146,36 +202,48 @@ b = {'P': {'free': True,
 # LDs
 LDz = {'ldc1': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.3413, 'sigma': 0.0013}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.3412, 'sigma': 0.0013}
                            }
                  },
         'ldc2': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.1268, 'sigma': 0.0040}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.1269, 'sigma': 0.0039}
                            }
                  },
        }
 
 LDKp = {'ldc1': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.5503, 'sigma': 0.0024}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.5501, 'sigma': 0.0025}
                            }
                  },
         'ldc2': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.1189, 'sigma': 0.0050}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.1191, 'sigma': 0.0054}
                            }
                  },
         }
 
 LDNG = {'ldc1': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.4864, 'sigma': 0.0022}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.4861, 'sigma': 0.0021}
                            }
                  },
         'ldc2': {'free': True,
                  'value': None,  # unit: n/a
-                 'prior': {'category': 'normal', 'args': {'mu': 0.1281, 'sigma': 0.0053}
+                 'prior': {'category': 'normal', 'args': {'mu': 0.1286, 'sigma': 0.0052}
                            }
                  },
         }
+
+LDR = {'ldc1': {'free': True,
+                'value': None,  # unit: n/a
+                'prior': {'category': 'normal', 'args': {'mu': 0.4781, 'sigma': 0.0022}
+                          }
+                },
+       'ldc2': {'free': True,
+                'value': None,  # unit: n/a
+                'prior': {'category': 'normal', 'args': {'mu': 0.1304, 'sigma': 0.0055}
+                          }
+                },
+       }

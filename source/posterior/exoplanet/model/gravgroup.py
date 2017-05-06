@@ -364,7 +364,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                 # Create the content related to LC instruments (inst_ld_dict and inst_ss_dict)
                 inst_ld_dict = ""
                 inst_ss_dict = ""
-                ss_dict = ("'{instmod_fullname}': {{'{supersamp_key}':  {default_supersamp}, "
+                ss_dict = ("'{instmod_fullname}': {{'{supersamp_key}': {default_supersamp}, "
                            "'{exptime_key}': {default_exptime}}},")
                 ld_dict = "'{instmod_fullname}': '{def_LDparcont}',"
                 default_supersamp = 1

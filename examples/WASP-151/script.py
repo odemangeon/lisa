@@ -17,6 +17,11 @@ from numpy import median
 import numpy as np
 # from ipdb import set_trace
 
+# Add lisa folder to python path
+lisa_folder = "/Users/olivier/Softwares/lisa/"
+if lisa_folder not in sys.path:
+    sys.path.append(lisa_folder)
+
 import source.posterior.core.posterior as cpost
 import source.tools.emcee_tools as et
 import source.tools.stats.distribution_anali as da
@@ -69,8 +74,8 @@ logger.info("6. Load the paramerisation file")
 post_instance.model.load_LC_param_file()
 
 logger.info("5. Apply a parametrisation to the model")
-post_instance.model.apply_RV_LC_EXOFAST_param(with_drift=False, with_DeltaRV=True,
-                                              with_DeltaOOT=False)
+post_instance.model.apply_RV_LC_EXOFAST_param(with_driftRV=False, with_DeltaRV=True,
+                                              with_DeltaOOT=False, with_driftOOT=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")
@@ -137,18 +142,18 @@ sigma_m, _, sigma_p = da.getconfi(et.get_clean_flatchain(sampler, l_walker=l_wal
 # WASP-151_b_Rrat: 0.10105118308635531 +0.0017288716142898897 -0.0009004305596509582
 # WASP-151_b_aR: 9.967458319518668 +0.31018483846089673 -0.5501394571610305
 et.plot_chains(sampler, l_param_name)
-pl.savefig("run/WASP-151/images/traces_raw.png")
+pl.savefig("./images/traces_raw.png")
 pl.close("all")
 et.plot_chains(sampler, l_param_name, l_walker=l_walker_geweke, l_burnin=l_burnin)
-pl.savefig("run/WASP-151/images/traces_geweke_select.png")
+pl.savefig("./images/traces_geweke_select.png")
 pl.close("all")
 corner(et.get_clean_flatchain(sampler, l_walker=l_walker_geweke, l_burnin=l_burnin),
        labels=l_param_name, truths=fitted_values)
-pl.savefig("run/WASP-151/images/corner.png")
+pl.savefig("./images/corner.png")
 pl.close("all")
 et.overplot_data_model(fitted_values, l_param_name,
                        post_instance.datasimulators.dataset_db, post_instance.dataset_db,
                        post_instance.noisemodels.dataset_db,
                        oversamp=30)
-pl.savefig("run/WASP-151/images/data_comparison.png")
+pl.savefig("./images/data_comparison.png")
 pl.close("all")
