@@ -15,6 +15,7 @@ from corner import corner
 import matplotlib.pyplot as pl
 from numpy import median
 import numpy as np
+import sys
 # from ipdb import set_trace
 
 # Add lisa folder to python path
@@ -75,7 +76,7 @@ post_instance.model.load_LC_param_file()
 
 logger.info("5. Apply a parametrisation to the model")
 post_instance.model.apply_RV_LC_EXOFAST_param(with_driftRV=False, with_DeltaRV=True,
-                                              with_DeltaOOT=False, with_driftOOT=True)
+                                              with_DeltaOOT=True, with_driftOOT=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")
@@ -113,7 +114,7 @@ logger.info("13. Create initial value")
 p0 = [post_instance.model.get_initial_values(list_paramnames=arg_list["param"])
       for i in range(nwalkers)]
 # logger.debug("Initial p0 values: {}".format(p0))
-et.explore(sampler, p0, nsteps=10000)
+et.explore(sampler, p0, nsteps=1000)
 l_walker_acceptfrac, _ = et.acceptancefraction_selection(sampler, sig_fact=2., verbose=1)
 l_walker_lnpost, _ = et.lnposterior_selection(sampler, sig_fact=2., verbose=1)
 l_walker = list(set(l_walker_acceptfrac) & set(l_walker_lnpost))
@@ -156,4 +157,13 @@ et.overplot_data_model(fitted_values, l_param_name,
                        post_instance.noisemodels.dataset_db,
                        oversamp=30)
 pl.savefig("./images/data_comparison.png")
+pl.close("all")
+et.overplot_data_model(fitted_values, l_param_name,
+                       post_instance.datasimulators.dataset_db, post_instance.dataset_db,
+                       post_instance.noisemodels.dataset_db,
+                       oversamp=30, phasefold=True,
+                       phasefold_kwargs={"planets": ["b", ],
+                                         "P": [4.533460664271991, ],
+                                         "tc": [57741.007471378594, ]})
+pl.savefig("./images/data_comparison_pholded.png")
 pl.close("all")
