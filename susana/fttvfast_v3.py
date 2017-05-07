@@ -27,7 +27,13 @@ def fttvfast_v3(p_parameters,stellar_mass, dt, time_ttv, rv_times=None ):
     all masses are in units of M_sun, the Period is in units of days, and the angles are in DEGREES. Cartesian coordinates are in AU and AU/day. The coordinate system is as described in the paper text. One can use different units, as long as G is converted accordingly.
     '''
 
-    For now the code works for 2 or 3 planets
+    For now the code works for 2 or 3 planets , 3 planets not tested
+
+    outputs : ttvs for each planet for the same ttvs as requested and rvs for the requested times if asked
+
+    TODO:
+    program not happy with != None :
+    check if it is better to do a match because if the rvs are before the transits the routine will fail
     """
 
 
@@ -42,9 +48,9 @@ def fttvfast_v3(p_parameters,stellar_mass, dt, time_ttv, rv_times=None ):
         tmidb = time_ttv[0]
         tmidc = time_ttv[1]
         all_time_ttv =  np.concatenate( (tmidb, tmidc) )
-        epoca = ((tmidb-tmidb[0])/p_parameters[1]  + 0.4 )// 1
+        epoca = np.round((tmidb-tmidb[0])/p_parameters[1]  )
         epoca = epoca.astype(int)
-        epoca2 = ((tmidc-tmidc[0])/p_parameters[8] + 0.4 )// 1
+        epoca2 = np.round((tmidc-tmidc[0])/p_parameters[8] )
         epoca2 = epoca2.astype(int)
 
     elif nplanets  == 3 :
@@ -59,26 +65,26 @@ def fttvfast_v3(p_parameters,stellar_mass, dt, time_ttv, rv_times=None ):
         tmidc = time_ttv[1]
         tmidd = time_ttv[2]
         all_time_ttv =  np.concatenate( (tmidb, tmidc, tmidd) )
-        epoca = ((tmidb-tmidb[0])/p_parameters[1]  + 0.4 )// 1
+        epoca = np.round((tmidb-tmidb[0])/p_parameters[1]  )
         epoca = epoca.astype(int)
-        epoca2 = ((tmidc-tmidc[0])/p_parameters[8] + 0.4 )// 1
+        epoca2 = np.round((tmidc-tmidc[0])/p_parameters[8] )
         epoca2 = epoca2.astype(int)
-        epoca3 = ((tmidd-tmidd[0])/p_parameters[15] + 0.4 )// 1
+        epoca3 = np.round((tmidd-tmidd[0])/p_parameters[15] )
         epoca3 = epoca3.astype(int)
 
 
     if rv_times != None :
         fulltime = np.concatenate( (all_time_ttv , rv_times) )
 
-        Time = np.min(fulltime) - 1.0
-        Total = np.max(fulltime) + 1.0
+        Time = np.min(fulltime) - 0.5
+        Total = np.max(fulltime) + 0.5
 
 
         results = ttvfast.ttvfast(allplanets, stellar_mass, Time, dt, Total, rv_times=list(rv_times), input_flag=1)
 
     else :
-        Time = np.min(all_time_ttv) - 1.0
-        Total = np.max(all_time_ttv) + 1.0
+        Time = np.min(all_time_ttv) - 0.5
+        Total = np.max(all_time_ttv) + 0.5
 
         results = ttvfast.ttvfast(allplanets, stellar_mass, Time, dt, Total,  input_flag=1)
 
@@ -95,15 +101,33 @@ def fttvfast_v3(p_parameters,stellar_mass, dt, time_ttv, rv_times=None ):
     ttv1 = outimes[p1]
     ttv2 = outimes[p2]
 
-    if rv_times != None :
-        day1 = 86400.0
-        au= 1.495978707e11
-        outrvs = np.asarray( results['rv']) *au /(day1)
+    if nplanets == 2 :
+        if rv_times != None :
+            day1 = 86400.0
+            au= 1.495978707e11
+            outrvs = np.asarray( results['rv']) *au /(day1)
 
 
-        # return  ttvs p1, ttvs of p2, rvs
-        return [ttv1[epoca],ttv2[epoca2] , outrvs ]
+            # return  ttvs p1, ttvs of p2, rvs
+            return [ttv1[epoca],ttv2[epoca2] , outrvs ]
 
-    else:
+        else:
         # return ttvs p1, ttvs of p2, rvs
-        return [ttv1[epoca],ttv2[epoca2]]
+            return [ttv1[epoca],ttv2[epoca2]]
+
+    elif nplanets == 3 :
+        p3 = np.where(np.logical_and( index ==2 , outimes > 0 ))
+        ttv3 = outimes[p3]
+
+        if rv_times != None :
+            day1 = 86400.0
+            au= 1.495978707e11
+            outrvs = np.asarray( results['rv']) *au /(day1)
+
+
+            # return  ttvs p1, ttvs of p2, rvs
+            return [ttv1[epoca],ttv2[epoca2] ,ttv3[epoca2] , outrvs ]
+
+        else:
+        # return ttvs p1, ttvs of p2, rvs
+            return [ttv1[epoca],ttv2[epoca2],ttv3[epoca2] ]

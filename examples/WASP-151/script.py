@@ -19,7 +19,7 @@ import sys
 # from ipdb import set_trace
 
 # Add lisa folder to python path
-lisa_folder = "/Users/olivier/Softwares/lisa/"
+lisa_folder = "/Users/sbarros/Documents/work/python/photodynamic/lisa/"
 if lisa_folder not in sys.path:
     sys.path.append(lisa_folder)
 
