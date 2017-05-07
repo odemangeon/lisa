@@ -11,6 +11,8 @@ setenv_lisa.bash
 run/
 uml/
 
+# Susana's stuff
+data/images
 
 # C extensions
 *.so
