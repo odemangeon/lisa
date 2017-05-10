@@ -35,6 +35,7 @@ from ajplanet import pl_rv_array
 from batman import TransitModel, TransitParams
 from pytransit import MandelAgol
 
+
 from .celestial_bodies import Star, Planet
 from .parametrisation import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
@@ -926,6 +927,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             dico_docf[obj_key] = DocFunction(function=ldict[function_name.format(object=obj_key)],
                                              arg_list=arg_list[obj_key])
         return dico_docf
+
 
     # def is_star(self, name):
     #     """Returns True if a star of this name exists in the gravgroup."""

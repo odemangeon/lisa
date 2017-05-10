@@ -8,6 +8,7 @@ results.
 """
 from logging import getLogger
 from matplotlib.pyplot import subplots, subplot, figure  # , figure, plot, show
+import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
 # from sys import stdout
 import matplotlib.gridspec as gridspec
@@ -16,6 +17,8 @@ from matplotlib.gridspec import GridSpec
 from collections import defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
+from collections import Iterable
+
 from .stats.loc_scale_estimator import mad
 
 
@@ -478,24 +481,24 @@ def lnposterior_selection(sampler, sig_fact=3., verbose=1):
     return l_selected_walker, nb_rejected
 
 
-def get_fitted_values(sampler, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
-                      verbose=1):
+def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
+                      lnprobability=None, verbose=1):
     """Return the fitted values from the sampler.
 
-    :param emcee.EnsembleSampler sampler:
+    :param ChainInterpret chainI:
     :param string method: method used to extract the fitted values ["MAP", "median"]
     :param int_iteratable l_walkers: list of valid walkers
     :param int burnin: index of the first iteration to consider.
     :param int verbose: if 1 speaks otherwise not
     """
-    ndim = sampler.dim
+    ndim = chainI.dim
     if method == "median":
-        res = median(get_clean_flatchain(sampler, l_walker=l_walker, l_burnin=l_burnin), axis=0)
+        res = median(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), axis=0)
     elif method == "MAP":
         if (l_walker is not None) or (l_burnin is not None):
             logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
-        walker, it = unravel_index(argmax(sampler.lnprobability), dims=sampler.lnprobability.shape)
-        res = array([sampler.chain[walker, it, dim] for dim in range(ndim)])
+        walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
+        res = array([chainI[walker, it, dim] for dim in range(ndim)])
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
@@ -507,29 +510,53 @@ def get_fitted_values(sampler, method="MAP", l_param_name=None, l_walker=None, l
     return res
 
 
-def get_clean_flatchain(sampler, l_walker=None, l_burnin=None):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
-    :param emcee.EnsembleSampler sampler:
+    :param ChainInterpret chainI:
     :param int_iteratable l_walkers: list of valid walkers
     :param int_iteratable l_burnin: list of burnin iterations for each valid walker
     """
     if (l_walker is None) and (l_burnin is None):
-        return sampler.flatchain
+        return chainI.flatchain
     else:
-        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=chainI.shape[0])
     if l_burnin is None:
-        s = sampler.chain[l_walker, ...].shape
-        return sampler.chain[l_walker, ...].reshape(s[0] * s[1], s[2])
+        s = chainI[l_walker, ...].shape
+        return chainI[l_walker, ...].reshape(s[0] * s[1], s[2])
     else:
-        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
-    ndim = sampler.dim
+        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=chainI.shape[0])
+    ndim = chainI.dim
     res = []
     for dim in range(ndim):
         res.append([])
         for walker, burnin in zip(l_walker, l_burnin):
-            res[dim].extend(sampler.chain[walker, burnin:, dim])
+            res[dim].extend(chainI[walker, burnin:, dim])
     return array(res).transpose()
+
+# def get_clean_flatchain(sampler, l_walker=None, l_burnin=None):
+#     """Return a flatchain with only the selected walkers and iteration after the burnin.
+#
+#     :param emcee.EnsembleSampler sampler:
+#     :param int_iteratable l_walkers: list of valid walkers
+#     :param int_iteratable l_burnin: list of burnin iterations for each valid walker
+#     """
+#     if (l_walker is None) and (l_burnin is None):
+#         return sampler.flatchain
+#     else:
+#         l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+#     if l_burnin is None:
+#         s = sampler.chain[l_walker, ...].shape
+#         return sampler.chain[l_walker, ...].reshape(s[0] * s[1], s[2])
+#     else:
+#         l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
+#     ndim = sampler.dim
+#     res = []
+#     for dim in range(ndim):
+#         res.append([])
+#         for walker, burnin in zip(l_walker, l_burnin):
+#             res[dim].extend(sampler.chain[walker, burnin:, dim])
+#     return array(res).transpose()
 
 
 def geweke_multi(sampler, first=0.1, last=0.5, intervals=20, l_walker=None):
@@ -647,3 +674,81 @@ def __get_default_ax(ax):
     if ax is None:
         fig, ax = subplots(nrows=1, ncols=1, squeeze=True)
     return ax
+
+
+def write_latex_table(filename, df_fitval, obj_name=None):
+    """Write a TeX file with a table giving the fitted values."""
+    if obj_name is None:
+        obj_name = ''
+    # Create Latex table
+    with open(filename, "w") as f:
+        f.write("\\begin{table}\n\\caption{\\label{}}\n\\begin{tabular}{lc}\\hline\n")
+        f.write("Parameters & {}\\\\ \\hline\n".format(obj_name))
+        for par in df_fitval.index:
+            f.write("{} & ${}_{{-{}}}^{{+{}}}$\\\\\n".format(par.replace('_', '\\_'),
+                                                             df_fitval.loc[par, 'value'],
+                                                             df_fitval.loc[par, 'sigma-'],
+                                                             df_fitval.loc[par, 'sigma+']))
+        f.write("\\hline\n\\\\")
+        f.write("\\end{tabular}\n")
+        f.write("\\end{table}\n")
+
+
+class ChainsInterpret(np.ndarray):
+
+    __err_shapeinput__ = "Shape of input_array should be <= 3."
+    __err_dimarrlparam__ = "Last dim of input_array have the same dimension than l_param_names."
+
+    def __new__(cls, input_array, param_names):
+        # Input array is an already formed ndarray instance
+        # We first cast to be our class type
+        if len(input_array.shape) > 3:
+            raise ValueError(cls.__err_shapeinput__)
+        obj = np.asarray(input_array).view(cls)
+        # add the new attribute to the created instance
+        obj.__paramname_idx = dict((n, i) for i, n in enumerate(param_names))
+        if len(param_names) != obj.shape[-1]:
+            raise ValueError(cls.__err_dimarrlparam__)
+        # Finally, we must return the newly created object:
+        return obj
+
+    def __array_finalize__(self, obj):
+        # see InfoArray.__array_finalize__ for comments
+        if obj is None:
+            return
+        self.__paramname_idx = getattr(obj, 'paramname_idx', None)
+
+    def __getitem__(self, indexing):
+        if isinstance(indexing, str):
+            idx = self.paramname_idx[indexing]
+            indexing = (slice(None, None, None), idx)
+        if isinstance(indexing, tuple):
+            if isinstance(indexing[-1], str):
+                l = list(indexing[:-1])
+                l.append(self.paramname_idx[indexing[-1]])
+                indexing = list(l)
+            elif isinstance(indexing[-1], Iterable):
+                if isinstance(indexing[-1][0], str):
+                    l = list(indexing[:-1])
+                    l.append([self.paramname_idx[parname] for parname in indexing[-1]])
+                    indexing = list(l)
+        return super(ChainsInterpret, self).__getitem__(indexing)
+
+    @property
+    def paramname_idx(self):
+        """Return the list of parameters names."""
+        return self.__paramname_idx
+
+    @property
+    def flatchain(self):
+        """
+        A shortcut for accessing chain flattened along the zeroth (walker)
+        axis.
+        """
+        s = self.shape
+        return self.reshape(s[0] * s[1], s[2])
+
+    @property
+    def dim(self):
+        """Return the number of parameters."""
+        return self.shape[-1]

@@ -18,8 +18,6 @@ physical values
     include the call to SI parameters from scipy
     for now not done because I didn't find all the values I wanted.
 """
-
-
 import numpy as np
 import math
 # import math
@@ -28,10 +26,20 @@ import math
 # import matplotlib.pyplot as plt
 
 import astropy.constants as const
+from collections import Counter
+from numbers import Number
+from numpy import ndarray, stack
+from numpy import random
+from logging import getLogger
 
 from IPython import get_ipython
 from numpy import pi
 
+from .human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
+from .emcee_tools import ChainsInterpret
+
+
+logger = getLogger()
 
 # http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7
@@ -53,50 +61,89 @@ denjup = 1.33  # g/cm^3
 grav = const.G.cgs.value  # g in  cgs
 
 
-def geta0(per, ms, mp):
+def get_transit_depth(Rrat):
+    """Return the transit depth.
+
+    :param float/np.ndarray Rrat: Radius ratio
+
+    TODO: Make relation working for grazing transit too
     """
-    get semi-major axis in meters (SI) using kepler equation
-    inputs are period in days, stellar mass in solar masses, plabet mass in jupiter masses
-    call geta0( per, ms, mp )
-    """
-    P = per * 24. * 3600.0  # change P to seconds for SI
-    a0 = ((P / (2. * np.pi))**2. * gm * (ms + mp / msunjup))**(1. / 3.)
-    return a0
+    return np.power(Rrat, 2)
 
 
-def getper(a0, ms, mp):
-    """
-    get period in days using kepler equation
-    inputs are a0 in meters (SI), stellar mass in solar masses, plabet mass in jupiter masses
-    call getper(a, ms,mp)
-    """
-    p =  (  (2. * np.pi)**2. *a0**3. /( gm * (ms + mp / msunjup) )   )**(1. / 2.)
+def getinc(cosinc):
+    """Return the inclination of the orbit.
 
-    return p/(24. * 3600.0 )
+    :param float/np.ndarray cosinc: cosinus of the inclination
+    """
+    return np.rad2deg(np.arccos(cosinc))
 
 
-def getb(inc, ar, ecc, omega):
+def getRp(Rrat, Rs, Rsfact=rsun, Rpfact=rjup):
+    """Return the planetary radius.
+
+
+    :param float/np.ndarray Rrat: Radius ratio, planetary radius over stellar radius
+    :param float/np.ndarray Rs: Stellar radius
+    :param float Rsfact: Unit factor for stellar radius (optional and default solar radius in meter)
+    :param float Rpfact: Unit factor for planetary radius (optional and default jupiter radius in
+                         meter)
+    :return float/np.ndarray Rp: Planetary radius in the same unit than Rs
     """
-    get the impact parameter
-    inputs are inclination, ar=a/rstar, ccentricity , omega
-    call getb( inc, ar, ecc, omega )
+    return np.multiply(Rrat, Rs) * Rsfact / Rpfact
+
+
+def geta(P, Ms, Mp):
+    """Return semi-major axis in meters (SI) using kepler equation
+
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray Mp: Planetary mass in jupiter mass
+    :return float/np.ndarray a: Planetary orbital semi-major axis in au
+    """
+    Ps = P * 24. * 3600.0  # change P to seconds for SI
+    return ((Ps / (2. * np.pi))**2. * gm * (Ms + Mp / msunjup))**(1. / 3.) / au
+
+
+def getP(a, Ms, Mp):
+    """Return planetary orbital period in days using kepler equation
+
+    :param float/np.ndarray a: Planetary orbital semi-major axis in meters
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray Mp: Planetary mass in jupiter mass
+    :return float/np.ndarray P: Planetary orbital period in days
+    """
+    P = ((2. * np.pi)**2. * a**3. / (gm * (Ms + Mp / msunjup)))**(1. / 2.)
+    return P / (24. * 3600.0)
+
+
+def getb(inc, aR, ecc, omega):
+    """Return the impact parameter
+
+    :param float/np.ndarray inc: Planetary orbital inclination in degrees
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray ecc: Planetary orbital eccentricity without unit
+    :param float/np.ndarray omega: Stellar argument of periastron associated to the planet orbital
+                                   in degrees
+    :return float/np.ndarray b: Planetary orbital impact parameter without unit
     """
     corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
-    return np.cos(np.deg2rad(inc)) * ar * corrfactor
+    return np.cos(np.deg2rad(inc)) * aR * corrfactor
 
 
-def getrstar(ar, a0):
+def getRs(aR, a):
+    """Return stellar radius
+
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray a: Planetary orbital semi-major axis in meters (SI)
+    :return float/np.ndarray Rs: Stellar radius in solar radius
     """
-    get radius of the star in units of rsun
-    input are  ar =a/rstar and the semi-major axis in meters (SI)
-    call getrstar (ar, a0)
-    """
-    return a0 / (ar * rsun)
+    return a / (aR * rsun)
 
 
 def getdurkip(per, inc, ar, ecc, omega):
     """
-    compute the duration with kipping formulat that has smller error in hours
+    compute the duration with kipping formulat that has smaller error in hours
     inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega
     call getdurkip (per,  inc, ar, ecc, omega )
     """
@@ -108,61 +155,97 @@ def getdurkip(per, inc, ar, ecc, omega):
     return tkip
 
 
-def gett14(per, inc, ar, ecc, omega, rp):
+def gett14(P, inc, aR, ecc, omega, Rrat):
+    """Return the full transit duration.
+
+    :param float/np.ndarray P: Planetary period in days
+    :param float/np.ndarray inc: Planetary orbital inclination in degrees
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray ecc: Planetary orbital eccentricity without unit
+    :param float/np.ndarray omega: Stellar argument of periastron associated to the planet orbital
+                                   in degrees
+    :param float/np.ndarray Rrat: Radius ratio (Planetary radius over stellar radius) without unit
+    :return float/np.ndarray T14: full transit duration in hours
     """
-    compute full duration in the usual definition in hours
-    # inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega, rp =rp/rs,
-    call gett14(per,  inc, ar, ecc, omega, rp )
-    """
-    P = per * 24.  # change days to hours
-    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
-    bb = getb(inc, ar, ecc, omega)
-    tdura = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
-             np.arcsin(np.sqrt((1. + rp)**2. - bb**2.) /
-                       (corrfactor * ar * np.sin(np.deg2rad(inc)))))
-    return tdura
+    Ph = P * 24.  # change days to hours
+    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
+    b = getb(inc, aR, ecc, omega)
+    return (Ph * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
+            np.arcsin(np.sqrt((1. + Rrat)**2. - b**2.) /
+                      (corrfactor * aR * np.sin(np.deg2rad(inc)))))
 
 
-def gett12(per, inc, ar, ecc, omega, rp):
+# def gett14(P, inc, aR, ecc, omega, Rrat):
+#     """
+#     compute full duration in the usual definition in hours
+#     # inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega, rp =rp/rs,
+#     call gett14(per,  inc, ar, ecc, omega, rp )
+#     """
+#     P = per * 24.  # change days to hours
+#     corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
+#     bb = getb(inc, ar, ecc, omega)
+#     tdura = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
+#              np.arcsin(np.sqrt((1. + rp)**2. - bb**2.) /
+#                        (corrfactor * ar * np.sin(np.deg2rad(inc)))))
+#     return tdura
+
+
+def gett23(P, inc, aR, ecc, omega, Rrat):
     """
     compute ingres/egress duration in the usual definition in hours
     inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega, rp =rp/rs,
     call gett12(per,  inc, ar, ecc, omega, rp )
     """
-    P = per * 24.  # change days to hours
-    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
-    bb = getb(inc, ar, ecc, omega)
-    t23 = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
-           np.arcsin(np.sqrt((1. - rp)**2. - bb**2.) / (corrfactor * ar * np.sin(np.deg2rad(inc)))))
-    return t23
+    Ph = P * 24.  # change days to hours
+    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
+    b = getb(inc, aR, ecc, omega)
+    return (Ph * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
+            np.arcsin(np.sqrt((1. - Rrat)**2. - b**2.) /
+                      (corrfactor * aR * np.sin(np.deg2rad(inc)))))
 
 
-def getdenstar(per, ar):
-    """
-    get the stellar density in solar values
-    inputs are period in days and   ar =a/rstar
-    call getdenstar(per, ar)
-    """
-    P = per * 24. * 3600.0  # change P to seconds for SI
-    return ar**3. * 4. * np.pi**2. * rsun**3. / (gm * P**2.)
+# def gett12(per, inc, ar, ecc, omega, rp):
+#     """
+#     compute ingres/egress duration in the usual definition in hours
+#     inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega, rp =rp/rs,
+#     call gett12(per,  inc, ar, ecc, omega, rp )
+#     """
+#     P = per * 24.  # change days to hours
+#     corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
+#     bb = getb(inc, ar, ecc, omega)
+#     t23 = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
+#            np.arcsin(np.sqrt((1. - rp)**2. - bb**2.) / (corrfactor * ar * np.sin(np.deg2rad(inc)))))
+#     return t23
 
 
-def getrpjup(rp, rstar):
+def getrhostar(P, aR):
+    """Return the stellar density from the transit.
+
+    :param float/np.ndarray P: Planetary orbital period im days
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :return float/np.ndarray rhostar: Density of the star from transit in solar density
     """
-    get the radius of the planet in units jupiter radius
-    inputs are rp =rp/rs, rstar in solar radius
-    call getrpjup(rp, rstar)
-    """
-    return rp * rstar * rsun / rjup
+    Ps = P * 24. * 3600.0  # change P to seconds for SI
+    return aR**3. * 4. * np.pi**2. * rsun**3. / (gm * Ps**2.)
 
 
-def getden(m, r):
+# def getrpjup(rp, rstar):
+#     """
+#     get the radius of the planet in units jupiter radius
+#     inputs are rp =rp/rs, rstar in solar radius
+#     call getrpjup(rp, rstar)
+#     """
+#     return rp * rstar * rsun / rjup
+
+
+def getrhopl(M, R):
+    """Return he density of a spherical body.
+
+    :param float/np.ndarray M: Mass of the body
+    :param float/np.ndarray R: Radius of the body
+    :return float/np.ndarray rho: density of the body in unit of mass per unit of radius cube
     """
-    get density of planet or star in the units of mass and radius they already have
-    inputs are m and radius in the same units relative as the result
-    call getden( m, r)
-    """
-    return m / r**3.
+    return 3 * M / (4 * np.pi * R**3.)
 
 
 def getplsurfaceg(per, ar, rp, inc, ecc, velocity):
@@ -179,39 +262,34 @@ def getplsurfaceg(per, ar, rp, inc, ecc, velocity):
     return surgp
 
 
-def getlogg(per, ar, rstar):
+def getloggstar(P, aR, Rs):
+    """Return the logg value of the star computed from the transit.
+
+    :param float/np.ndarray P: Planetary orbital period im days
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray Rs: Stellar radius in solar radius
     """
-    get log g from ar
-    inputs  per in days, ar =a/rstar rstar in solar radius
-    call getlogg(per, ar, rstar )
-    """
-    density = getdenstar(per, ar)  # densun in cgs and rsun in meters
-    loggstar = np.log10(4. * np.pi * grav / 3.) + np.log10(density * densun * rstar * rsun * 100.)
-    return loggstar
+    density = getrhostar(P, aR)  # densun in cgs and rsun in meters
+    return np.log10(4. * np.pi * grav / 3.) + np.log10(density * densun * Rs * rsun * 100.)
 
 
-def gettequ(teff, ar):
-    """
-    get equilibrium temperature
-    inputs teff in kelvin, ar =a/rstar
-    call gettequ(teff, ar)
-    """
-    return teff * np.sqrt(0.5 / ar)
+def getcirctime(P, Ms, Rs, Mp, Rrat):
+    """Return circulisation timescale in giga years
 
+    This assumes the tidal factor to be 10^5 if it is 10^6 we need to multiply by 10.
 
-def getcirtime(per, mstar, rstar, mp, rp):
-    """
-    circulisation timescale  in giga years
-    inputs are per is days, mstar in sun masses, rstar in solar masses , mp in jupiter masses,
-    rp =rp/rs
-    this assumes the tidal factor to be 10^5 if it is 10^6 we need to multiply by 10.
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray Rs: Stellar radius in solar radius
+    :param float/np.ndarray Mp: Planetary mass in jupiter radius
+    :param float/np.ndarray Rrat: Radius ratio (Planetary radius over stellar radius) without unit
+
     call getcirtime(per, mstar, rstar, mp, rp)
     """
-    rprjup = getrpjup(rp, rstar)
-    a0 = geta0(per, mstar, mp)
+    Rp = getRp(Rrat, Rs, Rsfact=rsun, Rpfact=rjup)
+    a = geta(P, Ms, Mp) * au
     # print(a0/au)
-    tau5 = 0.63 * mp * ((1. / mstar)**1.5) * ((a0 / (rsun * 10.))**6.5) * ((1. / rprjup)**5.) * 0.1
-    return tau5
+    return 0.63 * Mp * ((1. / Ms)**1.5) * ((a / (rsun * 10.))**6.5) * ((1. / Rp)**5.) * 0.1
 
 
 def getecc(secosw, sesinw):
@@ -246,7 +324,7 @@ def getomega_deg(secosw, sesinw):
     :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
     :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
     """
-    return np.degrees(np.arctan(sesinw / secosw))
+    return np.rad2deg(np.arctan(sesinw / secosw))
 
 
 def getomega_fast(secosw, sesinw):
@@ -273,16 +351,61 @@ def getomega_deg_fast(secosw, sesinw):
         return math.degrees(math.atan(sesinw / secosw))
 
 
-def getkamp(per, ms, mp, inc, ecc):
+def getK(P, Ms, Mp, inc, ecc):
+    """Return radial velocity semi-amplitude of a star associated to a planet
+
+    from equation 14 page 3
+        http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray Mp: Planet mass in Jupiter mass
+    :param float/np.ndarray inc: Planet orbital inclination in degrees
+    :param float/np.ndarray ecc: Planet orbital eccentricity
+    :return float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet in
+                                meter per second
     """
-    semi amplitude in meter /s
-    inputs, per in days ,ms=stellar mass in msun,  mp planet mass in Jupiter masses,
-    inclination in degrees, eccentricity
-    from equation
+    return (28.4329 / np.sqrt(1.0 - ecc**2.0) * Mp * np.sin(np.deg2rad(inc)) *
+            (Mp / msunjup + Ms)**(-2.0 / 3.0) * (P / 365.25)**(-1.0 / 3.0))
+
+
+def getMpsininc(P, K, Ms, ecc, Kfact=1000):
+    """Return radial velocity semi-amplitude of a star associated to a planet
+
+    Adapted from equation 14 page 3, assuming that the planet mass in negligeable compared to the
+    stellar mass
     http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet in
+                               meter per second
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray ecc: Planet orbital eccentricity
+    :param float/np.ndarray Kfact: Facteur to convert the K value in meter per sec
+    :return float/np.ndarray Mpsininc: Planet mass multiply by sinus of the okanetary orbital
+                                       inclination in Jupiter mass
     """
-    return (28.4329 * mp * np.sin(np.deg2rad(inc)) * (mp / msunjup + ms)**(-2.0 / 3.0) *
-            (per / 365.25)**(-1.0 / 3.0) / np.sqrt(1.0 - ecc**2.0))
+    return (K * Kfact / 28.4329 * np.sqrt(1.0 - ecc**2.0) * Ms**(2.0 / 3.0) *
+            (P / 365.25)**(1.0 / 3.0))
+
+
+def getMp(P, K, Ms, ecc, inc, Kfact=1000):
+    """Return radial velocity semi-amplitude of a star associated to a planet
+
+    Adapted from equation 14 page 3, assuming that the planet mass in negligeable compared to the
+    stellar mass
+    http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet in
+                               meter per second
+    :param float/np.ndarray Ms: Stellar mass in solar mass
+    :param float/np.ndarray ecc: Planet orbital eccentricity
+    :param float/np.ndarray inc: Planet orbital inclination in degrees
+    :return float/np.ndarray Mp: Planet mass in Jupiter mass
+    """
+    return (K * Kfact / 28.4329 * np.sqrt(1.0 - ecc**2.0) * Ms**(2.0 / 3.0) *
+            (P / 365.25)**(1.0 / 3.0)) / np.sin(np.deg2rad(inc))
 
 
 def gettp(P, tc, secosw, sesinw):
@@ -321,6 +444,145 @@ def gettp_fast(P, tc, ecc, omega):
     E = 2.0 * math.atan(math.sqrt((1.0 - ecc) / (1.0 + ecc)) * math.tan(f / 2.0))
     mshift = E - ecc * math.sin(E)
     return tc - P * mshift / (2.0 * pi)
+
+
+def getTeqpl(Teffst, aR, A=0):
+    """Return the planet equilibrium temperature.
+
+    Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
+    and https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
+
+    :param float/np.ndarray Teffst: Effective temperature of the star
+    :param float/np.ndarray Rst: Stellar radius in solar radius
+    :param float/np.ndarray a: Planetary orbital semi-major axis (mean planet to star distance) in
+                               au
+    :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
+    """
+    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR)
+
+
+def get_secondary_chains(model, chaininterpret):
+    """Return ChainInterpret isntance with the computed chain of the secondary parameters.
+    """
+    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
+        # Create a dictionary with the main parameter values either chain (if free) or one value
+        dico_par = {}
+        for param in model.get_list_params(main=True):
+            if param.free:
+                dico_par[param.full_name] = chaininterpret[..., param.full_name]
+            else:
+                dico_par[param.full_name] = param.value
+
+        # Compute the chains for secondary parameters.
+        # Initialise the results object
+        l_parname_sec_chain = []
+        l_parname_sec_fixed = []
+
+        star = model.stars[list(model.stars.keys())[0]]
+        # Simulate stellar Mass and radius chains if needed
+        for param in [star.M, star.R, star.Teff]:
+            if param.main is False:
+                # Ask to provide a stellar mass value
+                intitule_question = ("Enter a {} value. If you just press enter 1. solar"
+                                     " mass is assumed.\n".format(param.full_name))
+                param_value, answered = Ask4Number(intitule_question, default_value=1.)
+                # If replied ask to provide and mass error value, otherwise assume no error
+                if answered:
+                    intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
+                                         "no uncertainty is assumed.\n".format(param.full_name))
+                    param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
+                else:
+                    param_error = 0.
+                # if provided simulated a stellar mass chains else only give a fixed value.
+                if param_error == 0.:
+                    dico_par[param.full_name] = param_value
+                else:
+                    dico_par[param.full_name] = random.normal(loc=param_value,
+                                                              scale=param_error,
+                                                              size=chaininterpret.shape[:-1])
+
+        # Iterate over planet related secondary
+        for planet in model.planets.values():
+            # Prepare the list of tuples secondary parameter name, function, parameters
+            l_tup_planet = []
+            # Transit depth
+            l_tup_planet.append((planet.Trdepth.full_name, get_transit_depth,
+                                 [planet.Rrat.full_name]))
+            # Inclination
+            l_tup_planet.append((planet.inc.full_name, getinc,
+                                 [planet.cosinc.full_name]))
+            # eccentricity
+            l_tup_planet.append((planet.ecc.full_name, getecc,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # omega : argument of periastron in degrees
+            l_tup_planet.append((planet.omega.full_name, getomega_deg,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # b: impact parameter
+            l_tup_planet.append((planet.b.full_name, getb,
+                                 [planet.inc.full_name, planet.aR.full_name,
+                                  planet.ecc.full_name, planet.omega.full_name]))
+            # Rp: planetary radius
+            l_tup_planet.append((planet.R.full_name, getRp,
+                                 [planet.Rrat.full_name, star.R.full_name]))
+            # T14: full transit duration
+            l_tup_planet.append((planet.t14.full_name, gett14,
+                                 [planet.P.full_name, planet.inc.full_name, planet.aR.full_name,
+                                  planet.ecc.full_name, planet.omega.full_name,
+                                  planet.Rrat.full_name]))
+            # T12: ingress/egress duration
+            l_tup_planet.append((planet.t12.full_name, gett12,
+                                 [planet.P.full_name, planet.inc.full_name, planet.aR.full_name,
+                                  planet.ecc.full_name, planet.omega.full_name,
+                                  planet.Rrat.full_name]))
+            # Mp: Planetary mass
+            l_tup_planet.append((planet.M.full_name, getMp,
+                                 [planet.P.full_name, planet.K.full_name, star.M.full_name,
+                                  planet.ecc.full_name, planet.inc.full_name]))
+            # a: semi major axis
+            l_tup_planet.append((planet.a.full_name, geta,
+                                 [planet.P.full_name, star.M.full_name, planet.M.full_name]))
+            # rhostar: Density of the star
+            l_tup_planet.append((planet.rhostar.full_name, getrhostar,
+                                 [planet.P.full_name, planet.aR.full_name]))
+            # loggstar: logg of the star
+            l_tup_planet.append((planet.loggstar.full_name, getloggstar,
+                                 [planet.P.full_name, planet.aR.full_name, star.R.full_name]))
+            # circtime: circularisation timescale of the planet
+            l_tup_planet.append((planet.circtime.full_name, getcirctime,
+                                 [planet.P.full_name, star.M.full_name, star.R.full_name,
+                                  planet.M.full_name, planet.Rrat.full_name]))
+            # rhoplanet: Density of the planet
+            l_tup_planet.append((planet.rho.full_name, getrhopl,
+                                 [planet.M.full_name, planet.R.full_name]))
+            # Teq: Equilibrium temperature
+            l_tup_planet.append((planet.Teq.full_name, getTeqpl,
+                                 [star.Teff.full_name, planet.aR.full_name]))
+
+            # Compute teh secondary parameter
+            for sec_paraname, func, param_list in l_tup_planet:
+                logger.debug("Computing secondary parameter: {}".format(sec_paraname))
+                values = func(*[dico_par[param] for param in param_list])
+                if isinstance(values, Number) or isinstance(values, ndarray):
+                    dico_par[sec_paraname] = values
+                    if isinstance(values, Number):
+                        l_parname_sec_fixed.append(sec_paraname)
+                    else:
+                        if values.size == 1:
+                            l_parname_sec_fixed.append(sec_paraname)
+                        elif values.size > 1:
+                            l_parname_sec_chain.append(sec_paraname)
+                        else:
+                            raise ValueError("Secondary parameter computation {} didn't return "
+                                             "any result: {}".format(sec_paraname, values))
+                else:
+                    raise ValueError("Secondary parameter computation {} return an unexpected "
+                                     "object type: {}".format(sec_paraname, type(values)))
+        chainIsec = ChainsInterpret(stack([dico_par[param] for param in l_parname_sec_chain],
+                                          axis=-1),
+                                    l_parname_sec_chain)
+        return chainIsec, l_parname_sec_chain
+    else:
+        raise ValueError("For now this function only handles LC and RV parametrisation.")
 
 
 if __name__ == "__main__":

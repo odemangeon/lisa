@@ -95,6 +95,10 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="M", name_prefix=self.full_name, main=False))
         ## Mean density of the planet
         self.add_parameter(Parameter(name="rho", name_prefix=self.full_name, main=False))
+        ## Density of the star from the transit
+        self.add_parameter(Parameter(name="rhostar", name_prefix=self.full_name, main=False))
+        ## logg of the star from the transit
+        self.add_parameter(Parameter(name="loggstar", name_prefix=self.full_name, main=False))
         ## Age of the planet
         self.add_parameter(Parameter(name="age", name_prefix=self.full_name, main=False))
         ## Orbital period
@@ -112,27 +116,37 @@ class Planet(CelestialBody):
         ## Impact parameter
         self.add_parameter(Parameter(name="b", name_prefix=self.full_name, main=False))
         ## Argument of periastron of star (= argument of periastron of planet + pi)
-        self.add_parameter(Parameter(name="w", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="omega", name_prefix=self.full_name, main=False))
         ## Longitude of the acending node
-        self.add_parameter(Parameter(name="Omega", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="OMEGA", name_prefix=self.full_name, main=False))
         ## First Transit time
         self.add_parameter(Parameter(name="tc", name_prefix=self.full_name, main=False))
         ## Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## log Radial velocity semi-amplitude
-        self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="logK", name_prefix=self.full_name, main=False))
         ## Radius ratio planet over star
         self.add_parameter(Parameter(name="Rrat", name_prefix=self.full_name, main=False))
+        ## Transit depth
+        self.add_parameter(Parameter(name="Trdepth", name_prefix=self.full_name, main=False))
         ## Mass ratio planet over star
         self.add_parameter(Parameter(name="Mrat", name_prefix=self.full_name, main=False))
         ## a over R, ratio of semi-major axis over Radius of the host star
         self.add_parameter(Parameter(name="aR", name_prefix=self.full_name, main=False))
         ## log a over R, ratio of semi-major axis over Radius of the host star
         # self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
-        ## ecc . cos(w)
+        ## sqrt(ecc) . cos(w)
         self.add_parameter(Parameter(name="secosw", name_prefix=self.full_name, main=False))
-        ## ecc . sin(w)
+        ## sqrt(ecc) . sin(w)
         self.add_parameter(Parameter(name="sesinw", name_prefix=self.full_name, main=False))
+        ## Transit duration t14
+        self.add_parameter(Parameter(name="t14", name_prefix=self.full_name, main=False))
+        ## Transit duration t12
+        self.add_parameter(Parameter(name="t12", name_prefix=self.full_name, main=False))
+        ## Circularisation time
+        self.add_parameter(Parameter(name="circtime", name_prefix=self.full_name, main=False))
+        ## Teq: Equilibrium Temperature
+        self.add_parameter(Parameter(name="Teq", name_prefix=self.full_name, main=False))
         ## transit times
         self.transit_times = {}
 
