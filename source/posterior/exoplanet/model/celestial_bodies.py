@@ -134,15 +134,17 @@ class Planet(CelestialBody):
         ## a over R, ratio of semi-major axis over Radius of the host star
         self.add_parameter(Parameter(name="aR", name_prefix=self.full_name, main=False))
         ## log a over R, ratio of semi-major axis over Radius of the host star
-        # self.add_parameter(Parameter(name="ar", name_prefix=self.full_name, main=False))
+        # self.add_parameter(Parameter(name="logaR", name_prefix=self.full_name, main=False))
         ## sqrt(ecc) . cos(w)
         self.add_parameter(Parameter(name="secosw", name_prefix=self.full_name, main=False))
         ## sqrt(ecc) . sin(w)
         self.add_parameter(Parameter(name="sesinw", name_prefix=self.full_name, main=False))
-        ## Transit duration t14
-        self.add_parameter(Parameter(name="t14", name_prefix=self.full_name, main=False))
-        ## Transit duration t12
-        self.add_parameter(Parameter(name="t12", name_prefix=self.full_name, main=False))
+        ## Transit duration D14
+        self.add_parameter(Parameter(name="D14", name_prefix=self.full_name, main=False))
+        ## Transit duration D23
+        self.add_parameter(Parameter(name="D23", name_prefix=self.full_name, main=False))
+        ## Transit duration D12
+        self.add_parameter(Parameter(name="D12", name_prefix=self.full_name, main=False))
         ## Circularisation time
         self.add_parameter(Parameter(name="circtime", name_prefix=self.full_name, main=False))
         ## Teq: Equilibrium Temperature

@@ -155,7 +155,7 @@ def getdurkip(per, inc, ar, ecc, omega):
     return tkip
 
 
-def gett14(P, inc, aR, ecc, omega, Rrat):
+def getD14(P, inc, aR, ecc, omega, Rrat):
     """Return the full transit duration.
 
     :param float/np.ndarray P: Planetary period in days
@@ -165,7 +165,7 @@ def gett14(P, inc, aR, ecc, omega, Rrat):
     :param float/np.ndarray omega: Stellar argument of periastron associated to the planet orbital
                                    in degrees
     :param float/np.ndarray Rrat: Radius ratio (Planetary radius over stellar radius) without unit
-    :return float/np.ndarray T14: full transit duration in hours
+    :return float/np.ndarray D14: full transit duration in hours
     """
     Ph = P * 24.  # change days to hours
     corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
@@ -190,11 +190,11 @@ def gett14(P, inc, aR, ecc, omega, Rrat):
 #     return tdura
 
 
-def gett23(P, inc, aR, ecc, omega, Rrat):
+def getD23(P, inc, aR, ecc, omega, Rrat):
     """
     compute ingres/egress duration in the usual definition in hours
     inputs are period is days, inclination,  ar =a/rstar, eccentricity , omega, rp =rp/rs,
-    call gett12(per,  inc, ar, ecc, omega, rp )
+    call getD23(per,  inc, ar, ecc, omega, rp )
     """
     Ph = P * 24.  # change days to hours
     corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
@@ -524,13 +524,13 @@ def get_secondary_chains(model, chaininterpret):
             # Rp: planetary radius
             l_tup_planet.append((planet.R.full_name, getRp,
                                  [planet.Rrat.full_name, star.R.full_name]))
-            # T14: full transit duration
-            l_tup_planet.append((planet.t14.full_name, gett14,
+            # D14: full transit duration
+            l_tup_planet.append((planet.D14.full_name, getD14,
                                  [planet.P.full_name, planet.inc.full_name, planet.aR.full_name,
                                   planet.ecc.full_name, planet.omega.full_name,
                                   planet.Rrat.full_name]))
-            # T12: ingress/egress duration
-            l_tup_planet.append((planet.t12.full_name, gett12,
+            # D12: ingress/egress duration
+            l_tup_planet.append((planet.D23.full_name, getD23,
                                  [planet.P.full_name, planet.inc.full_name, planet.aR.full_name,
                                   planet.ecc.full_name, planet.omega.full_name,
                                   planet.Rrat.full_name]))
