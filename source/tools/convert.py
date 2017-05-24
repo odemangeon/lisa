@@ -461,7 +461,7 @@ def getTeqpl(Teffst, aR, A=0):
     return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR)
 
 
-def get_secondary_chains(model, chaininterpret):
+def get_secondary_chains(model, chaininterpret, star_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
     """
     if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
@@ -482,12 +482,24 @@ def get_secondary_chains(model, chaininterpret):
         # Simulate stellar Mass and radius chains if needed
         for param in [star.M, star.R, star.Teff]:
             if param.main is False:
-                # Ask to provide a stellar mass value
-                intitule_question = ("Enter a {} value. If you just press enter 1. solar"
-                                     " mass is assumed.\n".format(param.full_name))
-                param_value, answered = Ask4Number(intitule_question, default_value=1.)
+                ask_param_value = True
+                ask_param_error = True
+                if param.name in star_kwargs:
+                    if "value" in star_kwargs[param.name]:
+                        param_value = star_kwargs[param.name]["value"]
+                        ask_param_value = False
+                    if "error" in star_kwargs[param.name]:
+                        param_value = star_kwargs[param.name]["error"]
+                        ask_param_error = False
+                if ask_param_value:
+                    # Ask to provide a stellar mass value
+                    intitule_question = ("Enter a {} value. If you just press enter 1. solar"
+                                         " mass is assumed.\n".format(param.full_name))
+                    param_value, answered = Ask4Number(intitule_question, default_value=1.)
+                else:
+                    answered = False
                 # If replied ask to provide and mass error value, otherwise assume no error
-                if answered:
+                if ask_param_error and not(ask_param_value and not(answered)):
                     intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
                                          "no uncertainty is assumed.\n".format(param.full_name))
                     param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)

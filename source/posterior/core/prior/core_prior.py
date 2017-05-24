@@ -67,6 +67,17 @@ class Prior(object):
                                       "implemented yet.")
         return priors
 
+    def __joint_lnprior_creator(self, list_lnpriors, arg_list):
+        def joint_lnprior(p):
+            res = 0
+            # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
+            #                                                 arg_list["param"]))
+            # logger.debug("params prior ({}): {}".format(len(p), p))
+            for i, ln_prior in enumerate(list_lnpriors):
+                res += ln_prior(p[i])
+            return res
+        return DocFunction(function=joint_lnprior, arg_list=arg_list)
+
     def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
 
@@ -92,17 +103,16 @@ class Prior(object):
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
 
-        def joint_lnprior(p):
-            res = 0
-            # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
-            #                                                 arg_list["param"]))
-            # logger.debug("params prior ({}): {}".format(len(p), p))
-            for i, ln_prior in enumerate(list_lnpriors):
-                res += ln_prior(p[i])
-            return res
+        # def joint_lnprior(p):
+        #     res = 0
+        #     # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
+        #     #                                                 arg_list["param"]))
+        #     # logger.debug("params prior ({}): {}".format(len(p), p))
+        #     for i, ln_prior in enumerate(list_lnpriors):
+        #         res += ln_prior(p[i])
+        #     return res
 
-        docf = DocFunction(function=joint_lnprior, arg_list=arg_list)
-
+        docf = self.__joint_lnprior_creator(list_lnpriors, arg_list)
         return docf
 
     def create_lnpriors(self, lnlike_db, individual_priors=None, affectinstmodel4dataset=False,

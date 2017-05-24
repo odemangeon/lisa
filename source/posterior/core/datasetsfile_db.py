@@ -106,7 +106,7 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
 
     def get_noisemod4instmodfullname(self):
         """Return the dictionary giving the noise model name for each instrument model full_name."""
-        res = {}
+        res = OrderedDict()
         for inst_cat in self:
             for inst_name in self[inst_cat]:
                 for inst_model in self[inst_cat][inst_name]:
