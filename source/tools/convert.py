@@ -489,7 +489,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                         param_value = star_kwargs[param.name]["value"]
                         ask_param_value = False
                     if "error" in star_kwargs[param.name]:
-                        param_value = star_kwargs[param.name]["error"]
+                        param_error = star_kwargs[param.name]["error"]
                         ask_param_error = False
                 if ask_param_value:
                     # Ask to provide a stellar mass value
@@ -504,7 +504,9 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                                          "no uncertainty is assumed.\n".format(param.full_name))
                     param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
                 else:
-                    param_error = 0.
+                    if ask_param_value and not(answered):
+                        param_error = 0.
+
                 # if provided simulated a stellar mass chains else only give a fixed value.
                 if param_error == 0.:
                     dico_par[param.full_name] = param_value
