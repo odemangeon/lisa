@@ -11,9 +11,10 @@ logger = logging.getLogger()
 
 
 def QCM_utilisateur(intitule_question, l_reponses_possibles):
-    """
-    Syntaxe:
-        reponse = QCM_utilisateur(intitule_question,l_reponses_possibles)
+    """Ask a multiple choice question with a predefined set of possible answers.
+
+    :param string       intitule_question: Question that you want to ask
+    :param string_list  l_reponses_possibles: list of possible replies
     """
     while True:
         rep = str(input(intitule_question))

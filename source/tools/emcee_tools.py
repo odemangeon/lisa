@@ -8,7 +8,9 @@ results.
 """
 from logging import getLogger
 from matplotlib.pyplot import subplots, subplot, figure  # , figure, plot, show
+import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
+from numpy import percentile
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -16,11 +18,18 @@ from matplotlib.gridspec import GridSpec
 from collections import defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
+from collections import Iterable
+from dill import dump, load
+from os.path import isfile, join
+
 from .stats.loc_scale_estimator import mad
 
 
 ## Logger Object
 logger = getLogger()
+
+
+exptime_Kepler = 0.02043402778  # days
 
 
 # The incremental saving doesn't work because, it writes to the fiel but then I don't know how to
@@ -46,111 +55,47 @@ def explore(sampler, p0, nsteps):
             previous_i = i
 
 
-def plot_chains(sampler, l_param_name=None, l_walker=None, l_burnin=None,
-                plot_height=2, plot_width=8, **kwargs_tl):
-    fig, ax = subplots(nrows=sampler.dim + 1, sharex=True, squeeze=True,
-                       figsize=(plot_width, sampler.dim * plot_height))
-    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
-    l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=sampler.dim)
-    l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
-    lnprob_min = sampler.lnprobability[l_walker, ...].min()
-    lnprob_max = sampler.lnprobability[l_walker, ...].max()
+def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
+                suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
+    ndim = chains.shape[-1]
+    nwalker = chains.shape[0]
+    fig, ax = subplots(nrows=ndim + 1, sharex=True, squeeze=True,
+                       figsize=(plot_width, ndim * plot_height))
+    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
+    l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
+    l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=nwalker)
+    lnprob_min = lnprobability[l_walker, ...].min()
+    lnprob_max = lnprobability[l_walker, ...].max()
     for walker, burnin in zip(l_walker, l_burnin):
         ax[0].set_title("lnpost")
-        line = ax[0].plot(sampler.lnprobability[walker, :], alpha=0.5)
+        line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
         ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
                      alpha=0.5)
-    for i in range(sampler.dim):
+    for i in range(ndim):
         ax[i + 1].set_title(l_param_name[i])
-        vmin = sampler.chain[l_walker, :, i].min()
-        vmax = sampler.chain[l_walker, :, i].max()
+        vmin = chains[l_walker, :, i].min()
+        vmax = chains[l_walker, :, i].max()
         for walker, burnin in zip(l_walker, l_burnin):
-            line = ax[i + 1].plot(sampler.chain[walker, :, i], alpha=0.5)
-            ax[i + 1].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
-                             alpha=0.5)
-    ax[sampler.dim].set_xlabel("iteration")
-    fig.tight_layout(**kwargs_tl)
-
-
-def overplot_data_model_init(param, l_param_name, datasim_db, dataset_db, noisemod_db=None,
-                             oversamp=10, plot_height=2, plot_width=8, **kwargs_tl):
-    """param        np.array
-       datasim_db   dataset_db in datasimulators
-       dataset_db   dataset_db
-       noisemod_db  dictionary giving the noise model instance for each dataset name
-    """
-    raise Warning("This function is depreceated and has been replaced by overplot_data_model")
-    # Get the list of all datasets names and the number of datasets
-    l_datasets = dataset_db.get_datasets()
-    ndataset = len(l_datasets)
-
-    # Create the figure and grid which will harbor the plots for each dataset
-    fig = figure(figsize=(plot_width, ndataset * plot_height))
-    gs = GridSpec(nrows=ndataset, ncols=1)
-
-    # Create and fill the dictionary which for each noise_model_name return the dict of kwargs.
-    dico_noisemod_allkwargs = dict()
-    for dataset_name, noise_mod in noisemod_db.items():
-        if noise_mod is None:
-            continue
-        dico_noisemod_allkwargs[noise_mod.category] = defaultdict(list)
-        if noise_mod.has_GP:
-            for dataset_name in noise_mod.l_dataset:
-                dataset = dataset_db[dataset_name]
-                kwargs = dataset.get_kwargs()
-                for karg_type, kwarg_value in kwargs.items():
-                    dico_noisemod_allkwargs[noise_mod.category][karg_type].append(kwarg_value)
-
-    for i, dataset in enumerate(l_datasets):
-        # Create the two Axes for the comparison data/model and the residuals and set the title.
-        ax_data, ax_resi = add_twoaxeswithsharex(gs[i], gs_from_sps_kw={"height_ratios": (3, 1)})
-        ax_data.set_title(dataset.dataset_name)
-
-        # plot the data
-        kwargs = dataset.get_kwargs()
-        ax_data.errorbar(kwargs["t"], kwargs["data"], kwargs["data_err"], fmt=".", color="b")
-
-        # plot the model and residuals
-        tmin = kwargs["t"].min()
-        tmax = kwargs["t"].max()
-        nt = len(kwargs["t"])
-        tsamp = (tmax - tmin) / (nt * oversamp)
-        tmin_moins = tmin - oversamp * tsamp
-        tmax_plus = tmax + oversamp * tsamp
-        t = linspace(tmin_moins, tmax_plus, nt * oversamp)
-        noise_model = noisemod_db[dataset.dataset_name]
-        idx_par = []
-        datasim_function = datasim_db[dataset.dataset_name]["whole"].function
-        datasim_paramnames = datasim_db[dataset.dataset_name]["whole"].arg_list["param"]
-        for par in datasim_paramnames:
-            idx_par.append(l_param_name.index(par))
-        datasim_t = datasim_function(param[idx_par], t)
-        datasim_tdata = datasim_function(param[idx_par], kwargs["t"])
-        ax_data.plot(t, datasim_t, "g-", label="model")
-        ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_tdata, kwargs["data_err"],
-                         fmt=".", color="g")
-        if noise_model.has_GP:
-            gpsim_func = noise_model.gp_simulator
-            datasim_GP_t = (datasim_t +
-                            gpsim_func(param, t, **dico_noisemod_allkwargs[noise_model.category]))
-            datasim_GP_tdata = (datasim_tdata +
-                                gpsim_func(param, kwargs["t"],
-                                           **dico_noisemod_allkwargs[noise_model.category]))
-            ax_data.plot(t, datasim_GP_t, "r-", label="model+GP")
-            ax_resi.errorbar(kwargs["t"], kwargs["data"] - datasim_GP_tdata, kwargs["data_err"],
-                             fmt=".", color="r")
-        ax_data.legend(loc='upper right', shadow=True)
-        # Draw a line y=0 for the residuals
-        xmin, xmax = ax_resi.get_xlim()
-        ax_resi.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
-        ax_resi.set_xlim(xmin, xmax)
+            if suppress_burnin:
+                line = ax[i + 1].plot(chains[walker, burnin:, i], alpha=0.5)
+            else:
+                line = ax[i + 1].plot(chains[walker, :, i], alpha=0.5)
+                ax[i + 1].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
+                                 alpha=0.5)
+    ax[ndim].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
 
 
 def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
+                        supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, **kwargs_tl):
-    """param        np.array
+    """
+    :param int oversamp: The model will computed in oversamp times more points than the data
+    :param int supersamp_model: The model will computed in supersamp_model times more points and
+                                then averaged over bins of supersamp_model to take into account an
+                                increased exposure time.
+       param        np.array
        datasim_db   dataset_db in datasimulators
        dataset_db   dataset_db
        noisemod_db  dictionary giving the noise model instance for each dataset name
@@ -185,10 +130,11 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
         noise_model = noisemod_db[dataset.dataset_name]
         noisemod_allkwargs = dico_noisemod_allkwargs[noise_model.category]
         kwargs = dataset.get_kwargs()
-        t = kwargs["t"]
+        t = kwargs.pop("t")
         nt = len(t)
-        data = kwargs["data"]
-        data_err = kwargs["data_err"]
+        data = kwargs.pop("data")
+        data_err = kwargs.pop("data_err")
+
         if phasefold:
             # Create the Axes for the comparison data/model and the residuals and set the title.
             # and plot the data
@@ -215,14 +161,15 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
                 phasemax = phases.max()
                 tmin = tc + P * phasemin
                 tmax = tc + P * phasemax
-                plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name,
-                           oversamp=oversamp,
-                           plot_phase=True, P=P, tc=tc,
+                plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc, param, l_param_name,
+                           supersamp=supersamp_model, exptime=exptime,
+                           datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
                            noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
                            ax=ax_data)
-                # Plot the model and residuals
+                # Plot residuals
                 plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
-                               plot_phase=True, P=P, tc=tc,
+                               supersamp=supersamp_model, exptime=exptime,
+                               datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
                                noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
                                ax=ax_resi)
         else:
@@ -238,16 +185,16 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
             # Plot the model
             tmin = t.min()
             tmax = t.max()
-            plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, oversamp=oversamp,
-                       plot_phase=False,
-                       noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
-                       ax=ax_data)
+            plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc, param, l_param_name,
+                       datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                       plot_phase=False, noise_model=noise_model,
+                       noisemod_allkwargs=noisemod_allkwargs, ax=ax_data)
 
             # Plot the residuals
             plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
-                           plot_phase=False,
-                           noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
-                           ax=ax_resi)
+                           datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                           plot_phase=False, noise_model=noise_model,
+                           noisemod_allkwargs=noisemod_allkwargs, ax=ax_resi)
 
         # Plot the legend
         ax_data.legend(loc='upper right', shadow=True)
@@ -255,16 +202,53 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
     fig.tight_layout(**kwargs_tl)
 
 
-def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, oversamp=1,
+def get_time_supersampled(time, supersamp, exptime):
+    """Return a time vector supersampled.
+
+    Inspired from https://github.com/hpparvi/PyTransit/blob/master/src/supersampler.py
+
+    :param array_like t: time vector
+
+    """
+    relative_supersample_positions = exptime * ((np.arange(1, supersamp + 1, dtype='d') - 0.5) /
+                                                supersamp - 0.5)
+    return (np.asarray(time)[:, np.newaxis] + relative_supersample_positions).reshape(-1)
+
+
+def average_supersampled_values(values, supersamp):
+    """Return an averaged values vector.
+
+    Inspired from https://github.com/hpparvi/PyTransit/blob/master/src/supersampler.py
+    and https://github.com/lkreidberg/batman/blob/master/batman/transitmodel.py
+
+    :param np.ndarray values: supersampled values vector has to be 1D
+    :param int supersamp: Super sampling factor of the values vector
+    """
+    return np.mean(values.reshape(-1, supersamp), axis=1)
+
+
+def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+               supersamp=1, exptime=exptime_Kepler,
                plot_phase=False, P=None, tc=None,
                noise_model=None, noisemod_allkwargs=None,
+               pl_kwargs_model=None, pl_kwargs_modelandGP=None,
                ax=None):
     # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
     # tmax_plus), the model time vector (t)
-    tsamp = (tmax - tmin) / (nt * oversamp)
-    tmin_moins = tmin - oversamp * tsamp
-    tmax_plus = tmax + oversamp * tsamp
-    t = linspace(tmin_moins, tmax_plus, nt * oversamp)
+    tsamp = (tmax - tmin) / (nt - 1)  # nt - 1 because this the number of intervals
+    tmin_moins = tmin - tsamp  # Add 1 point before tmin
+    tmax_plus = tmax + tsamp  # Add 1 point after tmax
+    nt += 2
+    t_plot = linspace(tmin_moins, tmax_plus, nt)
+    if supersamp > 1:
+        t_model = get_time_supersampled(t_plot, supersamp, exptime)
+    else:
+        t_model = t_plot
+
+    # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
+    # the datasim function
+    if datasim_kwargs is None:
+        datasim_kwargs = {}
 
     # Compute the model values for each time
     idx_par = []
@@ -272,35 +256,50 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, oversamp
     datasim_paramnames = datasim_db_docfunc.arg_list["param"]
     for par in datasim_paramnames:
         idx_par.append(l_param_name.index(par))
-    model = datasim_function(param[idx_par], t)
+    model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
+    if supersamp > 1:
+        model = average_supersampled_values(model, supersamp)
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
 
     # Plot the model
-    errorbar_kwarg = {"label": "model", "color": "g", "fmt": "-"}
+    kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 0.6}
+    if pl_kwargs_model is not None:
+        kwarg_model.update(pl_kwargs_model)
     if plot_phase:
-        plot_phase_folded_timeserie(t, model, P, tc, ax=ax, errorbar_kwarg=errorbar_kwarg)
+        plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, errorbar_kwarg=kwarg_model)
     else:
-        ax.errorbar(t, model, **errorbar_kwarg)
+        ax.errorbar(t_plot, model, **kwarg_model)
 
     # Plot the model + GP
     if noise_model is not None:
         if noise_model.has_GP:
             gpsim_func = noise_model.gp_simulator
-            model_wGP = model + gpsim_func(param, t, **noisemod_allkwargs)
-            errorbar_kwarg = {"label": "model+GP", "color": "r", "fmt": "-"}
+            gp_model = gpsim_func(param, t_model, **noisemod_allkwargs)
+            if supersamp > 1:
+                gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
+            model_wGP = model + gp_model
+            kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 0.6}
+            if pl_kwargs_modelandGP is not None:
+                kwarg_GP.update(pl_kwargs_modelandGP)
             if plot_phase:
-                plot_phase_folded_timeserie(t, model_wGP, P, tc, ax=ax,
-                                            errorbar_kwarg=errorbar_kwarg)
+                plot_phase_folded_timeserie(t_plot, model_wGP, P, tc, ax=ax,
+                                            errorbar_kwarg=kwarg_GP)
             else:
-                ax.errorbar(t, model_wGP, **errorbar_kwarg)
+                ax.errorbar(t_plot, model_wGP, **kwarg_GP)
 
 
-def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=None,
-                   plot_phase=False, P=None, tc=None,
+def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
+                   datasim_kwargs=None, data_err=None,
+                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
                    noise_model=None, noisemod_allkwargs=None,
+                   pl_kwargs_model=None, pl_kwargs_modelandGP=None,
                    ax=None):
+    # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
+    # the datasim function
+    if datasim_kwargs is None:
+        datasim_kwargs = {}
 
     # Compute the residuals values for each time
     idx_par = []
@@ -308,32 +307,45 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=No
     datasim_paramnames = datasim_db_docfunc.arg_list["param"]
     for par in datasim_paramnames:
         idx_par.append(l_param_name.index(par))
-    model = datasim_function(param[idx_par], t)
+    if supersamp > 1:
+        t_model = get_time_supersampled(t, supersamp, exptime)
+    else:
+        t_model = t
+    model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
+    if supersamp > 1:
+        model = average_supersampled_values(model, supersamp)
     residual = data - model
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
 
     # Plot the residuals
-    errorbar_kwarg = {"label": "model", "color": "g", "fmt": "."}
+    kwarg_model = {"label": "model", "color": "g", "fmt": "."}
+    if pl_kwargs_model is not None:
+        kwarg_model.update(pl_kwargs_model)
     if plot_phase:
         plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err, ax=ax,
-                                    errorbar_kwarg=errorbar_kwarg)
+                                    errorbar_kwarg=kwarg_model)
     else:
-        ax.errorbar(t, residual, data_err, **errorbar_kwarg)
+        ax.errorbar(t, residual, data_err, **kwarg_model)
 
     # Plot the model + GP
     if noise_model is not None:
         if noise_model.has_GP:
             gpsim_func = noise_model.gp_simulator
-            model_wGP = model + gpsim_func(param, t, **noisemod_allkwargs)
+            gp_model = gpsim_func(param, t_model, **noisemod_allkwargs)
+            if supersamp > 1:
+                gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
+            model_wGP = model + gp_model
             residual_wGP = data - model_wGP
-            errorbar_kwarg = {"label": "model+GP", "color": "r", "fmt": "."}
+            kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "."}
+            if pl_kwargs_modelandGP is not None:
+                kwarg_GP.update(pl_kwargs_modelandGP)
             if plot_phase:
                 plot_phase_folded_timeserie(t, residual_wGP, P, tc, ax=ax,
-                                            errorbar_kwarg=errorbar_kwarg)
+                                            errorbar_kwarg=kwarg_GP)
             else:
-                ax.errorbar(t, residual_wGP, data_err, **errorbar_kwarg)
+                ax.errorbar(t, residual_wGP, data_err, **kwarg_GP)
 
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
@@ -351,16 +363,10 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar
     P and tc needs to have the same unit than the time in dataset.
     """
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t, P, T0=(tc + P / 2))
+    phases = foldAt(t, P, T0=(tc + P / 2)) - 0.5
 
     # Sort with respect to phase
-    # First, get the order of indices ...
     sortIndi = argsort(phases)
-    # ... and, second, rearrange the arrays.
-    phases = phases[sortIndi] - 0.5
-    flux = data[sortIndi]
-    if data_err is not None:
-        flux_err = data_err[sortIndi]
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -374,9 +380,9 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar
 
     # Plot the phase folded data
     if data_err is not None:
-        line = ax.errorbar(phases, flux, flux_err, **kw)
+        line = ax.errorbar(phases[sortIndi], data[sortIndi], data_err[sortIndi], **kw)
     else:
-        line = ax.errorbar(phases, flux, **kw)
+        line = ax.errorbar(phases[sortIndi], data[sortIndi], **kw)
     return line, phases
 
 
@@ -436,66 +442,69 @@ def apply_mask(x=None):
         return np.delete(x, self.mask, axis=0)
 
 
-def acceptancefraction_selection(sampler, sig_fact=3., verbose=1):
+def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):
     """Return selected walker based on the acceptance fraction.
 
     :param emcee.EnsembleSampler sampler:
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     """
-    median_acceptance_frac = median(sampler.acceptance_fraction)
-    mad_acceptance_frac = mad(sampler.acceptance_fraction)
+    percentile_acceptance_frac = percentile(acceptance_fraction, quantile)
+    mad_acceptance_frac = mad(acceptance_fraction)
     if verbose == 1:
-        logger.info("Acceptance fraction of the walkers: {}\nmedian: {}, MAD:{}"
-                    "".format(sampler.acceptance_fraction, median_acceptance_frac,
+        logger.info("Acceptance fraction of the walkers: {}\nquantile {}%: {}, MAD:{}"
+                    "".format(acceptance_fraction, quantile, percentile_acceptance_frac,
                               mad_acceptance_frac))
-    l_selected_walker = where(sampler.acceptance_fraction > (median_acceptance_frac -
-                                                             sig_fact * mad_acceptance_frac))[0]
-    nb_rejected = sampler.chain.shape[0] - len(l_selected_walker)
+    l_selected_walker = where(acceptance_fraction > (percentile_acceptance_frac -
+                                                     sig_fact * mad_acceptance_frac))[0]
+    nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
-        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, sampler.chain.shape[0]))
+        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected,
+                                                               acceptance_fraction.shape[0]))
     return l_selected_walker, nb_rejected
 
 
-def lnposterior_selection(sampler, sig_fact=3., verbose=1):
+def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, verbose=1):
     """Return selected walker based on the acceptance fraction.
 
     :param emcee.EnsembleSampler sampler:
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     """
-    median_lnposterior = median(sampler.lnprobability)
-    mad_lnposterior = mad(sampler.lnprobability)
-    walkers_median_lnposterior = median(sampler.lnprobability, axis=1)
+    percentile_lnposterior = percentile(lnprobability, quantile)
+    mad_lnposterior = mad(lnprobability)
+    walkers_median_lnposterior = median(lnprobability, axis=1)
     if verbose == 1:
-        logger.info("lnposterior of the walkers: {}\nmedian: {}, MAD:{}"
-                    "".format(walkers_median_lnposterior, median_lnposterior, mad_lnposterior))
+        logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
+                    "".format(walkers_median_lnposterior, quantile, percentile_lnposterior,
+                              mad_lnposterior))
     l_selected_walker = where(walkers_median_lnposterior >
-                              (median_lnposterior - (sig_fact * mad_lnposterior)))[0]
-    nb_rejected = sampler.chain.shape[0] - len(l_selected_walker)
+                              (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
+    nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
-        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, sampler.chain.shape[0]))
+        logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
     return l_selected_walker, nb_rejected
 
 
-def get_fitted_values(sampler, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
-                      verbose=1):
+def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
+                      lnprobability=None, verbose=1):
     """Return the fitted values from the sampler.
 
-    :param emcee.EnsembleSampler sampler:
+    :param ChainInterpret chainI:
     :param string method: method used to extract the fitted values ["MAP", "median"]
     :param int_iteratable l_walkers: list of valid walkers
     :param int burnin: index of the first iteration to consider.
     :param int verbose: if 1 speaks otherwise not
     """
-    ndim = sampler.dim
+    ndim = chainI.dim
     if method == "median":
-        res = median(get_clean_flatchain(sampler, l_walker=l_walker, l_burnin=l_burnin), axis=0)
+        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin),
+                           axis=0)
     elif method == "MAP":
         if (l_walker is not None) or (l_burnin is not None):
             logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
-        walker, it = unravel_index(argmax(sampler.lnprobability), dims=sampler.lnprobability.shape)
-        res = array([sampler.chain[walker, it, dim] for dim in range(ndim)])
+        walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
+        res = array([chainI[walker, it, dim] for dim in range(ndim)])
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
@@ -507,32 +516,37 @@ def get_fitted_values(sampler, method="MAP", l_param_name=None, l_walker=None, l
     return res
 
 
-def get_clean_flatchain(sampler, l_walker=None, l_burnin=None):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
-    :param emcee.EnsembleSampler sampler:
+    :param ChainInterpret chainI:
     :param int_iteratable l_walkers: list of valid walkers
     :param int_iteratable l_burnin: list of burnin iterations for each valid walker
     """
     if (l_walker is None) and (l_burnin is None):
-        return sampler.flatchain
+        return chainI.flatchain
     else:
-        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=chainI.shape[0])
     if l_burnin is None:
-        s = sampler.chain[l_walker, ...].shape
-        return sampler.chain[l_walker, ...].reshape(s[0] * s[1], s[2])
+        s = chainI[l_walker, ...].shape
+        return chainI[l_walker, ...].reshape(s[0] * s[1], s[2])
     else:
-        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=sampler.chain.shape[0])
-    ndim = sampler.dim
+        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=chainI.shape[0])
+    ndim = chainI.dim
     res = []
-    for dim in range(ndim):
-        res.append([])
+    if ndim == 1:
         for walker, burnin in zip(l_walker, l_burnin):
-            res[dim].extend(sampler.chain[walker, burnin:, dim])
-    return array(res).transpose()
+            res.extend(chainI[walker, burnin:])
+        return array(res).transpose()
+    else:
+        for dim in range(ndim):
+            res.append([])
+            for walker, burnin in zip(l_walker, l_burnin):
+                res[dim].extend(chainI[walker, burnin:, dim])
+        return array(res).transpose()
 
 
-def geweke_multi(sampler, first=0.1, last=0.5, intervals=20, l_walker=None):
+def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     """Adapted the geweke test for multiple wlaker exploration.
 
     :param emcee.EnsembleSampler sampler:
@@ -543,19 +557,20 @@ def geweke_multi(sampler, first=0.1, last=0.5, intervals=20, l_walker=None):
     :param int intervals: Number of sub-chains to analyze. Defaults to 20.
     :param int_iteratable l_walker: list of valid walkers
     """
+    nwalker = chains.shape[0]
+    ndim = chains.shape[-1]
     # Get the list of valid walkers (l_walker), the number of parameters (ndim) and the number of
     # steps for each walker (nsteps)
-    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=sampler.chain.shape[0])
+    l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
     nwalker = len(l_walker)
-    ndim = sampler.dim
-    nsteps = sampler.chain.shape[1]
+    nsteps = chains.shape[1]
 
     # Compute the start step of the last part of the chain and compute median and MAD of the last
     # part of the chain for each parameter
     last_start_step = int(nsteps * last)
-    l_med_last = [median(sampler.chain[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     print("l_med_last: {}".format(l_med_last))
-    l_mad_last = [mad(sampler.chain[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     print("l_mad_last: {}".format(l_mad_last))
 
     # Compute the start steps of all the first parts of the chains that we will use for the Geweke
@@ -567,11 +582,14 @@ def geweke_multi(sampler, first=0.1, last=0.5, intervals=20, l_walker=None):
     for dim, med_last, mad_last in zip(range(ndim), l_med_last, l_mad_last):
         for i, walker in enumerate(l_walker):
             for j, first_start in enumerate(first_start_steps):
-                med_first = median(sampler.chain[walker, first_start:(first_start + first_length),
-                                                 dim])
-                mad_first = mad(sampler.chain[walker, first_start:(first_start + first_length),
-                                              dim])
-                zscores[i, j, dim] = (med_first - med_last) / (sqrt(mad_first**2 + mad_last**2))
+                med_first = median(chains[walker, first_start:(first_start + first_length), dim])
+                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim])
+                # Compute the zscore, but if the dispersion of the first part is too big compared to
+                # the last part, I don't consider the first part as converge what the zscore.
+                if mad_first < (5 * mad_last):
+                    zscores[i, j, dim] = (med_first - med_last) / (sqrt(mad_first**2 + mad_last**2))
+                else:
+                    zscores[i, j, dim] = np.inf
     return zscores, first_start_steps
 
 
@@ -647,3 +665,191 @@ def __get_default_ax(ax):
     if ax is None:
         fig, ax = subplots(nrows=1, ncols=1, squeeze=True)
     return ax
+
+
+def write_latex_table(filename, df_fitval, obj_name=None):
+    """Write a TeX file with a table giving the fitted values."""
+    if obj_name is None:
+        obj_name = ''
+    # Create Latex table
+    with open(filename, "w") as f:
+        f.write("\\begin{table}\n\\caption{\\label{}}\n\\begin{tabular}{lc}\\hline\n")
+        f.write("Parameters & {}\\\\ \\hline\n".format(obj_name))
+        for par in df_fitval.index:
+            f.write("{} & ${}_{{-{}}}^{{+{}}}$\\\\\n".format(par.replace('_', '\\_'),
+                                                             df_fitval.loc[par, 'value'],
+                                                             df_fitval.loc[par, 'sigma-'],
+                                                             df_fitval.loc[par, 'sigma+']))
+        f.write("\\hline\n\\\\")
+        f.write("\\end{tabular}\n")
+        f.write("\\end{table}\n")
+
+
+extension_pickle = {"chain": "_chain.pk",
+                    "lnpost": "_lnprobability.pk",
+                    "acceptfrac": "_acceptance_fraction.pk",
+                    "l_param_name": "_l_param_name.pk",
+                    "df_fittedval": "_df_fittedval.pk",
+                    "fitted_values": "_fitted_values.pk",
+                    "fitted_values_sec": "_fitted_values_sec.pk",
+                    }
+
+
+def save_emceesampler(sampler, l_param_name, obj_name):
+    """Save Emcee sampler elements."""
+
+    # Save chain in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["chain"]), "wb") as fchain:
+        dump(sampler.chain, fchain)
+
+    # Save lnprobability in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["lnpost"]), "wb") as flnprob:
+        dump(sampler.lnprobability, flnprob)
+
+    # Save acceptance_fraction in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["acceptfrac"]), "wb") as faccfrac:
+        dump(sampler.acceptance_fraction, faccfrac)
+
+    # Save l_param_name in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["l_param_name"]), "wb") as flparam:
+        dump(l_param_name, flparam)
+
+
+def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None):
+    """Save Emcee sampler elements."""
+
+    # Save df_fittedval in a pickle
+    if df_fittedval is not None:
+        with open("{}{}".format(obj_name, extension_pickle["df_fittedval"]), "wb") as fdffitval:
+            dump(df_fittedval, fdffitval)
+
+    # Save fitted_values in a pickle
+    if fitted_values is not None:
+        if "array" not in fitted_values or "l_param" not in fitted_values:
+            raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
+                             "'l_param'")
+        with open("{}{}".format(obj_name, extension_pickle["fitted_values"]), "wb") as ffitval:
+            dump(fitted_values, ffitval)
+
+    # Save fitted_values in a pickle
+    if fitted_values_sec is not None:
+        if "array" not in fitted_values or "l_param" not in fitted_values:
+            raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
+                             "'l_param'")
+        with open("{}{}".format(obj_name, extension_pickle["fitted_values_sec"]), "wb") as ffitvals:
+            dump(fitted_values_sec, ffitvals)
+
+
+def load_emceesampler(obj_name, folder="."):
+    """Save Emcee sampler elements."""
+
+    # Save chain in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["chain"]), "rb") as fchain:
+        chain = load(fchain)
+
+    # Save lnprobability in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["lnpost"]), "rb") as flnprob:
+        lnprobability = load(flnprob)
+
+    # Save acceptance_fraction in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["acceptfrac"]), "rb") as faccfrac:
+        acceptance_fraction = load(faccfrac)
+
+    # Save l_param_name in a pickle
+    with open("{}{}".format(obj_name, extension_pickle["l_param_name"]), "rb") as flparam:
+        l_param_name = load(flparam)
+
+    return chain, lnprobability, acceptance_fraction, l_param_name
+
+
+def load_chain_analysis(obj_name, folder="."):
+    """Save Emcee sampler elements."""
+
+    # load df_fittedval from a pickle
+    file_df_fittedval = "{}{}".format(obj_name, extension_pickle["df_fittedval"])
+    if isfile(join(folder, file_df_fittedval)):
+        with open(join(folder, file_df_fittedval), "rb") as fdffitval:
+            df_fittedval = load(fdffitval)
+    else:
+        df_fittedval = None
+
+    # Load fitted_values from a pickle
+    file_fitted_values = "{}{}".format(obj_name, extension_pickle["fitted_values"])
+    if isfile(join(folder, file_fitted_values)):
+        with open(join(folder, file_fitted_values), "rb") as ffitval:
+            fitted_values = load(ffitval)
+    else:
+        fitted_values = None
+
+    # Load fitted_values_sec from a pickle
+    file_fitted_values_sec = "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])
+    if isfile(join(folder, file_fitted_values_sec)):
+        with open(join(folder, file_fitted_values_sec), "rb") as ffitvals:
+            fitted_values_sec = load(ffitvals)
+    else:
+        fitted_values_sec = None
+
+    return fitted_values, fitted_values_sec, df_fittedval
+
+
+class ChainsInterpret(np.ndarray):
+
+    __err_shapeinput__ = "Shape of input_array should be <= 3."
+    __err_dimarrlparam__ = "Last dim of input_array have the same dimension than l_param_names."
+
+    def __new__(cls, input_array, param_names):
+        # Input array is an already formed ndarray instance
+        # We first cast to be our class type
+        if len(input_array.shape) > 3:
+            raise ValueError(cls.__err_shapeinput__)
+        obj = np.asarray(input_array).view(cls)
+        # add the new attribute to the created instance
+        obj.__paramname_idx = dict((n, i) for i, n in enumerate(param_names))
+        if len(param_names) != obj.shape[-1]:
+            raise ValueError(cls.__err_dimarrlparam__)
+        # Finally, we must return the newly created object:
+        return obj
+
+    def __array_finalize__(self, obj):
+        # see InfoArray.__array_finalize__ for comments
+        if obj is None:
+            return
+        self.__paramname_idx = getattr(obj, 'paramname_idx', None)
+
+    def __getitem__(self, indexing):
+        if isinstance(indexing, str):
+            idx = self.paramname_idx[indexing]
+            indexing = (slice(None, None, None), idx)
+        if isinstance(indexing, tuple):
+            if isinstance(indexing[-1], str):
+                l = list(indexing[:-1])
+                l.append(self.paramname_idx[indexing[-1]])
+                indexing = list(l)
+            elif isinstance(indexing[-1], Iterable):
+                if isinstance(indexing[-1][0], str):
+                    l = list(indexing[:-1])
+                    l.append([self.paramname_idx[parname] for parname in indexing[-1]])
+                    indexing = list(l)
+        return super(ChainsInterpret, self).__getitem__(indexing)
+
+    @property
+    def paramname_idx(self):
+        """Return the list of parameters names."""
+        return self.__paramname_idx
+
+    @property
+    def flatchain(self):
+        """
+        A shortcut for accessing chain flattened along the zeroth (walker)
+        axis.
+        """
+        s = self.shape
+        return self.reshape(s[0] * s[1], s[2])
+
+    @property
+    def dim(self):
+        """Return the number of parameters."""
+        if len(self.shape) == 3:
+            return self.shape[-1]
+        else:
+            return 1

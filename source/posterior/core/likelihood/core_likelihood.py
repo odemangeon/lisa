@@ -79,6 +79,13 @@ class LikelihoodCreator(object):
             db.lock()
         return db
 
+    def __lnlike_withdataset_creator(self, func, arg_list, kwargs):
+        def lnlike_withdataset(p):
+            # logger.debug("paramnames likewdst ({}): {}\nparams likewdst ({}): {}"
+            #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
+            return func(p, **kwargs)
+        return DocFunction(function=lnlike_withdataset, arg_list=arg_list)
+
     def create_lnlikelihoods_perdataset(self, lnlike_db, dataset_db, instmodel4dataset):
         """Create the log likelihood function with the data hardcoded."""
         db = {}
@@ -99,15 +106,20 @@ class LikelihoodCreator(object):
 
             # The creator is needed for enclosure on func, arg_list and kwargs and avoid issue with
             # the late binding enclosure
-            def lnlike_withdataset_creator(func, arg_list, kwargs):
-                def lnlike_withdataset(p):
-                    # logger.debug("paramnames likewdst ({}): {}\nparams likewdst ({}): {}"
-                    #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
-                    return func(p, **kwargs)
-                return DocFunction(function=lnlike_withdataset, arg_list=arg_list)
+            # def lnlike_withdataset_creator(func, arg_list, kwargs):
+            #     def lnlike_withdataset(p):
+            #         # logger.debug("paramnames likewdst ({}): {}\nparams likewdst ({}): {}"
+            #         #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
+            #         return func(p, **kwargs)
+            #     return DocFunction(function=lnlike_withdataset, arg_list=arg_list)
 
-            db[dataset_name] = lnlike_withdataset_creator(func=lnlike_func, arg_list=arg_list_new,
-                                                          kwargs=kwargs)
+
+            db[dataset_name] = self.__lnlike_withdataset_creator(func=lnlike_func,
+                                                                 arg_list=arg_list_new,
+                                                                 kwargs=kwargs)
+            # db[dataset_name] = lnlike_withdataset_creator(func=lnlike_func,
+            #                                               arg_list=arg_list_new,
+            #                                               kwargs=kwargs)
 
             # l_func.append(db[dataset_name])
             # idx_par = []
@@ -138,6 +150,21 @@ class LikelihoodCreator(object):
         #                                                  dataset_db=dataset_db,
         #                                                  instmodel4dataset=instmodel4dataset)
         return db
+
+    def __lnlike_withalldataset_creator(self, l_func, l_params_idx, l_allkwargs, arg_list):
+        def lnlike_all(p):
+            res = 0
+            # logger.debug("paramnames like ({}): {}\nparams like ({}): {}"
+            #              "".format(len(arg_list_all["param"]), arg_list_all["param"],
+            #                        len(p), p))
+            for func, idxs, kwargs in zip(l_func, l_params_idx, l_allkwargs):
+                # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): "
+                #              "{}".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
+                #                        len(param), param))
+                res += func(p[idxs], **kwargs)
+            return res
+
+        return DocFunction(function=lnlike_all, arg_list=arg_list)
 
     def create_lnlikelihood_alldataset(self, datasim_db, dataset_db, instmodel4dataset):
 
@@ -197,26 +224,26 @@ class LikelihoodCreator(object):
             # for dataset in noisemodel_instance.l_dataset:
             #     dico_params_idx[noise_model]["dataset"] = l_p
 
-        def lnlike_withalldataset_creator(l_func, l_params_idx, l_allkwargs, arg_list):
-            def lnlike_all(p):
-                res = 0
-                # logger.debug("paramnames like ({}): {}\nparams like ({}): {}"
-                #              "".format(len(arg_list_all["param"]), arg_list_all["param"],
-                #                        len(p), p))
-                for func, idxs, kwargs in zip(l_func, l_params_idx, l_allkwargs):
-                    # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): "
-                    #              "{}".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
-                    #                        len(param), param))
-                    res += func(p[idxs], **kwargs)
-                return res
-
-            return DocFunction(function=lnlike_all, arg_list=arg_list)
+        # def lnlike_withalldataset_creator(l_func, l_params_idx, l_allkwargs, arg_list):
+        #     def lnlike_all(p):
+        #         res = 0
+        #         # logger.debug("paramnames like ({}): {}\nparams like ({}): {}"
+        #         #              "".format(len(arg_list_all["param"]), arg_list_all["param"],
+        #         #                        len(p), p))
+        #         for func, idxs, kwargs in zip(l_func, l_params_idx, l_allkwargs):
+        #             # logger.debug("func: {}\nidxs ({}): {}\np[idxs] ({}): {}\nparams names ({}): "
+        #             #              "{}".format(func, len(idxs), idxs, len(p[idxs]), p[idxs],
+        #             #                        len(param), param))
+        #             res += func(p[idxs], **kwargs)
+        #         return res
+        #
+        #     return DocFunction(function=lnlike_all, arg_list=arg_list)
 
         arg_list_all = OrderedDict()
         arg_list_all["param"] = l_allparams
         arg_list_all["kwargs"] = []
-        doc_f = lnlike_withalldataset_creator(l_func=l_func, l_params_idx=l_params_idx,
-                                              l_allkwargs=l_allkwargs, arg_list=arg_list_all)
+        doc_f = self.__lnlike_withalldataset_creator(l_func=l_func, l_params_idx=l_params_idx,
+                                                     l_allkwargs=l_allkwargs, arg_list=arg_list_all)
         return doc_f, dico_noisemodel_instance  # , dico_params_idx_all
 
         # Then create the lnlike filling the kwargs and final sum them

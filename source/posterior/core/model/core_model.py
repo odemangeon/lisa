@@ -91,6 +91,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Return the name of the object studied."""
         return self.name
 
+    @property
+    def init_kwargs(self):
+        """Return the dictionary giving the arguments for the define_model method of Posterior."""
+        raise NotImplementedError("You need to create this property for your model !")
+
     def init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""
         for instmod_fullname in l_instmod_fullnames:
@@ -327,3 +332,16 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """load the parameter file."""
         dico_config = self.read_parameter_file()
         self.load_config(dico_config)
+
+    @property
+    def automatic_init_kwargs(self):
+        """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
+        dico = {}
+        dico["param_file"] = self.param_file
+        return dico
+
+    def automatic_model_initialisation(self, param_file):
+        """load the parameter file."""
+        self.param_file = param_file
+        self.update_paramfile_info()
+        self.load_parameter_file()

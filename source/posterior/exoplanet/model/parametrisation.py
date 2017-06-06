@@ -17,6 +17,48 @@ logger = getLogger()
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
+    @property
+    def available_parametrisation_dico(self):
+        """Dictionary defining the available parametrisation and their apply functions."""
+        return {"RV_EXOFAST": self.apply_RV_EXOFAST_param,
+                "LC_EXOFAST": self.apply_LC_EXOFAST_param,
+                "RV&LC_EXOFAST": self.apply_RV_LC_EXOFAST_param}
+
+    @property
+    def parametrisation(self):
+        """Dictionary defining the available parametrisation and their apply functions."""
+        return self.__parametrisation
+
+    @parametrisation.setter
+    def parametrisation(self, value=None):
+        """Set the parametrisation to use."""
+        if value is None:
+            if Counter(self.dataset_db.inst_categories) == Counter(["RV", ]):
+                self.__parametrisation = "RV_EXOFAST"
+            elif Counter(self.dataset_db.inst_categories) == Counter(["LC", ]):
+                self.__parametrisation = "LC_EXOFAST"
+            elif Counter(self.dataset_db.inst_categories) == Counter(["LC", "RV"]):
+                self.__parametrisation = "RV&LC_EXOFAST"
+            else:
+                raise ValueError("{} doesn't correspond to a predefined parametrisation."
+                                 "".format(self.dataset_db.inst_categories))
+        else:
+            if value in self.available_parametrisation_dico.keys():
+                self.__parametrisation = value
+            else:
+                raise ValueError("{} is not an available parametrisation ({})"
+                                 "".format(value, self.available_parametrisation_dico.keys()))
+        logger.info("The parametrisation has been set: {}".format(self.__parametrisation))
+
+    @property
+    def parametrisation_kwargs(self):
+        """Dictionary giving the keyword arguments of the apply_parametrisation method."""
+        return self.__parametrisation_kwargs
+
+    def apply_parametrisation(self, *args, **kwargs):
+        """Apply the parametrisation pointed by the parametrisation property."""
+        self.available_parametrisation_dico[self.parametrisation](*args, **kwargs)
+
     def apply_RV_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False):
         """Apply the parametrisation for the fit of RV only.
 
@@ -34,6 +76,11 @@ class GravGroup_Parametrisation(object):
         # Check that the instrument category of all the datasets is "RV" otherwise raise a warning
         self.__check_dataset_instcat(["RV", ])
 
+        # Init and Fill the dictionary parametrisation_kwargs
+        self.__parametrisation_kwargs = {}
+        self.__parametrisation_kwargs["with_driftRV"] = with_driftRV
+        self.__parametrisation_kwargs["with_DeltaRV"] = with_DeltaRV
+
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
@@ -49,7 +96,7 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the RV instrument models parameters
         self.instmodel_RV_parametrisation(driftRV_main=with_driftRV, DeltaRV_main=with_DeltaRV)
 
-    def apply_LC_EXOFAST_param(self, with_DeltaOOT=False):
+    def apply_LC_EXOFAST_param(self, with_DeltaOOT=False, with_driftOOT=False):
         """Apply the parametrisation for the fit of LC only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -66,6 +113,11 @@ class GravGroup_Parametrisation(object):
         # Check that the instrument category of all the datasets is "RV" otherwise raise a warning
         self.__check_dataset_instcat(["LC", ])
 
+        # Init and Fill the dictionary parametrisation_kwargs
+        self.__parametrisation_kwargs = {}
+        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
+        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
+
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].Rrat.main = True
@@ -77,7 +129,7 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].sesinw.main = True
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT)
+        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
@@ -100,6 +152,13 @@ class GravGroup_Parametrisation(object):
         # Check that the instrument categories of all the datasets are "RV" or "LC" otherwise raise
         # a warning
         self.__check_dataset_instcat(["RV", "LC"])
+
+        # Init and Fill the dictionary parametrisation_kwargs
+        self.__parametrisation_kwargs = {}
+        self.__parametrisation_kwargs["with_driftRV"] = with_driftRV
+        self.__parametrisation_kwargs["with_DeltaRV"] = with_DeltaRV
+        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
+        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
 
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]

@@ -9,7 +9,7 @@ The objective of this package is to provides the LC_Instrument and LC_Dataset cl
 """
 import logging
 import matplotlib.pyplot as plt
-from numpy import array
+from numpy import array, percentile
 
 from source.posterior.core.dataset_and_instrument.dataset import Dataset
 from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
@@ -41,11 +41,16 @@ class LC_Dataset(Dataset):
         pandas_df = self.get_data()
         return {"data": array(pandas_df["flux"]),
                 "data_err": array(pandas_df["flux_err"]),
-                "t": array(pandas_df["time"])}
+                "t": array(pandas_df["time"]),
+                "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
         pandas_df = self.get_data()
         return array(pandas_df["time"])
+
+    def get_exptime(self, quartile=50):
+        time = self.get_time()
+        return percentile(time[1:] - time[:-1], quartile)
 
     def create_datasimulator_for_dataset(self, datasim_func):
         return datasim_func

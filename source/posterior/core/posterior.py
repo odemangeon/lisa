@@ -22,6 +22,7 @@ The objective of this package is to provides the core Posterior class.
 """
 from logging import getLogger
 from numpy import inf
+from dill import dump, load
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
@@ -54,7 +55,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
             2. Define two locks: dataset_lock and database_lock
             3. Initialize the dataset database attribute and assign it dataset_lock
             4. Initialize the run_folder attribute
-            5. Initialie instmodel4dataset attribute and assign it dataset_lock
+            5. Initialize instmodel4dataset attribute and assign it dataset_lock
             6. Initialise the model attribute
             7. Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
                datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
@@ -360,6 +361,41 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                                                           arg_list=arg_list_new)
 
         return db
+
+    _extension_postinstance = "_posterior_instance.pk"
+
+    def save_post_instance(self):
+        # strcture to store the informations about the Posterior instance
+        dico = {}
+        dico["object_name"] = self.object_name
+        dico["data_folder"] = self.dataset_db.data_folder
+        dico["run_folder"] = self.run_folder
+        dico["dataset_file"] = self.datasetsfile_db.datasetsfile_path
+        dico["model_category"] = self.model.category
+        dico["model_kwargs"] = self.model.init_kwargs
+        dico["model_auto_init_kwargs"] = self.model.automatic_init_kwargs
+
+        # Save it to a pickle
+        with open("{}{}".format(self.object_name, self._extension_postinstance), "wb") as fpostinst:
+            dump(dico, fpostinst)
+
+    def init_from_pickle(self):
+        # load the dictionary
+        with open("{}{}".format(self.object_name, self._extension_postinstance), "rb") as fdico:
+            dico = load(fdico)
+
+        # post_instance = Posterior(object_name=dico["object_name"])
+        self.dataset_db.data_folder = dico["data_folder"]
+        self.run_folder = dico["run_folder"]
+        self.load_datasetsfile(dico["dataset_file"])
+        self.define_model(category=dico["model_category"], name=dico["object_name"],
+                          **dico["model_kwargs"])
+        self.model.automatic_model_initialisation(**dico["model_auto_init_kwargs"])
+        self.get_datasimulators()
+        self.get_lnlikelihoods()
+        self.get_individal_lnpriors()
+        self.get_lnpriors()
+        self.get_lnposteriors()
 
     # Code to add all datasets in a folder
     # # Examine data folder to look for available datasets

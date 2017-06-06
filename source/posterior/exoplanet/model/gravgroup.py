@@ -35,6 +35,7 @@ from ajplanet import pl_rv_array
 from batman import TransitModel, TransitParams
 from pytransit import MandelAgol
 
+
 from .celestial_bodies import Star, Planet
 from .parametrisation import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
@@ -75,7 +76,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                   }
 
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
-                 transit_model=None, rv_model=None,
+                 transit_model=None, rv_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
         """docstring Planet init method."""
         super(GravGroup, self).__init__(name, dataset_db, run_folder,
@@ -84,8 +85,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         if "LC" in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
-            self.__ldmodel4instmodfname = {}
-            self.__SSE4instmodfname = {}
+            self.__ldmodel4instmodfname = OrderedDict()  # Limb darkening model for each instrument
+            self.__SSE4instmodfname = OrderedDict()  # Supersampling and Exposure time for each instrument
             # Limb darkening model
             # self.ld_model = ld_model
             # TODO: Create the LC_param_file and create a function to load its content and build the
@@ -131,10 +132,23 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         else:
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
+        # Set parametrisation
+        self.parametrisation = parametrisation
+
         ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
         ## separation binary star. This is kept for later.
         # self.subgravgroups = []
+
+    @property
+    def init_kwargs(self):
+        """Return the dictionary giving the arguments for the define_model method of Posterior."""
+        dico = {}
+        dico["stars"] = self.nb_star
+        dico["planets"] = self.nb_planets
+        dico["transit_model"] = self.transit_model
+        dico["rv_model"] = self.rv_model
+        return dico
 
     @property
     def transit_model(self):
@@ -467,16 +481,27 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def get_list_LD_parconts(self):
         return self.paramcontainers[CoreLD.category].values()
 
+    @property
+    def automatic_init_kwargs(self):
+        """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
+        dico = super(GravGroup, self).automatic_init_kwargs
+        dico["lc_param_file"] = self.lc_param_file
+        dico["kwargs_parametrisation"] = self.parametrisation_kwargs
+        return dico
+
+    def automatic_model_initialisation(self, lc_param_file, kwargs_parametrisation, **kwargs):
+        """load the parameter file."""
+        self.lc_param_file = lc_param_file
+        self.load_LC_param_file()
+        self.apply_parametrisation(**kwargs_parametrisation)
+        super(GravGroup, self).automatic_model_initialisation(**kwargs)
+
     def _create_datasimulator_RV(self, inst_model):
         """Return datasimulator functions.
 
         A datasimualtor function is created for the whole dataset_database and for each instrument
         model individually.
 
-        This function does:
-            1. Check if the dataset_db contain RV data
-            2. If Yes:
-                2.1. for each planet
         ----
         Returns:
             - 1 data simulator function for the whole dataset.
@@ -509,7 +534,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         function_name = ("RVsim_{{object}}_{instmod_fullname}"
                          "".format(instmod_fullname=inst_model.full_name))
         template_function = """
-        def {function_name}(p, t):
+        def {function_name}(p, t, tref=None):
         {{tab}}{{preambule}}
         {{tab}}return {{delta_inst_rv}} {{drift_rv}} {{star_mean_rv}} {{planets_rv}}
         """.format(function_name=function_name)
@@ -521,6 +546,9 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         arg_list[self.key_whole]["param"] = []
         arg_list[self.key_whole]["kwargs"] = []
         param_nb[self.key_whole] = 0
+
+        # Add time in the kwargs entry of the whole system arg_list
+        arg_list[self.key_whole]["kwargs"].append("t")
 
         # Create for the instrument Delta RV (delta_inst_rv)
         inst_name = inst_model.instrument.name
@@ -555,12 +583,16 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
 
         # Create the text for the istrument RV drift (drift_rv)
         if inst_model.driftRV.main:
+            arg_list[self.key_whole]["kwargs"].append("tref")
             if inst_model.driftRV.free:
-                drift_rv = "p[{}] * t + ".format(param_nb[self.key_whole])
+                drift_rv = "p[{}] * (t - tref) + ".format(param_nb[self.key_whole])
                 param_nb[self.key_whole] += 1
                 arg_list[self.key_whole]["param"].append(inst_model.driftRV.full_name)
             else:
-                drift_rv = "{} * t + ".format(inst_model.driftRV.value)
+                if inst_model.driftRV.value != 0.0:
+                    drift_rv = "{} * (t - tref) + ".format(inst_model.driftRV.value)
+                else:
+                    drift_rv = ""
         else:
             drift_rv = ""
 
@@ -640,9 +672,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             logger.debug("text of {object} RV simulator function :\n{text_func}"
                          "".format(object=planet.name, text_func=text_def_func[planet.name]))
 
-            # Add time in the kwargs entry of the planet arg_list
-            arg_list[planet.name]["kwargs"].append("t")
-
         # Finalise the  text of whole system RV simulator function
         text_def_func[self.key_whole] = (template_function.
                                          format(object=self.key_whole, preambule=preambule_whole,
@@ -651,9 +680,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                                                 planets_rv=whole_planets_rv))
         logger.debug("text of {object} RV simulator function :\n{text_func}"
                      "".format(object=self.key_whole, text_func=text_def_func[self.key_whole]))
-
-        # Add time in the kwargs entry of the whole system arg_list
-        arg_list[self.key_whole]["kwargs"].append("t")
 
         # Create and fill the output dictionnary containing the datasimulators functions.
         dico_docf = dict.fromkeys(text_def_func.keys(), None)
@@ -671,16 +697,15 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def _create_datasimulator_LC(self, inst_model):
         """Return datasimulator functions.
 
-        A datasimualtor function is created for the whole dataset_database and for each instrument
-        model individually.
+        A datasimualtor function is created for the whole dataset_database and for each planet
+        individually.
 
         :param Instrument_Model inst_model: instance of Instrument_Model
 
         ----
         Returns:
-            - 1 data simulator function for the whole dataset.
-            - 3 levels dictionary with instrument category, instrument name, instrument model
-            containing function that take parameters values and return simulated data.
+            - A dictionary with DocFunctions containing the data simulator function for the whole
+             system ("whole") and for the each planet individually ("planet_name")
         """
         # Get the star object.
         # star = self.stars[list(self.stars.keys())[0]]
@@ -708,7 +733,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         function_name = ("LCsim_{{object}}_{instmod_fullname}"
                          "".format(instmod_fullname=inst_model.full_name))
         template_function = """
-        def {function_name}(p, t):
+        def {function_name}(p, t, tref=None):
         {{tab}}{{preambule}}
         {{tab}}return 1 {{delta_oot}} {{drift_oot}} {{planets_lc}}
         """.format(function_name=function_name)
@@ -721,6 +746,9 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         arg_list[self.key_whole]["kwargs"] = []
         param_nb[self.key_whole] = 0
 
+        # Add time in the kwargs entry of the whole system arg_list
+        arg_list[self.key_whole]["kwargs"].append("t")
+
         # Create text for the instrument DeltaOOT (delta_oot)
         inst_name = inst_model.instrument.name
         if inst_model.DeltaOOT.main:
@@ -729,18 +757,27 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                 param_nb[self.key_whole] += 1
                 arg_list[self.key_whole]["param"].append(inst_model.DeltaOOT.full_name)
             else:
-                delta_oot = "+ {}".format(inst_model.DeltaOOT.value)
+                if inst_model.DeltaOOT.value != 0.0:
+                    delta_oot = "+ {}".format(inst_model.DeltaOOT.value)
+                else:
+                    delta_oot = ""
         else:
             delta_oot = ""  # If no deltaOOT is main, I still need an empty string
 
         # Create the text for the instrument OOT drift (drift_oot)
         if inst_model.driftOOT.main:
+            arg_list[self.key_whole]["kwargs"].append("tref")
             if inst_model.driftOOT.free:
-                drift_oot = "+ p[{}] * (t - t.min())".format(param_nb[self.key_whole])
+                # drift_oot = "+ p[{}] * (t - t.min())".format(param_nb[self.key_whole])
+                drift_oot = "+ p[{}] * (t - tref)".format(param_nb[self.key_whole])
                 param_nb[self.key_whole] += 1
                 arg_list[self.key_whole]["param"].append(inst_model.driftOOT.full_name)
             else:
-                drift_oot = "+ {} * (t - t.min())".format(inst_model.driftOOT.value)
+                # drift_oot = "+ {} * (t - t.min())".format(inst_model.driftOOT.value)
+                if inst_model.driftOOT.value != 0.0:
+                    drift_oot = "+ {} * (t - tref)".format(inst_model.driftOOT.value)
+                else:
+                    drift_oot = ""
         else:
             drift_oot = ""
 
@@ -897,15 +934,389 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             logger.debug("text of {object} LC simulator function :\n{text_func}"
                          "".format(object=planet.name, text_func=text_def_func[planet.name]))
 
-            # Add time in the kwargs entry of the planet arg_list
-            arg_list[planet.name]["kwargs"].append("t")
-
         # Finalise the  text of whole system RV simulator function
         text_def_func[self.key_whole] = (template_function.
                                          format(object=self.key_whole, preambule=preambule_whole,
                                                 delta_oot=delta_oot, drift_oot=drift_oot,
                                                 planets_lc=whole_planets_lc, tab=tab))
         logger.debug("text of {object} LC simulator function :\n{text_func}"
+                     "".format(object=self.key_whole, text_func=text_def_func[self.key_whole]))
+
+        # Create and fill the output dictionnary containing the datasimulators functions.
+        dico_docf = dict.fromkeys(text_def_func.keys(), None)
+        for obj_key in dico_docf:
+            ldict["getecc_fast"] = getecc_fast
+            ldict["getomega_fast"] = getomega_fast
+            ldict["acos"] = acos
+            ldict["degrees"] = degrees
+            if self.transit_model == "batman":
+                ldict["TransitModel"] = TransitModel
+            else:
+                ldict["m"] = m_pytransit
+            exec(text_def_func[obj_key], ldict)
+            dico_docf[obj_key] = DocFunction(function=ldict[function_name.format(object=obj_key)],
+                                             arg_list=arg_list[obj_key])
+        return dico_docf
+
+    def _create_datasimulator_woinst_RV(self):
+        """Return datasimulator functions without instrument impact.
+
+        A datasimualtor function is created for the whole dataset_database and for each planet
+         individually.
+
+        ----
+        Returns:
+            Returns:
+                - A dictionary with DocFunctions containing the data simulator function for the
+                 whole system ("whole") and for the each planet individually ("planet_name")
+        """
+        # Get the star object.
+        star = self.stars[list(self.stars.keys())[0]]
+
+        # text_def_func is a dictionary which will received the text of the datasimulator functions
+        # It has several keys for several datasimulator functions:
+        #   - "whole" for the whole system with all the planets
+        #   - "b", "c", ... ("planet name") for only the contribution of one planet.
+        text_def_func = {}
+
+        # param_nb is a dictionary that will keep track of the number of parameter for each
+        # function in text_def_func (so the keys are the same).
+        param_nb = {}
+
+        # arg_list is a dictionary which will receive the argument list of the datasimulator
+        # function in text_def_func (so the keys are the same).
+        # The argument list of a function is itself a dictionary (OrderedDict) that get at least two
+        # keys:
+        #   - "param": list of the free parameters name in order
+        #   - "kwargs": list of the additional argument taht you need to provide to simulate the
+        #               data. For example the time
+        arg_list = {}
+
+        # Initialise the template function text
+        function_name = "RVsim_{{object}}_woinst"
+        template_function = """
+        def {function_name}(p, t):
+        {{tab}}{{preambule}}
+        {{tab}}return {{star_mean_rv}} {{planets_rv}}
+        """.format(function_name=function_name)
+        tab = "    "
+        template_function = dedent(template_function)
+
+        # Initialise arg_list and param_nb for key "whole"
+        arg_list[self.key_whole] = OrderedDict()
+        arg_list[self.key_whole]["param"] = []
+        arg_list[self.key_whole]["kwargs"] = []
+        param_nb[self.key_whole] = 0
+
+        # Create the text for the star mean RV (star_mean_rv)
+        if star.v0.free:
+            star_mean_rv = "p[{}]".format(param_nb[self.key_whole])
+            param_nb[self.key_whole] += 1
+            arg_list[self.key_whole]["param"].append(star.v0.full_name)
+        else:
+            star_mean_rv = "{}".format(star.v0.value)
+
+        # Save the param_nb and arg_list for the whole function before iterating over the planets
+        # text_def_func_before = text_def_func[self.key_whole]
+        param_nb_before = param_nb[self.key_whole]
+        arg_list_before = deepcopy(arg_list[self.key_whole])
+
+        # Iterate over the planets to create the preambules (preambule_planet and preambule_whole),
+        # the planets RV contribution (planet_rv and whole_planets_rv) and finalise the text of
+        # planets functions.
+        preambule_whole = ""
+        template_preambule = """
+        {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
+        {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+        {tab}tp_{planet} = gettp_fast({P}, {tc}, ecc_{planet}, omega_{planet})
+        """
+        template_planet_rv = ("+ pl_rv_array(t, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet},"
+                              " {P})")
+        whole_planets_rv = ""
+        for i, planet in enumerate(self.planets.values()):
+            # Initialise arg_list and param_nb for the current planet
+            arg_list[planet.name] = deepcopy(arg_list_before)
+            param_nb[planet.name] = param_nb_before
+
+            # Create two dictionaries which will contain the text for each planet parameter for the
+            # current planet and for the whole system.
+            params_planet = {}
+            params_whole = {}
+            # Create the text for each planet parameter for the current planet and for the whole
+            # system.
+            for param_name, param in zip(["K", "secosw", "sesinw", "tc", "P"],
+                                         [planet.K, planet.secosw, planet.sesinw, planet.tc,
+                                          planet.P]):
+                if param.free:
+                    param_text = "p[{}]"
+                    params_whole[param_name] = param_text.format(param_nb[self.key_whole])
+                    param_nb[self.key_whole] += 1
+                    arg_list[self.key_whole]["param"].append(param.full_name)
+                    params_planet[param_name] = param_text.format(param_nb[planet.name])
+                    param_nb[planet.name] += 1
+                    arg_list[planet.name]["param"].append(param.full_name)
+                else:
+                    params_whole[param_name] = "{}".format(param.value)
+                    params_planet[param_name] = params_whole[param_name]
+
+            # Create the preambule text that compute intermediate variables
+            preambule_planet = (dedent(template_preambule).
+                                format(planet=planet.name, secosw=params_planet["secosw"],
+                                       sesinw=params_planet["sesinw"], P=params_planet["P"],
+                                       tc=params_planet["tc"], tab=tab))
+            preambule_whole += (dedent(template_preambule).
+                                format(planet=planet.name, secosw=params_whole["secosw"],
+                                       sesinw=params_whole["sesinw"], P=params_whole["P"],
+                                       tc=params_whole["tc"], tab=tab))
+
+            # planets RV contribution (planet_rv and whole_planets_rv)
+            planet_rv = template_planet_rv.format(planet=planet.name, K=params_planet["K"],
+                                                  P=params_planet["P"])
+            whole_planets_rv += template_planet_rv.format(planet=planet.name, K=params_whole["K"],
+                                                          P=params_whole["P"])
+
+            # Finalise the  text of planet RV simulator function
+            text_def_func[planet.name] = (template_function.
+                                          format(object=planet.name, preambule=preambule_planet,
+                                                 star_mean_rv=star_mean_rv, planets_rv=planet_rv,
+                                                 tab=tab))
+            logger.debug("text of {object} RV simulator function :\n{text_func}"
+                         "".format(object=planet.name, text_func=text_def_func[planet.name]))
+
+            # Add time in the kwargs entry of the planet arg_list
+            arg_list[planet.name]["kwargs"].append("t")
+
+        # Finalise the  text of whole system RV simulator function
+        text_def_func[self.key_whole] = (template_function.
+                                         format(object=self.key_whole, preambule=preambule_whole,
+                                                star_mean_rv=star_mean_rv, tab=tab,
+                                                planets_rv=whole_planets_rv))
+        logger.debug("text of {object} RV simulator function :\n{text_func}"
+                     "".format(object=self.key_whole, text_func=text_def_func[self.key_whole]))
+
+        # Add time in the kwargs entry of the whole system arg_list
+        arg_list[self.key_whole]["kwargs"].append("t")
+
+        # Create and fill the output dictionnary containing the datasimulators functions.
+        dico_docf = dict.fromkeys(text_def_func.keys(), None)
+        for obj_key in dico_docf:
+            ldict = locals().copy()
+            ldict["getecc_fast"] = getecc_fast
+            ldict["getomega_fast"] = getomega_fast
+            ldict["gettp_fast"] = gettp_fast
+            ldict["pl_rv_array"] = pl_rv_array
+            exec(text_def_func[obj_key], ldict)
+            dico_docf[obj_key] = DocFunction(function=ldict[function_name.format(object=obj_key)],
+                                             arg_list=arg_list[obj_key])
+        return dico_docf
+
+    def _create_datasimulator_woinst_LC(self, LD_parcont, supersamp=1, exptime=0.02043402778):
+        """Return datasimulator functions that doesn't include any instrument effect.
+
+        A datasimualtor function is created for the whole dataset_database and for each planet
+        individually.
+
+        :param TBC LD_parcont: Limb darkening parameter container
+        :param int supersamp: Supersampling for the model
+        :param float exptime: Exposure time for the model
+
+        ----
+        Returns:
+            - A dictionary with DocFunctions containing the data simulator function for the whole
+             system ("whole") and for the each planet individually ("planet_name")
+        """
+        # Get the star object.
+        # star = self.stars[list(self.stars.keys())[0]]
+
+        # text_def_func is a dictionary which will received the text of the datasimulator functions
+        # It has several keys for several datasimulator functions:
+        #   - "whole" for the whole system with all the planets
+        #   - "b", "c", ... ("planet name") for only the contribution of one planet.
+        text_def_func = {}
+
+        # param_nb is a dictionary that will keep track of the number of parameter for each
+        # function in text_def_func (so the keys are the same).
+        param_nb = {}
+
+        # arg_list is a dictionary which will receive the argument list of the datasimulator
+        # function in text_def_func (so the keys are the same).
+        # The argument list of a function is itself a dictionary (OrderedDict) that get at least two
+        # keys:
+        #   - "param": list of the free parameters name in order
+        #   - "kwargs": list of the additional argument taht you need to provide to simulate the
+        #               data. For example the time
+        arg_list = {}
+
+        # Initialise the template function text
+        function_name = "LCsim_{{object}}_woinst"
+        template_function = """
+        def {function_name}(p, t):
+        {{tab}}{{preambule}}
+        {{tab}}return 1 {{planets_lc}}
+        """.format(function_name=function_name)
+        tab = "    "
+        template_function = dedent(template_function)
+
+        # Initialise arg_list and param_nb for key "whole"
+        arg_list[self.key_whole] = OrderedDict()
+        arg_list[self.key_whole]["param"] = []
+        arg_list[self.key_whole]["kwargs"] = []
+        param_nb[self.key_whole] = 0
+
+        # Create the template preambule
+        if self.transit_model == "batman":
+            template_preambule = """
+            {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
+            {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
+            {tab}inc_{planet} = degrees(acos({cosinc}))
+            {tab}params_{planet}.t0 = {tc}
+            {tab}params_{planet}.per = {P}
+            {tab}params_{planet}.rp = {Rrat}
+            {tab}params_{planet}.a = {aR}
+            {tab}params_{planet}.inc = inc_{planet}
+            {tab}params_{planet}.ecc = ecc_{planet}
+            {tab}params_{planet}.w = omega_{planet}
+            {tab}params_{planet}.limb_dark = '{ld_mod_name}'
+            {tab}params_{planet}.u = {ld_param_list}
+            """
+        else:
+            template_preambule = """
+            {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
+            {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+            {tab}inc_{planet} = acos({cosinc})
+            """
+        template_preambule = dedent(template_preambule)
+
+        # Add the initialisation of the TransitModel to the template
+        if supersamp > 1:
+            if self.transit_model == "batman":
+                template_preambule += ("{{tab}}m_{{planet}} = TransitModel(params_{{planet}}, t, "
+                                       "supersample_factor={supersamp}, exp_time={exptime})\n"
+                                       "".format(supersamp=supersamp, exptime=exptime))
+            else:
+                m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime,
+                                         model=LD_parcont.ld_type)
+        else:
+            if self.transit_model == "batman":
+                template_preambule += ("{tab}m_{planet} = TransitModel(params_{planet}, t)\n")
+            else:
+                m_pytransit = MandelAgol(model=LD_parcont.ld_type)
+
+        # Create the ld_param_list
+        ld_param_list = "["
+        for param in LD_parcont.get_list_params(main=True):
+            if param.free:
+                ld_param_list += "p[{}], ".format(param_nb[self.key_whole])
+                param_nb[self.key_whole] += 1
+                arg_list[self.key_whole]["param"].append(param.full_name)
+            else:
+                ld_param_list += "{}, ".format(param.value)
+        ld_param_list += "]"
+
+        # Create the text for template_planet_lc
+        if self.transit_model == "batman":
+            template_planet_lc = ("+ m_{planet}.light_curve(params_{planet}) - 1 ")
+        else:
+            template_planet_lc = ("+ m.evaluate(t, {Rrat}, {ld_param_list}, {tc}, {P}, {aR}, "
+                                  "inc_{planet}, ecc_{planet}, omega_{planet}) - 1 ")
+
+        # Save the param_nb and arg_list for the whole function before iterating over the planets
+        # text_def_func_before = text_def_func[self.key_whole]
+        param_nb_before = param_nb[self.key_whole]
+        arg_list_before = deepcopy(arg_list[self.key_whole])
+
+        # Initialise the local dictionary for the creation of the datasim functions by exec
+        ldict = locals().copy()
+
+        # Initialise the text for the whole system preambule
+        preambule_whole = ""
+        whole_planets_lc = ""
+        for i, planet in enumerate(self.planets.values()):
+            # Initialise arg_list and param_nb for the current planet
+            arg_list[planet.name] = deepcopy(arg_list_before)
+            param_nb[planet.name] = param_nb_before
+
+            # Create the params_planet object
+            ldict["params_{planet}".format(planet=planet.name)] = TransitParams()
+
+            # Create two dictionaries which will contain the text for each planet parameter for the
+            # current planet and for the whole system.
+            params_planet = {}
+            params_whole = {}
+            # Create the text for each planet parameter for the current planet and for the whole
+            # system.
+            for param_name, param in zip(["secosw", "sesinw", "cosinc", "tc", "P", "Rrat", "aR"],
+                                         [planet.secosw, planet.sesinw, planet.cosinc, planet.tc,
+                                          planet.P, planet.Rrat, planet.aR]):
+                if param.free:
+                    param_text = "p[{}]"
+                    params_whole[param_name] = param_text.format(param_nb[self.key_whole])
+                    param_nb[self.key_whole] += 1
+                    arg_list[self.key_whole]["param"].append(param.full_name)
+                    params_planet[param_name] = param_text.format(param_nb[planet.name])
+                    param_nb[planet.name] += 1
+                    arg_list[planet.name]["param"].append(param.full_name)
+                else:
+                    params_whole[param_name] = "{}".format(param.value)
+                    params_planet[param_name] = params_whole[param_name]
+
+            # Create the preambule text that compute intermediate variables
+            if self.transit_model == "batman":
+                preambule_planet = (template_preambule.
+                                    format(planet=planet.name, secosw=params_planet["secosw"],
+                                           sesinw=params_planet["sesinw"], tc=params_planet["tc"],
+                                           cosinc=params_planet["cosinc"], P=params_planet["P"],
+                                           Rrat=params_planet["Rrat"], aR=params_planet["aR"],
+                                           ld_mod_name=LD_parcont.ld_type,
+                                           ld_param_list=ld_param_list, tab=tab))
+                preambule_whole += (template_preambule.
+                                    format(planet=planet.name, secosw=params_whole["secosw"],
+                                           sesinw=params_whole["sesinw"], tc=params_whole["tc"],
+                                           cosinc=params_whole["cosinc"], P=params_whole["P"],
+                                           Rrat=params_whole["Rrat"], aR=params_whole["aR"],
+                                           ld_mod_name=LD_parcont.ld_type,
+                                           ld_param_list=ld_param_list, tab=tab))
+            else:
+                preambule_planet = (template_preambule.
+                                    format(planet=planet.name, secosw=params_planet["secosw"],
+                                           sesinw=params_planet["sesinw"],
+                                           cosinc=params_planet["cosinc"], tab=tab))
+                preambule_whole += (template_preambule.
+                                    format(planet=planet.name, secosw=params_whole["secosw"],
+                                           sesinw=params_whole["sesinw"],
+                                           cosinc=params_whole["cosinc"], tab=tab))
+
+            # planets LC contribution (planet_lc and whole_planets_lc)
+            if self.transit_model == "batman":
+                planet_lc = template_planet_lc.format(planet=planet.name)
+                whole_planets_lc += template_planet_lc.format(planet=planet.name)
+            else:
+                planet_lc = template_planet_lc.format(planet=planet.name, aR=params_planet["aR"],
+                                                      Rrat=params_planet["Rrat"],
+                                                      tc=params_planet["tc"], P=params_planet["P"],
+                                                      ld_param_list=ld_param_list)
+                whole_planets_lc += template_planet_lc.format(planet=planet.name,
+                                                              aR=params_whole["aR"],
+                                                              Rrat=params_whole["Rrat"],
+                                                              tc=params_whole["tc"],
+                                                              P=params_whole["P"],
+                                                              ld_param_list=ld_param_list)
+
+            # Finalise the  text of planet LC simulator function
+            text_def_func[planet.name] = (template_function.
+                                          format(object=planet.name, preambule=preambule_planet,
+                                                 planets_lc=planet_lc, tab=tab))
+            logger.debug("text of {object} LC simulator function wo inst:\n{text_func}"
+                         "".format(object=planet.name, text_func=text_def_func[planet.name]))
+
+            # Add time in the kwargs entry of the planet arg_list
+            arg_list[planet.name]["kwargs"].append("t")
+
+        # Finalise the  text of whole system RV simulator function
+        text_def_func[self.key_whole] = (template_function.
+                                         format(object=self.key_whole, preambule=preambule_whole,
+                                                planets_lc=whole_planets_lc, tab=tab))
+        logger.debug("text of {object} LC simulator function wo inst:\n{text_func}"
                      "".format(object=self.key_whole, text_func=text_def_func[self.key_whole]))
 
         # Add time in the kwargs entry of the whole system arg_list

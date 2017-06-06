@@ -43,7 +43,8 @@ class RV_Dataset(Dataset):
         pandas_df = self.get_data()
         return {"data": array(pandas_df["RV"]),
                 "data_err": array(pandas_df["RV_err"]),
-                "t": array(pandas_df["time"])}
+                "t": array(pandas_df["time"]),
+                "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
         pandas_df = self.get_data()

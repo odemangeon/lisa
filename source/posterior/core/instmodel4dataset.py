@@ -36,7 +36,7 @@ class Instmodel4Dataset(LockableDict):
        and update it with the datasets provided.
     """
     def __init__(self, list_datasetnames=None, list_instmodels=None, lock=None):
-        super(Instmodel4Dataset, self).__init__(ordered=False, lock=lock)
+        super(Instmodel4Dataset, self).__init__(ordered=True, lock=lock)
         if list_datasetnames is not None:
             self.update(list_datasetnames, list_instmodels)
 
