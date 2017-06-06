@@ -12,7 +12,9 @@ run/
 uml/
 
 # Susana's stuff
-data/images
+susana/images/
+data/HD106315/
+
 
 # C extensions
 *.so
