@@ -460,6 +460,24 @@ def getTeqpl(Teffst, aR, A=0):
     """
     return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR)
 
+def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022):
+    """Return the scale height of atmosphere in kilometers
+
+    Relation obtained from Guillaume and it works for hot Jupiters
+
+    :param float/np.ndarray mp: Planetary mass in jupiter mass
+    :param float/np.ndarray rp: Planetary mass in jupiter radius
+    :param float/np.ndarray Teqpl: Equilibrium temperature of the planet
+    :param float/np.ndarray mu: mean molecular weight kg/mol (default: 0.0022) (from guillaume)
+
+    :return float/np.ndarray scaleheight: Scale height in kilometers
+    """
+    rgas = 8.3144621 #The gas constant (also known as the molar, universal, or ideal gas constant, J⋅mol−1⋅K−1
+    gra=(g * Mp * mjup) / ( Rp * rjup)**2.
+
+    h = (rgas * Teqpl) / (mu * gra)
+    return h/1e3
+
 
 def get_secondary_chains(model, chaininterpret, star_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
