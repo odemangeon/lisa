@@ -30,14 +30,14 @@ def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=1):
     return result
 
 
-def check_name(name):
+def check_name(name, verbose=1):
     """Check that there is no '_' in name and remove it if there is."""
-    return check_name_for_prohibitedchar(name=name, prohibitedchars="_")
+    return check_name_for_prohibitedchar(name=name, prohibitedchars="_", verbose=verbose)
 
 
-def check_name_code(name):
+def check_name_code(name, verbose=1):
     """Check that there is no '-' in name and remove it if there is."""
-    return check_name_for_prohibitedchar(name=name, prohibitedchars="-")
+    return check_name_for_prohibitedchar(name=name, prohibitedchars="-", verbose=verbose)
 
 
 class Name(object):

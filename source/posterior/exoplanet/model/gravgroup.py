@@ -674,7 +674,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             # Finalise the  text of planet RV simulator function
             text_def_func[planet.name] = (template_function.
                                           format(object=planet.name, preambule=preambule_planet,
-                                                 delta_inst_rv=delta_inst_rv, drift_rv=drift_rv,
+                                                 delta_inst_rv=delta_inst_rv,
                                                  star_mean_rv=star_mean_rv, planets_rv=planet_rv,
                                                  tab=tab))
             logger.debug("text of {object} RV simulator function :\n{text_func}"
@@ -683,7 +683,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         # Finalise the  text of whole system RV simulator function
         text_def_func[self.key_whole] = (template_function.
                                          format(object=self.key_whole, preambule=preambule_whole,
-                                                delta_inst_rv=delta_inst_rv, drift_rv=drift_rv,
+                                                delta_inst_rv=delta_inst_rv,
                                                 star_mean_rv=star_mean_rv, tab=tab,
                                                 planets_rv=whole_planets_rv))
         logger.debug("text of {object} RV simulator function :\n{text_func}"
