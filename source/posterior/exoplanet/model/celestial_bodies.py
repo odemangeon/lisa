@@ -161,6 +161,7 @@ class Star(CelestialBody):
     """
 
     __category__ = "stars"
+    __RVdrift_basename__ = "RVdrift"
 
     def __init__(self, gravgroup=None, name=""):
         """docstring Planet init method.
@@ -203,7 +204,38 @@ class Star(CelestialBody):
         self.add_parameter(Parameter(name="F", name_prefix=self.full_name, main=False))
         ## Metallicity
         self.add_parameter(Parameter(name="feh", name_prefix=self.full_name, main=False))
-        ## dict of the list of limb darkening coefficients for an instrument
-        self.ld_coeff = {}  # Dict or vector
-        ## dict of limb darkening law for an instrument
-        self.ld_models = {}
+
+    def init_RVdrift_parameters(self, with_RVdrift=False, RVdrift_order=1):
+        """Initialise/Create the required parameter for the modelling of the RV_drift."""
+        self.__with_RVdrift = with_RVdrift
+        self.__RVdrift_order = RVdrift_order
+        if with_RVdrift:
+            if isinstance(RVdrift_order, int) and RVdrift_order >= 1:
+                for order in range(1, RVdrift_order + 1):
+                    self.add_parameter(Parameter(name=(self.get_RVdrift_param_name(order)),
+                                                 name_prefix=self.full_name,
+                                                 main=True,
+                                                 unit="[K].s^(-{})".format(order)))
+            else:
+                raise ValueError("If you want to model an RV drift you need to "
+                                 "provide an RVdrift_order that above 1 !")
+
+    @property
+    def with_RVdrift(self):
+        """True if the stellar model includes an RV drift."""
+        try:
+            return self.__with_RVdrift
+        except:
+            return False
+
+    @property
+    def RVdrift_order(self):
+        """Return the order of the RV drift model or None, if it's not modeled."""
+        if self.with_RVdrift:
+            return self.__RVdrift_order
+        else:
+            return None
+
+    def get_RVdrift_param_name(self, order):
+        """Return the parameter name of the coefficient of the RV drift model."""
+        return "{}{}".format(self.__RVdrift_basename__, order)

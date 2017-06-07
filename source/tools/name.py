@@ -95,9 +95,9 @@ class Name(object):
     @property
     def name_code(self):
         """Return the name of the instance that can be used in code."""
-        return check_name_code(self.name)
+        return check_name_code(self.name, verbose=0)
 
     @property
     def full_name_code(self):
         """Return the full name of the CelestialBody."""
-        return check_name_code(self.full_name)
+        return check_name_code(self.full_name, verbose=0)
