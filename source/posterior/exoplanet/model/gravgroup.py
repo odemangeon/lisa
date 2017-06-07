@@ -536,7 +536,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         template_function = """
         def {function_name}(p, t, tref=None):
         {{tab}}{{preambule}}
-        {{tab}}return {{delta_inst_rv}} {{drift_rv}} {{star_mean_rv}} {{planets_rv}}
+        {{tab}}return {{delta_inst_rv}} {{star_mean_rv}} {{planets_rv}}
         """.format(function_name=function_name)
         tab = "    "
         template_function = dedent(template_function)
@@ -581,21 +581,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                 else:
                     delta_inst_rv += "{} + ".format(inst_model.DeltaRV.value)
 
-        # Create the text for the istrument RV drift (drift_rv)
-        if inst_model.driftRV.main:
-            arg_list[self.key_whole]["kwargs"].append("tref")
-            if inst_model.driftRV.free:
-                drift_rv = "p[{}] * (t - tref) + ".format(param_nb[self.key_whole])
-                param_nb[self.key_whole] += 1
-                arg_list[self.key_whole]["param"].append(inst_model.driftRV.full_name)
-            else:
-                if inst_model.driftRV.value != 0.0:
-                    drift_rv = "{} * (t - tref) + ".format(inst_model.driftRV.value)
-                else:
-                    drift_rv = ""
-        else:
-            drift_rv = ""
-
         # Create the text for the star mean RV (star_mean_rv)
         if star.v0.free:
             star_mean_rv = "p[{}]".format(param_nb[self.key_whole])
@@ -603,6 +588,29 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
             arg_list[self.key_whole]["param"].append(star.v0.full_name)
         else:
             star_mean_rv = "{}".format(star.v0.value)
+        if star.with_RVdrift:
+            for order in range(1, star.RVdrift_order + 1):
+                RVdrift_param_name = star.get_RVdrift_param_name(order)
+                RVdrift_param_fullname = star.parameters[RVdrift_param_name].full_name
+                if star.parameters[RVdrift_param_name].main:
+                    value_not0 = True
+                    if star.parameters[RVdrift_param_name].free:
+                        star_mean_rv += "+ p[{}]".format(param_nb[self.key_whole])
+                        param_nb[self.key_whole] += 1
+                        arg_list[self.key_whole]["param"].append(RVdrift_param_fullname)
+                    else:
+                        if inst_model.parameters[RVdrift_param_name].value != 0.0:
+                            star_mean_rv += "+ {}".format(inst_model.parameters[RVdrift_param_name].
+                                                          value)
+                        else:
+                            value_not0 = False
+                    if value_not0:
+                        if "tref" not in arg_list[self.key_whole]["kwargs"]:
+                            arg_list[self.key_whole]["kwargs"].append("tref")
+                        if order == 1:
+                            star_mean_rv += " * (t - tref) "
+                        elif order > 1:
+                            star_mean_rv += " * (t - tref)**{} ".format(order)
 
         # Save the param_nb and arg_list for the whole function before iterating over the planets
         # text_def_func_before = text_def_func[self.key_whole]
@@ -763,7 +771,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                         arg_list[self.key_whole]["param"].append(OOT_param_fullname)
                     else:
                         if inst_model.parameters[OOT_param_name].value != 0.0:
-                            oot_var += "+ {}".format(OOT_param_name.value)
+                            oot_var += "+ {}".format(inst_model.parameters[OOT_param_name].value)
                         else:
                             value_not0 = False
                     if value_not0 and order > 0:
@@ -775,38 +783,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                             oot_var += " * (t - tref)**{} ".format(order)
                     elif value_not0 and order == 0:
                         oot_var += " "
-
-        # # Create text for the instrument DeltaOOT (delta_oot)
-        # #inst_name = inst_model.instrument.name
-        # if inst_model.DeltaOOT.main:
-        #     if inst_model.DeltaOOT.free:
-        #         delta_oot = "+ p[{}]".format(param_nb[self.key_whole])
-        #         param_nb[self.key_whole] += 1
-        #         arg_list[self.key_whole]["param"].append(inst_model.DeltaOOT.full_name)
-        #     else:
-        #         if inst_model.DeltaOOT.value != 0.0:
-        #             delta_oot = "+ {}".format(inst_model.DeltaOOT.value)
-        #         else:
-        #             delta_oot = ""
-        # else:
-        #     delta_oot = ""  # If no deltaOOT is main, I still need an empty string
-        #
-        # # Create the text for the instrument OOT drift (drift_oot)
-        # if inst_model.driftOOT.main:
-        #     arg_list[self.key_whole]["kwargs"].append("tref")
-        #     if inst_model.driftOOT.free:
-        #         # drift_oot = "+ p[{}] * (t - t.min())".format(param_nb[self.key_whole])
-        #         drift_oot = "+ p[{}] * (t - tref)".format(param_nb[self.key_whole])
-        #         param_nb[self.key_whole] += 1
-        #         arg_list[self.key_whole]["param"].append(inst_model.driftOOT.full_name)
-        #     else:
-        #         # drift_oot = "+ {} * (t - t.min())".format(inst_model.driftOOT.value)
-        #         if inst_model.driftOOT.value != 0.0:
-        #             drift_oot = "+ {} * (t - tref)".format(inst_model.driftOOT.value)
-        #         else:
-        #             drift_oot = ""
-        # else:
-        #     drift_oot = ""
 
         # Create the template preambule
         if self.transit_model == "batman":
