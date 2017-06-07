@@ -151,16 +151,27 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                 String which refers to an available Core_Model Subclass that has been defined in the
                 model_setup_file.
         """
+        # Load the model_setup_file.py to get all the available  models
         if load_setup:
             manager_model.load_setup()
+
+        # If the name of the object studied by the model is not provided put default
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
+
+        # Get the CoreModel subclass associated to the provided category
         model_subclass = manager_model.get_model_subclass(category)
+
+        # Get the dictionary giving the noise model category associated to each instrument model
+        # (designated by their full name)
         noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
+
+        # Create the model instance
         self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
                                       instmodel4dataset=self.instmodel4dataset,
                                       l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
                                       **kwargs)
+
         self.model.set_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
         self.lock()
         logger.info("Model defined with name {} !".format(self.model.name))

@@ -96,7 +96,7 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the RV instrument models parameters
         self.instmodel_RV_parametrisation(driftRV_main=with_driftRV, DeltaRV_main=with_DeltaRV)
 
-    def apply_LC_EXOFAST_param(self, with_DeltaOOT=False, with_driftOOT=False):
+    def apply_LC_EXOFAST_param(self, with_OOT_var=False, OOT_var_order=1):
         """Apply the parametrisation for the fit of LC only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -115,8 +115,8 @@ class GravGroup_Parametrisation(object):
 
         # Init and Fill the dictionary parametrisation_kwargs
         self.__parametrisation_kwargs = {}
-        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
-        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
+        self.__parametrisation_kwargs["with_OOT_var"] = with_OOT_var
+        self.__parametrisation_kwargs["OOT_var_order"] = OOT_var_order
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -129,13 +129,13 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].sesinw.main = True
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
+        self.instmodel_LC_parametrisation(with_OOT_var=with_OOT_var, OOT_var_order=OOT_var_order)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
 
-    def apply_RV_LC_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False, with_DeltaOOT=False,
-                                  with_driftOOT=False):
+    def apply_RV_LC_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False, with_OOT_var=False,
+                                  OOT_var_order=1):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -157,8 +157,8 @@ class GravGroup_Parametrisation(object):
         self.__parametrisation_kwargs = {}
         self.__parametrisation_kwargs["with_driftRV"] = with_driftRV
         self.__parametrisation_kwargs["with_DeltaRV"] = with_DeltaRV
-        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
-        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
+        self.__parametrisation_kwargs["with_OOT_var"] = with_OOT_var
+        self.__parametrisation_kwargs["OOT_var_order"] = OOT_var_order
 
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
@@ -178,7 +178,7 @@ class GravGroup_Parametrisation(object):
         self.instmodel_RV_parametrisation(DeltaRV_main=with_DeltaRV, driftRV_main=with_driftRV)
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
+        self.instmodel_LC_parametrisation(with_OOT_var=with_OOT_var, OOT_var_order=OOT_var_order)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
@@ -219,12 +219,12 @@ class GravGroup_Parametrisation(object):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
 
-    def instmodel_LC_parametrisation(self, DeltaOOT_main=False, driftOOT_main=False):
+    def instmodel_LC_parametrisation(self, with_OOT_var=False, OOT_var_order=1):
         """Make all the DeltaOOT arguments of all the LC instrument models main parameters."""
         list_instmodel = self.get_instmodel_objs(inst_cat="LC")
         for inst_model in list_instmodel:
-            inst_model.DeltaOOT.main = DeltaOOT_main
-            inst_model.driftOOT.main = driftOOT_main
+            inst_model.init_OOT_var_parameters(with_OOT_var=with_OOT_var,
+                                               OOT_var_order=OOT_var_order)
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
