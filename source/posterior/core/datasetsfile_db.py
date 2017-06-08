@@ -84,24 +84,43 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
 
         Also update the datasetsfile_content.
         """
+        # Load the noise_model_setup_file.py to get all the available noise models
         if load_setup:
             mgr_noisemodel.load_setup()
+
+        # Read the dataset file and load its content in dictionary dico_df.
+        # Each keys is the path to a dataset file and contain a dictionary with two keys:
+        # "inst_mod" giving the instrument model's name and "noise_mod" giving the noise model's
+        # name
         dico_df = read_datasets_file(datasetsfile_path)
         logger.debug("Content of the datasets file: {}".format(dico_df))
+
+        # For each dataset file
         for dataset_filepath in dico_df:
+            # Extract the dataset name and filename from its path and file the path4name dictionary
+            # giving the dataset path associated to its name
             dataset_filename = get_filename_from_file_path(dataset_filepath)
             dataset_name = dataset_name_from_file_name(dataset_filename)
             logger.debug("load info regarding dataset {} at path: {}".format(dataset_name,
                                                                              dataset_filepath))
             self.path4name[dataset_name] = dataset_filepath
+
+            # Extract, instrument category, instrument name, ... from the dataset filename
             dataset_info = interpret_data_filename(dataset_filename)
             inst_cat = dataset_info["inst_category"]
             inst_name = dataset_info["inst_name"]
             inst_model = dico_df[dataset_filepath]["inst_mod"]
             noise_model = dico_df[dataset_filepath]["noise_mod"]
+
+            # Store the instrument model name associated to a dataset name in instmodel4dataset
             self.instmodel4dataset[dataset_name] = inst_model
+
+            # Store the noise model subclass associated to an instrument model into datasetfile_db
+            # (self)
             self[inst_cat][inst_name][inst_model] = (mgr_noisemodel.
                                                      get_noisemodel_subclass(noise_model))
+
+        # Store the datasetsfile path into the read only datasetsfile_path property
         self.__datasetsfile_path = datasetsfile_path
 
     def get_noisemod4instmodfullname(self):

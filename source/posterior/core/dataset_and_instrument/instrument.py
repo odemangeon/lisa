@@ -50,6 +50,15 @@ def build_instmod_fullname(inst_model, inst_name):
     return "{}_{}".format(inst_name, inst_model)
 
 
+# class MethodIntercept(type):
+#
+#     def __getattr__(cls, name):
+#         try:
+#             return lambda *args, **kwargs: getattr(cls, name)(*args, **kwargs)
+#         except:
+#             raise AttributeError
+
+
 class Instrument_Model(Core_ParamContainer):
     """Docstring of Instrument_Model class."""
 
@@ -67,6 +76,14 @@ class Instrument_Model(Core_ParamContainer):
         for name, dico in instrument.params_model.items():
             self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
                                          **dico))
+
+    def __getattr__(self, name):
+        if hasattr(self.instrument, name):
+            if hasattr(getattr(self.instrument, name), "__call__"):
+                return lambda *args, **kwargs: getattr(self.instrument, name)(inst_model=self,
+                                                                              *args, **kwargs)
+        # Default behaviour
+        return super(Instrument_Model, self).__getattr__(name)
 
     @property
     def noise_model(self):

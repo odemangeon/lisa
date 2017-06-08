@@ -107,10 +107,12 @@ class Manager_Inst_Dataset(object):
                 name           : string,
                     name of the instrument
             """
-            params_model = self.get_inst_subclass(inst_category).params_model
-            self.add_available_inst(self._Default_Instrument(category=inst_category,
-                                                             name=name,
-                                                             params_model=params_model))
+            # params_model = self.get_inst_subclass(inst_category).params_model
+            new_inst = self.get_inst_subclass(inst_category)(name)
+            # self.add_available_inst(self._Default_Instrument(category=inst_category,
+            #                                                  name=name,
+            #                                                  params_model=params_model))
+            self.add_available_inst(new_inst)
 
         def load_setup(self):
             """Load the configuration of instruments and datasets define in the setup file.

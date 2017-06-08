@@ -8,7 +8,6 @@ The Objective of this file is to define the different type of parametrisation av
 from logging import getLogger
 from collections import Counter
 
-from ....tools.convert import getecc_fast, getomega_fast
 
 ## Logger Object
 logger = getLogger()
@@ -59,7 +58,7 @@ class GravGroup_Parametrisation(object):
         """Apply the parametrisation pointed by the parametrisation property."""
         self.available_parametrisation_dico[self.parametrisation](*args, **kwargs)
 
-    def apply_RV_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False):
+    def apply_RV_EXOFAST_param(self, with_DeltaRV=False, with_RVdrift=False, RVdrift_order=1):
         """Apply the parametrisation for the fit of RV only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -78,12 +77,15 @@ class GravGroup_Parametrisation(object):
 
         # Init and Fill the dictionary parametrisation_kwargs
         self.__parametrisation_kwargs = {}
-        self.__parametrisation_kwargs["with_driftRV"] = with_driftRV
         self.__parametrisation_kwargs["with_DeltaRV"] = with_DeltaRV
+        self.__parametrisation_kwargs["with_RVdrift"] = with_RVdrift
+        self.__parametrisation_kwargs["RVdrift_order"] = RVdrift_order
 
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
+        (self.paramcontainers["stars"][star_name].
+         init_RVdrift_parameters)(with_RVdrift=with_RVdrift, RVdrift_order=RVdrift_order)
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -94,9 +96,9 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].tc.main = True
 
         # Apply the parametrisation to the RV instrument models parameters
-        self.instmodel_RV_parametrisation(driftRV_main=with_driftRV, DeltaRV_main=with_DeltaRV)
+        self.instmodel_RV_parametrisation(DeltaRV_main=with_DeltaRV)
 
-    def apply_LC_EXOFAST_param(self, with_DeltaOOT=False, with_driftOOT=False):
+    def apply_LC_EXOFAST_param(self, with_OOT_var=False, OOT_var_order=1):
         """Apply the parametrisation for the fit of LC only.
 
         Apply the parametrisation for Radial Velocity data described in Eastman, J., et
@@ -115,8 +117,8 @@ class GravGroup_Parametrisation(object):
 
         # Init and Fill the dictionary parametrisation_kwargs
         self.__parametrisation_kwargs = {}
-        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
-        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
+        self.__parametrisation_kwargs["with_OOT_var"] = with_OOT_var
+        self.__parametrisation_kwargs["OOT_var_order"] = OOT_var_order
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -129,13 +131,13 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].sesinw.main = True
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
+        self.instmodel_LC_parametrisation(with_OOT_var=with_OOT_var, OOT_var_order=OOT_var_order)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
 
-    def apply_RV_LC_EXOFAST_param(self, with_driftRV=False, with_DeltaRV=False, with_DeltaOOT=False,
-                                  with_driftOOT=False):
+    def apply_RV_LC_EXOFAST_param(self, with_DeltaRV=False, with_RVdrift=False, RVdrift_order=1,
+                                  with_OOT_var=False, OOT_var_order=1):
         """Apply the parametrisation for the fit of LC and RV.
 
         Apply the parametrisation for Radial Velocity and Transit data described in Eastman, J., et
@@ -153,16 +155,19 @@ class GravGroup_Parametrisation(object):
         # a warning
         self.__check_dataset_instcat(["RV", "LC"])
 
-        # Init and Fill the dictionary parametrisation_kwargs
+        # Init and Fill the dictionary parametrisation_kwargs (Important to reconstruct from pickle)
         self.__parametrisation_kwargs = {}
-        self.__parametrisation_kwargs["with_driftRV"] = with_driftRV
         self.__parametrisation_kwargs["with_DeltaRV"] = with_DeltaRV
-        self.__parametrisation_kwargs["with_DeltaOOT"] = with_DeltaOOT
-        self.__parametrisation_kwargs["with_driftOOT"] = with_driftOOT
+        self.__parametrisation_kwargs["with_RVdrift"] = with_RVdrift
+        self.__parametrisation_kwargs["RVdrift_order"] = RVdrift_order
+        self.__parametrisation_kwargs["with_OOT_var"] = with_OOT_var
+        self.__parametrisation_kwargs["OOT_var_order"] = OOT_var_order
 
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
+        (self.paramcontainers["stars"][star_name].
+         init_RVdrift_parameters)(with_RVdrift=with_RVdrift, RVdrift_order=RVdrift_order)
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.planets.keys()):
             self.paramcontainers["planets"][planet_name].Rrat.main = True
@@ -175,10 +180,10 @@ class GravGroup_Parametrisation(object):
             self.paramcontainers["planets"][planet_name].aR.main = True
 
         # Apply the parametrisation to the RV instrument models parameters
-        self.instmodel_RV_parametrisation(DeltaRV_main=with_DeltaRV, driftRV_main=with_driftRV)
+        self.instmodel_RV_parametrisation(DeltaRV_main=with_DeltaRV)
 
         # Apply the parametrisation to the LC instrument models parameters
-        self.instmodel_LC_parametrisation(DeltaOOT_main=with_DeltaOOT, driftOOT_main=with_driftOOT)
+        self.instmodel_LC_parametrisation(with_OOT_var=with_OOT_var, OOT_var_order=OOT_var_order)
 
         # Apply the parametrisation to the Limb darkening models parameters
         self.limbdarkening_parametrisation()
@@ -204,7 +209,7 @@ class GravGroup_Parametrisation(object):
                              "but you have to analyse {}."
                              "".format(l_instcat_expected, self.dataset_db.inst_categories))
 
-    def instmodel_RV_parametrisation(self, DeltaRV_main=False, driftRV_main=False):
+    def instmodel_RV_parametrisation(self, DeltaRV_main=False):
         """Make all the jitter arguments of all the RV instrument models main parameters."""
         if DeltaRV_main:
             RVrefglobal_instname = self.RV_globalref_instname
@@ -212,75 +217,21 @@ class GravGroup_Parametrisation(object):
         list_instmodel = self.get_instmodel_objs(inst_cat="RV")
         for inst_model in list_instmodel:
             inst_name = inst_model.instrument.name
-            inst_model.driftRV.main = driftRV_main
             inst_model.DeltaRV.main = DeltaRV_main
             if DeltaRV_main:
                 if (inst_name == RVrefglobal_instname) and (inst_model.name == RVrefglobal_modname):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
 
-    def instmodel_LC_parametrisation(self, DeltaOOT_main=False, driftOOT_main=False):
+    def instmodel_LC_parametrisation(self, with_OOT_var=False, OOT_var_order=1):
         """Make all the DeltaOOT arguments of all the LC instrument models main parameters."""
         list_instmodel = self.get_instmodel_objs(inst_cat="LC")
         for inst_model in list_instmodel:
-            inst_model.DeltaOOT.main = DeltaOOT_main
-            inst_model.driftOOT.main = driftOOT_main
+            inst_model.init_OOT_var_parameters(with_OOT_var=with_OOT_var,
+                                               OOT_var_order=OOT_var_order)
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
         for LD_parcont in self.get_list_LD_parconts():
             for param in LD_parcont.get_list_params():
                 param.main = True
-
-# # transit parameters
-# self.rp = 0.          # planet radius (in units of stellar radii)
-# self.ar = 0.          # semi-major axis (in units of stellar radii)
-# self.inc = 0.         # orbital inclination (in degrees)
-#
-# '''
-# this will depend on how many LC data sets ..? how to set it?
-# '''
-# self.jitter_lc = 0.
-# self.u = [0., 0.]     # limb darkening coefficients
-# self.supersample = 0  # 21 supersampling factor needs to be defined for each light curve
-# self.exp_time = 0.5 / 24.  # if supersampling is done we need to define this for each light
-# # curve
-# # we can also calculate it but sometimes if we miss data this will be wrong
-#
-# # rv parameters
-# self.rvsys = 0.      # radial velocity systematic velocity
-# self.K = 0.          # semi-amplitude
-# '''
-# this will depend on how many rv data sets ..? how to set it?
-# '''
-# self.jitter_rv = 0.
-#
-# # parameters shared between transit and rv
-# self.ecc = 0.    # eccentricity
-# self.w = 0.      # longitude of periastron (in degrees)
-# '''
-# This will depend if we if we are fiting individual transit times
-# '''
-# self.t0 = 0.      # time of inferior conjunction
-# self.period = 0.  # orbital period
-#
-# # For each instrument
-# Instruments_LC = {"Instrument1": {"same_jitter": True,
-#                                   "dataset"}
-# # Create a dictionnary called instruments_LC
-# # for each instrument_LC, create a key in instruments_LC that contains a
-# # dictionnary instrument. Look how many data set there is for this instrument.
-# # If one create a jitter key in the instrument dictionnary which contains a dictionary for the
-# # jitter parameter.which contains a free which is true or false and a prior that is a dictionary
-# # which a joint which could be true or false, a type that could be Gaussian, Uniform, ..., args
-# # which gives the arguments of the prior function. If joint is true
-# #
-# jitter = {"free": True,
-#           "prior": {"joint": False, "joint_prior_ref": None,
-#                     "type": None, "args": {}
-#                     }
-#           "value": None
-#           }
-#
-# # For LC each dataset
-# bandwidth = [None, None]  # bandwidth in microns

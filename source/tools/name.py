@@ -15,7 +15,7 @@ from logging import getLogger
 logger = getLogger()
 
 
-def check_name_for_prohibitedchar(name, prohibitedchars=""):
+def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=1):
     """Check that there is no prohibited characters in name and remove it if there is."""
     if not isinstance(name, str):
         raise ValueError("Name should be a string or None")
@@ -23,20 +23,21 @@ def check_name_for_prohibitedchar(name, prohibitedchars=""):
     for char in prohibitedchars:
         if result.count(char) > 0:
             result = result.replace(char, "")
-            logger.warning("Name can't contain {} caracter so they have been removed.".format(char))
-    if result != name:
+            if not(verbose):
+                logger.warning("Name can't contain {} caracter so they have been removed.".format(char))
+    if result != name and not(verbose):
         logger.warning("Proposed name: {}, Returned name: {}".format(name, result))
     return result
 
 
-def check_name(name):
+def check_name(name, verbose=1):
     """Check that there is no '_' in name and remove it if there is."""
-    return check_name_for_prohibitedchar(name=name, prohibitedchars="_")
+    return check_name_for_prohibitedchar(name=name, prohibitedchars="_", verbose=verbose)
 
 
-def check_name_code(name):
+def check_name_code(name, verbose=1):
     """Check that there is no '-' in name and remove it if there is."""
-    return check_name_for_prohibitedchar(name=name, prohibitedchars="-")
+    return check_name_for_prohibitedchar(name=name, prohibitedchars="-", verbose=verbose)
 
 
 class Name(object):
@@ -47,6 +48,7 @@ class Name(object):
         logger.debug("Name of the instance of class {} set to {}.".format(self.__class__.__name__,
                                                                           self.name))
         # 2.
+        self.__name_prefix = None
         self.name_prefix = name_prefix
         # 3.
         if type(self) is Name:
@@ -65,14 +67,14 @@ class Name(object):
     @property
     def hasnameprefix(self):
         """Return True is name_prefix has been set already, False otherwise."""
-        return hasattr(self, "name_prefix")
+        return self.__name_prefix is not None
 
     @name_prefix.setter
     def name_prefix(self, name_prefix):
         """Set the prefix of the ame of the instance."""
-        if self.hasnameprefix:
-                logger.warning("The name prefix of the instance has already been defined."
-                               "One should not redefined it so set command is ignored.")
+        if self.__name_prefix is not None:
+            logger.warning("The name prefix of the instance has already been defined."
+                           "One should not redefined it so set command is ignored.")
         else:
             if name_prefix is None:
                 logger.debug("No name_prefix provided for instance {} of class {}."
@@ -93,9 +95,9 @@ class Name(object):
     @property
     def name_code(self):
         """Return the name of the instance that can be used in code."""
-        return check_name_code(self.name)
+        return check_name_code(self.name, verbose=0)
 
     @property
     def full_name_code(self):
         """Return the full name of the CelestialBody."""
-        return check_name_code(self.full_name)
+        return check_name_code(self.full_name, verbose=0)

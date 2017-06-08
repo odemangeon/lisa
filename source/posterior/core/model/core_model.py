@@ -71,13 +71,26 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             dataset_db : DatasetDatabase instance,
                 DatasetDatabase giving the dataset to be modeled.
         """
-        Core_ParamContainer.__init__(self, name)  # 1.
-        DatasetDbAttr.__init__(self, dataset_db)  # 2.
+        # Core_Model is a Core_ParamContainer, so set the model name and init through
+        # Core_ParamContainer init method
+        Core_ParamContainer.__init__(self, name)
+
+        # Model needs to access the datasets so give model the dataset_db attribute
+        DatasetDbAttr.__init__(self, dataset_db)
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
-        RunFolder.__init__(self, run_folder=run_folder)  # 3.
-        ParamContainerDatabase.__init__(self)  # 4.
-        self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)  # 5.
+
+        # Set the run folder
+        RunFolder.__init__(self, run_folder=run_folder)
+
+        # Core Model is also a ParamContainer Database so initialise it
+        ParamContainerDatabase.__init__(self)
+
+        # Initialise the instrument models
+        self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
+
+        # If no instmodel4dataset provided create it and then initialise the instmodel4dataset of
+        # the model
         if instmodel4dataset is None:  # 6.
             instmodel4dataset = Instmodel4Dataset(list_datasetnames=(self.dataset_db.
                                                                      get_datasetnames()))
