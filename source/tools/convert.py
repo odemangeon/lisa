@@ -448,11 +448,13 @@ def gettp_fast(P, tc, ecc, omega):
     return tc - P * mshift / (2.0 * pi)
 
 
-def getTeqpl(Teffst, aR, A=0):
+def getTeqpl(Teffst, aR, ecc, A=0):
     """Return the planet equilibrium temperature.
 
     Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
     and https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
+    and later updated to include the effect of excentricity on the average stellar planet distance
+    according to equation 5 of Laughlin & Lissauer 2015arXiv150105685L
 
     :param float/np.ndarray Teffst: Effective temperature of the star
     :param float/np.ndarray Rst: Stellar radius in solar radius
@@ -460,7 +462,7 @@ def getTeqpl(Teffst, aR, A=0):
                                au
     :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
     """
-    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR)
+    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR) / (1 - e**2)**(1/8.)
 
 def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
@@ -619,7 +621,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                                  [planet.M.full_name, planet.R.full_name]))
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.full_name, getTeqpl,
-                                 [star.Teff.full_name, planet.aR.full_name]))
+                                 [star.Teff.full_name, planet.aR.full_name, planet.ecc.full_name]))
 
             # L: Stellar luminosity
             l_tup_planet.append((star.L.full_name, getLs,
