@@ -149,6 +149,10 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="circtime", name_prefix=self.full_name, main=False))
         ## Teq: Equilibrium Temperature
         self.add_parameter(Parameter(name="Teq", name_prefix=self.full_name, main=False))
+        ## Fi: insolation flux
+        self.add_parameter(Parameter(name="Fi", name_prefix=self.full_name, main=False))
+        ## H: scale height
+        self.add_parameter(Parameter(name="H", name_prefix=self.full_name, main=False))
         ## transit times
         self.transit_times = {}
 

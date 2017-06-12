@@ -50,6 +50,7 @@ msun = gm / g
 mjup = const.M_jup.value  # msun/msunjup
 msunjup = msun / mjup
 mearth = const.M_earth.value  # 5.9742e27 was wrong
+Teffsun = ((const.L_sun/(const.sigma_sb * 4 * pi * const.R_sun**2))**(1/4.)).value
 
 rsun = const.R_sun.value
 rjup = const.R_jup.value
@@ -238,14 +239,15 @@ def getrhostar(P, aR):
 #     return rp * rstar * rsun / rjup
 
 
-def getrhopl(M, R):
+def getrhopl(M, R, rhofact=1):
     """Return he density of a spherical body.
 
     :param float/np.ndarray M: Mass of the body
     :param float/np.ndarray R: Radius of the body
+    :param float/np.ndarray rhofact: multiplicative factor for unit purposes
     :return float/np.ndarray rho: density of the body in unit of mass per unit of radius cube
     """
-    return 3 * M / (4 * np.pi * R**3.)
+    return rhofact * M / R**3.
 
 
 def getplsurfaceg(per, ar, rp, inc, ecc, velocity):
@@ -460,23 +462,52 @@ def getTeqpl(Teffst, aR, A=0):
     """
     return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR)
 
-def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022):
+def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
 
     Relation obtained from Guillaume and it works for hot Jupiters
 
-    :param float/np.ndarray mp: Planetary mass in jupiter mass
-    :param float/np.ndarray rp: Planetary mass in jupiter radius
-    :param float/np.ndarray Teqpl: Equilibrium temperature of the planet
+    :param float/np.ndarray mp: Planetary mass (in jupiter mass)
+    :param float/np.ndarray rp: Planetary mass (in jupiter radius)
+    :param float/np.ndarray Teqpl: Equilibrium temperature of the planet (K)
     :param float/np.ndarray mu: mean molecular weight kg/mol (default: 0.0022) (from guillaume)
+    :param float Hfact: Multiplicative factor for unit purposes (if !=1 watch out units)
 
-    :return float/np.ndarray scaleheight: Scale height in kilometers
+    :return float/np.ndarray scaleheight: Scale height (in km)
     """
     rgas = 8.3144621 #The gas constant (also known as the molar, universal, or ideal gas constant, J⋅mol−1⋅K−1
     gra=(g * Mp * mjup) / ( Rp * rjup)**2.
 
     h = (rgas * Teqpl) / (mu * gra)
-    return h/1e3
+    return Hfact * h/1e3
+
+
+def getLs(Rs, Teffst, Lfact=1.):
+    """Return the stellar luminosity.
+
+    https://exoplanetarchive.ipac.caltech.edu/docs/poet_calculations.html
+
+    :param float/np.ndarray Rs: Radius of the star (in sun radius)
+    :param float/np.ndarray Teffst: Effective temperature of the star (in K)
+    :param float Lfact: Multiplicative factor for unit purposes (if !=1 watch out units)
+
+    :return float/np.ndarray Ls: Luminosity of the star (in solar luminosity)
+    """
+    return Lfact * Rs**2 * (Teffst/Teffsun)**4
+
+
+def getFi(Ls, a, Fifact=1.):
+    """Return the insolation flux at the planetary surface.
+
+    https://exoplanetarchive.ipac.caltech.edu/docs/poet_calculations.html
+
+    :param float/np.ndarray Ls: Luminosity of the star (in solar luminosity)
+    :param float/np.ndarray a: semi-major axis (in au)
+    :param float Fifact: Multiplicative factor for unit purposes (if !=1 watch out units)
+
+    :return float/np.ndarray Fi: Insolation flux (in earth insolation flux)
+    """
+    return Fifact * Ls / a**2
 
 
 def get_secondary_chains(model, chaininterpret, star_kwargs=None):
@@ -589,6 +620,18 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.full_name, getTeqpl,
                                  [star.Teff.full_name, planet.aR.full_name]))
+
+            # L: Stellar luminosity
+            l_tup_planet.append((star.L.full_name, getLs,
+                                 [star.R.full_name, star.Teff.full_name]))
+
+            # Fi: Planetary insolation flux
+            l_tup_planet.append((planet.Fi.full_name, getFi,
+                                 [star.L.full_name, planet.a.full_name]))
+
+            # H: Scale Height
+            l_tup_planet.append((planet.H.full_name, getscaleheigh,
+                                 [planet.M.full_name, planet.R.full_name, planet.Teq.full_name]))
 
             # Compute teh secondary parameter
             for sec_paraname, func, param_list in l_tup_planet:
