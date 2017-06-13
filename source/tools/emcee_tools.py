@@ -47,6 +47,50 @@ exptime_Kepler = 0.02043402778  # days
 #         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
 #     stdout.write("\n")
 
+def get_init_distrib_from_fitvalues(fitted_values):
+    """Generate the init_distrib dictionary for generate_random_init_pos from fitted_values.
+    :param pd.DataFrame fitted_values: Fitted values from a previous run rows are parameter names
+        columns are value, sigma+, sigma-
+
+    :return dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma"
+        of the normal distribution to use for each parameter. First level keys are parameter full
+        name. Second is "sigma" and "mu".
+    """
+    init_distrib = {}
+    for param, row in fitted_values.iterrows():
+        init_distrib[param] = {"mu": row["value"], "sigma": np.mean([row["sigma+"], row["sigma-"]])}
+    return init_distrib
+
+
+def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
+    """Generate initial position from for the walkers.
+
+    :param int nwalker: number of walkers
+    :param Posterior post_instance: Instance of the posterior class
+    :param dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma" of
+        the normal distribution to use for each parameter. First level keys are parameter full name.
+        Second is "sigma" and "mu".
+
+    :return np.ndarray p0: Ndarray containing the initial positions for all the walkers
+    """
+    l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
+    p0 = []
+    if init_distrib is None:
+        return np.asarray([post_instance.model.get_initial_values(list_paramnames=l_param_name)
+                           for i in range(nwalker)])
+    else:
+        for param in l_param_name:
+            if param in init_distrib:
+                p0.append(np.random.normal(loc=init_distrib[param]["mu"],
+                                           scale=init_distrib[param]["sigma"],
+                                           size=nwalker))
+            else:
+                p0.append(np.squeeze(np.asarray([post_instance.model.
+                                                 get_initial_values(list_paramnames=[param])
+                                                 for i in range(nwalker)])))
+        return np.asarray(p0).transpose()
+
+
 def explore(sampler, p0, nsteps):
     with tqdm(total=nsteps) as pbar:
         previous_i = -1

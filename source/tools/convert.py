@@ -462,7 +462,7 @@ def getTeqpl(Teffst, aR, ecc, A=0):
                                au
     :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
     """
-    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR) / (1 - e**2)**(1/8.)
+    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR) / (1 - ecc**2)**(1/8.)
 
 def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
