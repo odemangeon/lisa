@@ -611,7 +611,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
 
     # Compute the start step of the last part of the chain and compute median and MAD of the last
     # part of the chain for each parameter
-    last_start_step = int(nsteps * last)
+    last_start_step = nsteps - int(nsteps * last)
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     print("l_med_last: {}".format(l_med_last))
     l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]

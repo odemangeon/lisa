@@ -121,6 +121,8 @@ def getP(a, Ms, Mp):
 def getb(inc, aR, ecc, omega):
     """Return the impact parameter
 
+    See Kipping 2011 (PhD thesis) p. 55, eq. 3.26
+
     :param float/np.ndarray inc: Planetary orbital inclination in degrees
     :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     :param float/np.ndarray ecc: Planetary orbital eccentricity without unit
