@@ -182,13 +182,13 @@ class GravGroup_Parametrisation(object):
         """
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
-        if self.parametrisation in self.RV_parametrisatons:
+        if self.parametrisation in self.RV_parametrisations:
             self.paramcontainers["stars"][star_name].v0.main = True
             (self.paramcontainers["stars"][star_name].
              init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
                                       RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
                                                                                     None))
-        if self.parametrisation in ["LC_multis", "RV&LC_EXOFAST"]:
+        if self.parametrisation in ["LC_multis", "RV&LC_multis"]:
             self.paramcontainers["stars"][star_name].rho.main = True
 
         # Apply the parametrisation to the planets parameters
@@ -228,8 +228,8 @@ class GravGroup_Parametrisation(object):
             for inst_model in list_instmodel:
                 (inst_model.
                  init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs["with_OOT_var"],
-                                         OOT_var_order=(self.
-                                                        parametrisation_kwargs["OOT_var_order"])))
+                                         OOT_var_order=(self.parametrisation_kwargs.
+                                                        get("OOT_var_order", None))))
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

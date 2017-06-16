@@ -16,8 +16,8 @@ Location and scale estimators module.
 @todo: Unit tests of mad and estimator_loc_scale
 """
 
-from numpy import sort, median, where, sqrt, pi
-from numpy import sum as npsum, arange
+from numpy import sort, median, where, sqrt, pi, arange, transpose, prod
+from numpy import sum as npsum
 import statsmodels.api as sm
 
 ## Estimator of location and scale with LeastSquares norm
@@ -112,7 +112,7 @@ def mad(data, axis=None, **kwargs):
         return sm.robust.mad(data, **kwargs)
 
 
-def rob_mom(data, center=None):
+def rob_mom(data, center=None, moment=None):
     """
     Calculate robust estimates of the central location and spread of a distribution.
 
@@ -143,6 +143,9 @@ def rob_mom(data, center=None):
     center : float, optional
         If set, the spread is calculated w.r.t. zero rather than the central value of the vector.
         If data is a vector of residuals, this should be set to zero.
+    moment : int, optional
+        if None return the two moment. If 1 or 2 return the 1st (average) or 2nd (std) moment
+        respectively.
 
     Returns:
     --------
@@ -225,4 +228,11 @@ def rob_mom(data, center=None):
             w = w * (n - w)
             spread = sqrt(pi) / (n * (n - 1)) * npsum(w * g)
 
-    return centre, spread
+    if moment is None:
+        return centre, spread
+    elif moment == 1:
+        return centre
+    elif moment == 2:
+        return spread
+    else:
+        raise ValueError("moment argument can be None, 1 or 2. Got {}".format(moment))

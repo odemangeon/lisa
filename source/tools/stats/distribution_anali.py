@@ -31,6 +31,7 @@ def getconfi(distri, level, centre=None, l_param_name=None):
     optinal input is centre. if given it will be used to calculate the limits otherwise the rob_mom
     will be used.
     """
+    ndim = len(distri.shape)
     if level == 1:
         s1 = np.nanpercentile(distri, [16, 84], axis=0)
 
@@ -42,19 +43,29 @@ def getconfi(distri, level, centre=None, l_param_name=None):
 
     # If center is provided, take it as cen, otherwise use the median value of the data.
     if centre is None:
-        loc = np.asarray(rob_mom(distri))[0]
+        if ndim == 1:
+            loc = rob_mom(distri, moment=1)
+        else:
+            loc = np.apply_along_axis(rob_mom, 0, distri, moment=1)
     else:
         loc = centre
 
     dis_right, dis_left = s1[1] - loc, loc - s1[0]
 
     text = "\n"
-    for i in range(distri.shape[1]):
+    if ndim == 1:
         if l_param_name is not None:
-            param_name = l_param_name[i] + ": "
+            param_name = l_param_name
         else:
             param_name = ""
-        text += "{}{} +{} -{}\n".format(param_name, loc[i], dis_right[i], dis_left[i])
+        text += "{}{} +{} -{}\n".format(param_name, loc, dis_right, dis_left)
+    else:
+        for i in range(distri.shape(1)):
+            if l_param_name is not None:
+                param_name = l_param_name[i] + ": "
+            else:
+                param_name = ""
+            text += "{}{} +{} -{}\n".format(param_name, loc[i], dis_right[i], dis_left[i])
     logger.info(text)
 
     return dis_right, loc, dis_left
