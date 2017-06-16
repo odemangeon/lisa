@@ -60,7 +60,7 @@ def getconfi(distri, level, centre=None, l_param_name=None):
             param_name = ""
         text += "{}{} +{} -{}\n".format(param_name, loc, dis_right, dis_left)
     else:
-        for i in range(distri.shape(1)):
+        for i in range(distri.shape[1]):
             if l_param_name is not None:
                 param_name = l_param_name[i] + ": "
             else:
