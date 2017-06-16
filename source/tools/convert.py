@@ -221,15 +221,16 @@ def getD23(P, inc, aR, ecc, omega, Rrat):
 #     return t23
 
 
-def getrhostar(P, aR):
+def getrhostar(P, aR, rhofact=1):
     """Return the stellar density from the transit.
 
     :param float/np.ndarray P: Planetary orbital period im days
     :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float rhofact: multiplicative factor for unit purposes
     :return float/np.ndarray rhostar: Density of the star from transit in solar density
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
-    return aR**3. * 4. * np.pi**2. * rsun**3. / (gm * Ps**2.)
+    return aR**3. * 4. * np.pi**2. * rsun**3. / (gm * Ps**2.) * rhofact
 
 
 # def getrpjup(rp, rstar):
