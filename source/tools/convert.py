@@ -234,16 +234,25 @@ def getrhostar(P, aR, rhofact=1):
 
 
 def getaoverr(P, rhostar):
-    """Return the stellar density from the transit.
+    """Return the a over Rstar.
 
-    :param float/np.ndarray P: Planetary orbital period im days
+    :param float/np.ndarray P: Planetary orbital period in days
     :param float/np.ndarray rhostar: Density of the star from transit in solar density
     :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
     return (  (rhostar *  gm * Ps**2. / (4. * np.pi**2.) ) )**(1.0/3.0) / rsun
 
+def getaoverr_fromspec(loggstar, P, Rstar):
+    """Return the stellar density from the transit.
 
+    :param float/np.ndarray loggstar: log g of the star (log10 of the cgs value of g)
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray Rstar: Radius of the star in Sun radii
+    :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    """
+    Ps = P * 24. * 3600.0  # change P to seconds for SI
+    return ((Ps**2 * 10**(loggstar)) / (4 * np.pi**2 * Rstar * rsun * 100))**(1.0/3.0)
 
 # def getrpjup(rp, rstar):
 #     """
