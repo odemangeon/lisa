@@ -61,7 +61,7 @@ def init_logger(logger=None, with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lv
 
     if with_fh:
         if fh is None:
-            fh = FileHandler("fh_file")
+            fh = FileHandler(fh_file)
             fh.setLevel(fh_lvl)
             fh.setFormatter(formatter_detailled)
             logger.addHandler(fh)
