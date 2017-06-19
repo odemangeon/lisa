@@ -32,6 +32,11 @@ class GravGroup_Parametrisation(object):
         return ["LC_EXOFAST", "LC_Multis", "RV&LC_EXOFAST", "RV&LC_Multis"]
 
     @property
+    def LC_multis_parametrisations(self):
+        """List of the available parametrisations for LC datasets using the Multis params."""
+        return ["LC_Multis", "RV&LC_Multis"]
+
+    @property
     def RVandLC_parametrisations(self):
         """List of the available parametrisations for RV datasets."""
         return ["RV&LC_EXOFAST", "RV&LC_Multis"]

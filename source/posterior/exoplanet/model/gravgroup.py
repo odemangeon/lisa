@@ -785,27 +785,28 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
                         oot_var += " "
 
         # Create the template preambule
-        if self.transit_model == "batman":
-            template_preambule = """
+        template_preambule = """
             {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
-            {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
+            {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))"""
+        if self.parametrisation in self.LC_multis_parametrisations:
+            template_preambule += "\n{tab}aR_{planet} = getaoverr({P}, {rhostar})"
+        if self.transit_model == "batman":
+            template_preambule += """
             {tab}inc_{planet} = degrees(acos({cosinc}))
             {tab}params_{planet}.t0 = {tc}
             {tab}params_{planet}.per = {P}
             {tab}params_{planet}.rp = {Rrat}
-            {tab}params_{planet}.a = {aR}
             {tab}params_{planet}.inc = inc_{planet}
             {tab}params_{planet}.ecc = ecc_{planet}
             {tab}params_{planet}.w = omega_{planet}
             {tab}params_{planet}.limb_dark = '{ld_mod_name}'
-            {tab}params_{planet}.u = {ld_param_list}
-            """
+            {tab}params_{planet}.u = {ld_param_list}"""
+            if self.parametrisation in self.LC_multis_parametrisations:
+                template_preambule += "\n{tab}params_{planet}.a = aR_{planet}\n"
+            else:
+                template_preambule += "\n{tab}params_{planet}.a = {aR}\n"
         else:
-            template_preambule = """
-            {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
-            {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
-            {tab}inc_{planet} = acos({cosinc})
-            """
+            template_preambule += "\n{tab}inc_{planet} = acos({cosinc})\n"
         template_preambule = dedent(template_preambule)
 
         # Get the ld_parcont
@@ -844,8 +845,13 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
         if self.transit_model == "batman":
             template_planet_lc = ("+ m_{planet}.light_curve(params_{planet}) - 1 ")
         else:
-            template_planet_lc = ("+ m.evaluate(t, {Rrat}, {ld_param_list}, {tc}, {P}, {aR}, "
-                                  "inc_{planet}, ecc_{planet}, omega_{planet}) - 1 ")
+            if self.parametrisation in self.LC_multis_parametrisations:
+                template_planet_lc = ("+ m.evaluate(t, {Rrat}, {ld_param_list}, {tc}, {P}, "
+                                      "aR_{planet}, inc_{planet}, ecc_{planet}, omega_{planet}) "
+                                      "- 1 ")
+            else:
+                template_planet_lc = ("+ m.evaluate(t, {Rrat}, {ld_param_list}, {tc}, {P}, {aR}, "
+                                      "inc_{planet}, ecc_{planet}, omega_{planet}) - 1 ")
 
         # Save the param_nb and arg_list for the whole function before iterating over the planets
         # text_def_func_before = text_def_func[self.key_whole]
