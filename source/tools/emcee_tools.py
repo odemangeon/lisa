@@ -508,21 +508,21 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     return l_selected_walker, nb_rejected
 
 
-def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, verbose=1):
+def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1):
     """Return selected walker based on the acceptance fraction.
 
     :param emcee.EnsembleSampler sampler:
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     """
-    percentile_lnposterior = percentile(lnprobability, quantile)
-    mad_lnposterior = mad(lnprobability)
-    walkers_median_lnposterior = median(lnprobability, axis=1)
+    walkers_percentile_lnposterior = percentile(lnprobability, quantile_walker, axis=1)
+    percentile_lnposterior = percentile(walkers_percentile_lnposterior, quantile)
+    mad_lnposterior = mad(walkers_percentile_lnposterior)
     if verbose == 1:
         logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
-                    "".format(walkers_median_lnposterior, quantile, percentile_lnposterior,
+                    "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
                               mad_lnposterior))
-    l_selected_walker = where(walkers_median_lnposterior >
+    l_selected_walker = where(walkers_percentile_lnposterior >
                               (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
