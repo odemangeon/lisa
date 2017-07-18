@@ -37,6 +37,7 @@ class StellarActNoiseModel(Core_Noise_Model):
 
     __category__ = stelact_GP_noisemodel
     __has_GP__ = True
+    __has_jitter__ = False
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")

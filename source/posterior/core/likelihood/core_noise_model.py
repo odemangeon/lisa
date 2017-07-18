@@ -40,7 +40,7 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
 class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     """Docstring for Core_Noise_Model class."""
 
-    __mandatoryattrs__ = ["category", "has_GP"]
+    __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
 
     def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
         """Initialise a Core_Noise_Model subclass instance.
@@ -62,7 +62,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             else:
                 raise ValueError(err_msg.format(type(datasim_docfunc), type(value)))
         else:
-            raise ValueError(err_msg.format(type(datasim_docfunc)))
+            raise ValueError(err_msg.format(type(datasim_docfunc), ""))
         self.instmodel_obj = instmodel_obj  # Set the instmodel_obj attributes
         self.check_parametrisation(model_instance, instmodel_obj)  # Check correct parametrisation
         # Make Core_NoiseModel an abstract class

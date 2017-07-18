@@ -23,6 +23,8 @@ The objective of this package is to provides the core Posterior class.
 from logging import getLogger
 from numpy import inf
 from dill import dump, load
+from os.path import join
+from textwrap import dedent
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
@@ -33,6 +35,7 @@ from .datasetsfile_db import DatasetsFileDbAttr
 from ...tools.name import Name
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
+from ...tools.human_machine_interface.QCM import QCM_utilisateur
 
 
 logger = getLogger()
@@ -136,6 +139,41 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
 
     def load_datasetsfile(self, path_datasets_file):
         file_path = self.look4runfile(file_path=path_datasets_file)
+        if file_path is None:
+            logger.info("{} doesn't exist.".format(path_datasets_file))
+            answers_list_yn = ['y', 'n']
+            question = ("File {} doesn't exist. Do you want to create it ? {}\n"
+                        "".format(path_datasets_file, answers_list_yn))
+            reply = QCM_utilisateur(question, answers_list_yn)
+            if reply == "y":
+
+                answers_list_create = ["absolute", "error"]
+                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' "
+                            "path: {}".format(path_datasets_file, path_datasets_file))
+                if self.hasrun_folder:
+                    answers_list_create.append("run_folder")
+                    run_folder_path = join(self.run_folder, path_datasets_file)
+                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
+                question += ("\nNot create it and raise an 'error' ? {}\n"
+                             "".format(answers_list_create))
+                reply2 = QCM_utilisateur(question, answers_list_create)
+                if reply2 == 'absolute':
+                    file_path = path_datasets_file
+                elif reply2 == "run_folder":
+                    file_path = join(self.run_folder, path_datasets_file)
+                else:
+                    raise ValueError("File {} doesn't exist and the user doesn't want to create it."
+                                     "".format(path_datasets_file))
+                with open(file_path, 'x') as fdatasets:
+                    header = """
+                    # Datasets file: List below all the files you want to use for this run
+                    # The first columns is the path to a dataset file
+                    # The second columns is the name of the instrument model used for this dataset
+                    # The third column is the noise model.
+                    """
+                    header = dedent(header[1:-1])
+                    fdatasets.write(header)
+                input("Modifiy the dataset file")
         self.datasetsfile_db.load(file_path)
         self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
 
@@ -273,17 +311,22 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
             datasim_db = self.datasimulators.instrument_db
-            (self.lnlikelihoods.instrument_db.
-             update(self.model.create_lnlikelihoods(datasim_db=datasim_db)))
+            db_lnlike, db_noise = self.model.create_lnlikelihoods(datasim_db=datasim_db)
+            self.lnlikelihoods.instrument_db.update(db_lnlike)
+            self.noisemodels.instrument_db.update(db_noise)
             (self.lnlikelihoods.dataset_db.
              update(self.model.
-                    create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
-                                                    dataset_db=self.dataset_db,
-                                                    instmodel4dataset=self.instmodel4dataset)))
-            (self.lnlikelihoods.dataset_db['all'],
-             dico_noisemodel_instance
+                    create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.
+                                                                      dataset_db),
+                                                    dataset_db=self.dataset_db)))
+            # (self.lnlikelihoods.dataset_db.
+            #  update(self.model.
+            #         create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
+            #                                         dataset_db=self.dataset_db,
+            #                                         instmodel4dataset=self.instmodel4dataset)))
+            (self.lnlikelihoods.dataset_db['all'], dico_noisemodel_instance
              ) = (self.model.
-                  create_lnlikelihood_alldataset(datasim_db=datasim_db,
+                  create_lnlikelihood_alldataset(datasim_db_dtset=self.datasimulators.dataset_db,
                                                  dataset_db=self.dataset_db,
                                                  instmodel4dataset=self.instmodel4dataset))
             self.noisemodels.dataset_db.update(dico_noisemodel_instance)

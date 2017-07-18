@@ -30,25 +30,32 @@ class RV_Dataset(Dataset):
 
     __mandatory_columns__ = ["time", "RV", "RV_err"]
 
+    ## name of the data  and data error columns
+    _data_name = "RV"
+    _data_err_name = "RV_err"
+
     def plot(self, y="RV", yerr="RV_err", **kwargs):
         """
         Plot function to visualise the data.
 
         This is not very pretty but it plots the flux versus time and the error bars
         """
-        self.get_data().plot(y=y, yerr=yerr, **kwargs)
+        self.get_datatable().plot(y=y, yerr=yerr, **kwargs)
         plt.show()
 
     def get_kwargs(self):
-        pandas_df = self.get_data()
+        pandas_df = self.get_datatable()
         return {"data": array(pandas_df["RV"]),
                 "data_err": array(pandas_df["RV_err"]),
                 "t": array(pandas_df["time"]),
                 "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
-        pandas_df = self.get_data()
+        pandas_df = self.get_datatable()
         return array(pandas_df["time"])
+
+    def get_tref(self):
+        return (self.get_time()).min()
 
     def create_datasimulator_for_dataset(self, datasim_func):
         # t_dtst = self.get_time()

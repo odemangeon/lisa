@@ -122,7 +122,7 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
                                     ['y', 'n'])
         else:
             msg = ("You didn't provided any folder and the standard one doesn't exist."
-                   "Do you want to create the folder (reply by 'y' or 'n'):\n{}".format(folder))
+                   "Do you want to create the standard folder (reply by 'y' or 'n'):\n")
             reply = QCM_utilisateur(msg, ["y", "n"])
         # 4.1.
         if reply == "y":

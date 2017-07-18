@@ -89,7 +89,7 @@ def getRp(Rrat, Rs, Rsfact=rsun, Rpfact=rjup):
     :param float Rsfact: Unit factor for stellar radius (optional and default solar radius in meter)
     :param float Rpfact: Unit factor for planetary radius (optional and default jupiter radius in
                          meter)
-    :return float/np.ndarray Rp: Planetary radius in the same unit than Rs
+    :return float/np.ndarray Rp: Planetary radius in jupiter radius by default (Rsfact and Rpfact)
     """
     return np.multiply(Rrat, Rs) * Rsfact / Rpfact
 
@@ -416,7 +416,7 @@ def getMpsininc(P, K, Ms, ecc, Kfact=1000):
 
 
 def getMp(P, K, Ms, ecc, inc, Kfact=1000):
-    """Return radial velocity semi-amplitude of a star associated to a planet
+    """Return the planetary mass
 
     Adapted from equation 14 page 3, assuming that the planet mass in negligeable compared to the
     stellar mass
@@ -478,7 +478,7 @@ def getTeqpl(Teffst, aR, ecc, A=0):
     Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
     and https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
     and later updated to include the effect of excentricity on the average stellar planet distance
-    according to equation 5 of Laughlin & Lissauer 2015arXiv150105685L
+    according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L
 
     :param float/np.ndarray Teffst: Effective temperature of the star
     :param float/np.ndarray Rst: Stellar radius in solar radius

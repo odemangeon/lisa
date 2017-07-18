@@ -113,10 +113,10 @@ class GravGroup_Parametrisation(object):
         l_optional_keywords = []
 
         # Fill the list of mandatory and optional keywords depending on the parameterisation
-        if self.parametrisation in self.RV_parametrisatons:
+        if self.parametrisation in self.RV_parametrisations:
             l_mandatory_keywords += ["with_DeltaRV", "with_RVdrift"]
             l_optional_keywords += ["RVdrift_order"]
-        if self.parametrisation in self.LC_parametrisatons:
+        if self.parametrisation in self.LC_parametrisations:
             l_mandatory_keywords += ["with_OOT_var"]
             l_optional_keywords += ["OOT_var_order"]
 
@@ -134,10 +134,10 @@ class GravGroup_Parametrisation(object):
                             "".format(len(l_unexpected), l_unexpected))
 
         # Check that no optional keyword is missing
-        if self.parametrisation in self.RV_parametrisatons:
+        if self.parametrisation in self.RV_parametrisations:
             if not(kwargs["with_RVdrift"]):
                 l_optional_keywords.remove("RVdrift_order")
-        if self.parametrisation in self.LC_parametrisatons:
+        if self.parametrisation in self.LC_parametrisations:
             if not(kwargs["with_OOT_var"]):
                 l_optional_keywords.remove("OOT_var_order")
         l_missing += [arg for arg in l_optional_keywords if arg not in kwargs]
@@ -170,11 +170,11 @@ class GravGroup_Parametrisation(object):
         if self.parametrisation in ["RV_EXOFAST", ]:
             l_instcat_expected = ["RV", ]
         elif self.parametrisation in ["LC_EXOFAST", "LC_Multis"]:
-            l_instcat_expected = ["RV", ]
+            l_instcat_expected = ["LC", ]
         elif self.parametrisation in ["RV&LC_EXOFAST", "RV&LC_Multis"]:
             l_instcat_expected = ["RV", "LC"]
         if Counter(self.dataset_db.inst_categories) != Counter(l_instcat_expected):
-            raise ValueError("You are using a paprametrisation that has been defined to fit {}"
+            raise ValueError("You are using a parametrisation that has been defined to fit {}"
                              "but you have to analyse {}."
                              "".format(l_instcat_expected, self.dataset_db.inst_categories))
 
@@ -187,13 +187,13 @@ class GravGroup_Parametrisation(object):
         """
         # Apply the parametrisation to the star parameters
         star_name = list(self.paramcontainers["stars"].keys())[0]
-        if self.parametrisation in self.RV_parametrisatons:
+        if self.parametrisation in self.RV_parametrisations:
             self.paramcontainers["stars"][star_name].v0.main = True
             (self.paramcontainers["stars"][star_name].
              init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
                                       RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
                                                                                     None))
-        if self.parametrisation in ["LC_multis", "RV&LC_EXOFAST"]:
+        if self.parametrisation in self.LC_multis_parametrisations:
             self.paramcontainers["stars"][star_name].rho.main = True
 
         # Apply the parametrisation to the planets parameters
@@ -233,8 +233,8 @@ class GravGroup_Parametrisation(object):
             for inst_model in list_instmodel:
                 (inst_model.
                  init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs["with_OOT_var"],
-                                         OOT_var_order=(self.
-                                                        parametrisation_kwargs["OOT_var_order"])))
+                                         OOT_var_order=(self.parametrisation_kwargs.
+                                                        get("OOT_var_order", None))))
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

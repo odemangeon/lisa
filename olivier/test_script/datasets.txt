@@ -1,0 +1,5 @@
+# Datasets file: List below all the files you want to use for this run
+# The first columns is the path to a dataset file
+# The second columns is the name of the instrument model used for this dataset
+# The third column is the noise model.
+LC_HD106315_K2.txt    def    gaussian_jitter_multi
