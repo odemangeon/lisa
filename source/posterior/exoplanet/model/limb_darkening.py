@@ -64,6 +64,11 @@ class CoreLD(Core_ParamContainer):
         else:
             return False
 
+    @property
+    def init_LD_values(self):
+        """Initial list of LD values for the initialisation of the batman model."""
+        raise NotImplementedError("You should overwrite this property when you subclass CoreLD")
+
     def __get_list_all_paramnames(self):
         """Return the list of all parameters names."""
         if self.__ordered_paramname_list__ is None:
@@ -93,6 +98,10 @@ class LinearLD(CoreLD):
         ## Radius of the planet
         self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
 
+    @property
+    def init_LD_values(self):
+        return [0.5, ]
+
 
 class QuadraticLD(CoreLD):
     """docstring for QuadraticLD."""
@@ -105,6 +114,10 @@ class QuadraticLD(CoreLD):
         ## Radius of the planet
         self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+    @property
+    def init_LD_values(self):
+        return [0.4, 0.2]
 
 
 class SquareRootLD(CoreLD):
@@ -119,6 +132,10 @@ class SquareRootLD(CoreLD):
         self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
 
+    @property
+    def init_LD_values(self):
+        return [0.4, 0.2]
+
 
 class LogarithmicLD(CoreLD):
     """docstring for LogarithmicLD."""
@@ -132,6 +149,10 @@ class LogarithmicLD(CoreLD):
         self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
 
+    @property
+    def init_LD_values(self):
+        return [0.4, 0.2]
+
 
 class ExponentialLD(CoreLD):
     """docstring for ExponentialLD."""
@@ -144,6 +165,10 @@ class ExponentialLD(CoreLD):
         ## Radius of the planet
         self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+
+    @property
+    def init_LD_values(self):
+        return [0.4, 0.2]
 
 
 class NonLinearLD(CoreLD):
@@ -159,6 +184,10 @@ class NonLinearLD(CoreLD):
         self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc3", name_prefix=self.full_name, main=False))
         self.add_parameter(Parameter(name="ldc4", name_prefix=self.full_name, main=False))
+
+    @property
+    def init_LD_values(self):
+        return [0.5, 0.1, 0.1, -0.1]
 
 
 ## Dictionary relating the LD model name to the LD param container class

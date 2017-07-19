@@ -224,7 +224,7 @@ class Instmodel4DatasetAttr(object):
 
         For more details see instmodel4dataset.name_instmodels_used
         """
-        return self.get_instmod_fullname(dataset_name=dataset_name)
+        return self.instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
 
     def get_instmod(self, dataset_name):
         """Return the instrument model used for the specified dataset.

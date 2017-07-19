@@ -47,10 +47,10 @@ logger.info("manager.create_dataset(file_path=filepath_LC) create an instance of
             "dataset_K2.")
 dataset_K2 = manager.create_dataset(file_path=filepath_LC)
 
-logger.info("To read the data for the file you have to use dataset_K2.get_data(). It bhaves as the"
+logger.info("To read the data for the file you have to use dataset_K2.get_datatable(). It bhaves as the"
             " method pandas.read_table with some default values defined and thus returns a "
             "pandas.DataFrame object.")
-data = dataset_K2.get_data()
+data = dataset_K2.get_datatable()
 logger.info("Here is the info regarding the loaded data:\n{}".format(data.info()))
 logger.info("By default those data will not be loaded into the Dataset subclass. But if you want to"
             ", pass the argument store=True to get data.")

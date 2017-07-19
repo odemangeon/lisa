@@ -7,10 +7,10 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger
-from matplotlib.pyplot import subplots, subplot, figure  # , figure, plot, show
+from matplotlib.pyplot import subplots, figure, Subplot  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile
+from numpy import percentile, exp
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -21,8 +21,11 @@ from PyAstronomy.pyasl import foldAt
 from collections import Iterable
 from dill import dump, load
 from os.path import isfile, join
+# import pprint
 
 from .stats.loc_scale_estimator import mad
+
+# from ipdb import set_trace
 
 
 ## Logger Object
@@ -130,7 +133,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     fig.tight_layout(**kwargs_tl)
 
 
-def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db=None, oversamp=10,
+def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, noisemod_db=None, oversamp=10,
                         supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, **kwargs_tl):
@@ -140,7 +143,7 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
                                 then averaged over bins of supersamp_model to take into account an
                                 increased exposure time.
        param        np.array
-       datasim_db   dataset_db in datasimulators
+       datasim_dbf  datasimulators
        dataset_db   dataset_db
        noisemod_db  dictionary giving the noise model instance for each dataset name
     """
@@ -169,8 +172,9 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
                 for karg_type, kwarg_value in kwargs.items():
                     dico_noisemod_allkwargs[noise_mod.category][karg_type].append(kwarg_value)
 
-    for i, dataset in enumerate(l_datasets):
-        datasim_db_docfunc = datasim_db[dataset.dataset_name]["whole"]
+    for ii, dataset in enumerate(l_datasets):
+        inst_mod_fullname = datasim_dbf.get_instmod_fullname(dataset.dataset_name)
+        datasim_db_docfunc = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
         noise_model = noisemod_db[dataset.dataset_name]
         noisemod_allkwargs = dico_noisemod_allkwargs[noise_model.category]
         kwargs = dataset.get_kwargs()
@@ -179,12 +183,22 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
         data = kwargs.pop("data")
         data_err = kwargs.pop("data_err")
 
+        if noise_model.has_jitter:
+            jitter_param_fullname = noise_model.get_jitterparam(dataset.dataset_name).full_name
+            idx_jitter = l_param_name.index(jitter_param_fullname)
+            jitter = param[idx_jitter]
+            jitter_type = noise_model.jitter_type
+        else:
+            jitter = None
+            jitter_type = None
+
         if phasefold:
             # Create the Axes for the comparison data/model and the residuals and set the title.
             # and plot the data
             (axes_data,
-             axes_resi) = add_twoaxeswithsharex_perplanet(gs[i],
+             axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
                                                           nplanet=len(phasefold_kwargs["planets"]),
+                                                          fig=fig,
                                                           gs_from_sps_kw={"height_ratios": (3, 1)})
             title_printed = False
             for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
@@ -195,10 +209,12 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
                     ax_data.set_title(dataset.dataset_name)
                     title_printed = True
                 # Plot the data
-                errorbar_kwarg = {"color": "b", "fmt": "."}
+                pl_kwargs = {"color": "b", "fmt": "."}
                 _, phases = plot_phase_folded_timeserie(t=t, data=data, P=P, tc=tc,
-                                                        data_err=data_err, ax=ax_data,
-                                                        errorbar_kwarg=errorbar_kwarg)
+                                                        data_err=data_err,
+                                                        jitter=jitter, jitter_type=jitter_type,
+                                                        ax=ax_data,
+                                                        pl_kwargs=pl_kwargs)
 
                 # Plot the model
                 phasemin = phases.min()
@@ -212,6 +228,7 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
                            ax=ax_data)
                 # Plot residuals
                 plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
+                               jitter=jitter, jitter_type=jitter_type,
                                supersamp=supersamp_model, exptime=exptime,
                                datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
                                noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
@@ -219,12 +236,21 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
         else:
             # Create the Axes for the comparison data/model and the residuals and set the title.
             # and plot the data
-            ax_data, ax_resi = add_twoaxeswithsharex(gs[i],
+            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig,
                                                      gs_from_sps_kw={"height_ratios": (3, 1)})
             ax_data.set_title(dataset.dataset_name)
 
-            # Plot the data
-            ax_data.errorbar(t, data, data_err, fmt=".", color="b")
+            if jitter is None:
+                data_err_new = data_err
+            else:
+                if jitter_type == "multi":
+                    data_err_new = data_err * exp(jitter)
+                elif jitter_type == "add":
+                    data_err_new = sqrt(data_err**2 * (1 + exp(2 * jitter)))
+                else:
+                    raise ValueError("jitter_type should be in ['multi', 'add']")
+
+            ax_data.errorbar(t, data, data_err_new, fmt=".", color="b")
 
             # Plot the model
             tmin = t.min()
@@ -236,6 +262,7 @@ def overplot_data_model(param, l_param_name, datasim_db, dataset_db, noisemod_db
 
             # Plot the residuals
             plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
+                           jitter=jitter, jitter_type=jitter_type,
                            datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
                            plot_phase=False, noise_model=noise_model,
                            noisemod_allkwargs=noisemod_allkwargs, ax=ax_resi)
@@ -312,7 +339,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     if pl_kwargs_model is not None:
         kwarg_model.update(pl_kwargs_model)
     if plot_phase:
-        plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, errorbar_kwarg=kwarg_model)
+        plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, pl_kwargs=kwarg_model)
     else:
         ax.errorbar(t_plot, model, **kwarg_model)
 
@@ -329,13 +356,13 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
                 kwarg_GP.update(pl_kwargs_modelandGP)
             if plot_phase:
                 plot_phase_folded_timeserie(t_plot, model_wGP, P, tc, ax=ax,
-                                            errorbar_kwarg=kwarg_GP)
+                                            pl_kwargs=kwarg_GP)
             else:
                 ax.errorbar(t_plot, model_wGP, **kwarg_GP)
 
 
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
-                   datasim_kwargs=None, data_err=None,
+                   datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
                    noise_model=None, noisemod_allkwargs=None,
                    pl_kwargs_model=None, pl_kwargs_modelandGP=None,
@@ -368,10 +395,21 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
     if pl_kwargs_model is not None:
         kwarg_model.update(pl_kwargs_model)
     if plot_phase:
-        plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err, ax=ax,
-                                    errorbar_kwarg=kwarg_model)
+        plot_phase_folded_timeserie(t, residual, P, tc,
+                                    data_err=data_err, jitter=jitter, jitter_type=jitter_type,
+                                    ax=ax, pl_kwargs=kwarg_model)
     else:
-        ax.errorbar(t, residual, data_err, **kwarg_model)
+        if jitter is None:
+            ax.errorbar(t, residual, data_err, **kwarg_model)
+        else:
+            print("jitter: {}".format(jitter))
+            if jitter_type == "multi":
+                ax.errorbar(t, residual, data_err * exp(jitter), **kwarg_model)
+            elif jitter_type == "add":
+                ax.errorbar(t, residual, sqrt(data_err**2 * (1 + exp(2 * jitter))),
+                            **kwarg_model)
+            else:
+                raise ValueError("jitter_type should be in ['multi', 'add']")
 
     # Plot the model + GP
     if noise_model is not None:
@@ -386,10 +424,20 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
             if pl_kwargs_modelandGP is not None:
                 kwarg_GP.update(pl_kwargs_modelandGP)
             if plot_phase:
-                plot_phase_folded_timeserie(t, residual_wGP, P, tc, ax=ax,
-                                            errorbar_kwarg=kwarg_GP)
+                plot_phase_folded_timeserie(t, residual_wGP, P, tc, data_err=data_err,
+                                            jitter=jitter, jitter_type=jitter_type,
+                                            ax=ax, pl_kwargs=kwarg_GP)
             else:
-                ax.errorbar(t, residual_wGP, data_err, **kwarg_GP)
+                if jitter is None:
+                    ax.errorbar(t, residual_wGP, data_err, **kwarg_GP)
+                else:
+                    if jitter_type == "multi":
+                        ax.errorbar(t, residual_wGP, data_err * exp(jitter), **kwarg_GP)
+                    elif jitter_type == "add":
+                        ax.errorbar(t, residual_wGP, sqrt(data_err**2 * (1 + exp(2 * jitter))),
+                                    **kwarg_GP)
+                    else:
+                        raise ValueError("jitter_type should be in ['multi', 'add']")
 
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
@@ -397,7 +445,8 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
     ax.set_xlim(xmin, xmax)
 
 
-def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar_kwarg=None):
+def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitter_type=None,
+                                ax=None, pl_kwargs=None):
     """Plot a phase folded representation of a lc
 
     :param Dataset dataset: LC dataset
@@ -416,7 +465,7 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar
     ax = __get_default_ax(ax=ax)
 
     # Check the errorbar kwargs
-    kw = dict() if errorbar_kwarg is None else errorbar_kwarg.copy()
+    kw = dict() if pl_kwargs is None else pl_kwargs.copy()
     if "fmt" not in kw:
         kw["fmt"] = "-"
     if "color" not in kw:
@@ -424,13 +473,23 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, ax=None, errorbar
 
     # Plot the phase folded data
     if data_err is not None:
-        line = ax.errorbar(phases[sortIndi], data[sortIndi], data_err[sortIndi], **kw)
+        if jitter is None:
+            line = ax.errorbar(phases[sortIndi], data[sortIndi], data_err[sortIndi], **kw)
+        else:
+            if jitter_type == "multi":
+                line = ax.errorbar(phases[sortIndi], data[sortIndi],
+                                   data_err[sortIndi] * exp(jitter), **kw)
+            elif jitter_type == "add":
+                line = ax.errorbar(phases[sortIndi], data[sortIndi],
+                                   sqrt(data_err[sortIndi]**2 * (1 + exp(2 * jitter))), **kw)
+            else:
+                raise ValueError("jitter_type should be in ['multi', 'add']")
     else:
         line = ax.errorbar(phases[sortIndi], data[sortIndi], **kw)
     return line, phases
 
 
-def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
+def add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=None):
     """Add two axes to a subplotspec (created with gridspec) for data and residual plot. """
     # Set the default values for GridSpecFromSubplotSpec
     kw = dict() if gs_from_sps_kw is None else gs_from_sps_kw.copy()
@@ -441,20 +500,19 @@ def add_twoaxeswithsharex(subplotspec, gs_from_sps_kw=None):
 
     # Create the two axes, share x axis and set the ticks and ticks label properties
     gs = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=subplotspec, **kw)
-    ax0 = subplot(gs[0])
-    ax1 = subplot(gs[1], sharex=ax0)
-    ax0.tick_params(axis="both", which="both", direction="in", length=2, bottom="on", left="on",
-                    top="on", right="on", reset=True, labelbottom="off")
-    ax0.locator_params(axis="y", tight=True, nbins=3)
-    ax1.tick_params(axis="both", which="both", direction="in", length=2, bottom="on", left="on",
-                    top="on", right="on", reset=True)
-    ax1.locator_params(axis="y", tight=True, nbins=3)
+    ax0 = Subplot(fig, gs[0])
+    ax0.locator_params(axis="y", tight=True, nbins=4)
+    ax0.tick_params(labelbottom="off")
+    fig.add_subplot(ax0)
+    ax1 = Subplot(fig, gs[1], sharex=ax0)
+    fig.add_subplot(ax1)
+    ax1.locator_params(axis="y", tight=True, nbins=4)
 
     # Return the two axes
     return ax0, ax1
 
 
-def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, gs_from_sps_kw=None):
+def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=None):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
     """
     # Create the nplanet axes
@@ -464,26 +522,27 @@ def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, gs_from_sps_kw=None):
     axes_data = []
     axes_resi = []
     for gs_elem in gs:
-        ax_data, ax_resi = add_twoaxeswithsharex(gs_elem, gs_from_sps_kw=gs_from_sps_kw)
+        ax_data, ax_resi = add_twoaxeswithsharex(gs_elem, fig, gs_from_sps_kw=gs_from_sps_kw)
         axes_data.append(ax_data)
         axes_resi.append(ax_resi)
     return axes_data, axes_resi
 
 
-def apply_mask(x=None):
-    '''
-    Returns the outlier mask, an array of indices corresponding to the non-outliers.
-
-    :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead.
-       Default :py:obj:`None`
-
-    WORK IN PROGRESS
-    '''
-
-    if x is None:
-        return np.delete(np.arange(len(self.time)), self.mask)
-    else:
-        return np.delete(x, self.mask, axis=0)
+# Work in Progress to detect outliers before plotting
+# def apply_mask(x=None):
+#     '''
+#     Returns the outlier mask, an array of indices corresponding to the non-outliers.
+#
+#     :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead.
+#        Default :py:obj:`None`
+#
+#     WORK IN PROGRESS
+#     '''
+#
+#     if x is None:
+#         return np.delete(np.arange(len(self.time)), self.mask)
+#     else:
+#         return np.delete(x, self.mask, axis=0)
 
 
 def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):

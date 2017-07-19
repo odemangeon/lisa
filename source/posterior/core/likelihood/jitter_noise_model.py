@@ -31,6 +31,7 @@ class GaussianNoiseModel(Core_Noise_Model):
 
     __category__ = "gaussian"
     __has_GP__ = False
+    __has_jitter__ = False
 
     def _lnlike_dataset_creator(self, dataset_key=None):
         datasim_func = self.get_datasim_function(dataset_key)
@@ -113,6 +114,13 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     """docstring for GaussianNoiseModel_wdfmjitter."""
 
     __category__ = "gaussian_jitter_dfm"
+    __has_jitter__ = True
+    __jitter_type__ = "multi"
+
+    @property
+    def jitter_type(self):
+        """Return the type of jitter."""
+        return self.__jitter_type__
 
     def get_jitterparam(self, dataset_key=None):
         """Return the jitter parameter."""
@@ -243,6 +251,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjitteradd."""
 
     __category__ = "gaussian_jitter_add"
+    __jitter_type__ = "add"
 
     def _lnlike_dataset_creator(self, dataset_key=None):
         datasim_func = self.get_datasim_function(dataset_key)
@@ -275,6 +284,7 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjitteraddBaluev."""
 
     __category__ = "gaussian_jitter_add_Baluev"
+    __jitter_type__ = "add"
 
     def _lnlike_dataset_creator(self, dataset_key=None):
         datasim_func = self.get_datasim_function(dataset_key)

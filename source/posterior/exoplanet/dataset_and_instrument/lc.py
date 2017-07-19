@@ -30,25 +30,32 @@ class LC_Dataset(Dataset):
 
     __mandatory_columns__ = ["time", "flux", "flux_err"]
 
+    ## name of the data  and data error columns
+    _data_name = "flux"
+    _data_err_name = "flux_err"
+
     def plot(self, y="flux", yerr="flux_err", **kwargs):
         """
         Plot function to visualise the data.
 
         This is not very pretty but it plots the flux versus time and the error bars
         """
-        self.get_data().plot(y=y, yerr=yerr, **kwargs)
+        self.get_datatable().plot(y=y, yerr=yerr, **kwargs)
         plt.show()
 
     def get_kwargs(self):
-        pandas_df = self.get_data()
+        pandas_df = self.get_datatable()
         return {"data": array(pandas_df["flux"]),
                 "data_err": array(pandas_df["flux_err"]),
                 "t": array(pandas_df["time"]),
                 "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
-        pandas_df = self.get_data()
+        pandas_df = self.get_datatable()
         return array(pandas_df["time"])
+
+    def get_tref(self):
+        return (self.get_time()).min()
 
     def get_exptime(self, quartile=50):
         time = self.get_time()
@@ -106,6 +113,7 @@ class LC_Instrument(Core_Instrument):
     def get_OOT_param_name(self, order, inst_model):  # instrument is necessary don't remove it
         """Return the parameter name of the coefficient of the out-of-transit model."""
         return "{}{}".format(self.__OOT_var_basename__, order)
+
 
 K2 = LC_Instrument("K2")
 Kepler = LC_Instrument("Kepler")

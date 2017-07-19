@@ -22,6 +22,7 @@ logger = getLogger()
 
 class RunFolder(object):
     """docstring for RunFolder."""
+
     def __init__(self, run_folder=None):
         # 1.
         ## Folder where the program should look for config files by default: Initialise it
@@ -50,7 +51,7 @@ class RunFolder(object):
     def run_folder(self, run_folder="default"):
         """Set the run_folder attribute."""
         if run_folder is None:
-            logger.warning("The run_folder has NOT been definded because the provided folder is "
+            logger.warning("The run_folder has NOT been defined because the provided folder is "
                            "None")
         else:
             res = define_folder_withdefault(main_default_folder=input_run_folder,
@@ -76,6 +77,7 @@ class RunFolder(object):
 
 class DataFolder(object):
     """docstring for DataFolder."""
+
     def __init__(self, data_folder=None):
         # 1.
         ## Folder where the program should look for dataset files by default: Initialise it

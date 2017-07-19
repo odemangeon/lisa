@@ -25,6 +25,7 @@ and manipulate the data.
 from logging import getLogger
 from sys import exc_info
 from pandas import read_table
+from numpy import asarray
 
 from ....tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
 
@@ -44,6 +45,10 @@ class Dataset(object):
 
     ## Mandatory columns: For this abstract data base there is None
     _mandatory_columns = []
+
+    ## name of the data  and data error columns
+    _data_name = "data"
+    _data_err_name = "data_err"
 
     def __init__(self, file_path, instrument_instance):
         """Dataset init method FOR INHERITANCE PURPOSES (as Dataset is an abstract class).
@@ -232,7 +237,7 @@ class Dataset(object):
         # 5 and 6.
         if store:
             self._set_data(pandas_df)
-            return self.get_data()
+            return self.get_datatable()
         else:
             return pandas_df
 
@@ -245,8 +250,8 @@ class Dataset(object):
         """
         self.__data = data
 
-    def get_data(self, **kwargs):
-        """Return the data.
+    def get_datatable(self, **kwargs):
+        """Return the data table.
         ----
         Returns:
             Unconstrained type but not None, Data stored or loaded from the data file. Return None
@@ -262,3 +267,13 @@ class Dataset(object):
                                          exc_info()))
 
         return self.__data
+
+    def get_data(self):
+        """Return the data vector."""
+        pandas_df = self.get_datatable()
+        return asarray(pandas_df[self._data_name])
+
+    def get_data_err(self):
+        """Return the data vector."""
+        pandas_df = self.get_datatable()
+        return asarray(pandas_df[self._data_err_name])

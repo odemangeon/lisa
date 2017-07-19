@@ -13,7 +13,7 @@ The objective of this module is to define the class DatasimulatorCreator.
 """
 from logging import getLogger
 
-from ..database_func import DatabaseInstLvlDataset
+from ..database_instlevelsanddataset import DatabaseInstLvlDataset
 from ....tools.miscellaneous import interpret_data_filename
 
 
@@ -27,11 +27,11 @@ root_name_func_datsim = "_create_datasimulator"
 class DatasimulatorCreator(object):
     """docstring for DatasimulatorCreator."""
 
-    def _create_datasimulator(self, instmod_obj):
+    def _create_datasimulator(self, instmod_obj, dataset=None):
         """Return the datasimulator for a given instrument model."""
         inst_cat = instmod_obj.instrument.category
         create_datasim_func = getattr(self, root_name_func_datsim + "_" + inst_cat)
-        return create_datasim_func(instmod_obj)
+        return create_datasim_func(instmod_obj, dataset)
 
     def create_datasimulators(self, affectinstmodel4dataset=False, lock_db=False):
         """Return the datasimulator for each instrument model used."""
@@ -48,6 +48,7 @@ class DatasimulatorCreator(object):
             inst_name = instmod_obj.instrument.name
             inst_cat = instmod_obj.instrument.category
             db[inst_cat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
+            # print(list(db[inst_cat][inst_name][inst_model].keys()))
         if lock_db:
             db.lock()
         return db
@@ -56,14 +57,17 @@ class DatasimulatorCreator(object):
         """Create the datasimulator function for each dataset."""
         db = {}
         for dataset_name in instmodel4dataset:
-            instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
+            # instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
             fileinfo = interpret_data_filename(dataset_name)
             inst_cat = fileinfo["inst_category"]
             inst_name = fileinfo["inst_name"]
             number = fileinfo["number"]
             dataset = dataset_db[inst_cat][inst_name][number]
             db[dataset_name] = {}
-            for obj in datasim_db[instmod_fullname]:
-                datasim_func = datasim_db[instmod_fullname][obj]
-                db[dataset_name][obj] = dataset.create_datasimulator_for_dataset(datasim_func)
+            instmod_obj = self.get_instmod(dataset_name)
+            # for obj in datasim_db[instmod_fullname]:
+            #     instmod_obj = self.get_instmod(dataset_name)
+            #     # datasim_func = datasim_db[instmod_fullname][obj]
+            #     # db[dataset_name][obj] = dataset.create_datasimulator_for_dataset(datasim_func)
+            db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)["whole"]
         return db
