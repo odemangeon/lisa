@@ -45,8 +45,8 @@ class RV_Dataset(Dataset):
 
     def get_kwargs(self):
         pandas_df = self.get_datatable()
-        return {"data": array(pandas_df["RV"]),
-                "data_err": array(pandas_df["RV_err"]),
+        return {"data": array(pandas_df[self._data_name]),
+                "data_err": array(pandas_df[self._data_err_name]),
                 "t": array(pandas_df["time"]),
                 "tref": array(pandas_df["time"]).min()}
 

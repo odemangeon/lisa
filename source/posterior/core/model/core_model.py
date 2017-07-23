@@ -14,8 +14,9 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from numpy import array
+from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
@@ -96,6 +97,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
+
+        # Initialise __datasimcreatorname4instcat which as to be overwriten in the Model Subclass
+        self.__datasimcreatorname4instcat = {}
+
+        # Initialise datasimcreator which as to be overwriten in the Model Subclass
+        self.__datasimcreator = {}
+
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -108,6 +116,29 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     def init_kwargs(self):
         """Return the dictionary giving the arguments for the define_model method of Posterior."""
         raise NotImplementedError("You need to create this property for your model !")
+
+    @property
+    def datasimcreatorname4instcat(self):
+        """Return the dictionary giving the name of the datasimulator for each instrument category.
+        """
+        return self.__datasimcreatorname4instcat
+
+    @property
+    def datasimcreator(self):
+        """Return the dictionary giving the name of the datasimulator for each instrument category.
+        """
+        return self.__datasimcreator
+
+    def get_datasimcreatorname(self, inst_cat):
+        """Return the name of the datasimwoinst function associated with the isntrument category.
+        """
+        return self.__datasimcreatorname4instcat[inst_cat]
+
+    def get_datasimcreator(self, inst_cat):
+        """Return the name of the datasimwoinst function associated with the isntrument category.
+        """
+        datasimcreatorname = self.get_datasimcreatorname(inst_cat)
+        return self.datasimcreator[datasimcreatorname]
 
     def init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""

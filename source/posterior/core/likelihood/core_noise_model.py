@@ -42,7 +42,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
 
-    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
+    def __init__(self, datasim_docfunc, model_instance, instmodel_obj, dataset_included=False):
         """Initialise a Core_Noise_Model subclass instance.
 
         The model_instance and instmod_full_name arguments are not used in the function below but
@@ -51,6 +51,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         """
         err_msg = ("datasim_docfunc should be a DocFunction instance or a dict of DocFunction"
                    "instances ! Got {} {}.")
+        self.__dataset_included = dataset_included
         if isinstance(datasim_docfunc, DocFunction):  # Check the datasim_docfunc argument
             self.datasim_docfunc = datasim_docfunc
             self.__multidataset = False
@@ -69,8 +70,16 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         if type(self) is Core_Noise_Model:
             raise NotImplementedError("Core_NoiseModel should not be instanciated!")
 
-    def __call__(self, p, data, data_err, **kwarg_data):
-        return self.lnlike(p, data, data_err, **kwarg_data)
+    def __call__(self, p, data=None, data_err=None, **kwarg_data):
+        if self.dataset_included:
+            return self.lnlike(p)
+        else:
+            return self.lnlike(p, data, data_err, **kwarg_data)
+
+    @property
+    def dataset_included(self):
+        """True if the datasim_docfunc provided include the dataset information already."""
+        return self.__dataset_included
 
     @property
     def multidataset(self):

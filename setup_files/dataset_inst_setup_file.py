@@ -4,6 +4,7 @@ import source.posterior.core.dataset_and_instrument.manager_dataset_instrument a
 from source.posterior.core.dataset_and_instrument.instrument import Default_Instrument
 from source.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument, LC_Dataset
 from source.posterior.exoplanet.dataset_and_instrument.rv import RV_Instrument, RV_Dataset
+from source.posterior.exoplanet.dataset_and_instrument.ttv import TTV_Instrument, TTV_Dataset
 from source.posterior.exoplanet.dataset_and_instrument.lc import K2, Kepler, CHEOPS, CoRoT
 from source.posterior.exoplanet.dataset_and_instrument.rv import HARPS, SOPHIE_HE, SOPHIE_HR
 
@@ -13,6 +14,7 @@ manager.define_def_instrument_class(Default_Instrument)
 
 manager.add_available_inst_category(LC_Instrument, LC_Dataset)
 manager.add_available_inst_category(RV_Instrument, RV_Dataset)
+manager.add_available_inst_category(TTV_Instrument, TTV_Dataset)
 
 manager.add_available_inst(K2)
 manager.add_available_inst(Kepler)

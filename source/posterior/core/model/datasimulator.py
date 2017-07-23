@@ -30,8 +30,8 @@ class DatasimulatorCreator(object):
     def _create_datasimulator(self, instmod_obj, dataset=None):
         """Return the datasimulator for a given instrument model."""
         inst_cat = instmod_obj.instrument.category
-        create_datasim_func = getattr(self, root_name_func_datsim + "_" + inst_cat)
-        return create_datasim_func(instmod_obj, dataset)
+        # create_datasim_func = getattr(self, root_name_func_datsim + "_" + inst_cat)
+        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset)
 
     def create_datasimulators(self, affectinstmodel4dataset=False, lock_db=False):
         """Return the datasimulator for each instrument model used."""
