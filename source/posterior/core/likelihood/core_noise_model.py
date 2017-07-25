@@ -41,6 +41,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     """Docstring for Core_Noise_Model class."""
 
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
+    __kwargs_needed__ = ["data", "data_err"]
 
     def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
         """Initialise a Core_Noise_Model subclass instance.

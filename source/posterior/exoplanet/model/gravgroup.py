@@ -488,14 +488,16 @@ class GravGroup(Core_Model, GravGroup_Parametrisation):
     def automatic_init_kwargs(self):
         """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
         dico = super(GravGroup, self).automatic_init_kwargs
-        dico["lc_param_file"] = self.lc_param_file
+        if "LC" in self.dataset_db.inst_categories:
+            dico["lc_param_file"] = self.lc_param_file
         dico["kwargs_parametrisation"] = self.parametrisation_kwargs
         return dico
 
-    def automatic_model_initialisation(self, lc_param_file, kwargs_parametrisation, **kwargs):
+    def automatic_model_initialisation(self, kwargs_parametrisation, lc_param_file=None, **kwargs):
         """load the parameter file."""
-        self.lc_param_file = lc_param_file
-        self.load_LC_param_file()
+        if lc_param_file is not None:
+            self.lc_param_file = lc_param_file
+            self.load_LC_param_file()
         self.apply_parametrisation(**kwargs_parametrisation)
         super(GravGroup, self).automatic_model_initialisation(**kwargs)
 

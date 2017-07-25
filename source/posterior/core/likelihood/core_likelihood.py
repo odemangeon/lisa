@@ -246,8 +246,8 @@ class LikelihoodCreator(object):
             for dataset_name in noisemodel_instance.l_dataset:
                 dico_noisemodel_instance[dataset_name] = noisemodel_instance
                 dataset = dataset_db[dataset_name]
-                all_kwargs["data"].append(dataset.get_data())
-                all_kwargs["data_err"].append(dataset.get_data_err())
+                for kwargs_type in noisemodel_instance.__kwargs_needed__:
+                    all_kwargs[kwargs_type].append(dataset.get_kwargs()[kwargs_type])
                 # kwargs = dataset.get_kwargs()
                 # for karg_type, kwarg_value in kwargs.items():
                 #     all_kwargs[karg_type].append(kwarg_value)

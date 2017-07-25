@@ -168,9 +168,10 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, noisemod_d
         if noise_mod.has_GP:
             for dataset_name in noise_mod.l_dataset:
                 dataset = dataset_db[dataset_name]
-                kwargs = dataset.get_kwargs()
-                for karg_type, kwarg_value in kwargs.items():
-                    dico_noisemod_allkwargs[noise_mod.category][karg_type].append(kwarg_value)
+                kwargs_temp = dataset.get_kwargs()
+                for kwarg_type in noise_mod.__kwargs_needed__:
+                    (dico_noisemod_allkwargs[noise_mod.category][kwarg_type].
+                     append(kwargs_temp[kwarg_type]))
 
     for ii, dataset in enumerate(l_datasets):
         inst_mod_fullname = datasim_dbf.get_instmod_fullname(dataset.dataset_name)
@@ -205,12 +206,32 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, noisemod_d
                                                             phasefold_kwargs["P"],
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
+                # Get the datasim for this planet only
+                datasim_db_docfunc_pl = datasim_dbf.instrument_db[inst_mod_fullname][planet_name]
+                # Get the datasims for the other planets
+                l_datasim_db_docfunc_others = []
+                for pl in phasefold_kwargs["planets"]:
+                    if pl == planet_name:
+                        continue
+                    else:
+                        l_datasim_db_docfunc_others.append(datasim_dbf.
+                                                           instrument_db[inst_mod_fullname]
+                                                           [pl])
+
                 if not(title_printed):
                     ax_data.set_title(dataset.dataset_name)
                     title_printed = True
                 # Plot the data
+                data_pl = data.copy()
                 pl_kwargs = {"color": "b", "fmt": "."}
-                _, phases = plot_phase_folded_timeserie(t=t, data=data, P=P, tc=tc,
+                for datasim_db in l_datasim_db_docfunc_others:
+                    model, modelwGP, _ = compute_model(t, datasim_db, param, l_param_name,
+                                                       datasim_kwargs=kwargs,
+                                                       supersamp=supersamp_model, exptime=exptime,
+                                                       noise_model=noise_model,
+                                                       noisemod_allkwargs=noisemod_allkwargs)
+                    data_pl = data_pl - model
+                _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc,
                                                         data_err=data_err,
                                                         jitter=jitter, jitter_type=jitter_type,
                                                         ax=ax_data,
@@ -221,14 +242,14 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, noisemod_d
                 phasemax = phases.max()
                 tmin = tc + P * phasemin
                 tmax = tc + P * phasemax
-                plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc, param, l_param_name,
+                plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc_pl, param, l_param_name,
                            supersamp=supersamp_model, exptime=exptime,
                            datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
                            noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
                            ax=ax_data)
                 # Plot residuals
-                plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
-                               jitter=jitter, jitter_type=jitter_type,
+                plot_residuals(t, data, datasim_db_docfunc_pl, param, l_param_name,
+                               data_err=data_err, jitter=jitter, jitter_type=jitter_type,
                                supersamp=supersamp_model, exptime=exptime,
                                datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
                                noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
@@ -298,23 +319,14 @@ def average_supersampled_values(values, supersamp):
     return np.mean(values.reshape(-1, supersamp), axis=1)
 
 
-def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
-               supersamp=1, exptime=exptime_Kepler,
-               plot_phase=False, P=None, tc=None,
-               noise_model=None, noisemod_allkwargs=None,
-               pl_kwargs_model=None, pl_kwargs_modelandGP=None,
-               ax=None):
-    # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
-    # tmax_plus), the model time vector (t)
-    tsamp = (tmax - tmin) / (nt - 1)  # nt - 1 because this the number of intervals
-    tmin_moins = tmin - tsamp  # Add 1 point before tmin
-    tmax_plus = tmax + tsamp  # Add 1 point after tmax
-    nt += 2
-    t_plot = linspace(tmin_moins, tmax_plus, nt)
+def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+                  supersamp=1, exptime=exptime_Kepler,
+                  noise_model=None, noisemod_allkwargs=None):
+    # Supersample the time if needed
     if supersamp > 1:
-        t_model = get_time_supersampled(t_plot, supersamp, exptime)
+        t_model = get_time_supersampled(t, supersamp, exptime)
     else:
-        t_model = t_plot
+        t_model = t
 
     # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
     # the datasim function
@@ -331,18 +343,6 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     if supersamp > 1:
         model = average_supersampled_values(model, supersamp)
 
-    # Create a new figure and ax if needed
-    ax = __get_default_ax(ax=ax)
-
-    # Plot the model
-    kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 0.6}
-    if pl_kwargs_model is not None:
-        kwarg_model.update(pl_kwargs_model)
-    if plot_phase:
-        plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, pl_kwargs=kwarg_model)
-    else:
-        ax.errorbar(t_plot, model, **kwarg_model)
-
     # Plot the model + GP
     if noise_model is not None:
         if noise_model.has_GP:
@@ -351,21 +351,129 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
             if supersamp > 1:
                 gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
             model_wGP = model + gp_model
-            kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 0.6}
-            if pl_kwargs_modelandGP is not None:
-                kwarg_GP.update(pl_kwargs_modelandGP)
-            if plot_phase:
-                plot_phase_folded_timeserie(t_plot, model_wGP, P, tc, ax=ax,
-                                            pl_kwargs=kwarg_GP)
-            else:
-                ax.errorbar(t_plot, model_wGP, **kwarg_GP)
+        else:
+            model_wGP = None
+    else:
+        model_wGP = None
+
+    return model, model_wGP, t_model
+
+
+def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+               supersamp=1, exptime=exptime_Kepler,
+               plot_phase=False, P=None, tc=None,
+               noise_model=None, noisemod_allkwargs=None,
+               pl_kwargs_model=None, pl_kwargs_modelandGP=None,
+               ax=None):
+    # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
+    # tmax_plus), the model time vector (t)
+    tsamp = (tmax - tmin) / (nt - 1)  # nt - 1 because this the number of intervals
+    tmin_moins = tmin - tsamp  # Add 1 point before tmin
+    tmax_plus = tmax + tsamp  # Add 1 point after tmax
+    nt += 2
+    t_plot = linspace(tmin_moins, tmax_plus, nt)
+    model, model_wGP, t = compute_model(t_plot, datasim_db_docfunc, param, l_param_name,
+                                        datasim_kwargs=datasim_kwargs, supersamp=1,
+                                        exptime=exptime_Kepler,
+                                        noise_model=noise_model,
+                                        noisemod_allkwargs=noisemod_allkwargs)
+
+    # Create a new figure and ax if needed
+    ax = __get_default_ax(ax=ax)
+
+    # Plot the model
+    kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 0.6}
+    if pl_kwargs_model is not None:
+        kwarg_model.update(pl_kwargs_model)
+    if plot_phase:
+        line, _ = plot_phase_folded_timeserie(t, model, P, tc, ax=ax, pl_kwargs=kwarg_model)
+    else:
+        line = ax.errorbar(t, model, **kwarg_model)
+
+    # Plot the model + GP
+    if model_wGP is not None:
+        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 0.6}
+        if pl_kwargs_modelandGP is not None:
+            kwarg_GP.update(pl_kwargs_modelandGP)
+        if plot_phase:
+            line_wGP, _ = plot_phase_folded_timeserie(t, model_wGP, P, tc, ax=ax,
+                                                      pl_kwargs=kwarg_GP)
+        else:
+            line_wGP = ax.errorbar(t, model_wGP, **kwarg_GP)
+    else:
+        line_wGP = None
+    return line, line_wGP
+
+
+# def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+#                supersamp=1, exptime=exptime_Kepler,
+#                plot_phase=False, P=None, tc=None,
+#                noise_model=None, noisemod_allkwargs=None,
+#                pl_kwargs_model=None, pl_kwargs_modelandGP=None,
+#                ax=None):
+#     # Create the time sampling (tsamp) and the tmin and tmax for the model computation
+#     # (tmin_moins, tmax_plus), the model time vector (t)
+#     tsamp = (tmax - tmin) / (nt - 1)  # nt - 1 because this the number of intervals
+#     tmin_moins = tmin - tsamp  # Add 1 point before tmin
+#     tmax_plus = tmax + tsamp  # Add 1 point after tmax
+#     nt += 2
+#     t_plot = linspace(tmin_moins, tmax_plus, nt)
+#     if supersamp > 1:
+#         t_model = get_time_supersampled(t_plot, supersamp, exptime)
+#     else:
+#         t_model = t_plot
+#
+#     # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
+#     # the datasim function
+#     if datasim_kwargs is None:
+#         datasim_kwargs = {}
+#
+#     # Compute the model values for each time
+#     idx_par = []
+#     datasim_function = datasim_db_docfunc.function
+#     datasim_paramnames = datasim_db_docfunc.arg_list["param"]
+#     for par in datasim_paramnames:
+#         idx_par.append(l_param_name.index(par))
+#     model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
+#     if supersamp > 1:
+#         model = average_supersampled_values(model, supersamp)
+#
+#     # Create a new figure and ax if needed
+#     ax = __get_default_ax(ax=ax)
+#
+#     # Plot the model
+#     kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 0.6}
+#     if pl_kwargs_model is not None:
+#         kwarg_model.update(pl_kwargs_model)
+#     if plot_phase:
+#         plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, pl_kwargs=kwarg_model)
+#     else:
+#         ax.errorbar(t_plot, model, **kwarg_model)
+#
+#     # Plot the model + GP
+#     if noise_model is not None:
+#         if noise_model.has_GP:
+#             gpsim_func = noise_model.gp_simulator
+#             gp_model = gpsim_func(param, t_model, **noisemod_allkwargs)
+#             if supersamp > 1:
+#                 gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
+#             model_wGP = model + gp_model
+#             kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 0.6}
+#             if pl_kwargs_modelandGP is not None:
+#                 kwarg_GP.update(pl_kwargs_modelandGP)
+#             if plot_phase:
+#                 plot_phase_folded_timeserie(t_plot, model_wGP, P, tc, ax=ax,
+#                                             pl_kwargs=kwarg_GP)
+#             else:
+#                 ax.errorbar(t_plot, model_wGP, **kwarg_GP)
 
 
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
                    noise_model=None, noisemod_allkwargs=None,
-                   pl_kwargs_model=None, pl_kwargs_modelandGP=None,
+                   pl_kwargs_model=None, show_model=True,
+                   pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
     # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
     # the datasim function
@@ -392,28 +500,34 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
 
     # Plot the residuals
     kwarg_model = {"label": "model", "color": "g", "fmt": "."}
-    if pl_kwargs_model is not None:
-        kwarg_model.update(pl_kwargs_model)
-    if plot_phase:
-        plot_phase_folded_timeserie(t, residual, P, tc,
-                                    data_err=data_err, jitter=jitter, jitter_type=jitter_type,
-                                    ax=ax, pl_kwargs=kwarg_model)
+    if noise_model is None:
+        noise_modelGP = False
     else:
-        if jitter is None:
-            ax.errorbar(t, residual, data_err, **kwarg_model)
+        noise_modelGP = noise_model.has_GP
+    print(noise_modelGP)
+    if show_model or not(noise_modelGP):
+        if pl_kwargs_model is not None:
+            kwarg_model.update(pl_kwargs_model)
+        if plot_phase:
+            plot_phase_folded_timeserie(t, residual, P, tc,
+                                        data_err=data_err, jitter=jitter, jitter_type=jitter_type,
+                                        ax=ax, pl_kwargs=kwarg_model)
         else:
-            print("jitter: {}".format(jitter))
-            if jitter_type == "multi":
-                ax.errorbar(t, residual, data_err * exp(jitter), **kwarg_model)
-            elif jitter_type == "add":
-                ax.errorbar(t, residual, sqrt(data_err**2 * (1 + exp(2 * jitter))),
-                            **kwarg_model)
+            if jitter is None:
+                ax.errorbar(t, residual, data_err, **kwarg_model)
             else:
-                raise ValueError("jitter_type should be in ['multi', 'add']")
+                print("jitter: {}".format(jitter))
+                if jitter_type == "multi":
+                    ax.errorbar(t, residual, data_err * exp(jitter), **kwarg_model)
+                elif jitter_type == "add":
+                    ax.errorbar(t, residual, sqrt(data_err**2 * (1 + exp(2 * jitter))),
+                                **kwarg_model)
+                else:
+                    raise ValueError("jitter_type should be in ['multi', 'add']")
 
     # Plot the model + GP
     if noise_model is not None:
-        if noise_model.has_GP:
+        if noise_model.has_GP and show_modelandGP:
             gpsim_func = noise_model.gp_simulator
             gp_model = gpsim_func(param, t_model, **noisemod_allkwargs)
             if supersamp > 1:

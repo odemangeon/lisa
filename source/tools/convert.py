@@ -241,7 +241,16 @@ def getaoverr(P, rhostar):
     :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
-    return (  (rhostar *  gm * Ps**2. / (4. * np.pi**2.) ) )**(1.0/3.0) / rsun
+    return (  (rhostar * gm * Ps**2. / (4. * np.pi**2.) ) )**(1.0/3.0) / rsun
+
+def getaoverr_fromRstar(a, Rstar):
+    """Return the a over Rstar.
+
+    :param float/np.ndarray a: Planetary orbital semi-major axis in au.
+    :param float/np.ndarray Rstar: Stellar radius in solar radius
+    :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    """
+    return a * au / (Rstar * rsun)
 
 def getaoverr_fromspec(loggstar, P, Rstar):
     """Return the stellar density from the transit.
@@ -536,60 +545,61 @@ def getFi(Ls, a, Fifact=1.):
     return Fifact * Ls / a**2
 
 
-def get_secondary_chains(model, chaininterpret, star_kwargs=None):
+def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
     """
-    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
-        # Create a dictionary with the main parameter values either chain (if free) or one value
-        dico_par = {}
-        for param in model.get_list_params(main=True):
-            if param.free:
-                dico_par[param.full_name] = chaininterpret[..., param.full_name]
+    # Create a dictionary with the main parameter values either chain (if free) or one value
+    dico_par = {}
+    for param in model.get_list_params(main=True):
+        if param.free:
+            dico_par[param.full_name] = chaininterpret[..., param.full_name]
+        else:
+            dico_par[param.full_name] = param.value
+
+    # Compute the chains for secondary parameters.
+    # Initialise the results object
+    l_parname_sec_chain = []
+    l_parname_sec_fixed = []
+
+    star = model.stars[list(model.stars.keys())[0]]
+
+    # Simulate stellar Mass and radius chains if needed
+    for param in [star.M, star.R, star.Teff]:
+        if param.main is False:
+            ask_param_value = True
+            ask_param_error = True
+            if param.name in star_kwargs:
+                if "value" in star_kwargs[param.name]:
+                    param_value = star_kwargs[param.name]["value"]
+                    ask_param_value = False
+                if "error" in star_kwargs[param.name]:
+                    param_error = star_kwargs[param.name]["error"]
+                    ask_param_error = False
+            if ask_param_value:
+                # Ask to provide a stellar mass value
+                intitule_question = ("Enter a {} value. If you just press enter 1. solar"
+                                     " mass is assumed.\n".format(param.full_name))
+                param_value, answered = Ask4Number(intitule_question, default_value=1.)
             else:
-                dico_par[param.full_name] = param.value
+                answered = False
+            # If replied ask to provide and mass error value, otherwise assume no error
+            if ask_param_error and not(ask_param_value and not(answered)):
+                intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
+                                     "no uncertainty is assumed.\n".format(param.full_name))
+                param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
+            else:
+                if ask_param_value and not(answered):
+                    param_error = 0.
 
-        # Compute the chains for secondary parameters.
-        # Initialise the results object
-        l_parname_sec_chain = []
-        l_parname_sec_fixed = []
+            # if provided simulated a stellar mass chains else only give a fixed value.
+            if param_error == 0.:
+                dico_par[param.full_name] = param_value
+            else:
+                dico_par[param.full_name] = random.normal(loc=param_value,
+                                                          scale=param_error,
+                                                          size=chaininterpret.shape[:-1])
 
-        star = model.stars[list(model.stars.keys())[0]]
-        # Simulate stellar Mass and radius chains if needed
-        for param in [star.M, star.R, star.Teff]:
-            if param.main is False:
-                ask_param_value = True
-                ask_param_error = True
-                if param.name in star_kwargs:
-                    if "value" in star_kwargs[param.name]:
-                        param_value = star_kwargs[param.name]["value"]
-                        ask_param_value = False
-                    if "error" in star_kwargs[param.name]:
-                        param_error = star_kwargs[param.name]["error"]
-                        ask_param_error = False
-                if ask_param_value:
-                    # Ask to provide a stellar mass value
-                    intitule_question = ("Enter a {} value. If you just press enter 1. solar"
-                                         " mass is assumed.\n".format(param.full_name))
-                    param_value, answered = Ask4Number(intitule_question, default_value=1.)
-                else:
-                    answered = False
-                # If replied ask to provide and mass error value, otherwise assume no error
-                if ask_param_error and not(ask_param_value and not(answered)):
-                    intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
-                                         "no uncertainty is assumed.\n".format(param.full_name))
-                    param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
-                else:
-                    if ask_param_value and not(answered):
-                        param_error = 0.
-
-                # if provided simulated a stellar mass chains else only give a fixed value.
-                if param_error == 0.:
-                    dico_par[param.full_name] = param_value
-                else:
-                    dico_par[param.full_name] = random.normal(loc=param_value,
-                                                              scale=param_error,
-                                                              size=chaininterpret.shape[:-1])
-
+    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
         # Iterate over planet related secondary
         for planet in model.planets.values():
             # Prepare the list of tuples secondary parameter name, function, parameters
@@ -659,6 +669,116 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
             l_tup_planet.append((planet.H.full_name, getscaleheigh,
                                  [planet.M.full_name, planet.R.full_name, planet.Teq.full_name]))
 
+            # Compute teh secondary parameter
+            for sec_paraname, func, param_list in l_tup_planet:
+                logger.debug("Computing secondary parameter: {}".format(sec_paraname))
+                values = func(*[dico_par[param] for param in param_list])
+                if isinstance(values, Number) or isinstance(values, ndarray):
+                    dico_par[sec_paraname] = values
+                    if isinstance(values, Number):
+                        l_parname_sec_fixed.append(sec_paraname)
+                    else:
+                        if values.size == 1:
+                            l_parname_sec_fixed.append(sec_paraname)
+                        elif values.size > 1:
+                            l_parname_sec_chain.append(sec_paraname)
+                        else:
+                            raise ValueError("Secondary parameter computation {} didn't return "
+                                             "any result: {}".format(sec_paraname, values))
+                else:
+                    raise ValueError("Secondary parameter computation {} return an unexpected "
+                                     "object type: {}".format(sec_paraname, type(values)))
+        chainIsec = ChainsInterpret(stack([dico_par[param] for param in l_parname_sec_chain],
+                                          axis=-1),
+                                    l_parname_sec_chain)
+        return chainIsec, l_parname_sec_chain
+    elif Counter(["RV",]) == Counter(model.dataset_db.inst_categories):
+        # Default value for planet_kwargs and simulate if needed
+        dico_def_value = {"inc": 90.}
+        if planet_kwargs is None:
+            planet_kwargs = {}
+        for planet in model.planets.values():
+            pl_name = planet.name
+            if planet.name not in planet_kwargs:
+                planet_kwargs[pl_name] = {}
+            # Simulate planet inclination if needed.
+            for param in [planet.inc]:
+                if param.main is False:
+                    ask_param_value = False
+                    ask_param_error = False
+                    if param.name in planet_kwargs[pl_name]:
+                        if "value" in planet_kwargs[pl_name][param.name]:
+                            param_value = planet_kwargs[pl_name][param.name]["value"]
+                            ask_param_value = False
+                        if "error" in planet_kwargs[pl_name][param.name]:
+                            param_error = planet_kwargs[pl_name][param.name]["error"]
+                            ask_param_error = False
+                    if ask_param_value:
+                        # Ask to provide a stellar mass value
+                        intitule_question = ("Enter a {} value. If you just press enter {}"
+                                             " is assumed.\n".format(param.full_name,
+                                                                     dico_def_value[param.name]))
+                        param_value, answered = Ask4Number(intitule_question,
+                                                           default_value=dico_def_value[param.name])
+                    else:
+                        answered = False
+                    # If replied ask to provide and mass error value, otherwise assume no error
+                    if ask_param_error and not(ask_param_value and not(answered)):
+                        intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
+                                             "no uncertainty is assumed.\n".format(param.full_name))
+                        param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
+                    else:
+                        if ask_param_value and not(answered):
+                            param_error = 0.
+
+                    # if provided simulated a stellar mass chains else only give a fixed value.
+                    if param_error == 0.:
+                        dico_par[param.full_name] = param_value
+                    else:
+                        dico_par[param.full_name] = random.normal(loc=param_value,
+                                                                  scale=param_error,
+                                                                  size=chaininterpret.shape[:-1])
+
+        # Iterate over planet related secondary
+        for planet in model.planets.values():
+            # Prepare the list of tuples secondary parameter name, function, parameters
+            l_tup_planet = []
+            # eccentricity
+            l_tup_planet.append((planet.ecc.full_name, getecc,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # omega : argument of periastron in degrees
+            l_tup_planet.append((planet.omega.full_name, getomega_deg,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # Mpsini: Planetary mass sinus inclination
+            l_tup_planet.append((planet.Msini.full_name, getMpsininc,
+                                 [planet.P.full_name, planet.K.full_name, star.M.full_name,
+                                  planet.ecc.full_name]))
+            # Mp: Planetary mass
+            if planet.inc.full_name in dico_par:
+                l_tup_planet.append((planet.M.full_name, getMp,
+                                     [planet.P.full_name, planet.K.full_name, star.M.full_name,
+                                      planet.ecc.full_name, planet.inc.full_name]))
+            # a: semi major axis
+            if planet.inc.full_name in dico_par:
+                l_tup_planet.append((planet.a.full_name, geta,
+                                     [planet.P.full_name, star.M.full_name,
+                                      planet.M.full_name]))
+            else:
+                l_tup_planet.append((planet.a.full_name, geta,
+                                     [planet.P.full_name, star.M.full_name,
+                                      planet.Msini.full_name]))
+            # aR: semi major axis in stellar radius
+            l_tup_planet.append((planet.aR.full_name, getaoverr_fromRstar,
+                                 [planet.a.full_name, star.R.full_name]))
+            # Teq: Equilibrium temperature
+            l_tup_planet.append((planet.Teq.full_name, getTeqpl,
+                                 [star.Teff.full_name, planet.aR.full_name, planet.ecc.full_name]))
+            # L: Stellar luminosity
+            l_tup_planet.append((star.L.full_name, getLs,
+                                 [star.R.full_name, star.Teff.full_name]))
+            # Fi: Planetary insolation flux
+            l_tup_planet.append((planet.Fi.full_name, getFi,
+                                 [star.L.full_name, planet.a.full_name]))
             # Compute teh secondary parameter
             for sec_paraname, func, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))

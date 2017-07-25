@@ -38,11 +38,12 @@ class StellarActNoiseModel(Core_Noise_Model):
     __category__ = stelact_GP_noisemodel
     __has_GP__ = True
     __has_jitter__ = False
+    __kwargs_needed__ = ["data", "data_err", "t"]
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")
-    lnlikefunc_text = """def {func_name}(p, data, data_err, t):
-        model = datasim_func(p[{nb_GP_free_param}:], t)
+    lnlikefunc_text = """def {func_name}(p, data, data_err, t, **kwargs_data):
+        model = datasim_func(p[{nb_GP_free_param}:], **kwargs_data)
         gp = GP({kernel})
         gp.compute(t, data_err, sort=True)
         return gp.lnlikelihood(data - model)
@@ -54,13 +55,28 @@ class StellarActNoiseModel(Core_Noise_Model):
     # logger.debug("t: {{}}".format(t))
     # logger.debug("l_idx_param: {{}}".format(l_idx_param))
 
-    lnlikefunc_text_multidataset = """def {func_name}(p, data, data_err, t):
-        model = [datasim_func(p[indexes_dataset], t_dataset)
-                 for datasim_func, indexes_dataset, t_dataset in zip(l_func, l_idx_param, t)]
+    lnlikefunc_text_multidataset = """def {func_name}(p, data, data_err, t, **kwargs_data):
+        kwargs_dataset = []
+        for i in range(ndataset):
+            kwargs = dict()
+            for kwargs_type in kwargs_data:
+                kwargs[kwargs_type] = kwargs_data[kwargs_type][i]
+            kwargs_dataset.append(kwargs)
+        model = [datasim_func(p[indexes_dataset], **kwargs)
+                 for datasim_func, indexes_dataset, kwargs in zip(l_func, l_idx_param,
+                                                                  kwargs_dataset)]
         gp = GP({kernel})
         gp.compute(concatenate(t), concatenate(data_err), sort=True)
         return gp.lnlikelihood(concatenate(data) - concatenate(model))
         """
+
+    # lnlikefunc_text_multidataset = """def {func_name}(p, data, data_err, t):
+    #     model = [datasim_func(p[indexes_dataset], t_dataset)
+    #              for datasim_func, indexes_dataset, t_dataset in zip(l_func, l_idx_param, t)]
+    #     gp = GP({kernel})
+    #     gp.compute(concatenate(t), concatenate(data_err), sort=True)
+    #     return gp.lnlikelihood(concatenate(data) - concatenate(model))
+    #     """
     function_name = "lnlike"
 
     __star_param_GP_names = [amp_RV, evol_timescal, periodic_timescal, period]
@@ -86,8 +102,10 @@ class StellarActNoiseModel(Core_Noise_Model):
         ker = self.__get_text_define_GP()
         if self.multidataset:
             l_idx_param = []
+            ndataset = len(self.l_dataset)
             for dataset in self.l_dataset:
                 l_idx_param.append(self.get_param_idxs_datasim(dataset))
+            ldict["ndataset"] = ndataset
             ldict["l_idx_param"] = l_idx_param
             ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
             ldict["concatenate"] = concatenate
@@ -105,20 +123,64 @@ class StellarActNoiseModel(Core_Noise_Model):
         exec(func, ldict)
         return DocFunction(function=ldict[self.function_name], arg_list=self.get_arg_list())
 
-    def lnlike(self, p, data, data_err, t):
+    # def lnlike_creator(self):
+    #     ldict = locals().copy()
+    #     nb_free = self.nb_params_GP_free
+    #     ker = self.__get_text_define_GP()
+    #     if self.multidataset:
+    #         l_idx_param = []
+    #         for dataset in self.l_dataset:
+    #             l_idx_param.append(self.get_param_idxs_datasim(dataset))
+    #         ldict["l_idx_param"] = l_idx_param
+    #         ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
+    #         ldict["concatenate"] = concatenate
+    #         ldict["logger"] = logger
+    #         text_func = self.lnlikefunc_text_multidataset
+    #     else:
+    #         datasim_func = self.get_datasim_function()
+    #         ldict["datasim_func"] = datasim_func
+    #         text_func = self.lnlikefunc_text
+    #     func = text_func.format(func_name=self.function_name, nb_GP_free_param=nb_free,
+    #                             kernel=ker)
+    #     ldict["ExpSquaredKernel"] = ExpSquaredKernel
+    #     ldict["ExpSine2Kernel"] = ExpSine2Kernel
+    #     ldict["exp"] = exp
+    #     ldict["GP"] = GP
+    #     exec(func, ldict)
+    #     return DocFunction(function=ldict[self.function_name], arg_list=self.get_arg_list())
+
+    def lnlike(self, p, data, data_err, t, **kwarg_data):
         if self.multidataset:
             model = []
-            for dataset_key, t_dataset in zip(self.l_dataset, t):
-                model.append(self.get_datasim_function(dataset_key)
-                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+            for i, dataset in enumerate(self.l_dataset):
+                kwargs_dataset = {}
+                for kwargs_type in kwarg_data:
+                    kwargs_dataset[kwargs_type] = kwarg_data[kwargs_type][i]
+                model.append(self.get_datasim_function(dataset)
+                             (p[self.get_param_idxs_datasim(dataset)], **kwargs_dataset))
             gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(concatenate(t), concatenate(data_err))
             return gp.lnlikelihood(concatenate(data) - concatenate(model))
         else:
-            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], **kwarg_data)
             gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
             return gp.lnlikelihood(data - model)
+
+    # def lnlike(self, p, data, data_err, t):
+    #     if self.multidataset:
+    #         model = []
+    #         for dataset_key, t_dataset in zip(self.l_dataset, t):
+    #             model.append(self.get_datasim_function(dataset_key)
+    #                          (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(concatenate(t), concatenate(data_err))
+    #         return gp.lnlikelihood(concatenate(data) - concatenate(model))
+    #     else:
+    #         model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
+    #         return gp.lnlikelihood(data - model)
 
     def __define_GP(self, p):
         l_val = [p[idxorval] if free else idxorval
@@ -189,17 +251,21 @@ class StellarActNoiseModel(Core_Noise_Model):
                                  arg_list_new["param"])
         return arg_list_new
 
-    def gp_simulator(self, p, tsim, data, data_err, t):
+    def gp_simulator(self, p, tsim, data, data_err, t, **kwarg_data):
         if self.multidataset:
             model = []
-            for dataset_key, t_dataset in zip(self.l_dataset, t):
+            for ii, dataset_key in enumerate(self.l_dataset):
+                kwargs_dataset = {}
+                for kwargs_type in kwarg_data:
+                    kwargs_dataset[kwargs_type] = kwarg_data[kwargs_type][ii]
                 model.append(self.get_datasim_function(dataset_key)
-                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+                             (p[self.get_param_idxs_datasim(dataset_key)], **kwargs_dataset))
             gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(concatenate(t), concatenate(data_err))
             return gp.sample_conditional(concatenate(data) - concatenate(model), tsim)
         else:
-            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()],
+                                                **kwarg_data)
             gp = self.__define_GP(p[self.get_param_idxs_GP()])
             gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
             return gp.sample_conditional(data - model, tsim)
@@ -239,6 +305,7 @@ class StellarActNoiseModel(Core_Noise_Model):
         err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
                    "{} parameter !")
         for param in self.get_star_params_GP():
+            print(self.star.parameters)
             if param.name not in self.star.parameters:
                 raise ValueError(err_msg.format(instmod_obj.full_name, self.category,
                                                 param.full_name, ""))
