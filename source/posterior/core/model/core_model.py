@@ -102,6 +102,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         self.__datasimcreatorname4instcat = {}
 
         # Initialise datasimcreator which as to be overwriten in the Model Subclass
+        # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
         self.__datasimcreator = {}
 
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
@@ -120,22 +121,34 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     @property
     def datasimcreatorname4instcat(self):
         """Return the dictionary giving the name of the datasimulator for each instrument category.
+
+        key: instrument category, value: datasimcreator name
         """
         return self.__datasimcreatorname4instcat
 
     @property
     def datasimcreator(self):
-        """Return the dictionary giving the name of the datasimulator for each instrument category.
+        """Define the available datasimcreator for the model.
+
+        key: datasimcreator name, value: datasimcreator docfunction
         """
         return self.__datasimcreator
 
     def get_datasimcreatorname(self, inst_cat):
-        """Return the name of the datasimwoinst function associated with the isntrument category.
+        """Return the name of the datasimcreator (without_instrument?) function associated with
+        the instrument category.
+
+        :param inst_cat string: Instrument category
+        :return datasimcreator_name string: Datasimcreator name
         """
         return self.__datasimcreatorname4instcat[inst_cat]
 
     def get_datasimcreator(self, inst_cat):
-        """Return the name of the datasimwoinst function associated with the isntrument category.
+        """Return the datasimcreator docfunc (without_instrument?) associated with the instrument
+        category.
+
+        :param inst_cat string: Instrument category
+        :return datasimcreator_name string: Datasimcreator name
         """
         datasimcreatorname = self.get_datasimcreatorname(inst_cat)
         return self.datasimcreator[datasimcreatorname]

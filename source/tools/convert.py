@@ -36,6 +36,7 @@ from IPython import get_ipython
 from numpy import pi
 
 from .human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
+from .human_machine_interface.QCM import QCM_utilisateur
 from .emcee_tools import ChainsInterpret
 
 
@@ -535,6 +536,17 @@ def getFi(Ls, a, Fifact=1.):
     """
     return Fifact * Ls / a**2
 
+def getRstar(rho, M, Rfact=1.):
+    """Return the stellar radius.
+
+    :param float/np.ndarray rho: Stellar density (in solar density)
+    :param float/np.ndarray M: Stellar mass (in solar mass)
+    :param float Rfact: Multiplicative factor for unit purposes (if !=1 watch out units)
+
+    :return float/np.ndarray R: Stellar radius (in solar radius if Rfact=1)
+    """
+    return Rfact * (M / rho)**(1. / 3)
+
 
 def get_secondary_chains(model, chaininterpret, star_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
@@ -555,7 +567,20 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
 
         star = model.stars[list(model.stars.keys())[0]]
         # Simulate stellar Mass and radius chains if needed
-        for param in [star.M, star.R, star.Teff]:
+        if ("rho" not in star_kwargs) and ("R" not in star_kwargs):
+            intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
+                                 "'R']\n")
+            reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
+        if reply == star.rho.name:
+            l_param_star = [star.M, star.rho, star.Teff]
+        elif reply == star.R.name:
+            l_param_star = [star.M, star.R, star.Teff]
+        else:
+            if star.rho.name in star_kwargs:
+                l_param_star = [star.M, star.rho, star.Teff]
+            else:
+                l_param_star = [star.M, star.R, star.Teff]
+        for param in l_param_star:
             if param.main is False:
                 ask_param_value = True
                 ask_param_error = True
@@ -589,6 +614,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                     dico_par[param.full_name] = random.normal(loc=param_value,
                                                               scale=param_error,
                                                               size=chaininterpret.shape[:-1])
+
+        if star.rho.full_name in dico_par:
+            dico_par[star.R.full_name] = getRstar(dico_par[star.rho.full_name],
+                                                  dico_par[star.M.full_name])
 
         # Iterate over planet related secondary
         for planet in model.planets.values():

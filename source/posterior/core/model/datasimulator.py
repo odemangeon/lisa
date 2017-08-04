@@ -71,3 +71,6 @@ class DatasimulatorCreator(object):
             #     # db[dataset_name][obj] = dataset.create_datasimulator_for_dataset(datasim_func)
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)["whole"]
         return db
+
+    def create_datasimulator_alldatasets(self, datasim_dbf, inser):
+        """Create a function that gather the datasimulators for all the datasets."""
