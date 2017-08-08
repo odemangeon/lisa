@@ -571,14 +571,20 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
             intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
                                  "'R']\n")
             reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
+        else:
+            reply = None
         if reply == star.rho.name:
+            Rstar_infered = True
             l_param_star = [star.M, star.rho, star.Teff]
         elif reply == star.R.name:
+            Rstar_infered = False
             l_param_star = [star.M, star.R, star.Teff]
         else:
             if star.rho.name in star_kwargs:
+                Rstar_infered = True
                 l_param_star = [star.M, star.rho, star.Teff]
             else:
+                Rstar_infered = False
                 l_param_star = [star.M, star.R, star.Teff]
         for param in l_param_star:
             if param.main is False:
@@ -615,7 +621,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                                                               scale=param_error,
                                                               size=chaininterpret.shape[:-1])
 
-        if star.rho.full_name in dico_par:
+        if Rstar_infered:
             dico_par[star.R.full_name] = getRstar(dico_par[star.rho.full_name],
                                                   dico_par[star.M.full_name])
 
@@ -707,6 +713,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                 else:
                     raise ValueError("Secondary parameter computation {} return an unexpected "
                                      "object type: {}".format(sec_paraname, type(values)))
+        if Rstar_infered:
+            l_parname_sec_chain.append(star.R.full_name)
         chainIsec = ChainsInterpret(stack([dico_par[param] for param in l_parname_sec_chain],
                                           axis=-1),
                                     l_parname_sec_chain)
