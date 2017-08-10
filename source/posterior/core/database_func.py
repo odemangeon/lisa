@@ -34,9 +34,12 @@ class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
     5. Initialise the instrument_db attribute with the above instmodel4dataset if exist or without
        instmodel4dataset if not.
     6. Initialise the dataset_db attribute as a LockableDict with the lock_dataset defined above.
-       Add an "all" key with value None for the func including all datasets and key for datasets in
-       instmodel4dataset
+       Add an _alldtst_key key with value None for the func including all datasets and key for
+       datasets in instmodel4dataset
     """
+
+    _alldtst_key = "all"
+
     def __init__(self, object_stored, database_name, instmodel4dataset=None, list_datasetnames=None,
                  instordered=False, use_samelock=False, lock_dataset=None, lock_database=None):
         Name.__init__(self, name=object_stored, name_prefix=database_name)  # 1
@@ -55,7 +58,7 @@ class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
                                                       lock_database=(self.
                                                                      get_database_Lock_instance()))
         self.dataset_db = LockableDict(lock=self.get_dataset_Lock_instance())  # 6
-        self.dataset_db["all"] = None
+        self.dataset_db[self._alldtst_key] = None
         self.__update_datasets_dataset_db()
 
     @property
@@ -113,7 +116,7 @@ class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
         """
         set_new = set(self.instmodel4dataset.list_datasets)
         set_old = set(self.list_datasets_in_datasetdb)
-        set_old.remove("all")
+        set_old.remove(self._alldtst_key)
         set_add = set_new - set_old  # 1a
         set_delete = set_old - set_new  # 2a
         logger.debug("Datasets to add to dataset_db: {}\nDatasets to delete: {}"

@@ -43,6 +43,8 @@ logger = getLogger()
 manager_model = Manager_Model()
 manager_model.load_setup()
 
+alldtst_key = DatabaseFunc._alldtst_key
+
 
 class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
                 DatasetsFileDbAttr):
@@ -290,10 +292,10 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         if self.islocked_dataset_db:
             self.datasimulators.instrument_db.update(self.model.create_datasimulators())
             (self.datasimulators.dataset_db.
-             update(self.model.
-                    create_datasimulators_perdataset(datasim_db=self.datasimulators.instrument_db,
-                                                     dataset_db=self.dataset_db,
-                                                     instmodel4dataset=self.instmodel4dataset)))
+             update(self.model.create_datasimulators_perdataset(dataset_db=self.dataset_db)))
+            (self.datasimulators.dataset_db
+             [alldtst_key]) = (self.model.
+                               create_datasimulator_alldatasets(dataset_db=self.dataset_db))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 

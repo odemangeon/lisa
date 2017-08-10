@@ -14,9 +14,9 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict  # , defaultdict
 from numpy import array
-from copy import deepcopy
+# from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
@@ -52,25 +52,23 @@ manager_noisemodel.load_setup()
 class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
                  Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
                  metaclass=MandatoryReadOnlyAttr):
+    """docstring for Core_Model abstract class."""
 
     __mandatoryattrs__ = ["category"]
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
 
-    """docstring for Core_Model abstract class."""
     def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None,
                  l_instmod_fullnames=[]):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
-        This __init__ does:
-            1. Set name of the model and add a list of parameter attribute
-        ----
-        Arguments:
-            name  : string,
-                Name of the Core_Model
-            dataset_db : DatasetDatabase instance,
-                DatasetDatabase giving the dataset to be modeled.
+        :param string name: Name of the Core_Model
+        :param DatasetDatabase dataset_db: DatasetDatabase giving the dataset to be modeled.
+        :param string/None run_folder: Folder to use as run folder. For more info check run_folder
+        :param Instmodel4Dataset/None instmodel4dataset:
+        :param list_of_string l_instmod_fullnames: list of instrument model full names
+
         """
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
@@ -81,7 +79,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
 
-        # Set the run folder
+        # Intialise the run_folder property
         RunFolder.__init__(self, run_folder=run_folder)
 
         # Core Model is also a ParamContainer Database so initialise it
@@ -98,7 +96,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
 
-        # Initialise __datasimcreatorname4instcat which as to be overwriten in the Model Subclass
+        # Initialise datasimcreatorname4instcat which as to be overwriten in the Model Subclass
         self.__datasimcreatorname4instcat = {}
 
         # Initialise datasimcreator which as to be overwriten in the Model Subclass
@@ -120,7 +118,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
 
     @property
     def datasimcreatorname4instcat(self):
-        """Return the dictionary giving the name of the datasimulator for each instrument category.
+        """Dictionary giving the name of the datasimulator for each instrument category.
 
         key: instrument category, value: datasimcreator name
         """
@@ -128,7 +126,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
 
     @property
     def datasimcreator(self):
-        """Define the available datasimcreator for the model.
+        """Dictionary giving the datasimcreator function for each datasimcreator name.
 
         key: datasimcreator name, value: datasimcreator docfunction
         """

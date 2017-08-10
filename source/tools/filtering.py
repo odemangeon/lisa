@@ -123,6 +123,7 @@ def get_outliers(x, max_iter=10, sigma_out=5, badmask=None):
     :param int max_iter: strictly positive int
     :param np.ndarray badmask:
 
+    WORK IN PROGRESS
     '''
     outmask = np.array([], dtype=int)
     nanmask = np.argwhere(np.isnan(x))
