@@ -443,8 +443,6 @@ def gettp(P, tc, secosw, sesinw):
     :param numpy.ndarray ecc: eccentricity
     :param numpy.ndarray omega: argument of periastron in radian
 
-    If eccentricity is zero the code applies convention correction which is in agrement with if
-    calculated through formula
     """
     omega = getomega(secosw, sesinw)
     ecc = getecc(secosw, sesinw)
@@ -471,6 +469,25 @@ def gettp_fast(P, tc, ecc, omega):
     E = 2.0 * math.atan(math.sqrt((1.0 - ecc) / (1.0 + ecc)) * math.tan(f / 2.0))
     mshift = E - ecc * math.sin(E)
     return tc - P * mshift / (2.0 * pi)
+
+def get_meanA(P, tc, treference, secosw, sesinw):
+    """Returns the mean anomaly in radians for a specific reference time given the transit time
+    :param numpy.ndarray P: period in [time unit]
+    :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
+    :param numpy.ndarray treference: time for which we want the mean anomaly  [time unit]
+    :param numpy.ndarray secosw: sqrt (eccentricity ) * cos (omega)
+    :param numpy.ndarray  sesinw: sqrt (eccentricity ) * sin(omega)
+
+    TODO: check if works well
+    """
+    omega = getomega(secosw, sesinw)
+    ecc = getecc(secosw, sesinw)
+    f = pi * 0.5 - omega
+    E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
+    mshift = E - ecc * np.sin(E)
+    meananomaly =  2.0 *pi *((treference -tc)/period ) + mshift
+    return meananomaly % 2.0 *pi
+
 
 
 def getTeqpl(Teffst, aR, ecc, A=0):
