@@ -43,7 +43,7 @@ rad_right, rad_left =  s1[2]-mrad,  mrad-s1[0]
                              #zip(*np.percentile(rad, [16, 50, 84], axis=0))
 the following line is equavalent to the lines comeneted above
 '''
-rad_right, mrad, rad_left = getconfi(rad[:, np.newaxis], 1)
+rad_right, mrad, rad_left = getconfi(rad, 1)
 
 print('rob mom radius condifence')
 print('%.2f^{+%.2f}_{-%.2f}' % (mrad, rad_right,rad_left))
