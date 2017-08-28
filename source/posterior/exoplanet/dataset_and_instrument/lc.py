@@ -19,6 +19,9 @@ from source.posterior.core.parameter import Parameter
 ## Logger
 logger = logging.getLogger()
 
+## LC instrument category
+LC_inst_cat = "LC"
+
 
 class LC_Dataset(Dataset):
     """docstring for LC_Datasetc class.
@@ -68,7 +71,7 @@ class LC_Dataset(Dataset):
 class LC_Instrument(Core_Instrument):
     """docstring for LC_Instrument."""
 
-    __category__ = "LC"
+    __category__ = LC_inst_cat
     # __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
     #                     "driftOOT": {"unit": "wo unit/s"}}
     __params_model__ = {}

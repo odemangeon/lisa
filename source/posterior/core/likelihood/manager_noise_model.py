@@ -51,9 +51,8 @@ class Manager_NoiseModel(object):
 
         def get_available_noisemodels(self):
             """Returns the list of available noise model names.
-            ----
-            Returns:
-                list of string, giving the available noise model names.
+
+            :return : list of string, giving the available noise model names.
             """
             return list(self.__noise_models.keys())
 

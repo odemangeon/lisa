@@ -20,6 +20,7 @@ from numpy import array
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
+from .instrument_container import InstrumentContainerInterface
 from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from ..paramcontainer import Core_ParamContainer
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -49,9 +50,9 @@ manager_noisemodel = Manager_NoiseModel()
 manager_noisemodel.load_setup()
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
-                 Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
-                 metaclass=MandatoryReadOnlyAttr):
+class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, InstrumentContainerInterface,
+                 ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator,
+                 DatasimulatorCreator, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
     __mandatoryattrs__ = ["category"]

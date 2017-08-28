@@ -16,7 +16,6 @@ from collections import defaultdict
 
 from .datasim_docfunc import DatasimDocFunc
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
-# from ....tools.miscellaneous import interpret_data_filename
 
 
 ## logger object
@@ -52,6 +51,7 @@ class DatasimulatorCreator(object):
             instrument model used. There is several datasim for each instrument model, because there
             might be several components (e.g. several planets) in the object studied. But there is
             always an entry which correspond to the whole object whose key is self.key_whole .
+            Structure is: 1st = inst_cat, 2nd = inst_name, 3nd = inst_model, 4st = component
         """
         # Create the result database (DatabaseInstLvlDataset)
         # If affectinstmodel4dataset=True, copy the instmodel4dataset of the model into the one of
@@ -72,6 +72,7 @@ class DatasimulatorCreator(object):
             inst_cat = instmod_obj.instrument.category
             # ... create and store the datasimulator docfuncs in the database
             db[inst_cat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
+        # If required lock the database
         if lock_db:
             db.lock()
         return db
@@ -81,7 +82,8 @@ class DatasimulatorCreator(object):
 
         :param DatasetDatabase dataset_db: Database with all the datasets
         :return dict db: Database with the datasim docfunc for each dataset in dataset_db. There is
-            only one datasim for each dataset corresponding to the whole object.
+            only one datasim for each dataset corresponding to the whole object. The dataset are
+            included in the functions.
         """
         # Initialise the output database
         db = {}
@@ -95,8 +97,8 @@ class DatasimulatorCreator(object):
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
         return db
 
-    def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model,
-                                      inst_model_fullnames=None, datasets=None):
+    def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model, inst_cat,
+                                      inst_model_fullname=None, dataset=None):
         """Return the datasimulator for a given instrument model.
 
         :param list_DatasimDocFunc l_datasim: List of DatasimDocFunc
@@ -112,15 +114,16 @@ class DatasimulatorCreator(object):
 
         return DatasimDocFunc(function=datasim_alldatasets,
                               params_model=params_model,
-                              inst_model_fullnames=inst_model_fullnames,
-                              datasets=datasets)
+                              inst_cat=inst_cat,
+                              inst_model_fullname=inst_model_fullname,
+                              dataset=dataset)
 
     def create_datasimulator_alldatasets(self, dataset_db):
         """Return one datasim docfunction that simulates all the datasets at the same time.
 
         :param DatasetDatabase dataset_db: Database with all the datasets
         :return DocFunction docfunc: Function that simulates all the datasets in dataset_db at the
-            same time.
+            same time with the datasets included.
         """
         # Initialise the dictionary datsimC_inputs:
         #   key = datasimcreator_name, v
@@ -146,6 +149,7 @@ class DatasimulatorCreator(object):
         l_datsim = []
         l_allparams = []
         l_params_idx = []
+        inst_cats = []
         inst_model_fullnames = []
         datasets = []
 
@@ -156,12 +160,13 @@ class DatasimulatorCreator(object):
                             [datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
                                            datsimC_inputs[datsimC_name]["datasets"])
                             [self.key_whole])
-
+            # ... get the ordered list of instrument model full names for this function
+            inst_cats = inst_cats + list(l_datsim[-1].inst_cat)
             # ... get the ordered list of instrument model full names for this function
             inst_model_fullnames = (inst_model_fullnames +
-                                    l_datsim[-1].instmodel_fullnames)
+                                    list(l_datsim[-1].instmodel_fullname))
             # ... get the ordered list of dataset names for this function
-            datasets = datasets + l_datsim[-1].datasets
+            datasets = datasets + list(l_datsim[-1].dataset)
             # ... create the list of indexes for the function parameters and the list of all the
             # model parameter for the all datasets function
             idx_par = []
@@ -177,5 +182,6 @@ class DatasimulatorCreator(object):
         # Create the datasim_alldatasets
         return self.__datasim_alldatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,
                                                   params_model=l_allparams,
-                                                  inst_model_fullnames=inst_model_fullnames,
-                                                  datasets=datasets)
+                                                  inst_cat=inst_cats,
+                                                  inst_model_fullname=inst_model_fullnames,
+                                                  dataset=datasets)

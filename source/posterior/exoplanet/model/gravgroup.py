@@ -42,6 +42,8 @@ from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_rv import create_datasimulator_RV
 from .datasim_creator_lc import create_datasimulator_LC
 from .supersamp_exptime import SuperSampExpTimeAttr
+from ..dataset_and_instrument.lc import LC_inst_cat
+from ..dataset_and_instrument.rv import RV_inst_cat
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
 from ...core.model.core_model import Core_Model
@@ -88,7 +90,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         super(GravGroup, self).__init__(name, dataset_db, run_folder,
                                         instmodel4dataset=instmodel4dataset,
                                         l_instmod_fullnames=l_instmod_fullnames)
-        if "LC" in self.dataset_db.inst_categories:
+        if LC_inst_cat in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
             self.__ldmodel4instmodfname = OrderedDict()  # Limb darkening model for each instrument
@@ -98,17 +100,17 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
             # self.ld_model = ld_model
             # TODO: Create the LC_param_file and create a function to load its content and build the
             # Associated LD param containers.
-        if "RV" in self.dataset_db.inst_categories:
+        if RV_inst_cat in self.dataset_db.inst_categories:
             # radial velocities model
             self.rv_model = rv_model
             # Initialise the dictionary giving the RV zero point RV_references
-            self.__RV_references = dict.fromkeys(self.get_inst_names("RV"), None)
+            self.__RV_references = dict.fromkeys(self.get_inst_names(RV_inst_cat), None)
             logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
             self.__RV_references["global"] = list(self.__RV_references.keys())[0]
             for key in self.__RV_references:
                 if key != "global":
                     self.__RV_references[key] = self.get_instmodel_names(inst_name=key,
-                                                                         inst_cat="RV")[0]
+                                                                         inst_cat=RV_inst_cat)[0]
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
         if isinstance(stars, int):
@@ -143,8 +145,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         self.parametrisation = parametrisation
 
         # Fill the datasimcreatorname4instcat dictionnary
-        self.datasimcreatorname4instcat["RV"] = "sim_RV"
-        self.datasimcreatorname4instcat["LC"] = "sim_LC"
+        self.datasimcreatorname4instcat[RV_inst_cat] = "sim_RV"
+        self.datasimcreatorname4instcat[LC_inst_cat] = "sim_LC"
 
         # Fill the datasimcreator dictionnary
         self.datasimcreator["sim_RV"] = self._create_datasimulator_RV
@@ -161,9 +163,9 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         dico = {}
         dico["stars"] = self.nb_star
         dico["planets"] = self.nb_planets
-        if "LC" in self.dataset_db.inst_categories:
+        if LC_inst_cat in self.dataset_db.inst_categories:
             dico["transit_model"] = self.transit_model
-        if "RV" in self.dataset_db.inst_categories:
+        if RV_inst_cat in self.dataset_db.inst_categories:
             dico["rv_model"] = self.rv_model
         return dico
 
@@ -385,7 +387,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                 default_supersamp = 1
                 default_exptime = 0.02043402778  # Kepler long cadence exposure time in days
                 first_instmodel = True
-                for instmod_obj in self.get_instmodel_objs(inst_cat="LC"):
+                for instmod_obj in self.get_instmodel_objs(inst_cat=LC_inst_cat):
                     ld_tab = ""
                     ss_tab = ""
                     if not(first_instmodel):
@@ -503,7 +505,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                                        key_whole=self.key_whole,
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,
-                                       RV_inst_db=self.instruments["RV"],
+                                       RV_inst_db=self.instruments[RV_inst_cat],
                                        inst_models=inst_models, datasets=datasets)
 
     def _create_datasimulator_LC(self, inst_models, datasets=None):
@@ -637,7 +639,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     #             RVref4inst_modname = self.get_RVref4inst_modname(inst_name)
     #             # Add the Delta_RV of the global RV reference instrument model if needed
     #             if inst_name != RVrefglobal_instname:
-    #                 instmod_RVref4inst = self.instruments["RV"][inst_name][RVref4inst_modname]
+    #                 instmod_RVref4inst = self.instruments[RV_inst_cat][inst_name][RVref4inst_modname]
     #                 if instmod_RVref4inst.DeltaRV.main:
     #                     if instmod_RVref4inst.DeltaRV.free:
     #                         l_delta_inst_rv[ii] += "p[{}] + ".format(param_nb[self.key_whole])

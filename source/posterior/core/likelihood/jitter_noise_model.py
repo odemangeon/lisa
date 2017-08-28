@@ -17,125 +17,144 @@ from numpy import log as nplog
 from math import exp
 # from collections import OrderedDict
 
-from .core_noise_model import Core_Noise_Model
-from ..model.jitter import apply_parametrisation_jitter, jitter_name
+from .core_noise_model import GaussianNoiseModel
+from ...core.parameter import Parameter
 from ....tools.function_w_doc import DocFunction
 
 
 ## Logger
 logger = getLogger()
 
-
-class GaussianNoiseModel(Core_Noise_Model):
-    """docstring for GaussianNoiseModel."""
-
-    __category__ = "gaussian"
-    __has_GP__ = False
-    __has_jitter__ = False
-
-    def _lnlike_dataset_creator(self, dataset_key=None):
-        datasim_func = self.get_datasim_function(dataset_key)
-
-        def lnlike_gaussian(p, data, data_err, **kwarg_data):
-            model = datasim_func(p, **kwarg_data)
-            inv_sigma2 = 1.0 / (data_err**2)
-            return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-
-        return lnlike_gaussian
-
-    def lnlike_creator(self):
-        if self.multidataset:
-            l_func = []
-            l_param_idx = []
-            l_kwarg_idx = []
-            # dico_params_idx = OrderedDict()
-            for i, dataset in enumerate(self.l_dataset):
-                l_kwarg_idx.append(i)
-                l_func.append(self._lnlike_dataset_creator(dataset))
-                l_param_idx.append(self.get_param_idxs(dataset))
-                # dico_params_idx[dataset] = self.get_param_idxs(dataset)
-
-            def lnlike(p, data, data_err, **kwarg_data):
-                res = 0
-                for func, param_idx, kwarg_idx in zip(l_func, l_param_idx, l_kwarg_idx):
-                    kwargs_dataset = {}
-                    for kwargs_type in kwarg_data:
-                        kwargs_dataset[kwargs_type] = kwarg_data[kwargs_type][kwarg_idx]
-                    res += func(p[param_idx], data[kwarg_idx], data_err[kwarg_idx],
-                                **kwargs_dataset)
-                return res
-
-        else:
-            lnlike = self._lnlike_dataset_creator()
-            # dico_params_idx = None
-
-        return DocFunction(function=lnlike, arg_list=self.get_arg_list())  # , dico_params_idx
-
-    def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-        model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-        inv_sigma2 = 1.0 / (data_err**2)
-        return -0.5 * (npsum((data - model)**2 * inv_sigma2 -
-                             nplog(inv_sigma2)))
-
-    def lnlike(self, p, data, data_err, **kwarg_data):
-        if self.multidataset:
-            res = 0
-            for i, dataset in enumerate(self.l_dataset):
-                param_idx = self.get_param_idxs(dataset)
-                kwargs_dataset = {}
-                for kwargs_type in kwarg_data:
-                    kwargs_dataset[kwargs_type] = kwarg_data[kwargs_type][i]
-                res += self._lnlike_dataset(p[param_idx], data[i], data_err[i], dataset,
-                                            **kwargs_dataset)
-            return res
-        else:
-            return self._lnlike_dataset(p, data, data_err, **kwarg_data)
-
-    def _check_parametrisation_dataset(self, model_instance, dataset_key=None):
-        instmod_obj = self.get_instmodel_obj(dataset_key)
-        if jitter_name in instmod_obj.parameters:
-            logger.warning("The noise model of instrument model {} being Gaussian, it should "
-                           "not have a {} parameter !".format(instmod_obj.full_name,
-                                                              jitter_name))
-            if instmod_obj.parameters[jitter_name].main:
-                raise ValueError("For GaussianNoiseModel instmodel_obj.jitter should not be a "
-                                 "main paramater")
-
-    @classmethod
-    def apply_parametrisation(cls, model_instance, instmod_fullname):
-        """For this noise model there is no additional parameter required.
-
-        But the fonction needs to exist.
-        """
-        pass
+jitter_name = "jitter"
 
 
 class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     """docstring for GaussianNoiseModel_wdfmjitter."""
 
+    __mandatoryattrs__ = GaussianNoiseModel.__mandatoryattrs__.copy()
+    __mandatoryattrs__.append("jitter_type")
     __category__ = "gaussian_jitter_dfm"
     __has_jitter__ = True
     __jitter_type__ = "multi"
 
-    @property
-    def jitter_type(self):
-        """Return the type of jitter."""
-        return self.__jitter_type__
+    @classmethod
+    def apply_parametrisation(cls, model_instance, instmod_fullname):
+        """Check that there is a jitter main parameter in the instrument model.
 
-    def get_jitterparam(self, dataset_key=None):
-        """Return the jitter parameter."""
-        if self.multidataset:
-            return self.get_instmodel_obj(dataset_key).jitter
+        :param string instmod_fullname: Full name of the instrument involved in the noise model and
+            for which you want to apply the parametrisation for the noise modelling.
+        """
+        inst_model_obj = model_instance.instruments[instmod_fullname]
+        if jitter_name in inst_model_obj.parameters:
+            jitter_param = inst_model_obj.parameters[jitter_name]
+            jitter_param.main = True
         else:
-            return self.get_instmodel_obj().jitter
+            inst_model_obj.add_parameter(Parameter(name=jitter_name,
+                                                   name_prefix=inst_model_obj.full_name, main=True))
+            logger.debug("{} main parameter added in instruments model {}."
+                         "".format(jitter_name, instmod_fullname))
 
-    def _get_arg_list_one_dataset(self, dataset_key=None):
-        arg_list_new = super(GaussianNoiseModel_wdfmjitter,
-                             self)._get_arg_list_one_dataset(dataset_key)
-        if self.get_jitterparam(dataset_key).free:
-            arg_list_new["param"] = ([self.get_jitterparam(dataset_key).full_name] +
-                                     arg_list_new["param"])
-        return arg_list_new
+    @classmethod
+    def check_parametrisation(cls, model_instance, instmod_fullname):
+        """"""
+        instmod_obj = model_instance.instruments[instmod_fullname]
+        err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
+                   "{} parameter !")
+        if jitter_name not in instmod_obj.parameters:
+            raise ValueError(err_msg.format(instmod_obj.full_name, cls.category, jitter_name, ""))
+        if not(instmod_obj.parameters[jitter_name].main):
+            raise ValueError(err_msg.format(instmod_obj.full_name, cls.category, jitter_name,
+                                            "main"))
+
+    @classmethod
+    def get_prefilledlnlike(cls, l_params, l_instmod_obj, **kwargs):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        :param InstrumentModel/list_of_InstrumentModel l_instmod_obj: Instument model or list of
+            instrument model for the ln likelihood to produce.
+        :param list_of_string l_params: Current list of parameters full names.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_new: Updated list of parameters full names.
+        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        """
+        l_func = []
+        l_params_new = l_params
+        l_params_noisemod = []
+        l_idx_param_noisemod = []
+        for instmod_obj in l_instmod_obj:
+            (lnlike_dfmjitter_1instmod, l_params_new, l_params_noisemod,
+             l_idx_param_noisemod) = cls.get_prefilledlnlike_1instmod(l_params_new,
+                                                                      l_params_noisemod,
+                                                                      l_idx_param_noisemod,
+                                                                      instmod_obj)
+            l_func.append(lnlike_dfmjitter_1instmod)
+
+        def lnlike_dfmjitter(model, param_noisemod, l_datakwargs):
+            res = 0
+            for ii, func in zip(l_func, )
+                (model, param_noisemod, data, data_err)
+
+
+        return lnlike_dfmjitter, l_params_new, l_idx_param_noisemod
+
+    @classmethod
+    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+                                     instmod_obj):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        :param list_of_string l_params_lnlike: Current list of parameters full names for the
+            lnlikehood function.
+        :param list_of_string l_params_noisemod: Current list of parameters full names for the
+            noise model only.
+        :param list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        :param InstrumentModel instmod_obj: Instument_Model for which we want to produce the ln
+            likelihood.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_lnlike_new: Updated list of parameters full names for the
+            lnlikehood function.
+        :return list_of_string l_params_noisemod_new: Updated list of parameters full names for the
+            noise model only.
+        :return list_of_int l_idx_param_noisemod_new: Updated list of the index of the noise model
+            parameters in the updated list of parameters (l_params_new).
+        """
+        # Get jitter parameter for the instrument model
+        jitter_param = instmod_obj.parameters[jitter_name]
+
+        # Add the jitter param to the list of params if necessary
+        if jitter_param.free and (jitter_param.full_name not in l_params_lnlike):
+            l_params_lnlike_new = l_params_lnlike.copy()
+            l_params_lnlike_new.append(jitter_param.full_name)
+            l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
+            l_idx_param_noisemod_new.append(l_params_lnlike_new.index(jitter_param.full_name))
+            l_params_noisemod_new = l_params_noisemod.copy()
+            l_params_noisemod_new.append(jitter_param.full_name)
+        else:
+            l_params_lnlike_new = l_params_lnlike
+            l_idx_param_noisemod_new = l_idx_param_noisemod
+            l_params_noisemod_new = l_params_noisemod
+
+        #
+        if jitter_param.free:
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+
+            def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 + model**2 *
+                                    exp(2 * param_noisemod[idx_jitter_param]))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+        else:
+            jitter_value = jitter_param.value
+
+            def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+        return (lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new,
+                l_idx_param_noisemod_new)
 
     def _lnlike_dataset_creator(self, dataset_key=None):
         datasim_func = self.get_datasim_function(dataset_key)
@@ -163,21 +182,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                                 model**2 * exp(2 * self.get_jitterparam(dataset_key).value))
         return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
-    @classmethod
-    def apply_parametrisation(cls, model_instance, instmod_fullname):
-        """For more information see check_parametrisation_jitter."""
-        apply_parametrisation_jitter(model_instance=model_instance,
-                                     instmod_fullname=instmod_fullname)
 
-    def _check_parametrisation_dataset(self, model_instance, dataset_key=None):
-        instmod_obj = self.get_instmodel_obj(dataset_key)
-        err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
-                   "{} parameter !")
-        if jitter_name not in instmod_obj.parameters:
-            raise ValueError(err_msg.format(instmod_obj.full_name, self.category, jitter_name, ""))
-        if not(instmod_obj.parameters[jitter_name].main):
-            raise ValueError(err_msg.format(instmod_obj.full_name, self.category, jitter_name,
-                                            "main"))
 
 
 class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):

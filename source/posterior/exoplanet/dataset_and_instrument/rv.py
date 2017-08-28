@@ -18,6 +18,7 @@ from source.posterior.core.dataset_and_instrument.instrument import Core_Instrum
 ## Logger
 logger = getLogger()
 
+## LC instrument category
 RV_inst_cat = "RV"
 
 

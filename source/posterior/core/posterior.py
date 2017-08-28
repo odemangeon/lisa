@@ -313,7 +313,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
             datasim_db = self.datasimulators.instrument_db
-            db_lnlike, db_noise = self.model.create_lnlikelihoods(datasim_db=datasim_db)
+            db_lnlike, db_noise = self.model.create_lnlikelihoods(datasim_inst_db=datasim_db)
             self.lnlikelihoods.instrument_db.update(db_lnlike)
             self.noisemodels.instrument_db.update(db_noise)
             (self.lnlikelihoods.dataset_db.

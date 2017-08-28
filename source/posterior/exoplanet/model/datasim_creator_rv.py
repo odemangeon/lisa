@@ -10,6 +10,7 @@ from copy import deepcopy
 
 from ajplanet import pl_rv_array
 
+from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.dataset_and_instrument.instrument import Instrument_Model
 from ...core.dataset_and_instrument.dataset import Dataset
@@ -120,10 +121,13 @@ def create_datasimulator_RV(star, planets, key_whole,
         l_dataset = [datasets]
         l_inst_model = [inst_models]
 
-    # Set the inst_model_full_name for the name of the function
+    # Set the inst_model_full_name for the name of the function and the inst_cat input
+    # (instcat_docf) for the datasim_docfunc
     if multi:
         inst_model_full_name = "multi"
+        instcat_docf = [RV_inst_cat for ii in range(len(l_inst_model))]
     else:
+        instcat_docf = RV_inst_cat
         if inst_models is None:
             inst_model_full_name = "woinst"
         else:
@@ -416,7 +420,8 @@ def create_datasimulator_RV(star, planets, key_whole,
             dataset_kwargs = None
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
+                                            inst_cat=instcat_docf,
                                             dataset_kwargs=dataset_kwargs,
-                                            inst_model_fullnames=instmod_docf,
-                                            datasets=dtsts_docf)
+                                            inst_model_fullname=instmod_docf,
+                                            dataset=dtsts_docf)
     return dico_docf
