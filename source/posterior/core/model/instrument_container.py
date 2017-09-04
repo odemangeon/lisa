@@ -8,6 +8,7 @@ a ParamContainerDatabase with the possibility to handle an instruments database.
 """
 from ..dataset_and_instrument.instrument import instrument_model_category, Core_Instrument
 from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args
+from .paramcontainers_database import SpecificParamContainerCategory
 
 
 class InstrumentContainerInterface(object):
@@ -18,10 +19,7 @@ class InstrumentContainerInterface(object):
     def __init__(self):
         # super(ParamContainerDatabase, self).__init__()
         # Init the instruments
-        self.paramcontainers.update({instrument_model_category:
-                                     DatabaseInstLevel(object_stored="instmodobj",
-                                                       database_name=self.name,
-                                                       ordered=True)})
+        self.paramcontainers.update({instrument_model_category: InstrumentContainer()})
 
     def add_an_instrument_model(self, instrument, name, force=False):
         """Add an instrument model to the paramcontainers of this model."""
@@ -92,3 +90,45 @@ class InstrumentContainerInterface(object):
     def instrumenthasatleast1model(self, inst_name, inst_cat=None):
         """Return True if there is at least one instrument model for the instrument."""
         return self.instruments.hasatleast1instmod(inst_name=inst_name, inst_cat=inst_cat)
+
+
+class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
+    """docstring for InstrumentContainer."""
+    def __init__(self):
+        super(InstrumentContainer, self).__init__(object_stored="instmodobj",
+                                                  database_name="instrument container",
+                                                  ordered=True)
+
+    def get_list_params(self, main=False, free=False, inst_models={}):
+        """Return the list of all parameters.
+
+        :param bool main: True returns only the main parameters
+        :param bool free: True returns only the free parameters
+        :param dict inst_models : Dictionnary which for each instrument name give the list of the
+                names of instrument models for which you want the params.
+                key = isntrument name, value = list of instrument model name
+        :return list_of_param result: list of Parameter instances
+        """
+        result = []
+        for inst_name, list_mod_name in inst_models.items():
+            for inst_mod_name in list_mod_name:
+                mod = self[inst_name][inst_mod_name]
+                result.extend(mod.get_list_params(main=main, free=free))
+        return result
+
+    def get_subkwargs_4_get_list_params(self, **kwargs):
+        """Select the keyword arguments for the get_list_params method.
+
+        Keyword argument that are used by the get_list_params method of InstrumentContainer are:
+        :param bool main: True returns only the main parameters
+        :param bool free: True returns only the free parameters
+        :param dict inst_models : Dictionnary which for each instrument name give the list of the
+                names of instrument models for which you want the params.
+                key = isntrument name, value = list of instrument model name
+        :return dict selected_kwargs: Dictionary with key = argument name, value = argument value
+        """
+        selected_kwargs = {}
+        for kwarg_name in ["main", "free", "inst_models"]:
+            if kwarg_name in kwargs:
+                selected_kwargs[kwarg_name] = kwargs[kwarg_name]
+        return selected_kwargs

@@ -109,18 +109,33 @@ class ParamContainerDatabase(object):
         """Return the list of the paramcontainer categories in this ParamContainerDatabase."""
         return list(self.paramcontainers.keys())
 
-    def get_list_params(self, main=False, free=False):
+    def get_list_params(self, **kwargs):
         """Return the list of all parameters.
-        ----
-        Arguments:
-            inst_models : dict, (default:{}),
-                dictionnary which for each instrument name give the list of the names of
-                instrument models for which you want the params.
+
+        Keyword arguments can be:
+        :param bool main: Get only the main parameters. Default = False
+        :param bool free: Get only the main parameters. Default = False
+
+        Those are available for all the param containers, but additional keyword argument can be
+        acepted by specific parameter containers (like the instruments)
+
+        :return list_of_param result: list of Parameter instances
         """
+        if "main" not in kwargs:
+            kwargs["main"] = False
+        if "free" not in kwargs:
+            kwargs["free"] = False
         result = []
         for paramcont_cat in self.paramcontainers_categories:
-            for param_cont in self.paramcontainers[paramcont_cat].values():
-                result.extend(param_cont.get_list_params(main=main, free=free))
+            if isinstance(self.paramcontainers[paramcont_cat], SpecificParamContainerCategory):
+                selectedkwargs = (self.paramcontainers[paramcont_cat].
+                                  get_subkwargs_4_get_list_params(**kwargs))
+                result.extend(self.paramcontainers[paramcont_cat].
+                              get_list_params(**selectedkwargs))
+            else:
+                for param_cont in self.paramcontainers[paramcont_cat].values():
+                    result.extend(param_cont.get_list_params(main=kwargs["main"],
+                                                             free=kwargs["free"]))
         return result
 
     def get_list_paramnames(self, full_name=False, *args, **kwargs):
@@ -139,3 +154,20 @@ class ParamContainerDatabase(object):
             else:
                 result.append(param.name)
         return result
+
+
+class SpecificParamContainerCategory(object):
+    """docstring for SpecificParamContainerCategory."""
+
+    def get_subkwargs_4_get_list_params(self, **kwargs):
+        """Select the keyword arguments for the get_list_params method.
+
+        Keyword argument that are used by the get_list_params method of InstrumentContainer are:
+        Describes here the list of parameter the available for the get_list_params function.
+        It should at least contain main and free:
+        :param bool main: True returns only the main parameters
+        :param bool free: True returns only the free parameters
+        :return dict selected_kwargs: Dictionary with key = argument name, value = argument value
+        """
+        raise NotImplementedError("You have to overwrite the get_subkwargs_4_get_list_params method"
+                                  "when you create a subclass of SpecificParamContainerCategory")

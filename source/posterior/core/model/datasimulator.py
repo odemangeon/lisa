@@ -109,7 +109,7 @@ class DatasimulatorCreator(object):
         def datasim_alldatasets(p):
             l_res = []
             for datasim, idxs in zip(l_datasim, l_params_idx):
-                l_res += datasim(p[idxs])
+                l_res.extend(datasim(p[idxs]))
             return l_res
 
         return DatasimDocFunc(function=datasim_alldatasets,

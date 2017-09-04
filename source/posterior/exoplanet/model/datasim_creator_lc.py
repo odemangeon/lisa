@@ -39,9 +39,9 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
         - A dictionary with DocFunctions containing the data simulator function for the whole
          system ("whole") and for the each planet individually ("planet_name")
     """
-    # Check the content of inst_model_fullnames: If not provided or string set multi_inst_model
-    # to False, otherwise to True. And set the inst_model_fullnames argument for the Datasim_DocFunc
-    # instmod_docf
+    # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
+    # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
+    # Datasim_DocFunc (instmod_docf)
     instmod_err = False
     if inst_models is None or isinstance(inst_models, Instrument_Model):
         multi_instmodl = False
@@ -65,8 +65,9 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
     if instmod_err:
         raise ValueError("inst_models should be None, string or list of strings.")
 
-    # Check the content of datasets: If not provided or string set multi_dataset
-    # to False, otherwise to True.  And set the datasets argument for the Datasim_DocFunc dtsts_docf
+    # Check the content of datasets argument: Set multi_dataset to True if several datasets
+    # are provided, to False otherwise. Finally set the datasets argument for the
+    # Datasim_DocFunc (dtsts_docf)
     dataset_err = False
     if datasets is None or isinstance(datasets, Dataset):
         multi_dataset = False
@@ -155,14 +156,14 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
     template_returns_instmod = "1 {oot_var}{planets_lc}"
 
     # Create the arguments text
-    if multi_dataset:
+    if multi:
         if datasets[0] is None:
-            arguments = "p, l_t, l_tref"
+            arguments = "p, l_t, l_tref=None"
         else:
             arguments = "p"
     else:
         if datasets is None:
-            arguments = "p, t, tref"
+            arguments = "p, t, tref=None"
         else:
             arguments = "p"
 
@@ -174,51 +175,75 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
 
     # Add time in the kwargs entry of the whole system arg_list
     if datasets is None:
-        if multi_instmodl:
+        if multi:
             arg_list[key_whole]["kwargs"].append("l_t")
         else:
             arg_list[key_whole]["kwargs"].append("t")
 
     # Create the text for oot_var
     l_oot_var = []
+    # For each instrument model and dataset, ...
     for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
         l_oot_var.append("")
+        # ..., if out of transit variation has been asked, ...
         if instmdl.get_with_OOT_var():
+            # ..., For each order in the required polynomial model, ...
             for order in range(instmdl.get_OOT_var_order() + 1):
+                # ..., get the name and full name of the parameter for this order
                 OOT_param_name = instmdl.get_OOT_param_name(order)
                 OOT_param_fullname = instmdl.parameters[OOT_param_name].full_name
+                # ..., If this parameter is a main parameter (it should be), ...
                 if instmdl.parameters[OOT_param_name].main:
                     value_not0 = True
+                    # ..., If this parameter is free, ...
                     if instmdl.parameters[OOT_param_name].free:
+                        # ..., add the beginning of this order's contribution to the text of the
+                        # out of transit variation, add the parameter name to the list of
+                        # parameter, and increment the parameter counter
                         l_oot_var[ii] += "+ p[{}]".format(param_nb[key_whole])
                         param_nb[key_whole] += 1
                         arg_list[key_whole]["param"].append(OOT_param_fullname)
+                    # ..., else, ...
                     else:
+                        # ..., if the fixed value of this parameter is not zero, ...
                         if instmdl.parameters[OOT_param_name].value != 0.0:
+                            # ..., add the beginning of this order's contribution to the text of the
+                            # out of transit variation
                             l_oot_var[ii] += "+ {}".format(instmdl.parameters[OOT_param_name].
                                                            value)
+                        # ..., else, since the fixed value is zero, this order doesn't have any
+                        # contribution
                         else:
                             value_not0 = False
+                    # ..., if the order has a contribution to the out of transit variation and
+                    # the considered order is more than 0 meaning the time plays a role, ...
                     if value_not0 and order > 0:
-                        if ((("tref" not in arg_list[key_whole]["kwargs"]) or
-                             ("tref" not in arg_list[key_whole]["kwargs"])) and
+                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
+                        # no dataset is provided, ...
+                        if ((("tref" not in arg_list[key_whole]["kwargs"]) and
+                             ("l_tref" not in arg_list[key_whole]["kwargs"])) and
                            (dst is None)):
-                            if multi_instmodl:
+                            # ..., add "tref" or "l_tref" to the list of kwargs.
+                            if multi:
                                 arg_list[key_whole]["kwargs"].append("l_tref")
                             else:
                                 arg_list[key_whole]["kwargs"].append("tref")
+                        # ..., add the end of this order's contribution to the text of the out of
+                        # transit variation, ...
                         if order == 1:
-                            if multi_instmodl:
+                            if multi:
                                 l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
                                                   "".format(ii=ii))
                             else:
                                 l_oot_var[ii] += " * (t - tref) "
                         elif order > 1:
-                            if multi_instmodl:
+                            if multi:
                                 l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
                                                   "".format(order=order, ii=ii))
                             else:
                                 l_oot_var[ii] += " * (t - tref)**{} ".format(order)
+                    # If the is no contribution to the oot of transit variation from this order
+                    # add only a space.
                     elif value_not0 and order == 0:
                         l_oot_var[ii] += " "
 
@@ -293,20 +318,24 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
         {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
 
-        for instmdl, LD_parcont, ld_param_list in zip(l_inst_model, l_LD_parcont,
-                                                      l_ld_param_list):
-            if multi_instmodl:
+        for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
+                                                           l_ld_param_list):
+            # If the same model is used for several dataset a model will be several times in
+            # l_inst_model. So to avoid the repetition we check if this instrument has already been
+            # done.
+            if multi:
                 template_batman_pl = """
-        {{tab}}params_{{planet}}_{instmod_fullname}.t0 = {{tc}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.per = {{P}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.rp = {{Rrat}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.inc = inc_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.ecc = ecc_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.w = omega_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}.u = {ld_param_list}
-        {{tab}}params_{{planet}}_{instmod_fullname}.limb_dark = '{ld_mod_name}'"""
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tc}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.per = {{P}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.rp = {{Rrat}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.inc = inc_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.ecc = ecc_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.w = omega_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.u = {ld_param_list}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.limb_dark = '{ld_mod_name}'"""
                 template_batman_pl = (template_batman_pl.
                                       format(instmod_fullname=instmdl.full_name,
+                                             dst_key=dst.number,
                                              ld_mod_name=LD_parcont.ld_type,
                                              ld_param_list=ld_param_list))
             else:
@@ -324,23 +353,19 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
             template_preambule_pl += template_batman_pl
 
             if parametrisation in LC_multis_parametrisations:
-                if multi_instmodl:
-                    for instmdl in l_inst_model:
-                        template_batman_pl_2 = """
-        {{tab}}params_{{planet}}_{instmod_fullname}.a = aR_{{planet}}
-        """.format(instmod_fullname=instmdl.full_name)
-                    template_preambule_pl += template_batman_pl_2
+                if multi:
+                    template_preambule_pl += """
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = aR_{{planet}}
+        """.format(instmod_fullname=instmdl.full_name, dst_key=dst.number)
                 else:
                     template_preambule_pl += """
         {tab}params_{planet}.a = aR_{planet}
         """
             else:
-                if multi_instmodl:
-                    for instmdl in l_inst_model:
-                        template_batman_pl_3 = """
-        {{tab}}params_{{planet}}_{instmod_fullname}.a = {{aR}}
-        """.format(instmod_fullname=instmdl.full_name)
-                        template_preambule_pl += template_batman_pl_3
+                if multi:
+                    template_preambule_pl += """
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = {{aR}}
+        """.format(instmod_fullname=instmdl.full_name, dst_key=dst.number)
                 else:
                     template_preambule_pl += """
         {tab}params_{planet}.a = {aR}
@@ -355,13 +380,14 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
     # Initialise the local dictionary for the creation of the datasim functions by exec
     # ldict = locals().copy()
     ldict = {}
+    # if datasets are provided add the time array and tref to the local dictionary
     if datasets is not None:
-        if multi_instmodl:
+        if multi:
             l_t = []
             l_tref = []
             for instmdl, dst in zip(l_inst_model, l_dataset):
-                    l_t.append(dst.get_time())
-                    l_tref.append(dst.get_tref())
+                l_t.append(dst.get_time())
+                l_tref.append(dst.get_tref())
             ldict["l_t"] = l_t
             ldict["l_tref"] = l_tref
         else:
@@ -377,9 +403,9 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
             exptime = SSE4instmodfname.get_exptime(instmdl.full_name)
             if transit_model == "batman":
                 if dst is None:
-                    if multi_instmodl:
-                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname} "
-                                                "= TransitModel("
+                    if multi:
+                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname}_"
+                                                "dataset{dst_key} = TransitModel("
                                                 "params_{{planet}}_{instmod_fullname}, "
                                                 "l_t[{ii}], "
                                                 "supersample_factor={supersamp},"
@@ -387,7 +413,8 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                                                 "\n".format(supersamp=supersamp,
                                                             exptime=exptime,
                                                             ii=ii,
-                                                            instmod_fullname=instmdl.full_name))
+                                                            instmod_fullname=instmdl.full_name,
+                                                            dst_key=dst.number))
                     else:
                         template_batman_pl_4 = ("{{tab}}m_{{planet}} = TransitModel("
                                                 "params_{{planet}}, t, "
@@ -403,7 +430,7 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                     l_par_bat.append({})
                     for planet in planets.values():
                         l_par_bat[ii][planet.name] = TransitParams()
-                        if multi_instmodl:  # time of inf. conjunction
+                        if multi:  # time of inf. conjunction
                             l_par_bat[ii][planet.name].t0 = ldict["l_t"][ii].mean()
                         else:
                             l_par_bat[ii][planet.name].t0 = ldict["t"][ii].mean()
@@ -421,7 +448,7 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
         else:
             if transit_model == "batman":
                 if dst is None:
-                    if multi_instmodl:
+                    if multi:
                         template_batman_pl_5 = ("{{tab}}m_{{planet}} = TransitModel("
                                                 "params_{{planet}}, l_tp[{ii}])"
                                                 "\n".format(ii=ii))
@@ -436,7 +463,7 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                     l_par_bat.append({})
                     for planet in planets.values():
                         l_par_bat[ii][planet.name] = TransitParams()
-                        if multi_instmodl:  # time of inf. conjunction
+                        if multi:  # time of inf. conjunction
                             l_par_bat[ii][planet.name].t0 = ldict["l_t"][ii].mean()
                         else:
                             l_par_bat[ii][planet.name].t0 = ldict["t"][ii].mean()
@@ -453,15 +480,14 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
 
     # Create the text for template_planet_lc
     if transit_model == "batman":
-        if multi_instmodl:
-            template_planet_lc = ("+ m_{{planet}}_{instmod_fullname}.light_curve("
-                                  "params_{{planet}}_{instmod_fullname}) - 1 "
-                                  "".format(instmod_fullname=instmdl.full_name))
+        if multi:
+            template_planet_lc = ("+ m_{planet}_{instmod_fullname}_dataset{dst_key}.light_curve("
+                                  "params_{planet}_{instmod_fullname}_dataset{dst_key}) - 1 ")
         else:
             template_planet_lc = ("+ m_{planet}.light_curve(params_{planet}) - 1 ")
     else:
         if parametrisation in LC_multis_parametrisations:
-            if multi_instmodl:
+            if multi:
                 template_planet_lc = ("+ m.evaluate(l_t[{ii}], {Rrat}, {ld_param_list}, "
                                       "{tc}, {P}, aR_{planet}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
@@ -470,7 +496,7 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                                       "aR_{planet}, inc_{planet}, ecc_{planet}, "
                                       "omega_{planet}) - 1 ")
         else:
-            if multi_instmodl:
+            if multi:
                 template_planet_lc = ("+ m.evaluate(l_t[{ii}], {Rrat}, {ld_param_list}, "
                                       "{tc}, {P}, {aR}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
@@ -499,10 +525,11 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
             for ii, instmdl, dst, par_bat in zip(range(len(l_inst_model)), l_inst_model,
                                                  l_dataset, l_par_bat):
                 if dst is not None:
-                    if multi_instmodl:
-                        params_pl_inst = ("params_{planet}_{instmod_fullname}"
+                    if multi:
+                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.name,
-                                                    instmod_fullname=instmdl.full_name))
+                                                    instmod_fullname=instmdl.full_name,
+                                                    dst_key=dst.number))
                         tt = ldict["l_t"][ii]
                     else:
                         params_pl_inst = "params_{planet}".format(planet=planet.name)
@@ -516,19 +543,21 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                                                 exp_time=exptime)
                     else:
                         m_batman = TransitModel(ldict[params_pl_inst], tt)
-                    if multi_instmodl:
-                        m_pl_inst = ("m_{planet}_{instmod_fullname}"
+                    if multi:
+                        m_pl_inst = ("m_{planet}_{instmod_fullname}_dataset{dst_key}"
                                      "".format(planet=planet.name,
-                                               instmod_fullname=instmdl.full_name))
+                                               instmod_fullname=instmdl.full_name,
+                                               dst_key=dst.number))
 
                     else:
                         m_pl_inst = "m_{planet}".format(planet=planet.name)
                     ldict[m_pl_inst] = m_batman
                 else:
-                    if multi_instmodl:
-                        params_pl_inst = ("params_{planet}_{instmod_fullname}"
+                    if multi:
+                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.name,
-                                                    instmod_fullname=instmdl.full_name))
+                                                    instmod_fullname=instmdl.full_name,
+                                                    dst_key=dst.number))
                     else:
                         params_pl_inst = "params_{planet}".format(planet=planet.name)
                     ldict[params_pl_inst] = par_bat[planet.name]
@@ -585,8 +614,19 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
         # planets LC contribution (planet_lc and whole_planets_lc)
         # No need for case if batman or if dataset is None. Same reason than above
         l_planet_lc = []
-        for ii, ld_param_list in zip(range(len(l_inst_model)), l_ld_param_list):
+        for ii, instmdl, dst, ld_param_list in zip(range(len(l_inst_model)), l_inst_model,
+                                                   l_dataset, l_ld_param_list):
+            if instmdl is None:
+                instmdl_fname = None
+            else:
+                instmdl_fname = instmdl.full_name
+            if dst is None:
+                dst_nb = None
+            else:
+                dst_nb = dst.number
             l_planet_lc.append(template_planet_lc.format(planet=planet.name,
+                                                         instmod_fullname=instmdl_fname,
+                                                         dst_key=dst_nb,
                                                          aR=params_planet["aR"],
                                                          Rrat=params_planet["Rrat"],
                                                          tc=params_planet["tc"],
@@ -595,6 +635,8 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                                                          ii=ii
                                                          ))
             l_whole_planets_lc[ii] += template_planet_lc.format(planet=planet.name,
+                                                                instmod_fullname=instmdl_fname,
+                                                                dst_key=dst_nb,
                                                                 aR=params_planet["aR"],
                                                                 Rrat=params_whole["Rrat"],
                                                                 tc=params_whole["tc"],

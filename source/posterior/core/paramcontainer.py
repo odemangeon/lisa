@@ -37,7 +37,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
             raise NotImplementedError("Core_ParamContainer should not be instanciated !")
 
     def __getattr__(self, attr=""):
-        """Intercept attribute call to look first in the parameter list."""
+        """Intercept attribute call to look in the parameter list."""
         if attr in Core_ParamContainer.__get_list_all_paramnames(self):
             return self.parameters[attr]
         else:
@@ -67,8 +67,9 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters.
 
-        If main is True returns only the main parameters, if free is True returns only the free
-        parameters.
+        :param bool main: True returns only the main parameters
+        :param bool free: True returns only the free parameters
+        :return list_of_param result: list of Parameter instances
         """
         if main:
             result = []

@@ -81,15 +81,14 @@ class Prior(object):
     def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
 
-        The parameters have to be provided through their full names.
-        This function does:
-            1.
-
-        TODO: Implement DocFunction
+        :param list_of_str list_paramnames: List of parameters full names
+        :param dict individual_priors: Dictionary produced by the create_individual_lnpriors method.
+            If None it will created with this method.
+        :return DocFunction docf: DocFunction giving the joint ln prior
         """
         if individual_priors is None:
             individual_priors = self.create_individual_lnpriors()
-        # 1.
+
         list_lnpriors = []
         for param_name in list_paramnames:
             if param_name in individual_priors["marginal"]:
@@ -102,15 +101,6 @@ class Prior(object):
         arg_list = OrderedDict()
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
-
-        # def joint_lnprior(p):
-        #     res = 0
-        #     # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
-        #     #                                                 arg_list["param"]))
-        #     # logger.debug("params prior ({}): {}".format(len(p), p))
-        #     for i, ln_prior in enumerate(list_lnpriors):
-        #         res += ln_prior(p[i])
-        #     return res
 
         docf = self.__joint_lnprior_creator(list_lnpriors, arg_list)
         return docf
@@ -140,32 +130,17 @@ class Prior(object):
             db.lock()
         return db
 
-    def create_lnpriors_perdataset(self, individual_priors, lnprior_db, instmodel4dataset):
-        """Create the log likelihood function with the data hardcoded."""
+    def create_lnpriors_perdataset(self, individual_priors, lnlike_db_dtst):
+        """Create the ln prior functions associated to the lnlikelihood of each dataset.
+
+        :param dict individual_priors: Dictionary produced by the create_individual_lnpriors method.
+        :param dict lnlike_db_dtst: Dictionary with key = dataset name, value = LikelihoodDocFunc
+            giving the likelihood doc function for the dataset
+        :return dict db: Dictionary with key = dataset name, value = DocFunction
+            giving the likelihood doc function for the dataset
+        """
         db = {}
-        l_func = []
-        l_params = []
-        l_params_idx = []
-        l_allparams = []
-        for dataset_name in instmodel4dataset:
-            instmod_fullname = instmodel4dataset.get_instmod_fullname(dataset_name=dataset_name)
-            l_func.append(lnprior_db[instmod_fullname]["whole"].function)
-            l_params.append(lnprior_db[instmod_fullname]["whole"].arg_list)
-            idx_par = []
-            for par in lnprior_db[instmod_fullname]["whole"].arg_list["param"]:
-                if par not in l_allparams:
-                    l_allparams.append(par)
-                idx_par.append(l_allparams.index(par))
-            l_params_idx.append(idx_par)
-
-            db[dataset_name] = lnprior_db[instmod_fullname]["whole"]
-
-        lnprior_all = self.create_joint_lnprior(l_allparams, individual_priors=individual_priors)
-
-        arg_list_all = OrderedDict()
-        arg_list_all["param"] = l_allparams
-        arg_list_all["kwargs"] = []
-
-        db["all"] = DocFunction(function=lnprior_all, arg_list=arg_list_all)
-
+        for dataset_name, lnlike_docfunc in lnlike_db_dtst.items():
+            db[dataset_name] = self.create_joint_lnprior(lnlike_docfunc.params_model,
+                                                         individual_priors=individual_priors)
         return db

@@ -21,9 +21,6 @@ dtst_key = "dataset_name"
 class DatasimDocFunc(DocFunction):
     """docstring for DatasimDocFunc."""
 
-    _instmod_key = "inst_model_fullnames"
-    _dtst_key = "datasets"
-
     def __init__(self, function, params_model, inst_cat, dataset_kwargs=None,
                  inst_model_fullname=None, dataset=None):
         """Initialise the datasim doc function.
@@ -185,9 +182,14 @@ class DatasimDocFunc(DocFunction):
         raise NotImplementedError
 
     @property
+    def noutput(self):
+        """Return the number of outputs of the DatasimDocFunc."""
+        return len(self.__output_info.index)
+
+    @property
     def multi_output(self):
         """If True the datasim function simulates several outputs."""
-        return self.__output_info.index.count() > 1
+        return self.noutput > 1
 
     @property
     def output_info(self):

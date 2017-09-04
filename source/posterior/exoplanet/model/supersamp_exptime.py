@@ -5,33 +5,33 @@ Supersampling factor and exposure time module.
 """
 from collections import OrderedDict
 
+_supersamp_key = "supersamp"
+_exptime_key = "exptime"
+
 
 class SuperSampExpTime(OrderedDict):
     """docstring for SuperSampExpTime_Attr."""
-
-    _supersamp_key = "supersamp"
-    _exptime_key = "exptime"
 
     def __init__(self):
         super(SuperSampExpTime, self).__init__()
 
     def get_supersamp(self, instmod_fullname):
         """Return the supersampling factor to apply for the instrument model."""
-        return self[instmod_fullname][self._supersamp_key]
+        return self[instmod_fullname][_supersamp_key]
 
     def get_exptime(self, instmod_fullname):
         """Return the supersampling factor to apply for the instrument model."""
-        return self[instmod_fullname][self._exptime_key]
+        return self[instmod_fullname][_exptime_key]
 
     def add_instmodel_SSE(self, inst_model_fullname, supersamp=None, exptime=None):
         """Add a supersamp and/or an exposure time for a given instrument full name."""
-        self[inst_model_fullname] = {self._supersamp_key: supersamp,
-                                     self._exptime_key: exptime}
+        self[inst_model_fullname] = {_supersamp_key: supersamp,
+                                     _exptime_key: exptime}
 
     def add_instmodel_SSEdict(self, inst_model_fullname, SSEdict):
         """Add a supersamp and/or an exposure time for a given instrument full name."""
-        self.add_instmodel_SSE(inst_model_fullname, supersamp=SSEdict[self._supersamp_key],
-                               exptime=SSEdict[self._exptime_key])
+        self.add_instmodel_SSE(inst_model_fullname, supersamp=SSEdict[_supersamp_key],
+                               exptime=SSEdict[_exptime_key])
 
 
 class SuperSampExpTimeAttr(object):

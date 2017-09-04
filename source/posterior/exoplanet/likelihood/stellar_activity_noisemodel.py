@@ -17,13 +17,14 @@ from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from math import exp
 from numpy import concatenate
+from collections import defaultdict
 # from collections import OrderedDict
 
-from ..model.celestial_bodies import Star
+# from ..model.celestial_bodies import Star
 from ..model.stellar_activity import amp_RV, evol_timescal, periodic_timescal, period
 from ..model.stellar_activity import apply_parametrisation_stellar_activity
 from ...core.likelihood.core_noise_model import Core_Noise_Model
-from ....tools.function_w_doc import DocFunction
+# from ....tools.function_w_doc import DocFunction
 
 
 ## logger object
@@ -41,207 +42,337 @@ class StellarActNoiseModel(Core_Noise_Model):
 
     kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")
-    lnlikefunc_text = """def {func_name}(p, data, data_err, t):
-        model = datasim_func(p[{nb_GP_free_param}:], t)
+
+    lnlikefunc_text = """def {func_name}(model, param_noisemod, l_datakwargs):
         gp = GP({kernel})
-        gp.compute(t, data_err, sort=True)
-        return gp.lnlikelihood(data - model)
+        dict_datakwargs = defaultdict(list)
+        for datakwargs in l_datakwargs:
+            dict_datakwargs["t"].append(datakwargs["t"])
+            dict_datakwargs["data"].append(datakwargs["data"])
+            dict_datakwargs["data_err"].append(datakwargs["data_err"])
+        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]),
+                   sort=True)
+        return gp.lnlikelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
         """
 
-    # logger.debug("model: {{}}".format(model))
-    # logger.debug("data: {{}}".format(data))
-    # logger.debug("data_err: {{}}".format(data_err))
-    # logger.debug("t: {{}}".format(t))
-    # logger.debug("l_idx_param: {{}}".format(l_idx_param))
-
-    lnlikefunc_text_multidataset = """def {func_name}(p, data, data_err, t):
-        model = [datasim_func(p[indexes_dataset], t_dataset)
-                 for datasim_func, indexes_dataset, t_dataset in zip(l_func, l_idx_param, t)]
-        gp = GP({kernel})
-        gp.compute(concatenate(t), concatenate(data_err), sort=True)
-        return gp.lnlikelihood(concatenate(data) - concatenate(model))
-        """
     function_name = "lnlike"
+
+    gpsim_func_text = """def {func_name}(model, param_noisemod, l_datakwargs, tsim):
+        gp = GP({kernel})
+        dict_datakwargs = defaultdict(list)
+        for datakwargs in l_datakwargs:
+            dict_datakwargs["t"].append(datakwargs["t"])
+            dict_datakwargs["data"].append(datakwargs["data"])
+            dict_datakwargs["data_err"].append(datakwargs["data_err"])
+        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]),
+                   sort=True)
+        return gp.sample_conditional(concatenate(dict_datakwargs["data"]) - concatenate(model),
+                                     tsim)
+        """
+
+    gpsim_function_name = "gp_sim"
 
     __star_param_GP_names = [amp_RV, evol_timescal, periodic_timescal, period]
 
-    def __init__(self, datasim_docfunc, model_instance, instmodel_obj):
-        star = model_instance.stars[list(model_instance.stars.keys())[0]]
-        if isinstance(star, Star):
-            self.__star = star  # This needs to be done before the init for check_parametrisation
-        else:
-            raise ValueError("star should be a Star instance. Got {}".format(type(star)))
-        super(StellarActNoiseModel, self).__init__(datasim_docfunc=datasim_docfunc,
-                                                   model_instance=model_instance,
-                                                   instmodel_obj=instmodel_obj)
+    @classmethod
+    def apply_parametrisation(cls, model_instance, instmod_fullname=None):
+        """Add in the model the necessary main parameters for the noise model.
 
-    @property
-    def star(self):
-        """Return the star object used for this stellar activity noise modelling."""
-        return self.__star
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :param string instmod_fullname: Full name of the instrument involved in the noise model and
+            for which you want to apply the parametrisation for the noise modelling.
+        """
+        apply_parametrisation_stellar_activity(model_instance=model_instance,
+                                               instmod_fullname=instmod_fullname)
 
-    def lnlike_creator(self):
+    @classmethod
+    def check_parametrisation(cls, model_instance, instmod_fullname=None):
+        """Check the parameteristion for the noise model.
+
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :param string instmod_fullname: Full name of the instrument involved in the noise model and
+            for which you want to apply the parametrisation for the noise modelling.
+        """
+        err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
+                   "{} parameter !")
+        star = cls.get_star(model_instance)
+        for param in cls.get_star_params_GP(model_instance):
+            if param.name not in star.parameters:
+                raise ValueError(err_msg.format(instmod_fullname, cls.category,
+                                                param.full_name, ""))
+            if not(param.main):
+                raise ValueError(err_msg.format(instmod_fullname, cls.category,
+                                                param.full_name, "main"))
+
+    @classmethod
+    def get_prefilledlnlike(cls, l_params, model_instance, l_instmod_obj=None):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        :param list_of_string l_params: Current list of parameters full names.
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
+            instrument model for the ln likelihood to produce.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_new: Updated list of parameters full names.
+        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        """
         ldict = locals().copy()
-        nb_free = self.nb_params_GP_free
-        ker = self.__get_text_define_GP()
-        if self.multidataset:
-            l_idx_param = []
-            for dataset in self.l_dataset:
-                l_idx_param.append(self.get_param_idxs_datasim(dataset))
-            ldict["l_idx_param"] = l_idx_param
-            ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
-            ldict["concatenate"] = concatenate
-            ldict["logger"] = logger
-            text_func = self.lnlikefunc_text_multidataset
-        else:
-            datasim_func = self.get_datasim_function()
-            ldict["datasim_func"] = datasim_func
-            text_func = self.lnlikefunc_text
-        func = text_func.format(func_name=self.function_name, nb_GP_free_param=nb_free, kernel=ker)
+        # nb_free = cls.nb_params_GP_free
+        ker, l_params_new, l_idx_param_noisemod = cls.__get_text_define_GP(model_instance, l_params)
+        func = cls.lnlikefunc_text.format(func_name=cls.function_name, kernel=ker)
+        ldict["defaultdict"] = defaultdict
+        ldict["list"] = list
+        ldict["concatenate"] = concatenate
+        ldict["logger"] = logger
         ldict["ExpSquaredKernel"] = ExpSquaredKernel
         ldict["ExpSine2Kernel"] = ExpSine2Kernel
         ldict["exp"] = exp
         ldict["GP"] = GP
         exec(func, ldict)
-        return DocFunction(function=ldict[self.function_name], arg_list=self.get_arg_list())
-
-    def lnlike(self, p, data, data_err, t):
-        if self.multidataset:
-            model = []
-            for dataset_key, t_dataset in zip(self.l_dataset, t):
-                model.append(self.get_datasim_function(dataset_key)
-                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
-            gp = self.__define_GP(p[self.get_param_idxs_GP()])
-            gp.compute(concatenate(t), concatenate(data_err))
-            return gp.lnlikelihood(concatenate(data) - concatenate(model))
-        else:
-            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
-            gp = self.__define_GP(p[self.get_param_idxs_GP()])
-            gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
-            return gp.lnlikelihood(data - model)
-
-    def __define_GP(self, p):
-        l_val = [p[idxorval] if free else idxorval
-                 for idxorval, free in zip(self.star_param_GP_indexorval,
-                                           self.star_params_GP_isfree)]
-        kernel = (exp(l_val[0])**2.0 * ExpSquaredKernel(l_val[1]**2) *
-                  ExpSine2Kernel(2. / (l_val[2])**2.0, l_val[3]))
-        return GP(kernel)  # Define the kernel of the GP
-
-    def __get_text_define_GP(self):
-        dico = {}
-        for param_name, free, idxorval in zip(self.__star_param_GP_names,
-                                              self.star_params_GP_isfree,
-                                              self.star_param_GP_indexorval):
-            if free:
-                dico[param_name] = "p[{}]".format(idxorval)
-            else:
-                dico[param_name] = "{}".format(idxorval)
-        ker = self.kernel_text.format(amp_RV=dico[amp_RV], evol_timescal=dico[evol_timescal],
-                                      periodic_timescal=dico[periodic_timescal],
-                                      period=dico[period])
-        return ker
-
-    def get_star_param_GP_names(self, free=False, full_name=False):
-        """Return the list of the names of the paramaters of the GP model."""
-        if full_name:
-            return [param.full_name for param in self.get_star_params_GP(free=free)]
-        else:
-            return [param.name for param in self.get_star_params_GP(free=free)]
-
-    def get_star_params_GP(self, free=False):
-        """Return the list of GP parameters.
-
-        If free is True returns only the free parameters.
-        """
-        if free:
-            return [getattr(self.star, par) for par in self.__star_param_GP_names
-                    if getattr(self.star, par).free]
-        else:
-            return [getattr(self.star, par) for par in self.__star_param_GP_names]
-
-    @property
-    def star_params_GP_isfree(self):
-        """Return the list of boolean indicating if the GP parameters are free."""
-        return [param.free for param in self.get_star_params_GP()]
-
-    @property
-    def nb_params_GP_free(self):
-        """Return the number of GP parameters that are free."""
-        return len(self.get_star_params_GP(free=True))
-
-    @property
-    def star_param_GP_indexorval(self):
-        l = []
-        i = 0
-        for param in self.get_star_params_GP():
-            if param.free:
-                l.append(i)
-                i += 1
-            else:
-                l.append(param.value)
-        return l
-
-    def _get_arg_list_one_dataset(self, dataset_key=None):
-        arg_list_new = super(StellarActNoiseModel,
-                             self)._get_arg_list_one_dataset(dataset_key)
-        arg_list_new["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
-                                 arg_list_new["param"])
-        return arg_list_new
-
-    def gp_simulator(self, p, tsim, data, data_err, t):
-        if self.multidataset:
-            model = []
-            for dataset_key, t_dataset in zip(self.l_dataset, t):
-                model.append(self.get_datasim_function(dataset_key)
-                             (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
-            gp = self.__define_GP(p[self.get_param_idxs_GP()])
-            gp.compute(concatenate(t), concatenate(data_err))
-            return gp.sample_conditional(concatenate(data) - concatenate(model), tsim)
-        else:
-            model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
-            gp = self.__define_GP(p[self.get_param_idxs_GP()])
-            gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
-            return gp.sample_conditional(data - model, tsim)
-
-    def get_param_idxs_datasim(self, dataset_key=None):
-        """Return the list of param indexes for a datasimulator.
-
-        If multidataset dataset_key should not be None, because then you should do it for each
-        dataset.
-        """
-        # Get list of param names for the likelihood then for the datasimulator and final get the
-        # list of indexes for the datasimulator params
-        l_param_all = self.get_arg_list()["param"]
-        l_idx_param = []
-        for par in self.get_datasim_arg_list(dataset_key)["param"]:
-            l_idx_param.append(l_param_all.index(par))
-        return l_idx_param
-
-    def get_param_idxs_GP(self):
-        """Return the list of param indexes for the GP model."""
-        # Get list of param names for the likelihood then for the datasimulator and final get the
-        # list of indexes for the datasimulator params
-        l_param_all = self.get_arg_list()["param"]
-        l_idx_param = []
-        for par in self.get_star_param_GP_names(free=True, full_name=True):
-            l_idx_param.append(l_param_all.index(par))
-        return l_idx_param
+        return ldict[cls.function_name], l_params_new, l_idx_param_noisemod
 
     @classmethod
-    def apply_parametrisation(cls, model_instance, instmod_fullname):
-        """For more information see apply_parametrisation_stellar_activity."""
-        apply_parametrisation_stellar_activity(model_instance=model_instance,
-                                               instmod_fullname=instmod_fullname)
+    def get_necessary_datakwargs(cls, dataset):
+        """Return the data kwargs necessary for the computation of the likelihood.
 
-    def _check_parametrisation_dataset(self, model_instance, dataset_key=None):
-        instmod_obj = self.get_instmodel_obj(dataset_key)
-        err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
-                   "{} parameter !")
-        for param in self.get_star_params_GP():
-            if param.name not in self.star.parameters:
-                raise ValueError(err_msg.format(instmod_obj.full_name, self.category,
-                                                param.full_name, ""))
-            if not(param.main):
-                raise ValueError(err_msg.format(instmod_obj.full_name, self.category,
-                                                param.full_name, "main"))
+        :param Dataset dataset: Dataset instance.
+        :return dict datakwargs: dict with keys= datakwargs type (eg. "data"), value= value(s) of
+            this datakwarg for this dataset.
+        """
+        return {"data": dataset.get_data(), "data_err": dataset.get_data_err(),
+                "t": dataset.get_time()}
+
+    @classmethod
+    def get_star(cls, model_instance):
+        """Return the star object used for this stellar activity noise modelling.
+
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :return Star star: Star parameter container.
+        """
+        return list(model_instance.stars.values())[0]
+
+    # @classmethod
+    # def get_star_param_GP_names(cls, model_instance, free=False, full_name=False):
+    #     """Return the list of the names of the paramaters of the GP model."""
+    #     if full_name:
+    #         return [param.full_name for param in cls.get_star_params_GP(model_instance, free=free)]
+    #     else:
+    #         return [param.name for param in cls.get_star_params_GP(model_instance, free=free)]
+
+    @classmethod
+    def get_star_params_GP(cls, model_instance, free=False):
+        """Return the list of GP parameters.
+
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :param bool free: If True returns only the free parameters.
+        """
+        star = cls.get_star(model_instance)
+        if free:
+            return [getattr(star, par) for par in cls.__star_param_GP_names
+                    if getattr(star, par).free]
+        else:
+            return [getattr(star, par) for par in cls.__star_param_GP_names]
+
+    # @classmethod
+    # def star_params_GP_isfree(cls, model_instance):
+    #     """Return the list of boolean indicating if the GP parameters are free."""
+    #     return [param.free for param in cls.get_star_params_GP(model_instance)]
+
+    # @classmethod
+    # def nb_params_GP_free(cls, model_instance):
+    #     """Return the number of GP parameters that are free."""
+    #     return len(cls.get_star_params_GP(free=True))
+
+    @classmethod
+    def __get_text_define_GP(cls, model_instance, l_params):
+        """Return the text of the GP kernel.
+
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity).
+        :param list_of_string l_params: Current list of parameters full names.
+        :return str ker: Text of the kernel. The index in the parameter array p are for the
+            noise model parameter array only.
+        :return list_of_string l_params_new: Updated list of parameters full names.
+        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        """
+        dico = {}
+        i_noisemod = 0
+        l_params_new = l_params.copy()
+        l_idx_param_noisemod = []
+        for param in cls.get_star_params_GP(model_instance):
+            if param.free:
+                dico[param.name] = "param_noisemod[{}]".format(i_noisemod)
+                i_noisemod += 1
+                if param.full_name not in l_params_new:
+                    l_params_new.append(param.full_name)
+                l_idx_param_noisemod.append(l_params_new.index(param.full_name))
+            else:
+                dico[param.name] = "{}".format(param.value)
+        ker = cls.kernel_text.format(amp_RV=dico[amp_RV], evol_timescal=dico[evol_timescal],
+                                     periodic_timescal=dico[periodic_timescal],
+                                     period=dico[period])
+        return ker, l_params_new, l_idx_param_noisemod
+
+    @classmethod
+    def get_gp_simulator(cls, model_instance, l_params):
+        """Return the simulated values with the GP at given simulated times.
+
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity).
+        :param list_of_string l_params: Current list of parameters full names.
+        :return function gp_sim: gp simulator function that return the simulated gp contributions.
+            :param list_of_np.array model: Values of the model for each dataset associated which
+                this noise model.
+            :param list_of_float param_noisemod: List of noise model parameter values.
+            :param list_of_dict l_datakwargs:
+            :param np.array tsim: Array of time value at which you want to compute the gp prediction
+            :return np.array gp_sim_values: Array of the gp simulated values for each tsim values.
+        :return list_of_str l_param_noise_mod: List of parameter full name for the noise model.
+        """
+        ldict = locals().copy()
+        ker, l_params_new, l_idx_param_noisemod = cls.__get_text_define_GP(model_instance, l_params)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker)
+        ldict["defaultdict"] = defaultdict
+        ldict["list"] = list
+        ldict["concatenate"] = concatenate
+        ldict["logger"] = logger
+        ldict["ExpSquaredKernel"] = ExpSquaredKernel
+        ldict["ExpSine2Kernel"] = ExpSine2Kernel
+        ldict["exp"] = exp
+        ldict["GP"] = GP
+        exec(func, ldict)
+        return ldict[cls.gpsim_function_name], [l_params_new[idx] for idx in l_idx_param_noisemod]
+
+    # @classmethod
+    # def star_param_GP_indexorval(cls, model_instance, l_params):
+    #     """Return
+    #
+    #     :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+    #         noise model which requires parameter of the object studied (like GP and stellar
+    #         activity)
+    #     :param list_of_string l_params: Current list of parameters full names.
+    #     :return list_of_string_or_float l:
+    #     """
+    #     i = 0
+    #     l_params_new = l_params.copy()
+    #     for param in cls.get_star_params_GP(model_instance):
+    #         if param.free:
+    #             if param not in l_params_new:
+    #                 l_params_new.append(param.full_name)
+    #             i += 1
+    #         else:
+    #             l.append(param.value)
+    #     return l
+
+    # @classmethod
+    # def __define_GP(cls, p, model_instance):
+    #     l_val = [p[idxorval] if free else idxorval
+    #              for idxorval, free in zip(cls.star_param_GP_indexorval(model_instance),
+    #                                        cls.star_params_GP_isfree(model_instance))]
+    #     kernel = (exp(l_val[0])**2.0 * ExpSquaredKernel(l_val[1]**2) *
+    #               ExpSine2Kernel(2. / (l_val[2])**2.0, l_val[3]))
+    #     return GP(kernel)  # Define the kernel of the GP
+
+    # def lnlike_creator(self):
+    #     ldict = locals().copy()
+    #     nb_free = self.nb_params_GP_free
+    #     ker = self.__get_text_define_GP()
+    #     if self.multidataset:
+    #         l_idx_param = []
+    #         for dataset in self.l_dataset:
+    #             l_idx_param.append(self.get_param_idxs_datasim(dataset))
+    #         ldict["l_idx_param"] = l_idx_param
+    #         ldict["l_func"] = [self.get_datasim_function(dataset) for dataset in self.l_dataset]
+    #         ldict["concatenate"] = concatenate
+    #         ldict["logger"] = logger
+    #         text_func = self.lnlikefunc_text_multidataset
+    #     else:
+    #         datasim_func = self.get_datasim_function()
+    #         ldict["datasim_func"] = datasim_func
+    #         text_func = self.lnlikefunc_text
+    #     func = text_func.format(func_name=self.function_name, nb_GP_free_param=nb_free, kernel=ker)
+    #     ldict["ExpSquaredKernel"] = ExpSquaredKernel
+    #     ldict["ExpSine2Kernel"] = ExpSine2Kernel
+    #     ldict["exp"] = exp
+    #     ldict["GP"] = GP
+    #     exec(func, ldict)
+    #     return DocFunction(function=ldict[self.function_name], arg_list=self.get_arg_list())
+
+    # def lnlike(self, p, data, data_err, t):
+    #     if self.multidataset:
+    #         model = []
+    #         for dataset_key, t_dataset in zip(self.l_dataset, t):
+    #             model.append(self.get_datasim_function(dataset_key)
+    #                          (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(concatenate(t), concatenate(data_err))
+    #         return gp.lnlikelihood(concatenate(data) - concatenate(model))
+    #     else:
+    #         model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
+    #         return gp.lnlikelihood(data - model)
+
+    # def _get_arg_list_one_dataset(self, dataset_key=None):
+    #     arg_list_new = super(StellarActNoiseModel,
+    #                          self)._get_arg_list_one_dataset(dataset_key)
+    #     arg_list_new["param"] = (self.get_star_param_GP_names(free=True, full_name=True) +
+    #                              arg_list_new["param"])
+    #     return arg_list_new
+
+    # def gp_simulator(self, p, tsim, data, data_err, t):
+    #     """
+    #     """
+    #     if self.multidataset:
+    #         model = []
+    #         for dataset_key, t_dataset in zip(self.l_dataset, t):
+    #             model.append(self.get_datasim_function(dataset_key)
+    #                          (p[self.get_param_idxs_datasim(dataset_key)], t_dataset))
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(concatenate(t), concatenate(data_err))
+    #         return gp.sample_conditional(concatenate(data) - concatenate(model), tsim)
+    #     else:
+    #         model = self.get_datasim_function()(p[self.get_param_idxs_datasim()], t)
+    #         gp = self.__define_GP(p[self.get_param_idxs_GP()])
+    #         gp.compute(t, data_err)  # Pre-compute the factorization of the matrix.
+    #         return gp.sample_conditional(data - model, tsim)
+
+    # def get_param_idxs_datasim(self, dataset_key=None):
+    #     """Return the list of param indexes for a datasimulator.
+    #
+    #     If multidataset dataset_key should not be None, because then you should do it for each
+    #     dataset.
+    #     """
+    #     # Get list of param names for the likelihood then for the datasimulator and final get the
+    #     # list of indexes for the datasimulator params
+    #     l_param_all = self.get_arg_list()["param"]
+    #     l_idx_param = []
+    #     for par in self.get_datasim_arg_list(dataset_key)["param"]:
+    #         l_idx_param.append(l_param_all.index(par))
+    #     return l_idx_param
+
+    # def get_param_idxs_GP(self):
+    #     """Return the list of param indexes for the GP model."""
+    #     # Get list of param names for the likelihood then for the datasimulator and final get the
+    #     # list of indexes for the datasimulator params
+    #     l_param_all = self.get_arg_list()["param"]
+    #     l_idx_param = []
+    #     for par in self.get_star_param_GP_names(free=True, full_name=True):
+    #         l_idx_param.append(l_param_all.index(par))
+    #     return l_idx_param

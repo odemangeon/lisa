@@ -41,7 +41,7 @@ from .parametrisation import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_rv import create_datasimulator_RV
 from .datasim_creator_lc import create_datasimulator_LC
-from .supersamp_exptime import SuperSampExpTimeAttr
+from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
@@ -167,6 +167,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
             dico["transit_model"] = self.transit_model
         if RV_inst_cat in self.dataset_db.inst_categories:
             dico["rv_model"] = self.rv_model
+        dico["parametrisation"] = self.parametrisation
         return dico
 
     @property
@@ -402,9 +403,9 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                     inst_ss_dict += (ss_tab +
                                      ss_dict).format(tab_ss=tab_ss,
                                                      instmod_fullname=instmod_obj.full_name,
-                                                     supersamp_key=self.__supersamp_key,
+                                                     supersamp_key=_supersamp_key,
                                                      default_supersamp=default_supersamp,
-                                                     exptime_key=self.__exptime_key,
+                                                     exptime_key=_exptime_key,
                                                      default_exptime=default_exptime)
 
                 # Fill the structures of star_ld_dict
@@ -488,14 +489,16 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     def automatic_init_kwargs(self):
         """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
         dico = super(GravGroup, self).automatic_init_kwargs
-        dico["lc_param_file"] = self.lc_param_file
+        if LC_inst_cat in self.dataset_db.inst_categories:
+            dico["lc_param_file"] = self.lc_param_file
         dico["kwargs_parametrisation"] = self.parametrisation_kwargs
         return dico
 
     def automatic_model_initialisation(self, lc_param_file, kwargs_parametrisation, **kwargs):
         """load the parameter file."""
-        self.lc_param_file = lc_param_file
-        self.load_LC_param_file()
+        if LC_inst_cat in self.dataset_db.inst_categories:
+            self.lc_param_file = lc_param_file
+            self.load_LC_param_file()
         self.apply_parametrisation(**kwargs_parametrisation)
         super(GravGroup, self).automatic_model_initialisation(**kwargs)
 

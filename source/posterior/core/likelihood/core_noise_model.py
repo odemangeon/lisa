@@ -15,12 +15,11 @@ jitter parameters or the GP parameters) and provide the way the likelihood is co
     -
 """
 from logging import getLogger
-from collection import Iterable
+from collections import Iterable
 from numpy import sum as npsum
 from numpy import log as nplog
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr
-from ..dataset_and_instrument.instrument import Instrument_Model
 
 
 ## Logger
@@ -31,8 +30,8 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
 
     def __init__(cls, name, bases, attrs):
         super(Metaclass_NoiseModel, cls).__init__(name, bases, attrs)
-        l_mandatory_methods = ["lnlike_creator", "lnlike",
-                               "_check_parametrisation_dataset", "apply_parametrisation"]
+        l_mandatory_methods = []
+        # ["lnlike_creator", "lnlike", "_check_parametrisation_dataset", "apply_parametrisation"]
         if cls.__name__ not in ["Core_Noise_Model", ]:
             missing_attrs = ["{}".format(attr) for attr in l_mandatory_methods
                              if not hasattr(cls, attr)]
@@ -83,9 +82,12 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     def get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
+        :param list_of_string l_params: Current list of parameters full names.
         :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
             instrument model for the ln likelihood to produce.
-        :param list_of_string l_params: Current list of parameters full names.
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
         :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
             model the simulated data (array), param_noisemod the free parameters value for the noise
             model, the list of dataset kwargs and returns the ln posterior value
@@ -116,6 +118,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         :return list_of_InstrumentModel l_instmod_obj_new: Return a checked list of instrument model
             object
         """
+        from ..dataset_and_instrument.instrument import Instrument_Model
         if isinstance(l_instmod_obj, Instrument_Model):
             return [l_instmod_obj]
         elif isinstance(l_instmod_obj, Iterable):
@@ -150,12 +153,14 @@ class GaussianNoiseModel(Core_Noise_Model):
         pass
 
     @classmethod
-    def get_prefilledlnlike(cls, l_params, l_instmod_obj, **kwargs):
+    def get_prefilledlnlike(cls, l_params, **kwargs):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
+        As there is no parameter for this noise model, it doesn't need a l_instmod_obj or a
+        model_instance argument. But as it might be privided one automatically, I put the keyword
+        arguments **kwargs.
+
         :param list_of_string l_params: Current list of parameters full names.
-        :param InstrumentModel/list_of_InstrumentModel l_instmod_obj: Instument model or list of
-            instrument model for the ln likelihood to produce.
         :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
             model the simulated data (array), param_noisemod the free parameters value for the noise
             model, the list of dataset kwargs and returns the ln posterior value

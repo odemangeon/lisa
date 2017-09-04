@@ -54,9 +54,9 @@ def create_datasimulator_RV(star, planets, key_whole,
             datasets.
     :return dict dico_docf: key=object (planet name or whole_key), value=DatasimDocFunc
     """
-    # Check the content of inst_model_fullnames: If not provided or string set multi_inst_model
-    # to False, otherwise to True. And set the inst_model_fullnames argument for the Datasim_DocFunc
-    # instmod_docf
+    # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
+    # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
+    # Datasim_DocFunc (instmod_docf)
     instmod_err = False
     if inst_models is None or isinstance(inst_models, Instrument_Model):
         multi_instmodl = False
@@ -80,8 +80,9 @@ def create_datasimulator_RV(star, planets, key_whole,
     if instmod_err:
         raise ValueError("inst_models should be None, string or list of strings.")
 
-    # Check the content of datasets: If not provided or string set multi_dataset
-    # to False, otherwise to True.  And set the datasets argument for the Datasim_DocFunc dtsts_docf
+    # Check the content of datasets argument: Set multi_dataset to True if several datasets
+    # are provided, to False otherwise. Finally set the datasets argument for the
+    # Datasim_DocFunc (dtsts_docf)
     dataset_err = False
     if datasets is None or isinstance(datasets, Dataset):
         multi_dataset = False
@@ -167,14 +168,14 @@ def create_datasimulator_RV(star, planets, key_whole,
     template_returns_instmod = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
 
     # Create the arguments text
-    if multi_dataset:
+    if multi:
         if datasets[0] is None:
             arguments = "p, l_t, l_tref"
         else:
             arguments = "p"
     else:
         if datasets is None:
-            arguments = "p, t, tref"
+            arguments = "p, t, tref=None"
         else:
             arguments = "p"
 
@@ -186,7 +187,7 @@ def create_datasimulator_RV(star, planets, key_whole,
 
     # Add time in the kwargs entry of the whole system arg_list
     if datasets is None:
-        if multi_instmodl:
+        if multi:
             arg_list[key_whole]["kwargs"].append("l_t")
         else:
             arg_list[key_whole]["kwargs"].append("t")
@@ -232,39 +233,60 @@ def create_datasimulator_RV(star, planets, key_whole,
             arg_list[key_whole]["param"].append(star.v0.full_name)
         else:
             l_star_mean_rv[ii] += "{}".format(star.v0.value)
+
+        # If stellar RV drift has been asked, create the text for stellar RV drift, ...
         if star.with_RVdrift:
+            # ..., For each order in the required polynomial model (zero is the system mean
+            # velocity, so the orders starts at 1), ...
             for order in range(1, star.RVdrift_order + 1):
+                # ..., get the name and full name of the parameter for this order
                 RVdrift_param_name = star.get_RVdrift_param_name(order)
                 RVdrift_param_fullname = star.parameters[RVdrift_param_name].full_name
+                # ..., If this parameter is a main parameter (it should be), ...
                 if star.parameters[RVdrift_param_name].main:
                     value_not0 = True
+                    # ..., If this parameter is free, ...
                     if star.parameters[RVdrift_param_name].free:
+                        # ..., add the beginning of this order's contribution to the text of the
+                        # RV drift, add the parameter name to the list of parameter, and increment
+                        # the parameter counter
                         l_star_mean_rv[ii] += "+ p[{}]".format(param_nb[key_whole])
                         param_nb[key_whole] += 1
                         arg_list[key_whole]["param"].append(RVdrift_param_fullname)
+                    # ..., else, ...
                     else:
+                        # ..., if the fixed value of this parameter is not zero, ...
                         if star.parameters[RVdrift_param_name].value != 0.0:
+                            # ..., add the beginning of this order's contribution to the text of the
+                            # RV drift
                             l_star_mean_rv[ii] += "+ {}".format(star.
                                                                 parameters[RVdrift_param_name].
                                                                 value)
+                        # ..., else, since the fixed value is zero, this order doesn't have any
+                        # contribution
                         else:
                             value_not0 = False
+                    # ..., if the order has a contribution to the RV drift, ...
                     if value_not0:
-                        if ((("tref" not in arg_list[key_whole]["kwargs"]) or
-                             ("tref" not in arg_list[key_whole]["kwargs"])) and
+                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
+                        # no dataset is provided, ...
+                        if ((("tref" not in arg_list[key_whole]["kwargs"]) and
+                             ("l_tref" not in arg_list[key_whole]["kwargs"])) and
                            (dst is None)):
-                            if multi_instmodl:
+                            # ..., add "tref" or "l_tref" to the list of kwargs.
+                            if multi:
                                 arg_list[key_whole]["kwargs"].append("l_tref")
                             else:
                                 arg_list[key_whole]["kwargs"].append("tref")
+                        # ..., add the end of this order's contribution to the text of the RV drift.
                         if order == 1:
-                            if multi_instmodl:
+                            if multi:
                                 l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
                                                        "".format(ii=ii))
                             else:
                                 l_star_mean_rv[ii] += " * (t - tref) "
                         elif order > 1:
-                            if multi_instmodl:
+                            if multi:
                                 l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
                                                        "".format(order=order, ii=ii))
                             else:
@@ -284,7 +306,7 @@ def create_datasimulator_RV(star, planets, key_whole,
     {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
     {tab}tp_{planet} = gettp_fast({P}, {tc}, ecc_{planet}, omega_{planet})
     """
-    if multi_instmodl:
+    if multi:
         template_planet_rv = ("+ pl_rv_array(l_t[{ii}], 0., {K}, omega_{planet}, "
                               "ecc_{planet}, tp_{planet}, {P})")
     else:
@@ -294,7 +316,7 @@ def create_datasimulator_RV(star, planets, key_whole,
     # Initialise the local dictionary for the creation of the datasim functions by exec
     ldict = locals().copy()
     if datasets is not None:
-        if multi_instmodl:
+        if multi:
             l_t = []
             l_tref = []
             for instmdl, dst in zip(l_inst_model, l_dataset):
@@ -349,7 +371,7 @@ def create_datasimulator_RV(star, planets, key_whole,
 
         # planets RV contribution (planet_rv and whole_planets_rv)
         l_planet_rv = []
-        if multi_instmodl:
+        if multi:
             for ii, instmdl in enumerate(l_inst_model):
                 l_planet_rv.append(template_planet_rv.format(ii=ii,
                                                              planet=planet.name,
@@ -361,8 +383,8 @@ def create_datasimulator_RV(star, planets, key_whole,
                                                                     P=params_whole["P"])
         else:
             l_planet_rv.append(template_planet_rv.format(planet=planet.name,
-                                                         K=params_whole["K"],
-                                                         P=params_whole["P"]))
+                                                         K=params_planet["K"],
+                                                         P=params_planet["P"]))
             l_whole_planets_rv[ii] += template_planet_rv.format(planet=planet.name,
                                                                 K=params_whole["K"],
                                                                 P=params_whole["P"])

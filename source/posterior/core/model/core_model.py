@@ -83,8 +83,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         # Intialise the run_folder property
         RunFolder.__init__(self, run_folder=run_folder)
 
-        # Core Model is also a ParamContainer Database so initialise it
+        # Core Model is also a ParamContainer Database, so initialise it
         ParamContainerDatabase.__init__(self)
+
+        # Core Model is also an InstrumentContainer, so initialise it
+        InstrumentContainerInterface.__init__(self)
 
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
@@ -177,6 +180,21 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
             noise_model_subclass.apply_parametrisation(model_instance=self,
                                                        instmod_fullname=instmod_fullname)
 
+    def get_noisemodandinstmod4dataset(self):
+        """Return the dictionary giving the noise model subclass for each dataset.
+
+        :return dict res: Dictionary, key = dataset name, value = dict:
+            key = "noise model", value = noise model subclass
+            key = "instrument model", value = instrument model
+        """
+        res = {}
+        for dataset_name in self.instmodel4dataset:
+            inst_mod = self.get_instmod(dataset_name)
+            res[dataset_name]["instrument model"] = inst_mod
+            (res[dataset_name]
+             ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+        return res
+
     def get_param(self, full_name):
         """Return the instance of the Parameter designated by full_name."""
         logger.debug("Parameter full name: {}".format(full_name))
@@ -196,21 +214,31 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                 if inst_model is not None:
                     return inst_model.parameters[param_name]
 
-    def get_list_params(self, main=False, free=False):
-        """Return the list of all parameters."""
+    def get_list_params(self, **kwargs):
+        """Return the list of all parameters.
+
+        Keyword arguments can be:
+        :param bool main: Get only the main parameters. Default = False
+        :param bool free: Get only the main parameters. Default = False
+        :param dict inst_models : Dictionnary which for each instrument name give the list of the
+                names of instrument models for which you want the params.
+                Default = all instrument models used
+
+        Those are available for all the param containers, but additional keyword argument can be
+        acepted by specific parameter containers (like the instruments)
+
+        :return list_of_param result: list of Parameter instances
+        """
+        if "main" not in kwargs:
+            kwargs["main"] = False
+        if "free" not in kwargs:
+            kwargs["free"] = False
+        if "inst_models" not in kwargs:
+            kwargs["inst_models"] = self.name_instmodels_used(sortby_instname=True)
         result = []
-        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
-        result.extend(ParamContainerDatabase.
-                      get_list_params(self, main=main, free=free,
-                                      inst_models=self.name_instmodels_used(sortby_instname=True)))
-        # for paramcont_cat in self.paramcontainers_categories:
-        #     if paramcont_cat == instmod_cat:
-        #         result.extend(ParamContainerDatabase.
-        #                       get_list_params(self, main=main, free=free,
-        #                                       inst_models=self.name_instmodels_used))
-        #     else:
-        #         for param_cont in self.paramcontainers[paramcont_cat].values():
-        #             result.extend(param_cont.get_list_params(main=main, free=free))
+        result.extend(Core_ParamContainer.get_list_params(self, main=kwargs["main"],
+                                                          free=kwargs["free"]))
+        result.extend(ParamContainerDatabase.get_list_params(self, **kwargs))
         return result
 
     def get_list_paramnames(self, main=False, free=False, full_name=False):
