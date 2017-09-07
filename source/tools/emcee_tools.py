@@ -106,6 +106,7 @@ def explore(sampler, p0, nsteps):
         for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
             pbar.update(i - previous_i)
             previous_i = i
+    return result
 
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
@@ -636,6 +637,8 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :param emcee.EnsembleSampler sampler:
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
+    :return list_of_int l_selected_walker: list of selected walker
+    :return int nb_rejected:  number of rejected walker
     """
     walkers_percentile_lnposterior = percentile(lnprobability, quantile_walker, axis=1)
     percentile_lnposterior = percentile(walkers_percentile_lnposterior, quantile)
@@ -688,6 +691,7 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None):
     :param ChainInterpret chainI:
     :param int_iteratable l_walkers: list of valid walkers
     :param int_iteratable l_burnin: list of burnin iterations for each valid walker
+    :return np.array res: cleaned flat chain
     """
     if (l_walker is None) and (l_burnin is None):
         return chainI.flatchain

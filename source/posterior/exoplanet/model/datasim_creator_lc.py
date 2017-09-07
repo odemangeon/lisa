@@ -275,38 +275,6 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                 l_ld_param_list[ii] += "{}, ".format(param.value)
         l_ld_param_list[ii] += "]"
 
-    # Create the template preambule
-    # template_preambule_pl = """
-    #     {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
-    # if parametrisation in LC_multis_parametrisations:
-    #     template_preambule_pl += """
-    #     {tab}aR_{planet} = getaoverr({P}, {rhostar})"""
-    # if transit_model == "batman":
-    #     template_preambule_pl += """
-    #     {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
-    #     {tab}inc_{planet} = degrees(acos({cosinc}))
-    #     {tab}params_{planet}.t0 = {tc}
-    #     {tab}params_{planet}.per = {P}
-    #     {tab}params_{planet}.rp = {Rrat}
-    #     {tab}params_{planet}.inc = inc_{planet}
-    #     {tab}params_{planet}.ecc = ecc_{planet}
-    #     {tab}params_{planet}.w = omega_{planet}
-    #     {tab}params_{planet}.u = {ld_param_list}
-    #     {tab}params_{planet}.limb_dark = '{ld_mod_name}'"""
-    #     if parametrisation in LC_multis_parametrisations:
-    #         template_preambule_pl += """
-    #     {tab}params_{planet}.a = aR_{planet}
-    #     """
-    #     else:
-    #         template_preambule_pl += """
-    #     {tab}params_{planet}.a = {aR}
-    #     """
-    # else:
-    #     template_preambule_pl += """
-    #     {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
-    #     {tab}inc_{planet} = acos({cosinc})
-    #     """
-    # template_preambule_pl = dedent(template_preambule_pl)
     template_preambule_pl = """
         {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
     if parametrisation in LC_multis_parametrisations:
