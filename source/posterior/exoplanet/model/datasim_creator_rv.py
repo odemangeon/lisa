@@ -10,10 +10,11 @@ from copy import deepcopy
 
 from ajplanet import pl_rv_array
 
-from ..dataset_and_instrument.rv import RV_inst_cat
+# from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.dataset_and_instrument.instrument import Instrument_Model
-from ...core.dataset_and_instrument.dataset import Dataset
+from ...core.model.datasimulator import check_datasets_and_instmodels
+# from ...core.dataset_and_instrument.instrument import Instrument_Model
+# from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
 
 
@@ -21,7 +22,7 @@ from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
 logger = getLogger()
 
 
-def create_datasimulator_RV(star, planets, key_whole,
+def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
                             RV_globalref_instname=None,
                             RV_instref_modnames=None,
                             RV_inst_db=None,
@@ -34,6 +35,8 @@ def create_datasimulator_RV(star, planets, key_whole,
     :param Star star: Star instance corresponding to the star in the planetary system
     :param dict planets: key=planet name, value=Planet instance
     :param string key_whole: Key used for the whole system
+    :param string key_param: Key used for the parameters entry of arg_list
+    :param string key_kwargs: Key used for the keyword argument entry of arg_list
     :param string RV_globalref_instname: Instrument name of the instrument used as RV reference
     :param dict RV_instref_modnames: key=instrument name, value=instrument model name (not
         full name) used as reference for the instrument
@@ -57,82 +60,16 @@ def create_datasimulator_RV(star, planets, key_whole,
     # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
     # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
     # Datasim_DocFunc (instmod_docf)
-    instmod_err = False
-    if inst_models is None or isinstance(inst_models, Instrument_Model):
-        multi_instmodl = False
-        if inst_models is None:
-            instmod_docf = inst_models
-        else:
-            instmod_docf = inst_models.full_name
-    elif isinstance(inst_models, list):
-        if isinstance(inst_models[0], Instrument_Model):
-            multi_instmodl = True
-            instmod_docf = []
-            for instmod in inst_models:
-                if instmod is None:
-                    instmod_docf.append(instmod)
-                else:
-                    instmod_docf.append(instmod.full_name)
-        else:
-            instmod_err = True
-    else:
-        instmod_err = True
-    if instmod_err:
-        raise ValueError("inst_models should be None, string or list of strings.")
-
     # Check the content of datasets argument: Set multi_dataset to True if several datasets
     # are provided, to False otherwise. Finally set the datasets argument for the
     # Datasim_DocFunc (dtsts_docf)
-    dataset_err = False
-    if datasets is None or isinstance(datasets, Dataset):
-        multi_dataset = False
-        if datasets is None:
-            dtsts_docf = datasets
-        else:
-            dtsts_docf = datasets.dataset_name
-    elif isinstance(datasets, list):
-        if isinstance(datasets[0], Dataset):
-            multi_dataset = True
-            dtsts_docf = []
-            for dtst in datasets:
-                if dtst is None:
-                    dtsts_docf.append(dtst)
-                else:
-                    dtsts_docf.append(dtst.dataset_name)
-        else:
-            dataset_err = True
-    else:
-        dataset_err = True
-    if dataset_err:
-        raise ValueError("datasets should be None, string or list of strings.")
-
+    # Set the list of instrument categories for the Datasim_DocFunc (instcat_docf)
     # Produce the list of datasets and list of models (even of 1 element)
-    multi = multi_dataset or multi_instmodl
-    if multi and (multi_dataset != multi_instmodl):
-        if multi_dataset:
-            l_dataset = [datasets for instmod in inst_models]
-            l_inst_model = inst_models
-        else:  # multi_instmodl
-            l_inst_model = [inst_models for dtst in datasets]
-            l_dataset = datasets
-    elif multi:
-        l_dataset = datasets
-        l_inst_model = inst_models
-    else:
-        l_dataset = [datasets]
-        l_inst_model = [inst_models]
-
+    # Set multi indicating if multiple outputs are required for the datasimulator
     # Set the inst_model_full_name for the name of the function and the inst_cat input
     # (instcat_docf) for the datasim_docfunc
-    if multi:
-        inst_model_full_name = "multi"
-        instcat_docf = [RV_inst_cat for ii in range(len(l_inst_model))]
-    else:
-        instcat_docf = RV_inst_cat
-        if inst_models is None:
-            inst_model_full_name = "woinst"
-        else:
-            inst_model_full_name = inst_models.full_name
+    (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
+     dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
     # text_def_func is a dictionary which will received the text of the datasimulator functions
     # It has several keys for several datasimulator functions:
@@ -148,8 +85,8 @@ def create_datasimulator_RV(star, planets, key_whole,
     # function in text_def_func (so the keys are the same).
     # The argument list of a function is itself a dictionary (OrderedDict) that get at least two
     # keys:
-    #   - "param": list of the free parameters name in order
-    #   - "kwargs": list of the additional argument taht you need to provide to simulate the
+    #   - key_param: list of the free parameters name in order
+    #   - key_kwargs: list of the additional argument taht you need to provide to simulate the
     #               data. For example the time
     arg_list = {}
 
@@ -181,117 +118,23 @@ def create_datasimulator_RV(star, planets, key_whole,
 
     # Initialise arg_list and param_nb for key "whole"
     arg_list[key_whole] = OrderedDict()
-    arg_list[key_whole]["param"] = []
-    arg_list[key_whole]["kwargs"] = []
+    arg_list[key_whole][key_param] = []
+    arg_list[key_whole][key_kwargs] = []
     param_nb[key_whole] = 0
 
     # Add time in the kwargs entry of the whole system arg_list
     if datasets is None:
         if multi:
-            arg_list[key_whole]["kwargs"].append("l_t")
+            arg_list[key_whole][key_kwargs].append("l_t")
         else:
-            arg_list[key_whole]["kwargs"].append("t")
+            arg_list[key_whole][key_kwargs].append("t")
 
-    # Create for the instrument Delta RV (delta_inst_rv)
-    l_delta_inst_rv = []
-    l_star_mean_rv = []
-    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
-        l_delta_inst_rv.append("")
-        if instmdl is not None:
-            inst_name = instmdl.instrument.name
-            ## RVrefglobal_inst: name of the instrument chosen as global RV reference
-            ## (eg: HARPS)
-            RVrefglobal_instname = RV_globalref_instname
-            ## RVref4inst_modname: name of the instrument model chosen as reference for the
-            ## current instrument (eg: default)
-            RVref4inst_modname = RV_instref_modnames[inst_name]
-            # Add the Delta_RV of the global RV reference instrument model if needed
-            if inst_name != RVrefglobal_instname:
-                instmod_RVref4inst = RV_inst_db[inst_name][RVref4inst_modname]
-                if instmod_RVref4inst.DeltaRV.main:
-                    if instmod_RVref4inst.DeltaRV.free:
-                        l_delta_inst_rv[ii] += "p[{}] + ".format(param_nb[key_whole])
-                        param_nb[key_whole] += 1
-                        arg_list[key_whole]["param"].append(instmod_RVref4inst.DeltaRV.full_name)
-                    else:
-                        l_delta_inst_rv[ii] += "{} + ".format(instmod_RVref4inst.DeltaRV.value)
-            # Add the Delta_RV of the model used as RV reference for the current instrument
-            if instmdl.name != RVref4inst_modname:
-                if instmdl.DeltaRV.main:
-                    if instmdl.DeltaRV.free:
-                        l_delta_inst_rv[ii] += "p[{}] + ".format(param_nb[key_whole])
-                        param_nb[key_whole] += 1
-                        arg_list[key_whole]["param"].append(instmdl.DeltaRV.full_name)
-                    else:
-                        l_delta_inst_rv[ii] += "{} + ".format(instmdl.DeltaRV.value)
-
-        # Create the text for the star mean RV (star_mean_rv)
-        l_star_mean_rv.append("")
-        if star.v0.free:
-            l_star_mean_rv[ii] += "p[{}]".format(param_nb[key_whole])
-            param_nb[key_whole] += 1
-            arg_list[key_whole]["param"].append(star.v0.full_name)
-        else:
-            l_star_mean_rv[ii] += "{}".format(star.v0.value)
-
-        # If stellar RV drift has been asked, create the text for stellar RV drift, ...
-        if star.with_RVdrift:
-            # ..., For each order in the required polynomial model (zero is the system mean
-            # velocity, so the orders starts at 1), ...
-            for order in range(1, star.RVdrift_order + 1):
-                # ..., get the name and full name of the parameter for this order
-                RVdrift_param_name = star.get_RVdrift_param_name(order)
-                RVdrift_param_fullname = star.parameters[RVdrift_param_name].full_name
-                # ..., If this parameter is a main parameter (it should be), ...
-                if star.parameters[RVdrift_param_name].main:
-                    value_not0 = True
-                    # ..., If this parameter is free, ...
-                    if star.parameters[RVdrift_param_name].free:
-                        # ..., add the beginning of this order's contribution to the text of the
-                        # RV drift, add the parameter name to the list of parameter, and increment
-                        # the parameter counter
-                        l_star_mean_rv[ii] += "+ p[{}]".format(param_nb[key_whole])
-                        param_nb[key_whole] += 1
-                        arg_list[key_whole]["param"].append(RVdrift_param_fullname)
-                    # ..., else, ...
-                    else:
-                        # ..., if the fixed value of this parameter is not zero, ...
-                        if star.parameters[RVdrift_param_name].value != 0.0:
-                            # ..., add the beginning of this order's contribution to the text of the
-                            # RV drift
-                            l_star_mean_rv[ii] += "+ {}".format(star.
-                                                                parameters[RVdrift_param_name].
-                                                                value)
-                        # ..., else, since the fixed value is zero, this order doesn't have any
-                        # contribution
-                        else:
-                            value_not0 = False
-                    # ..., if the order has a contribution to the RV drift, ...
-                    if value_not0:
-                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
-                        # no dataset is provided, ...
-                        if ((("tref" not in arg_list[key_whole]["kwargs"]) and
-                             ("l_tref" not in arg_list[key_whole]["kwargs"])) and
-                           (dst is None)):
-                            # ..., add "tref" or "l_tref" to the list of kwargs.
-                            if multi:
-                                arg_list[key_whole]["kwargs"].append("l_tref")
-                            else:
-                                arg_list[key_whole]["kwargs"].append("tref")
-                        # ..., add the end of this order's contribution to the text of the RV drift.
-                        if order == 1:
-                            if multi:
-                                l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
-                                                       "".format(ii=ii))
-                            else:
-                                l_star_mean_rv[ii] += " * (t - tref) "
-                        elif order > 1:
-                            if multi:
-                                l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
-                                                       "".format(order=order, ii=ii))
-                            else:
-                                l_star_mean_rv[ii] += (" * (t - tref)**{order}"
-                                                       "".format(order=order))
+    # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
+    (l_star_mean_rv,
+     l_delta_inst_rv) = get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
+                                                   RV_globalref_instname, RV_instref_modnames,
+                                                   RV_inst_db, param_nb, key_whole, arg_list,
+                                                   key_param, key_kwargs)
 
     # Save the param_nb and arg_list for the whole function before iterating over the planets
     # text_def_func_before = text_def_func[self.key_whole]
@@ -314,14 +157,17 @@ def create_datasimulator_RV(star, planets, key_whole,
                               "ecc_{planet}, tp_{planet}, {P})")
 
     # Initialise the local dictionary for the creation of the datasim functions by exec
-    ldict = locals().copy()
+    # ldict = locals().copy() # TODO: think if there is a way to put that in a function common to
+    # all datasimulator because it's more or less repeated in my 3 datasimulators for now
+    ldict = {}
+    # if datasets are provided add the time array and tref to the local dictionary
     if datasets is not None:
         if multi:
             l_t = []
             l_tref = []
-            for instmdl, dst in zip(l_inst_model, l_dataset):
-                    l_t.append(dst.get_time())
-                    l_tref.append(dst.get_tref())
+            for dst in zip(l_dataset):
+                l_t.append(dst.get_time())
+                l_tref.append(dst.get_tref())
             ldict["l_t"] = l_t
             ldict["l_tref"] = l_tref
         else:
@@ -351,10 +197,10 @@ def create_datasimulator_RV(star, planets, key_whole,
                 param_text = "p[{}]"
                 params_whole[param_name] = param_text.format(param_nb[key_whole])
                 param_nb[key_whole] += 1
-                arg_list[key_whole]["param"].append(param.full_name)
+                arg_list[key_whole][key_param].append(param.full_name)
                 params_planet[param_name] = param_text.format(param_nb[planet.name])
                 param_nb[planet.name] += 1
-                arg_list[planet.name]["param"].append(param.full_name)
+                arg_list[planet.name][key_param].append(param.full_name)
             else:
                 params_whole[param_name] = "{}".format(param.value)
                 params_planet[param_name] = params_whole[param_name]
@@ -435,9 +281,9 @@ def create_datasimulator_RV(star, planets, key_whole,
         ldict["gettp_fast"] = gettp_fast
         ldict["pl_rv_array"] = pl_rv_array
         exec(text_def_func[obj_key], ldict)
-        params_model = arg_list[obj_key]["param"]
-        if len(arg_list[obj_key]["kwargs"]) > 0:
-            dataset_kwargs = str(arg_list[obj_key]["kwargs"])
+        params_model = arg_list[obj_key][key_param]
+        if len(arg_list[obj_key][key_kwargs]) > 0:
+            dataset_kwargs = str(arg_list[obj_key][key_kwargs])
         else:
             dataset_kwargs = None
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
@@ -447,3 +293,134 @@ def create_datasimulator_RV(star, planets, key_whole,
                                             inst_model_fullname=instmod_docf,
                                             dataset=dtsts_docf)
     return dico_docf
+
+
+def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
+                               RV_globalref_instname, RV_instref_modnames, RV_inst_db,
+                               param_nb, key_whole, arg_list, key_param, key_kwargs):
+    """Get the contribution of the systemic/star rv contribution and the instrumental delta RV.
+
+    :param list_of_Dataset l_dataset: Checked list of Dataset instance(s).
+    :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
+    :param Star star: Star instance corresponding to the star in the planetary system
+    :param bool multi: True if the datasim function needs multiple outputs.
+    :param string RV_globalref_instname: Instrument name of the instrument used as RV reference
+    :param dict RV_instref_modnames: key=instrument name, value=instrument model name (not
+        full name) used as reference for the instrument
+    :param dict RV_inst_db: key=instrument name, value=dict: key= instrument model name,
+        value=instrument model object.
+    :param dict_of_int param_nb: dictionary with key = key_whole, value = current number of free
+        parameters in the model
+    :param string key_whole: Key used for the whole system
+    :param dict arg_list: dictionary with key = key_whole, value = dict with
+        key = key_param, value = list of parameter full names
+    :param string key_param: Key used for the parameters entry of arg_list
+    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :return list_of_string l_delta_inst_rv: list give the string representation of the contributions
+        of the instrumental delta_rv for each couple instrument model - dataset in l_inst_model and
+        l_dataset.
+    :return list_of_string l_star_mean_rv: list give the string representation of the contributions
+        of the systemic/star rv  for each couple instrument model - dataset in
+        l_inst_model and l_dataset.
+    """
+    # Create for the instrument Delta RV (delta_inst_rv)
+    l_delta_inst_rv = []
+    l_star_mean_rv = []
+    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
+        l_delta_inst_rv.append("")
+        if instmdl is not None:
+            inst_name = instmdl.instrument.name
+            ## RVrefglobal_inst: name of the instrument chosen as global RV reference
+            ## (eg: HARPS)
+            RVrefglobal_instname = RV_globalref_instname
+            ## RVref4inst_modname: name of the instrument model chosen as reference for the
+            ## current instrument (eg: default)
+            RVref4inst_modname = RV_instref_modnames[inst_name]
+            # Add the Delta_RV of the global RV reference instrument model if needed
+            if inst_name != RVrefglobal_instname:
+                instmod_RVref4inst = RV_inst_db[inst_name][RVref4inst_modname]
+                if instmod_RVref4inst.DeltaRV.main:
+                    if instmod_RVref4inst.DeltaRV.free:
+                        l_delta_inst_rv[ii] += "p[{}] + ".format(param_nb[key_whole])
+                        param_nb[key_whole] += 1
+                        arg_list[key_whole][key_param].append(instmod_RVref4inst.DeltaRV.full_name)
+                    else:
+                        l_delta_inst_rv[ii] += "{} + ".format(instmod_RVref4inst.DeltaRV.value)
+            # Add the Delta_RV of the model used as RV reference for the current instrument
+            if instmdl.name != RVref4inst_modname:
+                if instmdl.DeltaRV.main:
+                    if instmdl.DeltaRV.free:
+                        l_delta_inst_rv[ii] += "p[{}] + ".format(param_nb[key_whole])
+                        param_nb[key_whole] += 1
+                        arg_list[key_whole][key_param].append(instmdl.DeltaRV.full_name)
+                    else:
+                        l_delta_inst_rv[ii] += "{} + ".format(instmdl.DeltaRV.value)
+
+        # Create the text for the star mean RV (star_mean_rv)
+        l_star_mean_rv.append("")
+        if star.v0.free:
+            l_star_mean_rv[ii] += "p[{}]".format(param_nb[key_whole])
+            param_nb[key_whole] += 1
+            arg_list[key_whole][key_param].append(star.v0.full_name)
+        else:
+            l_star_mean_rv[ii] += "{}".format(star.v0.value)
+
+        # If stellar RV drift has been asked, create the text for stellar RV drift, ...
+        if star.with_RVdrift:
+            # ..., For each order in the required polynomial model (zero is the system mean
+            # velocity, so the orders starts at 1), ...
+            for order in range(1, star.RVdrift_order + 1):
+                # ..., get the name and full name of the parameter for this order
+                RVdrift_param_name = star.get_RVdrift_param_name(order)
+                RVdrift_param_fullname = star.parameters[RVdrift_param_name].full_name
+                # ..., If this parameter is a main parameter (it should be), ...
+                if star.parameters[RVdrift_param_name].main:
+                    value_not0 = True
+                    # ..., If this parameter is free, ...
+                    if star.parameters[RVdrift_param_name].free:
+                        # ..., add the beginning of this order's contribution to the text of the
+                        # RV drift, add the parameter name to the list of parameter, and increment
+                        # the parameter counter
+                        l_star_mean_rv[ii] += "+ p[{}]".format(param_nb[key_whole])
+                        param_nb[key_whole] += 1
+                        arg_list[key_whole][key_param].append(RVdrift_param_fullname)
+                    # ..., else, ...
+                    else:
+                        # ..., if the fixed value of this parameter is not zero, ...
+                        if star.parameters[RVdrift_param_name].value != 0.0:
+                            # ..., add the beginning of this order's contribution to the text of the
+                            # RV drift
+                            l_star_mean_rv[ii] += "+ {}".format(star.
+                                                                parameters[RVdrift_param_name].
+                                                                value)
+                        # ..., else, since the fixed value is zero, this order doesn't have any
+                        # contribution
+                        else:
+                            value_not0 = False
+                    # ..., if the order has a contribution to the RV drift, ...
+                    if value_not0:
+                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
+                        # no dataset is provided, ...
+                        if ((("tref" not in arg_list[key_whole][key_kwargs]) and
+                             ("l_tref" not in arg_list[key_whole][key_kwargs])) and
+                           (dst is None)):
+                            # ..., add "tref" or "l_tref" to the list of kwargs.
+                            if multi:
+                                arg_list[key_whole][key_kwargs].append("l_tref")
+                            else:
+                                arg_list[key_whole][key_kwargs].append("tref")
+                        # ..., add the end of this order's contribution to the text of the RV drift.
+                        if order == 1:
+                            if multi:
+                                l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
+                                                       "".format(ii=ii))
+                            else:
+                                l_star_mean_rv[ii] += " * (t - tref) "
+                        elif order > 1:
+                            if multi:
+                                l_star_mean_rv[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
+                                                       "".format(order=order, ii=ii))
+                            else:
+                                l_star_mean_rv[ii] += (" * (t - tref)**{order}"
+                                                       "".format(order=order))
+    return l_star_mean_rv, l_delta_inst_rv

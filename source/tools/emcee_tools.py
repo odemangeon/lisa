@@ -25,7 +25,7 @@ from os.path import isfile, join
 from .stats.loc_scale_estimator import mad
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from ..posterior.core.posterior import alldtst_key
+# from ..posterior.core.posterior import alldtst_key
 
 
 # from ipdb import set_trace
@@ -300,8 +300,10 @@ def get_time_supersampled(time, supersamp, exptime):
 
     Inspired from https://github.com/hpparvi/PyTransit/blob/master/src/supersampler.py
 
-    :param array_like t: time vector
-
+    :param array_like time: time vector
+    :param int supersamp: Super sampling factor to apply (>= 1)
+    :param float exptime: Exposure time of the time vector, in the same unit than time
+    :return array_like supersamp_time: Super sampled time vector.
     """
     relative_supersample_positions = exptime * ((np.arange(1, supersamp + 1, dtype='d') - 0.5) /
                                                 supersamp - 0.5)

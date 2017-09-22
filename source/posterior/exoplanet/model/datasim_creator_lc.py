@@ -12,10 +12,11 @@ from math import acos, degrees
 from batman import TransitModel, TransitParams
 from pytransit import MandelAgol
 
-from ..dataset_and_instrument.lc import LC_inst_cat
+# from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.dataset_and_instrument.instrument import Instrument_Model
-from ...core.dataset_and_instrument.dataset import Dataset
+from ...core.model.datasimulator import check_datasets_and_instmodels
+# from ...core.dataset_and_instrument.instrument import Instrument_Model
+# from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.convert import getecc_fast, getomega_fast, getaoverr
 
 
@@ -23,104 +24,51 @@ from ....tools.convert import getecc_fast, getomega_fast, getaoverr
 logger = getLogger()
 
 
-def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis_parametrisations,
-                            ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
+def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
+                            parametrisation,
+                            LC_multis_parametrisations, ldmodel4instmodfname, LDs,
+                            transit_model, SSE4instmodfname,
                             inst_models=None, datasets=None):
     """Return datasimulator functions.
 
     A datasimualtor function is created for the whole dataset_database and for each planet
     individually.
 
+    :param Star star: Star object
+    :param dict_of_Planet planets: dictionary: key: planet name, value: Planet object
+    :param string key_whole: key to use to identify the whole system in the output dictionary
+        (dico_docf).
+    :param string key_param: Key used for the parameters entry of arg_list
+    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :param string parametrisation: String refering to the parametrisation to use
+    :param list_of_string LC_multis_parametrisations: List of string giving the parametrisation that
+        specially made for multi-planetary systems.
+    :param dict_of_ ldmodel4instmodfname: Dictionary giving Limd darkening model to use for each
+        instrument model
+    :param LDs: LD object?
+    :param string transit_model: String refering to the transit model to be used.
+    :param dict_of_ SSE4instmodfname: Dictionary giving the supersampling factor and the exposure
+        time to use for each instrument model
     :param Instrument_Model inst_model: instance of Instrument_Model
     :param Dataset dataset: instance of Dataset
 
-    ----
-    Returns:
-        - A dictionary with DocFunctions containing the data simulator function for the whole
-         system ("whole") and for the each planet individually ("planet_name")
+    :return dict_of_DatasimDocFunc dico_docf: A dictionary with DocFunctions containing the data
+        simulator function for the whole system ("whole") and for the each planet individually
+        ("planet_name")
     """
     # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
     # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
     # Datasim_DocFunc (instmod_docf)
-    instmod_err = False
-    if inst_models is None or isinstance(inst_models, Instrument_Model):
-        multi_instmodl = False
-        if inst_models is None:
-            instmod_docf = inst_models
-        else:
-            instmod_docf = inst_models.full_name
-    elif isinstance(inst_models, list):
-        if isinstance(inst_models[0], Instrument_Model):
-            multi_instmodl = True
-            instmod_docf = []
-            for instmod in inst_models:
-                if instmod is None:
-                    instmod_docf.append(instmod)
-                else:
-                    instmod_docf.append(instmod.full_name)
-        else:
-            instmod_err = True
-    else:
-        instmod_err = True
-    if instmod_err:
-        raise ValueError("inst_models should be None, string or list of strings.")
-
     # Check the content of datasets argument: Set multi_dataset to True if several datasets
     # are provided, to False otherwise. Finally set the datasets argument for the
     # Datasim_DocFunc (dtsts_docf)
-    dataset_err = False
-    if datasets is None or isinstance(datasets, Dataset):
-        multi_dataset = False
-        if datasets is None:
-            dtsts_docf = datasets
-        else:
-            dtsts_docf = datasets.dataset_name
-    elif isinstance(datasets, list):
-        if isinstance(datasets[0], Dataset):
-            multi_dataset = True
-            dtsts_docf = []
-            for dtst in datasets:
-                if dtst is None:
-                    dtsts_docf.append(dtst)
-                else:
-                    dtsts_docf.append(dtst.dataset_name)
-        else:
-            dataset_err = True
-    else:
-        dataset_err = True
-    if dataset_err:
-        raise ValueError("datasets should be None, string or list of strings.")
-
+    # Set the list of instrument categories for the Datasim_DocFunc (instcat_docf)
     # Produce the list of datasets and list of models (even of 1 element)
-    multi = multi_dataset or multi_instmodl
-    if multi and (multi_dataset != multi_instmodl):
-        if multi_dataset:
-            l_dataset = [datasets for instmod in inst_models]
-            l_inst_model = inst_models
-        else:  # multi_instmodl
-            l_inst_model = [inst_models for dtst in datasets]
-            l_dataset = datasets
-    elif multi:
-        l_dataset = datasets
-        l_inst_model = inst_models
-    else:
-        l_dataset = [datasets]
-        l_inst_model = [inst_models]
-
+    # Set multi indicating if multiple outputs are required for the datasimulator
     # Set the inst_model_full_name for the name of the function and the inst_cat input
     # (instcat_docf) for the datasim_docfunc
-    if multi:
-        inst_model_full_name = "multi"
-        instcat_docf = [LC_inst_cat for ii in range(len(l_inst_model))]
-    else:
-        instcat_docf = LC_inst_cat
-        if inst_models is None:
-            inst_model_full_name = "woinst"
-        else:
-            inst_model_full_name = inst_models.full_name
-
-    # Get the star object.
-    # star = self.stars[list(self.stars.keys())[0]]
+    (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
+     dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
     # text_def_func is a dictionary which will received the text of the datasimulator functions
     # It has several keys for several datasimulator functions:
@@ -136,8 +84,8 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
     # function in text_def_func (so the keys are the same).
     # The argument list of a function is itself a dictionary (OrderedDict) that get at least two
     # keys:
-    #   - "param": list of the free parameters name in order
-    #   - "kwargs": list of the additional argument taht you need to provide to simulate the
+    #   - key_param: list of the free parameters name in order
+    #   - key_kwargs: list of the additional argument taht you need to provide to simulate the
     #               data. For example the time
     arg_list = {}
 
@@ -169,90 +117,26 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
 
     # Initialise arg_list and param_nb for key "whole"
     arg_list[key_whole] = OrderedDict()
-    arg_list[key_whole]["param"] = []
-    arg_list[key_whole]["kwargs"] = []
+    arg_list[key_whole][key_param] = []
+    arg_list[key_whole][key_kwargs] = []
     param_nb[key_whole] = 0
 
     # Add time in the kwargs entry of the whole system arg_list
     if datasets is None:
         if multi:
-            arg_list[key_whole]["kwargs"].append("l_t")
+            arg_list[key_whole][key_kwargs].append("l_t")
         else:
-            arg_list[key_whole]["kwargs"].append("t")
+            arg_list[key_whole][key_kwargs].append("t")
 
-    # Create the text for oot_var
-    l_oot_var = []
-    # For each instrument model and dataset, ...
-    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
-        l_oot_var.append("")
-        # ..., if out of transit variation has been asked, ...
-        if instmdl.get_with_OOT_var():
-            # ..., For each order in the required polynomial model, ...
-            for order in range(instmdl.get_OOT_var_order() + 1):
-                # ..., get the name and full name of the parameter for this order
-                OOT_param_name = instmdl.get_OOT_param_name(order)
-                OOT_param_fullname = instmdl.parameters[OOT_param_name].full_name
-                # ..., If this parameter is a main parameter (it should be), ...
-                if instmdl.parameters[OOT_param_name].main:
-                    value_not0 = True
-                    # ..., If this parameter is free, ...
-                    if instmdl.parameters[OOT_param_name].free:
-                        # ..., add the beginning of this order's contribution to the text of the
-                        # out of transit variation, add the parameter name to the list of
-                        # parameter, and increment the parameter counter
-                        l_oot_var[ii] += "+ p[{}]".format(param_nb[key_whole])
-                        param_nb[key_whole] += 1
-                        arg_list[key_whole]["param"].append(OOT_param_fullname)
-                    # ..., else, ...
-                    else:
-                        # ..., if the fixed value of this parameter is not zero, ...
-                        if instmdl.parameters[OOT_param_name].value != 0.0:
-                            # ..., add the beginning of this order's contribution to the text of the
-                            # out of transit variation
-                            l_oot_var[ii] += "+ {}".format(instmdl.parameters[OOT_param_name].
-                                                           value)
-                        # ..., else, since the fixed value is zero, this order doesn't have any
-                        # contribution
-                        else:
-                            value_not0 = False
-                    # ..., if the order has a contribution to the out of transit variation and
-                    # the considered order is more than 0 meaning the time plays a role, ...
-                    if value_not0 and order > 0:
-                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
-                        # no dataset is provided, ...
-                        if ((("tref" not in arg_list[key_whole]["kwargs"]) and
-                             ("l_tref" not in arg_list[key_whole]["kwargs"])) and
-                           (dst is None)):
-                            # ..., add "tref" or "l_tref" to the list of kwargs.
-                            if multi:
-                                arg_list[key_whole]["kwargs"].append("l_tref")
-                            else:
-                                arg_list[key_whole]["kwargs"].append("tref")
-                        # ..., add the end of this order's contribution to the text of the out of
-                        # transit variation, ...
-                        if order == 1:
-                            if multi:
-                                l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
-                                                  "".format(ii=ii))
-                            else:
-                                l_oot_var[ii] += " * (t - tref) "
-                        elif order > 1:
-                            if multi:
-                                l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
-                                                  "".format(order=order, ii=ii))
-                            else:
-                                l_oot_var[ii] += " * (t - tref)**{} ".format(order)
-                    # If the is no contribution to the oot of transit variation from this order
-                    # add only a space.
-                    elif value_not0 and order == 0:
-                        l_oot_var[ii] += " "
+    l_oot_var = get_ootvar(l_inst_model, l_dataset, multi,
+                           param_nb, key_whole, arg_list, key_param, key_kwargs)
 
     if parametrisation in LC_multis_parametrisations:
         # Get the star object.
         if star.rho.free:
             rhostar = "p[{}]".format(param_nb[key_whole])
             param_nb[key_whole] += 1
-            arg_list[key_whole]["param"].append(star.rho.full_name)
+            arg_list[key_whole][key_param].append(star.rho.full_name)
         else:
             rhostar = "{}".format(star.rho.value)
     else:
@@ -270,11 +154,12 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
             if param.free:
                 l_ld_param_list[ii] += "p[{}], ".format(param_nb[key_whole])
                 param_nb[key_whole] += 1
-                arg_list[key_whole]["param"].append(param.full_name)
+                arg_list[key_whole][key_param].append(param.full_name)
             else:
                 l_ld_param_list[ii] += "{}, ".format(param.value)
         l_ld_param_list[ii] += "]"
 
+    # Create the preambule
     template_preambule_pl = """
         {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
     if parametrisation in LC_multis_parametrisations:
@@ -346,14 +231,15 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
     template_preambule_pl = dedent(template_preambule_pl)
 
     # Initialise the local dictionary for the creation of the datasim functions by exec
-    # ldict = locals().copy()
+    # ldict = locals().copy()  # TODO: think if there is a way to put that in a function common to
+    # all datasimulator because it's more or less repeated in my 3 datasimulators for now
     ldict = {}
     # if datasets are provided add the time array and tref to the local dictionary
     if datasets is not None:
         if multi:
             l_t = []
             l_tref = []
-            for instmdl, dst in zip(l_inst_model, l_dataset):
+            for dst in zip(l_dataset):
                 l_t.append(dst.get_time())
                 l_tref.append(dst.get_tref())
             ldict["l_t"] = l_t
@@ -549,10 +435,10 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                 param_text = "p[{}]"
                 params_whole[param_name] = param_text.format(param_nb[key_whole])
                 param_nb[key_whole] += 1
-                arg_list[key_whole]["param"].append(param.full_name)
+                arg_list[key_whole][key_param].append(param.full_name)
                 params_planet[param_name] = param_text.format(param_nb[planet.name])
                 param_nb[planet.name] += 1
-                arg_list[planet.name]["param"].append(param.full_name)
+                arg_list[planet.name][key_param].append(param.full_name)
             else:
                 params_whole[param_name] = "{}".format(param.value)
                 params_planet[param_name] = params_whole[param_name]
@@ -659,9 +545,9 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
         else:
             ldict["m"] = m_pytransit
         exec(text_def_func[obj_key], ldict)
-        params_model = arg_list[obj_key]["param"]
-        if len(arg_list[obj_key]["kwargs"]) > 0:
-            dataset_kwargs = str(arg_list[obj_key]["kwargs"])
+        params_model = arg_list[obj_key][key_param]
+        if len(arg_list[obj_key][key_kwargs]) > 0:
+            dataset_kwargs = str(arg_list[obj_key][key_kwargs])
         else:
             dataset_kwargs = None
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
@@ -671,3 +557,90 @@ def create_datasimulator_LC(star, planets, key_whole, parametrisation, LC_multis
                                             inst_model_fullname=instmod_docf,
                                             dataset=dtsts_docf)
     return dico_docf
+
+
+def get_ootvar(l_inst_model, l_dataset, multi,
+               param_nb, key_whole, arg_list, key_param, key_kwargs):
+    """Get the out of transit variation contribution to the light-curve
+
+    :param list_of_Dataset l_dataset: Checked list of Dataset instance(s).
+    :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
+    :param bool multi: True if the datasim function needs multiple outputs.
+    :param dict_of_int param_nb: dictionary with key = key_whole, value = current number of free
+        parameters in the model
+    :param string key_whole: Key used for the whole system
+    :param dict arg_list: dictionary with key = key_whole, value = dict with
+        key = key_param, value = list of parameter full names
+    :param string key_param: Key used for the parameters entry of arg_list
+    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :return list_of_string l_oot_var: list give the string representation of the contributions
+        of the out of transit variation for each couple instrument model - dataset in
+        l_inst_model and l_dataset.
+    """
+    # Create the text for oot_var
+    l_oot_var = []
+    # For each instrument model and dataset, ...
+    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
+        l_oot_var.append("")
+        # ..., if out of transit variation has been asked, ...
+        if instmdl.get_with_OOT_var():
+            # ..., For each order in the required polynomial model, ...
+            for order in range(instmdl.get_OOT_var_order() + 1):
+                # ..., get the name and full name of the parameter for this order
+                OOT_param_name = instmdl.get_OOT_param_name(order)
+                OOT_param_fullname = instmdl.parameters[OOT_param_name].full_name
+                # ..., If this parameter is a main parameter (it should be), ...
+                if instmdl.parameters[OOT_param_name].main:
+                    value_not0 = True
+                    # ..., If this parameter is free, ...
+                    if instmdl.parameters[OOT_param_name].free:
+                        # ..., add the beginning of this order's contribution to the text of the
+                        # out of transit variation, add the parameter name to the list of
+                        # parameter, and increment the parameter counter
+                        l_oot_var[ii] += "+ p[{}]".format(param_nb[key_whole])
+                        param_nb[key_whole] += 1
+                        arg_list[key_whole][key_param].append(OOT_param_fullname)
+                    # ..., else, ...
+                    else:
+                        # ..., if the fixed value of this parameter is not zero, ...
+                        if instmdl.parameters[OOT_param_name].value != 0.0:
+                            # ..., add the beginning of this order's contribution to the text of the
+                            # out of transit variation
+                            l_oot_var[ii] += "+ {}".format(instmdl.parameters[OOT_param_name].
+                                                           value)
+                        # ..., else, since the fixed value is zero, this order doesn't have any
+                        # contribution
+                        else:
+                            value_not0 = False
+                    # ..., if the order has a contribution to the out of transit variation and
+                    # the considered order is more than 0 meaning the time plays a role, ...
+                    if value_not0 and order > 0:
+                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
+                        # no dataset is provided, ...
+                        if ((("tref" not in arg_list[key_whole][key_kwargs]) and
+                             ("l_tref" not in arg_list[key_whole][key_kwargs])) and
+                           (dst is None)):
+                            # ..., add "tref" or "l_tref" to the list of kwargs.
+                            if multi:
+                                arg_list[key_whole][key_kwargs].append("l_tref")
+                            else:
+                                arg_list[key_whole][key_kwargs].append("tref")
+                        # ..., add the end of this order's contribution to the text of the out of
+                        # transit variation, ...
+                        if order == 1:
+                            if multi:
+                                l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}]) "
+                                                  "".format(ii=ii))
+                            else:
+                                l_oot_var[ii] += " * (t - tref) "
+                        elif order > 1:
+                            if multi:
+                                l_oot_var[ii] += (" * (l_t[{ii}] - l_tref[{ii}])**{order} "
+                                                  "".format(order=order, ii=ii))
+                            else:
+                                l_oot_var[ii] += " * (t - tref)**{} ".format(order)
+                    # If the is no contribution to the oot of transit variation from this order
+                    # add only a space.
+                    elif value_not0 and order == 0:
+                        l_oot_var[ii] += " "
+    return l_oot_var

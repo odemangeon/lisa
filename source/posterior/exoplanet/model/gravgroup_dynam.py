@@ -10,32 +10,32 @@ data.
 @TODO:
 """
 from logging import getLogger
-from os.path import isfile, join
-from collections import OrderedDict
-from string import ascii_lowercase
-from string import ascii_uppercase
+# from os.path import isfile, join
+# from collections import OrderedDict
+# from string import ascii_lowercase
+# from string import ascii_uppercase
 # from copy import deepcopy
-from textwrap import dedent
+# from textwrap import dedent
 # from math import acos, degrees
 # from ajplanet import pl_rv_array
 # from batman import TransitModel, TransitParams
 # from pytransit import MandelAgol
 
 from .gravgroup import GravGroup
-from .parametrisation import GravGroup_Parametrisation
-from .limb_darkening import Manager_LD, CoreLD
+# from .parametrisation import GravGroup_Parametrisation
+from .limb_darkening import Manager_LD  # , CoreLD
 from .datasim_creator_rebound import create_datasimulator_rebound
-from .datasim_creator_lc import create_datasimulator_LC
-from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
+# from .datasim_creator_lc import create_datasimulator_LC
+# from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
-from ...core.model.core_model import Core_Model
+# from ...core.model.core_model import Core_Model
 # from ....tools.function_w_doc import DocFunction
 # from ....tools.convert import getecc_fast, getomega_fast, getaoverr  # , gettp_fast
-from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.miscellaneous import spacestring_like
+# from ....tools.human_machine_interface.QCM import QCM_utilisateur
+# from ....tools.miscellaneous import spacestring_like
 
 
 # from pdb import set_trace
