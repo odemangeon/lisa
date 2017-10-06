@@ -122,11 +122,11 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     tab = "    "
     template_function = dedent(template_function)
 
-    # Initialise the template for each instmodel
+    # Initialise the template for each lc instmodel
     template_returns_instmodlc = "1 {oot_var}{planets_lc}"
 
-    # Initialise the template for each instmodel
-    template_returns_instmod = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
+    # Initialise the template for each rv instmodel
+    template_returns_instmodrv = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
 
     # Create the arguments text
     if multi:
