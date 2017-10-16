@@ -142,12 +142,6 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                                                                    inst_cat=[LC_inst_cat,
                                                                              RV_inst_cat])
 
-    # text_def_func is a dictionary which will received the text of the datasimulator functions
-    # It has several keys for several datasimulator functions:
-    #   - "whole" for the whole system with all the planets
-    #   - "b", "c", ... ("planet name") for only the contribution of one planet.
-    text_def_func = {}
-
     ## Initialise param_nb and arg_list
     # param_nb is a dictionary that will keep track of the number of parameter for each
     # function in text_def_func (so the keys are the same).
@@ -305,7 +299,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                     else:
                         final_time_instmod = times_instmod
                     if multi_cat[cat]:
-                        text_nb_times += """
+                        text_nb_times = """
                         {{tab}}l_nb_times[{cat}].append({final_time_instmod})
                         """.format(cat=cat, final_time_instmod=final_time_instmod)
                         format_supersamp_time_vec += dedent(text_nb_times)
@@ -346,7 +340,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         R_star_def = R_star_def.format(add_param_argument(star.R, arg_list, key_whole, key_param,
                                                           param_nb, par_vec_name)[key_whole])
     else:
-        R_star_def = None
+        R_star_def = ""
 
     ## Prepare the vector of parameters param_planets for the rebound function
     ## And if LC simulation the planetary radius vector.
@@ -381,12 +375,20 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
 
     ## Create the template for the text of the rebound wrapper and add the rebound wrapper function
     ## to ldict
+    returns_rebound_wrap = ""
+    if dico_inst_cat[LC_inst_cat]["has"] and dico_inst_cat[RV_inst_cat]["has"]:
+        returns_rebound_wrap += "rr, zz, rvs"
+    elif dico_inst_cat[LC_inst_cat]["has"]:
+        returns_rebound_wrap += "rr, zz"
+    else:
+        returns_rebound_wrap += "rvs"
     text_rebound_wrap = """
-        {{tab}}rr, zz, rvs = rebound_wrap_r_z_vz({param_planets}, {M_star}, {timeref_dyn},
+        {{tab}}{returns} = rebound_wrap_r_z_vz({param_planets}, {M_star}, {timeref_dyn},
         {{tab}}                                  dt={dt_dyn}, lc_times={time_vec_lc},
         {{tab}}                                  rv_times={time_vec_rv})
-        """.format(param_planets=param_planets_reb, M_star=M_star, timeref_dyn=time_ref_dyn,
-                   dt_dyn=deltat_dyn, time_vec_lc="dico_times[{}]".format(LC_inst_cat),
+        """.format(returns=returns_rebound_wrap, param_planets=param_planets_reb, M_star=M_star,
+                   timeref_dyn=time_ref_dyn, dt_dyn=deltat_dyn,
+                   time_vec_lc="dico_times[{}]".format(LC_inst_cat),
                    time_vec_rv="dico_times[{}]".format(RV_inst_cat))
     text_rebound_wrap = dedent(text_rebound_wrap)
     ldict["rebound_wrap_r_z_vz"] = rebound_wrap_r_z_vz
@@ -400,15 +402,33 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     {rebound_wrap}
     {compute_flux_text}
     {desupersamp_time_text}
+    {returns}
     """
 
-    ## TODO: Compute flux
-    for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
-                                            l_LD_parcont):
+    ## TODO: Compute flux values
+    if dico_inst_cat[LC_inst_cat]["has"]:
+        # Retrieve the rr and zz values corresponding to each LC instrument model (and dataset)
+        # Using the correct limb darkening law compute the flux from rr and zz and the LDC values
+        pass
 
+    ## TODO: Retrieve the RV values for each RV instrument model (and dataset)
+    if dico_inst_cat[RV_inst_cat]["has"]:
+        pass
+
+    ## TODO: Reorganize the LC and RV outputs as descrive by l_inst_model and l_dataset and
+    # create the returns with the stellar drift for RVs and the OOT variations for LC.
 
     ## TODO: Create the datasim function
-    return None
+    text_def_func = template_prembule.format(tab=tab, R_star_def=R_star_def,
+                                             format_and_supersamp_time=format_supersamp_time_vec,
+                                             rebound_wrap=text_rebound_wrap,
+                                             compute_flux_text="", desupersamp_time_text="",
+                                             returns=""
+                                             )
+    logger.debug("text of Rebound simulator function for {instmod_fullname}:\n{text_func}"
+                 "".format(object=key_whole, instmod_fullname=inst_model_full_name,
+                           text_func=text_def_func))
+    return text_def_func
 
 
 def funrebound(param_planet, stellar_mass, stellar_radius, limb_dark, treference,
