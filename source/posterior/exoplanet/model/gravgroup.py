@@ -37,7 +37,7 @@ from textwrap import dedent
 
 
 from .celestial_bodies import Star, Planet
-from .parametrisation import GravGroup_Parametrisation
+from .parametrisation_gravgroup import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_rv import create_datasimulator_RV
 from .datasim_creator_lc import create_datasimulator_LC
@@ -86,7 +86,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
                  transit_model=None, rv_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
-        """docstring Planet init method."""
+        """docstring GravGroup init method."""
         super(GravGroup, self).__init__(name, dataset_db, run_folder,
                                         instmodel4dataset=instmodel4dataset,
                                         l_instmod_fullnames=l_instmod_fullnames)

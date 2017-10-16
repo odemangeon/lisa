@@ -22,7 +22,7 @@ from logging import getLogger
 # from pytransit import MandelAgol
 
 from .gravgroup import GravGroup
-# from .parametrisation import GravGroup_Parametrisation
+from .parametrisation_gravgroupdynam import GravGroupDyn_Parametrisation
 from .limb_darkening import Manager_LD  # , CoreLD
 from .datasim_creator_rebound import create_datasimulator_rebound
 # from .datasim_creator_lc import create_datasimulator_LC
@@ -48,7 +48,7 @@ logger = getLogger()
 mgr_LD = Manager_LD()
 
 
-class GravGroupDyn(GravGroup):
+class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
     """docstring for GravGroup."""
 
     ## category
@@ -69,12 +69,12 @@ class GravGroupDyn(GravGroup):
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
                  dynamical_model=None, transit_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
-        """docstring Planet init method."""
-        super(GravGroup, self).__init__(name, dataset_db, instmodel4dataset=instmodel4dataset,
-                                        l_instmod_fullnames=l_instmod_fullnames,
-                                        transit_model=transit_model, rv_model=None,
-                                        parametrisation=parametrisation,
-                                        stars=stars, planets=planets, run_folder=run_folder)
+        """docstring GravGroupDyn init method."""
+        super(GravGroupDyn, self).__init__(name, dataset_db, instmodel4dataset=instmodel4dataset,
+                                           l_instmod_fullnames=l_instmod_fullnames,
+                                           transit_model=transit_model, rv_model=None,
+                                           parametrisation=parametrisation,
+                                           stars=stars, planets=planets, run_folder=run_folder)
         if LC_inst_cat in self.dataset_db.inst_categories:
             self._produce_LC = True
         else:

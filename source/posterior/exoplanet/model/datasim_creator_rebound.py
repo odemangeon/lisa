@@ -23,8 +23,8 @@ from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, 
                                                  get_lists_bijection_instcat, add_nonparam_argument)
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                             time_ref, l_time_ref)
-from ...core.dataset_and_instrument.lc import LC_inst_cat
-from ...core.dataset_and_instrument.rv import RV_inst_cat
+from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
+from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
 from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 
 
@@ -347,7 +347,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     ## TODO: Part of this could be a function of datasimulator toolbox which create a text,
     ##       fro example "p[0], p[3]", from a list of parameter isntances.
     param_planets_reb = "["
-    l_par_name = ["M", "P", "e", "i", "OMEGA", "omega"]
+    l_par_name = ["M", "P", "ecc", "inc", "OMEGA", "omega"]
     if dico_inst_cat[LC_inst_cat]["has"]:
         l_par_name = ["R"] + l_par_name
         text_param_rp = "rp = ["
