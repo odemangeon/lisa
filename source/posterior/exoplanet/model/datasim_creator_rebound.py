@@ -177,13 +177,23 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     tab = "    "
     template_function = dedent(template_function)
 
+    # Dictionary which will store the name of the time argument if there is one
+    time_arg_name = {}
+
+    # Dictionary saying if an instrument category have multiple couple inst_model/dataset
+    multi_cat = {}
+
+    # Make specific preparation for LC modelling
     if dico_inst_cat[LC_inst_cat]["has"]:
+        # See if there is multiple couple inst_model/dataset
+        multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"])
         # Add lc time as additional argument
-        arguments, timeLC_arg_name = add_time_argument(arguments, multi, has_dataset, arg_list,
-                                                       key_whole, key_kwargs, ldict,
-                                                       dico_inst_cat[LC_inst_cat]["l_dataset"],
-                                                       time_vec_name=time_vec_lc,
-                                                       l_time_vec_name=l_time_vec_lc)
+        (arguments,
+         time_arg_name[LC_inst_cat]) = add_time_argument(arguments, multi, has_dataset, arg_list,
+                                                         key_whole, key_kwargs, ldict,
+                                                         dico_inst_cat[LC_inst_cat]["l_dataset"],
+                                                         time_vec_name=time_vec_lc,
+                                                         l_time_vec_name=l_time_vec_lc)
         # Initialise the template for each lc instmodel
         template_returns_instmodlc = "1 {oot_var}{planets_lc}"
         # Get the out of transit variation contribution for each couple instrument - dataset
@@ -208,13 +218,17 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
             dico_inst_cat[LC_inst_cat]["exptime"].append(SSE4instmodfname.
                                                          get_exptime(instmdl.full_name))
 
+    # Make specific preparation for RV modelling
     if dico_inst_cat[RV_inst_cat]["has"]:
+        # See if there is multiple couple inst_model/dataset
+        multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"])
         # Add rv time as additional argument
-        arguments, timeRV_arg_name = add_time_argument(arguments, multi, has_dataset, arg_list,
-                                                       key_whole, key_kwargs, ldict,
-                                                       dico_inst_cat[RV_inst_cat]["l_dataset"],
-                                                       time_vec_name=time_vec_rv,
-                                                       l_time_vec_name=l_time_vec_rv)
+        (arguments,
+         time_arg_name[RV_inst_cat]) = add_time_argument(arguments, multi, has_dataset, arg_list,
+                                                         key_whole, key_kwargs, ldict,
+                                                         dico_inst_cat[RV_inst_cat]["l_dataset"],
+                                                         time_vec_name=time_vec_rv,
+                                                         l_time_vec_name=l_time_vec_rv)
         # Initialise the template for each rv instmodel
         template_returns_instmodrv = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
         # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
@@ -230,6 +244,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                                                  timeref_name=time_ref_rv,
                                                  l_timeref_name=l_time_ref_rv)
 
+    # Build the LC and RV times vector for the rebound wrapper
     # For RV and LC, add a key "times" to contain the full vector of sorted times
     # also add a key "l_times_retrieve" to contain the index of the time sample corresponding to
     # the each dataset times in the "l_dataset" key
@@ -254,66 +269,76 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                 for low, up in zip(cumsum([0, ] + l_nb_times[-1]), cumsum(l_nb_times)):
                     dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low, up])
     else:
-        if multi:  # This variable is used for both RV and LC times
-            format_supersamp_time_vec = "{tab}dico_times = {{}}".format(tab=tab)
-        else:
-            format_supersamp_time_vec = ""
-        time_vec_cat_name = {}  # This variable contain the final time vector name for LC and RV
+        format_supersamp_time_vec = "{tab}dico_times = {{}}".format(tab=tab)
+        if multi_cat[LC_inst_cat] or multi_cat[RV_inst_cat]:
+            format_supersamp_time_vec += "\n{tab}l_nb_times = {{}}".format(tab=tab)
+            format_supersamp_time_vec += "\n{tab}l_times_retrieve = {{}}".format(tab=tab)
+            ldict["array"] = array  # For the creation of dico_times[{cat}] array
+            ldict["append"] = append  # For the append of dico_times[{cat}] times vectors
+            ldict["cumsum"] = cumsum  # For the creation of l_times_retrieve
         do_supersamp = False  # True if at least one LC dataset requires supersampling
-        for cat, time_vec_name in zip([LC_inst_cat, RV_inst_cat], [time_vec_lc, time_vec_rv]):
+        for cat in [LC_inst_cat, RV_inst_cat]:
             if dico_inst_cat[cat]["has"]:
-                time_vec_cat_name[cat] = time_vec_name
-                if multi:
+                if multi_cat[cat]:
                     format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = array([])"
-                                                  "".format(tab, cat))
-                    ldict["array"] = array
-                    format_supersamp_time_vec += "\n{tab}l_nb_times = []".format(tab)
-                    for ii, instmod in enumerate(dico_inst_cat[cat]["l_inst_model"]):
-                        if multi:
-                            times_instmod = "{time_arg}_{ii}".format(time_arg= , ii=ii)
-                        else:
-                            times_instmod = "{time_arg}".format(time_arg= , ii=ii)
-                        if cat == LC_inst_cat:
-                            supersamp = dico_inst_cat[cat]["supersamp"][ii]
-                            exptime = dico_inst_cat[cat]["exptime"][ii]
-                            if supersamp > 1:
-                                supersamp_time += """
-    {tab}times_{cat}_{ii} = get_time_supersampled({times_instmod}, {supersamp}, {exptime})
-    """.format(tab=tab, cat=cat, ii=ii, times_instmod=times_instmod,
-               supersamp=supersamp, exptime=exptime)
-                                supersamp_time = dedent(supersamp_time)
-
-                        l_nb_times.append(len(times))  # TODO: Below maybe concatenate will be faster ?
-                        dico_inst_cat[cat]["times"] = append(dico_inst_cat[cat]["times"], times)
-                    idx_tosorttime = argsort(dico_inst_cat[cat]["times"])
-                    idx_todesorttime = argsort(idx_tosorttime)
-                    dico_inst_cat[cat]["times"] = dico_inst_cat[cat]["times"][idx_tosorttime]
-                    dico_inst_cat[cat]["l_times_retrieve"] = []
-                    for low, up in zip(cumsum([0, ] + l_nb_times[-1]), cumsum(l_nb_times)):
-                        dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low, up])
-
-                    ## TODO: TO BE CONTINUED
-                    # Need to interate over the instrument as done above.
-                    # Don't forget do_supersamp = True
-                else:
+                                                  "".format(tab=tab, cat=cat))
+                    format_supersamp_time_vec += ("\n{tab}l_nb_times[{cat}] = []"
+                                                  "".format(tab=tab, cat=cat))
+                for ii, instmod in enumerate(dico_inst_cat[cat]["l_inst_model"]):
+                    if multi_cat[cat]:
+                        times_instmod = "{time_arg}[{ii}]".format(time_arg=time_arg_name[cat],
+                                                                  ii=ii)
+                    else:
+                        times_instmod = "{time_arg}".format(time_arg=time_arg_name[cat])
                     if cat == LC_inst_cat:
                         supersamp = dico_inst_cat[cat]["supersamp"][ii]
                         exptime = dico_inst_cat[cat]["exptime"][ii]
                         if supersamp > 1:
                             do_supersamp = True
-                            format_supersamp_time_vec = """
-                {tab}{time_vec_lv} = "get_time_supersampled({time_vec_lv}, {supersamp}, {exptime})
-                """.format(tab=tab, time_vec_lv=time_vec_name, supersamp=supersamp, exptime=exptime)
-                            format_supersamp_time_vec = dedent(format_supersamp_time_vec)
+                            supersamp_time = """
+{tab}time_supersamp_{ii} = get_time_supersampled({times_instmod}, {supersamp}, {exptime})
+""".format(tab=tab, ii=ii, times_instmod=times_instmod, supersamp=supersamp, exptime=exptime)
+                            format_supersamp_time_vec += dedent(supersamp_time)
+                            final_time_instmod = "time_supersamp_{ii}".format(ii=ii)
+                        else:
+                            final_time_instmod = times_instmod
+                    else:
+                        final_time_instmod = times_instmod
+                    if multi_cat[cat]:
+                        text_nb_times += """
+                        {tab}l_nb_times[{cat}].append({final_time_instmod})
+                        """.format(tab=tab, cat=cat, final_time_instmod=final_time_instmod)
+                        format_supersamp_time_vec += dedent(text_nb_times)
+                        text_append_times = """
+                        {tab}dico_times[{cat}] = append(dico_times[{cat}], {final_time_instmod})
+                        """.format(tab=tab, cat=cat, final_time_instmod=final_time_instmod)
+                        format_supersamp_time_vec += dedent(text_append_times)
+                    else:
+                        format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = {time_vec}"
+                                                      "".format(tab=tab, cat=cat,
+                                                                time_vec=final_time_instmod))
+                if multi_cat[cat]:
+                    format_supersamp_time_vec += ("\n{tab}idx_tosorttime_{cat} = "
+                                                  "argsort(dico_times[{cat}])".format(cat=cat,
+                                                                                      tab=tab))
+                    format_supersamp_time_vec += ("\n{tab}idx_todesorttime_{cat} = argsort"
+                                                  "(idx_tosorttime_{cat})".format(cat=cat,
+                                                                                  tab=tab))
+                    format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = dico_times[{cat}]"
+                                                  "[idx_tosorttime_{cat}]".format(cat=cat,
+                                                                                  tab=tab))
+                    text_build_l_times_retrieve = """
+{tab}for low, up in zip(cumsum([0, ] + l_nb_times[{cat}][-1]), cumsum(l_nb_times[{cat}])):
+{tab}   l_times_retrieve[{cat}].append(idx_todesorttime_{cat}[low, up])
+""".format(tab=tab, cat=cat)
+                    format_supersamp_time_vec += dedent(text_build_l_times_retrieve)
             else:
-                time_vec_cat_name[cat] = "None"
+                format_supersamp_time_vec += "\n{tab}dico_times[{cat}] = None".format(tab=tab,
+                                                                                      cat=cat)
         if do_supersamp:
-            ldict["get_time_supersampled"] = get_time_supersampled
+            ldict["get_time_supersampled"] = get_time_supersampled  # for supersampling
         ## TODO: transfer get_time_supersampled in another module than
         # emcee_tools
-
-        raise NotImplementedError("For now, you cannot use create_datasimulator_rebound to create"
-                                  "for which you don't provide a dataset")
 
     ## Prepare the text for the stellar mass and radius parameter
     M_star = add_param_argument(star.M, arg_list, key_whole, key_param, param_nb,
