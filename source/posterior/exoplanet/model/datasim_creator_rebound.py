@@ -196,6 +196,15 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
          l_LD_parcont,
          l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, LDs,
                                                      param_nb, arg_list, key_whole, key_param)
+        # Get the supersampling factor and exposure time
+        dico_inst_cat[LC_inst_cat]["supersamp"] = []
+        dico_inst_cat[LC_inst_cat]["exptime"] = []
+        for instmdl, LD_parcont in zip(l_inst_model, l_LD_parcont):
+
+            dico_inst_cat[LC_inst_cat]["supersamp"].append(SSE4instmodfname.
+                                                           get_supersamp(instmdl.full_name))
+            dico_inst_cat[LC_inst_cat]["exptime"].append(SSE4instmodfname.
+                                                         get_exptime(instmdl.full_name))
 
     if dico_inst_cat[RV_inst_cat]["has"]:
         # Add rv time as additional argument
@@ -222,20 +231,58 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     # the each dataset times in the "l_dataset" key
     if has_dataset:
         for cat in [LC_inst_cat, RV_inst_cat]:
-            dico_inst_cat[cat]["times"] = array([])
-            l_nb_times = []
-            for dtst in dico_inst_cat[cat]["l_dataset"]:
-                times = dtst.get_time()
-                l_nb_times.append(len(times))  # TODO: Maybe concatenate will be faster than append?
-                dico_inst_cat[cat]["times"] = append(dico_inst_cat[cat]["times"], times)
-            idx_tosorttime = argsort(dico_inst_cat[cat]["times"])
-            idx_todesorttime = argsort(idx_tosorttime)
-            dico_inst_cat[cat]["times"] = dico_inst_cat[cat]["times"][idx_tosorttime]
-            dico_inst_cat[cat]["l_times_retrieve"] = []
-            for low, up in zip(cumsum([0, ] + l_nb_times[-1]), cumsum(l_nb_times)):
-                dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low, up])
+            if dico_inst_cat[cat]["has"]:
+                dico_inst_cat[cat]["times"] = array([])
+                l_nb_times = []
+                for ii, dtst in enumerate(dico_inst_cat[cat]["l_dataset"]):
+                    times = dtst.get_time()
+                    if cat == LC_inst_cat:
+                        supersamp = dico_inst_cat[cat]["supersamp"][ii]
+                        exptime = dico_inst_cat[cat]["exptime"][ii]
+                        if supersamp > 1:
+                            times = get_time_supersampled(times, supersamp, exptime)
+                    l_nb_times.append(len(times))  # TODO: Maybe concatenate will be faster ?
+                    dico_inst_cat[cat]["times"] = append(dico_inst_cat[cat]["times"], times)
+                idx_tosorttime = argsort(dico_inst_cat[cat]["times"])
+                idx_todesorttime = argsort(idx_tosorttime)
+                dico_inst_cat[cat]["times"] = dico_inst_cat[cat]["times"][idx_tosorttime]
+                dico_inst_cat[cat]["l_times_retrieve"] = []
+                for low, up in zip(cumsum([0, ] + l_nb_times[-1]), cumsum(l_nb_times)):
+                    dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low, up])
     else:
-        # TODO: Preambule which construct the lc_times and rv_times inside the function
+        if multi:
+            format_supersamp_time_vec = "{tab}dico_times = {}".format(tab)
+        else:
+            format_supersamp_time_vec = ""
+        time_vec_cat_name = {}
+        do_supersamp = False
+        for cat, time_vec_name in zip([LC_inst_cat, RV_inst_cat], [time_vec_lc, time_vec_rv]):
+            if dico_inst_cat[cat]["has"]:
+                time_vec_cat_name[cat] = time_vec_name
+                if multi:
+                    format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = array([])"
+                                                  "".format(tab, cat))
+                    ldict["array"] = array
+                    ## TODO: TO BE CONTINUED
+                    # Need to interate over the instrument as done above.
+                    # Don't forget do_supersamp = True
+                else:
+                    if cat == LC_inst_cat:
+                        supersamp = dico_inst_cat[cat]["supersamp"][ii]
+                        exptime = dico_inst_cat[cat]["exptime"][ii]
+                        if supersamp > 1:
+                            do_supersamp = True
+                            format_supersamp_time_vec = """
+                {tab}{time_vec_lv} = "get_time_supersampled({time_vec_lv}, {supersamp}, {exptime})
+                """.format(tab=tab, time_vec_lv=time_vec_name, supersamp=supersamp, exptime=exptime)
+                            format_supersamp_time_vec = dedent(format_supersamp_time_vec)
+            else:
+                time_vec_cat_name[cat] = "None"
+        if do_supersamp:
+            ldict["get_time_supersampled"] = get_time_supersampled
+        ## TODO: transfer get_time_supersampled in another module than
+        # emcee_tools
+
         raise NotImplementedError("For now, you cannot use create_datasimulator_rebound to create"
                                   "for which you don't provide a dataset")
 
@@ -284,16 +331,17 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     ## to ldict
     text_rebound_wrap = """
         {{tab}}rr, zz, rvs = rebound_wrap_r_z_vz({param_planets}, {M_star}, {timeref_dyn},
-        {{tab}}                                  dt={dt_dyn}, lc_times=lc_times, rv_times=rv_times)
+        {{tab}}                                  dt={dt_dyn}, lc_times={time_vec_lc},
+        {{tab}}                                  rv_times={time_vec_rv})
         """.format(param_planets=param_planets_reb, M_star=M_star, timeref_dyn=time_ref_dyn,
-                   dt_dyn=deltat_dyn)
+                   dt_dyn=deltat_dyn, time_vec_lc=time_vec_cat_name[LC_inst_cat],
+                   time_vec_rv=time_vec_cat_name[RV_inst_cat])
     text_rebound_wrap = dedent(text_rebound_wrap)
     ldict["rebound_wrap_r_z_vz"] = rebound_wrap_r_z_vz
 
-    ## TODO: Take care of the the supersampling and desupersampling
-    ## TODO: Take care of computing the flux
     template_prembule = """
-    {R_star_def}
+    {tab}{R_star_def}
+    {format_time}
     {supersamp_time_text}
     {rebound_wrap}
     {compute_flux_text}
@@ -301,8 +349,9 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     """
 
     ## TODO: Create the ouput per instmodel, dataset couple
-    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset, l_par_bat):
-        pass
+    for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
+                                            l_LD_parcont):
+
 
     ## TODO: Create the datasim function
     return None
