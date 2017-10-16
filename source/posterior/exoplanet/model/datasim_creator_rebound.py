@@ -260,7 +260,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                         exptime = dico_inst_cat[cat]["exptime"][ii]
                         if supersamp > 1:
                             times = get_time_supersampled(times, supersamp, exptime)
-                    l_nb_times.append(len(times))  # TODO: Below maybe concatenate will be faster ?
+                    l_nb_times.append(len(times))  # TODO: Below, maybe concatenate will be faster ?
                     dico_inst_cat[cat]["times"] = append(dico_inst_cat[cat]["times"], times)
                 idx_tosorttime = argsort(dico_inst_cat[cat]["times"])
                 idx_todesorttime = argsort(idx_tosorttime)
@@ -296,8 +296,8 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                         if supersamp > 1:
                             do_supersamp = True
                             supersamp_time = """
-{tab}time_supersamp_{ii} = get_time_supersampled({times_instmod}, {supersamp}, {exptime})
-""".format(tab=tab, ii=ii, times_instmod=times_instmod, supersamp=supersamp, exptime=exptime)
+{{tab}}time_supersamp_{ii} = get_time_supersampled({times_instmod}, {supersamp}, {exptime})
+""".format(ii=ii, times_instmod=times_instmod, supersamp=supersamp, exptime=exptime)
                             format_supersamp_time_vec += dedent(supersamp_time)
                             final_time_instmod = "time_supersamp_{ii}".format(ii=ii)
                         else:
@@ -306,12 +306,12 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                         final_time_instmod = times_instmod
                     if multi_cat[cat]:
                         text_nb_times += """
-                        {tab}l_nb_times[{cat}].append({final_time_instmod})
-                        """.format(tab=tab, cat=cat, final_time_instmod=final_time_instmod)
+                        {{tab}}l_nb_times[{cat}].append({final_time_instmod})
+                        """.format(cat=cat, final_time_instmod=final_time_instmod)
                         format_supersamp_time_vec += dedent(text_nb_times)
                         text_append_times = """
-                        {tab}dico_times[{cat}] = append(dico_times[{cat}], {final_time_instmod})
-                        """.format(tab=tab, cat=cat, final_time_instmod=final_time_instmod)
+                        {{tab}}dico_times[{cat}] = append(dico_times[{cat}], {final_time_instmod})
+                        """.format(cat=cat, final_time_instmod=final_time_instmod)
                         format_supersamp_time_vec += dedent(text_append_times)
                     else:
                         format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = {time_vec}"
@@ -328,17 +328,15 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                                                   "[idx_tosorttime_{cat}]".format(cat=cat,
                                                                                   tab=tab))
                     text_build_l_times_retrieve = """
-{tab}for low, up in zip(cumsum([0, ] + l_nb_times[{cat}][-1]), cumsum(l_nb_times[{cat}])):
-{tab}   l_times_retrieve[{cat}].append(idx_todesorttime_{cat}[low, up])
-""".format(tab=tab, cat=cat)
+{{tab}}for low, up in zip(cumsum([0, ] + l_nb_times[{cat}][-1]), cumsum(l_nb_times[{cat}])):
+{{tab}}   l_times_retrieve[{cat}].append(idx_todesorttime_{cat}[low, up])
+""".format(cat=cat)
                     format_supersamp_time_vec += dedent(text_build_l_times_retrieve)
             else:
                 format_supersamp_time_vec += "\n{tab}dico_times[{cat}] = None".format(tab=tab,
                                                                                       cat=cat)
         if do_supersamp:
             ldict["get_time_supersampled"] = get_time_supersampled  # for supersampling
-        ## TODO: transfer get_time_supersampled in another module than
-        # emcee_tools
 
     ## Prepare the text for the stellar mass and radius parameter
     M_star = add_param_argument(star.M, arg_list, key_whole, key_param, param_nb,
@@ -388,21 +386,23 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         {{tab}}                                  dt={dt_dyn}, lc_times={time_vec_lc},
         {{tab}}                                  rv_times={time_vec_rv})
         """.format(param_planets=param_planets_reb, M_star=M_star, timeref_dyn=time_ref_dyn,
-                   dt_dyn=deltat_dyn, time_vec_lc=time_vec_cat_name[LC_inst_cat],
-                   time_vec_rv=time_vec_cat_name[RV_inst_cat])
+                   dt_dyn=deltat_dyn, time_vec_lc="dico_times[{}]".format(LC_inst_cat),
+                   time_vec_rv="dico_times[{}]".format(RV_inst_cat))
     text_rebound_wrap = dedent(text_rebound_wrap)
     ldict["rebound_wrap_r_z_vz"] = rebound_wrap_r_z_vz
+    if has_dataset:  # Add to ldict the times formatted for the rebound wrapper if has_dataset.
+        ldict["dico_times[{}]".format(LC_inst_cat)] = dico_inst_cat[LC_inst_cat]["times"]
+        ldict["dico_times[{}]".format(RV_inst_cat)] = dico_inst_cat[RV_inst_cat]["times"]
 
     template_prembule = """
     {tab}{R_star_def}
-    {format_time}
-    {supersamp_time_text}
+    {format_and_supersamp_time}
     {rebound_wrap}
     {compute_flux_text}
     {desupersamp_time_text}
     """
 
-    ## TODO: Create the ouput per instmodel, dataset couple
+    ## TODO: Compute flux
     for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
                                             l_LD_parcont):
 
