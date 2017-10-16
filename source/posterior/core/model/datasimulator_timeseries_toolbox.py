@@ -48,6 +48,9 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
     :param str l_time_vec_name: Str used to design the list of time vector
     :param ?? new_arg_value: Value of the new argument.
     :return str arguments: Updated string giving the new text of arguments
+    :return str/None time_arg_name: String giving the name of the new time argument.
+        However if it is directly added to ldict and thus is not added to arguments,
+        time_arg_name is None.
     """
     if multi:
         if has_dataset:
@@ -56,18 +59,20 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
                 l_t.append(dst.get_time())
         else:
             l_t = None
-        arguments = add_nonparam_argument(arguments, l_time_vec_name, arg_list, key_arglist,
-                                          key_kwargs, ldict, add_to_ldict=has_dataset,
-                                          new_arg_value=l_t)
+        arguments, time_arg_name = add_nonparam_argument(arguments, l_time_vec_name, arg_list,
+                                                         key_arglist, key_kwargs, ldict,
+                                                         add_to_ldict=has_dataset,
+                                                         new_arg_value=l_t)
     else:
         if has_dataset:
             tt = l_dataset[0].get_time()
         else:
             tt = None
-        arguments = add_nonparam_argument(arguments, time_vec_name, arg_list, key_arglist,
-                                          key_kwargs, ldict, add_to_ldict=has_dataset,
-                                          new_arg_value=tt)
-    return arguments
+        arguments, time_arg_name = add_nonparam_argument(arguments, time_vec_name, arg_list,
+                                                         key_arglist, key_kwargs, ldict,
+                                                         add_to_ldict=has_dataset,
+                                                         new_arg_value=tt)
+    return arguments, time_arg_name
 
 
 def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_kwargs, ldict,
@@ -98,6 +103,9 @@ def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_kwargs, l
     :param str timeref_name: Str used to design the time vector
     :param str l_timeref_name: Str used to design the list of time vector
     :return str arguments: Updated string giving the new text of arguments
+    :return str/None timeref_arg_name: String giving the name of the new time reference argument.
+        However if it is directly added to ldict and thus is not added to arguments,
+        timeref_arg_name is None.
     """
     if multi:
         if add_to_ldict:
@@ -113,13 +121,15 @@ def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_kwargs, l
             else:
                 tref = None
         if use_dataset:
-            arguments = add_nonparam_argument(arguments, l_timeref_name, arg_list, key_arglist,
-                                              key_kwargs, ldict, add_to_ldict=add_to_ldict,
-                                              new_arg_value=l_tref)
+            arguments, timeref_arg_name = add_nonparam_argument(arguments, l_timeref_name, arg_list,
+                                                                key_arglist, key_kwargs, ldict,
+                                                                add_to_ldict=add_to_ldict,
+                                                                new_arg_value=l_tref)
         else:
-            arguments = add_nonparam_argument(arguments, timeref_name, arg_list, key_arglist,
-                                              key_kwargs, ldict, add_to_ldict=add_to_ldict,
-                                              new_arg_value=tref)
+            arguments, timeref_arg_name = add_nonparam_argument(arguments, timeref_name, arg_list,
+                                                                key_arglist, key_kwargs, ldict,
+                                                                add_to_ldict=add_to_ldict,
+                                                                new_arg_value=tref)
     else:
         if add_to_ldict:
             if use_dataset:
@@ -128,7 +138,8 @@ def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_kwargs, l
                 tref = get_time_ref
         else:
             tref = None
-        arguments = add_nonparam_argument(arguments, timeref_name, arg_list, key_arglist,
-                                          key_kwargs, ldict, add_to_ldict=add_to_ldict,
-                                          new_arg_value=tref)
-    return arguments
+        arguments, timeref_arg_names = add_nonparam_argument(arguments, timeref_name, arg_list,
+                                                             key_arglist, key_kwargs, ldict,
+                                                             add_to_ldict=add_to_ldict,
+                                                             new_arg_value=tref)
+    return arguments, timeref_arg_name

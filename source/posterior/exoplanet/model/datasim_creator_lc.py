@@ -125,10 +125,11 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
     # Initialise the template for each instmodel
     template_returns_instmod = "1 {oot_var}{planets_lc}"
 
-    # Add the time as additional argument
-    arguments = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole, key_kwargs,
-                                  ldict, l_dataset,
-                                  time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+    # Add the time as additional argument: TODO: time_arg_nam is a new return and is not used in the
+    # rest of the function. Check if it can be used.
+    arguments, time_arg_nam = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole,
+                                                key_kwargs, ldict, l_dataset,
+                                                time_vec_name=time_vec, l_time_vec_name=l_time_vec)
 
     # Get the out of transit variation contribution for each couple instrument - dataset
     l_oot_var, arguments = get_ootvar(l_inst_model, l_dataset, multi,
@@ -593,11 +594,12 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                            (l_timeref_name not in arg_list[key_whole][key_kwargs])):
                             def get_time_ref(time):
                                 return time[0]
-                            arguments = add_timeref_arguments(arguments, multi, arg_list,
-                                                              key_whole, key_kwargs, ldict,
-                                                              get_time_ref, has_dataset,
-                                                              True, l_dataset,
-                                                              timeref_name, l_timeref_name)
+                            (arguments,
+                             timeref_arg_name) = add_timeref_arguments(arguments, multi, arg_list,
+                                                                       key_whole, key_kwargs, ldict,
+                                                                       get_time_ref, has_dataset,
+                                                                       True, l_dataset,
+                                                                       timeref_name, l_timeref_name)
                         # ..., add the end of this order's contribution to the text of the out of
                         # transit variation, ...
                         if order == 1:

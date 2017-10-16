@@ -121,9 +121,9 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
     template_returns_instmod = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
 
     # Add the time as additional argument
-    arguments = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole, key_kwargs,
-                                  ldict, l_dataset,
-                                  time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+    arguments, time_arg_name = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole,
+                                                 key_kwargs, ldict, l_dataset,
+                                                 time_vec_name=time_vec, l_time_vec_name=l_time_vec)
 
     # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
     (l_star_mean_rv,
@@ -375,11 +375,12 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
                            (l_timeref_name not in arg_list[key_whole][key_kwargs])):
                             def get_time_ref(time):
                                 return time[0]
-                            arguments = add_timeref_arguments(arguments, multi, arg_list,
-                                                              key_whole, key_kwargs, ldict,
-                                                              get_time_ref, has_dataset,
-                                                              True, l_dataset,
-                                                              timeref_name, l_timeref_name)
+                            (arguments,
+                             timeref_arg_name) = add_timeref_arguments(arguments, multi, arg_list,
+                                                                       key_whole, key_kwargs, ldict,
+                                                                       get_time_ref, has_dataset,
+                                                                       True, l_dataset,
+                                                                       timeref_name, l_timeref_name)
                         # ..., add the end of this order's contribution to the text of the RV drift.
                         if order == 1:
                             if multi:

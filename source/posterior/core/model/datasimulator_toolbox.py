@@ -299,6 +299,8 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kw
     :param ?? def_arg_value: Default argument value. If None, no default value is provided. If you
         want None as default value, you need to provided "None"
     :return str arguments: Updated string giving the new text of arguments
+    :return str/None arg_name: String giving the name of the new argument. However if the argument
+        is directly added to ldict and thus is not added to arguments, arg_name is None.
     """
     if isinstance(key_arglist, Iterable):
         l_key_arglist = key_arglist
@@ -307,11 +309,13 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kw
 
     if add_to_ldict:
         ldict[new_arg_name] = new_arg_value
+        arg_name = None
     else:
+        arg_name = new_arg_name
         if def_arg_value is None:
             arguments += ", {}".format(new_arg_name)
         else:
             arguments += ", {}={}".format(new_arg_name, def_arg_value)
         for key in l_key_arglist:
             arg_list[key][key_kwargs].append(new_arg_name)
-    return arguments
+    return arguments, arg_name
