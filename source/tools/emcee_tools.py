@@ -23,6 +23,7 @@ from os.path import isfile, join
 # import pprint
 
 from .stats.loc_scale_estimator import mad
+from .time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 # from ..posterior.core.posterior import alldtst_key
@@ -293,33 +294,6 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, model_inst
         ax_data.legend(loc='upper right', shadow=True)
 
     fig.tight_layout(**kwargs_tl)
-
-
-def get_time_supersampled(time, supersamp, exptime):
-    """Return a time vector supersampled.
-
-    Inspired from https://github.com/hpparvi/PyTransit/blob/master/src/supersampler.py
-
-    :param array_like time: time vector
-    :param int supersamp: Super sampling factor to apply (>= 1)
-    :param float exptime: Exposure time of the time vector, in the same unit than time
-    :return array_like supersamp_time: Super sampled time vector.
-    """
-    relative_supersample_positions = exptime * ((np.arange(1, supersamp + 1, dtype='d') - 0.5) /
-                                                supersamp - 0.5)
-    return (np.asarray(time)[:, np.newaxis] + relative_supersample_positions).reshape(-1)
-
-
-def average_supersampled_values(values, supersamp):
-    """Return an averaged values vector.
-
-    Inspired from https://github.com/hpparvi/PyTransit/blob/master/src/supersampler.py
-    and https://github.com/lkreidberg/batman/blob/master/batman/transitmodel.py
-
-    :param np.ndarray values: supersampled values vector has to be 1D
-    :param int supersamp: Super sampling factor of the values vector
-    """
-    return np.mean(values.reshape(-1, supersamp), axis=1)
 
 
 def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,

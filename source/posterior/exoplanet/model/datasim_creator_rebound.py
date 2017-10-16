@@ -25,7 +25,7 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
                                                             time_ref, l_time_ref)
 from ...core.dataset_and_instrument.lc import LC_inst_cat
 from ...core.dataset_and_instrument.rv import RV_inst_cat
-from ....tools.emcee_tools import get_time_supersampled, average_supersampled_values
+from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 
 
 ## Logger object
