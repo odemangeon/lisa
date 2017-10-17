@@ -133,6 +133,11 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
+    logger.debug("Datasim creator Rebounf for : {}".format(inst_model_full_name))
+    logger.debug("list of instrument categories: {}".format(instcat_docf))
+    logger.debug("list of instrument models: {}".format(instmod_docf))
+    logger.debug("list of datasets: {}".format(dtsts_docf))
+
     # Check if datasets are provided
     has_dataset = get_has_datasets(l_dataset)
 
@@ -141,6 +146,8 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     dico_inst_cat, l_output_retrieve = get_lists_bijection_instcat(l_dataset, l_inst_model,
                                                                    inst_cat=[LC_inst_cat,
                                                                              RV_inst_cat])
+    logger.debug("dico_inst_cat: {}".format(dico_inst_cat))
+    logger.debug("l_output_retrieve: {}".format(l_output_retrieve))
 
     ## Initialise param_nb and arg_list
     # param_nb is a dictionary that will keep track of the number of parameter for each
@@ -191,8 +198,8 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         # Initialise the template for each lc instmodel
         template_returns_instmodlc = "1 {oot_var}{planets_lc}"
         # Get the out of transit variation contribution for each couple instrument - dataset
-        l_oot_var, arguments = get_ootvar(dico_inst_cat[RV_inst_cat]["l_inst_model"],
-                                          dico_inst_cat[RV_inst_cat]["l_dataset"], multi,
+        l_oot_var, arguments = get_ootvar(dico_inst_cat[LC_inst_cat]["l_inst_model"],
+                                          dico_inst_cat[LC_inst_cat]["l_dataset"], multi,
                                           ldict, arguments, param_nb, arg_list, key_whole,
                                           key_param, key_kwargs, time_vec_name=time_vec_lc,
                                           l_time_vec_name=l_time_vec_lc, timeref_name=time_ref_lc,
@@ -200,12 +207,13 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         # Get the ld_parcont and ld_param_list
         (l_LD_parcont_name,
          l_LD_parcont,
-         l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, LDs,
+         l_ld_param_list) = get_LD_parcont_and_param(dico_inst_cat[LC_inst_cat]["l_inst_model"],
+                                                     ldmodel4instmodfname, LDs,
                                                      param_nb, arg_list, key_whole, key_param)
         # Get the supersampling factor and exposure time
         dico_inst_cat[LC_inst_cat]["supersamp"] = []
         dico_inst_cat[LC_inst_cat]["exptime"] = []
-        for instmdl, LD_parcont in zip(l_inst_model, l_LD_parcont):
+        for instmdl, LD_parcont in zip(dico_inst_cat[LC_inst_cat]["l_inst_model"], l_LD_parcont):
 
             dico_inst_cat[LC_inst_cat]["supersamp"].append(SSE4instmodfname.
                                                            get_supersamp(instmdl.full_name))
@@ -243,6 +251,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     # also add a key "l_times_retrieve" to contain the index of the time sample corresponding to
     # the each dataset times in the "l_dataset" key
     if has_dataset:
+        format_supersamp_time_vec = ""
         for cat in [LC_inst_cat, RV_inst_cat]:
             if dico_inst_cat[cat]["has"]:
                 dico_inst_cat[cat]["times"] = array([])
@@ -260,11 +269,12 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                 idx_todesorttime = argsort(idx_tosorttime)
                 dico_inst_cat[cat]["times"] = dico_inst_cat[cat]["times"][idx_tosorttime]
                 dico_inst_cat[cat]["l_times_retrieve"] = []
-                for low, up in zip(cumsum([0, ] + l_nb_times[-1]), cumsum(l_nb_times)):
-                    dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low, up])
+                print()
+                for low, up in zip(cumsum([0, ] + l_nb_times[:-1]), cumsum(l_nb_times)):
+                    dico_inst_cat[cat]["l_times_retrieve"].append(idx_todesorttime[low:up])
     else:
         format_supersamp_time_vec = "{tab}dico_times = {{}}".format(tab=tab)
-        if multi_cat[LC_inst_cat] or multi_cat[RV_inst_cat]:
+        if multi_cat.get(LC_inst_cat, False) or multi_cat.get(RV_inst_cat, False):
             format_supersamp_time_vec += "\n{tab}l_nb_times = {{}}".format(tab=tab)
             format_supersamp_time_vec += "\n{tab}l_times_retrieve = {{}}".format(tab=tab)
             ldict["array"] = array  # For the creation of dico_times[{cat}] array
@@ -299,13 +309,14 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                     else:
                         final_time_instmod = times_instmod
                     if multi_cat[cat]:
-                        text_nb_times = """
-                        {{tab}}l_nb_times[{cat}].append({final_time_instmod})
-                        """.format(cat=cat, final_time_instmod=final_time_instmod)
-                        format_supersamp_time_vec += dedent(text_nb_times)
-                        text_append_times = """
-                        {{tab}}dico_times[{cat}] = append(dico_times[{cat}], {final_time_instmod})
-                        """.format(cat=cat, final_time_instmod=final_time_instmod)
+                        text_nb_times = ("{tab}l_nb_times[{cat}].append({final_time_instmod})"
+                                         "").format(cat=cat, final_time_instmod=final_time_instmod,
+                                                    tab=tab)
+                        format_supersamp_time_vec += text_nb_times
+                        text_append_times = ("{tab}dico_times[{cat}] = append(dico_times[{cat}], "
+                                             "{final_time_instmod})"
+                                             "").format(cat=cat, tab=tab,
+                                                        final_time_instmod=final_time_instmod)
                         format_supersamp_time_vec += dedent(text_append_times)
                     else:
                         format_supersamp_time_vec += ("\n{tab}dico_times[{cat}] = {time_vec}"
@@ -322,10 +333,10 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
                                                   "[idx_tosorttime_{cat}]".format(cat=cat,
                                                                                   tab=tab))
                     text_build_l_times_retrieve = """
-{{tab}}for low, up in zip(cumsum([0, ] + l_nb_times[{cat}][-1]), cumsum(l_nb_times[{cat}])):
+{{tab}}for low, up in zip(cumsum([0, ] + l_nb_times[{cat}][:-1]), cumsum(l_nb_times[{cat}])):
 {{tab}}   l_times_retrieve[{cat}].append(idx_todesorttime_{cat}[low, up])
 """.format(cat=cat)
-                    format_supersamp_time_vec += dedent(text_build_l_times_retrieve)
+                    format_supersamp_time_vec += dedent(text_build_l_times_retrieve).format(tab=tab)
             else:
                 format_supersamp_time_vec += "\n{tab}dico_times[{cat}] = None".format(tab=tab,
                                                                                       cat=cat)
@@ -364,14 +375,16 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         text_param_rp = text_param_rp[:-2] + "]"
 
     # Add the reference time for the dynamical simulation as argument
-    arguments = add_nonparam_argument(arguments, time_ref_dyn, arg_list, key_whole, key_kwargs,
-                                      ldict, add_to_ldict=False, new_arg_value=None,
-                                      def_arg_value=None)
+    (arguments,
+     timerefdyn_name) = add_nonparam_argument(arguments, time_ref_dyn, arg_list, key_whole,
+                                              key_kwargs, ldict, add_to_ldict=False,
+                                              new_arg_value=None, def_arg_value=None)
 
     # Add the time step for the dynamical simulation as argument
-    arguments = add_nonparam_argument(arguments, time_ref_dyn, arg_list, key_whole, key_kwargs,
-                                      ldict, add_to_ldict=False, new_arg_value=None,
-                                      def_arg_value=0.01)
+    (arguments,
+     deltatdyn_name) = add_nonparam_argument(arguments, deltat_dyn, arg_list, key_whole, key_kwargs,
+                                             ldict, add_to_ldict=False, new_arg_value=None,
+                                             def_arg_value=0.01)
 
     ## Create the template for the text of the rebound wrapper and add the rebound wrapper function
     ## to ldict
@@ -384,17 +397,18 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
         returns_rebound_wrap += "rvs"
     text_rebound_wrap = """
         {{tab}}{returns} = rebound_wrap_r_z_vz({param_planets}, {M_star}, {timeref_dyn},
-        {{tab}}                                  dt={dt_dyn}, lc_times={time_vec_lc},
-        {{tab}}                                  rv_times={time_vec_rv})
+        {{tab}}                                dt={dt_dyn}, lc_times={time_vec_lc},
+        {{tab}}                                rv_times={time_vec_rv})
         """.format(returns=returns_rebound_wrap, param_planets=param_planets_reb, M_star=M_star,
                    timeref_dyn=time_ref_dyn, dt_dyn=deltat_dyn,
                    time_vec_lc="dico_times[{}]".format(LC_inst_cat),
                    time_vec_rv="dico_times[{}]".format(RV_inst_cat))
-    text_rebound_wrap = dedent(text_rebound_wrap)
+    text_rebound_wrap = dedent(text_rebound_wrap).format(tab=tab)
     ldict["rebound_wrap_r_z_vz"] = rebound_wrap_r_z_vz
     if has_dataset:  # Add to ldict the times formatted for the rebound wrapper if has_dataset.
-        ldict["dico_times[{}]".format(LC_inst_cat)] = dico_inst_cat[LC_inst_cat]["times"]
-        ldict["dico_times[{}]".format(RV_inst_cat)] = dico_inst_cat[RV_inst_cat]["times"]
+        for cat in [LC_inst_cat, RV_inst_cat]:
+            if dico_inst_cat[cat]["has"]:
+                ldict["dico_times[{}]".format(cat)] = dico_inst_cat[cat]["times"]
 
     template_prembule = """
     {tab}{R_star_def}
@@ -402,8 +416,8 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     {rebound_wrap}
     {compute_flux_text}
     {desupersamp_time_text}
-    {returns}
     """
+    template_prembule = dedent(template_prembule)
 
     ## TODO: Compute flux values
     if dico_inst_cat[LC_inst_cat]["has"]:
@@ -419,16 +433,22 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_kwargs
     # create the returns with the stellar drift for RVs and the OOT variations for LC.
 
     ## TODO: Create the datasim function
-    text_def_func = template_prembule.format(tab=tab, R_star_def=R_star_def,
-                                             format_and_supersamp_time=format_supersamp_time_vec,
-                                             rebound_wrap=text_rebound_wrap,
-                                             compute_flux_text="", desupersamp_time_text="",
-                                             returns=""
-                                             )
+    text_preambule = template_prembule.format(tab=tab, R_star_def=R_star_def,
+                                              format_and_supersamp_time=format_supersamp_time_vec,
+                                              rebound_wrap=text_rebound_wrap,
+                                              compute_flux_text="", desupersamp_time_text="",
+                                              returns=""
+                                              )
+    text_def_func = template_function.format(object=key_whole,
+                                             tab=tab,
+                                             arguments=arguments,
+                                             preambule=text_preambule,
+                                             returns="")
     logger.debug("text of Rebound simulator function for {instmod_fullname}:\n{text_func}"
                  "".format(object=key_whole, instmod_fullname=inst_model_full_name,
                            text_func=text_def_func))
-    return text_def_func
+    output_db = {key_whole: text_def_func}
+    return output_db
 
 
 def funrebound(param_planet, stellar_mass, stellar_radius, limb_dark, treference,

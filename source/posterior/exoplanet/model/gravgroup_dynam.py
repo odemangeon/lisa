@@ -75,14 +75,14 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
                                            transit_model=transit_model, rv_model=None,
                                            parametrisation=parametrisation,
                                            stars=stars, planets=planets, run_folder=run_folder)
-        if LC_inst_cat in self.dataset_db.inst_categories:
-            self._produce_LC = True
-        else:
-            self._produce_LC = False
-        if RV_inst_cat in self.dataset_db.inst_categories:
-            self._produce_RV = True
-        else:
-            self._produce_RV = False
+        # if LC_inst_cat in self.dataset_db.inst_categories:
+        #     self._produce_LC = True
+        # else:
+        #     self._produce_LC = False
+        # if RV_inst_cat in self.dataset_db.inst_categories:
+        #     self._produce_RV = True
+        # else:
+        #     self._produce_RV = False
 
         self.dynamical_model = dynamical_model
 
@@ -94,7 +94,7 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
             raise NotImplementedError("Only dynamical model rebound is implemented for now")
 
         # Fill the datasimcreator dictionnary
-        self.datasimcreator["sim_rebound"] = None
+        self.datasimcreator["sim_rebound"] = self._create_datasimulator_RV_LC_rebound
 
     @property
     def dynamical_model(self):
@@ -124,6 +124,8 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
         return create_datasimulator_rebound(star=list(self.stars.values())[0],
                                             planets=self.planets,
                                             key_whole=self.key_whole,
+                                            key_param=self.key_param,
+                                            key_kwargs=self.key_kwargs,
                                             parametrisation=self.parametrisation,
                                             LC_multis_parametrisations=(self.
                                                                         LC_multis_parametrisations),

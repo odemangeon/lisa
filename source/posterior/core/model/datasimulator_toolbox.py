@@ -20,6 +20,10 @@ from ..dataset_and_instrument.dataset import Dataset
 ## Name of the model parameter vector
 par_vec_name = "p"
 
+## Keys for the parameter and the keywords arguments in the arg_list dictionary
+key_param = "param"
+key_kwargs = "kwargs"
+
 
 def check_datasets_and_instmodels(datasets, inst_models):
     """Check the content of datasets and inst_models argument for the datasim creator functions.
@@ -257,10 +261,12 @@ def add_param_argument(param, arg_list, key_arglist, key_param, param_nb,
         parameters (ex: "p[0]") if parameter is free otherwise str giving the fixed value of this
         parameter.
     """
-    if isinstance(key_arglist, Iterable):
+    if isinstance(key_arglist, str):
+        l_key_arglist = [key_arglist]
+    elif isinstance(key_arglist, Iterable):
         l_key_arglist = key_arglist
     else:
-        l_key_arglist = [key_arglist]
+        raise ValueError("key_arglist should be a string or in iterable of string")
 
     param_text = {}
     if param.free:
@@ -302,10 +308,12 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kw
     :return str/None arg_name: String giving the name of the new argument. However if the argument
         is directly added to ldict and thus is not added to arguments, arg_name is None.
     """
-    if isinstance(key_arglist, Iterable):
+    if isinstance(key_arglist, str):
+        l_key_arglist = [key_arglist]
+    elif isinstance(key_arglist, Iterable):
         l_key_arglist = key_arglist
     else:
-        l_key_arglist = [key_arglist]
+        raise ValueError("key_arglist should be a string or in iterable of string")
 
     if add_to_ldict:
         ldict[new_arg_name] = new_arg_value

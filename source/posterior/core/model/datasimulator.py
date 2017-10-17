@@ -16,6 +16,7 @@ from logging import getLogger
 from collections import defaultdict
 
 from .datasim_docfunc import DatasimDocFunc
+from .datasimulator_toolbox import key_param, key_kwargs
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
 
 
@@ -25,9 +26,14 @@ logger = getLogger()
 ## Root of all the function for the creation of datasimulators
 root_name_func_datsim = "_create_datasimulator"
 
+## Key for the whole
+
 
 class DatasimulatorCreator(object):
     """docstring for DatasimulatorCreator."""
+
+    key_param = key_param
+    key_kwargs = key_kwargs
 
     def _create_datasimulator(self, instmod_obj, dataset=None):
         """Return the datasimulator for a given instrument model.
