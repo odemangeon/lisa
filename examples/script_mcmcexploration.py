@@ -27,7 +27,7 @@ logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INF
 logger.info("########\nMCMC EXPLORATION")
 
 # If needed, load the fitted values dataframe from a previous mcmc exploration analysis
-load_from_pickle = True
+load_from_pickle = False
 
 if load_from_pickle:
     logger.info("0. Load from pickle")
