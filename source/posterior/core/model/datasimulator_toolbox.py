@@ -22,7 +22,10 @@ par_vec_name = "p"
 
 ## Keys for the parameter and the keywords arguments in the arg_list dictionary
 key_param = "param"
-key_kwargs = "kwargs"
+key_mand_kwargs = "mandatory_kwargs"
+key_opt_kwargs = "optional_kwargs"
+
+argskwargs = ", *args, **kwargs"
 
 
 def check_datasets_and_instmodels(datasets, inst_models):
@@ -202,7 +205,7 @@ def get_has_datasets(l_dataset):
     return l_dataset[0] is not None
 
 
-def init_arglist_paramnb_arguments_ldict(keys, key_param, key_kwargs,
+def init_arglist_paramnb_arguments_ldict(keys, key_param, key_mand_kwargs, key_opt_kwargs,
                                          param_vector_name=par_vec_name):
     """Initialise the arg_list, param_nb, ldict dictionaries and the argument string.
 
@@ -210,7 +213,8 @@ def init_arglist_paramnb_arguments_ldict(keys, key_param, key_kwargs,
 
     :param list_of_str keys: List of string giving the keys to initialise in arg_list and param_nb
     :param string key_param: Key used for the parameters entry of arg_list
-    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :param string key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param string key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
     :param str param_vector_name: str giving the name of the vector of parameters argument of the
         datasimulator function.
     :return dict_of_int param_nb: dictionary giving the current number of parameter in the model.
@@ -230,7 +234,8 @@ def init_arglist_paramnb_arguments_ldict(keys, key_param, key_kwargs,
     for key in keys:
         arg_list[key] = OrderedDict()
         arg_list[key][key_param] = []
-        arg_list[key][key_kwargs] = []
+        arg_list[key][key_mand_kwargs] = []
+        arg_list[key][key_opt_kwargs] = []
         param_nb[key] = 0
     return param_nb, arg_list, param_vector_name, {}
 
@@ -250,7 +255,7 @@ def add_param_argument(param, arg_list, key_arglist, key_param, param_nb,
         full name will be added to this list.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     :param str/list_of_str key_arglist: key of arg_list to update.
-    :param str key_kwargs: Key used for the keyword argument entry of arg_list
+    :param string key_param: Key used for the parameters entry of arg_list
     :param dict_of_int param_nb: dictionary giving the current number of parameter in the model.
         key = str key designating part of the system or the whole system
         value = int giving the current number of parameter in the model
@@ -280,8 +285,9 @@ def add_param_argument(param, arg_list, key_arglist, key_param, param_nb,
     return param_text
 
 
-def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kwargs, ldict,
-                          add_to_ldict=False, new_arg_value=None, def_arg_value=None):
+def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_mand_kwargs,
+                          key_opt_kwargs, ldict, add_to_ldict=False, add_to_arguments=True,
+                          new_arg_value=None, def_arg_value=None):
     """Update the text used as arguments for the datasimulator function simulating time series.
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
@@ -294,19 +300,25 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kw
     :param bool has_dataset: True if the datasimulator should includes datasets values
     :param dict arg_list: dictionary with key = key_whole, value = dict with
         key = key_param, value = list of parameter full names
+        key = key_mand_kwargs, value = list of mandatory keyword arguments
+        key = key_opt_kwargs, value = list of optional keyword arguments
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     :param str/list_of_str key_arglist: key of arg_list to update.
-    :param str key_kwargs: Key used for the keyword argument entry of arg_list
+    :param string key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param string key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
     :param dict ldict: dictionary to be used as local dictionary argument of the exec function.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param bool add_to_ldict: If True the new argument and it's value will be added to ldict.
-        Otherwise the name of the new argument is added to arguments
+    :param bool add_to_ldict: If True the new argument and its value will be added to ldict.
+        Otherwise the name of the new argument is added to arguments if
+    :param bool add_to_arguments: If True the new argument and its default value will be added to
+        arguments if add_to_ldict is not True.
     :param ?? new_arg_value: Value of the new argument.
     :param ?? def_arg_value: Default argument value. If None, no default value is provided. If you
         want None as default value, you need to provided "None"
     :return str arguments: Updated string giving the new text of arguments
-    :return str/None arg_name: String giving the name of the new argument. However if the argument
-        is directly added to ldict and thus is not added to arguments, arg_name is None.
+    :return str/None arg: String giving the name of the new argument (and the default value).
+        However if the argument is directly added to ldict and thus is not added to arguments,
+        arg is None.
     """
     if isinstance(key_arglist, str):
         l_key_arglist = [key_arglist]
@@ -317,13 +329,25 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_kw
 
     if add_to_ldict:
         ldict[new_arg_name] = new_arg_value
-        arg_name = None
+        arg = None
     else:
-        arg_name = new_arg_name
         if def_arg_value is None:
-            arguments += ", {}".format(new_arg_name)
+            arg = new_arg_name
+            key_kwargs = key_mand_kwargs
         else:
-            arguments += ", {}={}".format(new_arg_name, def_arg_value)
-        for key in l_key_arglist:
-            arg_list[key][key_kwargs].append(new_arg_name)
-    return arguments, arg_name
+            arg = "{}={}".format(new_arg_name, def_arg_value)
+            key_kwargs = key_opt_kwargs
+        if add_to_arguments:
+            arguments += ", {}".format(arg)
+            for key in l_key_arglist:
+                arg_list[key][key_kwargs].append(arg)
+    return arguments, arg
+
+
+def add_argskwargs_argument(arguments):
+    """Update the text used as arguments to include *args and **kwargs.
+
+    :param str arguments: string giving the current text of arguments
+    :return str arguments: Updated string giving the new text of arguments
+    """
+    return arguments + argskwargs

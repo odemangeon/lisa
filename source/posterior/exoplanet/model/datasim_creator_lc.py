@@ -15,10 +15,11 @@ from pytransit import MandelAgol
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
                                                  get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict)
-from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
-                                                            add_timeref_arguments, time_ref,
-                                                            l_time_ref)
+                                                 init_arglist_paramnb_arguments_ldict,
+                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
+                                                            l_time_vec, add_timeref_arguments,
+                                                            time_ref, l_time_ref)
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.convert import getecc_fast, getomega_fast, getaoverr
@@ -28,7 +29,7 @@ from ....tools.convert import getecc_fast, getomega_fast, getaoverr
 logger = getLogger()
 
 
-def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
+def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                             parametrisation,
                             LC_multis_parametrisations, ldmodel4instmodfname, LDs,
                             transit_model, SSE4instmodfname,
@@ -44,7 +45,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
     :param string key_whole: key to use to identify the whole system in the output dictionary
         (dico_docf).
     :param string key_param: Key used for the parameters entry of arg_list
-    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
     :param string parametrisation: String refering to the parametrisation to use
     :param list_of_string LC_multis_parametrisations: List of string giving the parametrisation that
         specially made for multi-planetary systems.
@@ -108,7 +110,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
     # for the creation of the datasim functions with exec
     param_nb, arg_list, arguments, ldict = init_arglist_paramnb_arguments_ldict([key_whole],
                                                                                 key_param,
-                                                                                key_kwargs,
+                                                                                key_mand_kwargs,
+                                                                                key_opt_kwargs,
                                                                                 par_vec_name)
 
     # Initialise the template function text
@@ -125,18 +128,19 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
     # Initialise the template for each instmodel
     template_returns_instmod = "1 {oot_var}{planets_lc}"
 
-    # Add the time as additional argument: TODO: time_arg_nam is a new return and is not used in the
-    # rest of the function. Check if it can be used.
-    arguments, time_arg_nam = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole,
-                                                key_kwargs, ldict, l_dataset,
-                                                time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+    # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
+    # the rest of the function. Check if it can be used.
+    (arguments, time_arg_name, time_arg
+     ) = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole, key_mand_kwargs,
+                           key_opt_kwargs, ldict, l_dataset, time_vec_name=time_vec,
+                           l_time_vec_name=l_time_vec)
 
     # Get the out of transit variation contribution for each couple instrument - dataset
     l_oot_var, arguments = get_ootvar(l_inst_model, l_dataset, multi,
                                       ldict, arguments, param_nb, arg_list, key_whole,
-                                      key_param, key_kwargs, time_vec_name=time_vec,
-                                      l_time_vec_name=l_time_vec, timeref_name=time_ref,
-                                      l_timeref_name=l_time_ref)
+                                      key_param, key_mand_kwargs, key_opt_kwargs,
+                                      time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                                      timeref_name=time_ref, l_timeref_name=l_time_ref)
 
     if parametrisation in LC_multis_parametrisations:
         rhostar = add_param_argument(star.rho, arg_list, key_whole, key_param,
@@ -478,6 +482,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
         returns_pl = returns_pl[:-2]
 
         # Finalise the  text of planet LC simulator function
+        if argskwargs not in arguments:
+            arguments = add_argskwargs_argument(arguments)
         text_def_func[planet.name] = (template_function.
                                       format(object=planet.name, preambule=preambule_planet,
                                              arguments=arguments, returns=returns_pl, tab=tab))
@@ -516,23 +522,30 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_kwargs,
             ldict["m"] = m_pytransit
         exec(text_def_func[obj_key], ldict)
         params_model = arg_list[obj_key][key_param]
-        if len(arg_list[obj_key][key_kwargs]) > 0:
-            dataset_kwargs = str(arg_list[obj_key][key_kwargs])
+        if len(arg_list[obj_key][key_mand_kwargs]) > 0:
+            mand_kwargs = str(arg_list[obj_key][key_mand_kwargs])
         else:
-            dataset_kwargs = None
+            mand_kwargs = None
+        if len(arg_list[obj_key][key_opt_kwargs]) > 0:
+            opt_kwargs = str(arg_list[obj_key][key_opt_kwargs])
+        else:
+            opt_kwargs = None
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
-                                            dataset_kwargs=dataset_kwargs,
+                                            include_dataset_kwarg=has_dataset,
+                                            mand_kwargs=mand_kwargs,
+                                            opt_kwargs=opt_kwargs,
                                             inst_model_fullname=instmod_docf,
                                             dataset=dtsts_docf)
     return dico_docf
 
 
 def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_list,
-               key_whole, key_param, key_kwargs,
-               time_vec_name=time_vec, l_time_vec_name=l_time_vec,
-               timeref_name=time_ref, l_timeref_name=l_time_ref):
+               key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
+               time_vec_name=time_vec, l_time_vec_name=l_time_vec, l_time_vec_format=None,
+               timeref_name=time_ref, l_timeref_name=l_time_ref,
+               l_timeref_format=None):
     """Get the out of transit variation contribution to the light-curve
 
     :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
@@ -549,11 +562,14 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     :param string key_whole: Key used for the whole system
     :param string key_param: Key used for the parameters entry of arg_list
-    :param string key_kwargs: Key used for the keyword argument entry of arg_list
-    :param str time_vec_name: Str used to design the time vector
-    :param str l_time_vec_name: Str used to design the list of time vector
-    :param str timeref_name: Str used to design the time vector
-    :param str l_timeref_name: Str used to design the list of time vector
+    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
+    :param str time_vec_name: Str used to designate the time vector
+    :param str l_time_vec_name: Str used to designate the list of time vectors
+    :param str l_time_vec_format: Str used to access an element of l_time_vec_name
+    :param str timeref_name: Str used to designate the time vector
+    :param str l_timeref_name: Str used to designate the list of time references
+    :param str l_timeref_format: Str used to access an element of l_timeref_name
     :return list_of_string l_oot_var: list give the string representation of the contributions
         of the out of transit variation for each couple instrument model - dataset in
         l_inst_model and l_dataset.
@@ -590,33 +606,46 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                     if value_not0 and order > 0:
                         # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
                         # no dataset is provided, ...
-                        if ((timeref_name not in arg_list[key_whole][key_kwargs]) and
-                           (l_timeref_name not in arg_list[key_whole][key_kwargs])):
+                        if ((timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs]) and
+                            (l_timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs])):
                             def get_time_ref(time):
                                 return time[0]
-                            (arguments,
-                             timeref_arg_name) = add_timeref_arguments(arguments, multi, arg_list,
-                                                                       key_whole, key_kwargs, ldict,
-                                                                       get_time_ref, has_dataset,
-                                                                       True, l_dataset,
-                                                                       timeref_name, l_timeref_name)
+                            (arguments, timeref_arg_name, timeref_arg
+                             ) = add_timeref_arguments(arguments, multi, arg_list, key_whole,
+                                                       key_mand_kwargs, key_opt_kwargs, ldict,
+                                                       get_time_ref, has_dataset, True, l_dataset,
+                                                       timeref_name, l_timeref_name)
                         # ..., add the end of this order's contribution to the text of the out of
                         # transit variation, ...
                         if order == 1:
                             if multi:
-                                l_oot_var[ii] += (" * ({ltime}[{ii}] - {ltimeref}[{ii}]) "
-                                                  "".format(ii=ii, ltime=l_time_vec_name,
-                                                            ltimeref=l_timeref_name))
+                                if l_time_vec_format is None:
+                                    l_time_ii = ("{ltimevec}[{ii}]"
+                                                 "".format(ltimevec=l_time_vec_name, ii=ii))
+                                else:
+                                    l_time_ii = l_time_vec_format.format(ii=ii)
+                                if l_timeref_format is None:
+                                    l_timeref_ii = ("{ltimeref}[{ii}]"
+                                                    "".format(ltimeref=l_timeref_name, ii=ii))
+                                else:
+                                    l_timeref_ii = l_timeref_format.format(ii=ii)
+                                l_oot_var[ii] += (" * ({l_time_ii} - {l_timeref_ii}) "
+                                                  "".format(ii=ii, l_time_ii=l_time_ii,
+                                                            l_timeref_ii=l_timeref_ii))
                             else:
                                 l_oot_var[ii] += (" * ({time} - {timeref}) "
                                                   "".format(time=time_vec_name,
                                                             timeref=timeref_name))
                         elif order > 1:
                             if multi:
-                                l_oot_var[ii] += (" * ({ltime}[{ii}] - {ltimeref}[{ii}])"
+                                l_time_ii = l_time_vec_format.format(ii=ii)
+                                l_timeref_ii = l_timeref_format.format(ii=ii)
+                                l_oot_var[ii] += (" * ({l_time_ii} - {l_timeref_ii})"
                                                   "**{order}".format(order=order, ii=ii,
-                                                                     ltime=l_time_vec_name,
-                                                                     ltimeref=l_timeref_name))
+                                                                     l_time_ii=l_time_ii,
+                                                                     l_timeref_ii=l_timeref_ii))
                             else:
                                 l_oot_var[ii] += (" * ({time} - {timeref})**{order}"
                                                   "".format(order=order, time=time_vec_name,

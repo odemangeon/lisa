@@ -67,8 +67,8 @@ class LikelihoodCreator(object):
                     key= "datakwargs", value: list of dataset_kwargs (dict: key=datakwarg type, eg.
                         "t" for time; value= datakwarg of this type for the corresponding dataset
                         simulated at the corresponding index of sim_data
-        :param bool include_dataset: If True the output ln likelihood function includes will
-            include_dataset the dataset kwargs, otherwise not. This argument is only used if the
+        :param bool include_dataset: If True the output ln likelihood function will include
+            the dataset kwargs, otherwise not. This argument is only used if the
             datasim doc function provided in argument does not included the dataset kwargs.
             Otherwise it is ignored and the dataset are automatically included in the output
             likelihood, that adds the noise model contribution, because it would not make sense to
@@ -91,8 +91,8 @@ class LikelihoodCreator(object):
                                "argument includes already the dataset kwargs. Include_dataset=False"
                                "is thus ignored.")
 
-            def lnlike(p):
-                sim_data = datasim_func(p[l_idx_param_dtsim])
+            def lnlike(p, *arg, **kwargs):
+                sim_data = datasim_func(p[l_idx_param_dtsim], *arg, **kwargs)
                 res = 0
                 for noisemod_name in dico_noisemodel:
                     res += (dico_noisemodel[noisemod_name][key_noisemod_likefunc]
@@ -204,7 +204,9 @@ class LikelihoodCreator(object):
         return LikelihoodDocFunc(self.__likelihood_creator(datasim, l_idx_param_dtsim,
                                                            dico_noisemodel),
                                  params_model=params_likelihood,
-                                 dataset_kwargs=None, output_info=output_info_like)
+                                 include_dataset_kwarg=datasim.include_dataset_kwarg,
+                                 mand_kwargs=None, opt_kwargs=None,
+                                 output_info=output_info_like)
 
     def create_lnlikelihoods(self, datasim_inst_db,
                              affectinstmodel4dataset=False, lock_db=False, pickleable=False):

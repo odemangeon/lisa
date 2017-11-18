@@ -114,7 +114,7 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
     @property
     def init_kwargs(self):
         """Return the dictionary giving the arguments for the define_model method of Posterior."""
-        dico = GravGroupDyn.init_kwargs.fget(self)
+        dico = GravGroup.init_kwargs.fget(self)
         dico["dynamical_model"] = self.dynamical_model
         if "rv_model" in dico:
             dico.pop("rv_model")
@@ -125,7 +125,8 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
                                             planets=self.planets,
                                             key_whole=self.key_whole,
                                             key_param=self.key_param,
-                                            key_kwargs=self.key_kwargs,
+                                            key_mand_kwargs=self.key_mand_kwargs,
+                                            key_opt_kwargs=self.key_opt_kwargs,
                                             parametrisation=self.parametrisation,
                                             LC_multis_parametrisations=(self.
                                                                         LC_multis_parametrisations),

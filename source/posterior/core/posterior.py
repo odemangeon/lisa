@@ -397,7 +397,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
             arg_list_new = lnprior_db_dtset[dataset_name].arg_list.copy()
 
             def lnpost_withdataset_creator(prior_func, like_func, arg_list):
-                def lnpost_withdataset(p):
+                def lnpost_withdataset(p, *args, **kwargs):
                     # logger.debug("paramnames lnpost ({}): {}\nparams lnpost ({}): {}"
                     #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
                     lnprior_val = prior_func(p)
@@ -407,7 +407,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                     else:
                         # lnlike_val = like_func(p)
                         # logger.debug("lnlike: {}".format(lnlike_val))
-                        return like_func(p) + lnprior_val
+                        return like_func(p, *args, **kwargs) + lnprior_val
                 return DocFunction(function=lnpost_withdataset, arg_list=arg_list_new)
 
             db[dataset_name] = lnpost_withdataset_creator(prior_func=lnprior_func,

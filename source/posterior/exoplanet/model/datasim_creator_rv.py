@@ -13,7 +13,8 @@ from ajplanet import pl_rv_array
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
                                                  get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict)
+                                                 init_arglist_paramnb_arguments_ldict,
+                                                 add_argskwargs_argument, argskwargs)
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                             add_timeref_arguments, time_ref,
                                                             l_time_ref)
@@ -26,7 +27,7 @@ from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
 logger = getLogger()
 
 
-def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
+def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                             RV_globalref_instname=None,
                             RV_instref_modnames=None,
                             RV_inst_db=None,
@@ -41,7 +42,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
     :param dict planets: key=planet name, value=Planet instance
     :param string key_whole: Key used for the whole system
     :param string key_param: Key used for the parameters entry of arg_list
-    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
     :param string RV_globalref_instname: Instrument name of the instrument used as RV reference
     :param dict RV_instref_modnames: key=instrument name, value=instrument model name (not
         full name) used as reference for the instrument
@@ -101,10 +103,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
     # Create the "arguments" text variable and intial with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    param_nb, arg_list, arguments, ldict = init_arglist_paramnb_arguments_ldict([key_whole],
-                                                                                key_param,
-                                                                                key_kwargs,
-                                                                                par_vec_name)
+    (param_nb, arg_list, arguments, ldict
+     ) = init_arglist_paramnb_arguments_ldict([key_whole], key_param, key_mand_kwargs, par_vec_name)
 
     # Initialise the template function text
     function_name = ("RVsim_{{object}}_{instmod_fullname}"
@@ -122,18 +122,16 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
 
     # Add the time as additional argument
     arguments, time_arg_name = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole,
-                                                 key_kwargs, ldict, l_dataset,
+                                                 key_mand_kwargs, key_opt_kwargs, ldict, l_dataset,
                                                  time_vec_name=time_vec, l_time_vec_name=l_time_vec)
 
     # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
-    (l_star_mean_rv,
-     l_delta_inst_rv,
-     arguments) = get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
-                                             RV_globalref_instname, RV_instref_modnames, RV_inst_db,
-                                             ldict, arguments, param_nb, arg_list, key_whole,
-                                             key_param, key_kwargs, time_vec_name=time_vec,
-                                             l_time_vec_name=l_time_vec, timeref_name=time_ref,
-                                             l_timeref_name=l_time_ref)
+    (l_star_mean_rv, l_delta_inst_rv, arguments
+     ) = get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi, RV_globalref_instname,
+                                    RV_instref_modnames, RV_inst_db, ldict, arguments, param_nb,
+                                    arg_list, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
+                                    time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                                    timeref_name=time_ref, l_timeref_name=l_time_ref)
 
     # Save the param_nb and arg_list for the whole function before iterating over the planets
     # text_def_func_before = text_def_func[self.key_whole]
@@ -224,6 +222,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
         returns_pl = returns_pl[:-2]
 
         # Finalise the text of planet RV simulator function
+        if argskwargs not in arguments:
+            arguments = add_argskwargs_argument(arguments)
         text_def_func[planet.name] = (template_function.
                                       format(object=planet.name, preambule=preambule_planet,
                                              arguments=arguments, returns=returns_pl,
@@ -259,14 +259,20 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
         ldict["pl_rv_array"] = pl_rv_array
         exec(text_def_func[obj_key], ldict)
         params_model = arg_list[obj_key][key_param]
-        if len(arg_list[obj_key][key_kwargs]) > 0:
-            dataset_kwargs = str(arg_list[obj_key][key_kwargs])
+        if len(arg_list[obj_key][key_mand_kwargs]) > 0:
+            mand_kwargs = str(arg_list[obj_key][key_mand_kwargs])
         else:
-            dataset_kwargs = None
+            mand_kwargs = None
+        if len(arg_list[obj_key][key_opt_kwargs]) > 0:
+            opt_kwargs = str(arg_list[obj_key][key_opt_kwargs])
+        else:
+            opt_kwargs = None
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
-                                            dataset_kwargs=dataset_kwargs,
+                                            include_dataset_kwarg=has_dataset,
+                                            mand_kwargs=mand_kwargs,
+                                            opt_kwargs=opt_kwargs,
                                             inst_model_fullname=instmod_docf,
                                             dataset=dtsts_docf)
     return dico_docf
@@ -274,7 +280,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_kwargs,
 
 def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
                                RV_globalref_instname, RV_instref_modnames, RV_inst_db, ldict,
-                               arguments, param_nb, arg_list, key_whole, key_param, key_kwargs,
+                               arguments, param_nb, arg_list, key_whole, key_param,
+                               key_mand_kwargs, key_opt_kwargs,
                                time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                timeref_name=time_ref, l_timeref_name=l_time_ref):
     """Get the contribution of the systemic/star rv contribution and the instrumental delta RV.
@@ -299,7 +306,8 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     :param string key_whole: Key used for the whole system
     :param string key_param: Key used for the parameters entry of arg_list
-    :param string key_kwargs: Key used for the keyword argument entry of arg_list
+    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
+    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
     :param str time_vec_name: Str used to design the time vector
     :param str l_time_vec_name: Str used to design the list of time vector
     :param str timeref_name: Str used to design the time vector
@@ -371,16 +379,17 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
                     if value_not0:
                         # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
                         # no dataset is provided, ...
-                        if ((timeref_name not in arg_list[key_whole][key_kwargs]) and
-                           (l_timeref_name not in arg_list[key_whole][key_kwargs])):
+                        if ((timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs]) and
+                            (l_timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs])):
                             def get_time_ref(time):
                                 return time[0]
-                            (arguments,
-                             timeref_arg_name) = add_timeref_arguments(arguments, multi, arg_list,
-                                                                       key_whole, key_kwargs, ldict,
-                                                                       get_time_ref, has_dataset,
-                                                                       True, l_dataset,
-                                                                       timeref_name, l_timeref_name)
+                            (arguments, timeref_arg_name, timeref_arg
+                             ) = add_timeref_arguments(arguments, multi, arg_list, key_whole,
+                                                       key_mand_kwargs, key_opt_kwargs, ldict,
+                                                       get_time_ref, has_dataset, True, l_dataset,
+                                                       timeref_name, l_timeref_name)
                         # ..., add the end of this order's contribution to the text of the RV drift.
                         if order == 1:
                             if multi:

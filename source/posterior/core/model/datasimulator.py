@@ -16,7 +16,7 @@ from logging import getLogger
 from collections import defaultdict
 
 from .datasim_docfunc import DatasimDocFunc
-from .datasimulator_toolbox import key_param, key_kwargs
+from .datasimulator_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
 
 
@@ -33,7 +33,8 @@ class DatasimulatorCreator(object):
     """docstring for DatasimulatorCreator."""
 
     key_param = key_param
-    key_kwargs = key_kwargs
+    key_mand_kwargs = key_mand_kwargs
+    key_opt_kwargs = key_opt_kwargs
 
     def _create_datasimulator(self, instmod_obj, dataset=None):
         """Return the datasimulator for a given instrument model.
@@ -113,15 +114,16 @@ class DatasimulatorCreator(object):
             datasim function in l_datasim.
         :return function datasim_alldatasets: Function that gather al
         """
-        def datasim_alldatasets(p):
+        def datasim_alldatasets(p, *args, **kwargs):
             l_res = []
             for datasim, idxs in zip(l_datasim, l_params_idx):
-                l_res.extend(datasim(p[idxs]))
+                l_res.extend(datasim(p[idxs], *args, **kwargs))
             return l_res
 
         return DatasimDocFunc(function=datasim_alldatasets,
                               params_model=params_model,
                               inst_cat=inst_cat,
+                              include_dataset_kwarg=l_datasim[0].include_dataset_kwarg,
                               inst_model_fullname=inst_model_fullname,
                               dataset=dataset)
 
