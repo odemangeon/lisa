@@ -11,7 +11,7 @@ from logging import getLogger
 from textwrap import dedent
 from collections import defaultdict
 # from copy import deepcopy
-from numpy import concatenate, argsort, cumsum, array, append
+from numpy import concatenate, argsort, cumsum, array, append, sign
 from astropy.constants import R_sun, au
 
 from batman._quadratic_ld import _quadratic_ld
@@ -47,6 +47,9 @@ Rsun_meter = R_sun.value
 
 ## Astronomical unit in meter
 au_meter = au.value
+
+## Convert m.s-1 to km.s-1
+ms2kms = 1e-3
 
 ## String used for the rv time vector
 time_vec_rv = "{}_rv".format(time_vec)
@@ -206,14 +209,14 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
     # Make specific preparation for LC modelling
     if dico_inst_cat[LC_inst_cat]["has"]:
         # See if there is multiple couple inst_model/dataset
-        multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"])
+        multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"]) > 1
         # Add lc time as additional argument
         (arguments, time_arg_name[LC_inst_cat], time_arg_LC
          ) = add_time_argument(arguments, multi_cat[LC_inst_cat], has_dataset, arg_list, key_whole,
                                key_mand_kwargs,
                                key_opt_kwargs, ldict, dico_inst_cat[LC_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_lc, l_time_vec_name=l_time_vec_lc,
-                               add_to_ldict=False, add_to_arguments=False)
+                               add_to_ldict=False, backup_add_to_args=False)
 
         # Get the out of transit variation contribution for each couple instrument - dataset
         (dico_inst_cat[LC_inst_cat]["l_oot_var"],
@@ -247,14 +250,14 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
     # Make specific preparation for RV modelling
     if dico_inst_cat[RV_inst_cat]["has"]:
         # See if there is multiple couple inst_model/dataset
-        multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"])
+        multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"]) > 1
         # Add rv time as additional argument
         (arguments, time_arg_name[RV_inst_cat], time_arg_RV
          ) = add_time_argument(arguments, multi_cat[RV_inst_cat], has_dataset, arg_list, key_whole,
                                key_mand_kwargs, key_opt_kwargs, ldict,
                                dico_inst_cat[RV_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_rv, l_time_vec_name=l_time_vec_rv,
-                               add_to_ldict=False, add_to_arguments=False)
+                               add_to_ldict=False, backup_add_to_args=False)
 
         # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
         (dico_inst_cat[RV_inst_cat]["l_star_mean_rv"],
@@ -500,17 +503,29 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
                 raise ValueError("For now {} LD model is not included !".format(LD_parcont.ld_type))
             else:
                 ldict[compute_flux_fct_name] = compute_flux_fct
-            projected_dist = ("rr[l_times_retrieve['{cat}'][{idx_LC}], jj] / {R_star_name}"
-                              "".format(cat=LC_inst_cat, idx_LC=idx_LC, R_star_name=R_star_name))
+            if multi_cat.get(LC_inst_cat, False):
+                projected_dist = ("rr[l_times_retrieve['{cat}'][{idx_LC}], jj] / {R_star_name}"
+                                  "".format(cat=LC_inst_cat, idx_LC=idx_LC,
+                                            R_star_name=R_star_name))
+                zz = ("zz[l_times_retrieve['{cat}'][{idx_LC}], jj]"
+                      "".format(cat=LC_inst_cat, idx_LC=idx_LC))
+            else:
+                projected_dist = ("rr[:, jj] / {R_star_name}"
+                                  "".format(R_star_name=R_star_name))
+                zz = "zz[:, jj]"
+            # If zz is negative (the planet is behind the star) we articiacial augment a lot the
+            # projected distance to avoid having a transit during the secondary
             compute_flux = """
 {{tab}}{res} = 1 {oot_var}
 {{tab}}for jj in range(0, {nb_planet}):
-{{tab}}    {res} += {flux_fct_name}({projected_dist}, {R_planet_vec_name}[jj],
+{{tab}}    dist_{idx_LC} = {projected_dist} + 1e28 * (1-sign({zz}))
+{{tab}}    {res} += {flux_fct_name}(dist_{idx_LC}, {R_planet_vec_name}[jj],
 {{tab}}                             *{ld_param_list}, nthreads) - 1
 """.format(res=res, nb_planet=len(planets), flux_fct_name=compute_flux_fct_name,
            projected_dist=projected_dist, R_planet_vec_name=R_planet_list_name,
-           ld_param_list=ld_param_list, oot_var=oot_var, idx_LC=idx_LC)
+           ld_param_list=ld_param_list, oot_var=oot_var, idx_LC=idx_LC, zz=zz)
             text_compute_flux += compute_flux
+            ldict["sign"] = sign
             if supersamp > 1:
                 supersamp_text = """
 {{tab}}{res} = average_supersampled_values({res}, {supersamp})
@@ -540,11 +555,15 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
                 res = "{res_name}[{index_res}]".format(res_name=res_name, index_res=index_res)
             else:
                 res = res_name
-
-            text_retrieve_rv += """
-        {{tab}}{res} = {delta_inst_rv} {star_mean_rv} + rvs[l_times_retrieve['{cat}'][{idx_RV}]]
-        """.format(res=res, star_mean_rv=star_mean_rv, delta_inst_rv=delta_inst_rv,
-                   cat=RV_inst_cat, idx_RV=idx_RV)
+            if multi_cat[RV_inst_cat]:
+                text_retrieve_rv += """
+            {{tab}}{res} = {delta_inst_rv} {star_mean_rv} + rvs[l_times_retrieve['{cat}'][{idx_RV}]]
+            """.format(res=res, star_mean_rv=star_mean_rv, delta_inst_rv=delta_inst_rv,
+                       cat=RV_inst_cat, idx_RV=idx_RV)
+            else:
+                text_retrieve_rv += """
+            {{tab}}{res} = {delta_inst_rv} {star_mean_rv} + rvs
+            """.format(res=res, star_mean_rv=star_mean_rv, delta_inst_rv=delta_inst_rv)
         text_retrieve_rv = dedent(text_retrieve_rv).format(tab=tab)
 
     ## Create the datasim function
@@ -758,8 +777,9 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
     :return np.array zz: 2 dimension (N, P) ndarray giving the position of each planet in the system
         relative to the star. N is the number of time sample requested in lc_times.
         P is the number of planets. Only ouputed if lc_times is provided.
-    :return np.array rvs: 1 dimension (N) ndarray giving the radial velocity of the star. N is the
-        the number of time sample requested in rv_times. Only ouputed if rv_times is provided.
+    :return np.array rvs: 1 dimension (N) ndarray giving the radial velocity of the star
+        (in km.s-1). N is the the number of time sample requested in rv_times.
+        Only ouputed if rv_times is provided.
     """
     ## Get the time at which rebound will have to provide the outputs (ltimes)
     # If simulated times for the light-curve are required, ...
@@ -776,8 +796,8 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
     if rv_times is not None:
         # ..., store those times in ltimes too
         # but if simulated times for the light-curve have also been requested, ...
+        np_rv = len(rv_times)
         if lc_times is not None:
-            np_rv = len(rv_times)
             # concatenate the two times vector with the light-curve one first
             ttimes = concatenate((ltimes, rv_times))
             lc_or_rv = concatenate((lc_or_rv, [False for ii in range(len(rv_times))]))
@@ -870,11 +890,11 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
     #     return totalflux
 
     if (lc_times is not None) and (rv_times is not None):
-        return rr, zz, rvs
+        return rr, zz, rvs * ms2kms
     elif (lc_times is not None):
         return rr, zz
     elif (rv_times is not None):
-        return rvs
+        return rvs * ms2kms
     else:
         raise ValueError("You have to provide at least one parameter amongst lc_times and rv_times")
 

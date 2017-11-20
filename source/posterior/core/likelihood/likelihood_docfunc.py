@@ -4,7 +4,7 @@
 likelihood documented function module.
 """
 
-from ..model.datasim_docfunc import DatasimDocFunc, instcat_key, instmodfullname_key, dtst_key
+from ..model.datasim_docfunc import DatasimDocFunc
 from ....tools.function_w_doc import DocFunction
 
 ## String used for the noise model column in ouput_info of LikelihoodDocFunc

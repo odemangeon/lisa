@@ -286,7 +286,7 @@ def add_param_argument(param, arg_list, key_arglist, key_param, param_nb,
 
 
 def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_mand_kwargs,
-                          key_opt_kwargs, ldict, add_to_ldict=False, add_to_arguments=True,
+                          key_opt_kwargs, ldict, add_to_ldict=False, backup_add_to_args=True,
                           new_arg_value=None, def_arg_value=None):
     """Update the text used as arguments for the datasimulator function simulating time series.
 
@@ -309,8 +309,8 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_ma
     :param dict ldict: dictionary to be used as local dictionary argument of the exec function.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     :param bool add_to_ldict: If True the new argument and its value will be added to ldict.
-        Otherwise the name of the new argument is added to arguments if
-    :param bool add_to_arguments: If True the new argument and its default value will be added to
+        Otherwise the name of the new argument is added to arguments if backup_add_to_args is True.
+    :param bool backup_add_to_args: If True the new argument and its default value will be added to
         arguments if add_to_ldict is not True.
     :param ?? new_arg_value: Value of the new argument.
     :param ?? def_arg_value: Default argument value. If None, no default value is provided. If you
@@ -337,7 +337,7 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_arglist, key_ma
         else:
             arg = "{}={}".format(new_arg_name, def_arg_value)
             key_kwargs = key_opt_kwargs
-        if add_to_arguments:
+        if backup_add_to_args:
             arguments += ", {}".format(arg)
             for key in l_key_arglist:
                 arg_list[key][key_kwargs].append(arg)

@@ -141,10 +141,10 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     fig.tight_layout(**kwargs_tl)
 
 
-def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, model_instance=None,
-                        oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
+def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kwargs={},
+                        model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
-                        plot_height=2, plot_width=8, **kwargs_tl):
+                        plot_height=2, plot_width=8, kwargs_tl={}):
     """
     :param np.array param:
     :param list_of_string l_param_name:
@@ -181,11 +181,15 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, model_inst
         nt = len(t)
         data = kwargs.pop("data")
         data_err = kwargs.pop("data_err")
+        kwargs.update(datasim_kwargs)
 
         if noise_mod.has_jitter:
             jitter_param_fullname = inst_mod.parameters[jitter_name].full_name
-            idx_jitter = l_param_name.index(jitter_param_fullname)
-            jitter = param[idx_jitter]
+            if inst_mod.parameters[jitter_name].free:
+                idx_jitter = l_param_name.index(jitter_param_fullname)
+                jitter = param[idx_jitter]
+            else:
+                jitter = inst_mod.parameters[jitter_name].value
             jitter_type = noise_mod.jitter_type
         else:
             jitter = None

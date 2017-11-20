@@ -16,7 +16,8 @@ from collections import defaultdict  # , OrderedDict
 # from copy import deepcopy
 
 from .manager_noise_model import Manager_NoiseModel
-from .likelihood_docfunc import LikelihoodDocFunc, noisemod_key, instmodfullname_key
+from .likelihood_docfunc import LikelihoodDocFunc, noisemod_key
+from ..model.datasim_docfunc import instmodfullname_key
 from ..database_func import DatabaseInstLvlDataset
 # from ....tools.function_w_doc import DocFunction
 # from ..model.datasim_docfunc import instmodfullname_key, dtst_key

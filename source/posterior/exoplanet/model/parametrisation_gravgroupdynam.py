@@ -53,7 +53,7 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             logger.info("No parametrisation provided. The automatically selected parametrisation is"
                         ": {}".format(self.parametrisation))
         else:
-            super(GravGroupDyn_Parametrisation, self).parametrisation = value
+            GravGroup_Parametrisation.parametrisation.fset(self, value)
 
     # TODO: This function doesn't seems to be used anywhere. Check why
     def __check_args(self, **kwargs):

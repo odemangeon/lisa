@@ -28,7 +28,7 @@ l_time_ref = "l_{}".format(time_ref)
 
 def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_mand_kwargs,
                       key_opt_kwargs, ldict, l_dataset, time_vec_name=time_vec,
-                      l_time_vec_name=l_time_vec, add_to_ldict=True, add_to_arguments=True):
+                      l_time_vec_name=l_time_vec, add_to_ldict=True, backup_add_to_args=True):
     """Add time to the arguments text and update arg_list and ldict.
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
@@ -51,8 +51,8 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
     :param ?? new_arg_value: Value of the new argument.
     :param bool add_to_ldict: If True the time argument and its value will be added to ldict if
         has_dataset is True. Otherwise it's not added
-    :param bool add_to_arguments: If True the new argument and its default value will be added to
-        arguments if add_to_ldict is not True.
+    :param bool backup_add_to_args: Decide wether or not to add the time to arguments, if the case
+        where has_dataset is True but add_to_ldict is False.
     :return str arguments: Updated string giving the new text of arguments
     :return str time_arg_name: String giving the name of the new time argument.
     :return str/None time_arg: String giving the argument and eventually the default value.
@@ -71,7 +71,7 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
          ) = add_nonparam_argument(arguments, l_time_vec_name, arg_list, key_arglist,
                                    key_mand_kwargs, key_opt_kwargs, ldict,
                                    add_to_ldict=(has_dataset and add_to_ldict),
-                                   add_to_arguments=add_to_arguments,
+                                   backup_add_to_args=(backup_add_to_args or not(has_dataset)),
                                    new_arg_value=l_t)
     else:
         if has_dataset:
@@ -83,7 +83,7 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
          ) = add_nonparam_argument(arguments, time_vec_name, arg_list, key_arglist, key_mand_kwargs,
                                    key_opt_kwargs, ldict,
                                    add_to_ldict=(has_dataset and add_to_ldict),
-                                   add_to_arguments=add_to_arguments,
+                                   backup_add_to_args=(backup_add_to_args or not(has_dataset)),
                                    new_arg_value=tt)
     return arguments, time_arg_name, time_arg
 
