@@ -32,7 +32,7 @@ from numpy import ndarray, stack
 from numpy import random
 from logging import getLogger
 
-from IPython import get_ipython
+# from IPython import get_ipython
 from numpy import pi
 
 from .human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
@@ -482,21 +482,24 @@ def gettp_fast(P, tc, ecc, omega):
     return tc - P * mshift / (2.0 * pi)
 
 
-def getTeqpl(Teffst, aR, ecc, A=0):
+def getTeqpl(Teffst, aR, ecc, A=0, f=1/4.):
     """Return the planet equilibrium temperature.
 
     Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
     and https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
     and later updated to include the effect of excentricity on the average stellar planet distance
-    according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L
-
+    according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L (1501.05685)
+    Plus Exoplanet atmospheres, physical processes, Sara Seager, p30 eq 3.9 for f contribution.
     :param float/np.ndarray Teffst: Effective temperature of the star
-    :param float/np.ndarray Rst: Stellar radius in solar radius
-    :param float/np.ndarray a: Planetary orbital semi-major axis (mean planet to star distance) in
-                               au
+    :param float/np.ndarray aR: Ration of the planetary orbital semi-major axis over the stellar
+        radius (without unit)
+    :param float/np.ndarray A: Bond albedo (should be between 0 and 1)
+    :param float/np.ndarray f: Redistribution factor. If 1/4 the energy is uniformly redistributed
+        over the planetary surface. If f = 2/3, no redistribution at all, the atmosphere immediately
+        reradiate whithout advection.
     :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
     """
-    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR) / (1 - ecc**2)**(1/8.)
+    return Teffst * (f * (1 - A))**(1 / 4.) * np.sqrt(1 / aR) / (1 - ecc**2)**(1/8.)
 
 def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
@@ -845,13 +848,13 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
         raise ValueError("For now this function only handles LC and RV parametrisation.")
 
 
-if __name__ == "__main__":
-    ipython = get_ipython()
-    print("Time it for getecc(0.1, 0.2)")
-    ipython.magic("timeit getecc(0.1, 0.2)")
-    print("Time it for getecc_fast(0.1, 0.2)")
-    ipython.magic("timeit getecc_fast(0.1, 0.2)")
-    print("\nTime it for getomega(0.1, 0.2)")
-    ipython.magic("timeit getomega(0.1, 0.2)")
-    print("Time it for getomega_fast(0.1, 0.2)")
-    ipython.magic("timeit getomega_fast(0.1, 0.2)")
+# if __name__ == "__main__":
+#     ipython = get_ipython()
+#     print("Time it for getecc(0.1, 0.2)")
+#     ipython.magic("timeit getecc(0.1, 0.2)")
+#     print("Time it for getecc_fast(0.1, 0.2)")
+#     ipython.magic("timeit getecc_fast(0.1, 0.2)")
+#     print("\nTime it for getomega(0.1, 0.2)")
+#     ipython.magic("timeit getomega(0.1, 0.2)")
+#     print("Time it for getomega_fast(0.1, 0.2)")
+#     ipython.magic("timeit getomega_fast(0.1, 0.2)")
