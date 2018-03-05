@@ -520,7 +520,7 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
 {{tab}}for jj in range(0, {nb_planet}):
 {{tab}}    dist_{idx_LC} = {projected_dist} + 1e28 * (1-sign({zz}))
 {{tab}}    {res} += {flux_fct_name}(dist_{idx_LC}, {R_planet_vec_name}[jj],
-{{tab}}                             *{ld_param_list}, nthreads) - 1
+{{tab}}                             *({ld_param_list}), nthreads) - 1
 """.format(res=res, nb_planet=len(planets), flux_fct_name=compute_flux_fct_name,
            projected_dist=projected_dist, R_planet_vec_name=R_planet_list_name,
            ld_param_list=ld_param_list, oot_var=oot_var, idx_LC=idx_LC, zz=zz)
