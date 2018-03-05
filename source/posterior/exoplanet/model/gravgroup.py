@@ -302,8 +302,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     __ldmod_dict_name = "LD_models"
     __supersamp_dict = "SuperSamps"
 
-    def create_LC_param_file(self, paramfile_path,
-                             answer_overwrite=None, answer_create=None):
+    def create_LC_param_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
         """Create a parameter file for the light-curve parametrisation.
 
         :param string paramfile_path: Path to the LC_param_file.
