@@ -22,8 +22,7 @@ from dill import dump, load
 from os.path import isfile, join
 # import pprint
 
-# Temporary commenting.
-# from .stats.loc_scale_estimator import mad
+from .stats.loc_scale_estimator import mad
 from .time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
