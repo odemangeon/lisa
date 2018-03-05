@@ -302,27 +302,46 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     __ldmod_dict_name = "LD_models"
     __supersamp_dict = "SuperSamps"
 
-    def create_LC_param_file(self, paramfile_path):
+    def create_LC_param_file(self, paramfile_path,
+                             answer_overwrite=None, answer_create=None):
         """Create a parameter file for the light-curve parametrisation.
 
         :param string paramfile_path: Path to the LC_param_file.
+        :param string answer_overwrite: If the LC_param_file already exists, do you want to
+            overwrite it ? "y" or "n". If this not provide the program will ask you interactively.
+        :param string answer_create: If the LC_param_file doesn't exists aleardy, where do you want
+            to create it ? "absolute", "run_folder" or "error". If this not provide the program will
+            ask you interactively.
         """
         file_path = self.look4runfile(file_path=paramfile_path)
         if file_path is not None:
             answers_list_yn = ['y', 'n']
-            question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                        "".format(file_path, answers_list_yn))
-            reply = QCM_utilisateur(question, answers_list_yn)
+            if answer_overwrite is None:
+                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
+                            "".format(file_path, answers_list_yn))
+                reply = QCM_utilisateur(question, answers_list_yn)
+            else:
+                if answer_overwrite in answers_list_yn:
+                    reply = answer_overwrite
+                else:
+                    raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
         else:
             answers_list_create = ["absolute", "error"]
-            question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
-                        "{}".format(paramfile_path, paramfile_path))
             if self.hasrun_folder:
                 answers_list_create.append("run_folder")
                 run_folder_path = join(self.run_folder, paramfile_path)
-                question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-            question += "\nNot create it and raise an 'error' ? {}\n".format(answers_list_create)
-            reply = QCM_utilisateur(question, answers_list_create)
+            if answer_create is None:
+                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
+                            "{}".format(paramfile_path, paramfile_path))
+                if self.hasrun_folder:
+                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
+                question += "\nNot create it and raise an 'error' ? {}\n".format(answers_list_create)
+                reply = QCM_utilisateur(question, answers_list_create)
+            else:
+                if answer_create in answers_list_create:
+                    reply = answer_create
+                else:
+                    raise ValueError("answer_create should by in {}".format(answers_list_create))
             if reply == "absolute":
                 file_path = paramfile_path
             elif reply == "run_folder":
