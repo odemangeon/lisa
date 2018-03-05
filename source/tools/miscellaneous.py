@@ -8,7 +8,7 @@ Provide toolbox with miscellaneous tools.
 @TODO:
 """
 from logging import getLogger
-from os.path import basename, splitext
+from os.path import basename, splitext, expanduser
 import os
 
 from .human_machine_interface.QCM import QCM_utilisateur
@@ -106,9 +106,9 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
     # 1.
     folder_provided = (folder != "default")
     if folder_provided:
-        folder_selected = folder
+        folder_selected = expanduser(folder)
     else:
-        folder_selected = os.path.join(main_default_folder, object_name)
+        folder_selected = os.path.join(expanduser(main_default_folder), object_name)
     # 2.
     folder_exist = os.path.isdir(folder_selected)
     # 3.
