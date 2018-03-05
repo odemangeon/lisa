@@ -523,7 +523,8 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
 {{tab}}                             {ld_param_list}, nthreads) - 1
 """.format(res=res, nb_planet=len(planets), flux_fct_name=compute_flux_fct_name,
            projected_dist=projected_dist, R_planet_vec_name=R_planet_list_name,
-           ld_param_list=ld_param_list.strip("[] ,"), oot_var=oot_var, idx_LC=idx_LC, zz=zz)
+           ld_param_list=ld_param_list.strip()[1:-1].strip(" ,"),
+           oot_var=oot_var, idx_LC=idx_LC, zz=zz)
             text_compute_flux += compute_flux
             ldict["sign"] = sign
             if supersamp > 1:
