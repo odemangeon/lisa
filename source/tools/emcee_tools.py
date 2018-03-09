@@ -6,7 +6,7 @@ emcee tools module.
 The objective of this module is to provide a toolbox for the exploitation and visualisation of emcee
 results.
 """
-from logging import getLogger
+from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
@@ -111,7 +111,7 @@ def explore(sampler, p0, nsteps, logger=None):
                 previous_i = i
         return result
     else:
-        tqdm_out = TqdmToLogger(logger,level=logging.INFO)
+        tqdm_out = TqdmToLogger(logger,level=INFO)
         with tqdm(total=nsteps, file=tqdm_out) as pbar:
             previous_i = -1
             for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
