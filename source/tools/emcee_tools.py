@@ -23,6 +23,7 @@ from os.path import isfile, join
 # import pprint
 
 from .stats.loc_scale_estimator import mad
+from .tqdm_logger import TqdmToLogger
 from .time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
@@ -101,13 +102,22 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
         return np.asarray(p0).transpose()
 
 
-def explore(sampler, p0, nsteps):
-    with tqdm(total=nsteps) as pbar:
-        previous_i = -1
-        for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
-            pbar.update(i - previous_i)
-            previous_i = i
-    return result
+def explore(sampler, p0, nsteps, logger=None):
+    if logger is None:
+        with tqdm(total=nsteps) as pbar:
+            previous_i = -1
+            for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
+                pbar.update(i - previous_i)
+                previous_i = i
+        return result
+    else:
+        tqdm_out = TqdmToLogger(logger,level=logging.INFO)
+        with tqdm(total=nsteps, file=tqdm_out) as pbar:
+            previous_i = -1
+            for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
+                pbar.update(i - previous_i)
+                previous_i = i
+        return result
 
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
