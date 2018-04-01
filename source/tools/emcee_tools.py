@@ -25,6 +25,7 @@ from os.path import isfile, join
 from .stats.loc_scale_estimator import mad
 from .tqdm_logger import TqdmToLogger
 from .time_series_toolbox import get_time_supersampled, average_supersampled_values
+from .human_machine_interface.QCM import QCM_utilisateur
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 # from ..posterior.core.posterior import alldtst_key
@@ -102,21 +103,35 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
         return np.asarray(p0).transpose()
 
 
-def explore(sampler, p0, nsteps, logger=None):
+def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overwrite=None, l_param_name=None, logger=None):
+    if save_to_file:
+        if isfile(filename):
+            if overwrite is None:
+                l_reponses_possibles = ["y", "n"]
+                question = "File {} already exists. Do you want to continue and overwrite it ? {}\n".format(filename, l_reponses_possibles)
+                rep = QCM_utilisateur(question, l_reponses_possibles)
+                overwrite = (rep == "y")
+        else:
+            overwrite = True
+        if overwrite:
+            with open(filename, "w") as f:
+                f.write("# i_walker\t{:s}\n".format("\t".join(l_param_name)))
+        else:
+            raise ValueError("filename correspond to an existing file.")
     if logger is None:
-        with tqdm(total=nsteps) as pbar:
-            previous_i = -1
-            for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
-                pbar.update(i - previous_i)
-                previous_i = i
-        return result
+        tqdm_out = None
     else:
         tqdm_out = TqdmToLogger(logger,level=INFO)
-        with tqdm(total=nsteps, file=tqdm_out) as pbar:
-            previous_i = -1
-            for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
-                pbar.update(i - previous_i)
-                previous_i = i
+    with tqdm(total=nsteps, file=tqdm_out) as pbar:
+        previous_i = -1
+        for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
+            position = result[0]
+            if save_to_file:
+                with open(filename, "a") as f:
+                    for k in range(position.shape[0]):
+                        f.write("{0:4d} {1:s}\n".format(k, " ".join(["{:10.4f}".format(xx) for xx in position[k]])))
+            pbar.update(i - previous_i)
+            previous_i = i
         return result
 
 
