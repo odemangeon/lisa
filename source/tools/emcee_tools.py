@@ -617,7 +617,7 @@ def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=No
 def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):
     """Return selected walker based on the acceptance fraction.
 
-    :param emcee.EnsembleSampler sampler:
+    :param np.array acceptance_fraction: Value of the acceptance fraction for each walker.
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     """
@@ -639,7 +639,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
 def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1):
     """Return selected walker based on the acceptance fraction.
 
-    :param emcee.EnsembleSampler sampler:
+    :param np.array lnprobability: Values of the lnprobability taken by each walker at each iteration
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     :return list_of_int l_selected_walker: list of selected walker
@@ -725,7 +725,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     """Adapted the geweke test for multiple wlaker exploration.
 
     :param emcee.EnsembleSampler sampler:
-    :param float last: first portion of the chain to be used in the Geweke diagnostic.
+    :param float first: first portion of the chain to be used in the Geweke diagnostic.
         Default to 0.1 (i.e. first 10 % of the chain)
     :param float last: last portion of the chain to be used in the Geweke diagnostic.
         Default to 0.5 (i.e. last 50 % of the chain)
