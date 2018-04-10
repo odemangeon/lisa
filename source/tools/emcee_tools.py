@@ -25,6 +25,8 @@ from os.path import isfile, join
 
 from .stats.loc_scale_estimator import mad
 
+from scipy.stats import mode
+
 # from ipdb import set_trace
 
 
@@ -49,6 +51,67 @@ exptime_Kepler = 0.02043402778  # days
 #         n = int((width + 1) * float(i) / nsteps)
 #         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
 #     stdout.write("\n")
+
+
+
+def get_centre_gaussian(xdata, ydata):
+    """Return the centre of a guassian
+    :param xdata and ydata are the x and y that define the guassian
+        they can be the x and y of an histogram
+    return double that is the centre of the guassian
+    """
+    from lmfit.models import GaussianModel
+    gmodel = GaussianModel()
+    params = gmodel.make_params(amplitude=ydata.max(),
+                            center=xdata.mean(),
+                            sigma=xdata.std())
+    result = gmodel.fit(ydata, params, x=xdata)
+    peak = result.values['center']
+    return peak
+
+def gauspeak(values, nbins):
+    """Return the centre of a guassian fit to an histrogram of values
+    :param values np.array with values for which we will calculate the histogram and the centre of a gaussianfit
+        if np.array has more than one parameter it will do each one seperatly
+    :param nbins int number of bins used in the histrogram
+    return list of the guassian centre fit for each parameter
+    """
+    number_fitted =  len(values[0,:])
+    peak =[]
+    for i in range(0,number_fitted):
+        ydata = np.histogram(values[:,i],nbins)[0]
+        bin_edges =np.histogram(values[:,i],nbins)[1]
+        delta = bin_edges[2]-bin_edges[1]
+        xdata = bin_edges[0:len(bin_edges)-1] + delta/2.
+        centre_gaussian = get_centre_gaussian(xdata, ydata)
+        centre_gaussian = max(centre_gaussian , xdata[0])
+        centre_gaussian = min(centre_gaussian, xdata[nbins-1] )
+        peak.append (centre_gaussian )
+
+    return peak
+
+
+def modepeak(values, nbins):
+    """Return the mode a distribution by cumputing the histogram
+    :param values np.array with values for which we will calculate the mode of the distribution
+        if np.array has more than one parameter it will do each one seperatly
+    :param nbins int number of bins used in the histrogram
+    return list of the mode fit for each parameter
+    """
+    number_fitted =  len(values[0,:])
+    peak =[]
+    for i in range(0,number_fitted):
+        ydata = np.histogram(values[:,i],nbins)[0]
+        bin_edges =np.histogram(values[:,i],nbins)[1]
+        delta = bin_edges[2]-bin_edges[1]
+        xdata = bin_edges[0:len(bin_edges)-1] + delta/2.
+        indice = np.argmax(ydata)
+        peak.append (xdata[indice])
+
+    return peak
+
+
+
 
 def get_init_distrib_from_fitvalues(fitted_values):
     """Generate the init_distrib dictionary for generate_random_init_pos from fitted_values.
@@ -708,7 +771,7 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     """Return the fitted values from the sampler.
 
     :param ChainInterpret chainI:
-    :param string method: method used to extract the fitted values ["MAP", "median"]
+    :param string method: method used to extract the fitted values ["MAP", "median", "gausfit", "mode"]
     :param int_iteratable l_walkers: list of valid walkers
     :param int burnin: index of the first iteration to consider.
     :param int verbose: if 1 speaks otherwise not
@@ -722,6 +785,10 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
             logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
         res = array([chainI[walker, it, dim] for dim in range(ndim)])
+    elif method == "gaussfit":
+        res = gauspeak( get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
+    elif method == "mode":
+        res = modepeak( get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
