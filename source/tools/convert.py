@@ -490,6 +490,7 @@ def getTeqpl(Teffst, aR, ecc, A=0, f=1/4.):
     and later updated to include the effect of excentricity on the average stellar planet distance
     according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L (1501.05685)
     Plus Exoplanet atmospheres, physical processes, Sara Seager, p30 eq 3.9 for f contribution.
+
     :param float/np.ndarray Teffst: Effective temperature of the star
     :param float/np.ndarray aR: Ration of the planetary orbital semi-major axis over the stellar
         radius (without unit)
@@ -548,6 +549,7 @@ def getFi(Ls, a, Fifact=1.):
     """
     return Fifact * Ls / a**2
 
+
 def getRstar(rho, M, Rfact=1.):
     """Return the stellar radius.
 
@@ -558,6 +560,29 @@ def getRstar(rho, M, Rfact=1.):
     :return float/np.ndarray R: Stellar radius (in solar radius if Rfact=1)
     """
     return Rfact * (M / rho)**(1. / 3)
+
+
+def getloggpl(M, R):
+    """Return the planetary log(g).
+
+    :param float/np.ndarray M: Planetary mass (in jupiter mass)
+    :param float/np.ndarray R: Planetary radius (in jupiter radius)
+
+    :return float/np.ndarray loggpl: Planetary logg
+    """
+    # mjup in kg and rjup in m
+    return np.log10(grav * M * mjup * 1000 / np.power(R * rjup * 100, 2))
+
+
+def getgpl(M, R):
+    """Return the planetary surface gravity.
+
+    :param float/np.ndarray M: Planetary mass (in jupiter mass)
+    :param float/np.ndarray R: Planetary radius (in jupiter radius)
+
+    :return float/np.ndarray gpl: Planetary surface gravity (im m.s-2)
+    """
+    return const.G.value * M * mjup / np.power(R * rjup, 2)
 
 
 def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):
