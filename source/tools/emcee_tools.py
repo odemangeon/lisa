@@ -129,7 +129,7 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
             if save_to_file:
                 with open(filename, "a") as f:
                     for k in range(position.shape[0]):
-                        f.write("{0:4d} {1:s}\n".format(k, " ".join(["{:10.4f}".format(xx) for xx in position[k]])))
+                        f.write("{0:4d} {1:s}\n".format(k, " ".join(["{:>15f}".format(xx) for xx in position[k]])))
             pbar.update(i - previous_i)
             previous_i = i
         return result
