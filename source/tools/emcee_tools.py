@@ -115,7 +115,7 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
             overwrite = True
         if overwrite:
             with open(filename, "w") as f:
-                f.write("# i_walker\t{:s}\n".format("\t".join(l_param_name)))
+                f.write("i_walker\t{:s}\n".format("\t".join(l_param_name)))
         else:
             raise ValueError("filename correspond to an existing file.")
     if logger is None:
