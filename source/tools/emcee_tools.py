@@ -115,7 +115,7 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
             overwrite = True
         if overwrite:
             with open(filename, "w") as f:
-                f.write("i_walker\t{:s}\n".format("\t".join(l_param_name)))
+                f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior",])))
         else:
             raise ValueError("filename correspond to an existing file.")
     if logger is None:
@@ -126,10 +126,11 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
         previous_i = -1
         for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
             position = result[0]
+            lnprob = result[1]
             if save_to_file:
                 with open(filename, "a") as f:
                     for k in range(position.shape[0]):
-                        f.write("{0:4d} {1:s}\n".format(k, " ".join(["{:>15f}".format(xx) for xx in position[k]])))
+                        f.write("{:4d} {:s} {:>15f}\n".format(k, " ".join(["{:>15f}".format(xx) for xx in position[k]]), lnprob[k]))
             pbar.update(i - previous_i)
             previous_i = i
         return result
