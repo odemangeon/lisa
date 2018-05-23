@@ -43,6 +43,9 @@ teff = (6290,60)
 logg = (4.29,0.07)
 z = (-0.24,0.04)
 
+teff = (4550,75)
+logg = (2.953,0.007)
+z = (0.11,0.07)
 
 #Download the model spectra for the filter set
 sc = LDPSetCreator(teff=teff,logg=logg , z=z, filters=filters)
