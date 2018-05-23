@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 """
-Script for the analysis of emcee chains
+Script template to analysis the chains obtained during the MCMC exploration
 
 @TODO:
 """

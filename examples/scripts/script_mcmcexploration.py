@@ -1,13 +1,14 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 """
-Script for the analysis of WASP-153 RV + LC data
+Script template to perform an MCMC exploration.
 
 @TODO:
 """
-from __future__ import print_function
 from logging import DEBUG, INFO
 from math import ceil
+from scipy.optimize import minimize
+from numpy import zeros_like
 
 from emcee import EnsembleSampler
 
@@ -18,7 +19,7 @@ import source.tools.emcee_tools as et
 import source.tools.mylogger as ml
 
 
-obj_name = "WASP-153"
+obj_name = "HD75289"
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -50,19 +51,18 @@ post_instance.load_datasetsfile("datasets.txt")
 
 logger.info("4. Add a model")
 post_instance.define_model(category="GravitionalGroups", name=obj_name, stars=1, planets=1,
-                           transit_model="batman", parametrisation=None)
+                           parametrisation="RV_EXOFAST")
 
-logger.info("5. Create and modify LC parameter file")
-post_instance.model.create_LC_param_file(paramfile_path="LC_param_file.py")
-
-input("Modifiy the LC paramerisation file")
-
-logger.info("6. Load the paramerisation file")
-post_instance.model.load_LC_param_file()
+# logger.info("5. Create and modify LC parameter file")
+# post_instance.model.create_LC_param_file(paramfile_path="LC_param_file.py")
+#
+# input("Modifiy the LC paramerisation file")
+#
+# logger.info("6. Load the paramerisation file")
+# post_instance.model.load_LC_param_file()
 
 logger.info("5. Apply a parametrisation to the model")
-post_instance.model.apply_parametrisation(with_RVdrift=False, with_DeltaRV=False,
-                                          with_OOT_var=False)
+post_instance.model.apply_parametrisation(with_RVdrift=False, with_DeltaRV=True)
 
 logger.info("6. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")
@@ -102,10 +102,22 @@ else:
     init_distrib = None
 p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
                                  init_distrib=init_distrib)
-# logger.debug("Initial p0 values: {}".format(p0))
 
-logger.info("14. Perform MCMC exploration")
-et.explore(sampler, p0, nsteps=5000)
+# logger.debug("Initial p0 values: {}".format(p0))
+if not load_from_pickle:
+    logger.info("14. AMOEBA minimization")
+    p1 = zeros_like(p0)
+    lnpostfnminus = lambda p: -lnpostfn(p)
+    N_maxiter = 600
+    xtol = 1e-8
+    for ii in range(nwalkers):
+        res = minimize(lnpostfnminus, p0[ii, :], method='nelder-mead', options={'xtol': xtol, 'disp': True, 'maxiter': p0[ii, :].size * N_maxiter})
+        p1[ii, :] = res["x"]
+else:
+    p1 = p0
+
+logger.info("15. Perform MCMC exploration")
+et.explore(sampler, p1, nsteps=10000)
 
 et.save_emceesampler(sampler, l_param_name, obj_name)
 post_instance.save_post_instance()
