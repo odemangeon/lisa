@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, exp
+from numpy import percentile, exp, newaxis, concatenate
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -20,6 +20,7 @@ from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
 from dill import dump, load
 from os.path import isfile, join
+from pandas import read_table
 # import pprint
 
 from .stats.loc_scale_estimator import mad
@@ -135,6 +136,32 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
             previous_i = i
         return result
 
+def read_datfile(datfile, walker_col="i_walker", lnpost_col="lnposterior"):
+    """Read .dat file created by the explore function (save_to_file=True)
+
+    The .dat file needs to have a header. The fist column has to be i_walker giving the index of the
+    walker. The last column has to be lnposterior giving the log posterior probability
+
+    :param str datfile: Path to .dat file
+    :param str walker_col: Name of the column containing the index of the walkers
+    :param str lnpost_col: Name of the column containing the log posterior probability values
+    :return array chains: Array containing the chains formatted as the EnsembleSampler object
+    :return array lnpost: Array containing the lnposterior values formatted as the EnsembleSampler
+        object
+    :return list_of_str l_param: Array containing the lnposterior values formatted as the EnsembleSampler
+        object
+    """
+    df = read_table(datfile, sep="\s+", header=0)
+
+    nb_walker = df[walker_col].max() - df[walker_col].min() + 1
+    df["iteration"] = np.array(df.index) // 88
+    df.set_index([walker_col, 'iteration'], inplace=True)
+    l_param = list(df.columns)
+    l_param.remove(lnpost_col)
+    return (concatenate([df.loc[walker,:][df.columns[:-1]].values[newaxis, ...] for walker in range(nb_walker)]),
+            concatenate([df.loc[walker,:][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]),
+            l_param
+            )
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
