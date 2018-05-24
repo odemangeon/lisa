@@ -29,6 +29,7 @@ logger.info("########\nMCMC EXPLORATION")
 
 # If needed, load the fitted values dataframe from a previous mcmc exploration analysis
 load_from_pickle = False
+do_preminization = False
 
 if load_from_pickle:
     logger.info("0. Load from pickle")
@@ -86,7 +87,10 @@ logger.info("11. Create posterior functions")
 post_instance.get_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
-logger.info("12. Create sampler")
+logger.info("12. Save posterior instance")
+post_instance.save_post_instance()
+
+logger.info("13. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
 lnpostfn = post_instance.lnposteriors.dataset_db["all"].function
 arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
@@ -95,7 +99,7 @@ lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * 2.5) / 2) * 2  # To get an even number of walkers
 sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn)
 
-logger.info("13. Create initial value")
+logger.info("14. Create initial value")
 if load_from_pickle:
     init_distrib = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
 else:
@@ -104,8 +108,8 @@ p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
                                  init_distrib=init_distrib)
 
 # logger.debug("Initial p0 values: {}".format(p0))
-if not load_from_pickle:
-    logger.info("14. AMOEBA minimization")
+if not load_from_pickle and do_preminization:
+    logger.info("15. AMOEBA minimization")
     p1 = zeros_like(p0)
     lnpostfnminus = lambda p: -lnpostfn(p)
     N_maxiter = 600
@@ -116,7 +120,7 @@ if not load_from_pickle:
 else:
     p1 = p0
 
-logger.info("15. Perform MCMC exploration")
+logger.info("16. Perform MCMC exploration")
 et.explore(sampler, p1, nsteps=10000)
 
 et.save_emceesampler(sampler, l_param_name, obj_name)

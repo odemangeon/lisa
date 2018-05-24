@@ -104,21 +104,24 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
         return np.asarray(p0).transpose()
 
 
-def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overwrite=None, l_param_name=None, logger=None):
+def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
+            filename_acceptfrac="chain.dat", overwrite=None, l_param_name=None, logger=None):
     if save_to_file:
-        if isfile(filename):
-            if overwrite is None:
-                l_reponses_possibles = ["y", "n"]
-                question = "File {} already exists. Do you want to continue and overwrite it ? {}\n".format(filename, l_reponses_possibles)
-                rep = QCM_utilisateur(question, l_reponses_possibles)
-                overwrite = (rep == "y")
-        else:
-            overwrite = True
-        if overwrite:
-            with open(filename, "w") as f:
-                f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior",])))
-        else:
-            raise ValueError("filename correspond to an existing file.")
+        for filename, cat in [(filename_chain, "chain"), (filename_acceptfrac, "acceptfrac")]:
+            if isfile(filename):
+                if overwrite is None:
+                    l_reponses_possibles = ["y", "n"]
+                    question = "File {} already exists. Do you want to continue and overwrite it ? {}\n".format(filename, l_reponses_possibles)
+                    rep = QCM_utilisateur(question, l_reponses_possibles)
+                    overwrite = (rep == "y")
+            else:
+                overwrite = True
+            if overwrite:
+                if cat == "chain":
+                    with open(filename, "w") as f:
+                        f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior",])))
+            else:
+                raise ValueError("{} correspond to an existing file.".format(filename))
     if logger is None:
         tqdm_out = None
     else:
@@ -129,20 +132,24 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename="chain.dat", overw
             position = result[0]
             lnprob = result[1]
             if save_to_file:
-                with open(filename, "a") as f:
+                with open(filename_chain, "a") as f:
                     for k in range(position.shape[0]):
                         f.write("{:4d} {:s} {:>15f}\n".format(k, " ".join(["{:>15f}".format(xx) for xx in position[k]]), lnprob[k]))
+                acceptance_fraction = sampler.acceptance_fraction
+                with open(filename_acceptfrac, "w") as f:
+                    for k, acceptfrac in enumerate(acceptance_fraction):
+                        f.write("{:4d} {:>15f}\n".format(k, acceptfrac))
             pbar.update(i - previous_i)
             previous_i = i
         return result
 
-def read_datfile(datfile, walker_col="i_walker", lnpost_col="lnposterior"):
+def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposterior"):
     """Read .dat file created by the explore function (save_to_file=True)
 
     The .dat file needs to have a header. The fist column has to be i_walker giving the index of the
     walker. The last column has to be lnposterior giving the log posterior probability
 
-    :param str datfile: Path to .dat file
+    :param str chaindatfile: Path to .dat file
     :param str walker_col: Name of the column containing the index of the walkers
     :param str lnpost_col: Name of the column containing the log posterior probability values
     :return array chains: Array containing the chains formatted as the EnsembleSampler object
@@ -151,7 +158,7 @@ def read_datfile(datfile, walker_col="i_walker", lnpost_col="lnposterior"):
     :return list_of_str l_param: Array containing the lnposterior values formatted as the EnsembleSampler
         object
     """
-    df = read_table(datfile, sep="\s+", header=0)
+    df = read_table(chaindatfile, sep="\s+", header=0)
 
     nb_walker = df[walker_col].max() - df[walker_col].min() + 1
     df["iteration"] = np.array(df.index) // 88
@@ -162,6 +169,19 @@ def read_datfile(datfile, walker_col="i_walker", lnpost_col="lnposterior"):
             concatenate([df.loc[walker,:][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]),
             l_param
             )
+
+def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col="lnposterior"):
+    """Read .dat file created by the explore function (save_to_file=True)
+
+    The .dat file needs to have a header. The fist column has to be i_walker giving the index of the
+    walker. The last column has to be lnposterior giving the log posterior probability
+
+    :param str acceptfracdatfile: Path to .dat file
+    :return array acceptance_fraction: Array containing the acceptance fraction for each walker.
+    """
+    df = read_table(acceptfracdatfile, sep="\s+", header=0)
+
+    return df[df.columns[-1]]
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
@@ -897,29 +917,42 @@ extension_pickle = {"chain": "_chain.pk",
                     "fitted_values_sec": "_fitted_values_sec.pk",
                     }
 
+def pickle_stuff(stuff, filename):
+    """Save stuff in a pickle file.
 
-def save_emceesampler(sampler, l_param_name, obj_name):
+    The pickle file name is defined by the object_name and the extension
+    "{}{}".format(obj_name, extension)
+
+    :param stuff: Stuff to pickle
+    :param str filename: Name of the pickle file
+    """
+    # Save chain in a pickle
+    with open(filename, "wb") as fpickle:
+        dump(object, fpickle)
+
+
+def save_emceesampler(sampler, l_param_name=None, obj_name=""):
     """Save Emcee sampler elements."""
 
     # Save chain in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["chain"]), "wb") as fchain:
-        dump(sampler.chain, fchain)
+    pickle_stuff(sampler.chain, "{}{}".format(obj_name, extension_pickle["chain"]))
 
     # Save lnprobability in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["lnpost"]), "wb") as flnprob:
-        dump(sampler.lnprobability, flnprob)
+    pickle_stuff(sampler.lnprobability, "{}{}".format(obj_name, extension_pickle["lnpost"]))
 
     # Save acceptance_fraction in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["acceptfrac"]), "wb") as faccfrac:
-        dump(sampler.acceptance_fraction, faccfrac)
+    pickle_stuff(sampler.acceptance_fraction, "{}{}".format(obj_name, extension_pickle["acceptfrac"]))
 
     # Save l_param_name in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["l_param_name"]), "wb") as flparam:
-        dump(l_param_name, flparam)
+    if l_param_name is not None:
+        pickle_stuff(l_param_name, "{}{}".format(obj_name, extension_pickle["l_param_name"]))
 
 
 def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None):
-    """Save Emcee sampler elements."""
+    """Save chain analysis results.
+
+    TODO: Update to use pickle_stuff
+    """
 
     # Save df_fittedval in a pickle
     if df_fittedval is not None:
