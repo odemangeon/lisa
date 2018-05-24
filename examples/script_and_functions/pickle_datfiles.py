@@ -11,7 +11,7 @@ from datetime import datetime
 from os.path import splitext, basename
 from os import remove
 
-from source.tools.emcee_tools import read_datfile, read_acceptfracdatfile, extension_pickle
+from source.tools.emcee_tools import read_chaindatfile, read_acceptfracdatfile, extension_pickle, pickle_stuff
 
 # Argument parsing
 parser = argparse.ArgumentParser()
@@ -32,17 +32,17 @@ dico_files = {"chain": {"original": args.chain_datfile, "copy": None},
               "acceptfrac": {"original": args.acceptfrac_datfile, "copy": None}}
 for key, item in dico_files.items():
     datfile_root, datfile_ext = splitext(item["original"])
-    item["copy"] = datfile_root + "_tmp_{0.year}{0.month}{0.day}{0.hour}{0.min}{0.sec}".format(now) + datfile_ext
+    item["copy"] = datfile_root + "_tmp_{0.year}{0.month}{0.day}{0.hour}{0.minute}{0.second}".format(now) + datfile_ext
     copyfile(item["original"], item["copy"])
 
 if args.objname is None:
     filename_root, _ = splitext(basename(dico_files["chain"]["original"]))
-    obj_name = filename_root.split("_")
+    obj_name = filename_root.split("_")[0]
 else:
     obj_name = args.objname
 
 # Read the chain dat file and pickle the info
-chains, lnpost, l_params = read_datfile(dico_files["chain"]["copy"])
+chains, lnpost, l_params = read_chaindatfile(dico_files["chain"]["copy"])
 # Save chain in a pickle
 pickle_stuff(chains, "{}{}".format(obj_name, extension_pickle["chain"]))
 # Save lnprobability in a pickle

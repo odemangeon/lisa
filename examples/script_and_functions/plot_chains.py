@@ -12,7 +12,7 @@ from datetime import datetime
 from os.path import splitext
 from os import remove
 
-from source.tools.emcee_tools import read_datfile, plot_chains
+from source.tools.emcee_tools import read_chaindatfile, plot_chains
 
 # Argument parsing
 parser = argparse.ArgumentParser()
@@ -25,11 +25,11 @@ now = datetime.now()
 
 # Copy the .dat file
 datfile_root, datfile_ext = splitext(args.chain_datfile)
-copied_datefile =  datfile_root + "_tmp_{0.year}{0.month}{0.day}{0.hour}{0.min}{0.sec}".format(now) + datfile_ext
+copied_datefile =  datfile_root + "_tmp_{0.year}{0.month}{0.day}{0.hour}{0.minute}{0.second}".format(now) + datfile_ext
 copyfile(args.chain_datfile, copied_datefile)
 
 # Read the chain dat file
-chains, lnpost, l_params = read_datfile(copied_datefile)
+chains, lnpost, l_params = read_chaindatfile(copied_datefile)
 
 # Produce trace plot
 plot_chains(chains, lnpost, l_params)
