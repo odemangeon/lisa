@@ -45,21 +45,6 @@ mgr_noisemodel.load_setup()
 exptime_Kepler = 0.02043402778  # days
 
 
-# The incremental saving doesn't work because, it writes to the fiel but then I don't know how to
-# load it.
-# def explore(sampler, p0, nsteps, width=50, save_to_file=None):
-#     f = open(save_to_file, "w")
-#     f.close()
-#     for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=False)):
-#         position = result[0]
-#         f = open(save_to_file, "a")
-#         for k in range(position.shape[0]):
-#             f.write("{0:4d} {1:s}\n".format(k, " ".join([str(x) for x in position[k]])))
-#         f.close()
-#         n = int((width + 1) * float(i) / nsteps)
-#         stdout.write("\r[{0}{1}]".format('#' * n, ' ' * (width - n)))
-#     stdout.write("\n")
-
 def get_init_distrib_from_fitvalues(fitted_values):
     """Generate the init_distrib dictionary for generate_random_init_pos from fitted_values.
     :param pd.DataFrame fitted_values: Fitted values from a previous run rows are parameter names
@@ -105,7 +90,7 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
 
 
 def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
-            filename_acceptfrac="chain.dat", overwrite=None, l_param_name=None, logger=None):
+            filename_acceptfrac="acceptfrac.dat", overwrite=None, l_param_name=None, logger=None):
     if save_to_file:
         for filename, cat in [(filename_chain, "chain"), (filename_acceptfrac, "acceptfrac")]:
             if isfile(filename):
