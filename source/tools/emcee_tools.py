@@ -673,7 +673,10 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     """Return selected walker based on the acceptance fraction.
 
     :param np.array lnprobability: Values of the lnprobability taken by each walker at each iteration
-    :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
+    :param float sig_fact: acceptance fraction below quantile - sig_fact * sigma will be rejected
+    :param float quantile: Quantile to use as reference lnprobability value.
+    :param float quantile_walker: Quantile used to assert the lnprobability for each walker. 50 is
+        the meadian, 100 is the highest lnprobability.
     :param int verbose: if 1 speaks otherwise not
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker

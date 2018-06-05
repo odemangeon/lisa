@@ -9,7 +9,7 @@ from copy import deepcopy
 from math import acos, degrees
 
 from batman import TransitModel, TransitParams
-from pytransit import MandelAgol
+# from pytransit import MandelAgol
 
 # from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc

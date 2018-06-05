@@ -111,7 +111,7 @@ class DataFolder(object):
     def data_folder(self, data_folder="default"):
         """Set the data_folder attribute."""
         if data_folder is None:
-            logger.warning("The data_folder has NOT been definded because the provided folder is "
+            logger.warning("The data_folder has NOT been defined because the provided folder is "
                            "None")
         else:
             res = define_folder_withdefault(main_default_folder=input_data_folder,
