@@ -166,7 +166,7 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
     """
     df = read_table(acceptfracdatfile, sep="\s+", header=0)
 
-    return df[df.columns[-1]].values[newaxis, ...]
+    return df[df.columns[-1]].values
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
