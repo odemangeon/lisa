@@ -166,7 +166,7 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
     """
     df = read_table(acceptfracdatfile, sep="\s+", header=0)
 
-    return df[df.columns[-1]]
+    return df[df.columns[-1]].values[newaxis, ...]
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
@@ -916,7 +916,7 @@ def pickle_stuff(stuff, filename):
     """
     # Save chain in a pickle
     with open(filename, "wb") as fpickle:
-        dump(object, fpickle)
+        dump(stuff, fpickle)
 
 
 def save_emceesampler(sampler, l_param_name=None, obj_name=""):
