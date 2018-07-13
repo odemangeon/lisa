@@ -119,7 +119,7 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             if save_to_file:
                 with open(filename_chain, "a") as f:
                     for k in range(position.shape[0]):
-                        f.write("{:4d} {:s} {:>20.12e}\n".format(k, " ".join(["{:>20.12e}".format(xx) for xx in position[k]]), lnprob[k]))
+                        f.write("{:4d} {:s} {:>16.14g}\n".format(k, " ".join(["{:>16.14g}".format(xx) for xx in position[k]]), lnprob[k]))
                 acceptance_fraction = sampler.acceptance_fraction
                 with open(filename_acceptfrac, "w") as f:
                     for k, acceptfrac in enumerate(acceptance_fraction):
