@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, exp, newaxis, concatenate
+from numpy import percentile, exp, newaxis, concatenate, std
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -782,6 +782,13 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     print("l_med_last: {}".format(l_med_last))
     l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    l_mad_last_is0 = [mad_dim == 0.0 for mad_dim in l_mad_last]
+    if any(l_mad_last_is0):
+        for dim in np.where(l_mad_last_is0)[0]:
+            print("MAD returned 0.0 for parameter number: {}. Compute std.".format(dim))
+            l_mad_last[dim] = std(chains[l_walker, last_start_step:, dim])
+            if l_mad_last[dim] == 0.0:
+                raise ValueError("MAD and std returned zero for parameter number: {}.".format(dim))
     print("l_mad_last: {}".format(l_mad_last))
 
     # Compute the start steps of all the first parts of the chains that we will use for the Geweke
@@ -804,7 +811,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     return zscores, first_start_steps
 
 
-def geweke_plot(zscores, first_steps=None, l_param_name=None,
+def geweke_plot(zscores, first_steps=None, l_param_name=None, geweke_thres=2,
                 plot_height=2, plot_width=8, **kwargs_tl):
     ndim = zscores.shape[-1]
     nwalker = zscores.shape[0]
@@ -819,7 +826,7 @@ def geweke_plot(zscores, first_steps=None, l_param_name=None,
         for k in range(nwalker):
             ax[i].plot(first_steps, zscores[k, :, i], alpha=0.5)
 
-        ax[i].hlines([-2, 2], xmin, xmax, linestyles="dashed")
+        ax[i].hlines([-geweke_thres, geweke_thres], xmin, xmax, linestyles="dashed")
     ax[ndim - 1].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
 
