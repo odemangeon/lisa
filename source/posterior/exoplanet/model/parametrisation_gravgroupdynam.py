@@ -136,4 +136,4 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             self.paramcontainers["planets"][planet_name].omega.main = True
             self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
             if self.parametrisation in self.LC_parametrisations:
-                self.paramcontainers["planets"][planet_name].R.main = True
+                self.paramcontainers["planets"][planet_name].Rrat.main = True

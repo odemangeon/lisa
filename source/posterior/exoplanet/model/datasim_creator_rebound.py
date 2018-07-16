@@ -409,14 +409,14 @@ def create_datasimulator_rebound(star, planets, key_whole, key_param, key_mand_k
     param_planets_reb = "["
     l_par_name = ["M", "P", "ecc", "inc", "OMEGA", "omega", "MeanAnomaly"]
     if dico_inst_cat[LC_inst_cat]["has"]:
-        l_par_name = ["R"] + l_par_name
+        l_par_name = ["Rrat"] + l_par_name
         R_planet_list_name = "rp"
         text_param_rp = "{} = [".format(R_planet_list_name)
     for planet in planets.values():
         for param_name in l_par_name:
             param_text = add_param_argument(planet.parameters[param_name], arg_list, key_whole,
                                             key_param, param_nb, par_vec_name)[key_whole]
-            if param_name == "R":
+            if param_name == "Rrat":
                 text_param_rp += param_text + ", "
             else:
                 param_planets_reb += param_text + ", "
