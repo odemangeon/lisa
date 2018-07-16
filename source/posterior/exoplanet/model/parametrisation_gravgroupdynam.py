@@ -20,33 +20,53 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
     @property
     def available_parametrisations(self):
         """List of the available parametrisation."""
-        return ["RV_Rebound_Standard", "LC_Rebound_Standard", "RV&LC_Rebound_Standard"]
+        return ["RV_Rebound_Standard", "LC_Rebound_Standard", "RV&LC_Rebound_Standard",
+                "RV_Rebound_2p", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
 
     @property
     def RV_parametrisations(self):
         """List of the available parametrisations for RV datasets."""
-        return ["RV_Rebound_Standard", "RV&LC_Rebound_Standard"]
+        return ["RV_Rebound_Standard", "RV&LC_Rebound_Standard", "RV_Rebound_2p", "RV&LC_Rebound_2p"]
 
     @property
     def LC_parametrisations(self):
         """List of the available parametrisations for RV datasets."""
-        return ["LC_Rebound_Standard", "RV&LC_Rebound_Standard"]
+        return ["LC_Rebound_Standard", "RV&LC_Rebound_Standard", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
 
     @property
     def RVandLC_parametrisations(self):
         """List of the available parametrisations for RV datasets."""
-        return ["RV&LC_Rebound_Standard"]
+        return ["RV&LC_Rebound_Standard", "RV&LC_Rebound_2p"]
+
+    @property
+    def Standard_parametrisation(self):
+        """List of the available parametrisations for RV datasets."""
+        return ["RV_Rebound_Standard", "LC_Rebound_Standard", "RV&LC_Rebound_Standard"]
+
+    @property
+    def TwoPlanets_parametrisation(self):
+        """List of the available parametrisations for two planet parameterisation."""
+        return ["RV_Rebound_2p", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
 
     @GravGroup_Parametrisation.parametrisation.setter
     def parametrisation(self, value=None):
         """Set the parametrisation to use."""
         if value is None:
             if Counter(self.dataset_db.inst_categories) == Counter(["RV", ]):
-                GravGroup_Parametrisation.parametrisation.fset(self, "RV_Rebound_Standard")
+                if self.nb_planets == 2:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "RV_Rebound_2p")
+                else:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "RV_Rebound_Standard")
             elif Counter(self.dataset_db.inst_categories) == Counter(["LC", ]):
-                GravGroup_Parametrisation.parametrisation.fset(self, "LC_Rebound_Standard")
+                if self.nb_planets == 2:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "LC_Rebound_2p")
+                else:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "LC_Rebound_Standard")
             elif Counter(self.dataset_db.inst_categories) == Counter(["LC", "RV"]):
-                GravGroup_Parametrisation.parametrisation.fset(self, "RV&LC_Rebound_Standard")
+                if self.nb_planets == 2:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "RV&LC_Rebound_2p")
+                else:
+                    GravGroup_Parametrisation.parametrisation.fset(self, "RV&LC_Rebound_Standard")
             else:
                 raise ValueError("{} doesn't correspond to a predefined parametrisation."
                                  "".format(self.dataset_db.inst_categories))
@@ -130,10 +150,21 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].M.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
-            self.paramcontainers["planets"][planet_name].ecc.main = True
-            self.paramcontainers["planets"][planet_name].inc.main = True
-            self.paramcontainers["planets"][planet_name].OMEGA.main = True
-            self.paramcontainers["planets"][planet_name].omega.main = True
-            self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
+            if self.parametrisation in self.TwoPlanets_parametrisation:
+                self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name="alpha_ref", name_prefix=self.full_name, main=True))
+            else:
+                self.paramcontainers["planets"][planet_name].ecc.main = True
+                self.paramcontainers["planets"][planet_name].inc.main = True
+                self.paramcontainers["planets"][planet_name].OMEGA.main = True
+                self.paramcontainers["planets"][planet_name].omega.main = True
+                self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
             if self.parametrisation in self.LC_parametrisations:
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
+
+        if self.parametrisation in self.TwoPlanets_parametrisation:
+            self.add_parameter(Parameter(name="q_plus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="q_p", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="ecos_plus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="ecos_minus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="esin_plus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="esin_minus", name_prefix=self.full_name, main=True))
