@@ -34,5 +34,5 @@ class DocFunction(object):
         """Return the list of arguments names."""
         return self.__arg_list
 
-    def __call__(self, *args):
-        return self.function(*args)
+    def __call__(self, *args, **kwargs):
+        return self.function(*args, **kwargs)

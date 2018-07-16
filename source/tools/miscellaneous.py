@@ -8,10 +8,11 @@ Provide toolbox with miscellaneous tools.
 @TODO:
 """
 from logging import getLogger
-from os.path import basename, splitext
+from os.path import basename, splitext, expanduser
 import os
 
 from .human_machine_interface.QCM import QCM_utilisateur
+from .human_machine_interface.askpath import ask_exisiting_path
 
 ## Logger object
 logger = getLogger()
@@ -83,16 +84,7 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
           automatically define as "main_default/object_name". To use this you should assign
           "default"
         - Via the folder argument: You can provide any folder here
-    This function does:
-        1. Check if the folder argument has been provided. If yes use this otherwise try
-            use a folder with the object name in the folder designated by the main_default_folder
-            provided in argument
-        2. Test is the folder selected in 1 exists
-        3. If yes, return this folder
-        4. If no, Ask if the user want to create the folder selected.
-            4.1. If yes, create it and return the folder selected
-            4.2. If no, don't create, don't return and put log warning message
-        5. Log the result of the execution
+
     ----
     Arguments:
         main_default_folder : string,
@@ -103,38 +95,46 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
             path to the folder which contain the data. If provided the main_default_folder and
             objected argument are ignored.
     """
-    # 1.
+    # 1. Check if the folder argument has been provided. If yes use this otherwise try use a folder
+    # with the object name in the folder designated by the main_default_folder provided in argument
     folder_provided = (folder != "default")
     if folder_provided:
-        folder_selected = folder
+        folder_selected = expanduser(folder)
     else:
-        folder_selected = os.path.join(main_default_folder, object_name)
-    # 2.
+        folder_selected = os.path.join(expanduser(main_default_folder), object_name)
+    # 2. Test is the folder selected in 1 exists
     folder_exist = os.path.isdir(folder_selected)
-    # 3.
+    # 3. If yes, return this folder
     if folder_exist:
         folder_defined = True
-    # 4.
+    # 4. If no, Ask if the user want to create the folder selected.
     else:
         if folder_provided:
             error_msg = "Folder doesn't exist: {}".format(folder_selected)
-            reply = QCM_utilisateur(error_msg + "\n Do you want to create it ? ['y', 'n']",
+            reply = QCM_utilisateur(error_msg + "\n Do you want to create it ? (reply by 'y' or 'n')\n",
                                     ['y', 'n'])
         else:
-            msg = ("You didn't provided any folder and the standard one doesn't exist."
+            msg = ("You didn't provided any folder and the standard one doesn't exist. "
                    "Do you want to create the standard folder (reply by 'y' or 'n'):\n")
             reply = QCM_utilisateur(msg, ["y", "n"])
-        # 4.1.
+        # 4.1. If yes, create it and return the folder selected
         if reply == "y":
             os.makedirs(folder_selected)
             folder_defined = True
             logger.info("Folder created: {}".format(folder_selected))
-        # 4.2.
+        # 4.2. If no, don't create, and ask for an existing folder
         else:
-            folder_defined = False
-            logger.warning("folder has not been defined because provided folder doesn't "
-                           "exist and has not been created.")
-    # 5.
+            msg = ("Provide the path to an existing folder (Press enter to quit without defining "
+                   "any folder)\n")
+            reply = ask_exisiting_path(msg, exit_answer="", file_or_dir="dir")
+            if reply is None:
+                folder_defined = False
+                logger.warning("folder has not been defined because provided folder doesn't "
+                               "exist and has not been created.")
+            else:
+                folder_defined = True
+                folder_selected = reply
+    # 5. Log the result of the execution
     if folder_defined:
         if folder_provided:
             logger.debug("folder is defined as a specific folder: {}".format(folder_selected))

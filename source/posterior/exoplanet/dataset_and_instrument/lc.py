@@ -19,6 +19,9 @@ from source.posterior.core.parameter import Parameter
 ## Logger
 logger = logging.getLogger()
 
+## LC instrument category
+LC_inst_cat = "LC"
+
 
 class LC_Dataset(Dataset):
     """docstring for LC_Datasetc class.
@@ -45,8 +48,8 @@ class LC_Dataset(Dataset):
 
     def get_kwargs(self):
         pandas_df = self.get_datatable()
-        return {"data": array(pandas_df["flux"]),
-                "data_err": array(pandas_df["flux_err"]),
+        return {"data": array(pandas_df[self._data_name]),
+                "data_err": array(pandas_df[self._data_err_name]),
                 "t": array(pandas_df["time"]),
                 "tref": array(pandas_df["time"]).min()}
 
@@ -68,7 +71,7 @@ class LC_Dataset(Dataset):
 class LC_Instrument(Core_Instrument):
     """docstring for LC_Instrument."""
 
-    __category__ = "LC"
+    __category__ = LC_inst_cat
     # __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
     #                     "driftOOT": {"unit": "wo unit/s"}}
     __params_model__ = {}

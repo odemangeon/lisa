@@ -121,6 +121,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="omega", name_prefix=self.full_name, main=False))
         ## Longitude of the acending node
         self.add_parameter(Parameter(name="OMEGA", name_prefix=self.full_name, main=False))
+        ## Mean anomaly
+        self.add_parameter(Parameter(name="MeanAnomaly", name_prefix=self.full_name, main=False))
         ## First Transit time
         self.add_parameter(Parameter(name="tc", name_prefix=self.full_name, main=False))
         ## Radial velocity semi-amplitude

@@ -21,9 +21,13 @@ logger = getLogger()
 
 
 class RunFolder(object):
-    """docstring for RunFolder."""
+    """docstring for the RunFolder class."""
 
     def __init__(self, run_folder=None):
+        """Initialise the run_folder property.
+
+        :param string/None run_folder: Folder to use as run folder. For more info check run_folder
+        """
         # 1.
         ## Folder where the program should look for config files by default: Initialise it
         self.run_folder = run_folder
@@ -49,7 +53,7 @@ class RunFolder(object):
 
     @run_folder.setter
     def run_folder(self, run_folder="default"):
-        """Set the run_folder attribute."""
+        """Set the run_folder attribute, see run_folder property docstring."""
         if run_folder is None:
             logger.warning("The run_folder has NOT been defined because the provided folder is "
                            "None")
@@ -70,7 +74,8 @@ class RunFolder(object):
     def look4runfile(self, file_path):
         """Look for a file in absolute or in the default folder.
 
-        Return None if file is not found.
+        :param string file_path: path or name to the file you are looking for.
+        :return string absolute_path: Path to the file that you are looking for. None if not found.
         """
         return look4file_withdeffolder(file_path=file_path, default_folder=self.run_folder)
 
@@ -106,7 +111,7 @@ class DataFolder(object):
     def data_folder(self, data_folder="default"):
         """Set the data_folder attribute."""
         if data_folder is None:
-            logger.warning("The data_folder has NOT been definded because the provided folder is "
+            logger.warning("The data_folder has NOT been defined because the provided folder is "
                            "None")
         else:
             res = define_folder_withdefault(main_default_folder=input_data_folder,

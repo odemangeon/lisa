@@ -29,7 +29,7 @@ if __name__ == "__main__":
     npoints = len(ttt)
 
     stellar_mass = 0.97061886114722451
-    stellar_radius =  0.926
+    stellar_radius = 0.926
     limb_dark = [0.460, 0.210]
     treference = 56813.0
     supersample = 20

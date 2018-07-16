@@ -5,6 +5,7 @@ Created on Fri May 25 17:39:11 2012
 @author: olivierdemangeon
 """
 import logging
+import readline  # When readline module was loaded, input() will use it to provide elaborate line editing and history features.
 
 ## logger
 logger = logging.getLogger()

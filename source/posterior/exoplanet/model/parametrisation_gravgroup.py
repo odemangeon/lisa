@@ -92,7 +92,7 @@ class GravGroup_Parametrisation(object):
 
         # Check that the instrument category of all the datasets is as expected otherwise raise a
         # warning
-        self.__check_dataset_instcat()
+        self._check_dataset_instcat()
         # Init and Fill the dictionary parametrisation_kwargs
         self.save_parametrisation_kwargs(**kwargs)
 
@@ -105,6 +105,7 @@ class GravGroup_Parametrisation(object):
         # If needed apply the limbdarkening coefficient parametrisation
         self.limbdarkening_parametrisation()
 
+    # TODO: This function doesn't seems to be used anywhere. Check why
     def __check_args(self, **kwargs):
         """Raise an error if the provided arguments are the one expected."""
         l_missing = []
@@ -147,25 +148,21 @@ class GravGroup_Parametrisation(object):
 
     def __check_nstar(self):
         """Raise an error if the number of stars in the gravgroup is not the one expected."""
-        if self.parametrisation in ["RV_EXOFAST", "LC_EXOFAST", "RV&LC_EXOFAST", "LC_Multis",
-                                    "RV&LC_Multis"]:
-            if self.nb_of_paramcontainers["stars"] != 1:
-                raise ValueError("{} parametrisation can only be applied to gravgroups "
-                                 "with exactly 1 star. This gravgroups has {} star(s)."
-                                 "".format(self.parametrisation,
-                                           self.nb_of_paramcontainers["stars"]))
+        if self.nb_of_paramcontainers["stars"] != 1:
+            raise ValueError("{} parametrisation can only be applied to gravgroups "
+                             "with exactly 1 star. This gravgroups has {} star(s)."
+                             "".format(self.parametrisation,
+                                       self.nb_of_paramcontainers["stars"]))
 
     def __check_nplanet(self):
         """Raise an error if the number of planets in the gravgroup is not the one expected."""
-        if self.parametrisation in ["RV_EXOFAST", "LC_EXOFAST", "RV&LC_EXOFAST", "LC_Multis",
-                                    "RV&LC_Multis"]:
-            if self.nb_of_paramcontainers["planets"] < 1:
-                raise ValueError("{} parametrisation can only be applied to gravgroups "
-                                 "with at least 1 planet. This gravgroups has {} planet(s)."
-                                 "".format(self.parametrisation,
-                                           self.nb_of_paramcontainers["planets"]))
+        if self.nb_of_paramcontainers["planets"] < 1:
+            raise ValueError("{} parametrisation can only be applied to gravgroups "
+                             "with at least 1 planet. This gravgroups has {} planet(s)."
+                             "".format(self.parametrisation,
+                                       self.nb_of_paramcontainers["planets"]))
 
-    def __check_dataset_instcat(self):
+    def _check_dataset_instcat(self):
         """Raise an error if the instrument categories of the dataset are not as expected."""
         if self.parametrisation in ["RV_EXOFAST", ]:
             l_instcat_expected = ["RV", ]
@@ -186,14 +183,10 @@ class GravGroup_Parametrisation(object):
         Volume 125,Number 923.
         """
         # Apply the parametrisation to the star parameters
-        star_name = list(self.paramcontainers["stars"].keys())[0]
-        if self.parametrisation in self.RV_parametrisations:
-            self.paramcontainers["stars"][star_name].v0.main = True
-            (self.paramcontainers["stars"][star_name].
-             init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
-                                      RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
-                                                                                    None))
+        self.apply_star_SystemicRV_parametrisation()
+
         if self.parametrisation in self.LC_multis_parametrisations:
+            star_name = list(self.paramcontainers["stars"].keys())[0]
             self.paramcontainers["stars"][star_name].rho.main = True
 
         # Apply the parametrisation to the planets parameters
@@ -211,6 +204,18 @@ class GravGroup_Parametrisation(object):
                 self.paramcontainers["planets"][planet_name].tc.main = True
                 self.paramcontainers["planets"][planet_name].secosw.main = True
                 self.paramcontainers["planets"][planet_name].sesinw.main = True
+
+    def apply_star_SystemicRV_parametrisation(self):
+        """Apply the parametrisation for the modelling of the systemic RV.
+        """
+        # Apply the parametrisation to the star parameters for the systemic RV
+        star_name = list(self.paramcontainers["stars"].keys())[0]
+        if self.parametrisation in self.RV_parametrisations:
+            self.paramcontainers["stars"][star_name].v0.main = True
+            (self.paramcontainers["stars"][star_name].
+             init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
+                                      RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
+                                                                                    None))
 
     def apply_instmodel_parametrisation(self):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""

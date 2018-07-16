@@ -125,11 +125,11 @@ class Instmodel4DatasetAttr(object):
     """docstring for ProvideDatasetDbAttr."""
     def __init__(self, instmodel4dataset=None, list_datasetnames=None, lock=None):
         """Initialise the instmodel4dataset attribute.
-        ----
-        Args:
-            - instmodel4dataset: Even if it has a lock the lock of the new instance is decided by
+
+        :param instmodel4dataset: Even if it has a lock the lock of the new instance is decided by
                 the lock arg (see below).
-            - Lock : This argument will decide of the lock affected to the new instance.
+        :param list_datasetnames:
+        :param lock: This argument will decide of the lock affected to the new instance.
 
         """
         self.replace_instmodel4dataset(instmodel4dataset=instmodel4dataset,

@@ -43,6 +43,8 @@ logger = getLogger()
 manager_model = Manager_Model()
 manager_model.load_setup()
 
+alldtst_key = DatabaseFunc._alldtst_key
+
 
 class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
                 DatasetsFileDbAttr):
@@ -227,12 +229,10 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """
         list_datasetnames = self.dataset_db.get_datasetnames()
         self.instmodel4dataset.update(list_datasetnames)  # 1.
-        # self.model.init_missinginstmodels()  # 2. TODO: Provide a noisemod4instmodfullname
         self.datasimulators.update_datasets()  # 3.
         self.lnpriors.update_datasets()  # 4.
         self.lnlikelihoods.update_datasets()  # 5.
         self.lnposteriors.update_datasets()  # 6.
-        self.noisemodels.update_datasets()  # 6.
         super(Posterior, self).dataset_lock()  # 7.
 
     def unlock(self):
@@ -275,8 +275,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
             (self.lnpriors.dataset_db.
              update(self.model.
                     create_lnpriors_perdataset(individual_priors=self.lnpriors.individual,
-                                               lnprior_db=self.lnpriors.instrument_db,
-                                               instmodel4dataset=self.instmodel4dataset)))
+                                               lnlike_db_dtst=self.lnlikelihoods.dataset_db)))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
@@ -290,10 +289,10 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         if self.islocked_dataset_db:
             self.datasimulators.instrument_db.update(self.model.create_datasimulators())
             (self.datasimulators.dataset_db.
-             update(self.model.
-                    create_datasimulators_perdataset(datasim_db=self.datasimulators.instrument_db,
-                                                     dataset_db=self.dataset_db,
-                                                     instmodel4dataset=self.instmodel4dataset)))
+             update(self.model.create_datasimulators_perdataset(dataset_db=self.dataset_db)))
+            (self.datasimulators.dataset_db
+             [alldtst_key]) = (self.model.
+                               create_datasimulator_alldatasets(dataset_db=self.dataset_db))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
@@ -302,34 +301,35 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         """Return the current content lnprior database."""
         return self.__lnlike_db
 
-    @property
-    def noisemodels(self):
-        """Return the current content noisemodels database."""
-        return self.__noisemodel_db
-
     def get_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
-            datasim_db = self.datasimulators.instrument_db
-            db_lnlike, db_noise = self.model.create_lnlikelihoods(datasim_db=datasim_db)
-            self.lnlikelihoods.instrument_db.update(db_lnlike)
-            self.noisemodels.instrument_db.update(db_noise)
+            # Since for now I cannot produce lnlike for datasim that doesn't include the dataset
+            # kwargs, I cannot fill the instrument_db in self.likelihoods
+            # datasim_db = self.datasimulators.instrument_db
+            # db_lnlike = self.model.create_lnlikelihoods(datasim_inst_db=datasim_db)
+            # self.lnlikelihoods.instrument_db.update(db_lnlike)
+
+            # Create the lnlikelihood function for each dataset
             (self.lnlikelihoods.dataset_db.
              update(self.model.
                     create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.
-                                                                      dataset_db),
-                                                    dataset_db=self.dataset_db)))
+                                                                      dataset_db)
+                                                    )
+                    )
+             )
             # (self.lnlikelihoods.dataset_db.
             #  update(self.model.
             #         create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
             #                                         dataset_db=self.dataset_db,
             #                                         instmodel4dataset=self.instmodel4dataset)))
-            (self.lnlikelihoods.dataset_db['all'], dico_noisemodel_instance
-             ) = (self.model.
-                  create_lnlikelihood_alldataset(datasim_db_dtset=self.datasimulators.dataset_db,
-                                                 dataset_db=self.dataset_db,
-                                                 instmodel4dataset=self.instmodel4dataset))
-            self.noisemodels.dataset_db.update(dico_noisemodel_instance)
+            # (self.lnlikelihoods.dataset_db['all'], dico_noisemodel_instance
+            #  ) = (self.model.
+            #       create_lnlikelihood_alldataset(datasim_db_dtset=self.datasimulators.dataset_db,
+            #                                      dataset_db=self.dataset_db,
+            #                                      instmodel4dataset=self.instmodel4dataset
+            #                                      )
+            #       )
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
@@ -397,7 +397,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
             arg_list_new = lnprior_db_dtset[dataset_name].arg_list.copy()
 
             def lnpost_withdataset_creator(prior_func, like_func, arg_list):
-                def lnpost_withdataset(p):
+                def lnpost_withdataset(p, *args, **kwargs):
                     # logger.debug("paramnames lnpost ({}): {}\nparams lnpost ({}): {}"
                     #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
                     lnprior_val = prior_func(p)
@@ -407,7 +407,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
                     else:
                         # lnlike_val = like_func(p)
                         # logger.debug("lnlike: {}".format(lnlike_val))
-                        return like_func(p) + lnprior_val
+                        return like_func(p, *args, **kwargs) + lnprior_val
                 return DocFunction(function=lnpost_withdataset, arg_list=arg_list_new)
 
             db[dataset_name] = lnpost_withdataset_creator(prior_func=lnprior_func,

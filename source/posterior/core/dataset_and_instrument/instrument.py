@@ -65,7 +65,13 @@ class Instrument_Model(Core_ParamContainer):
     __category__ = instrument_model_category
 
     def __init__(self, instrument, name, noise_model=None):
-        """Docstring of the Instrument_Model init method."""
+        """Docstring of the Instrument_Model init method.
+
+        :param Core_Instrument instrument: Instrument that is modelled.
+        :param string name: Name of the instrument model
+        :param string/None noise_model: Name of noise model to use for this instruments data
+            likelihood.
+        """
         # name_prefix is set to None because it will be set when the gravgroup is set.
         super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
         self.__instrument = instrument

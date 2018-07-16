@@ -32,12 +32,12 @@ from numpy import ndarray, stack
 from numpy import random
 from logging import getLogger
 
-from IPython import get_ipython
+# from IPython import get_ipython
 from numpy import pi
 
 from .human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
 from .human_machine_interface.QCM import QCM_utilisateur
-from .emcee_tools import ChainsInterpret
+from .chain_interpreter import ChainsInterpret
 
 
 logger = getLogger()
@@ -243,6 +243,15 @@ def getaoverr(P, rhostar):
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
     return (  (rhostar *  gm * Ps**2. / (4. * np.pi**2.) ) )**(1.0/3.0) / rsun
+
+def getaoverr_fromRstar(a, Rstar):
+    """Return the a over Rstar.
+
+    :param float/np.ndarray a: Planetary orbital semi-major axis in au.
+    :param float/np.ndarray Rstar: Stellar radius in solar radius
+    :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    """
+    return a * au / (Rstar * rsun)
 
 def getaoverr_fromspec(loggstar, P, Rstar):
     """Return the stellar density from the transit.
@@ -490,21 +499,25 @@ def get_meanA(P, tc, treference, secosw, sesinw):
 
 
 
-def getTeqpl(Teffst, aR, ecc, A=0):
+def getTeqpl(Teffst, aR, ecc, A=0, f=1/4.):
     """Return the planet equilibrium temperature.
 
     Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
     and https://en.wikipedia.org/wiki/Stefan%E2%80%93Boltzmann_law
     and later updated to include the effect of excentricity on the average stellar planet distance
-    according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L
+    according to equation 5 p 25 of Laughlin & Lissauer 2015arXiv150105685L (1501.05685)
+    Plus Exoplanet atmospheres, physical processes, Sara Seager, p30 eq 3.9 for f contribution.
 
     :param float/np.ndarray Teffst: Effective temperature of the star
-    :param float/np.ndarray Rst: Stellar radius in solar radius
-    :param float/np.ndarray a: Planetary orbital semi-major axis (mean planet to star distance) in
-                               au
+    :param float/np.ndarray aR: Ration of the planetary orbital semi-major axis over the stellar
+        radius (without unit)
+    :param float/np.ndarray A: Bond albedo (should be between 0 and 1)
+    :param float/np.ndarray f: Redistribution factor. If 1/4 the energy is uniformly redistributed
+        over the planetary surface. If f = 2/3, no redistribution at all, the atmosphere immediately
+        reradiate whithout advection.
     :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
     """
-    return Teffst * (1 - A)**(1 / 4.) * np.sqrt(0.5 / aR) / (1 - ecc**2)**(1/8.)
+    return Teffst * (f * (1 - A))**(1 / 4.) * np.sqrt(1 / aR) / (1 - ecc**2)**(1/8.)
 
 def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
@@ -565,15 +578,97 @@ def getRstar(rho, M, Rfact=1.):
     return Rfact * (M / rho)**(1. / 3)
 
 
-def get_secondary_chains(model, chaininterpret, star_kwargs=None):
+def getRstar(rho, M, Rfact=1.):
+    """Return the stellar radius.
+
+    :param float/np.ndarray rho: Stellar density (in solar density)
+    :param float/np.ndarray M: Stellar mass (in solar mass)
+    :param float Rfact: Multiplicative factor for unit purposes (if !=1 watch out units)
+
+    :return float/np.ndarray R: Stellar radius (in solar radius if Rfact=1)
+    """
+    return Rfact * (M / rho)**(1. / 3)
+
+
+def getloggpl(M, R):
+    """Return the planetary log(g).
+
+    :param float/np.ndarray M: Planetary mass (in jupiter mass)
+    :param float/np.ndarray R: Planetary radius (in jupiter radius)
+
+    :return float/np.ndarray loggpl: Planetary logg
+    """
+    # mjup in kg and rjup in m
+    return np.log10(grav * M * mjup * 1000 / np.power(R * rjup * 100, 2))
+
+
+def getgpl(M, R):
+    """Return the planetary surface gravity.
+
+    :param float/np.ndarray M: Planetary mass (in jupiter mass)
+    :param float/np.ndarray R: Planetary radius (in jupiter radius)
+
+    :return float/np.ndarray gpl: Planetary surface gravity (im m.s-2)
+    """
+    return const.G.value * M * mjup / np.power(R * rjup, 2)
+
+
+def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
     """
-    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
-        # Create a dictionary with the main parameter values either chain (if free) or one value
-        dico_par = {}
-        for param in model.get_list_params(main=True):
-            if param.free:
-                dico_par[param.full_name] = chaininterpret[..., param.full_name]
+    # Create a dictionary with the main parameter values either chain (if free) or one value
+    dico_par = {}
+    for param in model.get_list_params(main=True):
+        if param.free:
+            dico_par[param.full_name] = chaininterpret[..., param.full_name]
+        else:
+            dico_par[param.full_name] = param.value
+
+    # Compute the chains for secondary parameters.
+    # Initialise the results object
+    l_parname_sec_chain = []
+    l_parname_sec_fixed = []
+
+    star = list(model.stars.values())[0]
+
+    # Decide if you use rho or R as main stellar physical parameter
+    if ("rho" not in star_kwargs) and ("R" not in star_kwargs):
+        intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
+                             "'R']\n")
+        reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
+    else:
+        reply = None
+    if reply == star.rho.name:
+        Rstar_infered = True
+        l_param_star = [star.M, star.rho, star.Teff]
+    elif reply == star.R.name:
+        Rstar_infered = False
+        l_param_star = [star.M, star.R, star.Teff]
+    else:
+        if star.rho.name in star_kwargs:
+            Rstar_infered = True
+            l_param_star = [star.M, star.rho, star.Teff]
+        else:
+            Rstar_infered = False
+            l_param_star = [star.M, star.R, star.Teff]
+
+    # Simulate stellar Mass, Teff, radius or rho chains if needed
+    for param in l_param_star:
+        if param.main is False:
+            ask_param_value = True
+            ask_param_error = True
+            if param.name in star_kwargs:
+                if "value" in star_kwargs[param.name]:
+                    param_value = star_kwargs[param.name]["value"]
+                    ask_param_value = False
+                if "error" in star_kwargs[param.name]:
+                    param_error = star_kwargs[param.name]["error"]
+                    ask_param_error = False
+            if ask_param_value:
+                # Ask to provide a stellar mass value
+                intitule_question = ("Enter a {} value. If you just press enter 1"
+                                     "is assumed.\n".format(param.full_name))
+                param_value, answered = Ask4Number(intitule_question, default_value=1.)
             else:
                 dico_par[param.full_name] = param.value
 
@@ -630,18 +725,21 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
                     if ask_param_value and not(answered):
                         param_error = 0.
 
-                # if provided simulated a stellar mass chains else only give a fixed value.
-                if param_error == 0.:
-                    dico_par[param.full_name] = param_value
-                else:
-                    dico_par[param.full_name] = random.normal(loc=param_value,
-                                                              scale=param_error,
-                                                              size=chaininterpret.shape[:-1])
+            # if provided simulated a stellar mass chains else only give a fixed value.
+            if param_error == 0.:
+                dico_par[param.full_name] = param_value
+            else:
+                dico_par[param.full_name] = random.normal(loc=param_value,
+                                                          scale=param_error,
+                                                          size=chaininterpret.shape[:-1])
 
-        if Rstar_infered:
-            dico_par[star.R.full_name] = getRstar(dico_par[star.rho.full_name],
-                                                  dico_par[star.M.full_name])
+    # Compute R star from rho if needed
+    if Rstar_infered:
+        dico_par[star.R.full_name] = getRstar(dico_par[star.rho.full_name],
+                                              dico_par[star.M.full_name])
+        l_parname_sec_chain.append(star.R.full_name)
 
+    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
         # Iterate over planet related secondary
         for planet in model.planets.values():
             # Prepare the list of tuples secondary parameter name, function, parameters
@@ -711,6 +809,116 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
             l_tup_planet.append((planet.H.full_name, getscaleheigh,
                                  [planet.M.full_name, planet.R.full_name, planet.Teq.full_name]))
 
+            # Compute the secondary parameter
+            for sec_paraname, func, param_list in l_tup_planet:
+                logger.debug("Computing secondary parameter: {}".format(sec_paraname))
+                values = func(*[dico_par[param] for param in param_list])
+                if isinstance(values, Number) or isinstance(values, ndarray):
+                    dico_par[sec_paraname] = values
+                    if isinstance(values, Number):
+                        l_parname_sec_fixed.append(sec_paraname)
+                    else:
+                        if values.size == 1:
+                            l_parname_sec_fixed.append(sec_paraname)
+                        elif values.size > 1:
+                            l_parname_sec_chain.append(sec_paraname)
+                        else:
+                            raise ValueError("Secondary parameter computation {} didn't return "
+                                             "any result: {}".format(sec_paraname, values))
+                else:
+                    raise ValueError("Secondary parameter computation {} return an unexpected "
+                                     "object type: {}".format(sec_paraname, type(values)))
+        chainIsec = ChainsInterpret(stack([dico_par[param] for param in l_parname_sec_chain],
+                                          axis=-1),
+                                    l_parname_sec_chain)
+        return chainIsec, l_parname_sec_chain
+
+    elif Counter(["RV", ]) == Counter(model.dataset_db.inst_categories):
+        # Default value for planet_kwargs and simulate if needed
+        dico_def_value = {"inc": 90.}
+        if planet_kwargs is None:
+            planet_kwargs = {}
+        for planet in model.planets.values():
+            pl_name = planet.name
+            if planet.name not in planet_kwargs:
+                planet_kwargs[pl_name] = {}
+            # Simulate planet inclination if needed.
+            for param in [planet.inc]:
+                if param.main is False:
+                    ask_param_value = False
+                    ask_param_error = False
+                    if param.name in planet_kwargs[pl_name]:
+                        if "value" in planet_kwargs[pl_name][param.name]:
+                            param_value = planet_kwargs[pl_name][param.name]["value"]
+                            ask_param_value = False
+                        if "error" in planet_kwargs[pl_name][param.name]:
+                            param_error = planet_kwargs[pl_name][param.name]["error"]
+                            ask_param_error = False
+                    if ask_param_value:
+                        # Ask to provide a stellar mass value
+                        intitule_question = ("Enter a {} value. If you just press enter {}"
+                                             " is assumed.\n".format(param.full_name,
+                                                                     dico_def_value[param.name]))
+                        param_value, answered = Ask4Number(intitule_question,
+                                                           default_value=dico_def_value[param.name])
+                    else:
+                        answered = False
+                    # If replied ask to provide and mass error value, otherwise assume no error
+                    if ask_param_error and not(ask_param_value and not(answered)):
+                        intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
+                                             "no uncertainty is assumed.\n".format(param.full_name))
+                        param_error, _ = Ask4PositiveNumber(intitule_question, default_value=0.)
+                    else:
+                        if ask_param_value and not(answered):
+                            param_error = 0.
+                    # if provided simulated a stellar mass chains else only give a fixed value.
+                    if param_error == 0.:
+                        dico_par[param.full_name] = param_value
+                    else:
+                        dico_par[param.full_name] = random.normal(loc=param_value,
+                                                                  scale=param_error,
+                                                                  size=chaininterpret.shape[:-1])
+
+        # Iterate over planet related secondary
+        for planet in model.planets.values():
+            # Prepare the list of tuples secondary parameter name, function, parameters
+            l_tup_planet = []
+            # eccentricity
+            l_tup_planet.append((planet.ecc.full_name, getecc,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # omega : argument of periastron in degrees
+            l_tup_planet.append((planet.omega.full_name, getomega_deg,
+                                 [planet.secosw.full_name, planet.sesinw.full_name]))
+            # Mpsini: Planetary mass sinus inclination
+            l_tup_planet.append((planet.Msini.full_name, getMpsininc,
+                                 [planet.P.full_name, planet.K.full_name, star.M.full_name,
+                                  planet.ecc.full_name]))
+            # Mp: Planetary mass
+            if planet.inc.full_name in dico_par:
+                l_tup_planet.append((planet.M.full_name, getMp,
+                                     [planet.P.full_name, planet.K.full_name, star.M.full_name,
+                                      planet.ecc.full_name, planet.inc.full_name]))
+            # a: semi major axis
+            if planet.inc.full_name in dico_par:
+                l_tup_planet.append((planet.a.full_name, geta,
+                                     [planet.P.full_name, star.M.full_name,
+                                      planet.M.full_name]))
+            else:
+                l_tup_planet.append((planet.a.full_name, geta,
+                                     [planet.P.full_name, star.M.full_name,
+                                      planet.Msini.full_name]))
+            # aR: semi major axis in stellar radius
+            l_tup_planet.append((planet.aR.full_name, getaoverr_fromRstar,
+                                 [planet.a.full_name, star.R.full_name]))
+            # Teq: Equilibrium temperature
+            l_tup_planet.append((planet.Teq.full_name, getTeqpl,
+                                 [star.Teff.full_name, planet.aR.full_name, planet.ecc.full_name]))
+            # L: Stellar luminosity
+            l_tup_planet.append((star.L.full_name, getLs,
+                                 [star.R.full_name, star.Teff.full_name]))
+            # Fi: Planetary insolation flux
+            l_tup_planet.append((planet.Fi.full_name, getFi,
+                                 [star.L.full_name, planet.a.full_name]))
             # Compute teh secondary parameter
             for sec_paraname, func, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
@@ -740,13 +948,13 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None):
         raise ValueError("For now this function only handles LC and RV parametrisation.")
 
 
-if __name__ == "__main__":
-    ipython = get_ipython()
-    print("Time it for getecc(0.1, 0.2)")
-    ipython.magic("timeit getecc(0.1, 0.2)")
-    print("Time it for getecc_fast(0.1, 0.2)")
-    ipython.magic("timeit getecc_fast(0.1, 0.2)")
-    print("\nTime it for getomega(0.1, 0.2)")
-    ipython.magic("timeit getomega(0.1, 0.2)")
-    print("Time it for getomega_fast(0.1, 0.2)")
-    ipython.magic("timeit getomega_fast(0.1, 0.2)")
+# if __name__ == "__main__":
+#     ipython = get_ipython()
+#     print("Time it for getecc(0.1, 0.2)")
+#     ipython.magic("timeit getecc(0.1, 0.2)")
+#     print("Time it for getecc_fast(0.1, 0.2)")
+#     ipython.magic("timeit getecc_fast(0.1, 0.2)")
+#     print("\nTime it for getomega(0.1, 0.2)")
+#     ipython.magic("timeit getomega(0.1, 0.2)")
+#     print("Time it for getomega_fast(0.1, 0.2)")
+#     ipython.magic("timeit getomega_fast(0.1, 0.2)")

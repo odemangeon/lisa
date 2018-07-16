@@ -14,11 +14,13 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-from collections import OrderedDict
+from collections import OrderedDict  # , defaultdict
 from numpy import array
+# from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
+from .instrument_container import InstrumentContainerInterface
 from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from ..paramcontainer import Core_ParamContainer
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -48,28 +50,26 @@ manager_noisemodel = Manager_NoiseModel()
 manager_noisemodel.load_setup()
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamContainerDatabase,
-                 Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
-                 metaclass=MandatoryReadOnlyAttr):
+class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, InstrumentContainerInterface,
+                 ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator,
+                 DatasimulatorCreator, metaclass=MandatoryReadOnlyAttr):
+    """docstring for Core_Model abstract class."""
 
     __mandatoryattrs__ = ["category"]
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
 
-    """docstring for Core_Model abstract class."""
     def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None,
                  l_instmod_fullnames=[]):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
-        This __init__ does:
-            1. Set name of the model and add a list of parameter attribute
-        ----
-        Arguments:
-            name  : string,
-                Name of the Core_Model
-            dataset_db : DatasetDatabase instance,
-                DatasetDatabase giving the dataset to be modeled.
+        :param string name: Name of the Core_Model
+        :param DatasetDatabase dataset_db: DatasetDatabase giving the dataset to be modeled.
+        :param string/None run_folder: Folder to use as run folder. For more info check run_folder
+        :param Instmodel4Dataset/None instmodel4dataset:
+        :param list_of_string l_instmod_fullnames: list of instrument model full names
+
         """
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
@@ -80,11 +80,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
 
-        # Set the run folder
+        # Intialise the run_folder property
         RunFolder.__init__(self, run_folder=run_folder)
 
-        # Core Model is also a ParamContainer Database so initialise it
+        # Core Model is also a ParamContainer Database, so initialise it
         ParamContainerDatabase.__init__(self)
+
+        # Core Model is also an InstrumentContainer, so initialise it
+        InstrumentContainerInterface.__init__(self)
 
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
@@ -96,6 +99,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
+
+        # Initialise datasimcreatorname4instcat which as to be overwriten in the Model Subclass
+        self.__datasimcreatorname4instcat = {}
+
+        # Initialise datasimcreator which as to be overwriten in the Model Subclass
+        # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
+        self.__datasimcreator = {}
+
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -108,6 +119,41 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
     def init_kwargs(self):
         """Return the dictionary giving the arguments for the define_model method of Posterior."""
         raise NotImplementedError("You need to create this property for your model !")
+
+    @property
+    def datasimcreatorname4instcat(self):
+        """Dictionary giving the name of the datasimulator for each instrument category.
+
+        key: instrument category, value: datasimcreator name
+        """
+        return self.__datasimcreatorname4instcat
+
+    @property
+    def datasimcreator(self):
+        """Dictionary giving the datasimcreator function for each datasimcreator name.
+
+        key: datasimcreator name, value: datasimcreator docfunction
+        """
+        return self.__datasimcreator
+
+    def get_datasimcreatorname(self, inst_cat):
+        """Return the name of the datasimcreator (without_instrument?) function associated with
+        the instrument category.
+
+        :param inst_cat string: Instrument category
+        :return datasimcreator_name string: Datasimcreator name
+        """
+        return self.__datasimcreatorname4instcat[inst_cat]
+
+    def get_datasimcreator(self, inst_cat):
+        """Return the datasimcreator docfunc (without_instrument?) associated with the instrument
+        category.
+
+        :param inst_cat string: Instrument category
+        :return datasimcreator_name string: Datasimcreator name
+        """
+        datasimcreatorname = self.get_datasimcreatorname(inst_cat)
+        return self.datasimcreator[datasimcreatorname]
 
     def init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""
@@ -134,6 +180,21 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
             noise_model_subclass.apply_parametrisation(model_instance=self,
                                                        instmod_fullname=instmod_fullname)
 
+    def get_noisemodandinstmod4dataset(self):
+        """Return the dictionary giving the noise model subclass for each dataset.
+
+        :return dict res: Dictionary, key = dataset name, value = dict:
+            key = "noise model", value = noise model subclass
+            key = "instrument model", value = instrument model
+        """
+        res = {}
+        for dataset_name in self.instmodel4dataset:
+            inst_mod = self.get_instmod(dataset_name)
+            res[dataset_name]["instrument model"] = inst_mod
+            (res[dataset_name]
+             ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+        return res
+
     def get_param(self, full_name):
         """Return the instance of the Parameter designated by full_name."""
         logger.debug("Parameter full name: {}".format(full_name))
@@ -153,21 +214,31 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
                 if inst_model is not None:
                     return inst_model.parameters[param_name]
 
-    def get_list_params(self, main=False, free=False):
-        """Return the list of all parameters."""
+    def get_list_params(self, **kwargs):
+        """Return the list of all parameters.
+
+        Keyword arguments can be:
+        :param bool main: Get only the main parameters. Default = False
+        :param bool free: Get only the main parameters. Default = False
+        :param dict inst_models : Dictionnary which for each instrument name give the list of the
+                names of instrument models for which you want the params.
+                Default = all instrument models used
+
+        Those are available for all the param containers, but additional keyword argument can be
+        acepted by specific parameter containers (like the instruments)
+
+        :return list_of_param result: list of Parameter instances
+        """
+        if "main" not in kwargs:
+            kwargs["main"] = False
+        if "free" not in kwargs:
+            kwargs["free"] = False
+        if "inst_models" not in kwargs:
+            kwargs["inst_models"] = self.name_instmodels_used(sortby_instname=True)
         result = []
-        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
-        result.extend(ParamContainerDatabase.
-                      get_list_params(self, main=main, free=free,
-                                      inst_models=self.name_instmodels_used(sortby_instname=True)))
-        # for paramcont_cat in self.paramcontainers_categories:
-        #     if paramcont_cat == instmod_cat:
-        #         result.extend(ParamContainerDatabase.
-        #                       get_list_params(self, main=main, free=free,
-        #                                       inst_models=self.name_instmodels_used))
-        #     else:
-        #         for param_cont in self.paramcontainers[paramcont_cat].values():
-        #             result.extend(param_cont.get_list_params(main=main, free=free))
+        result.extend(Core_ParamContainer.get_list_params(self, main=kwargs["main"],
+                                                          free=kwargs["free"]))
+        result.extend(ParamContainerDatabase.get_list_params(self, **kwargs))
         return result
 
     def get_list_paramnames(self, main=False, free=False, full_name=False):
@@ -291,24 +362,45 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, ParamCont
         """Return True is the attribute param_file has been defined."""
         return self.param_file is not None
 
-    def create_parameter_file(self, paramfile_path):
-        """Create the parameter file."""
+    def create_parameter_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
+        """Create the parameter file.
+
+        :param string paramfile_path: Path to the param_file.
+        :param string answer_overwrite: If the LC_param_file already exists, do you want to
+            overwrite it ? "y" or "n". If this not provide the program will ask you interactively.
+        :param string answer_create: If the LC_param_file doesn't exists aleardy, where do you want
+            to create it ? "absolute", "run_folder" or "error". If this not provide the program will
+            ask you interactively.
+        """
         file_path = self.look4runfile(file_path=paramfile_path)
         if file_path is not None:
             answers_list_yn = ['y', 'n']
-            question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                        "".format(file_path, answers_list_yn))
-            reply = QCM_utilisateur(question, answers_list_yn)
+            if answer_overwrite is None:
+                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
+                            "".format(file_path, answers_list_yn))
+                reply = QCM_utilisateur(question, answers_list_yn)
+            else:
+                if answer_overwrite in answers_list_yn:
+                    reply = answer_overwrite
+                else:
+                    raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
         else:
             answers_list_create = ["absolute", "error"]
-            question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
-                        "{}".format(paramfile_path, paramfile_path))
             if self.hasrun_folder:
                 answers_list_create.append("run_folder")
                 run_folder_path = join(self.run_folder, paramfile_path)
-                question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-            question += "\nNot create it and raise an 'error' ? {}".format(answers_list_create)
-            reply = QCM_utilisateur(question, answers_list_create)
+            if answer_create is None:
+                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
+                            "{}".format(paramfile_path, paramfile_path))
+                if self.hasrun_folder:
+                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
+                question += "\nNot create it and raise an 'error' ? {}".format(answers_list_create)
+                reply = QCM_utilisateur(question, answers_list_create)
+            else:
+                if answer_create in answers_list_create:
+                    reply = answer_create
+                else:
+                    raise ValueError("answer_create should by in {}".format(answers_list_create))
             if reply == "absolute":
                 file_path = paramfile_path
             elif reply == "run_folder":
