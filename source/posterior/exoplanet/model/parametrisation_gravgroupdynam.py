@@ -110,10 +110,10 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             if self.parametrisation == "Np":
                 self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name="alpha_ref", name_prefix=self.full_name, main=True))
             else:
-                self.paramcontainers["planets"][planet_name].ecc.main = True
+                self.paramcontainers["planets"][planet_name].secosw.main = True
+                self.paramcontainers["planets"][planet_name].sesinw.main = True
                 self.paramcontainers["planets"][planet_name].inc.main = True
                 self.paramcontainers["planets"][planet_name].OMEGA.main = True
-                self.paramcontainers["planets"][planet_name].omega.main = True
                 self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
             if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
