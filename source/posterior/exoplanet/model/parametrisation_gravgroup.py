@@ -16,6 +16,9 @@ from ..dataset_and_instrument.rv import RV_inst_cat
 logger = getLogger()
 
 
+# TODO: At one point, it might be usefull to make a Core_Parametrisation class
+
+
 class GravGroup_Parametrisation(object):
     """docstring for the interface class GravGroup_Parametrisation."""
 
