@@ -11,6 +11,8 @@ TODO:
 from logging import getLogger
 from numbers import Number
 
+from astropy.units import Unit
+
 from source.tools.name import Name
 from source.tools.miscellaneous import spacestring_like
 from .prior.manager_prior import Manager_Prior
@@ -34,7 +36,7 @@ class Parameter(Name):
     ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
     joint_prior_pos = None
 
-    def __init__(self, name, name_prefix=None, unit="n/a",
+    def __init__(self, name, name_prefix=None, unit=None,
                  free=True, main=False,
                  joint_prior=False, prior_category=None, prior_args=None,
                  value=None
@@ -83,9 +85,11 @@ class Parameter(Name):
         # Set the value of the parameter
         self.value = value
         ## Unit of the value
-        if not isinstance(unit, str):
-            raise ValueError("Unit should be a string")
-        self.__unit = unit
+        if unit is None:
+            self.__unit = unit
+        else:
+            self.unit = unit
+
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = {"caracteristics": ["free", "value"],
                                  "prior": ["category", "args"]}
@@ -135,6 +139,21 @@ class Parameter(Name):
     def unit(self):
         """Return the unit of the value of the parameter."""
         return self.__unit
+
+    @unit.setter
+    def unit(self, unt):
+        """Set the unit of the parameter.
+
+        :param str/astropy.units.Unit unt:
+        """
+        if self.__unit is None:
+            if isinstance(unt, Unit) or isinstance(unt, str):
+                self.__unit = unt
+            else:
+                raise TypeError("unit should be a string or a astropy.units.Unit")
+        else:
+            raise AssertionError("unit is already defined to {}. You are not allowed to modify it."
+                                 "".format(self.__unit))
 
     @property
     def prior_info(self):
