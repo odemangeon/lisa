@@ -31,7 +31,7 @@ logger = getLogger()
 
 def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                             parametrisation,
-                            LC_multis_parametrisations, ldmodel4instmodfname, LDs,
+                            ldmodel4instmodfname, LDs,
                             transit_model, SSE4instmodfname,
                             inst_models=None, datasets=None,
                             param_vector_name=par_vec_name):
@@ -142,7 +142,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                       time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                       timeref_name=time_ref, l_timeref_name=l_time_ref)
 
-    if parametrisation in LC_multis_parametrisations:
+    if parametrisation == "Multis":
         rhostar = add_param_argument(star.rho, arg_list, key_whole, key_param,
                                      param_nb, par_vec_name)[key_whole]
     else:
@@ -157,7 +157,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the preambule
     template_preambule_pl = """
         {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
-    if parametrisation in LC_multis_parametrisations:
+    if parametrisation == "Multis":
         template_preambule_pl += """
         {tab}aR_{planet} = getaoverr({P}, {rhostar})"""
 
@@ -200,7 +200,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                                ld_param_list=ld_param_list)
             template_preambule_pl += template_batman_pl
 
-            if parametrisation in LC_multis_parametrisations:
+            if parametrisation == "Multis":
                 if multi:
                     template_preambule_pl += """
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = aR_{{planet}}
@@ -317,7 +317,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         else:
             template_planet_lc = ("+ m_{planet}.light_curve(params_{planet}) - 1 ")
     else:
-        if parametrisation in LC_multis_parametrisations:
+        if parametrisation == "Multis":
             if multi:
                 template_planet_lc = ("+ m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
                                       "{tc}, {P}, aR_{planet}, inc_{planet}, "
@@ -401,7 +401,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         # system.
         l_param = [planet.secosw, planet.sesinw, planet.cosinc, planet.tc, planet.P,
                    planet.Rrat]
-        if parametrisation not in LC_multis_parametrisations:
+        if parametrisation != "Multis":
             l_param.append(planet.aR)
         else:
             params_planet["aR"] = ""
@@ -512,7 +512,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         ldict["getecc_fast"] = getecc_fast
         ldict["getomega_fast"] = getomega_fast
         ldict["acos"] = acos
-        if parametrisation in LC_multis_parametrisations:
+        if parametrisation == "Multis":
             ldict["getaoverr"] = getaoverr
         if transit_model == "batman":
             if not(has_dataset):
