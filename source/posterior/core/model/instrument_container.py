@@ -12,14 +12,21 @@ from .paramcontainers_database import SpecificParamContainerCategory
 
 
 class InstrumentContainerInterface(object):
-    """docstring for ParamContainerDatabase.
+    """docstring for InstrumentContainerInterface and interface of core_model.Core_Model.
 
-    It has to be in the list of parent before ParamContainerDatabase.
+    It has to be in the list of parent classes of Model before ParamContainerDatabase.
+    It's an Interface of core_model.Core_Model which allows the model to properly handle instrument
+    models.
     """
     def __init__(self):
         # super(ParamContainerDatabase, self).__init__()
         # Init the instruments
         self.paramcontainers.update({instrument_model_category: InstrumentContainer()})
+
+    @property
+    def instruments(self):
+        """Return an Orderedict with the instrument models currently in the instance."""
+        return self.paramcontainers[instrument_model_category]
 
     def add_an_instrument_model(self, instrument, name, force=False):
         """Add an instrument model to the paramcontainers of this model."""
@@ -36,11 +43,6 @@ class InstrumentContainerInterface(object):
         inst_model, inst_name, inst_cat = check_args(inst_model=inst_model, inst_name=inst_name,
                                                      inst_cat=inst_cat, **kwargs)
         self.instruments[inst_cat][inst_name].pop(inst_model)
-
-    @property
-    def instruments(self):
-        """Return the instruments an Orderedict with the instrument models of the model."""
-        return self.paramcontainers[instrument_model_category]
 
     @property
     def instruments_categories(self):
@@ -69,6 +71,9 @@ class InstrumentContainerInterface(object):
 
     def get_list_params(self, main=False, free=False, inst_models={}):
         """Return the list of all parameters.
+
+        TODO: Not sure that it should be here in the InstrumentContainerInterface.
+
         ----
         Arguments:
             inst_models : dict, (default:{}),
@@ -94,6 +99,7 @@ class InstrumentContainerInterface(object):
 
 class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
     """docstring for InstrumentContainer."""
+
     def __init__(self):
         super(InstrumentContainer, self).__init__(object_stored="instmodobj",
                                                   database_name="instrument container",
@@ -101,6 +107,8 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
 
     def get_list_params(self, main=False, free=False, inst_models={}):
         """Return the list of all parameters.
+
+        TODO: Not sure that this function is used, but if it's working, it should be used.
 
         :param bool main: True returns only the main parameters
         :param bool free: True returns only the free parameters

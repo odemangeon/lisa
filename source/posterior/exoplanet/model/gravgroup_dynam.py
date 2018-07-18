@@ -44,15 +44,18 @@ from ..dataset_and_instrument.rv import RV_inst_cat
 ## Logger object
 logger = getLogger()
 
-
+## Manager Limb Darkening models
 mgr_LD = Manager_LD()
 
 
 class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
     """docstring for GravGroup."""
 
-    ## category
+    ## Model category string
     __category__ = "GravitionalGroupsDynamic"
+
+    ## Set of possible instrument categories
+    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available dynamical models, the 1st element is used as default
     _dyn_models = ["rebound"]

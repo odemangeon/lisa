@@ -55,7 +55,16 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                  DatasimulatorCreator, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
-    __mandatoryattrs__ = ["category"]
+    ## List of mandatory arguments which have to be defined in the subclasses.
+    # For example "category" is in this list. It has to be defined in the subclass as a class
+    # attribute like this:
+    # __category__ = "ModelCategory"
+    # It then be read as self.category
+    __mandatoryattrs__ = ["category", "possible_inst_categories"]
+    # category: String which designate the model (for example: "GravitionalGroups"). To choose the
+    #   model to be used, the user will use this string.
+    # possible_inst_categories: Set of the categories of data that the model can simulate
+    #   (for example: {"RV", "LC"} for "GravitionalGroups")
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
@@ -450,3 +459,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         self.param_file = param_file
         self.update_paramfile_info()
         self.load_parameter_file()
+
+    def _check_dataset_instcat(self):
+        """Check that the instrument categories of the datasets are all handled by the model. """
+        if self.possible_inst_categories >= set(self.dataset_db.inst_categories):
+            raise ValueError("Model of category {} cannot simulate data of the following category: {}."
+                             " Remove the datasets of this(ese) category(ies) or change the model."
+                             "".format(self.category, self.dataset_db.inst_categories - self.possible_inst_categories))

@@ -9,6 +9,9 @@ from logging import getLogger
 from collections import Counter
 
 from .parametrisation_gravgroup import GravGroup_Parametrisation
+from ..dataset_and_instrument.lc import LC_inst_cat
+from ..dataset_and_instrument.rv import RV_inst_cat
+
 
 ## Logger Object
 logger = getLogger()
@@ -20,62 +23,30 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
     @property
     def available_parametrisations(self):
         """List of the available parametrisation."""
-        return ["RV_Rebound_Standard", "LC_Rebound_Standard", "RV&LC_Rebound_Standard",
-                "RV_Rebound_2p", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
+        return ["Standard", "Np"]
 
-    @property
-    def RV_parametrisations(self):
-        """List of the available parametrisations for RV datasets."""
-        return ["RV_Rebound_Standard", "RV&LC_Rebound_Standard", "RV_Rebound_2p", "RV&LC_Rebound_2p"]
+    def _choose_default_parametrisation(self):
+        """Return the best parametrisation when no choice is made by the user."""
+         if self.nb_planets == 2:
+             return "Np"
+         else:
+             return "Standard"
 
-    @property
-    def LC_parametrisations(self):
-        """List of the available parametrisations for RV datasets."""
-        return ["LC_Rebound_Standard", "RV&LC_Rebound_Standard", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
+    def _check_validity_parametrisation(self, parametrisation):
+        """Check that the parametrisation requested is valid for the current model.
 
-    @property
-    def RVandLC_parametrisations(self):
-        """List of the available parametrisations for RV datasets."""
-        return ["RV&LC_Rebound_Standard", "RV&LC_Rebound_2p"]
+        If not raise ValueError. For now there is no validity concern for model given the existing
+        parametrisations.
 
-    @property
-    def Standard_parametrisation(self):
-        """List of the available parametrisations for RV datasets."""
-        return ["RV_Rebound_Standard", "LC_Rebound_Standard", "RV&LC_Rebound_Standard"]
+        :param str parametrisation: String which designate the parametrisation. Should be in
+            self.available_parametrisations
+        """
+        if parametrisation == "Np" and (self.nb_planets not in [2, ]):
+            raise ValueError("Parametrisation {} is not available with the current number of "
+                             "planets. Possible number of planets: {}"
+                             "".format(parametrisation, self.nb_planets))
 
-    @property
-    def TwoPlanets_parametrisation(self):
-        """List of the available parametrisations for two planet parameterisation."""
-        return ["RV_Rebound_2p", "LC_Rebound_2p", "RV&LC_Rebound_2p"]
-
-    @GravGroup_Parametrisation.parametrisation.setter
-    def parametrisation(self, value=None):
-        """Set the parametrisation to use."""
-        if value is None:
-            if Counter(self.dataset_db.inst_categories) == Counter(["RV", ]):
-                if self.nb_planets == 2:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "RV_Rebound_2p")
-                else:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "RV_Rebound_Standard")
-            elif Counter(self.dataset_db.inst_categories) == Counter(["LC", ]):
-                if self.nb_planets == 2:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "LC_Rebound_2p")
-                else:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "LC_Rebound_Standard")
-            elif Counter(self.dataset_db.inst_categories) == Counter(["LC", "RV"]):
-                if self.nb_planets == 2:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "RV&LC_Rebound_2p")
-                else:
-                    GravGroup_Parametrisation.parametrisation.fset(self, "RV&LC_Rebound_Standard")
-            else:
-                raise ValueError("{} doesn't correspond to a predefined parametrisation."
-                                 "".format(self.dataset_db.inst_categories))
-            logger.info("No parametrisation provided. The automatically selected parametrisation is"
-                        ": {}".format(self.parametrisation))
-        else:
-            GravGroup_Parametrisation.parametrisation.fset(self, value)
-
-    # TODO: This function doesn't seems to be used anywhere. Check why
+    # TODO: This function doesn't seems to be used anywhere. SO I didn't updated it.
     def __check_args(self, **kwargs):
         """Raise an error if the provided arguments are the one expected.
         """
@@ -85,7 +56,7 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
         l_optional_keywords = []
 
         # Fill the list of mandatory and optional keywords depending on the parameterisation
-        if self.parametrisation in self.RV_parametrisations:
+        if RV_inst_cat in self.RV_parametrisations:
             l_mandatory_keywords += ["with_DeltaRV", "with_RVdrift"]
             l_optional_keywords += ["RVdrift_order"]
         if self.parametrisation in self.LC_parametrisations:
@@ -117,40 +88,26 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             raise TypeError("apply_parametrisation missing {} keyword argument: {}"
                             "".format(len(l_missing), l_missing))
 
-    def _check_dataset_instcat(self):
-        """Raise an error if the instrument categories of the dataset are not as expected."""
-        if self.parametrisation in ["RV_Rebound_Standard", ]:
-            l_instcat_expected = ["RV", ]
-        elif self.parametrisation in ["LC_Rebound_Standard"]:
-            l_instcat_expected = ["LC", ]
-        elif self.parametrisation in ["RV&LC_Rebound_Standard"]:
-            l_instcat_expected = ["RV", "LC"]
-        if Counter(self.dataset_db.inst_categories) != Counter(l_instcat_expected):
-            raise ValueError("You are using a parametrisation that has been defined to fit {}"
-                             "but you have to analyse {}."
-                             "".format(l_instcat_expected, self.dataset_db.inst_categories))
-
     def apply_star_planet_parametrisation(self):
         """Apply the parametrisation for the star and planets.
 
-        For the EXOFAST parametrisations:
-        See Eastman, J., et al., 2013, Publications of the Astronomical Society of the Pacific,
-        Volume 125,Number 923.
+        For Np and number of planet equal to 2, see Barros+16
         """
         # Apply the parametrisation to the star parameters
-        self.apply_star_SystemicRV_parametrisation()
+        if RV_inst_cat in set(self.dataset_db.inst_categories):
+            self.apply_star_SystemicRV_parametrisation()
 
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].M.main = True
 
-        if self.parametrisation in self.LC_parametrisations:
+        if LC_inst_cat in set(self.dataset_db.inst_categories):
             self.paramcontainers["stars"][star_name].R.main = True
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].M.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
-            if self.parametrisation in self.TwoPlanets_parametrisation:
+            if self.parametrisation == "Np":
                 self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name="alpha_ref", name_prefix=self.full_name, main=True))
             else:
                 self.paramcontainers["planets"][planet_name].ecc.main = True
@@ -158,10 +115,10 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
                 self.paramcontainers["planets"][planet_name].OMEGA.main = True
                 self.paramcontainers["planets"][planet_name].omega.main = True
                 self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
-            if self.parametrisation in self.LC_parametrisations:
+            if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
 
-        if self.parametrisation in self.TwoPlanets_parametrisation:
+        if self.parametrisation == "Np":
             self.add_parameter(Parameter(name="q_plus", name_prefix=self.full_name, main=True))
             self.add_parameter(Parameter(name="q_p", name_prefix=self.full_name, main=True))
             self.add_parameter(Parameter(name="ecos_plus", name_prefix=self.full_name, main=True))

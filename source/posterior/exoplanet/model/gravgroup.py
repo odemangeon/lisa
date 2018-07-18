@@ -66,8 +66,11 @@ mgr_LD = Manager_LD()
 class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     """docstring for GravGroup."""
 
-    ## category
+    ## Model category string
     __category__ = "GravitionalGroups"
+
+    ## Set of possible instrument categories
+    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["ajplanet"]
