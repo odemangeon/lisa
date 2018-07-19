@@ -123,8 +123,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="OMEGA", name_prefix=self.full_name, main=False))
         ## Mean anomaly
         self.add_parameter(Parameter(name="MeanAnomaly", name_prefix=self.full_name, main=False))
-        ## First Transit time
-        self.add_parameter(Parameter(name="tc", name_prefix=self.full_name, main=False))
+        ## Reference time of inferior conjunction
+        self.add_parameter(Parameter(name="tic", name_prefix=self.full_name, main=False))
         ## Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.full_name, main=False))
         ## log Radial velocity semi-amplitude

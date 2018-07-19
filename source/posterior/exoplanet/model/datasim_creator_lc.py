@@ -173,7 +173,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             # done.
             if multi:
                 template_batman_pl = """
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tc}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tic}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.per = {{P}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.rp = {{Rrat}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.inc = inc_{{planet}}
@@ -188,7 +188,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                              ld_param_list=ld_param_list))
             else:
                 template_batman_pl = """
-        {{tab}}params_{{planet}}.t0 = {{tc}}
+        {{tab}}params_{{planet}}.t0 = {{tic}}
         {{tab}}params_{{planet}}.per = {{P}}
         {{tab}}params_{{planet}}.rp = {{Rrat}}
         {{tab}}params_{{planet}}.inc = inc_{{planet}}
@@ -320,19 +320,19 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         if parametrisation == "Multis":
             if multi:
                 template_planet_lc = ("+ m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tc}, {P}, aR_{planet}, inc_{planet}, "
+                                      "{tic}, {P}, aR_{planet}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
             else:
-                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tc}, {P},"
+                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, {P},"
                                       " aR_{planet}, inc_{planet}, ecc_{planet}, "
                                       "omega_{planet}) - 1 ")
         else:
             if multi:
                 template_planet_lc = ("+ m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tc}, {P}, {aR}, inc_{planet}, "
+                                      "{tic}, {P}, {aR}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
             else:
-                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tc}, "
+                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, "
                                       "{P}, {aR}, inc_{planet}, ecc_{planet}, "
                                       "omega_{planet}) - 1 ")
 
@@ -399,7 +399,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.secosw, planet.sesinw, planet.cosinc, planet.tc, planet.P,
+        l_param = [planet.secosw, planet.sesinw, planet.cosinc, planet.tic, planet.P,
                    planet.Rrat]
         if parametrisation != "Multis":
             l_param.append(planet.aR)
@@ -418,7 +418,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
                                    secosw=params_planet["secosw"],
                                    sesinw=params_planet["sesinw"],
-                                   tc=params_planet["tc"], rhostar=rhostar,
+                                   tic=params_planet["tic"], rhostar=rhostar,
                                    cosinc=params_planet["cosinc"], P=params_planet["P"],
                                    Rrat=params_planet["Rrat"], aR=params_planet["aR"],
                                    # ld_mod_name=LD_parcont.ld_type,
@@ -427,7 +427,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         preambule_whole += (template_preambule_pl.
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
                                    secosw=params_whole["secosw"],
-                                   sesinw=params_whole["sesinw"], tc=params_whole["tc"],
+                                   sesinw=params_whole["sesinw"], tic=params_whole["tic"],
                                    cosinc=params_whole["cosinc"], P=params_whole["P"],
                                    Rrat=params_whole["Rrat"], aR=params_planet["aR"],
                                    # ld_mod_name=LD_parcont.ld_type,
@@ -455,7 +455,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                          dst_key=dst_nb,
                                                          aR=params_planet["aR"],
                                                          Rrat=params_planet["Rrat"],
-                                                         tc=params_planet["tc"],
+                                                         tic=params_planet["tic"],
                                                          P=params_planet["P"],
                                                          ld_param_list=ld_param_list,
                                                          ii=ii
@@ -467,7 +467,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                                 dst_key=dst_nb,
                                                                 aR=params_planet["aR"],
                                                                 Rrat=params_whole["Rrat"],
-                                                                tc=params_whole["tc"],
+                                                                tic=params_whole["tic"],
                                                                 P=params_whole["P"],
                                                                 ld_param_list=ld_param_list,
                                                                 ii=ii

@@ -144,7 +144,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     template_preambule = """
     {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
     {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
-    {tab}tp_{planet} = gettp_fast({P}, {tc}, ecc_{planet}, omega_{planet})
+    {tab}tp_{planet} = gettp_fast({P}, {tic}, ecc_{planet}, omega_{planet})
     """
     if multi:
         template_planet_rv = ("+ pl_rv_array({ltime_vec}[{ii}], 0., {K}, omega_{planet}, "
@@ -169,7 +169,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.K, planet.secosw, planet.sesinw, planet.tc, planet.P]
+        l_param = [planet.K, planet.secosw, planet.sesinw, planet.tic, planet.P]
         for param in l_param:
             param_text = add_param_argument(param, arg_list, [key_whole, planet.name], key_param,
                                             param_nb, par_vec_name)
@@ -180,11 +180,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         preambule_planet = (dedent(template_preambule).
                             format(planet=planet.name, secosw=params_planet["secosw"],
                                    sesinw=params_planet["sesinw"], P=params_planet["P"],
-                                   tc=params_planet["tc"], tab=tab))
+                                   tic=params_planet["tic"], tab=tab))
         preambule_whole += (dedent(template_preambule).
                             format(planet=planet.name, secosw=params_whole["secosw"],
                                    sesinw=params_whole["sesinw"], P=params_whole["P"],
-                                   tc=params_whole["tc"], tab=tab))
+                                   tic=params_whole["tic"], tab=tab))
 
         # planets RV contribution (planet_rv and whole_planets_rv)
         l_planet_rv = []
