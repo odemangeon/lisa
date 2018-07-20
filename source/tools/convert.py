@@ -613,6 +613,179 @@ def getgpl(M, R):
     return const.G.value * M * mjup / np.power(R * rjup, 2)
 
 
+def getM_4_E(E, ecc):
+    """Return the Mean anomalie from eccentric anomalie and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param float/np.array E: Eccentric anomaly in radians
+    :param float/np.array ecc: Eccentricity [0, 1]
+    :param float/np.array M: Mean anomaly in radians
+    """
+    return E - ecc np.sin(E)
+
+
+def getM_4_E_fast(E, ecc):
+    """Return the Mean anomalie from eccentric anomalie and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param float E: Eccentric anomaly in radians
+    :param float ecc: Eccentricity [0, 1]
+    :param float M: Mean anomaly in radians
+    """
+    return E - ecc * math.sin(E)
+
+
+def getM_4_f(f, ecc, positive=True):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param float/np.array f: true anomaly in radians
+    :param float/np.array ecc: eccentricity
+    :param float/np.array positive: if True, the result is in [0, 2.pi], else in [-pi, pi].
+    :return float/np.array m: mean anomaly in radians
+    """
+    E = getE_4_f(f, ecc, positive) # eccentric anomaly
+    return getM_4_E(E, ecc) # mean anomalie
+
+
+def getM_4_f_fast(f, ecc):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity
+    :return m: mean anomaly in radians in [-pi, pi]
+    """
+    ee = getE_4_f_fast(f, ecc) # eccentric anomaly
+    return getM_4_E_fast(ee, ecc) # mean anomalie
+
+
+def getM_4_f_fast_positive(f, ecc):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity
+    :return m: mean anomaly in radians in [0, 2.pi]
+    """
+    ee = getE_4_f_fast_positive(f, ecc) # eccentric anomaly
+    return getM_4_E_fast(ee, ecc) # mean anomalie
+
+
+def getE_4_f(f, ecc, positive=True):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments and eccentricity.
+
+    :param float/np.array f: true anomaly in radians
+    :param float/np.array ecc: eccentricity [0, 1]
+    :param float/np.array positive: if True, the result is in [0, 2.pi], else in [-pi, pi].
+    :return float/np.array ee: eccentric anomaly in radians
+    """
+    ee = 2 * np.arctan(np.tan(f/2) * np.sqrt((1-ecc)/(1+ecc)))  # eccentric anomaly
+    if ee < 0 and positive:
+        return 2 * np.pi + ee
+    else:
+        return ee
+
+
+def getE_4_f_fast(f, ecc):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity [0, 1]
+    :return ee: eccentric anomaly in radians in [-pi, pi].
+    """
+    return 2 * math.arctan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
+
+
+def getE_4_f_fast_positive(f, ecc):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity [0, 1]
+    :return ee: eccentric anomaly in radians in [0, 2.pi].
+    """
+    ee = 2 * math.arctan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
+    if ee < 0:
+        return 2 * np.pi + ee
+    else:
+        return ee
+
+
+def gettic_4_Mref(M_ref, P, ecc, omega, t_ref=0.0):
+    """Compute the next time of inferior conjection from the mean anomaly at a given reference time.
+
+    :param float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in radians
+    :param float/np.array t_ref: refrence time
+    :return float/np.array tic: next time of inferior conjunction after t_ref
+    """
+    deltat = P / (2 * pi) * (getM_4_f(pi/2 - omega, ecc, positive=True) - M_ref)
+    if deltat < 0:
+        return t_ref + P + deltat
+    else:
+        return t_ref + deltat
+
+
+def gettic_4_Mref_fast(M_ref, P, ecc, omega, t_ref=0.0):
+    """Compute the next time of inferior conjection from the mean anomaly at a given reference time.
+
+    :param float M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    :param float P: period
+    :param float ecc: eccentricity
+    :param float omega: argument of periastron in radians
+    :param float t_ref: refrence time
+    :return float tic: next time of inferior conjunction after t_ref
+    """
+    deltat = P / (2 * pi) * (getM_4_f_fast_positive(pi/2 - omega, ecc) - M_ref)
+    if deltat < 0:
+        return t_ref + P + deltat
+    else:
+        return t_ref + deltat
+
+
+def getMref_4_tic(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float/np.array tic: Time of inferior conjunction after t_ref
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in radians
+    :param float/np.array t_ref: refrence time
+    :return float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f(pi/2 - omega, ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
+
+
+def getMref_4_tic_fast(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float tic: Time of inferior conjunction after t_ref
+    :param float P: period
+    :param float ecc: eccentricity
+    :param float omega: argument of periastron in radians
+    :param float t_ref: refrence time
+    :return float M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f_fast_positive(pi/2 - omega, ecc) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
+
+
 def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
     """
