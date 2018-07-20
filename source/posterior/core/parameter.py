@@ -20,6 +20,10 @@ from .prior.manager_prior import Manager_Prior
 ## Logger Object
 logger = getLogger()
 
+
+# TODO: Add the possibility to add a description of the parameter.
+
+
 ## Prior manager
 manager = Manager_Prior()
 manager.load_setup()
