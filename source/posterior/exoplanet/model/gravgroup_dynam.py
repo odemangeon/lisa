@@ -130,8 +130,6 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
                                             key_mand_kwargs=self.key_mand_kwargs,
                                             key_opt_kwargs=self.key_opt_kwargs,
                                             parametrisation=self.parametrisation,
-                                            LC_multis_parametrisations=(self.
-                                                                        LC_multis_parametrisations),
                                             ldmodel4instmodfname=self.ldmodel4instmodfname,
                                             LDs=self.LDs, transit_model=self.transit_model,
                                             SSE4instmodfname=self.SSE4instmodfname,

@@ -11,7 +11,7 @@ TODO:
 from logging import getLogger
 from numbers import Number
 
-from astropy.units import Unit
+from astropy.units import NamedUnit
 
 from source.tools.name import Name
 from source.tools.miscellaneous import spacestring_like
@@ -89,9 +89,8 @@ class Parameter(Name):
         # Set the value of the parameter
         self.value = value
         ## Unit of the value
-        if unit is None:
-            self.__unit = unit
-        else:
+        self.__unit = None
+        if unit is not None:
             self.unit = unit
 
         ## Initialise the info regarding the content of the parametrisation file
@@ -151,13 +150,14 @@ class Parameter(Name):
         :param str/astropy.units.Unit unt:
         """
         if self.__unit is None:
-            if isinstance(unt, Unit) or isinstance(unt, str):
+            if isinstance(unt, NamedUnit) or isinstance(unt, str):
                 self.__unit = unt
             else:
                 raise TypeError("unit should be a string or a astropy.units.Unit")
         else:
-            raise AssertionError("unit is already defined to {}. You are not allowed to modify it."
-                                 "".format(self.__unit))
+            if unt != self.__unit:
+                raise AssertionError("unit is already defined to {}. You are not allowed to modify it."
+                                     "".format(self.__unit))
 
     @property
     def prior_info(self):

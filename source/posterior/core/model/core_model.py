@@ -462,7 +462,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
 
     def _check_dataset_instcat(self):
         """Check that the instrument categories of the datasets are all handled by the model. """
-        if self.possible_inst_categories >= set(self.dataset_db.inst_categories):
+        if not(self.possible_inst_categories >= set(self.dataset_db.inst_categories)):
             raise ValueError("Model of category {} cannot simulate data of the following category: {}."
                              " Remove the datasets of this(ese) category(ies) or change the model."
-                             "".format(self.category, self.dataset_db.inst_categories - self.possible_inst_categories))
+                             "".format(self.category, set(self.dataset_db.inst_categories) - self.possible_inst_categories))

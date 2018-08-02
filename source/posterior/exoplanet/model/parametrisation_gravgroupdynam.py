@@ -7,7 +7,9 @@ The Objective of this file is to define the different type of parametrisation av
 """
 from logging import getLogger
 from collections import Counter
+
 from numpy import pi
+import astropy.units as unt
 
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..dataset_and_instrument.lc import LC_inst_cat
@@ -28,10 +30,10 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
 
     def _choose_default_parametrisation(self):
         """Return the best parametrisation when no choice is made by the user."""
-         if self.nb_planets == 2:
-             return "Np"
-         else:
-             return "Standard"
+        if self.nb_planets == 2:
+            return "Np"
+        else:
+            return "Standard"
 
     def _check_validity_parametrisation(self, parametrisation):
         """Check that the parametrisation requested is valid for the current model.
@@ -103,34 +105,48 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
 
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].M.main = True
+        self.paramcontainers["stars"][star_name].M.unit = unt.M_sun
 
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             self.paramcontainers["stars"][star_name].R.main = True
+            self.paramcontainers["stars"][star_name].R.unit = unt.R_sun
 
         # Apply the parametrisation to the planets parameters
         if OmegaRef_planet is None:
-            OmegaRef_planet = self.paramcontainers["planets"].keys()[0]
+            OmegaRef_planet = list(self.paramcontainers["planets"].keys())[0]
         for planet_name in list(self.paramcontainers["planets"].keys()):
             self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].P.unit = unt.day
             self.paramcontainers["planets"][planet_name].tic.main = True
+            self.paramcontainers["planets"][planet_name].tic.unit = "Same than the data"
             self.paramcontainers["planets"][planet_name].inc.main = True
+            self.paramcontainers["planets"][planet_name].inc.unit = unt.rad
+            self.paramcontainers["planets"][planet_name].OMEGA.main = True
+            self.paramcontainers["planets"][planet_name].OMEGA.unit = unt.rad
             if planet_name == OmegaRef_planet:
-                self.paramcontainers["planets"][planet_name].OMEGA.main = True
                 self.paramcontainers["planets"][planet_name].OMEGA.free = False
                 self.paramcontainers["planets"][planet_name].OMEGA.value = pi
-            else:
-                self.paramcontainers["planets"][planet_name].OMEGA.main = True
             if self.parametrisation == "Standard":
                 self.paramcontainers["planets"][planet_name].M.main = True
+                self.paramcontainers["planets"][planet_name].M.unit = unt.M_sun
                 self.paramcontainers["planets"][planet_name].secosw.main = True
+                self.paramcontainers["planets"][planet_name].secosw.unit = "w/o unit"
                 self.paramcontainers["planets"][planet_name].sesinw.main = True
+                self.paramcontainers["planets"][planet_name].sesinw.unit = "w/o unit"
             if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
+                self.paramcontainers["planets"][planet_name].Rrat.unit = "w/o unit"
 
         if self.parametrisation == "Np":
             self.add_parameter(Parameter(name="qplus", name_prefix=self.full_name, main=True))
+            self.parameters["qplus"].unit = "w/o unit"
             self.add_parameter(Parameter(name="qp", name_prefix=self.full_name, main=True))
+            self.parameters["qp"].unit = "w/o unit"
             self.add_parameter(Parameter(name="hplus", name_prefix=self.full_name, main=True))
+            self.parameters["hplus"].unit = "w/o unit"
             self.add_parameter(Parameter(name="hminus", name_prefix=self.full_name, main=True))
+            self.parameters["hminus"].unit = "w/o unit"
             self.add_parameter(Parameter(name="kplus", name_prefix=self.full_name, main=True))
+            self.parameters["kplus"].unit = "w/o unit"
             self.add_parameter(Parameter(name="kminus", name_prefix=self.full_name, main=True))
+            self.parameters["kminus"].unit = "w/o unit"

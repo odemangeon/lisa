@@ -422,7 +422,7 @@ def getomega_fast(secosw, sesinw):
     if secosw == 0.:
         return math.copysign(math.pi / 2, sesinw)
     else:
-        return math.atan(sesinw / secosw)
+        return math.atan2(sesinw, secosw)
 
 
 def getomega_deg_fast(secosw, sesinw):
@@ -434,7 +434,7 @@ def getomega_deg_fast(secosw, sesinw):
     if secosw == 0.:
         return math.degrees(math.copysign(math.pi / 2, sesinw))
     else:
-        return math.degrees(math.atan(sesinw / secosw))
+        return math.degrees(math.atan2(sesinw, secosw))
 
 
 def getomega_plc_4_handk(hplus, hminus, kplus, kminus):
@@ -461,7 +461,7 @@ def getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus):
     if (hplus - hminus) == 0.:
         return math.copysign(math.pi / 2, (kplus - kminus))
     else:
-        return math.atan((kplus - kminus) / (hplus - hminus))
+        return math.atan2((kplus - kminus), (hplus - hminus))
 
 
 def getomega_plb_4_handk(hplus, hminus, kplus, kminus):
@@ -488,7 +488,7 @@ def getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus):
     if (hplus + hminus) == 0.:
         return math.copysign(math.pi / 2, (kplus + kminus))
     else:
-        return math.atan((kplus + kminus) / (hplus + hminus))
+        return math.atan2((kplus + kminus), (hplus + hminus))
 
 
 def getK(P, Ms, Mp, inc, ecc):
@@ -726,7 +726,7 @@ def getM_4_E(E, ecc):
     :param float/np.array ecc: Eccentricity [0, 1]
     :param float/np.array M: Mean anomaly in radians
     """
-    return E - ecc np.sin(E)
+    return E - ecc * np.sin(E)
 
 
 def getM_4_E_fast(E, ecc):
@@ -807,7 +807,7 @@ def getE_4_f_fast(f, ecc):
     :param ecc: eccentricity [0, 1]
     :return ee: eccentric anomaly in radians in [-pi, pi].
     """
-    return 2 * math.arctan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
+    return 2 * math.atan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
 
 
 def getE_4_f_fast_positive(f, ecc):
@@ -819,7 +819,7 @@ def getE_4_f_fast_positive(f, ecc):
     :param ecc: eccentricity [0, 1]
     :return ee: eccentric anomaly in radians in [0, 2.pi].
     """
-    ee = 2 * math.arctan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
+    ee = 2 * math.atan(math.tan(f/2) * math.sqrt((1-ecc)/(1+ecc)))
     if ee < 0:
         return 2 * np.pi + ee
     else:

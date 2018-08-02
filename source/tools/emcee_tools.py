@@ -493,7 +493,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
 def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
                supersamp=1, exptime=exptime_Kepler,
                plot_phase=False, P=None, tc=None,
-               noise_model=None, noisemod_allkwargs=None,
+               noise_model=None, model_instance=None,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None,
                ax=None):
     # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
@@ -507,7 +507,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
                                         datasim_kwargs=datasim_kwargs, supersamp=1,
                                         exptime=exptime_Kepler,
                                         noise_model=noise_model,
-                                        noisemod_allkwargs=noisemod_allkwargs)
+                                        model_instance=model_instance)
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -539,11 +539,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
-<<<<<<< HEAD
-                   noise_model=None, noisemod_allkwargs=None,
-=======
                    noise_model=None, model_instance=None,
->>>>>>> ttvfast
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):

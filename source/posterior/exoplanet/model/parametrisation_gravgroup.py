@@ -65,9 +65,9 @@ class GravGroup_Parametrisation(object):
         :param str parametrisation: String which designate the parametrisation. Should be in
             self.available_parametrisations
         """
-        if value not in self.available_parametrisations:
+        if parametrisation not in self.available_parametrisations:
             raise ValueError("{} is not in the list of available parametrisation ({})"
-                             "".format(value, self.available_parametrisations))
+                             "".format(parametrisation, self.available_parametrisations))
 
     # TODO: If I do a Core_Parametrisation Class, this should go there
     def _check_validity_parametrisation(self, parametrisation):
