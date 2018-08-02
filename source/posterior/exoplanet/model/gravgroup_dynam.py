@@ -124,8 +124,7 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
         return dico
 
     def _create_datasimulator_RV_LC_rebound(self, inst_models=None, datasets=None):
-        return create_datasimulator_rebound(star=list(self.stars.values())[0],
-                                            planets=self.planets,
+        return create_datasimulator_rebound(gravgroup=self,
                                             key_whole=self.key_whole,
                                             key_param=self.key_param,
                                             key_mand_kwargs=self.key_mand_kwargs,

@@ -331,13 +331,14 @@ def getcirctime(P, Ms, Rs, Mp, Rrat):
 def getecc(secosw, sesinw):
     """Get eccentricity from e.cos(omega) and e.sin(omega).
 
-    This method works with np.array as input.
+    :param np.array/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.array/float sesinw: sqrt(eccentricity).sin(omega)
     """
     return secosw**2 + sesinw**2
 
 
 def getecc_fast(secosw, sesinw):
-    """Returns eccentricity as a float.
+    """Get eccentricity from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
@@ -345,11 +346,60 @@ def getecc_fast(secosw, sesinw):
     return secosw * secosw + sesinw * sesinw
 
 
+def getecc_plc_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param np.array/float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param np.array/float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param np.array/float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param np.array/float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return np.sqrt(((hplus - hminus)**2 / 4) + ((kplus - kminus)**2  / 4))
+
+
+def getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return math.sqrt(((hplus - hminus) * (hplus - hminus) / 4) + ((kplus - kminus) * (kplus - kminus) / 4))
+
+def getecc_plb_4_handk(hplus, hminus, kplus, kminus, Pc_over_Pb):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param np.array/float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param np.array/float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param np.array/float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param np.array/float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :param np.array/float Pc_over_Pb: ratio of the orbital period of planet c over the one of planet b
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return Pc_over_Pb**(2./3.) * np.sqrt(((hplus + hminus)**2 / 4) + ((kplus + kminus)**2  / 4))
+
+
+def getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc_over_Pb):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :param float Pc_over_Pb: ratio of the orbital period of planet c over the one of planet b
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return math.pow(Pc_over_Pb, 2./3.) *  math.sqrt(((hplus + hminus) * (hplus + hminus) / 4) + ((kplus + kminus) * (kplus + kminus) / 4))
+
+
 def getomega(secosw, sesinw):
     """Get omego in radians from e.cos(omega) and e.sin(omega).
 
-    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
-    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
     """
     return np.arctan(sesinw / secosw)
 
@@ -357,14 +407,14 @@ def getomega(secosw, sesinw):
 def getomega_deg(secosw, sesinw):
     """Get omego in degrees from e.cos(omega) and e.sin(omega).
 
-    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
-    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
     """
     return np.rad2deg(np.arctan(sesinw / secosw))
 
 
 def getomega_fast(secosw, sesinw):
-    """Returns omega as a float radian.
+    """Get omego in radians from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
@@ -376,7 +426,7 @@ def getomega_fast(secosw, sesinw):
 
 
 def getomega_deg_fast(secosw, sesinw):
-    """Returns omega as a float degrees.
+    """Get omego in degrees from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
@@ -385,6 +435,60 @@ def getomega_deg_fast(secosw, sesinw):
         return math.degrees(math.copysign(math.pi / 2, sesinw))
     else:
         return math.degrees(math.atan(sesinw / secosw))
+
+
+def getomega_plc_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    """
+    return np.arctan((kplus - kminus) / (hplus - hminus))
+
+
+def getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    """
+    if (hplus - hminus) == 0.:
+        return math.copysign(math.pi / 2, (kplus - kminus))
+    else:
+        return math.atan((kplus - kminus) / (hplus - hminus))
+
+
+def getomega_plb_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    """
+    return np.arctan((kplus + kminus) / (hplus + hminus))
+
+
+def getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    """
+    if (hplus + hminus) == 0.:
+        return math.copysign(math.pi / 2, (kplus + kminus))
+    else:
+        return math.atan((kplus + kminus) / (hplus + hminus))
 
 
 def getK(P, Ms, Mp, inc, ecc):

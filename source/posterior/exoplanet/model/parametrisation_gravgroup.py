@@ -193,7 +193,7 @@ class GravGroup_Parametrisation(object):
             if RV_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].K.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
-            self.paramcontainers["planets"][planet_name].tc.main = True
+            self.paramcontainers["planets"][planet_name].tic.main = True
             self.paramcontainers["planets"][planet_name].secosw.main = True
             self.paramcontainers["planets"][planet_name].sesinw.main = True
 

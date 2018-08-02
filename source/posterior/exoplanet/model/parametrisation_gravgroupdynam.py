@@ -7,6 +7,7 @@ The Objective of this file is to define the different type of parametrisation av
 """
 from logging import getLogger
 from collections import Counter
+from numpy import pi
 
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..dataset_and_instrument.lc import LC_inst_cat
@@ -88,10 +89,13 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             raise TypeError("apply_parametrisation missing {} keyword argument: {}"
                             "".format(len(l_missing), l_missing))
 
-    def apply_star_planet_parametrisation(self):
+    def apply_star_planet_parametrisation(self, OmegaRef_planet=None, ):
         """Apply the parametrisation for the star and planets.
 
         For Np and number of planet equal to 2, see Barros+16
+
+        :param str OmegaRef_planet: Name of the planet used as reference for OMEGA (Longitude of
+            ascendal node). For this planet, OMEGA will be fixed and it's value set to 180.
         """
         # Apply the parametrisation to the star parameters
         if RV_inst_cat in set(self.dataset_db.inst_categories):
@@ -104,24 +108,29 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             self.paramcontainers["stars"][star_name].R.main = True
 
         # Apply the parametrisation to the planets parameters
+        if OmegaRef_planet is None:
+            OmegaRef_planet = self.paramcontainers["planets"].keys()[0]
         for planet_name in list(self.paramcontainers["planets"].keys()):
-            self.paramcontainers["planets"][planet_name].M.main = True
             self.paramcontainers["planets"][planet_name].P.main = True
-            if self.parametrisation == "Np":
-                self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name="alpha_ref", name_prefix=self.full_name, main=True))
+            self.paramcontainers["planets"][planet_name].tic.main = True
+            self.paramcontainers["planets"][planet_name].inc.main = True
+            if planet_name == OmegaRef_planet:
+                self.paramcontainers["planets"][planet_name].OMEGA.main = True
+                self.paramcontainers["planets"][planet_name].OMEGA.free = False
+                self.paramcontainers["planets"][planet_name].OMEGA.value = pi
             else:
+                self.paramcontainers["planets"][planet_name].OMEGA.main = True
+            if self.parametrisation == "Standard":
+                self.paramcontainers["planets"][planet_name].M.main = True
                 self.paramcontainers["planets"][planet_name].secosw.main = True
                 self.paramcontainers["planets"][planet_name].sesinw.main = True
-                self.paramcontainers["planets"][planet_name].inc.main = True
-                self.paramcontainers["planets"][planet_name].OMEGA.main = True
-                self.paramcontainers["planets"][planet_name].MeanAnomaly.main = True
             if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
 
         if self.parametrisation == "Np":
-            self.add_parameter(Parameter(name="q_plus", name_prefix=self.full_name, main=True))
-            self.add_parameter(Parameter(name="q_p", name_prefix=self.full_name, main=True))
-            self.add_parameter(Parameter(name="ecos_plus", name_prefix=self.full_name, main=True))
-            self.add_parameter(Parameter(name="ecos_minus", name_prefix=self.full_name, main=True))
-            self.add_parameter(Parameter(name="esin_plus", name_prefix=self.full_name, main=True))
-            self.add_parameter(Parameter(name="esin_minus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="qplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="qp", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="hplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="hminus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="kplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="kminus", name_prefix=self.full_name, main=True))
