@@ -403,7 +403,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                             "{}".format(paramfile_path, paramfile_path))
                 if self.hasrun_folder:
                     question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += "\nNot create it and raise an 'error' ? {}".format(answers_list_create)
+                question += ("\nNot create it and raise an 'error' ?\nReply one of these answers {}\n"
+                             "".format(answers_list_create))
                 reply = QCM_utilisateur(question, answers_list_create)
             else:
                 if answer_create in answers_list_create:

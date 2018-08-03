@@ -14,6 +14,7 @@ import astropy.units as unt
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
+from ...core.parameter import Parameter
 
 
 ## Logger Object
