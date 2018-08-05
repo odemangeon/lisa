@@ -51,7 +51,7 @@ class Prior(object):
         # 1.
         marginal = OrderedDict()
         joint = OrderedDict()
-        for param in self.get_list_params(main=True, free=True):
+        for param in self.get_list_params(main=True, free=True, recursive=True):
             if param.joint:
                 joint[param.full_name] = param
             else:

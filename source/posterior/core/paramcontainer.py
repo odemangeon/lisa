@@ -18,6 +18,8 @@ from .parameter import Parameter
 logger = getLogger()
 
 
+key_params_fileinfo = "Param names"
+
 class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_ParamContainer."""
 
@@ -103,21 +105,24 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
 
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
-        self.paramfile_info.update({"Param names": [param.name for param in
+        self.paramfile_info.update({key_params_fileinfo: [param.name for param in
                                                     self.get_list_params(main=True)]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
                      "".format(self.name, self.paramfile_info))
 
     def get_paramfile_section(self, text_tab="", texttab_1tline=True,
-                              entete_symb=" = ", quote_name=False, ):
+                              entete_symb=" = ", quote_name=False, **kwargs):
         """Return the text to include in the parameter_file for this CelestialBody.
 
-        ----
-
-        Arguments:
-            text_tab : string,
-                text giving the tabulation that needs to be added to this the text to obtain the
+        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
+        :param bool texttab_1tline: Wether to use the tab for the first line or not.
+        :param str entete_symb: Symbol to use after the paramcontainers name
+        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
+        :return str text: Text for the parameter file.
+
+        Keywords arguments are given to get_list_params:
+        See self.get_list_params for details
         """
         if quote_name:
             entete = "'{}'{}{{".format(self.name_code, entete_symb)
@@ -129,7 +134,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
             text += text_tab
         text += entete
         texttab_1tline_param = False
-        for param in self.get_list_params(main=True):
+        for param in self.get_list_params(main=True, **kwargs):
             text += param.get_paramfile_section(text_tab=text_tab + space_entete_param,
                                                 texttab_1tline=texttab_1tline_param,
                                                 entete_symb=": ",
@@ -140,9 +145,13 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         return text
 
     def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
+        """load the configuration specified by the dictionnary
+
+        :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
+            read from the parameter file.
+        """
         logger.debug("List of Param names: {}".format(self.paramfile_info["Param names"]))
-        for param_name in self.paramfile_info["Param names"]:
+        for param_name in self.paramfile_info[key_params_fileinfo]:
             param = getattr(self, param_name)
             if param.name_code in dico_config:
                 param.main = True

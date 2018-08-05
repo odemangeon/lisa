@@ -31,7 +31,7 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
 from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
 from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
 from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ....tools.convert import getecc_fast, getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast
+from ....tools.convert import getecc_fast, getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
 
 ## Logger object
 logger = getLogger()
@@ -476,23 +476,26 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
             param_gravgroup[param.name] = add_param_argument(param, arg_list, key_whole, key_param,
                                                              param_nb, par_vec_name)[key_whole]
         param_pl = {}
-        for planet in planets.values:
+        for planet in planets.values():
             param_pl[planet.name] = {}
             l_param_pl = [planet.P, planet.tic, planet.inc, planet.OMEGA]
             for param in l_param_pl:
                 param_pl[planet.name][param.name] = add_param_argument(param, arg_list, key_whole, key_param,
                                                                        param_nb, par_vec_name)[key_whole]
-            param_conv += template_param_conv_pl.format(planet=planet.name, tic=param_pl[planet.name]["tic"], P=param_pl[planet.name]["P"],
-                                                        t_ref=time_ref_dyn)
             param_planets_reb += ", ".join(["M_{}".format(planet.name), param_pl[planet.name]["P"], "ecc_{}".format(planet.name),
                                             param_pl[planet.name]["inc"], param_pl[planet.name]["OMEGA"], "omega_{}".format(planet.name),
                                             "MeanAnomaly_{}".format(planet.name)])
+            param_planets_reb += ", "
+        param_planets_reb = param_planets_reb[:-2] + "]"
         planet_names = [planet.name for planet in planets.values()]
         param_conv += template_param_conv_gravgroup.format(planets=planet_names, qplus=param_gravgroup["qplus"], qp=param_gravgroup["qp"],
                                                            M_star=M_star, hplus=param_gravgroup["hplus"], hminus=param_gravgroup["hminus"],
                                                            kplus=param_gravgroup["kplus"], kminus=param_gravgroup["kminus"],
                                                            P_0=param_pl[planet_names[0]]["P"], P_1=param_pl[planet_names[1]]["P"],
                                                            tab=tab)
+        for planet in planets.values():
+            param_conv += template_param_conv_pl.format(planet=planet.name, tic=param_pl[planet.name]["tic"], P=param_pl[planet.name]["P"],
+                                                        t_ref=time_ref_dyn, tab=tab)
 
     # Add the reference time for the dynamical simulation as argument
     (arguments, timeref_arg
