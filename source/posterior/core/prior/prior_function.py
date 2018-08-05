@@ -282,19 +282,27 @@ class SinePrior(Core_Prior_Function):
     __mandatory_args__ = ["vmin", "vmax"]
     __extra_args__ = []
 
-    def __init__(self, vmin, vmax):
+    def __init__(self, vmin, vmax, rad=True):
         if vmin >= vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
-        if vmin < 0. or vmin > 180.:
-            raise ValueError("vmin should between 0. and 180")
-        if vmax < 0. or vmax > 180.:
-            raise ValueError("vmin should between 0. and 180")
+        self.rad = rad
+        self.degtorad = pi / 180.0
+        if rad:
+            if vmin < 0. or vmin > 180.:
+                raise ValueError("vmin should between 0. and 180")
+            if vmax < 0. or vmax > 180.:
+                raise ValueError("vmin should between 0. and 180")
+            self.C = 1. / (np.cos(vmin) - np.cos(vmax))
+        else:
+            if vmin < 0. or vmin > pi:
+                raise ValueError("vmin should between 0. and pi")
+            if vmax < 0. or vmax > pi:
+                raise ValueError("vmin should between 0. and pi")
+            self.C = 1. / ((np.cos(vmin * self.degtorad) - np.cos(vmax * self.degtorad)) / self.degtorad)
         self.vmin = vmin
         self.vmax = vmax
-        self.C = 1. / (180 / pi * (np.cos(vmin * pi / 180.0) - np.cos(vmax * pi / 180.0)))
         self.lnC = mt.log(self.C)
         self.lims = [vmin, vmax]
-        self.degtorad = pi / 180.0
 
     def create_logpdf(self):
         vmin = self.vmin
@@ -302,23 +310,35 @@ class SinePrior(Core_Prior_Function):
         lnC = self.lnC
         degtorad = self.degtorad
 
-        def logpdf(x):
-            if x >= vmin and x <= vmax:
-                return mt.log(np.sin(x * degtorad)) + lnC
-            else:
-                return -inf
-        return logpdf
+        if self.rad:
+            def logpdf(x):
+                if x >= vmin and x <= vmax:
+                    return mt.log(np.sin(x)) + lnC
+                else:
+                    return -inf
+            return logpdf
+        else:
+            def logpdf(x):
+                if x >= vmin and x <= vmax:
+                    return mt.log(np.sin(x * degtorad)) + lnC
+                else:
+                    return -inf
+            return logpdf
 
-    def __logpdf_wcustargs(self, x, lnC, degtorad):
+    def __logpdf_wcustargs(self, x, lnC, angleconv):
         return mt.log(np.sin(x * degtorad)) + lnC
 
     def logpdf(self, x):
+        if self.rad:
+            conv = 1
+        else:
+            conv = self.degtorad
         if isinstance(x, np.ndarray):
             return np.where((self.vmin < x) & (x < self.vmax),
-                            self.__logpdf_wcustargs(x, self.lnC, self.degtorad),
+                            self.__logpdf_wcustargs(x, self.lnC, conv),
                             -inf)
         if x >= self.vmin and x <= self.vmax:
-            return self.__logpdf_wcustargs(x, self.lnC, self.degtorad)
+            return self.__logpdf_wcustargs(x, self.lnC, conv)
         else:
             return -inf
 
