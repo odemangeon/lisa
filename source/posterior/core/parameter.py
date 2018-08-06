@@ -274,10 +274,10 @@ class Parameter(Name):
         space_entete_prior = spacestring_like(entete_prior)
         text += text_tab + space_entete_param + entete_prior
         # Classical marginal prior keys
-        text += "'category': '{}', 'args': {}\n".format(self.prior_category, self.prior_args)
+        text += "'category': '{}', 'args': {},\n".format(self.prior_category, self.prior_args)
         # Joint prior keys (for later use, not implemented yet in what follows)
         text += (text_tab + space_entete_param + space_entete_prior +
-                 "'joint_prior_ref': None,\n")
+                 "'joint_prior_ref': None\n")
         text += text_tab + space_entete_param + space_entete_prior + "}\n"
         text += text_tab + space_entete_param + "},\n"
         return text
