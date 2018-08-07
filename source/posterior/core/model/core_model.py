@@ -32,11 +32,12 @@ from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..dataset_and_instrument.instrument import interpret_instmod_fullname
 from ..likelihood.core_likelihood import LikelihoodCreator
 from ..likelihood.manager_noise_model import Manager_NoiseModel
-from ..prior.core_prior import Prior
+from ..prior.model_prior import Model_Prior, joint_prior_name
 from ..prior.manager_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder
+from ....tools.miscellaneous import spacestring_like
 
 
 ## Logger
@@ -50,7 +51,7 @@ manager_noisemodel = Manager_NoiseModel()
 manager_noisemodel.load_setup()
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, InstrumentContainerInterface,
+class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator,
                  DatasimulatorCreator, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
@@ -97,6 +98,9 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
 
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
+
+        # Initialise the attributes related to the Prior
+        Model_Prior.init(self, self.paramfile_info)
 
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
@@ -328,12 +332,15 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                                                         inst_db=self.paramcontainers[parcont_type],
                                                         text_tab=text_tab, entete_symb=entete_symb,
                                                         quote_name=quote_name)
-        # Finally produce the param file section for the parameter of the model which are not in
+        # Produce the param file section for the parameter of the model which are not in
         # any specific paramcontainer
         text += "# {}\n\n".format(self.category)
         text += super(Core_Model, self).get_paramfile_section(text_tab=text_tab, texttab_1tline=False,
                                                               entete_symb=" = ", quote_name=False,
                                                               recursive=False)
+        # Produce the text to introduce the joint paramaters distribution section
+        text += "\n" + self.get_paramfile_section_jointprior()
+
         self.update_paramfile_info()
         return text
 
@@ -367,13 +374,15 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
             read from the parameter file.
         """
+        # load the joint prior configuration
+        Model_Prior.load_jointprior_config(dico_config=dico_config)
+        # Load the new configuration from the parameter file for each Paramcontainer and parameter
         logger.debug("List of Core_ParamContainer types in param_file_info: {}"
                      "".format(self.paramfile_info.keys()))
-        # Load the new configuration from the parameter file
         for paramcont_type in self.paramfile_info.keys():
             logger.debug("Content of param_file_info for {}: {}"
                          "".format(paramcont_type, self.paramfile_info[paramcont_type]))
-            if paramcont_type not in [instmod_cat, key_params_fileinfo]:
+            if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
                 for paramcont_name in self.paramfile_info[paramcont_type]:
                     paramcont_dico = dico_config[paramcont_name]
                     logger.debug("Content of param dictionary for {} {}: {}"
@@ -384,7 +393,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                                        inst_db_info=self.paramfile_info[paramcont_type],
                                        inst_db=self.paramcontainers[paramcont_type],
                                        model_instance=self)
-            else:
+            else:  # For the model parameters (those who do no belong in any param container)
                 super(Core_Model, self).load_config(dico_config=dico_config[self.name_code])
 
     @property

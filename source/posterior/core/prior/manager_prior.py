@@ -21,10 +21,13 @@ The objective of this module is to manage the priors.
 """
 from logging import getLogger
 from ....software_parameters import setupfile_prior
-from .prior_function import Core_Prior_Function
+from .core_prior import Core_Prior_Function
 
 ## Logger
 logger = getLogger()
+
+
+# TODO: Store in different place the joint and marginal priors ?
 
 
 class Manager_Prior(object):

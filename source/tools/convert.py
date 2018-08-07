@@ -400,8 +400,9 @@ def getomega(secosw, sesinw):
 
     :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
     :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-pi, pi]
     """
-    return np.arctan(sesinw / secosw)
+    return np.arctan2(sesinw, secosw)
 
 
 def getomega_deg(secosw, sesinw):
@@ -409,8 +410,9 @@ def getomega_deg(secosw, sesinw):
 
     :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
     :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-180, 180]
     """
-    return np.rad2deg(np.arctan(sesinw / secosw))
+    return np.rad2deg(np.arctan2(sesinw, secosw))
 
 
 def getomega_fast(secosw, sesinw):
@@ -418,11 +420,9 @@ def getomega_fast(secosw, sesinw):
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-pi, pi]
     """
-    if secosw == 0.:
-        return math.copysign(math.pi / 2, sesinw)
-    else:
-        return math.atan2(sesinw, secosw)
+    return math.atan2(sesinw, secosw)
 
 
 def getomega_deg_fast(secosw, sesinw):
@@ -430,11 +430,9 @@ def getomega_deg_fast(secosw, sesinw):
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-180, 180]
     """
-    if secosw == 0.:
-        return math.degrees(math.copysign(math.pi / 2, sesinw))
-    else:
-        return math.degrees(math.atan2(sesinw, secosw))
+    return math.degrees(math.atan2(sesinw, secosw))
 
 
 def getomega_plc_4_handk(hplus, hminus, kplus, kminus):
@@ -444,9 +442,9 @@ def getomega_plc_4_handk(hplus, hminus, kplus, kminus):
     :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
     :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
     :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
-    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
     """
-    return np.arctan((kplus - kminus) / (hplus - hminus))
+    return np.arctan2((kplus - kminus), (hplus - hminus))
 
 
 def getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus):
@@ -456,12 +454,9 @@ def getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus):
     :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
     :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
     :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
-    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    :return float omega_c: argument of periastron for the c planet  [-pi, pi]
     """
-    if (hplus - hminus) == 0.:
-        return math.copysign(math.pi / 2, (kplus - kminus))
-    else:
-        return math.atan2((kplus - kminus), (hplus - hminus))
+    return math.atan2((kplus - kminus), (hplus - hminus))
 
 
 def getomega_plb_4_handk(hplus, hminus, kplus, kminus):
@@ -471,9 +466,9 @@ def getomega_plb_4_handk(hplus, hminus, kplus, kminus):
     :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
     :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
     :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
-    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
     """
-    return np.arctan((kplus + kminus) / (hplus + hminus))
+    return np.arctan2((kplus + kminus), (hplus + hminus))
 
 
 def getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus):
@@ -483,12 +478,129 @@ def getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus):
     :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
     :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
     :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
-    :return float omega_c: argument of periastron for the c planet  [0, 1]
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
     """
-    if (hplus + hminus) == 0.:
-        return math.copysign(math.pi / 2, (kplus + kminus))
-    else:
-        return math.atan2((kplus + kminus), (hplus + hminus))
+    return math.atan2((kplus + kminus), (hplus + hminus))
+
+
+def gethplus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 16 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float hplus: hplus (see above)
+    """
+    return Pb_over_Pc**(2./3.) * eb * np.cos(omegab) + ec * np.cos(omegac)
+
+
+def gethplus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 16 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float hplus: hplus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2./3.) * eb * math.cos(omegab) + ec * math.cos(omegac)
+
+
+def gethminus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float hminus: hminus (see above)
+    """
+    return Pb_over_Pc**(2./3.) * eb * np.cos(omegab) - ec * np.cos(omegac)
+
+
+def gethminus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float hminus: hminus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2./3.) * eb * math.cos(omegab) - ec * math.cos(omegac)
+
+
+def getkplus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 18 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float kplus: kplus (see above)
+    """
+    return Pb_over_Pc**(2./3.) * eb * np.sin(omegab) + ec * np.sin(omegac)
+
+
+def getkplus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 18 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float kplus: kplus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2./3.) * eb * math.sin(omegab) + ec * math.sin(omegac)
+
+
+def getkminus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float kminus: kminus (see above)
+    """
+    return Pb_over_Pc**(2./3.) * eb * np.sin(omegab) - ec * np.sin(omegac)
+
+
+def getkminus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float kminus: kminus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2./3.) * eb * math.sin(omegab) - ec * math.sin(omegac)
 
 
 def getK(P, Ms, Mp, inc, ecc):
