@@ -69,29 +69,6 @@ class InstrumentContainerInterface(object):
         """Return the list of instrument names."""
         return self.instruments.get_instnames(inst_cat=inst_cat, sortby_instcat=sortby_instcat)
 
-    def get_list_params(self, main=False, free=False, inst_models={}):
-        """Return the list of all parameters.
-
-        TODO: Not sure that it should be here in the InstrumentContainerInterface.
-
-        ----
-        Arguments:
-            inst_models : dict, (default:{}),
-                dictionnary which for each instrument name give the list of the names of
-                instrument models for which you want the params.
-        """
-        result = []
-        for paramcont_cat in self.paramcontainers_categories:
-            if paramcont_cat == instrument_model_category:
-                for inst_name, list_mod_name in inst_models.items():
-                    for inst_mod_name in list_mod_name:
-                        mod = self.instruments[inst_name][inst_mod_name]
-                        result.extend(mod.get_list_params(main=main, free=free))
-            else:
-                for param_cont in self.paramcontainers[paramcont_cat].values():
-                    result.extend(param_cont.get_list_params(main=main, free=free))
-        return result
-
     def instrumenthasatleast1model(self, inst_name, inst_cat=None):
         """Return True if there is at least one instrument model for the instrument."""
         return self.instruments.hasatleast1instmod(inst_name=inst_name, inst_cat=inst_cat)
@@ -108,10 +85,8 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
     def get_list_params(self, main=False, free=False, inst_models={}):
         """Return the list of all parameters.
 
-        TODO: Not sure that this function is used, but if it's working, it should be used.
-
-        :param bool main: True returns only the main parameters
-        :param bool free: True returns only the free parameters
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
         :param dict inst_models : Dictionnary which for each instrument name give the list of the
                 names of instrument models for which you want the params.
                 key = isntrument name, value = list of instrument model name
@@ -124,19 +99,26 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                 result.extend(mod.get_list_params(main=main, free=free))
         return result
 
-    def get_subkwargs_4_get_list_params(self, **kwargs):
+    def get_subkwargs_4_get_list_params(self, model_instance, **kwargs):
         """Select the keyword arguments for the get_list_params method.
 
-        Keyword argument that are used by the get_list_params method of InstrumentContainer are:
-        :param bool main: True returns only the main parameters
-        :param bool free: True returns only the free parameters
+        :param Core_Model model_instance: Model instance which is used for the default value of
+            inst_models (see below).
+
+        Keyword argument that are used by the get_list_params method of InstrumentContainer
+        only:
         :param dict inst_models : Dictionnary which for each instrument name give the list of the
                 names of instrument models for which you want the params.
                 key = isntrument name, value = list of instrument model name
+                If not provided, we return all the instrument models used by the model.
+
         :return dict selected_kwargs: Dictionary with key = argument name, value = argument value
         """
         selected_kwargs = {}
-        for kwarg_name in ["main", "free", "inst_models"]:
-            if kwarg_name in kwargs:
-                selected_kwargs[kwarg_name] = kwargs[kwarg_name]
+        # Get the specific arguments for InstrumentContainer get_param function
+        for kwarg_name in ["inst_models"]:
+            selected_kwargs[kwarg_name] = kwargs.get(kwarg_name, None)
+        # Set the default value for inst_models, if not provided
+        if selected_kwargs["inst_models"] is None:
+            kwargs["inst_models"] = model_instance.name_instmodels_used(sortby_instname=True)
         return selected_kwargs

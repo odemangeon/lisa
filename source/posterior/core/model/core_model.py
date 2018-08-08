@@ -258,8 +258,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
         # Get parameters that in the param containers
         if recursive:
-            if "inst_models" not in kwargs:
-                kwargs["inst_models"] = self.name_instmodels_used(sortby_instname=True)
             result.extend(ParamContainerDatabase.get_list_params(self, main=main, free=free, **kwargs))
         return result
 
