@@ -258,7 +258,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
         # Get parameters that in the param containers
         if recursive:
-            result.extend(ParamContainerDatabase.get_list_params(self, main=main, free=free, **kwargs))
+            result.extend(ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, **kwargs))
         return result
 
     def get_list_paramnames(self, main=False, free=False, recursive=False, **kwargs):

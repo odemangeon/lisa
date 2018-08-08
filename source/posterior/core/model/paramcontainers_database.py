@@ -109,11 +109,13 @@ class ParamContainerDatabase(object):
         """Return the list of the paramcontainer categories in this ParamContainerDatabase."""
         return list(self.paramcontainers.keys())
 
-    def get_list_params(self,  main=False, free=False, **kwargs):
+    def get_list_params(self, model_instance=None, main=False, free=False,  **kwargs):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameters
         :param bool free: If true (default false) returns only the free parameters
+        :param Core_Model model_instance: Model instance which is used for the default value of
+            some SpecificParamContainerCategory (optional).
 
         Keyword arguments are arguments specific to a certain type of parameter containers (like the
          instruments). See get_list_params of these parameter container for more information.
@@ -124,7 +126,7 @@ class ParamContainerDatabase(object):
         for paramcont_cat in self.paramcontainers_categories:
             if isinstance(self.paramcontainers[paramcont_cat], SpecificParamContainerCategory):
                 selectedkwargs = (self.paramcontainers[paramcont_cat].
-                                  get_subkwargs_4_get_list_params(**kwargs))
+                                  get_subkwargs_4_get_list_params(model_instance, **kwargs))
                 result.extend(self.paramcontainers[paramcont_cat].
                               get_list_params(**selectedkwargs))
             else:

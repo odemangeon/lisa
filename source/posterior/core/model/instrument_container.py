@@ -99,11 +99,11 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                 result.extend(mod.get_list_params(main=main, free=free))
         return result
 
-    def get_subkwargs_4_get_list_params(self, model_instance, **kwargs):
+    def get_subkwargs_4_get_list_params(self, model_instance=None, **kwargs):
         """Select the keyword arguments for the get_list_params method.
 
         :param Core_Model model_instance: Model instance which is used for the default value of
-            inst_models (see below).
+            inst_models, see below (optional).
 
         Keyword argument that are used by the get_list_params method of InstrumentContainer
         only:
