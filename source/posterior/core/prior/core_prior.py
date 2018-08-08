@@ -62,5 +62,35 @@ class Core_JointPriorFunction(Core_Prior_Function):
     __joint__ = True
 
     @classmethod
-    def check_param(cls, params):
-        pass    
+    def check_param(cls, params, model_instance):
+        """Check that the parameters dictionnary provided for the Joint prior is correct.
+
+        Check that the parameters keys provided are the ones required by the definition of the prior.
+        Check that the parameters names provided correspond to existing parameters.
+
+        :param dict params: Dictionnary containing as keys the keys defined in the Joint prior
+            __params__ attribute and as values the names of the model parameters to be used for each
+            key.
+        :param Core_Model model_instance: model instance to be able to check the the parameter names
+            provided in params are valid.
+        """
+        # Check that the parameter keys are good
+        set_paramskeys_expected = set(cls.params)
+        set_paramskeys_received = set(params.keys())
+        if set_paramskeys_expected != set_paramskeys_received:
+            unexpected_paramskeys = set_paramskeys_received - set_paramskeys_expected
+            missing_paramskeys = set_paramskeys_expected - set_paramskeys_received
+            raise ValueError("Wrong parameter keys provided for Joint prior category {}.\n"
+                             "Number of unexpected keys: {}, list: {}\n"
+                             "Number of unexpected keys: {}, list: {}"
+                             "".format(self.category, len(unexpected_paramskeys), unexpected_paramskeys,
+                                       len(missing_paramskeys), missing_paramskeys))
+        else:
+            logger.debug("The params keys provided for Joint prior category {} are correct.")
+        # Check that the parameter names correspond to existing params and that they are main parameters
+        l_main_paramnames = model_instance.get_list_paramnames(main=True, recursive=True, full_name=True)
+        for param_name in params.values():
+            if param_name not in l_main_paramnames:
+                raise ValueError("Parameter name {} doesn't exist in the model.".format(param_name))
+        logger.debug("The parameters name provided for Joint prior category all correspond to "
+                     "existing parameters")

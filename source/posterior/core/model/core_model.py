@@ -239,41 +239,50 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def get_list_params(self, main=False, free=False, recursive=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool main: True returns only the main parameters
-        :param bool free: True returns only the free parameters
-        :param bool recursive: If True also returns the parameters in the param containers of the
-            param container database
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
+        :param bool recursive: If true (default false) also returns the parameters in the param
+            containers of the param container database
 
-        Keyword arguments are given to get_list_params of parent classes ParamContainerDatabase:
-        they are for additional keyword argument which can be accepted by specific parameter
-        containers (like the instruments)
+        Keyword arguments are given to ParamContainerDatabase.get_list_params (see docstring for
+        exhaustive information. Below I describe some of these.
         :param dict inst_models : Dictionnary which for each instrument name give the list of the
                 names of instrument models for which you want the params.
                 Default = all instrument models used
 
         :return list_of_param result: list of Parameter instances
         """
-        if "main" not in kwargs:
-            kwargs["main"] = False
-        if "free" not in kwargs:
-            kwargs["free"] = False
+        kwargs_CoreParamContainer = kwargs.copy()
         result = []
-        result.extend(Core_ParamContainer.get_list_params(self, main=kwargs.get("main", False),
-                                                          free=kwargs.get("free", False)))
+        # Get parameters that in the model parameters and not in any specific param container
+        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
+        # Get parameters that in the param containers
         if recursive:
             if "inst_models" not in kwargs:
                 kwargs["inst_models"] = self.name_instmodels_used(sortby_instname=True)
-            result.extend(ParamContainerDatabase.get_list_params(self, **kwargs))
+            result.extend(ParamContainerDatabase.get_list_params(self, main=main, free=free, **kwargs))
         return result
 
-    def get_list_paramnames(self, main=False, free=False, recursive=False, full_name=False,):
-        """Return the list of all parameters."""
+    def get_list_paramnames(self, main=False, free=False, recursive=False, **kwargs):
+        """Return the list of all parameters names in the model.
+
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
+        :param bool recursive: If true (default false) also returns the parameters in the param
+            containers of the param container database
+
+        Keyword arguments are passed to the Name.get_name (see docstring for exhaustive information)
+        Below is the description of some of these:
+        :param bool full_name: If True (default False) return the full name of the parameter
+        :param bool code_name: If True (default False) return the code version of the name of the parameter
+        :param bool prefix: If True (default False) return the prefix of the full name of the parameter
+            This argument and full_name cannot be true at the same time
+
+        :return list_of_paramname result: list of Parameter instances names
+        """
         result = []
-        for param in self.get_list_params(main=main, free=free, recursive=recursive):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
+        for param in get_list_params(self, main=main, free=free, recursive=recursive):
+            result.append(param.get_name(**kwargs))
         return result
 
     def get_initial_values(self, list_paramnames=None, sortby_paramfullname=False):

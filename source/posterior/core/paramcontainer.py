@@ -69,8 +69,8 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters.
 
-        :param bool main: True returns only the main parameters
-        :param bool free: True returns only the free parameters
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
         :return list_of_param result: list of Parameter instances
         """
         if main:
@@ -84,19 +84,41 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         else:
             return Core_ParamContainer.__get_list_all_params(self)
 
-    def get_list_paramnames(self, main=False, free=False, full_name=False):
-        """Return the list of all parameters."""
+    def get_list_paramnames(self, main=False, free=False, **kwargs):
+        """Return the list of all parameters.
+
+        :param bool main: If true (default false) returns only the main parameter names
+        :param bool free: If true (default false) returns only the free parameter names
+
+        Keyword arguments are passed directly to the Name.get_name method (see docstring of
+        for exhaustive information).
+        :param bool full_name: If True (default False) return the full name of the parameter
+        :param bool code_name: If True (default False) return the code version of the name of the parameter
+        :param bool prefix: If True (default False) return the prefix of the full name of the parameter
+            This argument and full_name cannot be true at the same time
+            
+        :return list_of_param result: list of Parameter instances
+        """
         result = []
         for param in Core_ParamContainer.get_list_params(self, main=main, free=free):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
+            result.append(param.get_name(**kwargs))
         return result
 
-    def has_parameter(self, name, main=False, free=False, full_name=False):
-        """Return True in the parameter exists."""
-        return name in self.get_list_paramnames(main=main, free=free, full_name=full_name)
+    def has_parameter(self, name,  main=False, free=False, **kwargs):
+        """Return True in the parameter designated by the name provided exists.
+
+        :param str name: Name of the parameter you are looking for
+        :param bool main: If true (default false) returns True only if the parameter exists and is a
+            main parameter
+        :param bool free: If true (default false) returns True only if the parameter exists and is a
+            free parameter
+
+        Keyword arguments are passed directly to the Parameter.get_name method (see docstring of
+        for exhaustive information).
+
+        :return bool has: True if the parameter as specified exists, False otherwise.
+        """
+        return name in self.get_list_paramnames(main=main, free=free, **kwargs)
 
     @property
     def paramfile_info(self):

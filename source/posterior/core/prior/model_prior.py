@@ -58,9 +58,9 @@ class Model_Prior(object):
         # Joint parameters
         # Define below the joint parameter distributions.
         '{joint_prior_name}' = {{# Example:
-        {tab}# priorhandk: {{'category': 'handk', 'args': {{'vmin': 0.0, 'vmax': 1.0}},
-        {tab}#                'params': {'hplus': 'hplus', 'hminus': 'hminus', 'kplus': 'kplus', 'kminus': 'kminus']
-        {tab}#              }}
+        {tab}# priorhkP: {{'category': 'hkP', 'args': {{'vmin': 0.0, 'vmax': 1.0}},
+        {tab}#             'params': {'hplus': 'hplus', 'hminus': 'hminus', 'kplus': 'kplus', 'kminus': 'kminus']
+        {tab}#            }}
         {tab}}}
         """.format(joint_prior_name=joint_prior_name,
                    tab=spacestring_like("'{}' = {{".format(joint_prior_name)))
@@ -72,26 +72,27 @@ class Model_Prior(object):
         :param dict dico_config: Dictionnary containing the joint priors information.
         """
         dico_config_jointprior = dico_config[joint_prior_name]
+        self.joint_prior_container.clear()
+        logger.debug("joint prior container cleared.")
         for joint_prior_ref, dico_jointprior in dico_config_jointprior.items():
-            # Check if joint prior ref already exists.
-            if joint_prior_ref in self.joint_prior_container:
-                logger.debug()
             # Check that the joint prior category is available
             if manager.is_available_priortype(dico_jointprior["category"]):
-                priorfunction_subclass = manager.get_priorfunc_subclass(prior_category)
+                priorfunction_subclass = manager.get_priorfunc_subclass(dico_jointprior["category"])
                 # Check that this is a joint prior
                 if not priorfunction_subclass.joint:
-                    raise ValueError("Prior class {} is not a joint prior category".format())
+                    raise ValueError("Prior category {} is not a joint prior category".format(dico_jointprior["category"]))
                 # Check that the arguments are fine
                 priorfunction_subclass.check_args(list(dico_jointprior["category"].keys()))
                 # Check the parameters
-                priorfunction_subclass.check_params(dico_jointprior["params"])
+                priorfunction_subclass.check_params(dico_jointprior["params"], self)
             else:
                 raise ValueError("prior_category {} is not in the list of available prior types: {}"
-                                 "".format(prior_category, manager.get_available_priors()))
-            self.joint_prior_container[joint_prior_ref] = dico_jointprior
-            # TODO: Continue
-
+                                 "".format(dico_jointprior["category"], manager.get_available_priors()))
+            self.joint_prior_container[joint_prior_ref] = {"category": dico_jointprior["category"],
+                                                           "args": dico_jointprior["args"],
+                                                           "params": dico_jointprior["params"]}
+            logger.info("Joint prior {} of category {} added to the joint prior container."
+                        "".format(joint_prior_ref, dico_jointprior["category"]))
 
     def create_individual_lnpriors(self):
         """Return a dictionnary providing the individual prior probability density functions.

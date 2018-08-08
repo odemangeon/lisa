@@ -65,6 +65,11 @@ class Name(object):
         return self.__name_prefix
 
     @property
+    def name_prefix_code(self):
+        """Return the name of the instance."""
+        return check_name_code(self.__name_prefix, verbose=0)
+
+    @property
     def hasnameprefix(self):
         """Return True is name_prefix has been set already, False otherwise."""
         return self.__name_prefix is not None
@@ -101,3 +106,23 @@ class Name(object):
     def full_name_code(self):
         """Return the full name of the CelestialBody."""
         return check_name_code(self.full_name, verbose=0)
+
+    def get_name(self, full_name=False, code_name=False, prefix=False):
+        """Return the name of the parameter.
+
+        :param bool full_name: If True (default False) return the full name of the parameter
+        :param bool code_name: If True (default False) return the code version of the name of the parameter
+        :param bool prefix: If True (default False) return the prefix of the full name of the parameter
+            This argument and full_name cannot be true at the same time
+        :return str name: String providing the name of the parameter
+        """
+        if full_name and prefix:
+            raise ValueError("full_name and prefix cannot be True at the same time.")
+        if prefix:
+            name = self.name_prefix
+        elif full_name:
+            name = self.full_name
+        else:
+            name = self.name
+        if code_name:
+            return check_name_code(name, verbose=0)
