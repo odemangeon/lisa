@@ -79,32 +79,24 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         :param string/None run_folder: Folder to use as run folder. For more info check run_folder
         :param Instmodel4Dataset/None instmodel4dataset:
         :param list_of_string l_instmod_fullnames: list of instrument model full names
-
         """
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
         Core_ParamContainer.__init__(self, name)
-
         # Model needs to access the datasets so give model the dataset_db attribute
         DatasetDbAttr.__init__(self, dataset_db)
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
-
         # Intialise the run_folder property
         RunFolder.__init__(self, run_folder=run_folder)
-
         # Core Model is also a ParamContainer Database, so initialise it
         ParamContainerDatabase.__init__(self)
-
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
-
         # Initialise the attributes related to the Prior
-        Model_Prior.init(self, self.paramfile_info)
-
+        Model_Prior.__init__(self, self.paramfile_info)
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
-
         # If no instmodel4dataset provided create it and then initialise the instmodel4dataset of
         # the model
         if instmodel4dataset is None:  # 6.
@@ -112,14 +104,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
-
         # Initialise datasimcreatorname4instcat which as to be overwriten in the Model Subclass
         self.__datasimcreatorname4instcat = {}
-
         # Initialise datasimcreator which as to be overwriten in the Model Subclass
         # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
         self.__datasimcreator = {}
-
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -208,33 +197,33 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
              ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
         return res
 
-    def get_param(self, full_name):
-        """Return the instance of the Parameter designated by full_name.
-
-        :param str full_name:
-        """
-        logger.debug("Parameter full name: {}".format(full_name))
-        full_name_split = full_name.split("_")
-        if len(full_name_split) > 2:
-            for paramcont_cat in self.paramcont_categories:
-                if paramcont_cat is not instmod_cat:
-                    obj_name, subobj_name, param_name = full_name_split
-                    if subobj_name in self.paramcontainers[paramcont_cat]:
-                        if (self.paramcontainers[paramcont_cat][subobj_name].
-                           has_parameter(name=param_name)):
-                                return (self.paramcontainers[paramcont_cat][subobj_name].
-                                        parameters[param_name])
-
-                else:
-                    inst_name, inst_model, param_name = full_name_split
-                    inst_db = self.instruments
-                    inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
-                    if inst_model is not None:
-                        return inst_model.parameters[param_name]
-        else:
-            obj_name, param_name = full_name_split
-            if self.has_parameter(param_name):
-                return self.parameters[param_name]
+    # def get_param(self, full_name):
+    #     """Return the instance of the Parameter designated by full_name.
+    #
+    #     :param str full_name:
+    #     """
+    #     logger.debug("Parameter full name: {}".format(full_name))
+    #     full_name_split = full_name.split("_")
+    #     if len(full_name_split) > 2:
+    #         for paramcont_cat in self.paramcont_categories:
+    #             if paramcont_cat is not instmod_cat:
+    #                 obj_name, subobj_name, param_name = full_name_split
+    #                 if subobj_name in self.paramcontainers[paramcont_cat]:
+    #                     if (self.paramcontainers[paramcont_cat][subobj_name].
+    #                        has_parameter(name=param_name)):
+    #                             return (self.paramcontainers[paramcont_cat][subobj_name].
+    #                                     parameters[param_name])
+    #
+    #             else:
+    #                 inst_name, inst_model, param_name = full_name_split
+    #                 inst_db = self.instruments
+    #                 inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
+    #                 if inst_model is not None:
+    #                     return inst_model.parameters[param_name]
+    #     else:
+    #         obj_name, param_name = full_name_split
+    #         if self.has_parameter(param_name):
+    #             return self.parameters[param_name]
 
     def get_list_params(self, main=False, free=False, recursive=False, **kwargs):
         """Return the list of all parameters.
@@ -252,7 +241,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
         :return list_of_param result: list of Parameter instances
         """
-        kwargs_CoreParamContainer = kwargs.copy()
         result = []
         # Get parameters that in the model parameters and not in any specific param container
         result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
@@ -269,17 +257,18 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         :param bool recursive: If true (default false) also returns the parameters in the param
             containers of the param container database
 
-        Keyword arguments are passed to the Name.get_name (see docstring for exhaustive information)
-        Below is the description of some of these:
-        :param bool full_name: If True (default False) return the full name of the parameter
-        :param bool code_name: If True (default False) return the code version of the name of the parameter
-        :param bool prefix: If True (default False) return the prefix of the full name of the parameter
-            This argument and full_name cannot be true at the same time
+        Keyword arguments are passed to the Named.get_name (see docstring for exhaustive information)
+        As recursive is a parameter of both get_list_paramnames and Named.get_name, for the recursive
+        parameter of Named.get_name use recursive_naming.
 
         :return list_of_paramname result: list of Parameter instances names
         """
         result = []
-        for param in get_list_params(self, main=main, free=free, recursive=recursive):
+        # Change the parameter recursive_naming into recursive is present in kwargs before giving to
+        # get_name.
+        if "recursive_naming" in kwargs:
+            kwargs["recursive"] = kwargs.pop("recursive_naming")
+        for param in self.get_list_params(main=main, free=free, recursive=recursive):
             result.append(param.get_name(**kwargs))
         return result
 
@@ -294,7 +283,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         else:
             l_param_main_free = []
             for param_name in list_paramnames:
-                l_param_main_free.append(self.get_param(param_name))
+                l_param_main_free.append(self.get_param(param_name, kwargs_get_name={"include_prefix": True, "recursive": True},
+                                                        main=True, free=True, recursive=True))
         if sortby_paramfullname:
             res = OrderedDict()
         else:
@@ -351,19 +341,16 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         self.update_paramfile_info()
         return text
 
-    def update_paramfile_info(self, recursive=False):
-        """Update the paramfile info attribute.
-
-        TODO: The recursive argument doesn't seems to be used here
-        """
+    def update_paramfile_info(self):
+        """Update the paramfile info attribute."""
         self.paramfile_info.clear()
         # For each paramcontainer in the param container database. Produce the param file section.
         for parcont_type in self.paramcont_categories:
             # Instruments Param containers are a special case
             if parcont_type != instmod_cat:
                 self.paramfile_info[parcont_type] = []
-                for parcont_name, parcont in self.paramcontainers[parcont_type].items():
-                    self.paramfile_info[parcont_type].append(parcont_name)
+                for parcont in self.paramcontainers[parcont_type].values():
+                    self.paramfile_info[parcont_type].append(parcont.code_name)
                     parcont.update_paramfile_info()
             else:
                 self.paramfile_info[instmod_cat] = {}
@@ -382,7 +369,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             read from the parameter file.
         """
         # load the joint prior configuration
-        Model_Prior.load_jointprior_config(dico_config=dico_config)
+        Model_Prior.load_jointprior_config(self, dico_config=dico_config)
         # Load the new configuration from the parameter file for each Paramcontainer and parameter
         logger.debug("List of Core_ParamContainer types in param_file_info: {}"
                      "".format(self.paramfile_info.keys()))
@@ -401,7 +388,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                        inst_db=self.paramcontainers[paramcont_type],
                                        model_instance=self)
             else:  # For the model parameters (those who do no belong in any param container)
-                super(Core_Model, self).load_config(dico_config=dico_config[self.name_code])
+                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name])
 
     @property
     def param_file(self):
@@ -479,7 +466,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             logger.info("Parameter file created at path: {}".format(file_path))
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
-            self.update_paramfile_info(recursive=True)
+            self.update_paramfile_info()
         self.param_file = file_path
 
     def read_parameter_file(self):

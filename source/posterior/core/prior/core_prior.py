@@ -3,7 +3,13 @@
 """
 Core_Prior functions module.
 """
+from logging import getLogger
+
 from ....tools.metaclasses import MandatoryReadOnlyAttr
+
+
+## logger object
+logger = getLogger()
 
 
 class Metaclass_PriorFunction(MandatoryReadOnlyAttr):
@@ -62,7 +68,7 @@ class Core_JointPriorFunction(Core_Prior_Function):
     __joint__ = True
 
     @classmethod
-    def check_param(cls, params, model_instance):
+    def check_params(cls, params, model_instance):
         """Check that the parameters dictionnary provided for the Joint prior is correct.
 
         Check that the parameters keys provided are the ones required by the definition of the prior.
@@ -88,7 +94,7 @@ class Core_JointPriorFunction(Core_Prior_Function):
         else:
             logger.debug("The params keys provided for Joint prior category {} are correct.")
         # Check that the parameter names correspond to existing params and that they are main parameters
-        l_main_paramnames = model_instance.get_list_paramnames(main=True, recursive=True, full_name=True)
+        l_main_paramnames = model_instance.get_list_paramnames(main=True, recursive=True, full_name=True, code_version=True)
         for param_name in params.values():
             if param_name not in l_main_paramnames:
                 raise ValueError("Parameter name {} doesn't exist in the model.".format(param_name))

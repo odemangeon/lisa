@@ -239,7 +239,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
          dico_inst_cat[LC_inst_cat]["l_LD_parcont"],
          dico_inst_cat[LC_inst_cat]["l_ld_param_list"]
          ) = get_LD_parcont_and_param(dico_inst_cat[LC_inst_cat]["l_inst_model"],
-                                      ldmodel4instmodfname, LDs,
+                                      ldmodel4instmodfname, star, LDs,
                                       param_nb, arg_list, key_whole, key_param)
 
         # Get the supersampling factor and exposure time
@@ -248,9 +248,9 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
 
         for instmdl in dico_inst_cat[LC_inst_cat]["l_inst_model"]:
             dico_inst_cat[LC_inst_cat]["supersamp"].append(SSE4instmodfname.
-                                                           get_supersamp(instmdl.full_name))
+                                                           get_supersamp(instmdl.get_name(include_prefix=True, recursive=True)))
             dico_inst_cat[LC_inst_cat]["exptime"].append(SSE4instmodfname.
-                                                         get_exptime(instmdl.full_name))
+                                                         get_exptime(instmdl.get_name(include_prefix=True, recursive=True)))
 
     # Make specific preparation for RV modelling
     if dico_inst_cat[RV_inst_cat]["has"]:
@@ -441,14 +441,14 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
             l_param = [planet.M, planet.P, planet.secosw, planet.sesinw, planet.inc, planet.OMEGA,
                        planet.tic]
             for param in l_param:
-                params_whole[param.name] = add_param_argument(param, arg_list, key_whole, key_param,
+                params_whole[param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
                                                               param_nb, par_vec_name)[key_whole]
-            param_conv += template_param_conv.format(planet=planet.name, secosw=params_whole["secosw"],
+            param_conv += template_param_conv.format(planet=planet.get_name(), secosw=params_whole["secosw"],
                                                      sesinw=params_whole["secosw"], tic=params_whole["tic"],
                                                      P=params_whole["P"], t_ref=time_ref_dyn, tab=tab)
-            param_planets_reb += ", ".join([params_whole["M"], params_whole["P"], "ecc_{}".format(planet.name),
-                                            params_whole["inc"], params_whole["OMEGA"], "omega_{}".format(planet.name),
-                                            "MeanAnomaly_{}".format(planet.name)])
+            param_planets_reb += ", ".join([params_whole["M"], params_whole["P"], "ecc_{}".format(planet.get_name()),
+                                            params_whole["inc"], params_whole["OMEGA"], "omega_{}".format(planet.get_name()),
+                                            "MeanAnomaly_{}".format(planet.get_name())])
             param_planets_reb += ", "
         param_planets_reb = param_planets_reb[:-2] + "]"
     elif parametrisation == "Np":
@@ -473,28 +473,28 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         param_gravgroup = {}
         l_param_gravgroup = [gravgroup.qplus, gravgroup.qp, gravgroup.hplus, gravgroup.hminus, gravgroup.kplus, gravgroup.kminus]
         for param in l_param_gravgroup:
-            param_gravgroup[param.name] = add_param_argument(param, arg_list, key_whole, key_param,
+            param_gravgroup[param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
                                                              param_nb, par_vec_name)[key_whole]
         param_pl = {}
         for planet in planets.values():
-            param_pl[planet.name] = {}
+            param_pl[planet.get_name()] = {}
             l_param_pl = [planet.P, planet.tic, planet.inc, planet.OMEGA]
             for param in l_param_pl:
-                param_pl[planet.name][param.name] = add_param_argument(param, arg_list, key_whole, key_param,
+                param_pl[planet.get_name()][param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
                                                                        param_nb, par_vec_name)[key_whole]
-            param_planets_reb += ", ".join(["M_{}".format(planet.name), param_pl[planet.name]["P"], "ecc_{}".format(planet.name),
-                                            param_pl[planet.name]["inc"], param_pl[planet.name]["OMEGA"], "omega_{}".format(planet.name),
-                                            "MeanAnomaly_{}".format(planet.name)])
+            param_planets_reb += ", ".join(["M_{}".format(planet.get_name()), param_pl[planet.get_name()]["P"], "ecc_{}".format(planet.get_name()),
+                                            param_pl[planet.get_name()]["inc"], param_pl[planet.get_name()]["OMEGA"], "omega_{}".format(planet.get_name()),
+                                            "MeanAnomaly_{}".format(planet.get_name())])
             param_planets_reb += ", "
         param_planets_reb = param_planets_reb[:-2] + "]"
-        planet_names = [planet.name for planet in planets.values()]
+        planet_names = [planet.get_name() for planet in planets.values()]
         param_conv += template_param_conv_gravgroup.format(planets=planet_names, qplus=param_gravgroup["qplus"], qp=param_gravgroup["qp"],
                                                            M_star=M_star, hplus=param_gravgroup["hplus"], hminus=param_gravgroup["hminus"],
                                                            kplus=param_gravgroup["kplus"], kminus=param_gravgroup["kminus"],
                                                            P_0=param_pl[planet_names[0]]["P"], P_1=param_pl[planet_names[1]]["P"],
                                                            tab=tab)
         for planet in planets.values():
-            param_conv += template_param_conv_pl.format(planet=planet.name, tic=param_pl[planet.name]["tic"], P=param_pl[planet.name]["P"],
+            param_conv += template_param_conv_pl.format(planet=planet.get_name(), tic=param_pl[planet.get_name()]["tic"], P=param_pl[planet.get_name()]["P"],
                                                         t_ref=time_ref_dyn, tab=tab)
 
     # Add the reference time for the dynamical simulation as argument

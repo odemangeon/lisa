@@ -49,7 +49,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             jitter_param.main = True
         else:
             inst_model_obj.add_parameter(Parameter(name=jitter_name,
-                                                   name_prefix=inst_model_obj.full_name, main=True))
+                                                   name_prefix=inst_model_obj.name, main=True))
             logger.debug("{} main parameter added in instruments model {}."
                          "".format(jitter_name, instmod_fullname))
 
@@ -60,9 +60,9 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
                    "{} parameter !")
         if jitter_name not in instmod_obj.parameters:
-            raise ValueError(err_msg.format(instmod_obj.full_name, cls.category, jitter_name, ""))
+            raise ValueError(err_msg.format(instmod_obj.get_name(include_prefix=True, recursive=True), cls.category, jitter_name, ""))
         if not(instmod_obj.parameters[jitter_name].main):
-            raise ValueError(err_msg.format(instmod_obj.full_name, cls.category, jitter_name,
+            raise ValueError(err_msg.format(instmod_obj.get_name(include_prefix=True, recursive=True), cls.category, jitter_name,
                                             "main"))
 
     @classmethod
@@ -134,7 +134,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
 
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 + model**2 *
@@ -168,13 +168,13 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         :return list_of_int l_idx_param_noisemod: Updated List of the index of the noise model
             parameters in the updated list of parameters (l_params_new).
         """
-        if jitter_param.free and (jitter_param.full_name not in l_params_lnlike):
+        if jitter_param.free and (jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_lnlike):
             l_params_lnlike_new = l_params_lnlike.copy()
-            l_params_lnlike_new.append(jitter_param.full_name)
+            l_params_lnlike_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
             l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
-            l_idx_param_noisemod_new.append(l_params_lnlike_new.index(jitter_param.full_name))
+            l_idx_param_noisemod_new.append(l_params_lnlike_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
             l_params_noisemod_new = l_params_noisemod.copy()
-            l_params_noisemod_new.append(jitter_param.full_name)
+            l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
         else:
             l_params_lnlike_new = l_params_lnlike
             l_idx_param_noisemod_new = l_idx_param_noisemod
@@ -244,7 +244,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
@@ -322,7 +322,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
@@ -409,7 +409,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
 
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
@@ -489,7 +489,7 @@ class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))

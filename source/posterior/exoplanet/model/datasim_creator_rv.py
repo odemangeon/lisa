@@ -328,7 +328,7 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
     for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
         l_delta_inst_rv.append("")
         if instmdl is not None:
-            inst_name = instmdl.instrument.name
+            inst_name = instmdl.instrument.get_name()
             ## RVrefglobal_inst: name of the instrument chosen as global RV reference
             ## (eg: HARPS)
             RVrefglobal_instname = RV_globalref_instname

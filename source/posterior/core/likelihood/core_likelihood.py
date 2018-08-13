@@ -167,7 +167,7 @@ class LikelihoodCreator(object):
         for ii, instmod, dtst in zip(range(datasim.noutput), l_instmod, l_dataset):
             # ... Set the associate noise model name in output_info_like
             (output_info_like[noisemod_key]
-             [output_info_like[instmodfullname_key] == instmod.full_name]) = instmod.noise_model
+             [output_info_like[instmodfullname_key] == instmod.get_name(include_prefix=True, recursive=True)]) = instmod.noise_model
             # ... add the index corresponding to these dataset and instmod in the output of the
             # datasim function output in the "datasets" and "idx_simdata" section of the
             # corresponding noise model in dico_noisemodel
@@ -251,11 +251,11 @@ class LikelihoodCreator(object):
                     # Get the instrument model instance
                     instmod_obj = self.instruments[inst_cat][inst_name][inst_model]
                     logger.info("Creating likelihoods for instrument model {}"
-                                "".format(instmod_obj.full_name))
+                                "".format(instmod_obj.get_name(include_prefix=True, recursive=True)))
                     # For each component in the model, ...
                     for obj in datasim_inst_db[inst_cat][inst_name][inst_model]:
                         logger.info("Creating likelihood for instrument model {} and obj {}"
-                                    "".format(instmod_obj.full_name, obj))
+                                    "".format(instmod_obj.get_name(include_prefix=True, recursive=True), obj))
                         # ... get the datasim doc func
                         datasim = datasim_inst_db[inst_cat][inst_name][inst_model][obj]
                         # ... create the likelihood function

@@ -13,7 +13,7 @@ from numbers import Number
 
 from astropy.units import NamedUnit
 
-from source.tools.name import Name
+from source.tools.name import Named
 from source.tools.miscellaneous import spacestring_like
 from .prior.parameter_prior import Parameter_Prior
 
@@ -25,37 +25,35 @@ logger = getLogger()
 # TODO: Add the possibility to add a description of the parameter.
 
 
-class Parameter(Name, Parameter_Prior):
+class Parameter(Named, Parameter_Prior):
     """docstring for Parameter."""
 
     def __init__(self, name, name_prefix=None, unit=None, free=True, main=False, value=None,
-                 **kwargs_prior
-                 ):
+                 kwargs_getname_4_storename={}, kwargs_getname_4_codename={},
+                 **kwargs_prior):
         """Create a Parameter Instance.
 
-        ----
-
-        Arguments:
-            name            : string,
-                Name of the parameter
-            free            : boolean, optional (default: None),
-                True if you want the parameter to be free, False otherwise
-            main            : boolean, optional (default: None),
-                True if you want the parameter to be a main parameter, False if it's an auxiliary
-                parameter. Being a main parameter implies that you belong to the minium set of
-                parameter used for the model and that you have the possibility to be jumped or
-                fixed (free or not). Being an auxialiary parameter implies that your value is
-                defined by the value of the main parameters (so you can be free or not but it
-                doesn't depend on you).
-
-            value           : number (float), optional (default:None)
-                Number giving the current value of the parameter, can be used in the initialization
-                to define the initial value.
+        :param str name: Name of the parameter
+        :param str/Name/None name_prefix: (facultative) Prefix for the name (use for the full name)
+        :param bool free: (default: None), True if you want the parameter to be free, False otherwise
+        :param bool main: (default: None), True if you want the parameter to be a main parameter,
+            False if it's an auxiliary parameter. Being a main parameter implies that you belong
+            to the minium set of parameter used for the model and that you have the possibility
+            to be jumped or fixed (free or not). Being an auxialiary parameter implies that your
+            value is defined by the value of the main parameters (so you can be free or not but it
+            doesn't depend on you).
+        :param number(float) value: (default:None) Number giving the current value of the parameter,
+            can be used in the initialization to define the initial value.
+        :param dict kwargs_getname_4_storename: Parameters for the Named.get_name method to construct
+            the parameter names for storing in a param container database
+        :param dict kwargs_getname_4_codename: Parameters for the Named.get_name method to construct
+            the parameter names for reference in codes.
 
         Keyword arguments are provided to Parameter_Prior.__init__ (see its docstring for more
         info).
         """
-        super(Parameter, self).__init__(name=name, name_prefix=name_prefix)
+        super(Parameter, self).__init__(name=name, prefix=name_prefix, kwargs_getname_4_storename=kwargs_getname_4_storename,
+                                        kwargs_getname_4_codename=kwargs_getname_4_codename)
         # Set the free attribute
         self.free = free
         # Set the main attribute
@@ -66,11 +64,9 @@ class Parameter(Name, Parameter_Prior):
         self.__unit = None
         if unit is not None:
             self.unit = unit
-
-        ## Initialise the info regarding the content of the parametrisation file for a Parameter
+        # Initialise the info regarding the content of the parametrisation file for a Parameter
         self.__paramfile_info = {"caracteristics": ["free", "value"] # Caracteristics beside the prior info
                                  }
-
         # Initialisation relative to the Prior.
         Parameter_Prior.__init__(self, self.__paramfile_info, **kwargs_prior)
 
@@ -149,9 +145,10 @@ class Parameter(Name, Parameter_Prior):
             obtain the good alignment in the input file.
         """
         if quote_name:
-            entete = "'{}'{}{{".format(self.name_code, entete_symb)
+            entete = "'{}'{}{{"
         else:
-            entete = "{}{}{{".format(self.name_code, entete_symb)
+            entete = "{}{}{{"
+        entete = entete.format(self.get_name(code_version=True), entete_symb)
         space_entete_param = spacestring_like(entete)
         text = ""
         # First is the name of the parameter
@@ -164,7 +161,7 @@ class Parameter(Name, Parameter_Prior):
         text += text_tab + space_entete_param + "'value': {},  # unit: {}\n".format(self.value,
                                                                                     self.unit)
         # Finally the prior info
-        text += Parameter_Prior.get_paramfile_section_prior(self, text_tab = text_tab + space_entete_param)
+        text += Parameter_Prior.get_paramfile_section(self, text_tab = text_tab + space_entete_param)
         return text
 
     def load_config(self, dico_config, **kwargs_prior):
@@ -180,9 +177,9 @@ class Parameter(Name, Parameter_Prior):
                 if getattr(self, carac) != dico_config[carac]:
                     logger.debug("{} attribute of param {} changed from {} to {}"
                                  "".format(carac,
-                                           self.full_name,
+                                           self.get_name(include_prefix=True, recursive=True),
                                            getattr(self, carac),
                                            dico_config[carac]))
                     setattr(self, carac, dico_config[carac])
         if self.free:
-            Parameter_Prior.load_config(dico_config, **kwargs_prior)
+            Parameter_Prior.load_config(self, dico_config, **kwargs_prior)

@@ -217,7 +217,7 @@ class GravGroup_Parametrisation(object):
                 RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
             list_instmodel = self.get_instmodel_objs(inst_cat="RV")
             for inst_model in list_instmodel:
-                inst_name = inst_model.instrument.name
+                inst_name = inst_model.instrument.get_name()
                 inst_model.DeltaRV.main = DeltaRV_main
                 if DeltaRV_main:
                     if ((inst_name == RVrefglobal_instname) and

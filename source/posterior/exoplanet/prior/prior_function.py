@@ -16,7 +16,7 @@ from ....tools.convert import gethplus_fast, gethminus_fast, getkplus_fast, getk
 logger = getLogger()
 ## manager object
 manager = Manager_Prior()
-manager.load_setup()
+# manager.load_setup() ## Cannot be done otherwise there is an import loop
 
 
 # TODO: SeomegaPrior
@@ -24,7 +24,7 @@ manager.load_setup()
 
 # TODO: b and c planets are differentiated by their period. b usually have a smaller period than c.
 # But it's not always the case. It would be good to have a way to specify which planet has the smaller
-# period and then put to -inf the log period when this is not respected. 
+# period and then put to -inf the log period when this is not respected.
 class HKPPrior(Core_JointPriorFunction):
 
     __category__ = "hkP"

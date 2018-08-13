@@ -84,7 +84,7 @@ class TestMethods(TestCase):
                                     rv_model="ajplanet",
                                     stars=1, planets=2)
         logger.info("GravGroup Instance created !")
-        logger.info("name: {}".format(gravgroup_model.name))
+        logger.info("name: {}".format(gravgroup_model.get_name()))
         gravgroup_model.apply_RV_EXOFAST_param()
         logger.info("All params: {}".format(gravgroup_model.get_list_paramnames(full_name=True)))
         logger.info("Main params: {}".format(gravgroup_model.

@@ -59,7 +59,7 @@ def check_datasets_and_instmodels(datasets, inst_models):
         if inst_models is None:
             instmod_docf = inst_models
         else:
-            instmod_docf = inst_models.full_name
+            instmod_docf = inst_models.get_name(include_prefix=True, recursive=True)
     elif isinstance(inst_models, Iterable):
         if isinstance(inst_models[0], Instrument_Model):
             multi_instmodl = True
@@ -68,7 +68,7 @@ def check_datasets_and_instmodels(datasets, inst_models):
                 if instmod is None:
                     instmod_docf.append(instmod)
                 else:
-                    instmod_docf.append(instmod.full_name)
+                    instmod_docf.append(instmod.get_name(include_prefix=True, recursive=True))
         else:
             instmod_err = True
     else:
@@ -129,7 +129,7 @@ def check_datasets_and_instmodels(datasets, inst_models):
         if inst_models is None:
             inst_model_full_name = "woinst"
         else:
-            inst_model_full_name = inst_models.full_name
+            inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True)
 
     return (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
             dtsts_docf)
@@ -278,7 +278,7 @@ def add_param_argument(param, arg_list, key_arglist, key_param, param_nb,
         for key in l_key_arglist:
             param_text[key] = "{}[{}]".format(param_vector_name, param_nb[key])
             param_nb[key] += 1
-            arg_list[key][key_param].append(param.full_name)
+            arg_list[key][key_param].append(param.get_name(include_prefix=True, recursive=True))
     else:
         for key in l_key_arglist:
             param_text[key] = "{}".format(param.value)

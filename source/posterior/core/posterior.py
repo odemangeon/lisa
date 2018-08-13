@@ -32,7 +32,7 @@ from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbA
 from .model.manager_model import Manager_Model
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
-from ...tools.name import Name
+from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
@@ -46,7 +46,7 @@ manager_model.load_setup()
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
+class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
                 DatasetsFileDbAttr):
     """docstring for Posterior."""
 
@@ -55,51 +55,48 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
     def __init__(self, object_name, run_folder=None):
         """Init method for the Posterior class.
 
-        This function does:
-            1. Define the name of the object studied
-            2. Define two locks: dataset_lock and database_lock
-            3. Initialize the dataset database attribute and assign it dataset_lock
-            4. Initialize the run_folder attribute
-            5. Initialize instmodel4dataset attribute and assign it dataset_lock
-            6. Initialise the model attribute
-            7. Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
-               datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
-        ----
-        Arguments:
-            name : string,
-                Name of the object studied.
+        :param str object_name : Name of the object studied.
+        :param str/None run_folder: Path to the run folder
         """
-        Name.__init__(self, name=object_name)  # 1
-        DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)  # 2
-        DatasetDbAttr.__init__(self,  # 3
-                               dataset_db=DatasetDatabase(self.name,
+        # Define the name of the object studied
+        Named.__init__(self, name=object_name)
+        # Define two locks: dataset_lock and database_lock
+        DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
+        # Initialize the dataset database attribute and assign it dataset_lock
+        DatasetDbAttr.__init__(self,
+                               dataset_db=DatasetDatabase(self.get_name(),
                                                           lock=self.get_dataset_Lock_instance()))
-        RunFolder.__init__(self, run_folder=run_folder)  # 4
-        Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())  # 5
+        # Initialize the run_folder attribute
+        RunFolder.__init__(self, run_folder=run_folder)
+        # Initialize instmodel4dataset attribute and assign it dataset_lock
+        Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())
         DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
                                     instmodel4dataset=self.instmodel4dataset)
-        self.__model = None  # 6
+        # Initialise the model attribute
+        self.__model = None
+        # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
+        # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
                                          instmodel4dataset=self.instmodel4dataset,
                                          instordered=False, use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
-                                         lock_database=self.get_database_Lock_instance())  # 7
+                                         lock_database=self.get_database_Lock_instance())
         self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
                                         instmodel4dataset=self.instmodel4dataset,
                                         instordered=False, use_samelock=self.samelock,
                                         lock_dataset=self.get_dataset_Lock_instance(),
-                                        lock_database=self.get_database_Lock_instance())  # 7
+                                        lock_database=self.get_database_Lock_instance())
         self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
                                         instmodel4dataset=self.instmodel4dataset,
                                         instordered=False, use_samelock=self.samelock,
                                         lock_dataset=self.get_dataset_Lock_instance(),
-                                        lock_database=self.get_database_Lock_instance())  # 7
+                                        lock_database=self.get_database_Lock_instance())
         self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
                                          instmodel4dataset=self.instmodel4dataset,
                                          database_name=self.object_name, instordered=False,
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
-                                         lock_database=self.get_database_Lock_instance())  # 7
+                                         lock_database=self.get_database_Lock_instance())
         self.__noisemodel_db = DatabaseFunc(object_stored="noise model",
                                             instmodel4dataset=self.instmodel4dataset,
                                             database_name=self.object_name, instordered=False,
@@ -110,7 +107,7 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
     @property
     def object_name(self):
         """Return the name of the object studied."""
-        return self.name
+        return self.get_name()
 
     @property
     def run_folder(self):
@@ -185,54 +182,47 @@ class Posterior(DatasetDbAttr, Name, RunFolder, Instmodel4DatasetAttr, DstDbLock
         For now only assignement to None is possible.
         This function should check that the category is an available Core_Model Subclass
 
-        ----
-        Arguments:
-            category : string,
-                String which refers to an available Core_Model Subclass that has been defined in the
-                model_setup_file.
+        :param str category: String which refers to an available Core_Model Subclass that has been
+            defined in the model_setup_file.
+        :param bool load_setup: If True load the list of available Models from the model_setup_file.
+
+        Keywords arguments are passed to the Core Model subclass for its initialisation.
         """
         # Load the model_setup_file.py to get all the available  models
         if load_setup:
             manager_model.load_setup()
-
         # If the name of the object studied by the model is not provided put default
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
-
         # Get the CoreModel subclass associated to the provided category
         model_subclass = manager_model.get_model_subclass(category)
-
         # Get the dictionary giving the noise model category associated to each instrument model
         # (designated by their full name)
         noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
-
         # Create the model instance
         self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
                                       instmodel4dataset=self.instmodel4dataset,
                                       l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
                                       **kwargs)
-
         self.model.set_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
         self.lock()
-        logger.info("Model defined with name {} !".format(self.model.name))
+        logger.info("Model defined with name {} !".format(self.model.get_name()))
 
     def lock(self):
         """Lock the dataset_db and update instmodel4dataset attributes.
-
-        1. update datasets in instmodel4dataset attribute in model.
-        2. update datasets in model.
-        3. update datasets in datasim_db.
-        4. update datasets in lnprior_db.
-        5. update datasets in lnlike_db.
-        6. update datasets in lnpost_db.
-        7. Lock everything
         """
         list_datasetnames = self.dataset_db.get_datasetnames()
-        self.instmodel4dataset.update(list_datasetnames)  # 1.
-        self.datasimulators.update_datasets()  # 3.
-        self.lnpriors.update_datasets()  # 4.
-        self.lnlikelihoods.update_datasets()  # 5.
-        self.lnposteriors.update_datasets()  # 6.
+        # update datasets in instmodel4dataset attribute in model.
+        self.instmodel4dataset.update(list_datasetnames)
+        # update datasets in datasim_db.
+        self.datasimulators.update_datasets()
+        # update datasets in lnprior_db.
+        self.lnpriors.update_datasets()
+        # update datasets in lnlike_db.
+        self.lnlikelihoods.update_datasets()
+        # update datasets in lnpost_db.
+        self.lnposteriors.update_datasets()
+        # Lock everything
         super(Posterior, self).dataset_lock()  # 7.
 
     def unlock(self):

@@ -7,7 +7,7 @@ The objective of this package is to provides the classes to create exo systems a
  provide simulated light-curve and radial velocities for these systems.
 
 @TODO:
-    - Implement LD_model argument in __init__ of SystemModel
+    THIS IS OUTDATED CHECK IF THERE SOMETHING USEFUL AND DELETE
 """
 import logging
 import numpy as np

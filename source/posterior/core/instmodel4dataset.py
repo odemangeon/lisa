@@ -202,9 +202,9 @@ class Instmodel4DatasetAttr(object):
                              default_value=[])
         for instmodel_fullname in self.name_instmodels_used():
             inst_model_obj = self.instruments[instmodel_fullname]
-            inst_model = inst_model_obj.name
+            inst_model = inst_model_obj.get_name()
             inst_cat = inst_model_obj.instrument.category
-            inst_name = inst_model_obj.instrument.name
+            inst_name = inst_model_obj.instrument.get_name()
             add_obj_in_result(result, inst_model_obj, lvl3_key=inst_model, lvl2_key=inst_name,
                               lvl1_key=inst_cat,
                               sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,

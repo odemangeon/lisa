@@ -24,6 +24,7 @@ class ParamContainerDatabase(object):
     def __init__(self):
         # super(ParamContainerDatabase, self).__init__()
         self._paramcontainers = OrderedDict()
+        self._store_name_rules = OrderedDict()
 
     @property
     def name(self):
@@ -35,18 +36,31 @@ class ParamContainerDatabase(object):
         """ParamContainers contained in the models sorted into categorie."""
         return self._paramcontainers
 
-    def add_a_paramcontainer(self, paramcontainer, use_full_name=False, force=False):
-        """Add a paramcontainer to the model"""
+    @property
+    def store_name_rules_db(self):
+        """ParamContainers contained in the models sorted into categorie."""
+        return self._store_name_rules
+
+    def add_a_paramcontainer(self, paramcontainer, force=False):
+        """Add a paramcontainer to the model.
+
+        :param Core_ParamContainer paramcontainer: Paramcontainer to add to the database.
+        :param bool force: If True the paramcontainer is added to the database even if a paramcontainer
+            with the same store name already exists (it will be overwriten).
+        """
         if not(isinstance(paramcontainer, Core_ParamContainer)):
             raise ValueError("paramcontainer should be an instance of a subclass of "
                              "Core_ParamContainer.")
-        if use_full_name:
-            parcont_name = paramcontainer.full_name
-        else:
-            parcont_name = paramcontainer.name
+        parcont_name = paramcontainer.store_name
         parcont_cat = paramcontainer.category
+        # Check if the category of the param container already exist in the database. If not add it
         if parcont_cat not in self.paramcontainers:
             self.paramcontainers.update({parcont_cat: OrderedDict()})
+            self.store_name_rules_db.update({parcont_cat: paramcontainer.store_name_rules})
+        # Check if the
+        if not(self.store_name_rules_db[parcont_cat] == paramcontainer.store_name_rules):
+            raise ValueError("This param container ({}) doesn't not have the same store name rules "
+                             "than previous ones of the same category.")
         if parcont_name in self.paramcontainers[parcont_cat]:
             if not(force):
                 logger.error("paramcontainer {} already exist in the model, it will not be "
@@ -63,7 +77,7 @@ class ParamContainerDatabase(object):
         ----
         Arguments:
             name : string,
-                name of the paramcontainer.
+                Storage name of the paramcontainer.
             category : string,
                 category of the paramcontainer
         """
@@ -109,13 +123,13 @@ class ParamContainerDatabase(object):
         """Return the list of the paramcontainer categories in this ParamContainerDatabase."""
         return list(self.paramcontainers.keys())
 
-    def get_list_params(self, model_instance=None, main=False, free=False,  **kwargs):
+    def get_list_params(self, model_instance, main=False, free=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
         :param Core_Model model_instance: Model instance which is used for the default value of
             some SpecificParamContainerCategory (optional).
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
 
         Keyword arguments are arguments specific to a certain type of parameter containers (like the
          instruments). See get_list_params of these parameter container for more information.
@@ -134,21 +148,22 @@ class ParamContainerDatabase(object):
                     result.extend(param_cont.get_list_params(main=main, free=free))
         return result
 
-    def get_list_paramnames(self, full_name=False, *args, **kwargs):
+    def get_list_paramnames(self, model_instance=None, main=False, free=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool full_name:
-        :param *args, **kwargs: Those parameters are given directly to get_list_params. So see this
-            function for more details.
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
+        :param Core_Model model_instance: Model instance which is used for the default value of
+            some SpecificParamContainerCategory (optional).
+
+        Keyword arguments are passed to the Named.get_name methods (see docstring for details).
+
         :return list_of_string l_paramnames: List of names or full names of the parameters specified
             by args and kwargs.
         """
         result = []
-        for param in self.get_list_params(*args, **kwargs):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
+        for param in self.get_list_params(model_instance=model_instance, main=main, free=free):
+            result.append(param.get_name(**kwargs))
         return result
 
 

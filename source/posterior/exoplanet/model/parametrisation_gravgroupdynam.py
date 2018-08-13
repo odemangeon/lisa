@@ -139,15 +139,15 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
                 self.paramcontainers["planets"][planet_name].Rrat.unit = "w/o unit"
 
         if self.parametrisation == "Np":
-            self.add_parameter(Parameter(name="qplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="qplus", name_prefix=self.name, main=True))
             self.parameters["qplus"].unit = "w/o unit"
-            self.add_parameter(Parameter(name="qp", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="qp", name_prefix=self.name, main=True))
             self.parameters["qp"].unit = "w/o unit"
-            self.add_parameter(Parameter(name="hplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="hplus", name_prefix=self.name, main=True))
             self.parameters["hplus"].unit = "w/o unit"
-            self.add_parameter(Parameter(name="hminus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="hminus", name_prefix=self.name, main=True))
             self.parameters["hminus"].unit = "w/o unit"
-            self.add_parameter(Parameter(name="kplus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="kplus", name_prefix=self.name, main=True))
             self.parameters["kplus"].unit = "w/o unit"
-            self.add_parameter(Parameter(name="kminus", name_prefix=self.full_name, main=True))
+            self.add_parameter(Parameter(name="kminus", name_prefix=self.name, main=True))
             self.parameters["kminus"].unit = "w/o unit"

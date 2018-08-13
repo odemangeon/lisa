@@ -73,7 +73,7 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
                  dynamical_model=None, transit_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
         """docstring GravGroupDyn init method."""
-        super(GravGroupDyn, self).__init__(name, dataset_db, instmodel4dataset=instmodel4dataset,
+        super(GravGroupDyn, self).__init__(name=name, dataset_db=dataset_db, instmodel4dataset=instmodel4dataset,
                                            l_instmod_fullnames=l_instmod_fullnames,
                                            transit_model=transit_model, rv_model=None,
                                            parametrisation=parametrisation,

@@ -4,11 +4,14 @@ Interface class to handle prior in the Parameter class
 from logging import getLogger
 
 from source.tools.miscellaneous import spacestring_like
-from .prior.manager_prior import Manager_Prior
+from .manager_prior import Manager_Prior
 
 ## Prior manager
 manager = Manager_Prior()
 manager.load_setup()
+
+## Logger object
+logger = getLogger()
 
 ## Joint prior category String
 joint_prior_cat = "joint"
@@ -106,7 +109,7 @@ class Parameter_Prior(object):
             if prior_category == joint_prior_cat:
                 if joint_prior_ref is None:
                     raise ValueError("If you want the prior to be joint for param {}, you have to"
-                                     "provide a joint prior reference.".format(self.full_name))
+                                     "provide a joint prior reference.".format(self.get_name(include_prefix=True, recursive=True)))
                 else:
                     self.__prior_info["category"] = joint_prior_cat
                     if joint_prior_ref in available_joint_priors:
@@ -116,7 +119,7 @@ class Parameter_Prior(object):
                                          "have to define it in the joint prior section of the "
                                          "parameter file")
                     logger.debug("The Prior for param {} is joint and called {}."
-                                 "".format(self.full_name, self.joint_prior_ref))
+                                 "".format(self.get_name(include_prefix=True, recursive=True), self.joint_prior_ref))
             ## Give the category of prior: string, for example 'normal', 'uniform'
             else:
                 if manager.is_available_priortype(prior_category):
@@ -124,27 +127,27 @@ class Parameter_Prior(object):
                     priorfunction_subclass.check_args(list(kwargs.keys()))
                     if prior_category != self.__prior_info["category"]:
                         logger.debug("Prior category attribute of param {} changed from {} to {}"
-                                     "".format(self.full_name, self.__prior_info["category"],
+                                     "".format(self.get_name(include_prefix=True, recursive=True), self.__prior_info["category"],
                                                prior_category))
                         self.__prior_info["category"] = prior_category
                         logger.debug("New prior args for param {}: {}"
-                                     "".format(self.full_name, kwargs))
+                                     "".format(self.get_name(include_prefix=True, recursive=True), kwargs))
                         self.__prior_info["args"] = kwargs
                     else:
                         for arg in priorfunction_subclass.all_args:
                             if (arg in self.__prior_info["args"]) and (arg not in kwargs):
                                 logger.debug("Prior arg {} of param {} changed from {} to None"
-                                             "".format(arg, self.full_name,
+                                             "".format(arg, self.get_name(include_prefix=True, recursive=True),
                                                        self.__prior_info["args"][arg]))
                                 self.__prior_info["args"].pop(arg)
                             elif (arg not in self.__prior_info["args"]) and (arg in kwargs):
                                 logger.debug("Prior arg {} of param {} changed from None to {}"
-                                             "".format(arg, self.full_name, kwargs[arg]))
+                                             "".format(arg, self.get_name(include_prefix=True, recursive=True), kwargs[arg]))
                                 self.__prior_info["args"][arg] = kwargs[arg]
                             elif (arg in self.__prior_info["args"]) and (arg in kwargs):
                                 if self.__prior_info["args"][arg] != kwargs[arg]:
                                     logger.debug("Prior arg {} of param {} changed from {} to {}"
-                                                 "".format(arg, self.full_name,
+                                                 "".format(arg, self.get_name(include_prefix=True, recursive=True),
                                                            self.__prior_info["args"][arg], kwargs[arg]))
                                     self.__prior_info["args"][arg] = kwargs[arg]
                 else:

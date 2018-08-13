@@ -34,8 +34,9 @@ class InstrumentContainerInterface(object):
             raise ValueError("instrument should be an instance of a subclass of "
                              "Core_Instrument.")
         inst_cat = instrument.category
-        inst_name = instrument.name
-        inst_model_obj = instrument.create_model_instance(name=name)
+        inst_name = instrument.get_name()
+        inst_model_obj = instrument.create_model_instance(name=name, kwargs_getname_4_storename={"include_prefix": True, "recursive": True},
+                                                          kwargs_getname_4_codename={"include_prefix": False, "code_version": True})
         self.instruments[inst_cat][inst_name][name] = inst_model_obj
 
     def rm_an_instrument_model(self, inst_model, inst_name, inst_cat, **kwargs):
@@ -120,5 +121,5 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             selected_kwargs[kwarg_name] = kwargs.get(kwarg_name, None)
         # Set the default value for inst_models, if not provided
         if selected_kwargs["inst_models"] is None:
-            kwargs["inst_models"] = model_instance.name_instmodels_used(sortby_instname=True)
+            selected_kwargs["inst_models"] = model_instance.name_instmodels_used(sortby_instname=True)
         return selected_kwargs

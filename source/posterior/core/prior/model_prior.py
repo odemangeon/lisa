@@ -57,13 +57,15 @@ class Model_Prior(object):
         text_joint_param_distrib = """
         # Joint parameters
         # Define below the joint parameter distributions.
-        '{joint_prior_name}' = {{# Example:
-        {tab}# priorhkP: {{'category': 'hkP', 'args': {{'vmin': 0.0, 'vmax': 1.0}},
-        {tab}#             'params': {'hplus': 'hplus', 'hminus': 'hminus', 'kplus': 'kplus', 'kminus': 'kminus']
-        {tab}#            }}
+        {joint_prior_name} = {{# Example:
+        {tab}# 'priorhkP': {{'category': 'hkP', 'args': {{'Pb_prior': {{'category': 'uniform', 'args': {{'vmin': 0.0, 'vmax': 1.0}} }} }},
+        {tab}#              'params': {{'hplus': 'K219_hplus', 'hminus': 'K219_hminus',
+        {tab}#                         'kplus': 'K219_kplus', 'kminus': 'K219_kminus',
+        {tab}#                         'Pb': 'K219_b_P', 'Pc': 'K219_c_P'}}
+        {tab}#              }}
         {tab}}}
         """.format(joint_prior_name=joint_prior_name,
-                   tab=spacestring_like("'{}' = {{".format(joint_prior_name)))
+                   tab=spacestring_like("{} = {{".format(joint_prior_name)))
         return dedent(text_joint_param_distrib)
 
     def load_jointprior_config(self, dico_config):
@@ -82,7 +84,7 @@ class Model_Prior(object):
                 if not priorfunction_subclass.joint:
                     raise ValueError("Prior category {} is not a joint prior category".format(dico_jointprior["category"]))
                 # Check that the arguments are fine
-                priorfunction_subclass.check_args(list(dico_jointprior["category"].keys()))
+                priorfunction_subclass.check_args(list(dico_jointprior["args"].keys()))
                 # Check the parameters
                 priorfunction_subclass.check_params(dico_jointprior["params"], self)
             else:
@@ -97,36 +99,34 @@ class Model_Prior(object):
     def create_individual_lnpriors(self):
         """Return a dictionnary providing the individual prior probability density functions.
 
-        This function does:
-            1. Look for all the main free parameters in the model (self) and put them in two lists
-                marginal and joint dependending on wether they have a marginal or joint prior.
-            2. Create a dictionnary whith 2 keys: "marginal": {}, "joint": []
-            3. For each parameter in the list of marginal (step 1): Create an entry in
-               "marginal" (see step 2) which to the full name of the parameter associate the
-                marginal prior function.
-            4. For each parameter in the list of joint (step 1): ?
-                a. look for the associated parameters defined by ? and check if they are free
-                ??
-                ?. append a element to "joint" (see step 2) which is a dict with two keys:
-                   "Parameters": list of free parameters full name in the order required for the
-                                 prior function see "prior"
-                   "prior": joint prior functions which included the value of fixe parameters if
-                   needed
+        :return dict priors: Return the dictionary containing all the elementary priors (marginal and joints)
+            for all the main and free parameters of the model.
         """
-        # 1.
+        # Look for all the main free parameters in the model (self) and put them in two dict
+        # marginal and joint dependending on wether they have a marginal or joint prior.
         marginal = OrderedDict()
         joint = OrderedDict()
         for param in self.get_list_params(main=True, free=True, recursive=True):
             if param.joint:
-                joint[param.full_name] = param
+                joint[param.get_name(include_prefix=True, recursive=True)] = param
             else:
-                marginal[param.full_name] = param
-        # 2.
-        priors = {"marginal": {}, "joint": []}
-        # 3.
+                marginal[param.get_name(include_prefix=True, recursive=True)] = param
+        # Create a dict to receive the priors with two keys: marginal and joint
+        priors = {"marginal": {}, "joint": {}}
+        # For each parameter in the list of marginal (step 1): Create an entry in
+        # "marginal" (see step 2) which to the full name of the parameter associate the
+        # marginal prior function.
         for full_name, param in marginal.items():
             prior_func = manager.get_priorfunc_subclass(param.prior_category)(**param.prior_args)
             priors["marginal"][full_name] = prior_func.create_logpdf()
+        # For each parameter in the list of joint (step 1): ?
+        # a. look for the associated parameters defined by ? and check if they are free
+        # ??
+        # ?. append a element to "joint" (see step 2) which is a dict with two keys:
+        #       "Parameters": list of free parameters full name in the order required for the
+        #                     prior function see "prior"
+        #       "prior": joint prior functions which included the value of fixe parameters if
+        #                needed
         for full_name, param in joint.items():
             raise NotImplementedError("Joint prior as individual prior for parameters is not "
                                       "implemented yet.")
@@ -146,7 +146,7 @@ class Model_Prior(object):
     def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
 
-        :param list_of_str list_paramnames: List of parameters full names
+        :param list_of_str list_paramnames: List of parameters full names (include_prefix and recursive)
         :param dict individual_priors: Dictionary produced by the create_individual_lnpriors method.
             If None it will created with this method.
         :return DocFunction docf: DocFunction giving the joint ln prior

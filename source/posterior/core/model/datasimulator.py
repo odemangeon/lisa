@@ -75,8 +75,8 @@ class DatasimulatorCreator(object):
         # For each instrument model used, ...
         for instmod_obj in self.get_instmodels_used():
             # ... get the inst_cat, inst_name and inst_model_name for the storage in the database
-            inst_model = instmod_obj.name
-            inst_name = instmod_obj.instrument.name
+            inst_model = instmod_obj.get_name()
+            inst_name = instmod_obj.instrument.get_name()
             inst_cat = instmod_obj.instrument.category
             # ... create and store the datasimulator docfuncs in the database
             db[inst_cat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)

@@ -305,7 +305,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
         kwargs.update(datasim_kwargs)
 
         if noise_mod.has_jitter:
-            jitter_param_fullname = inst_mod.parameters[jitter_name].full_name
+            jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
             if inst_mod.parameters[jitter_name].free:
                 idx_jitter = l_param_name.index(jitter_param_fullname)
                 jitter = param[idx_jitter]
@@ -457,7 +457,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             l_instmod_noisemod_cat = []
             for inst_mod in model_instance.get_instmodels_used():
                 if inst_mod.noise_model == noise_model.category:
-                    l_instmod_noisemod_cat.append(inst_mod.full_name)
+                    l_instmod_noisemod_cat.append(inst_mod.get_name(include_prefix=True, recursive=True))
             idx_noisemod_GP = [ii for ii, instmod_fullname in
                                enumerate(datasim_all.instmodel_fullname)
                                if instmod_fullname in l_instmod_noisemod_cat]
