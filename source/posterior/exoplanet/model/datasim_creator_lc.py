@@ -13,15 +13,14 @@ from batman import TransitModel, TransitParams
 
 # from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
-                                                 get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict,
-                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
                                                             l_time_vec, add_timeref_arguments,
                                                             time_ref, l_time_ref)
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
+from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs)
 from ....tools.convert import getecc_fast, getomega_fast, getaoverr
 
 
@@ -108,11 +107,11 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the "arguments" text variable and intial with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    param_nb, arg_list, arguments, ldict = init_arglist_paramnb_arguments_ldict([key_whole],
-                                                                                key_param,
-                                                                                key_mand_kwargs,
-                                                                                key_opt_kwargs,
-                                                                                par_vec_name)
+    (param_nb,
+     arg_list,
+     arguments,
+     ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
+                                                   key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
     # Initialise the template function text
     function_name = ("LCsim_{{object}}_{instmod_fullname}"
@@ -143,8 +142,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                       timeref_name=time_ref, l_timeref_name=l_time_ref)
 
     if parametrisation == "Multis":
-        rhostar = add_param_argument(star.rho, arg_list, key_whole, key_param,
-                                     param_nb, par_vec_name)[key_whole]
+        rhostar = add_param_argument(param=star.rho, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                     key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
     else:
         rhostar = None
 
@@ -406,8 +405,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         else:
             params_planet["aR"] = ""
         for param in l_param:
-            param_text = add_param_argument(param, arg_list, [key_whole, planet.name], key_param,
-                                            param_nb, par_vec_name)
+            param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                            key_arglist=[key_whole, planet.name], param_vector_name=par_vec_name)
             params_whole[param.name] = param_text[key_whole]
             params_planet[param.name] = param_text[planet.name]
 
@@ -591,9 +590,9 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                 # ..., If this parameter is a main parameter (it should be), ...
                 if instmdl.parameters[OOT_param_name].main:
                     value_not0 = True
-                    text_OOT_param = add_param_argument(instmdl.parameters[OOT_param_name],
-                                                        arg_list, key_whole, key_param,
-                                                        param_nb, par_vec_name)[key_whole]
+                    text_OOT_param = add_param_argument(param=instmdl.parameters[OOT_param_name],
+                                                        arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                                        key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
                     # ..., if the parameter is free or the fixed value is not zero, ...
                     if text_OOT_param != str(0.0):
                         l_oot_var[ii] += "+ {}".format(text_OOT_param)
@@ -691,8 +690,8 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, para
         l_LD_parcont.append(LDs[star.code_name + "_" + l_LD_parcont_name[ii]])
         l_LD_param_list.append("[")
         for param in l_LD_parcont[ii].get_list_params(main=True):
-            l_LD_param_list[ii] += (add_param_argument(param, arg_list, key_whole, key_param,
-                                                       param_nb, par_vec_name)[key_whole] +
+            l_LD_param_list[ii] += (add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                       param_nb=param_nb, key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                     ", ")
         l_LD_param_list[ii] += "]"
     return l_LD_parcont_name, l_LD_parcont, l_LD_param_list

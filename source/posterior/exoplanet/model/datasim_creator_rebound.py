@@ -21,15 +21,15 @@ from .datasim_creator_lc import get_LD_parcont_and_param, get_ootvar
 from .limb_darkening import (LinearLD, QuadraticLD, SquareRootLD, LogarithmicLD, ExponentialLD,
                              NonLinearLD)
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
-                                                 get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict,
-                                                 get_lists_bijection_instcat, add_nonparam_argument,
-                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, get_has_datasets,
+                                                 get_lists_bijection_instcat)
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                             time_ref, l_time_ref)
 from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
 from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
+from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs,
+                                                  add_nonparam_argument)
 from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ....tools.convert import getecc_fast, getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
 
@@ -188,11 +188,11 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     # Create the "arguments" text variable and Initialize it with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    param_nb, arg_list, arguments, ldict = init_arglist_paramnb_arguments_ldict([key_whole],
-                                                                                key_param,
-                                                                                key_mand_kwargs,
-                                                                                key_opt_kwargs,
-                                                                                par_vec_name)
+    (param_nb,
+     arg_list,
+     arguments,
+     ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
+                                                   key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
     # Initialise the template function text
     function_name = ("Reboundsim_{{object}}_{instmod_fullname}"
@@ -394,16 +394,17 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
             ldict["get_time_supersampled"] = get_time_supersampled  # for supersampling
 
     ## Prepare the text for the stellar mass and radius parameter
-    M_star = add_param_argument(star.M, arg_list, key_whole, key_param, param_nb,
-                                par_vec_name)[key_whole]
+    M_star = add_param_argument(param=star.M, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
     if dico_inst_cat[LC_inst_cat]["has"]:
         R_star_name = "R_star"
         R_star_def = "{} = {} * Rsun_meter / au_meter"
         ldict["Rsun_meter"] = Rsun_meter
         ldict["au_meter"] = au_meter
         R_star_def = R_star_def.format(R_star_name,
-                                       add_param_argument(star.R, arg_list, key_whole, key_param,
-                                                          param_nb, par_vec_name)[key_whole])
+                                       add_param_argument(param=star.R, arg_list=arg_list, key_param=key_param,
+                                                          param_nb=param_nb, key_arglist=key_whole,
+                                                          param_vector_name=par_vec_name)[key_whole])
     else:
         R_star_def = ""
 
@@ -417,8 +418,9 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         R_planet_list_name = "rp"
         text_param_rp = "{} = [".format(R_planet_list_name)
         for planet in planets.values():
-            text_param_rp += add_param_argument(planet.parameters["Rrat"], arg_list, key_whole,
-                                                key_param, param_nb, par_vec_name)[key_whole] + ", "
+            text_param_rp += add_param_argument(param=planet.parameters["Rrat"], arg_list=arg_list,
+                                                key_param=key_param, param_nb=param_nb, key_arglist=key_whole,
+                                                param_vector_name=par_vec_name)[key_whole] + ", "
         text_param_rp = text_param_rp[:-2] + "]"
 
     # Create the text to convert the jumping parameters into arguments for the rebound wrapper.
@@ -441,8 +443,9 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
             l_param = [planet.M, planet.P, planet.secosw, planet.sesinw, planet.inc, planet.OMEGA,
                        planet.tic]
             for param in l_param:
-                params_whole[param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
-                                                              param_nb, par_vec_name)[key_whole]
+                params_whole[param.get_name()] = add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                                    param_nb=param_nb, key_arglist=key_whole,
+                                                                    param_vector_name=par_vec_name)[key_whole]
             param_conv += template_param_conv.format(planet=planet.get_name(), secosw=params_whole["secosw"],
                                                      sesinw=params_whole["secosw"], tic=params_whole["tic"],
                                                      P=params_whole["P"], t_ref=time_ref_dyn, tab=tab)
@@ -473,15 +476,17 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         param_gravgroup = {}
         l_param_gravgroup = [gravgroup.qplus, gravgroup.qp, gravgroup.hplus, gravgroup.hminus, gravgroup.kplus, gravgroup.kminus]
         for param in l_param_gravgroup:
-            param_gravgroup[param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
-                                                             param_nb, par_vec_name)[key_whole]
+            param_gravgroup[param.get_name()] = add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                                   param_nb=param_nb, key_arglist=key_whole,
+                                                                   param_vector_name=par_vec_name)[key_whole]
         param_pl = {}
         for planet in planets.values():
             param_pl[planet.get_name()] = {}
             l_param_pl = [planet.P, planet.tic, planet.inc, planet.OMEGA]
             for param in l_param_pl:
-                param_pl[planet.get_name()][param.get_name()] = add_param_argument(param, arg_list, key_whole, key_param,
-                                                                       param_nb, par_vec_name)[key_whole]
+                param_pl[planet.get_name()][param.get_name()] = add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                                                   param_nb=param_nb, key_arglist=key_whole,
+                                                                                   param_vector_name=par_vec_name)[key_whole]
             param_planets_reb += ", ".join(["M_{}".format(planet.get_name()), param_pl[planet.get_name()]["P"], "ecc_{}".format(planet.get_name()),
                                             param_pl[planet.get_name()]["inc"], param_pl[planet.get_name()]["OMEGA"], "omega_{}".format(planet.get_name()),
                                             "MeanAnomaly_{}".format(planet.get_name())])
@@ -499,14 +504,14 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
 
     # Add the reference time for the dynamical simulation as argument
     (arguments, timeref_arg
-     ) = add_nonparam_argument(arguments, time_ref_dyn, arg_list, key_whole, key_mand_kwargs,
-                               key_opt_kwargs, ldict, add_to_ldict=False, new_arg_value=None,
+     ) = add_nonparam_argument(arguments=arguments, new_arg_name=time_ref_dyn, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
                                def_arg_value=None)
 
     # Add the time step for the dynamical simulation as argument
     (arguments, deltadyn_arg
-     ) = add_nonparam_argument(arguments, deltat_dyn, arg_list, key_whole, key_mand_kwargs,
-                               key_opt_kwargs, ldict, add_to_ldict=False, new_arg_value=None,
+     ) = add_nonparam_argument(arguments=arguments, new_arg_name=deltat_dyn, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
                                def_arg_value=0.01)
 
     ## Create the template for the text of the rebound wrapper and add the rebound wrapper function
@@ -612,9 +617,9 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
 
         # Add nthreads as argument with def value = 1
         (arguments, nthreads_arg
-         ) = add_nonparam_argument(arguments, nthreads, arg_list, key_whole, key_mand_kwargs,
-                                   key_opt_kwargs, ldict, add_to_ldict=False, new_arg_value=None,
-                                   def_arg_value=1)
+         ) = add_nonparam_argument(arguments=arguments, new_arg_name=nthreads, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
+                                   key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole,
+                                   add_to_ldict=False, new_arg_value=None, def_arg_value=1)
 
     ## Retrieve the RV values for each RV instrument model (and dataset)
     text_retrieve_rv = ""

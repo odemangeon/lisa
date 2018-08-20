@@ -248,7 +248,7 @@ def update_instrument_paramfile_info(inst_db_info, inst_db):
             func(inst_db_info[inst_cat][key_misc])
 
 
-def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
+def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance, available_joint_priors={}):
     """Update the paramfile_info for an instrument category.
 
     It updates things introduced by get_allinst_paramfilesection in paramfile_info.
@@ -287,7 +287,7 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
             for inst_model in (set_paramfile_info & set_dico_config):
                 logger.debug("Instmodel to be updated: {}".format(inst_model))
                 paramcont_dico = dico_config[inst_name][inst_model]
-                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
+                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico, available_joint_priors=available_joint_priors)
             # Remove instrument model that are not in the param_file anymore
             for inst_model in (set_paramfile_info.difference(set_dico_config)):
                 logger.debug("Instmodel to be suppressed: {}".format(inst_model))
@@ -301,7 +301,7 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
                 instrument = manager_inst.get_instrument(inst_name)
                 model_instance.add_an_instrument_model(instrument=instrument, name=inst_model)
                 model_instance.update_paramfile_info()
-                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
+                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico, available_joint_priors=available_joint_priors)
             # Load which instrument model to use for which dataset
             for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
                 number = interpret_data_filename(dataset)["number"]

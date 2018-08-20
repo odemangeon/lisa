@@ -15,7 +15,7 @@ The objective of this package is to provides the core Core_Model class.
 from logging import getLogger
 from os.path import isfile, join
 from collections import OrderedDict  # , defaultdict
-from numpy import array
+from numpy import array, ones
 # from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
@@ -272,37 +272,78 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             result.append(param.get_name(**kwargs))
         return result
 
-    def get_initial_values(self, list_paramnames=None, sortby_paramfullname=False):
-        """Return intial values for the parameter.
+    def get_initial_values(self, list_paramnames=None, nb_values=1, output_dico=False):
+        """Return initial values for the parameter.
 
         If value is provided for the parameter this value is returned otherwise a value is stochas-
         tically drawn from the prior.
+
+        :param list_of_str list_paramnames: List of parameter names for which you want initial values.
+            The parameter requested should be free, otherwise they will be ignored.
+        :param int nb_values: Number of initial values per parameter in the output.
+        :param bool output_dico: If True the output is a dictionary which for keys the parameter names
+            and for values the initial values.
+        :return np.array/dict init_vals: Initial values for the requested free parameters. The dimension
+            would be nb_free_param * nb_values
         """
+        # Get the list of parameter instances (and parameter name if needed)
         if list_paramnames is None:
-            l_param_main_free = self.get_list_params(main=True, free=True, recursive=True)
+            list_params = self.get_list_params(main=True, free=True, recursive=True)
+            list_paramnames = [param.get_name(include_prefix=True, recursive=True) for param in list_param]
         else:
-            l_param_main_free = []
+            list_params = []
             for param_name in list_paramnames:
-                l_param_main_free.append(self.get_param(param_name, kwargs_get_name={"include_prefix": True, "recursive": True},
-                                                        main=True, free=True, recursive=True))
-        if sortby_paramfullname:
-            res = OrderedDict()
-        else:
-            res = []
-        for param in l_param_main_free:
-            if param.value is None:
-                prior_func_cls = manager_prior.get_priorfunc_subclass(param.prior_category)
-                value = prior_func_cls(**param.prior_args).ravs()
+                param = self.get_parameter(param_name, main=True, free=True, recursive=True)
+                if param is None:
+                    raise ValueError("Parameter {} not found in model.".format(param_name))
+                else:
+                    list_params.append(param)
+        # Pass through all the parameter instance. For the ones that don't have a joint prior, compute
+        # the initial value(s) and store them in dico_initvals, a dict with for key the parameter name
+        # and for value the initial value(s) computed.
+        # For the parameters that are joint, store in a dictionary (joint), the joint prior info and
+        # a list of parameter names ordered in the same way than the output on the joint prior ravs
+        # (method which draw values from the prior)
+        dico_initvals = {}
+        joint = {}
+        for param_name, param in zip(list_paramnames, list_params):
+            if param.joint:
+                if param.joint_prior_ref not in joint:
+                    joint[param.joint_prior_ref] = {"prior_info": self.joint_prior_container[param.joint_prior_ref],
+                                                    "param_name": ["" for ii in range(len(self.joint_prior_container[param.joint_prior_ref]["params"]))]}
+                joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
+                found = False
+                for ii, param_key in enumerate(joint_prior_class.params):
+                    if param.name.is_name(joint[param.joint_prior_ref]["prior_info"]["params"][param_key]):
+                        found = True
+                        break
+                if found:
+                    joint[param.joint_prior_ref]["param_name"][ii] = param_name
+                else:
+                    raise ValueError("Parameter {} not found in the joint prior {} parameters dictionary {}"
+                                     "".format(param.get_name(include_prefix=True, recursive=True),
+                                               param.joint_prior_ref, joint[param.joint_prior_ref]["prior_info"]["params"]))
             else:
-                value = param.value
-            if sortby_paramfullname:
-                res[param.full_name] = value
-            else:
-                res.append(value)
-        if sortby_paramfullname:
-            return res
+                if param.value is None:
+                    prior_func_cls = manager_prior.get_priorfunc_subclass(param.prior_category)
+                    dico_initvals[param_name] = prior_func_cls(**param.prior_args).ravs(nb_values=nb_values)
+                else:
+                    dico_initvals[param_name] = ones(nb_values) * param.value
+                    if dico_initvals[param_name].size == 1:
+                        dico_initvals[param_name] = dico_initvals[param_name][0]
+        # Produce the initial values for each parameter with the joint priors and store the result in a dictionary
+        # with for key the parameter name and for value the initial value(s).
+        for joint_prior_ref, dico in joint.items():
+            joint_prior_instance = manager_prior.get_priorfunc_subclass(dico["prior_info"]["category"])(**dico["prior_info"]["args"])
+            vals = joint_prior_instance.ravs(nb_values=nb_values)
+            for ii, param_name in enumerate(joint[joint_prior_ref]["param_name"]):
+                dico_initvals[param_name] = vals[ii]
+        # Produce the output
+        if output_dico:
+            return dico_initvals
         else:
-            return array(res)
+            return array([dico_initvals[param_name] for param_name in list_paramnames])
+
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.
@@ -381,14 +422,16 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                     paramcont_dico = dico_config[paramcont_name]
                     logger.debug("Content of param dictionary for {} {}: {}"
                                  "".format(paramcont_type, paramcont_name, paramcont_dico))
-                    self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico)
+                    self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico,
+                                                                                     available_joint_priors=self.joint_prior_container)
             elif paramcont_type == instmod_cat:
                 load_instrument_config(dico_config=dico_config,
                                        inst_db_info=self.paramfile_info[paramcont_type],
                                        inst_db=self.paramcontainers[paramcont_type],
-                                       model_instance=self)
+                                       model_instance=self,
+                                       available_joint_priors=self.joint_prior_container)
             else:  # For the model parameters (those who do no belong in any param container)
-                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name])
+                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], available_joint_priors=self.joint_prior_container)
 
     @property
     def param_file(self):

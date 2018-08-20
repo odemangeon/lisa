@@ -11,15 +11,14 @@ from ajplanet import pl_rv_array
 
 # from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
-                                                 get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict,
-                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                             add_timeref_arguments, time_ref,
                                                             l_time_ref)
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
+from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs)
 from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
 
 
@@ -103,8 +102,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the "arguments" text variable and intial with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    (param_nb, arg_list, arguments, ldict
-     ) = init_arglist_paramnb_arguments_ldict([key_whole], key_param, key_mand_kwargs, par_vec_name)
+    (param_nb,
+     arg_list,
+     arguments,
+     ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
+                                                   key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
     # Initialise the template function text
     function_name = ("RVsim_{{object}}_{instmod_fullname}"
@@ -171,8 +173,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         # system.
         l_param = [planet.K, planet.secosw, planet.sesinw, planet.tic, planet.P]
         for param in l_param:
-            param_text = add_param_argument(param, arg_list, [key_whole, planet.name], key_param,
-                                            param_nb, par_vec_name)
+            param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                            key_arglist=[key_whole, planet.name], param_vector_name=par_vec_name)
             params_whole[param.name] = param_text[key_whole]
             params_planet[param.name] = param_text[planet.name]
 
@@ -339,21 +341,21 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
             if inst_name != RVrefglobal_instname:
                 instmod_RVref4inst = RV_inst_db[inst_name][RVref4inst_modname]
                 if instmod_RVref4inst.DeltaRV.main:
-                    l_delta_inst_rv[ii] += (add_param_argument(instmod_RVref4inst.DeltaRV, arg_list,
-                                                               key_whole, key_param, param_nb,
-                                                               par_vec_name)[key_whole] +
+                    l_delta_inst_rv[ii] += (add_param_argument(param=instmod_RVref4inst.DeltaRV, arg_list=arg_list,
+                                                               key_param=key_param, param_nb=param_nb,
+                                                               key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                             " + ")
             # Add the Delta_RV of the model used as RV reference for the current instrument
             if instmdl.name != RVref4inst_modname:
                 if instmdl.DeltaRV.main:
-                    l_delta_inst_rv[ii] += (add_param_argument(instmdl.DeltaRV, arg_list,
-                                                               key_whole, key_param, param_nb,
-                                                               par_vec_name)[key_whole] +
+                    l_delta_inst_rv[ii] += (add_param_argument(param=instmdl.DeltaRV, arg_list=arg_list,
+                                                               key_param=key_param, param_nb=param_nb,
+                                                               key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                             " + ")
         # Create the text for the star mean RV (star_mean_rv)
         l_star_mean_rv.append("")
-        l_star_mean_rv[ii] += add_param_argument(star.v0, arg_list, key_whole, key_param, param_nb,
-                                                 par_vec_name)[key_whole]
+        l_star_mean_rv[ii] += add_param_argument(param=star.v0, arg_list=arg_list, key_param=key_param,
+                                                 param_nb=param_nb, key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
 
         # If stellar RV drift has been asked, create the text for stellar RV drift, ...
         if star.with_RVdrift:
@@ -365,9 +367,10 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
                 # ..., If this parameter is a main parameter (it should be), ...
                 if star.parameters[RVdrift_param_name].main:
                     value_not0 = True
-                    text_RV_drift_param = add_param_argument(star.parameters[RVdrift_param_name],
-                                                             arg_list, key_whole, key_param,
-                                                             param_nb, par_vec_name)[key_whole]
+                    text_RV_drift_param = add_param_argument(param=star.parameters[RVdrift_param_name],
+                                                             arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, key_arglist=key_whole,
+                                                             param_vector_name=par_vec_name)[key_whole]
                     # ..., if the parameter is free or the fixed value is not zero, ...
                     if text_RV_drift_param != str(0.0):
                         l_star_mean_rv[ii] += "+ {}".format(text_RV_drift_param)

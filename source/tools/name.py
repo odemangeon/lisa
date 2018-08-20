@@ -10,12 +10,13 @@ Provide the Name interface Class.
       function as in default_folders_data_run.
 """
 from logging import getLogger
+from copy import deepcopy
 
 ## Logger object
 logger = getLogger()
 
 
-def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=1):
+def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=0):
     """Check that there is no prohibited characters in name and remove it if there is."""
     if not isinstance(name, str):
         raise ValueError("Name should be a string or None")
@@ -23,19 +24,19 @@ def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=1):
     for char in prohibitedchars:
         if result.count(char) > 0:
             result = result.replace(char, "")
-            if not(verbose):
+            if verbose:
                 logger.warning("Name can't contain {} caracter so they have been removed.".format(char))
-    if result != name and not(verbose):
+    if result != name and verbose:
         logger.warning("Proposed name: {}, Returned name: {}".format(name, result))
     return result
 
 
-def check_name(name, verbose=1):
+def check_name(name, verbose=0):
     """Check that there is no '_' in name and remove it if there is."""
     return check_name_for_prohibitedchar(name=name, prohibitedchars="_", verbose=verbose)
 
 
-def check_name_code(name, verbose=1):
+def check_name_code(name, verbose=0):
     """Check that there is no '-' in name and remove it if there is."""
     return check_name_for_prohibitedchar(name=name, prohibitedchars="-", verbose=verbose)
 
@@ -144,6 +145,8 @@ class Name(object):
         """
         if prefix_kwargs is None:
             prefix_kwargs = {}
+        else:
+            prefix_kwargs = deepcopy(prefix_kwargs)
         if recursive:
             prefix_kwargs["include_prefix"] = include_prefix
             prefix_kwargs["code_version"] = code_version
@@ -157,6 +160,33 @@ class Name(object):
         if include_prefix and (self.has_prefix):
             name = self.prefix.get(**prefix_kwargs) + "_" + name
         return name
+
+    def is_name(self, name):
+        """Return True if the name provided is one formulation of the name of the instance.
+
+        :param str name: Name provided
+        :return bool res: True if the name provided is one formulation of the name of the instance.
+        """
+        for code_version in [True, False]:
+            result = self.get(include_prefix=False, code_version=code_version, recursive=False)
+            if result == name:
+                return True
+        full_prefix_kwargs = {}
+        prefix_kwargs = full_prefix_kwargs
+        while True:
+            for code_version in [True, False]:
+                new_result = self.get(include_prefix=True, code_version=code_version, recursive=False,
+                                      prefix_kwargs=full_prefix_kwargs)
+                if new_result == name:
+                    return True
+            if result == new_result:
+                return False
+            else:
+                result = new_result
+                prefix_kwargs["include_prefix"] = True
+                prefix_kwargs["recursive"] = False
+                prefix_kwargs["prefix_kwargs"] = {}
+                prefix_kwargs = prefix_kwargs["prefix_kwargs"]
 
 
 class Named(object):

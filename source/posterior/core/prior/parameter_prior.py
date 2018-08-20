@@ -14,19 +14,22 @@ manager.load_setup()
 logger = getLogger()
 
 ## Joint prior category String
-joint_prior_cat = "joint"
+# joint_prior_cat = "joint"
 
 
 class Parameter_Prior(object):
     """docstring for Parameter_Prior. Interface for the Parameter class to handle priors"""
 
-    ## Prior function: function
-    prior_func = None
+    ## Prior function: function (TODO: Doesn't seems to be used, suppress ?)
+    # prior_func = None
 
     ## Arguments of the prior function: dictionnary, for example for a gaussian {"mean": 0, "std":0}
-    prior_args = None
+    # (TODO: Doesn't seems to be used, suppress ?)
+    # prior_args = None
+
     ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
-    joint_prior_pos = None
+    # (TODO: Doesn't seems to be used, suppress ?)
+    # joint_prior_pos = None
 
 
     def __init__(self, paramfile_info, prior_category=None, prior_args=None, joint_prior_ref=None,
@@ -79,7 +82,7 @@ class Parameter_Prior(object):
     @property
     def joint(self):
         """Return True if the prior of the parameter is described by a joint prior."""
-        return self.prior_info["category"] == joint_prior_cat
+        return self.prior_info["joint_prior_ref"] is not None
 
     @property
     def joint_prior_ref(self):
@@ -106,20 +109,26 @@ class Parameter_Prior(object):
         depend on the prior function used.
         """
         if isinstance(prior_category, str):
-            if prior_category == joint_prior_cat:
-                if joint_prior_ref is None:
-                    raise ValueError("If you want the prior to be joint for param {}, you have to"
-                                     "provide a joint prior reference.".format(self.get_name(include_prefix=True, recursive=True)))
+            if joint_prior_ref is not None:
+                # Check of the joint prior ref has been defined in the param file and is thus available
+                if joint_prior_ref in available_joint_priors:
+                    self.__prior_info["joint_prior_ref"] = joint_prior_ref
                 else:
-                    self.__prior_info["category"] = joint_prior_cat
-                    if joint_prior_ref in available_joint_priors:
-                        self.__prior_info["joint_prior_ref"] = joint_prior_ref
-                    else:
-                        raise ValueError("Joint prior {} is not defined. If it's not a typo you "
-                                         "have to define it in the joint prior section of the "
-                                         "parameter file")
-                    logger.debug("The Prior for param {} is joint and called {}."
-                                 "".format(self.get_name(include_prefix=True, recursive=True), self.joint_prior_ref))
+                    raise ValueError("Joint prior {} is not defined. If it's not a typo you "
+                                     "have to define it in the joint prior section of the "
+                                     "parameter file".format(joint_prior_ref))
+                # Set category to None for no confusion
+                self.__prior_info["category"] = None
+                # Check that the parameter is indeed mentioned as parameter of the joint prior
+                for param_name in available_joint_priors[joint_prior_ref]["params"].values():
+                    found = self.name.is_name(param_name)
+                    if found:
+                        break
+                if not(found):
+                    raise ValueError("{} is indicated has joint prior for Parameter {}. However, "
+                                     "it doesn't appear has a joint prior parameter.".format(joint_prior_ref, self.get_name(include_prefix=True, recursive=True)))
+                logger.debug("The Prior for param {} is joint and called {}."
+                             "".format(self.get_name(include_prefix=True, recursive=True), self.joint_prior_ref))
             ## Give the category of prior: string, for example 'normal', 'uniform'
             else:
                 if manager.is_available_priortype(prior_category):

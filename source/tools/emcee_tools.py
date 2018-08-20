@@ -137,8 +137,7 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
     p0 = []
     if init_distrib is None:
-        return np.asarray([post_instance.model.get_initial_values(list_paramnames=l_param_name)
-                           for i in range(nwalker)])
+        return post_instance.model.get_initial_values(list_paramnames=l_param_name, nb_values=nwalker).transpose()
     else:
         for param in l_param_name:
             if param in init_distrib:

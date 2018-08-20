@@ -16,8 +16,8 @@ from logging import getLogger
 from collections import defaultdict
 
 from .datasim_docfunc import DatasimDocFunc
-from .datasimulator_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
+from ....tools.function_from_text_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 
 
 ## logger object

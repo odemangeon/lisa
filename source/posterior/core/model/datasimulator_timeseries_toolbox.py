@@ -11,7 +11,7 @@ creator function for time series datasets.
 @TODO:
     -
 """
-from .datasimulator_toolbox import add_nonparam_argument
+from ....tools.function_from_text_toolbox import add_nonparam_argument
 
 ## String used for the time vector
 time_vec = "t"

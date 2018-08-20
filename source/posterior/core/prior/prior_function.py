@@ -76,8 +76,12 @@ class UniformPrior(Core_Prior_Function):
             else:
                 return -inf
 
-    def ravs(self):
-        return np.random.uniform(self.vmin, self.vmax)
+    def ravs(self, nb_values=1):
+        val = np.random.uniform(self.vmin, self.vmax, size=nb_values)
+        if val.size==1:
+            return val[0]
+        else:
+            return val
 
 
 class NormalPrior(Core_Prior_Function):
@@ -120,11 +124,15 @@ class NormalPrior(Core_Prior_Function):
         else:
             return self._lf1 - (x - self.mu)**2 * self._f2 if self.vmin < x < self.vmax else -inf
 
-    def ravs(self):
-        val = self.vmin
-        while not((self.vmin < val) and (self.vmax > val)):
-            val = np.random.normal(self.mu, self.sigma)
-        return val
+    def ravs(self, nb_values=1):
+        val = np.random.normal(self.mu, self.sigma, size=nb_values)
+        for idx in np.where((val < self.vmin) | (val > self.vmax))[0]:
+            while not((self.vmin < val[idx]) and (self.vmax > val[idx])):
+                val[idx] = np.random.normal(self.mu, self.sigma)
+        if val.size==1:
+            return val[0]
+        else:
+            return val
 
 
 class LogNormPrior(Core_Prior_Function):
@@ -173,11 +181,15 @@ class LogNormPrior(Core_Prior_Function):
                 return -inf
             return self.__logpdf_wcustargs(self, x, self.mu, self.C, self.B)
 
-    def ravs(self):
-        val = self.vmin
-        while not((self.vmin < val) and (self.vmax > val)):
-            val = np.random.lognormal(self.mu, self.sigma)
-        return val
+    def ravs(self, nb_values=1):
+        val = np.random.lognormal(self.mu, self.sigma, size=nb_values)
+        for idx in np.where((val < self.vmin) | (val > self.vmax))[0]:
+            while not((self.vmin < val[idx]) and (self.vmax > val[idx])):
+                val[idx] = np.random.lognormal(self.mu, self.sigma)
+        if val.size==1:
+            return val[0]
+        else:
+            return val
 
 
 class JeffreysPrior(Core_Prior_Function):
@@ -220,9 +232,13 @@ class JeffreysPrior(Core_Prior_Function):
         else:
             return -inf
 
-    def ravs(self):
+    def ravs(self, nb_values=1):
         x1 = reciprocal(self.vmin, self.vmax)
-        return x1.rvs()
+        val = x1.rvs(size=nb_values)
+        if val.size==1:
+            return val[0]
+        else:
+            return val
 
 
 class SinePrior(Core_Prior_Function):
@@ -292,5 +308,9 @@ class SinePrior(Core_Prior_Function):
             return -inf
 
     # a random angle x has a probability density function = sin(x)
-    def ravs(self):
-        return np.random.uniform(self.vmin, self.vmax)
+    def ravs(self, nb_values=1):
+        val = np.random.uniform(self.vmin, self.vmax, size=nb_values)
+        if val.size==1:
+            return val[0]
+        else:
+            return val

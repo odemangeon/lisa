@@ -49,7 +49,14 @@ class Model_Prior(object):
 
     @property
     def joint_prior_container(self):
-        """Container where the information regarding the joint priors are stored."""
+        """Container where the information regarding the joint priors are stored.
+
+        It's an OrderedDict with as keys the joint prior reference used in the parameter file and as
+        values a dictionary with three keys: "category" which contain the joint prior category,
+        "args": which contains the arguments to use for the initialisation of the joint prior instance,
+        "params": with a dictionary which associate its keys which are the param keys define in the
+        Joint prior class, to its value which the name of the parameter chosen for these param keys.
+        """
         return self.__joint_priors
 
     def get_paramfile_section_jointprior(self):
@@ -69,7 +76,7 @@ class Model_Prior(object):
         return dedent(text_joint_param_distrib)
 
     def load_jointprior_config(self, dico_config):
-        """load the configuration for joint priors specified by the dictionnary
+        """load the configuration for joint priors specified by the dictionary into joint_prior_container
 
         :param dict dico_config: Dictionnary containing the joint priors information.
         """
@@ -112,34 +119,48 @@ class Model_Prior(object):
             else:
                 marginal[param.get_name(include_prefix=True, recursive=True)] = param
         # Create a dict to receive the priors with two keys: marginal and joint
-        priors = {"marginal": {}, "joint": {}}
+        priors = {"marginal": {}, "joint": {"logpdf": {}, "param_names": {}}}
         # For each parameter in the list of marginal (step 1): Create an entry in
         # "marginal" (see step 2) which to the full name of the parameter associate the
         # marginal prior function.
         for full_name, param in marginal.items():
             prior_func = manager.get_priorfunc_subclass(param.prior_category)(**param.prior_args)
             priors["marginal"][full_name] = prior_func.create_logpdf()
-        # For each parameter in the list of joint (step 1): ?
-        # a. look for the associated parameters defined by ? and check if they are free
-        # ??
-        # ?. append a element to "joint" (see step 2) which is a dict with two keys:
-        #       "Parameters": list of free parameters full name in the order required for the
-        #                     prior function see "prior"
-        #       "prior": joint prior functions which included the value of fixe parameters if
-        #                needed
+        # For each parameter in the list of joint (step 1):
+        # Check if the joint prior references is already in the priors["joint"] dictionary meaning
+        # that it has already been created for another parameter.
+        # If not, get the info from self.joint_prior_container, create the joint prior instance
+        # Create the logpdf
         for full_name, param in joint.items():
-            raise NotImplementedError("Joint prior as individual prior for parameters is not "
-                                      "implemented yet.")
+            if param.joint_prior_ref not in priors["joint"]:
+                joint_prior_info = self.joint_prior_container[param.joint_prior_ref]
+                joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(**joint_prior_info["args"])
+                params = {param_ref: self.get_parameter(param_name, recursive=True) for param_ref, param_name in joint_prior_info["params"].items()}
+                priors["joint"]["logpdf"][param.joint_prior_ref] = joint_prior_func.create_logpdf(params)
+                priors["joint"]["param_names"][full_name] = param.joint_prior_ref
         return priors
 
-    def __joint_lnprior_creator(self, list_lnpriors, arg_list):
+    def __joint_lnprior_creator(self, lnpriors_and_indexes, arg_list):
+        """Create and return the joint prior function.
+
+        :param list_of_tuple lnpriors_and_indexes: List of tuples of 2 elements. Each element
+            contain the a prior function as its element 0 and an index or a list of indexes as its element 1.
+            If there the prior function is the marginal prior of a parameter, the second element is
+            be one int giving the index of the parameter in the input array. If the prior function is
+            a joint prior of several parameters, the second element is a list of int giving the indexes
+            of these parameters in the input array.
+        :param dict_of_list arg_list: dictionary with two keys "param" and "kwargs". "param" contain
+            the list of parameter full names giving the order in which the parameter values should be provided
+            in the input array of the output joint prior function.
+        :return DocFunction func: Joint prior function.
+        """
         def joint_lnprior(p):
             res = 0
             # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
             #                                                 arg_list["param"]))
             # logger.debug("params prior ({}): {}".format(len(p), p))
-            for i, ln_prior in enumerate(list_lnpriors):
-                res += ln_prior(p[i])
+            for ln_prior, ii in lnpriors_and_indexes:
+                res += ln_prior(p[ii])
             return res
         return DocFunction(function=joint_lnprior, arg_list=arg_list)
 
@@ -154,20 +175,24 @@ class Model_Prior(object):
         if individual_priors is None:
             individual_priors = self.create_individual_lnpriors()
 
-        list_lnpriors = []
-        for param_name in list_paramnames:
+        marginal_lnpriors = []
+        joint_lnpriors = OrderedDict()
+        for ii, param_name in enumerate(list_paramnames):
             if param_name in individual_priors["marginal"]:
-                list_lnpriors.append(individual_priors['marginal'][param_name])
+                marginal_lnpriors.append((individual_priors['marginal'][param_name], ii))
+            elif param_name in individual_priors["joint"]["param_names"]:
+                joint_prior_ref = individual_priors["joint"]["param_names"][param_name]
+                if joint_prior_ref in joint_lnpriors:
+                    joint_lnpriors[joint_prior_ref][1].append(ii)
+                else:
+                    joint_lnpriors[joint_prior_ref] = (individual_priors["joint"]["logpdf"][joint_prior_ref], [ii])
             else:
-                logger.error("You try to acces the prior funciton of an unknown parameter or a "
-                             "joint parameter: {}".format(param_name))
-                raise NotImplementedError("Joint prior as individual prior for parameters is not "
-                                          "implemented yet.")
+                raise ValueError("Parameter {} doesn't exist in the individual priors dictionary."
+                                 "".format(param_name))
         arg_list = OrderedDict()
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
-
-        docf = self.__joint_lnprior_creator(list_lnpriors, arg_list)
+        docf = self.__joint_lnprior_creator(marginal_lnpriors + list(joint_lnpriors.values()), arg_list)
         return docf
 
     def create_lnpriors(self, lnlike_db, individual_priors=None, affectinstmodel4dataset=False,

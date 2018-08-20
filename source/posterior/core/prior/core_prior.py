@@ -94,9 +94,11 @@ class Core_JointPriorFunction(Core_Prior_Function):
         else:
             logger.debug("The params keys provided for Joint prior category {} are correct.")
         # Check that the parameter names correspond to existing params and that they are main parameters
-        l_main_paramnames = model_instance.get_list_paramnames(main=True, recursive=True, full_name=True, code_version=True)
-        for param_name in params.values():
-            if param_name not in l_main_paramnames:
-                raise ValueError("Parameter name {} doesn't exist in the model.".format(param_name))
+        dico_params_found = {}
+        for param_key, param_name in params.items():
+             found = model_instance.has_parameter(param_name, recursive=True)
+             dico_params_found[param_name] = found
+        if not(all(list(dico_params_found.values()))):
+            raise ValueError("Parameter names {} doesn't exist in the model.".format([param_name for param_name, found in dico_params_found.items() if not(found)]))
         logger.debug("The parameters name provided for Joint prior category all correspond to "
                      "existing parameters")

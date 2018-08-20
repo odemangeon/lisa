@@ -367,7 +367,7 @@ def getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus):
     :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
     :return float e_c: eccentricity of the planet c [0, 1]
     """
-    return math.sqrt(((hplus - hminus) * (hplus - hminus) / 4) + ((kplus - kminus) * (kplus - kminus) / 4))
+    return math.sqrt((((hplus - hminus) * (hplus - hminus)) / 4) + (((kplus - kminus) * (kplus - kminus)) / 4))
 
 def getecc_plb_4_handk(hplus, hminus, kplus, kminus, Pc_over_Pb):
     """Get eccentricity of b planet from h+, h-, k+, k-.
@@ -392,7 +392,7 @@ def getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc_over_Pb):
     :param float Pc_over_Pb: ratio of the orbital period of planet c over the one of planet b
     :return float e_c: eccentricity of the planet c [0, 1]
     """
-    return math.pow(Pc_over_Pb, 2./3.) *  math.sqrt(((hplus + hminus) * (hplus + hminus) / 4) + ((kplus + kminus) * (kplus + kminus) / 4))
+    return math.pow(Pc_over_Pb, 2./3.) *  math.sqrt((((hplus + hminus) * (hplus + hminus)) / 4) + (((kplus + kminus) * (kplus + kminus)) / 4))
 
 
 def getomega(secosw, sesinw):
