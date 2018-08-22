@@ -91,6 +91,11 @@ class NormalPrior(Core_Prior_Function):
     __extra_args__ = ["lims", "sigma_lims"]
 
     def __init__(self, mu, sigma, lims=None, sigma_lims=None):
+        self.mu = float(mu)
+        self.sigma = float(sigma)
+        self._f1 = 1. / mt.sqrt(2. * pi * sigma * sigma)
+        self._lf1 = mt.log(self._f1)
+        self._f2 = 1. / (2. * sigma * sigma)
         if (lims is not None) and (sigma_lims is not None):
             raise ValueError("You cannot set both lims and sigma_lims")
         elif lims is not None:
@@ -103,11 +108,6 @@ class NormalPrior(Core_Prior_Function):
         if self.vmin >= self.vmax:
             raise ValueError("lims should be a 2 element iterable where the first element is "
                              "strictly inferior to the second")
-        self.mu = float(mu)
-        self.sigma = float(sigma)
-        self._f1 = 1. / mt.sqrt(2. * pi * sigma * sigma)
-        self._lf1 = mt.log(self._f1)
-        self._f2 = 1. / (2. * sigma * sigma)
 
     def create_logpdf(self):
         lf1 = mt.log(1. / mt.sqrt(2. * pi * self.sigma * self.sigma))

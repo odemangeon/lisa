@@ -503,7 +503,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         if reply == "y":
             with open(file_path, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
-                f.write("# Parametrisation file of {}\n\n".format(self.name))
+                f.write("# Parametrisation file of {}\n".format(self.get_name()))
+                f.write("import numpy as np\n\n")
                 f.write("# Parameters\n")
                 f.write(self.get_paramfile_section())
             logger.info("Parameter file created at path: {}".format(file_path))
