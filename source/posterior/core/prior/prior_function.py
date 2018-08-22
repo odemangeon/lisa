@@ -88,10 +88,17 @@ class NormalPrior(Core_Prior_Function):
 
     __category__ = "normal"
     __mandatory_args__ = ["mu", "sigma"]
-    __extra_args__ = ["lims"]
+    __extra_args__ = ["lims", "sigma_lims"]
 
-    def __init__(self, mu, sigma, lims=None):
-        self.lims = np.array(lims) if lims is not None else np.array([-inf, inf])
+    def __init__(self, mu, sigma, lims=None, sigma_lims=None):
+        if (lims is not None) and (sigma_lims is not None):
+            raise ValueError("You cannot set both lims and sigma_lims")
+        elif lims is not None:
+            self.lims = np.array(lims)
+        elif sigma_lims is not None:
+            self.lims = [self.mu - sigma_lims[0] * self.sigma, self.mu + sigma_lims[1] * self.sigma]
+        else:
+            self.lims = np.array([-inf, inf])
         self.vmin, self.vmax = self.lims
         if self.vmin >= self.vmax:
             raise ValueError("lims should be a 2 element iterable where the first element is "
