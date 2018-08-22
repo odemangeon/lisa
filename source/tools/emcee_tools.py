@@ -15,7 +15,7 @@ from numpy import percentile, exp, newaxis, concatenate, std
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
 # from copy import deepcopy
-# from collections import defaultdict
+from collections import OrderedDict  # defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
 from dill import dump, load
@@ -104,8 +104,6 @@ def modepeak(values, nbins):
         peak.append (xdata[indice])
 
     return peak
-
-
 
 
 def get_init_distrib_from_fitvalues(fitted_values):
@@ -1087,3 +1085,12 @@ def load_chain_analysis(obj_name, folder="."):
         fitted_values_sec = None
 
     return fitted_values, fitted_values_sec, df_fittedval
+
+
+def get_param_value_OrderedDict(values, l_param_names):
+    """Return an Orderedictwith associate the parameter name to its value.
+    """
+    res = OrderedDict()
+    for val, name in zip(values, l_param_names):
+        res[name] = val
+    return res
