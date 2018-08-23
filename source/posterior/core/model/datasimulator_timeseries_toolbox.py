@@ -68,9 +68,9 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
             l_t = None
         time_arg_name = l_time_vec_name
         (arguments, time_arg
-         ) = add_nonparam_argument(arguments, l_time_vec_name, arg_list, key_arglist,
-                                   key_mand_kwargs, key_opt_kwargs, ldict,
-                                   add_to_ldict=(has_dataset and add_to_ldict),
+         ) = add_nonparam_argument(arguments=arguments, new_arg_name=l_time_vec_name, arg_list=arg_list,
+                                   key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs, ldict=ldict,
+                                   key_arglist=key_arglist, add_to_ldict=(has_dataset and add_to_ldict),
                                    backup_add_to_args=(backup_add_to_args or not(has_dataset)),
                                    new_arg_value=l_t)
     else:
@@ -80,9 +80,9 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
             tt = None
         time_arg_name = time_vec_name
         (arguments, time_arg
-         ) = add_nonparam_argument(arguments, time_vec_name, arg_list, key_arglist, key_mand_kwargs,
-                                   key_opt_kwargs, ldict,
-                                   add_to_ldict=(has_dataset and add_to_ldict),
+         ) = add_nonparam_argument(arguments=arguments, new_arg_name=time_vec_name, arg_list=arg_list,
+                                   key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs, ldict=ldict,
+                                   key_arglist=key_arglist, add_to_ldict=(has_dataset and add_to_ldict),
                                    backup_add_to_args=(backup_add_to_args or not(has_dataset)),
                                    new_arg_value=tt)
     return arguments, time_arg_name, time_arg
@@ -138,14 +138,16 @@ def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_mand_kwar
         timeref_arg_name = l_timeref_name
         if use_dataset:
             (arguments, timeref_arg
-             ) = add_nonparam_argument(arguments, l_timeref_name, arg_list, key_arglist,
-                                       key_mand_kwargs, key_opt_kwargs, ldict,
-                                       add_to_ldict=add_to_ldict, new_arg_value=l_tref)
+             ) = add_nonparam_argument(arguments=arguments, new_arg_name=l_timeref_name, arg_list=arg_list,
+                                       key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                       ldict=ldict, key_arglist=key_arglist, add_to_ldict=add_to_ldict,
+                                       new_arg_value=l_tref)
         else:
             (arguments, timeref_arg
-             ) = add_nonparam_argument(arguments, timeref_name, arg_list, key_arglist,
-                                       key_mand_kwargs, key_opt_kwargs, ldict,
-                                       add_to_ldict=add_to_ldict, new_arg_value=tref)
+             ) = add_nonparam_argument(arguments=arguments, new_arg_name=timeref_name, arg_list=arg_list,
+                                       key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                       ldict=ldict, key_arglist=key_arglist, add_to_ldict=add_to_ldict,
+                                       new_arg_value=tref)
     else:
         if add_to_ldict:
             if use_dataset:

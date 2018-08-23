@@ -502,8 +502,6 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                 format(object=key_whole, preambule=preambule_whole,
                                        arguments=arguments, returns=returns_whole,
                                        tab=tab))
-    logger.debug("text of {object} LC simulator function :\n{text_func}"
-                 "".format(object=key_whole, text_func=text_def_func[key_whole]))
 
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
@@ -519,6 +517,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             ldict["degrees"] = degrees
         else:
             ldict["m"] = m_pytransit
+        logger.debug("text of {object} LC simulator function :\n{text_func}"
+                     "".format(object=obj_key, text_func=text_def_func[obj_key]))
         exec(text_def_func[obj_key], ldict)
         params_model = arg_list[obj_key][key_param]
         if len(arg_list[obj_key][key_mand_kwargs]) > 0:
@@ -529,6 +529,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             opt_kwargs = str(arg_list[obj_key][key_opt_kwargs])
         else:
             opt_kwargs = None
+        logger.debug("Parameters for {object} LC simulator function :\n{dico_param}"
+                     "".format(object=obj_key, dico_param={nb: param for nb, param in enumerate(params_model)}))
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,

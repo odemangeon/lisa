@@ -215,11 +215,11 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     if dico_inst_cat[LC_inst_cat]["has"]:
         # See if there is multiple couple inst_model/dataset
         multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"]) > 1
-        # Add lc time as additional argument
+        # Add lc time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
         (arguments, time_arg_name[LC_inst_cat], time_arg_LC
-         ) = add_time_argument(arguments, multi_cat[LC_inst_cat], has_dataset, arg_list, key_whole,
-                               key_mand_kwargs,
-                               key_opt_kwargs, ldict, dico_inst_cat[LC_inst_cat]["l_dataset"],
+         ) = add_time_argument(arguments=arguments, multi=multi_cat[LC_inst_cat], has_dataset=has_dataset,
+                               arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[LC_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_lc, l_time_vec_name=l_time_vec_lc,
                                add_to_ldict=False, backup_add_to_args=False)
 
@@ -256,11 +256,11 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     if dico_inst_cat[RV_inst_cat]["has"]:
         # See if there is multiple couple inst_model/dataset
         multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"]) > 1
-        # Add rv time as additional argument
+        # Add rv time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
         (arguments, time_arg_name[RV_inst_cat], time_arg_RV
-         ) = add_time_argument(arguments, multi_cat[RV_inst_cat], has_dataset, arg_list, key_whole,
-                               key_mand_kwargs, key_opt_kwargs, ldict,
-                               dico_inst_cat[RV_inst_cat]["l_dataset"],
+         ) = add_time_argument(arguments=arguments, multi=multi_cat[RV_inst_cat], has_dataset=has_dataset,
+                               arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[RV_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_rv, l_time_vec_name=l_time_vec_rv,
                                add_to_ldict=False, backup_add_to_args=False)
 
@@ -665,7 +665,6 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     logger.debug("text of Rebound simulator function for {instmod_fullname}:\n{text_func}"
                  "".format(object=key_whole, instmod_fullname=inst_model_full_name,
                            text_func=text_def_func))
-
     exec(text_def_func, ldict)
     params_model = arg_list[key_whole][key_param]
     if len(arg_list[key_whole][key_mand_kwargs]) > 0:
@@ -677,6 +676,8 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     else:
         opt_kwargs = None
     dico_docf = {}
+    logger.debug("Parameters for {object} LC simulator function :\n{dico_param}"
+                 "".format(object=key_whole, dico_param={nb: param for nb, param in enumerate(params_model)}))
     dico_docf[key_whole] = DatasimDocFunc(function=ldict[function_name.format(object=key_whole)],
                                           params_model=params_model,
                                           inst_cat=instcat_docf,
