@@ -8,6 +8,8 @@ The Objective of this file is to define the different type of parametrisation av
 from logging import getLogger
 from collections import Counter
 
+# import astropy.units as unt
+
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
 
@@ -182,20 +184,25 @@ class GravGroup_Parametrisation(object):
         if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.parametrisation == "Multis"):
             star_name = list(self.paramcontainers["stars"].keys())[0]
             self.paramcontainers["stars"][star_name].rho.main = True
+            self.paramcontainers["stars"][star_name].rho.unit = "Solar density"
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
-                self.paramcontainers["planets"][planet_name].cosinc.main = True
+                self.paramcontainers["planets"][planet_name].Rrat.unit = "w/o unit"
+                self.paramcontainers["planets"][planet_name].cosinc.main = True  # Unit already defined in celestial_bodies
             if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.parametrisation == "EXOFAST"):
-                self.paramcontainers["planets"][planet_name].aR.main = True
+                self.paramcontainers["planets"][planet_name].aR.main = True  # Unit already defined in celestial_bodies
             if RV_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].K.main = True
+                self.paramcontainers["planets"][planet_name].K.unit = "[amplitude of the RV data]"
             self.paramcontainers["planets"][planet_name].P.main = True
+            self.paramcontainers["planets"][planet_name].P.unit = "[time of the RV data]"
             self.paramcontainers["planets"][planet_name].tic.main = True
-            self.paramcontainers["planets"][planet_name].secosw.main = True
-            self.paramcontainers["planets"][planet_name].sesinw.main = True
+            self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV data]"
+            self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies
+            self.paramcontainers["planets"][planet_name].esinw.main = True  # Unit already defined in celestial_bodies
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
@@ -203,6 +210,7 @@ class GravGroup_Parametrisation(object):
         # Apply the parametrisation to the star parameters for the systemic RV
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
+        self.paramcontainers["stars"][star_name].v0.unit = "[amplitude of the RV data]"
         (self.paramcontainers["stars"][star_name].
          init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
                                   RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
