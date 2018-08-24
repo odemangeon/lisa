@@ -198,7 +198,7 @@ class GravGroup_Parametrisation(object):
                 self.paramcontainers["planets"][planet_name].K.main = True
                 self.paramcontainers["planets"][planet_name].K.unit = "[amplitude of the RV data]"
             self.paramcontainers["planets"][planet_name].P.main = True
-            self.paramcontainers["planets"][planet_name].P.unit = "[time of the RV data]"
+            self.paramcontainers["planets"][planet_name].P.unit = "[time of the RV/LC data]"
             self.paramcontainers["planets"][planet_name].tic.main = True
             self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV data]"
             self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies

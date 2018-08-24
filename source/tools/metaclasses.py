@@ -3,7 +3,7 @@
 """
 metaclasses module.
 
-Provide the MandatoryReadOnlyAttr and CategorisedType metaclasse.
+Provide the MandatoryReadOnlyAttr, MandatoryMethods and CategorisedType metaclass.
 
 @TODO:
 """
@@ -44,10 +44,23 @@ class MandatoryReadOnlyAttr(type):
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
         if not(name.startswith("Core_")) and not(name.startswith("Default_")):
+            # Check for missing attributes
             missing_attrs = ["{}".format(attr) for attr in getattr(cls, "__mandatoryattrs__", [])
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
+
+
+class MandatoryMethods(type):
+
+    def __init__(cls, name, bases, attrs):
+        # print(cls, name, bases, attrs)
+        if not(name.startswith("Core_")):
+            # Check for missing attributes
+            missing_meths = ["{}".format(meth) for meth in getattr(cls, "__mandatorymeths__", [])
+                             if not hasattr(cls, meth)]
+            if len(missing_meths) > 0:
+                raise AttributeError("class '{}' requires attribute {}".format(name, missing_meths))
 
 
 def getcategory():

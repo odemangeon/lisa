@@ -110,11 +110,11 @@ class Planet(CelestialBody):
         ## Semi-major axis
         self.add_parameter(Parameter(name="a", name_prefix=self.name, main=False))
         ## Excentricity
-        self.add_parameter(Parameter(name="ecc", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ecc", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Inclination
         self.add_parameter(Parameter(name="inc", name_prefix=self.name, main=False))
         ## Cos Inclination
-        self.add_parameter(Parameter(name="cosinc", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="cosinc", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Impact parameter
         self.add_parameter(Parameter(name="b", name_prefix=self.name, main=False))
         ## Argument of periastron of star (= argument of periastron of planet + pi)
@@ -136,13 +136,17 @@ class Planet(CelestialBody):
         ## Mass ratio planet over star
         self.add_parameter(Parameter(name="Mrat", name_prefix=self.name, main=False))
         ## a over R, ratio of semi-major axis over Radius of the host star
-        self.add_parameter(Parameter(name="aR", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="aR", name_prefix=self.name, main=False, unit="w/o unit"))
         ## log a over R, ratio of semi-major axis over Radius of the host star
         # self.add_parameter(Parameter(name="logaR", name_prefix=self.name, main=False))
         ## sqrt(ecc) . cos(w)
-        self.add_parameter(Parameter(name="secosw", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="secosw", name_prefix=self.name, main=False, unit="w/o unit"))
+        ## ecc . cos(w)
+        self.add_parameter(Parameter(name="ecosw", name_prefix=self.name, main=False, unit="w/o unit"))
         ## sqrt(ecc) . sin(w)
-        self.add_parameter(Parameter(name="sesinw", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="sesinw", name_prefix=self.name, main=False, unit="w/o unit"))
+        ## ecc . sin(w)
+        self.add_parameter(Parameter(name="esinw", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Transit duration D14
         self.add_parameter(Parameter(name="D14", name_prefix=self.name, main=False))
         ## Transit duration D23

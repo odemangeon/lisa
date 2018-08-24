@@ -4,7 +4,7 @@ Interface class to handle prior in the Parameter class
 from logging import getLogger
 
 from source.tools.miscellaneous import spacestring_like
-from .manager_prior import Manager_Prior
+from .core_prior import Manager_Prior
 
 ## Prior manager
 manager = Manager_Prior()

@@ -5,40 +5,37 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf
+from numpy import pi, inf, ones
 
-from ...core.prior.core_prior import Core_Prior_Function, Core_JointPriorFunction
-from ...core.prior.manager_prior import Manager_Prior
+from ...core.prior.core_prior import Core_JointPrior_Function
 from ....tools.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
 from ....tools.convert import gethplus, gethminus, getkplus, getkminus
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
 
-
 ## logger object
 logger = getLogger()
-## manager object
-manager = Manager_Prior()
-# manager.load_setup() ## Cannot be done otherwise there is an import loop
 
 
-# TODO: SeomegaPrior
-
-
-# TODO: b and c planets are differentiated by their period. b usually have a smaller period than c.
-# But it's not always the case. It would be good to have a way to specify which planet has the smaller
-# period and then put to -inf the log period when this is not respected.
-class HKPPrior(Core_JointPriorFunction):
+# TODO: b and c planets are differentiated by their period.  b usually have a smaller period than c
+# (that's what I used in create_logpdf). But it's not always the case. It would be good to have a way
+# to specify which planet has the smaller period and then put to -inf the log period when this is not respected.
+class HKPPrior(Core_JointPrior_Function):
 
     __category__ = "hkP"
     __mandatory_args__ = []
     __extra_args__ = ['Pb_prior', 'Pc_prior', 'eb_prior', 'ec_prior', 'omegab_prior', 'omegac_prior']
     __params__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc']
 
-    def __init__(self, Pb_prior=None, Pc_prior=None, eb_prior=None, ec_prior=None,
-                 omegab_prior=None, omegac_prior=None):
-        self.dico_priors_arg = {}
+    def set_dico_priors_arg(self, Pb_prior=None, Pc_prior=None, eb_prior=None, ec_prior=None,
+                            omegab_prior=None, omegac_prior=None):
+        """Fill self.dico_priors_arg.
+
+        The argument defines the margnal prior of the hidden parameters "Pb", "Pc", "eb", "ec", "omegab",
+        "omegac". They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
+        like for marginal priors
+        """
         for Pname, P_prior in zip(["Pb", "Pc"], [Pb_prior, Pc_prior]):
             if P_prior is None:
                 P_prior = {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}}
@@ -51,29 +48,15 @@ class HKPPrior(Core_JointPriorFunction):
             if omega_prior is None:
                 omega_prior = {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
             self.dico_priors_arg[omeganame] = omega_prior
-        for param, prior_args in self.dico_priors_arg.items():
-            if manager.is_available_priortype(prior_args["category"]):
-                priorfunction_subclass = manager.get_priorfunc_subclass(prior_args["category"])
-                priorfunction_subclass.check_args(list(prior_args["args"].keys()))
-            else:
-                raise ValueError("prior_category {} is not in the list of available prior types: {}"
-                                 "".format(prior_args["category"], manager.get_available_priors()))
-            self.dico_priors_arg[param]["priorfunc_instance"] = priorfunction_subclass(**prior_args["args"])
-
-    @property
-    def dico_priorfunction(self):
-        """Dictionary containing the prior function instances for each physical parameters.
-
-        The physical parameter keys are Pb, Pc, eb, ec, omegab, omegac
-        """
-        return {param: self.dico_priors_arg[param]["priorfunc_instance"] for param in self.dico_priors_arg.keys()}
 
     def create_logpdf(self, params):
-        """Create the log pdf.
+        """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
             The keys are parameter keys in the self.params list and the values are the parameter instances
-        :return function logpdf: log pdf
+            as associated in the parameter file.
+        :return function logpdf: log pdf the order in which the parameter should be provided is
+            provided by self.params
         """
         (param_nb,
          arg_list,
@@ -88,9 +71,8 @@ class HKPPrior(Core_JointPriorFunction):
         ldict["inf"] = inf
         dico_text_params = {}
         for param_key in self.params:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list,
-                                                             key_param=key_param, param_nb=param_nb,
-                                                             param_vector_name=par_vec_name)
+            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)
         function_name = "logpdf_{}".format(self.category)
         text_function = """
         def {function_name}({param_vector_name}):
@@ -110,14 +92,15 @@ class HKPPrior(Core_JointPriorFunction):
                                              Pb=dico_text_params["Pb"], Pc=dico_text_params["Pc"])
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
+        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
         exec(text_function, ldict)
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, hplus, hminus, kplus, kminus, Pb, Pc):
-
         dico_logpdf = self.dico_priorfunction
 
-        eb = getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc/Pb)
+        eb = getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc / Pb)
         ec = getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus)
         omegab = getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus)
         omegac = getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus)
@@ -125,17 +108,24 @@ class HKPPrior(Core_JointPriorFunction):
                 dico_logpdf["omegab"](omegab) + dico_logpdf["omegac"](omegac))
 
     def ravs(self, nb_values=1):
+        """Return values of the parameters drawn from the joint prior.
+
+        :param int nb_values: Number of values to draw for each parameter.
+        :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
+            for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
+            The order of the parameters in the tuple is provided by self.params.
+        """
         dico_ravs = {}
         for param, dico in self.dico_priors_arg.items():
             value = dico.get("value", None)
             if value is None:
                 dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
             else:
-                dico_ravs[param] = np.ones(nb_values) * value
+                dico_ravs[param] = ones(nb_values) * value
             if dico_ravs[param].size == 1:
                 dico_ravs[param] = dico_ravs[param][0]
-        hplus = gethplus(dico_ravs["Pb"]/dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        hminus = gethminus(dico_ravs["Pb"]/dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kplus = getkplus(dico_ravs["Pb"]/dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
-        kminus = getkminus(dico_ravs["Pb"]/dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        hplus = gethplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        hminus = gethminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        kplus = getkplus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
+        kminus = getkminus(dico_ravs["Pb"] / dico_ravs["Pc"], dico_ravs["eb"], dico_ravs["ec"], dico_ravs["omegab"], dico_ravs["omegac"])
         return hplus, hminus, kplus, kminus, dico_ravs["Pb"], dico_ravs["Pc"]

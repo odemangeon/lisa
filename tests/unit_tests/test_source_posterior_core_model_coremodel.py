@@ -9,7 +9,7 @@ from sys import stdout
 
 import source.posterior.core.model.core_model as cmdl
 from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
-from source.posterior.core.prior.manager_prior import Manager_Prior
+from source.posterior.core.prior.core_prior import Manager_Prior
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 from source.posterior.core.dataset_and_instrument.instrument import instrument_model_category
 

@@ -7,6 +7,8 @@ from logging import getLogger
 from textwrap import dedent
 from copy import deepcopy
 
+import math as mt
+
 from ajplanet import pl_rv_array
 
 # from ..dataset_and_instrument.rv import RV_inst_cat
@@ -18,8 +20,8 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs)
-from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
+                                                  par_vec_name, add_argskwargs_argument, argskwargs)
+from ....tools.convert import gettp_fast  # getecc_fast, getomega_fast
 
 
 ## Logger object
@@ -146,12 +148,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     # the planets RV contribution (planet_rv and whole_planets_rv) and finalise the text of
     # planets functions.
     template_preambule = """
-    {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
-    {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+    {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})
+    {tab}omega_{planet} = atan2({esinw}, {ecosw})
     {tab}tp_{planet} = gettp_fast({P}, {tic}, ecc_{planet}, omega_{planet})
     """
-    template_planet_rv = ("+ pl_rv_array({time}, 0., {K}, omega_{planet}, "
-                          "ecc_{planet}, tp_{planet}, {P})")
+    template_planet_rv = "+ pl_rv_array({time}, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet}, {P})"
 
     # Initialise the text for the whole system preambule
     preambule_whole = ""
@@ -169,7 +170,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.K, planet.secosw, planet.sesinw, planet.tic, planet.P]
+        l_param = [planet.K, planet.ecosw, planet.esinw, planet.tic, planet.P]
         for param in l_param:
             param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
                                             key_arglist=[key_whole, planet.get_name()], param_vector_name=par_vec_name)
@@ -178,12 +179,12 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
 
         # Create the preambule text that compute intermediate variables
         preambule_planet = (dedent(template_preambule).
-                            format(planet=planet.get_name(), secosw=params_planet["secosw"],
-                                   sesinw=params_planet["sesinw"], P=params_planet["P"],
+                            format(planet=planet.get_name(), ecosw=params_planet["ecosw"],
+                                   esinw=params_planet["esinw"], P=params_planet["P"],
                                    tic=params_planet["tic"], tab=tab))
         preambule_whole += (dedent(template_preambule).
-                            format(planet=planet.get_name(), secosw=params_whole["secosw"],
-                                   sesinw=params_whole["sesinw"], P=params_whole["P"],
+                            format(planet=planet.get_name(), ecosw=params_whole["ecosw"],
+                                   esinw=params_whole["esinw"], P=params_whole["P"],
                                    tic=params_whole["tic"], tab=tab))
 
         # planets RV contribution (planet_rv and whole_planets_rv)
@@ -216,12 +217,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         # Finalise the text of planet RV simulator function
         if argskwargs not in arguments:
             arguments = add_argskwargs_argument(arguments)
-        text_def_func[planet.get_name()] = (template_function.
-                                      format(object=planet.get_name(), preambule=preambule_planet,
-                                             arguments=arguments, returns=returns_pl,
-                                             tab=tab))
-        logger.debug("text of {object} RV simulator function :\n{text_func}"
-                     "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
+        text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(), preambule=preambule_planet,
+                                                                     arguments=arguments, returns=returns_pl,
+                                                                     tab=tab))
+        # logger.debug("text of {object} RV simulator function :\n{text_func}"
+        #              "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
 
     # Fill returns text for the whole system
     returns_whole = ""
@@ -243,8 +243,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
-        ldict["getecc_fast"] = getecc_fast
-        ldict["getomega_fast"] = getomega_fast
+        ldict["sqrt"] = mt.sqrt
+        ldict["atan2"] = mt.atan2
         ldict["gettp_fast"] = gettp_fast
         ldict["pl_rv_array"] = pl_rv_array
         logger.debug("text of {object} RV simulator function :\n{text_func}"

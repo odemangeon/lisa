@@ -6,7 +6,7 @@ Datasim creator LC module.
 from logging import getLogger
 from textwrap import dedent
 from copy import deepcopy
-from math import acos, degrees
+from math import acos, degrees, sqrt, atan2
 
 from batman import TransitModel, TransitParams
 # from pytransit import MandelAgol
@@ -20,8 +20,8 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs)
-from ....tools.convert import getecc_fast, getomega_fast, getaoverr
+                                                  par_vec_name, add_argskwargs_argument, argskwargs)
+from ....tools.convert import getaoverr
 
 
 ## Logger object
@@ -155,14 +155,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     # Create the preambule
     template_preambule_pl = """
-        {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
+        {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
     if parametrisation == "Multis":
         template_preambule_pl += """
         {tab}aR_{planet} = getaoverr({P}, {rhostar})"""
 
     if transit_model == "batman":
         template_preambule_pl += """
-        {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
+        {tab}omega_{planet} = degrees(atan2({esinw}, {ecosw}))
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
 
         for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
@@ -219,7 +219,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         """
     else:
         template_preambule_pl += """
-        {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+        {tab}omega_{planet} = atan2({esinw}, {ecosw})
         {tab}inc_{planet} = acos({cosinc})
         """
     template_preambule_pl = dedent(template_preambule_pl)
@@ -398,7 +398,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.secosw, planet.sesinw, planet.cosinc, planet.tic, planet.P,
+        l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.tic, planet.P,
                    planet.Rrat]
         if parametrisation != "Multis":
             l_param.append(planet.aR)
@@ -415,8 +415,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         # because if one argument is not in the template, it is not used and this is it.
         preambule_planet = (template_preambule_pl.
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
-                                   secosw=params_planet["secosw"],
-                                   sesinw=params_planet["sesinw"],
+                                   ecosw=params_planet["ecosw"],
+                                   esinw=params_planet["esinw"],
                                    tic=params_planet["tic"], rhostar=rhostar,
                                    cosinc=params_planet["cosinc"], P=params_planet["P"],
                                    Rrat=params_planet["Rrat"], aR=params_planet["aR"],
@@ -425,8 +425,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                    tab=tab))
         preambule_whole += (template_preambule_pl.
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
-                                   secosw=params_whole["secosw"],
-                                   sesinw=params_whole["sesinw"], tic=params_whole["tic"],
+                                   ecosw=params_whole["ecosw"],
+                                   esinw=params_whole["esinw"], tic=params_whole["tic"],
                                    cosinc=params_whole["cosinc"], P=params_whole["P"],
                                    Rrat=params_whole["Rrat"], aR=params_planet["aR"],
                                    # ld_mod_name=LD_parcont.ld_type,
@@ -506,8 +506,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
-        ldict["getecc_fast"] = getecc_fast
-        ldict["getomega_fast"] = getomega_fast
+        ldict["sqrt"] = sqrt
+        ldict["atan2"] = atan2
         ldict["acos"] = acos
         if parametrisation == "Multis":
             ldict["getaoverr"] = getaoverr

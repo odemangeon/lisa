@@ -33,7 +33,7 @@ from ..dataset_and_instrument.instrument import interpret_instmod_fullname
 from ..likelihood.core_likelihood import LikelihoodCreator
 from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ..prior.model_prior import Model_Prior, joint_prior_name
-from ..prior.manager_prior import Manager_Prior
+from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder

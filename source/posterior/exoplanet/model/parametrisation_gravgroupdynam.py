@@ -119,7 +119,7 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             self.paramcontainers["planets"][planet_name].P.main = True
             self.paramcontainers["planets"][planet_name].P.unit = unt.day
             self.paramcontainers["planets"][planet_name].tic.main = True
-            self.paramcontainers["planets"][planet_name].tic.unit = "Same than the data"
+            self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV/LC data]"
             self.paramcontainers["planets"][planet_name].inc.main = True
             self.paramcontainers["planets"][planet_name].inc.unit = unt.rad
             self.paramcontainers["planets"][planet_name].OMEGA.main = True
@@ -130,10 +130,8 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
             if self.parametrisation == "Standard":
                 self.paramcontainers["planets"][planet_name].M.main = True
                 self.paramcontainers["planets"][planet_name].M.unit = unt.M_sun
-                self.paramcontainers["planets"][planet_name].secosw.main = True
-                self.paramcontainers["planets"][planet_name].secosw.unit = "w/o unit"
-                self.paramcontainers["planets"][planet_name].sesinw.main = True
-                self.paramcontainers["planets"][planet_name].sesinw.unit = "w/o unit"
+                self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies
+                self.paramcontainers["planets"][planet_name].esinw.main = True  # Unit already defined in celestial_bodies
             if LC_inst_cat in set(self.dataset_db.inst_categories):
                 self.paramcontainers["planets"][planet_name].Rrat.main = True
                 self.paramcontainers["planets"][planet_name].Rrat.unit = "w/o unit"

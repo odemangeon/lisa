@@ -15,7 +15,7 @@ from logging import getLogger
 from collections import OrderedDict
 from textwrap import dedent
 
-from .manager_prior import Manager_Prior
+from .core_prior import Manager_Prior
 from ..database_func import DatabaseInstLvlDataset
 from ....tools.function_w_doc import DocFunction
 from ....tools.miscellaneous import spacestring_like
