@@ -66,13 +66,14 @@ class DatabaseFunc(Named, Instmodel4DatasetAttr, DstDbLockAttr):
         self.__update_datasets_dataset_db()
 
     def __repr__(self):
-        repr = "instrument_db:\n"
+        repr = Named.__repr__(self) + ": {\n"
+        repr += "instrument_db:\n"
         repr += self.__instrument_db.__repr__()
         repr += "\ndataset_db:\n"
         repr += self.__dataset_db.__repr__()
         repr += "\ninstmodel4dataset:\n"
         repr += self.instmodel4dataset.__repr__()
-        return repr
+        return repr + "\n}"
 
     @property
     def database_name(self):

@@ -85,6 +85,9 @@ class DatabaseInstLevel(Nesteddict_getitIMFN, Named):
         Named.__init__(self, name=object_stored, prefix=database_name)
         Nesteddict_getitIMFN.__init__(self, nb_lvl=3, lock=lock, ordered=ordered, default=default)
 
+    def __repr__(self):
+        return Named.__repr__(self) + ":" + Nesteddict_getitIMFN.__repr__(self)
+
     @property
     def database_name(self):
         """Return the name of the database."""
