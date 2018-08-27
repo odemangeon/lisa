@@ -239,3 +239,13 @@ class DatasimDocFunc(DocFunction):
     def params_model(self):
         """Return the ordered list of model of the function."""
         return self.__param_model_list
+
+    @property
+    def _info(self):
+        """String with information about the function."""
+        text = super(DatasimDocFunc, self)._info
+        return text + "\noutput_info:\n {output_info}".format(output_info=self.output_info)
+
+    def info(self):
+        """Provide informations about the function."""
+        print(self._info)

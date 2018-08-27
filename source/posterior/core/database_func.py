@@ -65,6 +65,15 @@ class DatabaseFunc(Named, Instmodel4DatasetAttr, DstDbLockAttr):
         self.dataset_db[self._alldtst_key] = None
         self.__update_datasets_dataset_db()
 
+    def __repr__(self):
+        repr = "instrument_db:\n"
+        repr += self.__instrument_db.__repr__()
+        repr += "\ndataset_db:\n"
+        repr += self.__dataset_db.__repr__()
+        repr += "\ninstmodel4dataset:\n"
+        repr += self.instmodel4dataset.__repr__()
+        return repr
+
     @property
     def database_name(self):
         """Return the name of the database."""

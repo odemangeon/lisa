@@ -219,6 +219,9 @@ class Named(object):
 
         self.__code_name_rules = kwargs_getname_4_codename
 
+    def __repr__(self):
+        return "<{} {}>".format(self.__class__.__name__, self.get_name(include_prefix=True, recursive=True))
+
     @property
     def name(self):
         """Return the name of the instance."""

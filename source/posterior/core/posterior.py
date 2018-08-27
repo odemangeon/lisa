@@ -97,6 +97,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())
+        # TODO: This looks like it's not used ! IF not also suppress noisemodels property below
         self.__noisemodel_db = DatabaseFunc(object_stored="noise model",
                                             instmodel4dataset=self.instmodel4dataset,
                                             database_name=self.object_name, instordered=False,
@@ -285,6 +286,11 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                create_datasimulator_alldatasets(dataset_db=self.dataset_db))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
+
+    @property
+    def noisemodels(self):
+        """Return the current content lnprior database."""
+        return self.__noisemodel_db
 
     @property
     def lnlikelihoods(self):

@@ -97,6 +97,9 @@ class Dataset(object):
         if type(self) is Dataset:
             raise NotImplementedError("Dataset should not be instanciated!")
 
+    def __repr__(self):
+        return "<{} {}:{}>".format(self.__class__.__name__, self.dataset_name, self.filepath)
+
     @property
     def filepath(self):
         """Get the path of the data file."""

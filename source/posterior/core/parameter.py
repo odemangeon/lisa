@@ -65,7 +65,7 @@ class Parameter(Named, Parameter_Prior):
         if unit is not None:
             self.unit = unit
         # Initialise the info regarding the content of the parametrisation file for a Parameter
-        self.__paramfile_info = {"caracteristics": ["free", "value"] # Caracteristics beside the prior info
+        self.__paramfile_info = {"caracteristics": ["free", "value"]  # Caracteristics beside the prior info
                                  }
         # Initialisation relative to the Prior.
         Parameter_Prior.__init__(self, self.__paramfile_info, **kwargs_prior)
