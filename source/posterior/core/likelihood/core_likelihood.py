@@ -58,8 +58,8 @@ class LikelihoodCreator(object):
         :param dict dico_noisemodel: Dictionary giving the required inputs for each noise model.
             key = noise model name, value = dictionary:
                 key= "lnlike", value: lnlike function for this noise model. This function take as
-                    arguments take as arguments the modeled data, the parameters for the noise
-                    model, and eventually the dataset kwargs necessary for the noise model.
+                    arguments the modeled data, the parameters for the noise model, and eventually
+                    the dataset kwargs necessary for the noise model.
                 key= "idx_param_noisemod", value: list of indexes corresponding to the noise model
                     parameters in the parameter vector
                 key= "datasets", value: dictionary:
@@ -86,22 +86,35 @@ class LikelihoodCreator(object):
         datasim_func = datasim.function
         dataset_included_in_datasim = datasim.include_dataset_kwarg
 
+        logger.debug("Creation of likelihood from datasim function {} with the following dico_noisemodel:\n "
+                     "{}\nInformation about the datasim function:\n{}".format(datasim, dico_noisemodel,
+                                                                              datasim._info))
+
         if dataset_included_in_datasim:
             if not(include_dataset):
                 logger.warning("Include_dataset is False but the datasim doc function provided in "
                                "argument includes already the dataset kwargs. Include_dataset=False"
                                "is thus ignored.")
 
-            def lnlike(p, *arg, **kwargs):
-                sim_data = datasim_func(p[l_idx_param_dtsim], *arg, **kwargs)
-                res = 0
-                for noisemod_name in dico_noisemodel:
-                    res += (dico_noisemodel[noisemod_name][key_noisemod_likefunc]
-                            ([sim_data[ii] for ii in
-                              dico_noisemodel[noisemod_name][key_dtst][key_idxsim]],
-                             p[dico_noisemodel[noisemod_name][key_lparnoisemod]],
-                             dico_noisemodel[noisemod_name][key_dtst][key_dtkwarg]))
-                return res
+            if datasim.multi_output:
+                def lnlike(p, *arg, **kwargs):
+                    sim_data = datasim_func(p[l_idx_param_dtsim], *arg, **kwargs)
+                    res = 0
+                    for noisemod_name in dico_noisemodel:
+                        res += (dico_noisemodel[noisemod_name][key_noisemod_likefunc]
+                                ([sim_data[ii] for ii in
+                                  dico_noisemodel[noisemod_name][key_dtst][key_idxsim]],
+                                 p[dico_noisemodel[noisemod_name][key_lparnoisemod]],
+                                 dico_noisemodel[noisemod_name][key_dtst][key_dtkwarg]))
+                    return res
+            else:
+                noisemod_name = list(dico_noisemodel.keys())[0]
+                noisemod_dict = dico_noisemodel[noisemod_name]
+
+                def lnlike(p, *arg, **kwargs):
+                    sim_data = datasim_func(p[l_idx_param_dtsim], *arg, **kwargs)
+                    return noisemod_dict[key_noisemod_likefunc]([sim_data], p[noisemod_dict[key_lparnoisemod]],
+                                                                noisemod_dict[key_dtst][key_dtkwarg])
         else:
             raise NotImplementedError("For now, __likelihood_creator cannot be applied to a data "
                                       "simulator for which the dataset is not included")
@@ -209,6 +222,8 @@ class LikelihoodCreator(object):
                                  mand_kwargs=None, opt_kwargs=None,
                                  output_info=output_info_like)
 
+    # TODO: Right now this function is not used, because I am not creating likelihoods without dataset
+    # But actually, I think that _create_lnlikelihood might be able to do this case too (To Be Checked)
     def create_lnlikelihoods(self, datasim_inst_db,
                              affectinstmodel4dataset=False, lock_db=False, pickleable=False):
         """Return the likelihood for each instrument model used.
@@ -303,7 +318,7 @@ class LikelihoodCreator(object):
             # if dataset_name == "all":
             #     continue
 
-            # ..., create the lnlikelihood doc function
+            # ..., create the corresponding lnlikelihood doc function
             db[dataset_name] = self._create_lnlikelihood(datasim)
             # db[dataset_name] = self.__lnlike_withdataset_creator(lnlike_doc_func.function,
             #                                                      lnlike_doc_func.arg_list,

@@ -135,7 +135,7 @@ class DatasimulatorCreator(object):
             same time with the datasets included.
         """
         # Initialise the dictionary datsimC_inputs:
-        #   key = datasimcreator_name, v
+        #   key = datasimcreator_name,
         #   value = dict :
         #               key: "datasets" and "instmodels"
         #               value: list of datasets and list of corresponding intrument model object
@@ -162,6 +162,9 @@ class DatasimulatorCreator(object):
         inst_model_fullnames = []
         datasets = []
 
+        logger.debug("Creation of datasimulator for all datasets. Datasim creator inputs:\n {}"
+                     "".format(datsimC_inputs))
+
         # For each datasimcreator creator name, ...
         for datsimC_name in datsimC_inputs:
             # ... create the datasim function with all the datasets using this datasimcreator
@@ -169,7 +172,7 @@ class DatasimulatorCreator(object):
                             [datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
                                            datsimC_inputs[datsimC_name]["datasets"])
                             [self.key_whole])
-            # ... get the ordered list of instrument model full names for this function
+            # ... get the ordered list of instrument categories for this function
             inst_cats = inst_cats + list(l_datsim[-1].inst_cat)
             # ... get the ordered list of instrument model full names for this function
             inst_model_fullnames = (inst_model_fullnames +

@@ -88,12 +88,12 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         l_params_noisemod = []
         l_idx_param_noisemod = []
         for instmod_obj in l_instmod_obj:
-            (lnlike_dfmjitter_1instmod, l_params_new, l_params_noisemod,
+            (lnlike_1instmod, l_params_new, l_params_noisemod,
              l_idx_param_noisemod) = cls.get_prefilledlnlike_1instmod(l_params_new,
                                                                       l_params_noisemod,
                                                                       l_idx_param_noisemod,
                                                                       instmod_obj)
-            l_func.append(lnlike_dfmjitter_1instmod)
+            l_func.append(lnlike_1instmod)
 
         def lnlike_jitter(model, param_noisemod, l_datakwargs):
             res = 0
