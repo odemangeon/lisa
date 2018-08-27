@@ -229,7 +229,7 @@ class GravGroup_Parametrisation(object):
                 inst_model.DeltaRV.main = DeltaRV_main
                 if DeltaRV_main:
                     if ((inst_name == RVrefglobal_instname) and
-                       (inst_model.name == RVrefglobal_modname)):
+                       (inst_model.get_name() == RVrefglobal_modname)):
                         inst_model.DeltaRV.free = False
                         inst_model.DeltaRV.value = 0.0
         if LC_inst_cat in set(self.dataset_db.inst_categories):
