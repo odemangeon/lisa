@@ -224,8 +224,8 @@ class HKPtPrior(Core_JointPrior_Function):
                 text_Phi_lims = """
                 {tab}if (Phi{planet_name} < {Phi_min}) or (Phi{planet_name} > {Phi_max}):
                 {tab}    return -inf
-                """.format(tab="    ", planet_name=planet_name, Phi_min=self.Phi_min, Phi_max=self.Phi_max, )
-                check_Phi_lims += dedent(text_Phi_lims)
+                """
+                check_Phi_lims += dedent(text_Phi_lims).format(tab="    ", planet_name=planet_name, Phi_min=self.Phi_min, Phi_max=self.Phi_max)
                 logpdf_torPhi[planet_name] = "dico_logpdf['t{planet_name}']({{t_planet}})".format(planet_name=planet_name)
                 logpdf_torPhi[planet_name] = logpdf_torPhi[planet_name].format(t_planet=dico_text_params["t{}".format(planet_name)])
         function_name = "logpdf_{}".format(self.category)
