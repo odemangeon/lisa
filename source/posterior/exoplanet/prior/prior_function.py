@@ -178,7 +178,7 @@ class HKPtPrior(Core_JointPrior_Function):
                 self.dico_priors_arg["Phi"] = Phi_prior
                 if Phi_lims is not None:
                     raise ValueError("Phi_lims should not be set when Phi_prior is provided")
-        if any([use_phi for use_phi in self.use_phi.values()]):
+        if any([not(use_phi) for use_phi in self.use_phi.values()]):
             if Phi_lims is None:
                 Phi_lims = (-0.5, 0.5)
             self.Phi_min, self.Phi_max = Phi_lims
