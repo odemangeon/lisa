@@ -307,7 +307,7 @@ class HKPtPrior(Core_JointPrior_Function):
                 tt[planet_name] = dico_ravs["Phi{}".format(planet_name)] * dico_ravs["P{}".format(planet_name)] + self.t_ref
             else:
                 tt[planet_name] = dico_ravs["t{}".format(planet_name)]
-                Phi = (tt - self.t_ref) / dico_ravs["P{}".format(planet_name)]
+                Phi = (tt[planet_name] - self.t_ref) / dico_ravs["P{}".format(planet_name)]
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
                 while len(indexes) > 0:
                     tt[planet_name][indexes] = self.dico_priors_arg["t{}".format(planet_name)]["priorfunc_instance"].ravs(nb_values=len(indexes))
