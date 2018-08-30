@@ -134,7 +134,7 @@ class HKPtPrior(Core_JointPrior_Function):
     """Prior defined for the h, k, P and t parameters of the Np parametrisation of the GravgroupsDynam model.
     """
 
-    __category__ = "hkP"
+    __category__ = "hkPt"
     __mandatory_args__ = ['t_ref']
     __extra_args__ = ['Pb_prior', 'Pc_prior', 'eb_prior', 'ec_prior', 'omegab_prior', 'omegac_prior',
                       'tb_prior', 'tc_prior', 'Phi_lims', 'Phib_prior', 'Phic_prior']
