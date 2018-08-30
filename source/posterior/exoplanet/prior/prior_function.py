@@ -160,6 +160,7 @@ class HKPtPrior(Core_JointPrior_Function):
             if P_prior is None:
                 P_prior = {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}}
             self.dico_priors_arg[Pname] = P_prior
+        self.use_phi = {}
         for tname, t_prior, Phiname, Phi_prior, planet_name in zip(["tb", "tc"], [tb_prior, tc_prior],
                                                                    ["Phib", "Phib"], [Phib_prior, Phic_prior],
                                                                    ["b", "c"]):

@@ -132,12 +132,21 @@ class Model_Prior(object):
         # If not, get the info from self.joint_prior_container, create the joint prior instance
         # Create the logpdf
         for full_name, param in joint.items():
-            if param.joint_prior_ref not in priors["joint"]:
-                joint_prior_info = self.joint_prior_container[param.joint_prior_ref]
-                joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(**joint_prior_info["args"])
+            joint_prior_info = self.joint_prior_container[param.joint_prior_ref]
+            joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(**joint_prior_info["args"])
+            if param.joint_prior_ref not in priors["joint"]["logpdf"]:
                 params = {param_ref: self.get_parameter(param_name, recursive=True) for param_ref, param_name in joint_prior_info["params"].items()}
-                priors["joint"]["logpdf"][param.joint_prior_ref] = joint_prior_func.create_logpdf(params)
-                priors["joint"]["param_names"][full_name] = param.joint_prior_ref
+                priors["joint"]["logpdf"][param.joint_prior_ref] = {"function": joint_prior_func.create_logpdf(params),
+                                                                    "nb_param": len(joint_prior_func.params)}
+            idx = None
+            for param_ref, param_name in joint_prior_info["params"].items():
+                if param.name.is_name(param_name):
+                    idx = joint_prior_func.params.index(param_ref)
+            if idx is None:
+                raise ValueError("Parameter {} not found in joint prior info dictionary: {}"
+                                 "".format(full_name, joint_prior_info["params"]))
+            else:
+                priors["joint"]["param_names"][full_name] = {"ref": param.joint_prior_ref, "idx": idx}
         return priors
 
     def __joint_lnprior_creator(self, lnpriors_and_indexes, arg_list):
@@ -154,6 +163,9 @@ class Model_Prior(object):
             in the input array of the output joint prior function.
         :return DocFunction func: Joint prior function.
         """
+        logger.debug("Creating joint prior with the following lnpriors_and_indexes:\n{}\nand the following "
+                     "arg_list {}".format(lnpriors_and_indexes, arg_list))
+
         def joint_lnprior(p):
             res = 0
             # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
@@ -181,11 +193,12 @@ class Model_Prior(object):
             if param_name in individual_priors["marginal"]:
                 marginal_lnpriors.append((individual_priors['marginal'][param_name], ii))
             elif param_name in individual_priors["joint"]["param_names"]:
-                joint_prior_ref = individual_priors["joint"]["param_names"][param_name]
-                if joint_prior_ref in joint_lnpriors:
-                    joint_lnpriors[joint_prior_ref][1].append(ii)
-                else:
-                    joint_lnpriors[joint_prior_ref] = (individual_priors["joint"]["logpdf"][joint_prior_ref], [ii])
+                joint_prior_ref = individual_priors["joint"]["param_names"][param_name]["ref"]
+                idx_in_jointprior = individual_priors["joint"]["param_names"][param_name]["idx"]
+                if joint_prior_ref not in joint_lnpriors:
+                    joint_lnpriors[joint_prior_ref] = (individual_priors["joint"]["logpdf"][joint_prior_ref]["function"],
+                                                       [None for par in range(individual_priors["joint"]["logpdf"][joint_prior_ref]["nb_param"])])
+                joint_lnpriors[joint_prior_ref][1][idx_in_jointprior] = ii
             else:
                 raise ValueError("Parameter {} doesn't exist in the individual priors dictionary."
                                  "".format(param_name))
