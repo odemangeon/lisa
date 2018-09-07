@@ -74,6 +74,6 @@ if __name__ == "__main__":
 
 
     pl.plot(rv_times,rvdym, '.')
-    pl.plot(rv_times,-rvmodel, '.', color='r')
+    pl.plot(rv_times,rvmodel, '.', color='r')
     pl.title("rv")
     pl.show()

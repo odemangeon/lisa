@@ -74,7 +74,8 @@ au= 1.495978707e11 # AU in meters
 
 for i, time in enumerate(rv_times):
     sim.integrate(time)
-    rv_out[i] = particles[0].vz*au /(day1)
+    # corrected on the 7 september 2018 due to an error with the sign of the RVs
+    rv_out[i] = -particles[0].vz*au /(day1)
     #rv_out[i] = ( particles[2].vz * m2/m0  )*au /(day1)
 
 

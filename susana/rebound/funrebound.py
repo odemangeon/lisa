@@ -72,7 +72,7 @@ def funrebound(p_parameters,stellar_mass, stellar_radius,limb_dark, treference,
     outputs : model of photometry normalised or/ and  model of the radial velocity (m/s) for the times requested
 
     TODO:
-    transitpy not working 
+    transitpy not working
     """
 
 
@@ -153,7 +153,8 @@ def funrebound(p_parameters,stellar_mass, stellar_radius,limb_dark, treference,
         for jj in range(0, nplanets):
             distance[i,jj] = np.sqrt((particles[jj+1].x-particles[0].x)**2 + (particles[jj+1].y-particles[0].y)**2)
 
-        rvs[i] = particles[0].vz*au /(day1)
+        #bug fixed on the 7sep 2018. Rebound gives already the velocity of the star so it is negative relative to the osberved RVs
+        rvs[i] = -particles[0].vz*au /(day1)
 
     # separate rvs and flux
 
