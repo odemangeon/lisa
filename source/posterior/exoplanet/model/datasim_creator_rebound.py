@@ -595,22 +595,22 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
             # If zz is negative (the planet is behind the star) we articiacial augment a lot the
             # projected distance to avoid having a transit during the secondary
             compute_flux = """
-{{tab}}{res} = 1 {oot_var}
-{{tab}}for jj in range(0, {nb_planet}):
-{{tab}}    dist_{idx_LC} = {projected_dist} + 1e28 * (1-sign({zz}))
-{{tab}}    {res} += {flux_fct_name}(dist_{idx_LC}, {R_planet_vec_name}[jj],
-{{tab}}                             {ld_param_list}, nthreads) - 1
-""".format(res=res, nb_planet=len(planets), flux_fct_name=compute_flux_fct_name,
-           projected_dist=projected_dist, R_planet_vec_name=R_planet_list_name,
-           ld_param_list=ld_param_list.strip()[1:-1].strip(" ,"),
-           oot_var=oot_var, idx_LC=idx_LC, zz=zz)
-            text_compute_flux += compute_flux
+            {{tab}}{res} = 1 {oot_var}
+            {{tab}}for jj in range(0, {nb_planet}):
+            {{tab}}    dist_{idx_LC} = {projected_dist} + 1e28 * (1-sign({zz}))
+            {{tab}}    {res} += {flux_fct_name}(dist_{idx_LC}, {R_planet_vec_name}[jj],
+            {{tab}}                             {ld_param_list}, nthreads) - 1
+            """.format(res=res, nb_planet=len(planets), flux_fct_name=compute_flux_fct_name,
+                       projected_dist=projected_dist, R_planet_vec_name=R_planet_list_name,
+                       ld_param_list=ld_param_list.strip()[1:-1].strip(" ,"),
+                       oot_var=oot_var, idx_LC=idx_LC, zz=zz)
+            text_compute_flux += dedent(compute_flux)
             ldict["sign"] = sign
             if supersamp > 1:
                 supersamp_text = """
-{{tab}}{res} = average_supersampled_values({res}, {supersamp})
-""".format(res=res, supersamp=supersamp)
-                text_compute_flux += supersamp_text
+                {{tab}}{res} = average_supersampled_values({res}, {supersamp})
+                """.format(res=res, supersamp=supersamp)
+                text_compute_flux += dedent(supersamp_text)
                 ldict["average_supersampled_values"] = average_supersampled_values
 
         text_compute_flux = dedent(text_compute_flux).format(tab=tab)
@@ -943,7 +943,7 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
                 zz[ii_lc, jj] = (particles[jj + 1].z - particles[0].z)
             ii_lc += 1
         else:
-            rvs[ii_rv] = particles[0].vz * au_meter / day_sec
+            rvs[ii_rv] = - particles[0].vz * au_meter / day_sec  # The minus sign is necessary because the z axis is oriented towards us.
             ii_rv += 1
 
     # separate rvs and flux
