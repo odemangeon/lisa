@@ -15,14 +15,14 @@ The objective of this package is to provides the core Core_Model class.
 from logging import getLogger
 from os.path import isfile, join
 from collections import OrderedDict  # , defaultdict
-from numpy import array
+from numpy import array, ones
 # from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
 from .instrument_container import InstrumentContainerInterface
 from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
-from ..paramcontainer import Core_ParamContainer
+from ..paramcontainer import Core_ParamContainer, key_params_fileinfo
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..dataset_and_instrument.dataset_database import DatasetDbAttr
 from ..dataset_and_instrument.instrument import instrument_model_category as instmod_cat
@@ -32,11 +32,12 @@ from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..dataset_and_instrument.instrument import interpret_instmod_fullname
 from ..likelihood.core_likelihood import LikelihoodCreator
 from ..likelihood.manager_noise_model import Manager_NoiseModel
-from ..prior.core_prior import Prior
-from ..prior.manager_prior import Manager_Prior
+from ..prior.model_prior import Model_Prior, joint_prior_name
+from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder
+from ....tools.miscellaneous import spacestring_like
 
 
 ## Logger
@@ -50,12 +51,21 @@ manager_noisemodel = Manager_NoiseModel()
 manager_noisemodel.load_setup()
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, InstrumentContainerInterface,
+class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator,
                  DatasimulatorCreator, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
-    __mandatoryattrs__ = ["category"]
+    ## List of mandatory arguments which have to be defined in the subclasses.
+    # For example "category" is in this list. It has to be defined in the subclass as a class
+    # attribute like this:
+    # __category__ = "ModelCategory"
+    # It then be read as self.category
+    __mandatoryattrs__ = ["category", "possible_inst_categories"]
+    # category: String which designate the model (for example: "GravitionalGroups"). To choose the
+    #   model to be used, the user will use this string.
+    # possible_inst_categories: Set of the categories of data that the model can simulate
+    #   (for example: {"RV", "LC"} for "GravitionalGroups")
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
@@ -69,29 +79,24 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         :param string/None run_folder: Folder to use as run folder. For more info check run_folder
         :param Instmodel4Dataset/None instmodel4dataset:
         :param list_of_string l_instmod_fullnames: list of instrument model full names
-
         """
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
         Core_ParamContainer.__init__(self, name)
-
         # Model needs to access the datasets so give model the dataset_db attribute
         DatasetDbAttr.__init__(self, dataset_db)
         if not(self.isdefined_datasetdb):
             raise ValueError("You need to provide a DatasetDatabase to create a model !")
-
         # Intialise the run_folder property
         RunFolder.__init__(self, run_folder=run_folder)
-
         # Core Model is also a ParamContainer Database, so initialise it
         ParamContainerDatabase.__init__(self)
-
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
-
+        # Initialise the attributes related to the Prior
+        Model_Prior.__init__(self, self.paramfile_info)
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
-
         # If no instmodel4dataset provided create it and then initialise the instmodel4dataset of
         # the model
         if instmodel4dataset is None:  # 6.
@@ -99,14 +104,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
-
         # Initialise datasimcreatorname4instcat which as to be overwriten in the Model Subclass
         self.__datasimcreatorname4instcat = {}
-
         # Initialise datasimcreator which as to be overwriten in the Model Subclass
         # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
         self.__datasimcreator = {}
-
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -195,104 +197,168 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
              ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
         return res
 
-    def get_param(self, full_name):
-        """Return the instance of the Parameter designated by full_name."""
-        logger.debug("Parameter full name: {}".format(full_name))
-        for paramcont_cat in self.paramcont_categories:
-            if paramcont_cat is not instmod_cat:
-                obj_name, subobj_name, param_name = full_name.split("_")
-                if subobj_name in self.paramcontainers[paramcont_cat]:
-                    if (self.paramcontainers[paramcont_cat][subobj_name].
-                       has_parameter(name=param_name)):
-                            return (self.paramcontainers[paramcont_cat][subobj_name].
-                                    parameters[param_name])
+    # def get_param(self, full_name):
+    #     """Return the instance of the Parameter designated by full_name.
+    #
+    #     :param str full_name:
+    #     """
+    #     logger.debug("Parameter full name: {}".format(full_name))
+    #     full_name_split = full_name.split("_")
+    #     if len(full_name_split) > 2:
+    #         for paramcont_cat in self.paramcont_categories:
+    #             if paramcont_cat is not instmod_cat:
+    #                 obj_name, subobj_name, param_name = full_name_split
+    #                 if subobj_name in self.paramcontainers[paramcont_cat]:
+    #                     if (self.paramcontainers[paramcont_cat][subobj_name].
+    #                        has_parameter(name=param_name)):
+    #                             return (self.paramcontainers[paramcont_cat][subobj_name].
+    #                                     parameters[param_name])
+    #
+    #             else:
+    #                 inst_name, inst_model, param_name = full_name_split
+    #                 inst_db = self.instruments
+    #                 inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
+    #                 if inst_model is not None:
+    #                     return inst_model.parameters[param_name]
+    #     else:
+    #         obj_name, param_name = full_name_split
+    #         if self.has_parameter(param_name):
+    #             return self.parameters[param_name]
 
-            else:
-                inst_name, inst_model, param_name = full_name.split("_")
-                inst_db = self.instruments
-                inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
-                if inst_model is not None:
-                    return inst_model.parameters[param_name]
-
-    def get_list_params(self, **kwargs):
+    def get_list_params(self, main=False, free=False, recursive=False, **kwargs):
         """Return the list of all parameters.
 
-        Keyword arguments can be:
-        :param bool main: Get only the main parameters. Default = False
-        :param bool free: Get only the main parameters. Default = False
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
+        :param bool recursive: If true (default false) also returns the parameters in the param
+            containers of the param container database
+
+        Keyword arguments are given to ParamContainerDatabase.get_list_params (see docstring for
+        exhaustive information. Below I describe some of these.
         :param dict inst_models : Dictionnary which for each instrument name give the list of the
                 names of instrument models for which you want the params.
                 Default = all instrument models used
 
-        Those are available for all the param containers, but additional keyword argument can be
-        acepted by specific parameter containers (like the instruments)
-
         :return list_of_param result: list of Parameter instances
         """
-        if "main" not in kwargs:
-            kwargs["main"] = False
-        if "free" not in kwargs:
-            kwargs["free"] = False
-        if "inst_models" not in kwargs:
-            kwargs["inst_models"] = self.name_instmodels_used(sortby_instname=True)
         result = []
-        result.extend(Core_ParamContainer.get_list_params(self, main=kwargs["main"],
-                                                          free=kwargs["free"]))
-        result.extend(ParamContainerDatabase.get_list_params(self, **kwargs))
+        # Get parameters that in the model parameters and not in any specific param container
+        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
+        # Get parameters that in the param containers
+        if recursive:
+            result.extend(ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, **kwargs))
         return result
 
-    def get_list_paramnames(self, main=False, free=False, full_name=False):
-        """Return the list of all parameters."""
+    def get_list_paramnames(self, main=False, free=False, recursive=False, **kwargs):
+        """Return the list of all parameters names in the model.
+
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
+        :param bool recursive: If true (default false) also returns the parameters in the param
+            containers of the param container database
+
+        Keyword arguments are passed to the Named.get_name (see docstring for exhaustive information)
+        As recursive is a parameter of both get_list_paramnames and Named.get_name, for the recursive
+        parameter of Named.get_name use recursive_naming.
+
+        :return list_of_paramname result: list of Parameter instances names
+        """
         result = []
-        for param in self.get_list_params(main=main, free=free):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
+        # Change the parameter recursive_naming into recursive is present in kwargs before giving to
+        # get_name.
+        if "recursive_naming" in kwargs:
+            kwargs["recursive"] = kwargs.pop("recursive_naming")
+        for param in self.get_list_params(main=main, free=free, recursive=recursive):
+            result.append(param.get_name(**kwargs))
         return result
 
-    def get_initial_values(self, list_paramnames=None, sortby_paramfullname=False):
-        """Return intial values for the parameter.
+    def get_initial_values(self, list_paramnames=None, nb_values=1, output_dico=False):
+        """Return initial values for the parameter.
 
         If value is provided for the parameter this value is returned otherwise a value is stochas-
         tically drawn from the prior.
+
+        :param list_of_str list_paramnames: List of parameter names for which you want initial values.
+            The parameter requested should be free, otherwise they will be ignored.
+        :param int nb_values: Number of initial values per parameter in the output.
+        :param bool output_dico: If True the output is a dictionary which for keys the parameter names
+            and for values the initial values.
+        :return np.array/dict init_vals: Initial values for the requested free parameters. The dimension
+            would be nb_free_param * nb_values
         """
+        # Get the list of parameter instances (and parameter name if needed)
         if list_paramnames is None:
-            l_param_main_free = self.get_list_params(main=True, free=True)
+            list_params = self.get_list_params(main=True, free=True, recursive=True)
+            list_paramnames = [param.get_name(include_prefix=True, recursive=True) for param in list_param]
         else:
-            l_param_main_free = []
+            list_params = []
             for param_name in list_paramnames:
-                l_param_main_free.append(self.get_param(param_name))
-        if sortby_paramfullname:
-            res = OrderedDict()
-        else:
-            res = []
-        for param in l_param_main_free:
-            if param.value is None:
-                prior_func_cls = manager_prior.get_priorfunc_subclass(param.prior_category)
-                value = prior_func_cls(**param.prior_args).ravs()
+                param = self.get_parameter(param_name, main=True, free=True, recursive=True)
+                if param is None:
+                    raise ValueError("Parameter {} not found in model.".format(param_name))
+                else:
+                    list_params.append(param)
+        # Pass through all the parameter instance. For the ones that don't have a joint prior, compute
+        # the initial value(s) and store them in dico_initvals, a dict with for key the parameter name
+        # and for value the initial value(s) computed.
+        # For the parameters that are joint, store in a dictionary (joint), the joint prior info and
+        # a list of parameter names ordered in the same way than the output on the joint prior ravs
+        # (method which draw values from the prior)
+        dico_initvals = {}
+        joint = {}
+        for param_name, param in zip(list_paramnames, list_params):
+            if param.joint:
+                if param.joint_prior_ref not in joint:
+                    joint[param.joint_prior_ref] = {"prior_info": self.joint_prior_container[param.joint_prior_ref],
+                                                    "param_name": ["" for ii in range(len(self.joint_prior_container[param.joint_prior_ref]["params"]))]}
+                joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
+                found = False
+                for ii, param_key in enumerate(joint_prior_class.params):
+                    if param.name.is_name(joint[param.joint_prior_ref]["prior_info"]["params"][param_key]):
+                        found = True
+                        break
+                if found:
+                    joint[param.joint_prior_ref]["param_name"][ii] = param_name
+                else:
+                    raise ValueError("Parameter {} not found in the joint prior {} parameters dictionary {}"
+                                     "".format(param.get_name(include_prefix=True, recursive=True),
+                                               param.joint_prior_ref, joint[param.joint_prior_ref]["prior_info"]["params"]))
             else:
-                value = param.value
-            if sortby_paramfullname:
-                res[param.full_name] = value
-            else:
-                res.append(value)
-        if sortby_paramfullname:
-            return res
+                if param.value is None:
+                    prior_func_cls = manager_prior.get_priorfunc_subclass(param.prior_category)
+                    dico_initvals[param_name] = prior_func_cls(**param.prior_args).ravs(nb_values=nb_values)
+                else:
+                    dico_initvals[param_name] = ones(nb_values) * param.value
+                    if dico_initvals[param_name].size == 1:
+                        dico_initvals[param_name] = dico_initvals[param_name][0]
+        # Produce the initial values for each parameter with the joint priors and store the result in a dictionary
+        # with for key the parameter name and for value the initial value(s).
+        for joint_prior_ref, dico in joint.items():
+            joint_prior_instance = manager_prior.get_priorfunc_subclass(dico["prior_info"]["category"])(**dico["prior_info"]["args"])
+            vals = joint_prior_instance.ravs(nb_values=nb_values)
+            for ii, param_name in enumerate(joint[joint_prior_ref]["param_name"]):
+                dico_initvals[param_name] = vals[ii]
+        # Produce the output
+        if output_dico:
+            return dico_initvals
         else:
-            return array(res)
+            return array([dico_initvals[param_name] for param_name in list_paramnames])
+
 
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.
-        ----
-        Arguments:
-            text_tab : string,
-                text giving the tabulation that needs to be added to this the text to obtain the
+
+        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
+        :param str entete_symb: Symbol to use after the paramcontainers name
+        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
+        :return str text: Text for the parameter file.
         """
         text = ""
+        # For each paramcontainer in the param container database. Produce the param file section.
         for parcont_type in self.paramcont_categories:
             text += "{}# {}\n".format(text_tab, parcont_type)
+            # Instruments Param containers are a special case
             if parcont_type != instmod_cat:
                 for parcont in self.paramcontainers[parcont_type].values():
                     text += parcont.get_paramfile_section(text_tab=text_tab,
@@ -304,44 +370,68 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                                                         inst_db=self.paramcontainers[parcont_type],
                                                         text_tab=text_tab, entete_symb=entete_symb,
                                                         quote_name=quote_name)
+        # Produce the param file section for the parameter of the model which are not in
+        # any specific paramcontainer
+        text += "# {}\n\n".format(self.category)
+        text += super(Core_Model, self).get_paramfile_section(text_tab=text_tab, texttab_1tline=False,
+                                                              entete_symb=" = ", quote_name=False,
+                                                              recursive=False)
+        # Produce the text to introduce the joint paramaters distribution section
+        text += "\n" + self.get_paramfile_section_jointprior()
+
         self.update_paramfile_info()
         return text
 
-    def update_paramfile_info(self, recursive=False):
+    def update_paramfile_info(self):
         """Update the paramfile info attribute."""
         self.paramfile_info.clear()
+        # For each paramcontainer in the param container database. Produce the param file section.
         for parcont_type in self.paramcont_categories:
+            # Instruments Param containers are a special case
             if parcont_type != instmod_cat:
                 self.paramfile_info[parcont_type] = []
-                for parcont_name, parcont in self.paramcontainers[parcont_type].items():
-                    self.paramfile_info[parcont_type].append(parcont_name)
+                for parcont in self.paramcontainers[parcont_type].values():
+                    self.paramfile_info[parcont_type].append(parcont.code_name)
                     parcont.update_paramfile_info()
             else:
                 self.paramfile_info[instmod_cat] = {}
                 update_instrument_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat],
                                                  inst_db=self.paramcontainers[parcont_type])
-
+        # Finally update the paramfile_info for the params in the model itself (which are not in any)
+        # specific paramcontainer
+        super(Core_Model, self).update_paramfile_info()
         logger.debug("Updated paramfile info for {}.\nParamfile_info: {}"
                      "".format(self.name, self.paramfile_info))
 
     def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
+        """load the configuration specified by the dictionnary
+
+        :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
+            read from the parameter file.
+        """
+        # load the joint prior configuration
+        Model_Prior.load_jointprior_config(self, dico_config=dico_config)
+        # Load the new configuration from the parameter file for each Paramcontainer and parameter
         logger.debug("List of Core_ParamContainer types in param_file_info: {}"
                      "".format(self.paramfile_info.keys()))
         for paramcont_type in self.paramfile_info.keys():
             logger.debug("Content of param_file_info for {}: {}"
                          "".format(paramcont_type, self.paramfile_info[paramcont_type]))
-            if paramcont_type != instmod_cat:
+            if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
                 for paramcont_name in self.paramfile_info[paramcont_type]:
                     paramcont_dico = dico_config[paramcont_name]
                     logger.debug("Content of param dictionary for {} {}: {}"
                                  "".format(paramcont_type, paramcont_name, paramcont_dico))
-                    self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico)
-            else:
+                    self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico,
+                                                                                     available_joint_priors=self.joint_prior_container)
+            elif paramcont_type == instmod_cat:
                 load_instrument_config(dico_config=dico_config,
                                        inst_db_info=self.paramfile_info[paramcont_type],
                                        inst_db=self.paramcontainers[paramcont_type],
-                                       model_instance=self)
+                                       model_instance=self,
+                                       available_joint_priors=self.joint_prior_container)
+            else:  # For the model parameters (those who do no belong in any param container)
+                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], available_joint_priors=self.joint_prior_container)
 
     @property
     def param_file(self):
@@ -394,7 +484,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
                             "{}".format(paramfile_path, paramfile_path))
                 if self.hasrun_folder:
                     question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += "\nNot create it and raise an 'error' ? {}".format(answers_list_create)
+                question += ("\nNot create it and raise an 'error' ?\nReply one of these answers {}\n"
+                             "".format(answers_list_create))
                 reply = QCM_utilisateur(question, answers_list_create)
             else:
                 if answer_create in answers_list_create:
@@ -412,13 +503,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         if reply == "y":
             with open(file_path, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
-                f.write("# Parametrisation file of {}\n\n".format(self.name))
+                f.write("# Parametrisation file of {}\n".format(self.get_name()))
+                f.write("import numpy as np\n\n")
                 f.write("# Parameters\n")
                 f.write(self.get_paramfile_section())
             logger.info("Parameter file created at path: {}".format(file_path))
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
-            self.update_paramfile_info(recursive=True)
+            self.update_paramfile_info()
         self.param_file = file_path
 
     def read_parameter_file(self):
@@ -450,3 +542,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Prior, RunFolder, Instrumen
         self.param_file = param_file
         self.update_paramfile_info()
         self.load_parameter_file()
+
+    def _check_dataset_instcat(self):
+        """Check that the instrument categories of the datasets are all handled by the model. """
+        if not(self.possible_inst_categories >= set(self.dataset_db.inst_categories)):
+            raise ValueError("Model of category {} cannot simulate data of the following category: {}."
+                             " Remove the datasets of this(ese) category(ies) or change the model."
+                             "".format(self.category, set(self.dataset_db.inst_categories) - self.possible_inst_categories))

@@ -11,7 +11,7 @@ from os import remove
 # from ipdb import set_trace
 from numpy import zeros
 
-from source.posterior.core.prior.manager_prior import Manager_Prior
+from source.posterior.core.prior.core_prior import Manager_Prior
 from source.posterior.exoplanet.model.gravgroup import GravGroup
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 from source.posterior.core.datasetsfile_db import DatasetsFileDb
@@ -84,7 +84,7 @@ class TestMethods(TestCase):
                                     rv_model="ajplanet",
                                     stars=1, planets=2)
         logger.info("GravGroup Instance created !")
-        logger.info("name: {}".format(gravgroup_model.name))
+        logger.info("name: {}".format(gravgroup_model.get_name()))
         gravgroup_model.apply_RV_EXOFAST_param()
         logger.info("All params: {}".format(gravgroup_model.get_list_paramnames(full_name=True)))
         logger.info("Main params: {}".format(gravgroup_model.

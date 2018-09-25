@@ -15,7 +15,7 @@ from logging import getLogger
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr, DatabaseInstLvlDataset
-from ...tools.name import Name
+from ...tools.name import Named
 from ...tools.lockable_dict import LockableDict
 # from ...tools.miscellaneous import interpret_data_filename
 
@@ -24,32 +24,33 @@ from ...tools.lockable_dict import LockableDict
 logger = getLogger()
 
 
-class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
-    """docstring for DatabaseStoreFuncInstLvl.
+class DatabaseFunc(Named, Instmodel4DatasetAttr, DstDbLockAttr):
+    """docstring for DatabaseFunc.
 
-    1. Initialise the Name attributes.
-    2. Set the instordered
-    3. Initialise the locks
-    4. Initialise the Instmodel4Dataset
-    5. Initialise the instrument_db attribute with the above instmodel4dataset if exist or without
-       instmodel4dataset if not.
-    6. Initialise the dataset_db attribute as a LockableDict with the lock_dataset defined above.
-       Add an _alldtst_key key with value None for the func including all datasets and key for
-       datasets in instmodel4dataset
     """
 
     _alldtst_key = "all"
 
     def __init__(self, object_stored, database_name, instmodel4dataset=None, list_datasetnames=None,
                  instordered=False, use_samelock=False, lock_dataset=None, lock_database=None):
-        Name.__init__(self, name=object_stored, name_prefix=database_name)  # 1
-        self.__instordered = instordered  # 2
+        """Initialise the DatabaseFunc instance.
+
+        TODO:
+        """
+        # Initialise the Name attributes.
+        Named.__init__(self, name=object_stored, prefix=database_name)
+        # Set the instordered
+        self.__instordered = instordered
+        # Initialise the locks
         DstDbLockAttr.__init__(self, use_samelock=use_samelock, lock_dataset=lock_dataset,
-                               lock_database=lock_database)  # 3
+                               lock_database=lock_database)
+        # Initialise the Instmodel4Dataset
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        list_datasetnames=list_datasetnames,
-                                       lock=self.get_dataset_Lock_instance())  # 4
-        self.__instrument_db = DatabaseInstLvlDataset(object_stored=self.object_stored,  # 5
+                                       lock=self.get_dataset_Lock_instance())
+        # Initialise the instrument_db attribute with the above instmodel4dataset if exist or without
+        # instmodel4dataset if not.
+        self.__instrument_db = DatabaseInstLvlDataset(object_stored=self.object_stored,
                                                       database_name=self.database_name,
                                                       instmodel4dataset=self.instmodel4dataset,
                                                       ordered=self.instordered,
@@ -57,19 +58,32 @@ class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
                                                       lock_dataset=self.get_dataset_Lock_instance(),
                                                       lock_database=(self.
                                                                      get_database_Lock_instance()))
-        self.dataset_db = LockableDict(lock=self.get_dataset_Lock_instance())  # 6
+        # Initialise the dataset_db attribute as a LockableDict with the lock_dataset defined above.
+        # Add an _alldtst_key key with value None for the func including all datasets and key for
+        # datasets in instmodel4dataset
+        self.dataset_db = LockableDict(lock=self.get_dataset_Lock_instance())
         self.dataset_db[self._alldtst_key] = None
         self.__update_datasets_dataset_db()
+
+    def __repr__(self):
+        repr = Named.__repr__(self) + ": {\n"
+        repr += "instrument_db:\n"
+        repr += self.__instrument_db.__repr__()
+        repr += "\ndataset_db:\n"
+        repr += self.__dataset_db.__repr__()
+        repr += "\ninstmodel4dataset:\n"
+        repr += self.instmodel4dataset.__repr__()
+        return repr + "\n}"
 
     @property
     def database_name(self):
         """Return the name of the database."""
-        return self.name_prefix
+        return self.name.prefix.get(include_prefix=False, code_version=False)
 
     @property
     def object_stored(self):
         """Return the name of the objects stored in the database."""
-        return self.name
+        return self.name.get(include_prefix=False, code_version=False)
 
     @property
     def instordered(self):
@@ -88,6 +102,10 @@ class DatabaseFunc(Name, Instmodel4DatasetAttr, DstDbLockAttr):
 
     @dataset_db.setter
     def dataset_db(self, db):
+        """Set the dataset_db property.
+
+        :param LockableDict db: LockableDict used as container for the dataset database.
+        """
         if db is None:
             logger.debug("No dataset database provided for instance {} of class {}."
                          "".format(self.name, self.__class__.__name__))

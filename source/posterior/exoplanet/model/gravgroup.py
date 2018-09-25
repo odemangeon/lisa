@@ -66,8 +66,11 @@ mgr_LD = Manager_LD()
 class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     """docstring for GravGroup."""
 
-    ## category
+    ## Model category string
     __category__ = "GravitionalGroups"
+
+    ## Set of possible instrument categories
+    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["ajplanet"]
@@ -87,7 +90,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                  transit_model=None, rv_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
         """docstring GravGroup init method."""
-        super(GravGroup, self).__init__(name, dataset_db, run_folder,
+        super(GravGroup, self).__init__(name=name, dataset_db=dataset_db, run_folder=run_folder,
                                         instmodel4dataset=instmodel4dataset,
                                         l_instmod_fullnames=l_instmod_fullnames)
         if LC_inst_cat in self.dataset_db.inst_categories:
@@ -205,19 +208,29 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         else:
             raise AssertionError("rv_model should be in {}".format(self._rv_models))
 
-    def add_a_star(self, name=None):
-        """Add a Star in the GravGroup."""
-        if self.isavailable_paramcontainer(name, category="stars"):
-            logger.warning("A star with name {} already exists ! It will be overwritten"
-                           "".format(name))
+    def add_a_star(self, name=None, kwargs_getname_4_storename={"include_prefix": False, "code_version": True},
+                   kwargs_getname_4_codename={"include_prefix": False, "code_version": True}):
+        """Add a Star in the GravGroup.
+
+        :param str/None name: Name of the star (ex: A, B and should not include gravgroup name)
+
+        Arguments kwargs_getname_4_storename and kwargs_getname_4_codename are passed to Star.__init__
+        method (see ParamContainer.__init__ docstring for more info). Only the default values are
+        modified.
+        """
         if name is None:
-            for possible_name in ascii_uppercase:
-                if self.isavailable_paramcontainer(possible_name, category="stars"):
-                    continue
-                else:
-                    name = possible_name
-                    break
-        self.add_a_paramcontainer(Star(name=name, gravgroup=self))
+            list_of_possible_name = ascii_uppercase
+        else:
+            list_of_possible_name = [name]
+        for possible_name in list_of_possible_name:
+            star = Star(name=possible_name, gravgroup=self, kwargs_getname_4_storename=kwargs_getname_4_storename,
+                        kwargs_getname_4_codename=kwargs_getname_4_codename)
+            if self.isavailable_paramcontainer(star.store_name, category=star.category):
+                continue
+            else:
+                self.add_a_paramcontainer(star)
+                return
+        raise ValueError("All names provided already exists ({}). Star cannot be added".format(list_of_possible_name))
 
     def add_stars(self, number, names=None):
         """Add Stars in the GravGroup."""
@@ -236,19 +249,29 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     def nb_star(self):
         return self.nb_of_paramcontainers["stars"]
 
-    def add_a_planet(self, name=None):
-        """Add a Planet in the GravGroup."""
-        if self.isavailable_paramcontainer(name, category="planets"):
-            logger.warning("A planet with name {} already exists ! It will be overwritten"
-                           "".format(name))
+    def add_a_planet(self, name=None, kwargs_getname_4_storename={"include_prefix": False, "code_version": True},
+                     kwargs_getname_4_codename={"include_prefix": False, "code_version": True}):
+        """Add a Planet in the GravGroup.
+
+        :param str/None name: Name of the star (ex: A, B and should not include gravgroup name)
+
+        Arguments kwargs_getname_4_storename and kwargs_getname_4_codename are passed to Planet.__init__
+        method (see ParamContainer.__init__ docstring for more info). Only the default values are
+        modified.
+        """
         if name is None:
-            for possible_name in ascii_lowercase[1:]:
-                if self.isavailable_paramcontainer(possible_name, category="planets"):
-                    continue
-                else:
-                    name = possible_name
-                    break
-        self.add_a_paramcontainer(Planet(name=name, gravgroup=self))
+            list_of_possible_name = ascii_lowercase[1:]
+        else:
+            list_of_possible_name = [name]
+        for possible_name in list_of_possible_name:
+            planet = Planet(name=possible_name, gravgroup=self, kwargs_getname_4_storename=kwargs_getname_4_storename,
+                            kwargs_getname_4_codename=kwargs_getname_4_codename)
+            if self.isavailable_paramcontainer(planet.store_name, category=planet.category):
+                continue
+            else:
+                self.add_a_paramcontainer(planet)
+                return
+        raise ValueError("All names provided already exists ({}). Planet cannot be added".format(list_of_possible_name))
 
     def add_planets(self, number, names=None):
         """Add Planets in the GravGroup."""
@@ -392,7 +415,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                 default_parcontname = 'default'
                 star = self.stars[list(self.stars.keys())[0]]
                 tab_star_ld = tab_ld + spacestring_like("'{star_name}': {{"
-                                                        "".format(star_name=star.name))
+                                                        "".format(star_name=star.get_name()))
                 LDmodels = ("'{def_LDparcont}': '{def_LDmodname}'"
                             "".format(def_LDparcont=default_parcontname,
                                       def_LDmodname="quadratic"))
@@ -416,23 +439,23 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                         first_instmodel = False
                     inst_ld_dict += (ld_tab +
                                      ld_dict).format(tab_star_ld=tab_star_ld,
-                                                     instmod_fullname=instmod_obj.full_name,
+                                                     instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
                                                      def_LDparcont=default_parcontname)
                     inst_ss_dict += (ss_tab +
                                      ss_dict).format(tab_ss=tab_ss,
-                                                     instmod_fullname=instmod_obj.full_name,
+                                                     instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
                                                      supersamp_key=_supersamp_key,
                                                      default_supersamp=default_supersamp,
                                                      exptime_key=_exptime_key,
                                                      default_exptime=default_exptime)
 
                 # Fill the structures of star_ld_dict
-                star_ld_dict = star_ld_dict.format(star_name=star.name, inst_ld_dict=inst_ld_dict,
+                star_ld_dict = star_ld_dict.format(star_name=star.get_name(), inst_ld_dict=inst_ld_dict,
                                                    tab_star_ld=tab_star_ld, LDmodels=LDmodels,
                                                    LD_dict_name=self.__ldmod_dict_name)
 
                 # Fill the whole text_LC_param string
-                text_LC_param = text_LC_param.format(object_name=self.name,
+                text_LC_param = text_LC_param.format(object_name=self.get_name(),
                                                      transit_model=self.transit_model,
                                                      available_lds=available_lds,
                                                      ld_dict_name=self.__ld_dict_name,
@@ -469,16 +492,19 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         # Check that transit_model has not been changed
         if dico_config['transit_model'] != self.transit_model:
             raise ValueError("You cannot change the transit model that you previously selected.")
-        star = self.stars[list(self.stars.keys())[0]]
-        LD_models = dico_config[self.__ld_dict_name][star.name][self.__ldmod_dict_name]
-        l_LC_instmod_name = list(dico_config[self.__ld_dict_name][star.name].keys())
-        l_LC_instmod_name.remove(self.__ldmod_dict_name)
-        for instmod_name in l_LC_instmod_name:
-            ld_name = dico_config[self.__ld_dict_name][star.name][instmod_name]
-            self.ldmodel4instmodfname[instmod_name] = ld_name
-        for ld_name, ld_type in LD_models.items():
-            self.add_a_LD(star=star, ld_type=ld_type, name=ld_name)
-            # Create the LD paramcontainer with
+        for star in self.stars.values():
+            star = self.stars[list(self.stars.keys())[0]]
+            LD_models = dico_config[self.__ld_dict_name][star.code_name][self.__ldmod_dict_name]
+            l_LC_instmod_name = list(dico_config[self.__ld_dict_name][star.code_name].keys())
+            l_LC_instmod_name.remove(self.__ldmod_dict_name)
+            for instmod_name in l_LC_instmod_name:
+                ld_name = dico_config[self.__ld_dict_name][star.code_name][instmod_name]
+                if instmod_name not in self.ldmodel4instmodfname:
+                    self.ldmodel4instmodfname[instmod_name] = {}
+                self.ldmodel4instmodfname[instmod_name][star.code_name] = ld_name
+            for ld_name, ld_type in LD_models.items():
+                # Create the LD paramcontainer with
+                self.add_a_LD(star=star, ld_type=ld_type, name=ld_name)
         supersamp_dict = dico_config[self.__supersamp_dict]
         for instmod_name, dico in supersamp_dict.items():
             self.SSE4instmodfname.add_instmodel_SSEdict(instmod_name, dico)
@@ -488,13 +514,25 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         dico_config = self.read_LC_param_file()
         self.load_LC_config(dico_config)
 
-    def add_a_LD(self, star, ld_type, name):
-        """Add a Planet in the GravGroup."""
-        if self.isavailable_paramcontainer(name, category="LD"):
-            logger.warning("A LD model with name {} already exists ! It will be overwritten"
-                           "".format(name))
+    def add_a_LD(self, star, ld_type, name, kwargs_getname_4_storename={"include_prefix": True, "code_version": True},
+                 kwargs_getname_4_codename={"include_prefix": True, "code_version": True}):
+        """Add a Planet in the GravGroup.
+
+        :param Star star: Star instance the limb darkening refers to.
+        :param str ld_type: Type of the limb darkening model.
+        :param str name: Name of the limb darkening param container to be created.
+
+        Arguments kwargs_getname_4_storename and kwargs_getname_4_codename are passed to a Core_LD.__init__
+        method (see Core_LD.__init__ docstring for more info). Only the default values are
+        modified.
+        """
         LDparcont_class = mgr_LD.get_LD_parcont_subclass(ld_type)
-        self.add_a_paramcontainer(LDparcont_class(star=star, name=name))
+        LD = LDparcont_class(star=star, name=name, kwargs_getname_4_storename=kwargs_getname_4_storename,
+                             kwargs_getname_4_codename=kwargs_getname_4_codename)
+        if self.isavailable_paramcontainer(LD.store_name, category="LD"):
+            raise ValueError("Names provided already exists ({}). LD cannot be added".format(LD.store_name))
+        else:
+            self.add_a_paramcontainer(LD)
 
     @property
     def LDs(self):
@@ -540,7 +578,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                                        key_mand_kwargs=self.key_mand_kwargs,
                                        key_opt_kwargs=self.key_opt_kwargs,
                                        parametrisation=self.parametrisation,
-                                       LC_multis_parametrisations=self.LC_multis_parametrisations,
                                        ldmodel4instmodfname=self.ldmodel4instmodfname,
                                        LDs=self.LDs, transit_model=self.transit_model,
                                        SSE4instmodfname=self.SSE4instmodfname,

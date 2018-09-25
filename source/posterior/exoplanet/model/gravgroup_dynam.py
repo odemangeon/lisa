@@ -44,15 +44,18 @@ from ..dataset_and_instrument.rv import RV_inst_cat
 ## Logger object
 logger = getLogger()
 
-
+## Manager Limb Darkening models
 mgr_LD = Manager_LD()
 
 
 class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
     """docstring for GravGroup."""
 
-    ## category
+    ## Model category string
     __category__ = "GravitionalGroupsDynamic"
+
+    ## Set of possible instrument categories
+    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available dynamical models, the 1st element is used as default
     _dyn_models = ["rebound"]
@@ -70,7 +73,7 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
                  dynamical_model=None, transit_model=None, parametrisation=None,
                  stars=None, planets=None, run_folder=None):
         """docstring GravGroupDyn init method."""
-        super(GravGroupDyn, self).__init__(name, dataset_db, instmodel4dataset=instmodel4dataset,
+        super(GravGroupDyn, self).__init__(name=name, dataset_db=dataset_db, instmodel4dataset=instmodel4dataset,
                                            l_instmod_fullnames=l_instmod_fullnames,
                                            transit_model=transit_model, rv_model=None,
                                            parametrisation=parametrisation,
@@ -121,15 +124,12 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
         return dico
 
     def _create_datasimulator_RV_LC_rebound(self, inst_models=None, datasets=None):
-        return create_datasimulator_rebound(star=list(self.stars.values())[0],
-                                            planets=self.planets,
+        return create_datasimulator_rebound(gravgroup=self,
                                             key_whole=self.key_whole,
                                             key_param=self.key_param,
                                             key_mand_kwargs=self.key_mand_kwargs,
                                             key_opt_kwargs=self.key_opt_kwargs,
                                             parametrisation=self.parametrisation,
-                                            LC_multis_parametrisations=(self.
-                                                                        LC_multis_parametrisations),
                                             ldmodel4instmodfname=self.ldmodel4instmodfname,
                                             LDs=self.LDs, transit_model=self.transit_model,
                                             SSE4instmodfname=self.SSE4instmodfname,

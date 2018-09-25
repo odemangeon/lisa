@@ -16,7 +16,7 @@ from logging import getLogger
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from .dataset import Dataset
-from ....tools.name import Name
+from ....tools.name import Named
 from ....tools.dico_database import Nesteddict_wfixellvlnb, init_result, add_obj_in_result
 from ....tools.database_with_instrument_level import check_instcat
 from ....tools.default_folders_data_run import RunFolder, DataFolder
@@ -59,16 +59,16 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
             return super(Nesteddict_defgetitem, self).__missing__(key, cls)
 
 
-class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
+class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
     """docstring for DatasetDatabase."""
     def __init__(self, object_name, lock=None):
-        # 1.
-        Name.__init__(self, name=object_name)
-        # 2.
+        # Initialise the name of the datatabase
+        Named.__init__(self, name=object_name)
+        # Initialise the run folder
         RunFolder.__init__(self, run_folder=None)
-        # 3.
+        # Initialise the dataset folder
         DataFolder.__init__(self, data_folder=None)
-        # 4.
+        # Initialise the database (Nesteddict_defgetitem)
         Nesteddict_defgetitem.__init__(self, nb_lvl=3, lock=lock, ordered=True)
 
     def __missing__(self, key, cls=None):
@@ -77,7 +77,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
     @property
     def object_name(self):
         """Return the name of the object studied."""
-        return self.name
+        return self.name.get(include_prefix=False, code_version=False)
 
     def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.
@@ -91,7 +91,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
         if self.locked:
             raise ValueError("The dataset dabase has been locked you can not add a new dataset.")
         inst_category = dataset.instrument.category
-        inst_name = dataset.instrument.name
+        inst_name = dataset.instrument.get_name()
         number = dataset.number
         if str(number) in self[inst_category][inst_name]:
             if not(force):
@@ -118,7 +118,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
             number = filename_info["number"]
         elif isinstance(dataset, Dataset):
             inst_category = dataset.instrument.category
-            inst_name = dataset.instrument.name
+            inst_name = dataset.instrument.get_name()
             number = dataset.number
         else:
             raise ValueError("{} is neither a dataset instance nor a dataset file name."
@@ -268,7 +268,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Name, RunFolder, DataFolder):
         for dataset in list_dataset:
             instrument = dataset.instrument
             add_obj_in_result(result, dataset.dataset_name, lvl1_key=instrument.category,
-                              lvl2_key=instrument.name, type_finallvl=list)
+                              lvl2_key=instrument.get_name(), type_finallvl=list)
         return result
 
 
@@ -292,16 +292,16 @@ class DatasetDbAttr(object):
         if self.isdefined_datasetdb:
                 logger.warning("The dataset database has already been defined for instance {} of "
                                "class {}. One should not redefined it, so set command is ignored."
-                               "".format(self.name, self.__class__.__name__))
+                               "".format(self.get_name(), self.__class__.__name__))
                 raise Warning("The dataset database has already been define set command Ignored")
         else:
             if dataset_db is None:
                 logger.debug("No dataset database provided for instance {} of class {}."
-                             "".format(self.name, self.__class__.__name__))
+                             "".format(self.get_name(), self.__class__.__name__))
             else:
                 if isinstance(dataset_db, DatasetDatabase):
                     logger.debug("The dataset database of instance {} of class {} set to {}."
-                                 "".format(self.name, self.__class__.__name__, dataset_db))
+                                 "".format(self.get_name(), self.__class__.__name__, dataset_db))
                     self.__dataset_db = dataset_db
                 else:
                     raise ValueError("dataset_db should be a DatasetDatabase instance")

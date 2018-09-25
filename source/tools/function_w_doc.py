@@ -24,6 +24,9 @@ class DocFunction(object):
         self.__function = function
         self.__arg_list = arg_list
 
+    def __repr__(self):
+        return "<{} {}>".format(self.__class__.__name__, self.function)
+
     @property
     def function(self):
         """Return the function."""
@@ -36,3 +39,12 @@ class DocFunction(object):
 
     def __call__(self, *args, **kwargs):
         return self.function(*args, **kwargs)
+
+    @property
+    def _info(self):
+        """String with information about the function."""
+        return "{repr}\narg_list: {arg_list}".format(repr=self.__repr__(), arg_list=self.arg_list)
+
+    def info(self):
+        """Provide informations about the function."""
+        print(self._info)

@@ -108,7 +108,10 @@ class LockableDict(MutableMapping, LockableAttr):
         return key in self.__data
 
     def __str__(self):
-        return str(self.__data)
+        return self.__data.__str__()
+
+    def __repr__(self):
+        return self.__data.__repr__()
 
     def get_data(self):
         return self.__data

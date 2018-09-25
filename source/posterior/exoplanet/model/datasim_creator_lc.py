@@ -6,23 +6,22 @@ Datasim creator LC module.
 from logging import getLogger
 from textwrap import dedent
 from copy import deepcopy
-from math import acos, degrees
+from math import acos, degrees, sqrt, atan2
 
 from batman import TransitModel, TransitParams
 # from pytransit import MandelAgol
 
 # from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
-                                                 get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict,
-                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
                                                             l_time_vec, add_timeref_arguments,
                                                             time_ref, l_time_ref)
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
-from ....tools.convert import getecc_fast, getomega_fast, getaoverr
+from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                  par_vec_name, add_argskwargs_argument, argskwargs)
+from ....tools.convert import getaoverr
 
 
 ## Logger object
@@ -31,7 +30,7 @@ logger = getLogger()
 
 def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                             parametrisation,
-                            LC_multis_parametrisations, ldmodel4instmodfname, LDs,
+                            ldmodel4instmodfname, LDs,
                             transit_model, SSE4instmodfname,
                             inst_models=None, datasets=None,
                             param_vector_name=par_vec_name):
@@ -108,11 +107,11 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the "arguments" text variable and intial with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    param_nb, arg_list, arguments, ldict = init_arglist_paramnb_arguments_ldict([key_whole],
-                                                                                key_param,
-                                                                                key_mand_kwargs,
-                                                                                key_opt_kwargs,
-                                                                                par_vec_name)
+    (param_nb,
+     arg_list,
+     arguments,
+     ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
+                                                   key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
     # Initialise the template function text
     function_name = ("LCsim_{{object}}_{instmod_fullname}"
@@ -142,28 +141,28 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                       time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                       timeref_name=time_ref, l_timeref_name=l_time_ref)
 
-    if parametrisation in LC_multis_parametrisations:
-        rhostar = add_param_argument(star.rho, arg_list, key_whole, key_param,
-                                     param_nb, par_vec_name)[key_whole]
+    if parametrisation == "Multis":
+        rhostar = add_param_argument(param=star.rho, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                     key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
     else:
         rhostar = None
 
     # Get the ld_parcont and ld_param_list
     (l_LD_parcont_name,
      l_LD_parcont,
-     l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, LDs, param_nb,
+     l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, param_nb,
                                                  arg_list, key_whole, key_param)
 
     # Create the preambule
     template_preambule_pl = """
-        {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})"""
-    if parametrisation in LC_multis_parametrisations:
+        {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
+    if parametrisation == "Multis":
         template_preambule_pl += """
         {tab}aR_{planet} = getaoverr({P}, {rhostar})"""
 
     if transit_model == "batman":
         template_preambule_pl += """
-        {tab}omega_{planet} = degrees(getomega_fast({secosw}, {sesinw}))
+        {tab}omega_{planet} = degrees(atan2({esinw}, {ecosw}))
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
 
         for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
@@ -173,7 +172,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             # done.
             if multi:
                 template_batman_pl = """
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tc}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tic}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.per = {{P}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.rp = {{Rrat}}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.inc = inc_{{planet}}
@@ -182,13 +181,13 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.u = {ld_param_list}
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.limb_dark = '{ld_mod_name}'"""
                 template_batman_pl = (template_batman_pl.
-                                      format(instmod_fullname=instmdl.full_name,
+                                      format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                              dst_key=dst.number,
                                              ld_mod_name=LD_parcont.ld_type,
                                              ld_param_list=ld_param_list))
             else:
                 template_batman_pl = """
-        {{tab}}params_{{planet}}.t0 = {{tc}}
+        {{tab}}params_{{planet}}.t0 = {{tic}}
         {{tab}}params_{{planet}}.per = {{P}}
         {{tab}}params_{{planet}}.rp = {{Rrat}}
         {{tab}}params_{{planet}}.inc = inc_{{planet}}
@@ -200,11 +199,11 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                                ld_param_list=ld_param_list)
             template_preambule_pl += template_batman_pl
 
-            if parametrisation in LC_multis_parametrisations:
+            if parametrisation == "Multis":
                 if multi:
                     template_preambule_pl += """
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = aR_{{planet}}
-        """.format(instmod_fullname=instmdl.full_name, dst_key=dst.number)
+        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
                 else:
                     template_preambule_pl += """
         {tab}params_{planet}.a = aR_{planet}
@@ -213,14 +212,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                 if multi:
                     template_preambule_pl += """
         {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = {{aR}}
-        """.format(instmod_fullname=instmdl.full_name, dst_key=dst.number)
+        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
                 else:
                     template_preambule_pl += """
         {tab}params_{planet}.a = {aR}
         """
     else:
         template_preambule_pl += """
-        {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+        {tab}omega_{planet} = atan2({esinw}, {ecosw})
         {tab}inc_{planet} = acos({cosinc})
         """
     template_preambule_pl = dedent(template_preambule_pl)
@@ -229,9 +228,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     l_par_bat = []
     for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
                                             l_LD_parcont):
-        supersamp = SSE4instmodfname.get_supersamp(instmdl.full_name)
+        supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
         if supersamp > 1:
-            exptime = SSE4instmodfname.get_exptime(instmdl.full_name)
+            exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
             if transit_model == "batman":
                 if dst is None:
                     if multi:
@@ -244,7 +243,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                 "\n".format(supersamp=supersamp,
                                                             exptime=exptime,
                                                             ii=ii,
-                                                            instmod_fullname=instmdl.full_name,
+                                                            instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                             dst_key=dst.number))
                     else:
                         template_batman_pl_4 = ("{{tab}}m_{{planet}} = TransitModel("
@@ -317,22 +316,22 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         else:
             template_planet_lc = ("+ m_{planet}.light_curve(params_{planet}) - 1 ")
     else:
-        if parametrisation in LC_multis_parametrisations:
+        if parametrisation == "Multis":
             if multi:
                 template_planet_lc = ("+ m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tc}, {P}, aR_{planet}, inc_{planet}, "
+                                      "{tic}, {P}, aR_{planet}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
             else:
-                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tc}, {P},"
+                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, {P},"
                                       " aR_{planet}, inc_{planet}, ecc_{planet}, "
                                       "omega_{planet}) - 1 ")
         else:
             if multi:
                 template_planet_lc = ("+ m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tc}, {P}, {aR}, inc_{planet}, "
+                                      "{tic}, {P}, {aR}, inc_{planet}, "
                                       "ecc_{planet}, omega_{planet}) - 1 ")
             else:
-                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tc}, "
+                template_planet_lc = ("+ m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, "
                                       "{P}, {aR}, inc_{planet}, ecc_{planet}, "
                                       "omega_{planet}) - 1 ")
 
@@ -359,16 +358,16 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                     if multi:
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.name,
-                                                    instmod_fullname=instmdl.full_name,
+                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                     dst_key=dst.number))
                         tt = ldict[l_time_vec][ii]
                     else:
                         params_pl_inst = "params_{planet}".format(planet=planet.name)
                         tt = ldict[time_vec]
                     ldict[params_pl_inst] = par_bat[planet.name]
-                    supersamp = SSE4instmodfname.get_supersamp(instmdl.full_name)
+                    supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
                     if supersamp > 1:
-                        exptime = SSE4instmodfname.get_exptime(instmdl.full_name)
+                        exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
                         m_batman = TransitModel(ldict[params_pl_inst],
                                                 tt, supersample_factor=supersamp,
                                                 exp_time=exptime)
@@ -377,7 +376,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                     if multi:
                         m_pl_inst = ("m_{planet}_{instmod_fullname}_dataset{dst_key}"
                                      "".format(planet=planet.name,
-                                               instmod_fullname=instmdl.full_name,
+                                               instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                dst_key=dst.number))
 
                     else:
@@ -387,7 +386,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                     if multi:
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.name,
-                                                    instmod_fullname=instmdl.full_name,
+                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                     dst_key=dst.number))
                     else:
                         params_pl_inst = "params_{planet}".format(planet=planet.name)
@@ -399,15 +398,15 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.secosw, planet.sesinw, planet.cosinc, planet.tc, planet.P,
+        l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.tic, planet.P,
                    planet.Rrat]
-        if parametrisation not in LC_multis_parametrisations:
+        if parametrisation != "Multis":
             l_param.append(planet.aR)
         else:
             params_planet["aR"] = ""
         for param in l_param:
-            param_text = add_param_argument(param, arg_list, [key_whole, planet.name], key_param,
-                                            param_nb, par_vec_name)
+            param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                            key_arglist=[key_whole, planet.name], param_vector_name=par_vec_name)
             params_whole[param.name] = param_text[key_whole]
             params_planet[param.name] = param_text[planet.name]
 
@@ -416,9 +415,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         # because if one argument is not in the template, it is not used and this is it.
         preambule_planet = (template_preambule_pl.
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
-                                   secosw=params_planet["secosw"],
-                                   sesinw=params_planet["sesinw"],
-                                   tc=params_planet["tc"], rhostar=rhostar,
+                                   ecosw=params_planet["ecosw"],
+                                   esinw=params_planet["esinw"],
+                                   tic=params_planet["tic"], rhostar=rhostar,
                                    cosinc=params_planet["cosinc"], P=params_planet["P"],
                                    Rrat=params_planet["Rrat"], aR=params_planet["aR"],
                                    # ld_mod_name=LD_parcont.ld_type,
@@ -426,8 +425,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                    tab=tab))
         preambule_whole += (template_preambule_pl.
                             format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
-                                   secosw=params_whole["secosw"],
-                                   sesinw=params_whole["sesinw"], tc=params_whole["tc"],
+                                   ecosw=params_whole["ecosw"],
+                                   esinw=params_whole["esinw"], tic=params_whole["tic"],
                                    cosinc=params_whole["cosinc"], P=params_whole["P"],
                                    Rrat=params_whole["Rrat"], aR=params_planet["aR"],
                                    # ld_mod_name=LD_parcont.ld_type,
@@ -443,7 +442,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             if instmdl is None:
                 instmdl_fname = None
             else:
-                instmdl_fname = instmdl.full_name
+                instmdl_fname = instmdl.get_name(include_prefix=True, code_version=True, recursive=True)
             if dst is None:
                 dst_nb = None
             else:
@@ -455,7 +454,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                          dst_key=dst_nb,
                                                          aR=params_planet["aR"],
                                                          Rrat=params_planet["Rrat"],
-                                                         tc=params_planet["tc"],
+                                                         tic=params_planet["tic"],
                                                          P=params_planet["P"],
                                                          ld_param_list=ld_param_list,
                                                          ii=ii
@@ -467,7 +466,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                                 dst_key=dst_nb,
                                                                 aR=params_planet["aR"],
                                                                 Rrat=params_whole["Rrat"],
-                                                                tc=params_whole["tc"],
+                                                                tic=params_whole["tic"],
                                                                 P=params_whole["P"],
                                                                 ld_param_list=ld_param_list,
                                                                 ii=ii
@@ -503,16 +502,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                 format(object=key_whole, preambule=preambule_whole,
                                        arguments=arguments, returns=returns_whole,
                                        tab=tab))
-    logger.debug("text of {object} LC simulator function :\n{text_func}"
-                 "".format(object=key_whole, text_func=text_def_func[key_whole]))
 
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
-        ldict["getecc_fast"] = getecc_fast
-        ldict["getomega_fast"] = getomega_fast
+        ldict["sqrt"] = sqrt
+        ldict["atan2"] = atan2
         ldict["acos"] = acos
-        if parametrisation in LC_multis_parametrisations:
+        if parametrisation == "Multis":
             ldict["getaoverr"] = getaoverr
         if transit_model == "batman":
             if not(has_dataset):
@@ -520,6 +517,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             ldict["degrees"] = degrees
         else:
             ldict["m"] = m_pytransit
+        logger.debug("text of {object} LC simulator function :\n{text_func}"
+                     "".format(object=obj_key, text_func=text_def_func[obj_key]))
         exec(text_def_func[obj_key], ldict)
         params_model = arg_list[obj_key][key_param]
         if len(arg_list[obj_key][key_mand_kwargs]) > 0:
@@ -530,6 +529,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             opt_kwargs = str(arg_list[obj_key][key_opt_kwargs])
         else:
             opt_kwargs = None
+        logger.debug("Parameters for {object} LC simulator function :\n{dico_param}"
+                     "".format(object=obj_key, dico_param={nb: param for nb, param in enumerate(params_model)}))
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
@@ -591,9 +592,9 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                 # ..., If this parameter is a main parameter (it should be), ...
                 if instmdl.parameters[OOT_param_name].main:
                     value_not0 = True
-                    text_OOT_param = add_param_argument(instmdl.parameters[OOT_param_name],
-                                                        arg_list, key_whole, key_param,
-                                                        param_nb, par_vec_name)[key_whole]
+                    text_OOT_param = add_param_argument(param=instmdl.parameters[OOT_param_name],
+                                                        arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                                        key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
                     # ..., if the parameter is free or the fixed value is not zero, ...
                     if text_OOT_param != str(0.0):
                         l_oot_var[ii] += "+ {}".format(text_OOT_param)
@@ -657,13 +658,14 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
     return l_oot_var, arguments
 
 
-def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, LDs, param_nb, arg_list, key_whole,
+def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, param_nb, arg_list, key_whole,
                              key_param):
-    """Return the list of LD param container name, instance and parameter string list.
+    """Return the list of LD param container name, instance and parameter string list for a given star.
 
     :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
     :param dict_of_ ldmodel4instmodfname: Dictionary giving Limd darkening model to use for each
         instrument model
+    :param Star star: Star object
     :param LDs: LD object?
     :param dict_of_int param_nb: dictionary with key = key_whole, value = current number of free
         parameters in the model
@@ -686,12 +688,12 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, LDs, param_nb, 
     l_LD_parcont = []
     l_LD_param_list = []
     for ii, instmdl in enumerate(l_inst_model):
-        l_LD_parcont_name.append(ldmodel4instmodfname[instmdl.full_name])
-        l_LD_parcont.append(LDs[l_LD_parcont_name[ii]])
+        l_LD_parcont_name.append(ldmodel4instmodfname[instmdl.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name])
+        l_LD_parcont.append(LDs[star.code_name + "_" + l_LD_parcont_name[ii]])
         l_LD_param_list.append("[")
         for param in l_LD_parcont[ii].get_list_params(main=True):
-            l_LD_param_list[ii] += (add_param_argument(param, arg_list, key_whole, key_param,
-                                                       param_nb, par_vec_name)[key_whole] +
+            l_LD_param_list[ii] += (add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                       param_nb=param_nb, key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                     ", ")
         l_LD_param_list[ii] += "]"
     return l_LD_parcont_name, l_LD_parcont, l_LD_param_list

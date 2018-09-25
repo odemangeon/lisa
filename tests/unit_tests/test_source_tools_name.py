@@ -26,7 +26,7 @@ class TestMethods(TestCase):
     def setUp(self):
         class TestClass(Name):
             """Docstring of class TestClass."""
-            def __init__(self, name, name_prefix=None):
+            def __init__(self, name, prefix=None):
                 super(TestClass, self).__init__(name, name_prefix)
         self.TestClass = TestClass
 
@@ -47,7 +47,7 @@ class TestMethods(TestCase):
     def test_class_Name(self):
         testinst = self.TestClass(name="test")
         self.assertEqual(testinst.name, "test")
-        testinst2 = self.TestClass(name="test", name_prefix="M.")
+        testinst2 = self.TestClass(name="test", prefix="M.")
         self.assertEqual(testinst2.name, "test")
         with self.assertRaises(AttributeError):
             testinst.name = "redefinition_of_name"

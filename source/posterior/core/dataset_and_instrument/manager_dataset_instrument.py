@@ -88,7 +88,7 @@ class Manager_Inst_Dataset(object):
             if not(self.validate_inst_category(inst_instance.category)):
                 raise ValueError("Provided inst_category ({}) is not amongst the valid instrument "
                                  "categories: {}".format(self.get_available_inst_category()))
-            self.__available_inst.update({inst_instance.name: inst_instance})
+            self.__available_inst.update({inst_instance.get_name(): inst_instance})
 
         def define_def_instrument_class(self, Default_Inst_class):
             """Define the class to be used for default instruments.

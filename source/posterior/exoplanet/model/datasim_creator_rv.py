@@ -7,20 +7,21 @@ from logging import getLogger
 from textwrap import dedent
 from copy import deepcopy
 
+import math as mt
+
 from ajplanet import pl_rv_array
 
 # from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, add_param_argument,
-                                                 get_has_datasets, par_vec_name,
-                                                 init_arglist_paramnb_arguments_ldict,
-                                                 add_argskwargs_argument, argskwargs)
+from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                             add_timeref_arguments, time_ref,
                                                             l_time_ref)
 # from ...core.dataset_and_instrument.instrument import Instrument_Model
 # from ...core.dataset_and_instrument.dataset import Dataset
-from ....tools.convert import getecc_fast, getomega_fast, gettp_fast
+from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                  par_vec_name, add_argskwargs_argument, argskwargs)
+from ....tools.convert import gettp_fast  # getecc_fast, getomega_fast
 
 
 ## Logger object
@@ -103,8 +104,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the "arguments" text variable and intial with the parameter vector
     # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
     # for the creation of the datasim functions with exec
-    (param_nb, arg_list, arguments, ldict
-     ) = init_arglist_paramnb_arguments_ldict([key_whole], key_param, key_mand_kwargs, par_vec_name)
+    (param_nb,
+     arg_list,
+     arguments,
+     ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
+                                                   key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
     # Initialise the template function text
     function_name = ("RVsim_{{object}}_{instmod_fullname}"
@@ -121,9 +125,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     template_returns_instmod = "{delta_inst_rv} {star_mean_rv} {planets_rv}"
 
     # Add the time as additional argument
-    arguments, time_arg_name = add_time_argument(arguments, multi, has_dataset, arg_list, key_whole,
-                                                 key_mand_kwargs, key_opt_kwargs, ldict, l_dataset,
-                                                 time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+    (arguments, time_arg_name, time_arg
+     ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
+                           key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                           ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                           add_to_ldict=True, backup_add_to_args=True)
 
     # Get star mean rv and instrument delta rv contribution for each couple instrument - dataset
     (l_star_mean_rv, l_delta_inst_rv, arguments
@@ -142,16 +148,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     # the planets RV contribution (planet_rv and whole_planets_rv) and finalise the text of
     # planets functions.
     template_preambule = """
-    {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
-    {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
-    {tab}tp_{planet} = gettp_fast({P}, {tc}, ecc_{planet}, omega_{planet})
+    {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})
+    {tab}omega_{planet} = atan2({esinw}, {ecosw})
+    {tab}tp_{planet} = gettp_fast({P}, {tic}, ecc_{planet}, omega_{planet})
     """
-    if multi:
-        template_planet_rv = ("+ pl_rv_array({ltime_vec}[{ii}], 0., {K}, omega_{planet}, "
-                              "ecc_{planet}, tp_{planet}, {P})")
-    else:
-        template_planet_rv = ("+ pl_rv_array({time_vec}, 0., {K}, omega_{planet}, "
-                              "ecc_{planet}, tp_{planet}, {P})")
+    template_planet_rv = "+ pl_rv_array({time}, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet}, {P})"
 
     # Initialise the text for the whole system preambule
     preambule_whole = ""
@@ -160,8 +161,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         l_whole_planets_rv.append("")
     for i, planet in enumerate(planets.values()):
         # Initialise arg_list and param_nb for the current planet
-        arg_list[planet.name] = deepcopy(arg_list_before)
-        param_nb[planet.name] = param_nb_before
+        arg_list[planet.get_name()] = deepcopy(arg_list_before)
+        param_nb[planet.get_name()] = param_nb_before
 
         # Create two dictionaries which will contain the text for each planet parameter for the
         # current planet and for the whole system.
@@ -169,44 +170,36 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         params_whole = {}
         # Create the text for each planet parameter for the current planet and for the whole
         # system.
-        l_param = [planet.K, planet.secosw, planet.sesinw, planet.tc, planet.P]
+        l_param = [planet.K, planet.ecosw, planet.esinw, planet.tic, planet.P]
         for param in l_param:
-            param_text = add_param_argument(param, arg_list, [key_whole, planet.name], key_param,
-                                            param_nb, par_vec_name)
-            params_whole[param.name] = param_text[key_whole]
-            params_planet[param.name] = param_text[planet.name]
+            param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                            key_arglist=[key_whole, planet.get_name()], param_vector_name=par_vec_name)
+            params_whole[param.get_name()] = param_text[key_whole]
+            params_planet[param.get_name()] = param_text[planet.get_name()]
 
         # Create the preambule text that compute intermediate variables
         preambule_planet = (dedent(template_preambule).
-                            format(planet=planet.name, secosw=params_planet["secosw"],
-                                   sesinw=params_planet["sesinw"], P=params_planet["P"],
-                                   tc=params_planet["tc"], tab=tab))
+                            format(planet=planet.get_name(), ecosw=params_planet["ecosw"],
+                                   esinw=params_planet["esinw"], P=params_planet["P"],
+                                   tic=params_planet["tic"], tab=tab))
         preambule_whole += (dedent(template_preambule).
-                            format(planet=planet.name, secosw=params_whole["secosw"],
-                                   sesinw=params_whole["sesinw"], P=params_whole["P"],
-                                   tc=params_whole["tc"], tab=tab))
+                            format(planet=planet.get_name(), ecosw=params_whole["ecosw"],
+                                   esinw=params_whole["esinw"], P=params_whole["P"],
+                                   tic=params_whole["tic"], tab=tab))
 
         # planets RV contribution (planet_rv and whole_planets_rv)
         l_planet_rv = []
-        if multi:
-            for ii, instmdl in enumerate(l_inst_model):
-                l_planet_rv.append(template_planet_rv.format(ii=ii,
-                                                             planet=planet.name,
-                                                             ltime_vec=l_time_vec,
-                                                             K=params_planet["K"],
-                                                             P=params_planet["P"]))
-                l_whole_planets_rv[ii] += template_planet_rv.format(ii=ii,
-                                                                    ltime_vec=l_time_vec,
-                                                                    planet=planet.name,
-                                                                    K=params_whole["K"],
-                                                                    P=params_whole["P"])
-        else:
-            l_planet_rv.append(template_planet_rv.format(planet=planet.name,
-                                                         time_vec=time_vec,
+        for ii, instmdl in enumerate(l_inst_model):
+            if multi:
+                time = "{ltime_vec}[{ii}]".format(ltime_vec=l_time_vec, ii=ii)
+            else:
+                time = time_vec
+            l_planet_rv.append(template_planet_rv.format(planet=planet.get_name(),
+                                                         time=time,
                                                          K=params_planet["K"],
                                                          P=params_planet["P"]))
-            l_whole_planets_rv[ii] += template_planet_rv.format(planet=planet.name,
-                                                                time_vec=time_vec,
+            l_whole_planets_rv[ii] += template_planet_rv.format(planet=planet.get_name(),
+                                                                time=time,
                                                                 K=params_whole["K"],
                                                                 P=params_whole["P"])
 
@@ -224,12 +217,11 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         # Finalise the text of planet RV simulator function
         if argskwargs not in arguments:
             arguments = add_argskwargs_argument(arguments)
-        text_def_func[planet.name] = (template_function.
-                                      format(object=planet.name, preambule=preambule_planet,
-                                             arguments=arguments, returns=returns_pl,
-                                             tab=tab))
-        logger.debug("text of {object} RV simulator function :\n{text_func}"
-                     "".format(object=planet.name, text_func=text_def_func[planet.name]))
+        text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(), preambule=preambule_planet,
+                                                                     arguments=arguments, returns=returns_pl,
+                                                                     tab=tab))
+        # logger.debug("text of {object} RV simulator function :\n{text_func}"
+        #              "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
 
     # Fill returns text for the whole system
     returns_whole = ""
@@ -247,16 +239,16 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
                                                          preambule=preambule_whole,
                                                          arguments=arguments, returns=returns_whole,
                                                          tab=tab))
-    logger.debug("text of {object} RV simulator function :\n{text_func}"
-                 "".format(object=key_whole, text_func=text_def_func[key_whole]))
 
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
-        ldict["getecc_fast"] = getecc_fast
-        ldict["getomega_fast"] = getomega_fast
+        ldict["sqrt"] = mt.sqrt
+        ldict["atan2"] = mt.atan2
         ldict["gettp_fast"] = gettp_fast
         ldict["pl_rv_array"] = pl_rv_array
+        logger.debug("text of {object} RV simulator function :\n{text_func}"
+                     "".format(object=obj_key, text_func=text_def_func[obj_key]))
         exec(text_def_func[obj_key], ldict)
         params_model = arg_list[obj_key][key_param]
         if len(arg_list[obj_key][key_mand_kwargs]) > 0:
@@ -267,6 +259,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
             opt_kwargs = str(arg_list[obj_key][key_opt_kwargs])
         else:
             opt_kwargs = None
+        logger.debug("Parameters for {object} RV simulator function :\n{dico_param}"
+                     "".format(object=obj_key, dico_param={nb: param for nb, param in enumerate(params_model)}))
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
@@ -315,20 +309,21 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
     :return list_of_string l_delta_inst_rv: list give the string representation of the contributions
         of the instrumental delta_rv for each couple instrument model - dataset in l_inst_model and
         l_dataset.
-    :return list_of_string l_star_mean_rv: list give the string representation of the contributions
+    :return list_of_string l_star_mean_rv: list give the string representation of the contribution
         of the systemic/star rv  for each couple instrument model - dataset in
         l_inst_model and l_dataset.
     :return str arguments: Updated string giving the new text of arguments
     """
     # Check if datasets are provided
     has_dataset = get_has_datasets(l_dataset)
-    # Create for the instrument Delta RV (delta_inst_rv)
+    # Create list for the text of each instrument Delta RV (delta_inst_rv)
     l_delta_inst_rv = []
+    # Create list for the text of each instrument star_mean_rv (delta_inst_rv)
     l_star_mean_rv = []
     for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
         l_delta_inst_rv.append("")
         if instmdl is not None:
-            inst_name = instmdl.instrument.name
+            inst_name = instmdl.instrument.get_name()
             ## RVrefglobal_inst: name of the instrument chosen as global RV reference
             ## (eg: HARPS)
             RVrefglobal_instname = RV_globalref_instname
@@ -339,21 +334,21 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
             if inst_name != RVrefglobal_instname:
                 instmod_RVref4inst = RV_inst_db[inst_name][RVref4inst_modname]
                 if instmod_RVref4inst.DeltaRV.main:
-                    l_delta_inst_rv[ii] += (add_param_argument(instmod_RVref4inst.DeltaRV, arg_list,
-                                                               key_whole, key_param, param_nb,
-                                                               par_vec_name)[key_whole] +
+                    l_delta_inst_rv[ii] += (add_param_argument(param=instmod_RVref4inst.DeltaRV, arg_list=arg_list,
+                                                               key_param=key_param, param_nb=param_nb,
+                                                               key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                             " + ")
             # Add the Delta_RV of the model used as RV reference for the current instrument
-            if instmdl.name != RVref4inst_modname:
+            if instmdl.get_name() != RVref4inst_modname:
                 if instmdl.DeltaRV.main:
-                    l_delta_inst_rv[ii] += (add_param_argument(instmdl.DeltaRV, arg_list,
-                                                               key_whole, key_param, param_nb,
-                                                               par_vec_name)[key_whole] +
+                    l_delta_inst_rv[ii] += (add_param_argument(param=instmdl.DeltaRV, arg_list=arg_list,
+                                                               key_param=key_param, param_nb=param_nb,
+                                                               key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole] +
                                             " + ")
         # Create the text for the star mean RV (star_mean_rv)
         l_star_mean_rv.append("")
-        l_star_mean_rv[ii] += add_param_argument(star.v0, arg_list, key_whole, key_param, param_nb,
-                                                 par_vec_name)[key_whole]
+        l_star_mean_rv[ii] += add_param_argument(param=star.v0, arg_list=arg_list, key_param=key_param,
+                                                 param_nb=param_nb, key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
 
         # If stellar RV drift has been asked, create the text for stellar RV drift, ...
         if star.with_RVdrift:
@@ -365,9 +360,10 @@ def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi,
                 # ..., If this parameter is a main parameter (it should be), ...
                 if star.parameters[RVdrift_param_name].main:
                     value_not0 = True
-                    text_RV_drift_param = add_param_argument(star.parameters[RVdrift_param_name],
-                                                             arg_list, key_whole, key_param,
-                                                             param_nb, par_vec_name)[key_whole]
+                    text_RV_drift_param = add_param_argument(param=star.parameters[RVdrift_param_name],
+                                                             arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, key_arglist=key_whole,
+                                                             param_vector_name=par_vec_name)[key_whole]
                     # ..., if the parameter is free or the fixed value is not zero, ...
                     if text_RV_drift_param != str(0.0):
                         l_star_mean_rv[ii] += "+ {}".format(text_RV_drift_param)

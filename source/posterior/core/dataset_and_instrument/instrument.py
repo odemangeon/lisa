@@ -17,7 +17,7 @@ from logging import getLogger
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from ..paramcontainer import Core_ParamContainer
 from ..parameter import Parameter
-from ....tools.name import Name
+from ....tools.name import Named
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.miscellaneous import spacestring_like, interpret_data_filename
 from ..likelihood.manager_noise_model import Manager_NoiseModel
@@ -64,23 +64,34 @@ class Instrument_Model(Core_ParamContainer):
 
     __category__ = instrument_model_category
 
-    def __init__(self, instrument, name, noise_model=None):
+    def __init__(self, instrument, name, noise_model=None, **kwargs):
         """Docstring of the Instrument_Model init method.
 
         :param Core_Instrument instrument: Instrument that is modelled.
         :param string name: Name of the instrument model
         :param string/None noise_model: Name of noise model to use for this instruments data
             likelihood.
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
+        # Make the initialisation of Core_ParamContainer
         # name_prefix is set to None because it will be set when the gravgroup is set.
-        super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name)
+        if "name_prefix" in kwargs:
+            raise TypeError("'name_prefix' is an invalid keyword argument for this function. "
+                            "name_prefix is automatically set as gravgroup.name if gravgroup is"
+                            "provided")
+        super(Instrument_Model, self).__init__(name=name, name_prefix=instrument.name, **kwargs)
+        # Set the instrument attribute
         self.__instrument = instrument
+        # Set the noise_model attribute
         if noise_model is None:
             self.__noise_model = noise_model
         else:
             self.noise_model = noise_model
+        # Set the parameters necessary to model the instrument behavior.
         for name, dico in instrument.params_model.items():
-            self.add_parameter(Parameter(name=name, name_prefix=self.full_name,
+            self.add_parameter(Parameter(name=name, name_prefix=self.name,
                                          **dico))
 
     def __getattr__(self, name):
@@ -110,7 +121,7 @@ class Instrument_Model(Core_ParamContainer):
         return self.__instrument
 
 
-class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
+class Core_Instrument(Named, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Instrument abstract class."""
 
     __mandatoryattrs__ = ["category", "params_model"]
@@ -125,18 +136,25 @@ class Core_Instrument(Name, metaclass=MandatoryReadOnlyAttr):
             name : string,
                 Name of the Instrument
         """
+        # Do the Named initialization
         super(Core_Instrument, self).__init__(name=name)
 
         self.Instrument_Model = Instrument_Model
-        # IMPORTANT: THE INSTRUMENT TYPE IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
+        # IMPORTANT: THE INSTRUMENT CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
         # Make Dataset an abstract class
         if type(self) is Core_Instrument:
             raise NotImplementedError("Dataset should not be instanciated!")
 
-    def create_model_instance(self, name):
-        """Return the instrument type."""
-        return self.Instrument_Model(instrument=self, name=name)
+    def create_model_instance(self, name, **kwargs):
+        """Return the instrument type.
+
+        :param string name: Name of the instrument model
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        return self.Instrument_Model(instrument=self, name=name, **kwargs)
 
 
 class Default_Instrument(Core_Instrument):
@@ -230,7 +248,7 @@ def update_instrument_paramfile_info(inst_db_info, inst_db):
             func(inst_db_info[inst_cat][key_misc])
 
 
-def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
+def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance, available_joint_priors={}):
     """Update the paramfile_info for an instrument category.
 
     It updates things introduced by get_allinst_paramfilesection in paramfile_info.
@@ -269,7 +287,7 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
             for inst_model in (set_paramfile_info & set_dico_config):
                 logger.debug("Instmodel to be updated: {}".format(inst_model))
                 paramcont_dico = dico_config[inst_name][inst_model]
-                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
+                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico, available_joint_priors=available_joint_priors)
             # Remove instrument model that are not in the param_file anymore
             for inst_model in (set_paramfile_info.difference(set_dico_config)):
                 logger.debug("Instmodel to be suppressed: {}".format(inst_model))
@@ -283,7 +301,7 @@ def load_instrument_config(dico_config, inst_db_info, inst_db, model_instance):
                 instrument = manager_inst.get_instrument(inst_name)
                 model_instance.add_an_instrument_model(instrument=instrument, name=inst_model)
                 model_instance.update_paramfile_info()
-                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico)
+                inst_db[inst_cat][inst_name][inst_model].load_config(paramcont_dico, available_joint_priors=available_joint_priors)
             # Load which instrument model to use for which dataset
             for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
                 number = interpret_data_filename(dataset)["number"]

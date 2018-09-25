@@ -51,7 +51,7 @@ msun = gm / g
 mjup = const.M_jup.value  # msun/msunjup
 msunjup = msun / mjup
 mearth = const.M_earth.value  # 5.9742e27 was wrong
-Teffsun = ((const.L_sun/(const.sigma_sb * 4 * pi * const.R_sun**2))**(1/4.)).value
+Teffsun = ((const.L_sun / (const.sigma_sb * 4 * pi * const.R_sun**2))**(1 / 4.)).value
 
 rsun = const.R_sun.value
 rjup = const.R_jup.value
@@ -242,7 +242,8 @@ def getaoverr(P, rhostar):
     :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
-    return (  (rhostar *  gm * Ps**2. / (4. * np.pi**2.) ) )**(1.0/3.0) / rsun
+    return ((rhostar * gm * Ps**2. / (4. * np.pi**2.)))**(1.0 / 3.0) / rsun
+
 
 def getaoverr_fromRstar(a, Rstar):
     """Return the a over Rstar.
@@ -253,6 +254,7 @@ def getaoverr_fromRstar(a, Rstar):
     """
     return a * au / (Rstar * rsun)
 
+
 def getaoverr_fromspec(loggstar, P, Rstar):
     """Return the stellar density from the transit.
 
@@ -262,7 +264,7 @@ def getaoverr_fromspec(loggstar, P, Rstar):
     :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
-    return ((Ps**2 * 10**(loggstar)) / (4 * np.pi**2 * Rstar * rsun * 100))**(1.0/3.0)
+    return ((Ps**2 * 10**(loggstar)) / (4 * np.pi**2 * Rstar * rsun * 100))**(1.0 / 3.0)
 
 # def getrpjup(rp, rstar):
 #     """
@@ -331,13 +333,14 @@ def getcirctime(P, Ms, Rs, Mp, Rrat):
 def getecc(secosw, sesinw):
     """Get eccentricity from e.cos(omega) and e.sin(omega).
 
-    This method works with np.array as input.
+    :param np.array/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.array/float sesinw: sqrt(eccentricity).sin(omega)
     """
     return secosw**2 + sesinw**2
 
 
 def getecc_fast(secosw, sesinw):
-    """Returns eccentricity as a float.
+    """Get eccentricity from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
@@ -345,46 +348,262 @@ def getecc_fast(secosw, sesinw):
     return secosw * secosw + sesinw * sesinw
 
 
+def getecc_plc_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param np.array/float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param np.array/float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param np.array/float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param np.array/float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return np.sqrt(((hplus - hminus)**2 / 4) + ((kplus - kminus)**2 / 4))
+
+
+def getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return math.sqrt((((hplus - hminus) * (hplus - hminus)) / 4) + (((kplus - kminus) * (kplus - kminus)) / 4))
+
+
+def getecc_plb_4_handk(hplus, hminus, kplus, kminus, Pc_over_Pb):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param np.array/float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param np.array/float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param np.array/float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param np.array/float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :param np.array/float Pc_over_Pb: ratio of the orbital period of planet c over the one of planet b
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return Pc_over_Pb**(2. / 3.) * np.sqrt(((hplus + hminus)**2 / 4) + ((kplus + kminus)**2 / 4))
+
+
+def getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc_over_Pb):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :param float Pc_over_Pb: ratio of the orbital period of planet c over the one of planet b
+    :return float e_c: eccentricity of the planet c [0, 1]
+    """
+    return math.pow(Pc_over_Pb, 2. / 3.) * math.sqrt((((hplus + hminus) * (hplus + hminus)) / 4) + (((kplus + kminus) * (kplus + kminus)) / 4))
+
+
 def getomega(secosw, sesinw):
     """Get omego in radians from e.cos(omega) and e.sin(omega).
 
-    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
-    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-pi, pi]
     """
-    return np.arctan(sesinw / secosw)
+    return np.arctan2(sesinw, secosw)
 
 
 def getomega_deg(secosw, sesinw):
     """Get omego in degrees from e.cos(omega) and e.sin(omega).
 
-    :param np.ndarray secosw: sqrt(eccentricity).cos(omega)
-    :param np.ndarray sesinw: sqrt(eccentricity).sin(omega)
+    :param np.ndarray/float secosw: sqrt(eccentricity).cos(omega)
+    :param np.ndarray/float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-180, 180]
     """
-    return np.rad2deg(np.arctan(sesinw / secosw))
+    return np.rad2deg(np.arctan2(sesinw, secosw))
 
 
 def getomega_fast(secosw, sesinw):
-    """Returns omega as a float radian.
+    """Get omego in radians from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-pi, pi]
     """
-    if secosw == 0.:
-        return math.copysign(math.pi / 2, sesinw)
-    else:
-        return math.atan(sesinw / secosw)
+    return math.atan2(sesinw, secosw)
 
 
 def getomega_deg_fast(secosw, sesinw):
-    """Returns omega as a float degrees.
+    """Get omego in degrees from e.cos(omega) and e.sin(omega).
 
     :param float secosw: sqrt(eccentricity).cos(omega)
     :param float sesinw: sqrt(eccentricity).sin(omega)
+    :return float omega: argument of periastron [-180, 180]
     """
-    if secosw == 0.:
-        return math.degrees(math.copysign(math.pi / 2, sesinw))
-    else:
-        return math.degrees(math.atan(sesinw / secosw))
+    return math.degrees(math.atan2(sesinw, secosw))
+
+
+def getomega_plc_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
+    """
+    return np.arctan2((kplus - kminus), (hplus - hminus))
+
+
+def getomega_plc_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of c planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet  [-pi, pi]
+    """
+    return math.atan2((kplus - kminus), (hplus - hminus))
+
+
+def getomega_plb_4_handk(hplus, hminus, kplus, kminus):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
+    """
+    return np.arctan2((kplus + kminus), (hplus + hminus))
+
+
+def getomega_plb_4_handk_fast(hplus, hminus, kplus, kminus):
+    """Get eccentricity of b planet from h+, h-, k+, k-.
+
+    :param float hplus: (Pb/Pc)**2/3 * e_b * cos(omega_b) + e_c * cos(omega_c)
+    :param float hminus: (Pb/Pc)**2/3 * e_b * cos(omega_b) - e_c * cos(omega_c)
+    :param float kplus: (Pb/Pc)**2/3 * e_b * sin(omega_b) + e_c * sin(omega_c)
+    :param float kminus: (Pb/Pc)**2/3 * e_b * sin(omega_b) - e_c * sin(omega_c)
+    :return float omega_c: argument of periastron for the c planet [-pi, pi]
+    """
+    return math.atan2((kplus + kminus), (hplus + hminus))
+
+
+def gethplus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 16 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float hplus: hplus (see above)
+    """
+    return Pb_over_Pc**(2. / 3.) * eb * np.cos(omegab) + ec * np.cos(omegac)
+
+
+def gethplus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 16 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float hplus: hplus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2. / 3.) * eb * math.cos(omegab) + ec * math.cos(omegac)
+
+
+def gethminus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float hminus: hminus (see above)
+    """
+    return Pb_over_Pc**(2. / 3.) * eb * np.cos(omegab) - ec * np.cos(omegac)
+
+
+def gethminus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get hminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float hminus: hminus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2. / 3.) * eb * math.cos(omegab) - ec * math.cos(omegac)
+
+
+def getkplus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 18 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float kplus: kplus (see above)
+    """
+    return Pb_over_Pc**(2. / 3.) * eb * np.sin(omegab) + ec * np.sin(omegac)
+
+
+def getkplus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kplus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 18 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float kplus: kplus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2. / 3.) * eb * math.sin(omegab) + ec * math.sin(omegac)
+
+
+def getkminus(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param np.array/float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param np.array/float eb: eccentricity of the b planet
+    :param np.array/float ec: eccentricity of the c planet
+    :param np.array/float omegab: argument of periastron for the b planet
+    :param np.array/float omegac: argument of periastron for the c planet
+    :return np.array/float kminus: kminus (see above)
+    """
+    return Pb_over_Pc**(2. / 3.) * eb * np.sin(omegab) - ec * np.sin(omegac)
+
+
+def getkminus_fast(Pb_over_Pc, eb, ec, omegab, omegac):
+    """Get kminus in a 2 planet system from eccentricities, omegas and periods.
+
+    Follow the equation 15 of Huber, D.; et al. 2013. Science. 342(6156):331 Supplementary materials
+
+    :param float Pb_over_Pc: ratio of the orbital period of the b planet over the one of the c planet.
+    :param float eb: eccentricity of the b planet
+    :param float ec: eccentricity of the c planet
+    :param float omegab: argument of periastron for the b planet
+    :param float omegac: argument of periastron for the c planet
+    :return float kminus: kminus (see above)
+    """
+    return math.pow(Pb_over_Pc, 2. / 3.) * eb * math.sin(omegab) - ec * math.sin(omegac)
 
 
 def getK(P, Ms, Mp, inc, ecc):
@@ -433,11 +652,12 @@ def getMp(P, K, Ms, ecc, inc, Kfact=1000):
     http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
 
     :param float/np.ndarray P: Planetary orbital period in days
-    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet in
-                               meter per second
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet.
+        K * Kfact should be in m/s.
     :param float/np.ndarray Ms: Stellar mass in solar mass
     :param float/np.ndarray ecc: Planet orbital eccentricity
     :param float/np.ndarray inc: Planet orbital inclination in degrees
+    :param float/np.ndarray Kfact: Conversion factor for K
     :return float/np.ndarray Mp: Planet mass in Jupiter mass
     """
     return (K * Kfact / 28.4329 * np.sqrt(1.0 - ecc**2.0) * Ms**(2.0 / 3.0) *
@@ -479,8 +699,10 @@ def gettp_fast(P, tc, ecc, omega):
     mshift = E - ecc * math.sin(E)
     return tc - P * mshift / (2.0 * pi)
 
+
 def get_meanA(P, tc, treference, secosw, sesinw):
     """Returns the mean anomaly in radians for a specific reference time given the transit time
+
     :param numpy.ndarray P: period in [time unit]
     :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
     :param numpy.ndarray treference: time for which we want the mean anomaly  [time unit]
@@ -494,12 +716,11 @@ def get_meanA(P, tc, treference, secosw, sesinw):
     f = pi * 0.5 - omega
     E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
     mshift = E - ecc * np.sin(E)
-    meananomaly =  2.0 *pi *((treference -tc)/period ) + mshift
-    return meananomaly % 2.0 *pi
+    meananomaly = 2.0 * pi * ((treference - tc) / P) + mshift
+    return meananomaly % 2.0 * pi
 
 
-
-def getTeqpl(Teffst, aR, ecc, A=0, f=1/4.):
+def getTeqpl(Teffst, aR, ecc, A=0, f=1 / 4.):
     """Return the planet equilibrium temperature.
 
     Relation adapted from equation 4 page 4 in http://www.mpia.de/homes/ppvi/chapter/madhusudhan.pdf
@@ -517,7 +738,8 @@ def getTeqpl(Teffst, aR, ecc, A=0, f=1/4.):
         reradiate whithout advection.
     :return float/np.ndarray Teqpl: Equilibrium temperature of the planet
     """
-    return Teffst * (f * (1 - A))**(1 / 4.) * np.sqrt(1 / aR) / (1 - ecc**2)**(1/8.)
+    return Teffst * (f * (1 - A))**(1 / 4.) * np.sqrt(1 / aR) / (1 - ecc**2)**(1 / 8.)
+
 
 def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
     """Return the scale height of atmosphere in kilometers
@@ -532,11 +754,11 @@ def getscaleheigh(Mp, Rp, Teqpl, mu=0.0022, Hfact=1):
 
     :return float/np.ndarray scaleheight: Scale height (in km)
     """
-    rgas = 8.3144621 #The gas constant (also known as the molar, universal, or ideal gas constant, J⋅mol−1⋅K−1
-    gra=(g * Mp * mjup) / ( Rp * rjup)**2.
+    rgas = 8.3144621  # The gas constant (also known as the molar, universal, or ideal gas constant, J⋅mol−1⋅K−1
+    gra = (g * Mp * mjup) / (Rp * rjup)**2.
 
     h = (rgas * Teqpl) / (mu * gra)
-    return Hfact * h/1e3
+    return Hfact * h / 1e3
 
 
 def getLs(Rs, Teffst, Lfact=1.):
@@ -550,7 +772,7 @@ def getLs(Rs, Teffst, Lfact=1.):
 
     :return float/np.ndarray Ls: Luminosity of the star (in solar luminosity)
     """
-    return Lfact * Rs**2 * (Teffst/Teffsun)**4
+    return Lfact * Rs**2 * (Teffst / Teffsun)**4
 
 
 def getFi(Ls, a, Fifact=1.):
@@ -565,17 +787,6 @@ def getFi(Ls, a, Fifact=1.):
     :return float/np.ndarray Fi: Insolation flux (in earth insolation flux)
     """
     return Fifact * Ls / a**2
-
-def getRstar(rho, M, Rfact=1.):
-    """Return the stellar radius.
-
-    :param float/np.ndarray rho: Stellar density (in solar density)
-    :param float/np.ndarray M: Stellar mass (in solar mass)
-    :param float Rfact: Multiplicative factor for unit purposes (if !=1 watch out units)
-
-    :return float/np.ndarray R: Stellar radius (in solar radius if Rfact=1)
-    """
-    return Rfact * (M / rho)**(1. / 3)
 
 
 def getRstar(rho, M, Rfact=1.):
@@ -611,6 +822,179 @@ def getgpl(M, R):
     :return float/np.ndarray gpl: Planetary surface gravity (im m.s-2)
     """
     return const.G.value * M * mjup / np.power(R * rjup, 2)
+
+
+def getM_4_E(E, ecc):
+    """Return the Mean anomalie from eccentric anomalie and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param float/np.array E: Eccentric anomaly in radians
+    :param float/np.array ecc: Eccentricity [0, 1]
+    :param float/np.array M: Mean anomaly in radians
+    """
+    return E - ecc * np.sin(E)
+
+
+def getM_4_E_fast(E, ecc):
+    """Return the Mean anomalie from eccentric anomalie and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param float E: Eccentric anomaly in radians
+    :param float ecc: Eccentricity [0, 1]
+    :param float M: Mean anomaly in radians
+    """
+    return E - ecc * math.sin(E)
+
+
+def getM_4_f(f, ecc, positive=True):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param float/np.array f: true anomaly in radians
+    :param float/np.array ecc: eccentricity
+    :param float/np.array positive: if True, the result is in [0, 2.pi], else in [-pi, pi].
+    :return float/np.array m: mean anomaly in radians
+    """
+    E = getE_4_f(f, ecc, positive)  # eccentric anomaly
+    return getM_4_E(E, ecc)  # mean anomalie
+
+
+def getM_4_f_fast(f, ecc):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity
+    :return m: mean anomaly in radians in [-pi, pi]
+    """
+    ee = getE_4_f_fast(f, ecc)  # eccentric anomaly
+    return getM_4_E_fast(ee, ecc)  # mean anomalie
+
+
+def getM_4_f_fast_positive(f, ecc):
+    """Compute mean anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity
+    :return m: mean anomaly in radians in [0, 2.pi]
+    """
+    ee = getE_4_f_fast_positive(f, ecc)  # eccentric anomaly
+    return getM_4_E_fast(ee, ecc)  # mean anomalie
+
+
+def getE_4_f(f, ecc, positive=True):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works with numpy arrays as arguments and eccentricity.
+
+    :param float/np.array f: true anomaly in radians
+    :param float/np.array ecc: eccentricity [0, 1]
+    :param float/np.array positive: if True, the result is in [0, 2.pi], else in [-pi, pi].
+    :return float/np.array ee: eccentric anomaly in radians
+    """
+    ee = 2 * np.arctan(np.tan(f / 2) * np.sqrt((1 - ecc) / (1 + ecc)))  # eccentric anomaly
+    if ee < 0 and positive:
+        return 2 * np.pi + ee
+    else:
+        return ee
+
+
+def getE_4_f_fast(f, ecc):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity [0, 1]
+    :return ee: eccentric anomaly in radians in [-pi, pi].
+    """
+    return 2 * math.atan(math.tan(f / 2) * math.sqrt((1 - ecc) / (1 + ecc)))
+
+
+def getE_4_f_fast_positive(f, ecc):
+    """Compute eccentric anomaly from true anomaly and eccentricity.
+
+    This function works only with floats as arguments.
+
+    :param f: true anomaly in radians
+    :param ecc: eccentricity [0, 1]
+    :return ee: eccentric anomaly in radians in [0, 2.pi].
+    """
+    ee = 2 * math.atan(math.tan(f / 2) * math.sqrt((1 - ecc) / (1 + ecc)))
+    if ee < 0:
+        return 2 * np.pi + ee
+    else:
+        return ee
+
+
+def gettic_4_Mref(M_ref, P, ecc, omega, t_ref=0.0):
+    """Compute the next time of inferior conjection from the mean anomaly at a given reference time.
+
+    :param float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in radians
+    :param float/np.array t_ref: refrence time
+    :return float/np.array tic: next time of inferior conjunction after t_ref
+    """
+    deltat = P / (2 * pi) * (getM_4_f(pi / 2 - omega, ecc, positive=True) - M_ref)
+    if deltat < 0:
+        return t_ref + P + deltat
+    else:
+        return t_ref + deltat
+
+
+def gettic_4_Mref_fast(M_ref, P, ecc, omega, t_ref=0.0):
+    """Compute the next time of inferior conjection from the mean anomaly at a given reference time.
+
+    :param float M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    :param float P: period
+    :param float ecc: eccentricity
+    :param float omega: argument of periastron in radians
+    :param float t_ref: refrence time
+    :return float tic: next time of inferior conjunction after t_ref
+    """
+    deltat = P / (2 * pi) * (getM_4_f_fast_positive(pi / 2 - omega, ecc) - M_ref)
+    if deltat < 0:
+        return t_ref + P + deltat
+    else:
+        return t_ref + deltat
+
+
+def getMref_4_tic(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float/np.array tic: Time of inferior conjunction after t_ref
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in radians
+    :param float/np.array t_ref: refrence time
+    :return float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f(pi / 2 - omega, ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
+
+
+def getMref_4_tic_fast(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float tic: Time of inferior conjunction after t_ref
+    :param float P: period
+    :param float ecc: eccentricity
+    :param float omega: argument of periastron in radians
+    :param float t_ref: refrence time
+    :return float M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f_fast_positive(pi / 2 - omega, ecc) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
 
 
 def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):

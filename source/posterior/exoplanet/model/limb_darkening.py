@@ -26,8 +26,17 @@ class CoreLD(Core_ParamContainer):
     __ld_type__ = None
     __ordered_paramname_list__ = None
 
-    def __init__(self, star=None, name=""):
-        super(CoreLD, self).__init__(name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring CoreLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(CoreLD, self).__init__(name=name, name_prefix=star.name, **kwargs)
         self.star = star
 
     @property
@@ -44,12 +53,12 @@ class CoreLD(Core_ParamContainer):
                            "ignored")
         else:
             if star is None:
-                logger.debug("No star provided for CoreLD {}.".format(self.name))
+                logger.debug("No star provided for CoreLD {}.".format(self.get_name()))
             else:
                 self.__star = star
-                self.name_prefix = star.name
+                self.name.prefix = star.name
                 logger.debug("star of CoreLD {} set to {}."
-                             "".format(self.name, star.name))
+                             "".format(self.get_name(), star.get_name()))
 
     @property
     def ld_type(self):
@@ -93,10 +102,19 @@ class LinearLD(CoreLD):
     __ld_type__ = "linear"
     __ordered_paramname_list__ = ["ldc1"]
 
-    def __init__(self, star=None, name=""):
-        super(LinearLD, self).__init__(star=star, name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring LinearLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(LinearLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):
@@ -109,11 +127,20 @@ class QuadraticLD(CoreLD):
     __ld_type__ = "quadratic"
     __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
-    def __init__(self, star=None, name=""):
-        super(QuadraticLD, self).__init__(star=star, name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring QuadraticLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(QuadraticLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):
@@ -126,11 +153,20 @@ class SquareRootLD(CoreLD):
     __ld_type__ = "squareroot"
     __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
-    def __init__(self, star=None, name=""):
-        super(SquareRootLD, self).__init__(star=star, name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring SquareRootLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(SquareRootLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):
@@ -143,11 +179,20 @@ class LogarithmicLD(CoreLD):
     __ld_type = "logarithmic"
     __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
-    def __init__(self, star=None, name=""):
-        super(SquareRootLD, self).__init__(star=star, name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring LogarithmicLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(LogarithmicLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):
@@ -160,11 +205,20 @@ class ExponentialLD(CoreLD):
     __ld_type__ = "exponential"
     __ordered_paramname_list__ = ["ldc1", "ldc2"]
 
-    def __init__(self, star=None, name=""):
-        super(SquareRootLD, self).__init__(star=star, ld_type="exponential", name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring ExponentialLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(SquareRootLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):
@@ -177,13 +231,22 @@ class NonLinearLD(CoreLD):
     __ld_type__ = "nonlinear"
     __ordered_paramname_list__ = ["ldc1", "ldc2", "ldc3", "ldc4"]
 
-    def __init__(self, star=None, name=""):
-        super(SquareRootLD, self).__init__(star=star, ld_type="nonlinear", name=name)
+    def __init__(self, star=None, name="", **kwargs):
+        """docstring NonLinearLD init method.
+
+        :param Star star: (default: None), Star to which the limb darkening refers too
+        :param str name: (default: ""), Name of the Limb darkening param container (should not include the
+            name of the star)
+
+        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
+        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
+        """
+        super(NonLinearLD, self).__init__(star=star, name=name, **kwargs)
         ## Radius of the planet
-        self.add_parameter(Parameter(name="ldc1", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc2", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc3", name_prefix=self.full_name, main=False))
-        self.add_parameter(Parameter(name="ldc4", name_prefix=self.full_name, main=False))
+        self.add_parameter(Parameter(name="ldc1", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc2", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc3", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="ldc4", name_prefix=self.name, main=False))
 
     @property
     def init_LD_values(self):

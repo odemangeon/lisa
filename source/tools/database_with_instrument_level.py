@@ -14,7 +14,7 @@ The instrument levels are instrument category, instrument name, instrument model
 """
 from logging import getLogger
 
-from .name import Name
+from .name import Named
 from .dico_database import Nesteddict_wfixellvlnb
 
 
@@ -79,21 +79,24 @@ class Nesteddict_getitIMFN(Nesteddict_wfixellvlnb):
         return super(Nesteddict_getitIMFN, self).__missing__(key, cls=Nesteddict_getitIMFN)
 
 
-class DatabaseInstLevel(Nesteddict_getitIMFN, Name):
+class DatabaseInstLevel(Nesteddict_getitIMFN, Named):
     """docstring for DatabaseInstLevel."""
     def __init__(self, object_stored, database_name=None, lock=None, ordered=False, default=None):
-        Name.__init__(self, name=object_stored, name_prefix=database_name)
+        Named.__init__(self, name=object_stored, prefix=database_name)
         Nesteddict_getitIMFN.__init__(self, nb_lvl=3, lock=lock, ordered=ordered, default=default)
+
+    def __repr__(self):
+        return Named.__repr__(self) + ":" + Nesteddict_getitIMFN.__repr__(self)
 
     @property
     def database_name(self):
         """Return the name of the database."""
-        return self.name_prefix
+        return self.name.prefix.get_name()
 
     @property
     def object_stored(self):
         """Return the name of the objects stored in the database."""
-        return self.name
+        return self.get_name()
 
     @property
     def inst_categories(self):

@@ -15,7 +15,7 @@ from numpy import percentile, exp, newaxis, concatenate, std
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
 # from copy import deepcopy
-# from collections import defaultdict
+from collections import OrderedDict  # defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
 from dill import dump, load
@@ -106,8 +106,6 @@ def modepeak(values, nbins):
     return peak
 
 
-
-
 def get_init_distrib_from_fitvalues(fitted_values):
     """Generate the init_distrib dictionary for generate_random_init_pos from fitted_values.
     :param pd.DataFrame fitted_values: Fitted values from a previous run rows are parameter names
@@ -137,8 +135,7 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
     p0 = []
     if init_distrib is None:
-        return np.asarray([post_instance.model.get_initial_values(list_paramnames=l_param_name)
-                           for i in range(nwalker)])
+        return post_instance.model.get_initial_values(list_paramnames=l_param_name, nb_values=nwalker).transpose()
     else:
         for param in l_param_name:
             if param in init_distrib:
@@ -305,7 +302,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
         kwargs.update(datasim_kwargs)
 
         if noise_mod.has_jitter:
-            jitter_param_fullname = inst_mod.parameters[jitter_name].full_name
+            jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
             if inst_mod.parameters[jitter_name].free:
                 idx_jitter = l_param_name.index(jitter_param_fullname)
                 jitter = param[idx_jitter]
@@ -457,7 +454,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             l_instmod_noisemod_cat = []
             for inst_mod in model_instance.get_instmodels_used():
                 if inst_mod.noise_model == noise_model.category:
-                    l_instmod_noisemod_cat.append(inst_mod.full_name)
+                    l_instmod_noisemod_cat.append(inst_mod.get_name(include_prefix=True, recursive=True))
             idx_noisemod_GP = [ii for ii, instmod_fullname in
                                enumerate(datasim_all.instmodel_fullname)
                                if instmod_fullname in l_instmod_noisemod_cat]
@@ -493,7 +490,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
 def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
                supersamp=1, exptime=exptime_Kepler,
                plot_phase=False, P=None, tc=None,
-               noise_model=None, noisemod_allkwargs=None,
+               noise_model=None, model_instance=None,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None,
                ax=None):
     # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
@@ -507,7 +504,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
                                         datasim_kwargs=datasim_kwargs, supersamp=1,
                                         exptime=exptime_Kepler,
                                         noise_model=noise_model,
-                                        noisemod_allkwargs=noisemod_allkwargs)
+                                        model_instance=model_instance)
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -539,11 +536,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
-<<<<<<< HEAD
-                   noise_model=None, noisemod_allkwargs=None,
-=======
                    noise_model=None, model_instance=None,
->>>>>>> ttvfast
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
@@ -1092,3 +1085,12 @@ def load_chain_analysis(obj_name, folder="."):
         fitted_values_sec = None
 
     return fitted_values, fitted_values_sec, df_fittedval
+
+
+def get_param_value_OrderedDict(values, l_param_names):
+    """Return an Orderedictwith associate the parameter name to its value.
+    """
+    res = OrderedDict()
+    for val, name in zip(values, l_param_names):
+        res[name] = val
+    return res

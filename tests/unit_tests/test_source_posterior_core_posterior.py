@@ -127,7 +127,7 @@ class TestMethods(unittest.TestCase):
          _add_a_dataset_from_path(datafile_path=self.test_datafile))
         os.remove(self.test_datafile)
         inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
-        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
+        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.get_name()
         number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
         path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
         self.assertEqual("LC", inst_category)
@@ -151,7 +151,7 @@ class TestMethods(unittest.TestCase):
         os.remove(file2)
         os.remove(dataset_file)
         inst_category = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.category
-        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.name
+        inst_name = self.posterior_instance.dataset_db["LC"]["K2"]["0"].instrument.get_name()
         number = self.posterior_instance.dataset_db["LC"]["K2"]["0"].number
         path = self.posterior_instance.dataset_db["LC"]["K2"]["0"].filepath
         self.assertEqual("LC", inst_category)
@@ -160,7 +160,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(file1, path)
         inst_category = (self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"]
                          .instrument.category)
-        inst_name = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].instrument.name
+        inst_name = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].instrument.get_name()
         number = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].number
         path = self.posterior_instance.dataset_db["RV"]["SOPHIE-HE"]["0"].filepath
         self.assertEqual("RV", inst_category)

@@ -10,7 +10,7 @@ from logging import getLogger
 from collections import OrderedDict
 
 from ...tools.metaclasses import MandatoryReadOnlyAttr
-from ...tools.name import Name
+from ...tools.name import Named, check_getname_kwargs
 from ...tools.miscellaneous import spacestring_like
 from .parameter import Parameter
 
@@ -18,21 +18,30 @@ from .parameter import Parameter
 logger = getLogger()
 
 
-class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
+key_params_fileinfo = "Param names"
+
+class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_ParamContainer."""
 
     __mandatoryattrs__ = ["category"]
 
-    def __init__(self, name, name_prefix=None):
-        """docstring Core_ParamContainer init method."""
+    def __init__(self, name, name_prefix=None, **kwargs):
+        """docstring Core_ParamContainer init method.
+
+        :param str name: Name of the parameter container instance.
+        :param str/Name/None name_prefix: Prefix for the parameter container instance.
+
+        Keyword arguments are passed to Named.__init__ (see docstring for more info)
+        """
         ## Parameters WARNING, BECAUSE OF THE __GETATTR__ METHOD THIS HAS TO BE THE FIRST LINE !
         self.__parameters = OrderedDict()
-        #
-        super(Core_ParamContainer, self).__init__(name=name, name_prefix=name_prefix)
+        ## Do the Name class init
+        super(Core_ParamContainer, self).__init__(name=name, prefix=name_prefix, **kwargs)
         ## Initialise path to parametrisation file
         self.__param_file = None
         ## Initialise the info regarding the content of the parametrisation file
         self.__paramfile_info = dict()
+        ## This class is not meant to be instanciated but subclassed and then instanciated.
         if type(self) is Core_ParamContainer:
             raise NotImplementedError("Core_ParamContainer should not be instanciated !")
 
@@ -52,7 +61,7 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     def add_parameter(self, parameter):
         """Add a parameter to the Core_ParamContainer."""
         if isinstance(parameter, Parameter):
-            self.parameters[parameter.name] = parameter
+            self.parameters[parameter.get_name()] = parameter
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
 
@@ -67,8 +76,8 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
     def get_list_params(self, main=False, free=False):
         """Return the list of all parameters.
 
-        :param bool main: True returns only the main parameters
-        :param bool free: True returns only the free parameters
+        :param bool main: If true (default false) returns only the main parameters
+        :param bool free: If true (default false) returns only the free parameters
         :return list_of_param result: list of Parameter instances
         """
         if main:
@@ -82,19 +91,144 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         else:
             return Core_ParamContainer.__get_list_all_params(self)
 
-    def get_list_paramnames(self, main=False, free=False, full_name=False):
-        """Return the list of all parameters."""
+    def get_list_paramnames(self, main=False, free=False, **kwargs):
+        """Return the list of all parameters.
+
+        :param bool main: If true (default false) returns only the main parameter names
+        :param bool free: If true (default false) returns only the free parameter names
+
+        Keyword arguments are passed directly to the Named.get_name method (see docstring of
+        for exhaustive information).
+
+        :return list_of_param result: list of Parameter instances
+        """
         result = []
         for param in Core_ParamContainer.get_list_params(self, main=main, free=free):
-            if full_name:
-                result.append(param.full_name)
-            else:
-                result.append(param.name)
+            result.append(param.get_name(**kwargs))
         return result
 
-    def has_parameter(self, name, main=False, free=False, full_name=False):
-        """Return True in the parameter exists."""
-        return name in self.get_list_paramnames(main=main, free=free, full_name=full_name)
+    def _get_parameter_4_naming_kwargs(self, name, return_l_param_name=False, kwargs_get_name=None, **kwargs):
+        """Return parameter instance designated by it's name.
+
+        :param str name: Name of the Parameter looked for.
+        :param bool return_l_param_name: if True, return the list of existing parameter names
+        :param dict kwargs_get_name: Keyword arguments dictionary for the Paremeter.get_name method.
+
+        Keyword arguments are passed directly to the self.get_list_params method (see docstring of
+        for exhaustive information).
+
+        :return Parameter/None result: Parameter instance if uniquely found, None otherwise.
+        :return str error_msg: If the parameter has been found "". If not, "unknown" if no parameter
+            with this name exists or "duplicates" if several parameters with this name exists
+        :return list_of_str l_paramnames: If return_l_param_name is True, the list of existing parameter
+            names is returned.
+        """
+        l_param = self.get_list_params(**kwargs)
+        if kwargs_get_name is None:
+            kwargs_get_name = {}
+        l_param_names = [param.get_name(**kwargs_get_name) for param in l_param]
+        if l_param_names.count(name) == 0:
+            result = None
+            error_msg = "unknown"
+        elif l_param_names.count(name) == 1:
+            result = l_param[l_param_names.index(name)]
+            error_msg = ""
+        else:
+            result = None
+            error_msg = "duplicates"
+        if return_l_param_name:
+            return result, error_msg, l_param_names
+        else:
+            return result, error_msg
+
+    def get_parameter(self, name, return_error=False, **kwargs):
+        """Return the parameter instance designated by the name provided if possible.
+
+        :param str name: Name of the Parameter looked for.
+        :param bool return_error: If true return also the error message (error_msg)
+
+        Keyword arguments are passed to the self.get_list_params method (see docstring of
+        for exhaustive information).
+
+        :return Parameter/None result: Parameter instance if found, None otherwise.
+        :return str error_msg: If the parameter has been found "". If not, "unknown" if no parameter
+            with this name exists or "duplicates" if several parameters with this name exists. Returned
+            only if return_error is True
+        """
+
+        result_found = False
+        for code_version in [True, False]:
+            result, error_msg, l_paramnames = self._get_parameter_4_naming_kwargs(name, return_l_param_name=True,
+                                                                                  kwargs_get_name={"include_prefix": False,
+                                                                                                   "code_version": code_version,
+                                                                                                   "recursive": False},
+                                                                                  **kwargs)
+            if error_msg == "" or error_msg == "duplicates":
+                result_found = True
+        if not(result_found):
+            set_paramnames_normal = set(l_paramnames)
+            error_msg = "unknown"
+            full_prefix_kwargs = {}
+            prefix_kwargs = full_prefix_kwargs
+            while not(result_found):
+                for code_version in [True, False]:
+                    result, error_msg, l_paramnames = self._get_parameter_4_naming_kwargs(name, return_l_param_name=True,
+                                                                                          kwargs_get_name={"include_prefix": True,
+                                                                                                           "code_version": code_version,
+                                                                                                           "recursive": False,
+                                                                                                           "prefix_kwargs": full_prefix_kwargs},
+                                                                                          **kwargs)
+                    if error_msg == "" or error_msg == "duplicates":
+                        result_found = True
+                        break
+                new_set_paramnames_normal = set(l_paramnames)
+                if new_set_paramnames_normal == set_paramnames_normal:
+                    result_found = True
+                else:
+                    set_paramnames_normal = new_set_paramnames_normal
+                    prefix_kwargs["include_prefix"] = True
+                    prefix_kwargs["recursive"] = False
+                    prefix_kwargs["prefix_kwargs"] = {}
+                    prefix_kwargs = prefix_kwargs["prefix_kwargs"]
+        if return_error:
+            return result, error_msg
+        else:
+            return result
+
+    def _has_parameter_4_naming_kwargs(self, name,  kwargs_get_name=None, **kwargs):
+        """Return True in the parameter designated by the name provided exists.
+
+        :param str name: Name of the Parameter looked for.
+        :param dict kwargs_get_name: Keyword arguments dictionary for the Paremeter.get_name method.
+
+        Keyword arguments are passed directly to the self.get_list_params method (see docstring of
+        for exhaustive information).
+
+        :return bool has: True if the parameter as specified exists, False otherwise.
+        """
+        result, error_msg = self._get_param_4_naming_kwargs(name=name, return_l_param_name=False, kwargs_get_name=kwargs_get_name, **kwargs)
+        has = (result is not None)
+        return has, error_msg
+
+    def has_parameter(self, name, return_error=False, **kwargs):
+        """Return True in the parameter designated by the name provided exists.
+
+        :param str name: Name of the Parameter looked for.
+        :param bool return_error: If true return also the error message (error_msg)
+
+        Keyword arguments are passed to the self.get_list_params method (see docstring of
+        for exhaustive information).
+
+        :return bool has: True if the parameter as specified exists, False otherwise.
+        :return str error_msg: If the parameter has been found "". If not, "unknown" if no parameter
+            with this name exists or "duplicates" if several parameters with this name exists
+        """
+        result, error_msg = self.get_parameter(name, return_error=True, **kwargs)
+        has = (result is not None)
+        if return_error:
+            return has, error_msg
+        else:
+            return has
 
     @property
     def paramfile_info(self):
@@ -103,33 +237,37 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
 
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
-        self.paramfile_info.update({"Param names": [param.name for param in
-                                                    self.get_list_params(main=True)]})
+        self.paramfile_info.update({key_params_fileinfo: [param.get_name() for param in
+                                                          self.get_list_params(main=True)]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
-                     "".format(self.name, self.paramfile_info))
+                     "".format(self.get_name(), self.paramfile_info))
 
     def get_paramfile_section(self, text_tab="", texttab_1tline=True,
-                              entete_symb=" = ", quote_name=False, ):
+                              entete_symb=" = ", quote_name=False, **kwargs):
         """Return the text to include in the parameter_file for this CelestialBody.
 
-        ----
-
-        Arguments:
-            text_tab : string,
-                text giving the tabulation that needs to be added to this the text to obtain the
+        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
                 good alignment in the input file.
+        :param bool texttab_1tline: Wether to use the tab for the first line or not.
+        :param str entete_symb: Symbol to use after the paramcontainers name
+        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
+
+        Keywords arguments are given to self.get_list_params (see docstring for details).
+
+        :return str text: Text for the parameter file.
         """
         if quote_name:
-            entete = "'{}'{}{{".format(self.name_code, entete_symb)
+            entete = "'{}'{}{{"
         else:
-            entete = "{}{}{{".format(self.name_code, entete_symb)
+            entete = "{}{}{{"
+        entete = entete.format(self.code_name, entete_symb)
         space_entete_param = spacestring_like(entete)
         text = ""
         if texttab_1tline:
             text += text_tab
         text += entete
         texttab_1tline_param = False
-        for param in self.get_list_params(main=True):
+        for param in self.get_list_params(main=True, **kwargs):
             text += param.get_paramfile_section(text_tab=text_tab + space_entete_param,
                                                 texttab_1tline=texttab_1tline_param,
                                                 entete_symb=": ",
@@ -139,13 +277,18 @@ class Core_ParamContainer(Name, metaclass=MandatoryReadOnlyAttr):
         self.update_paramfile_info()
         return text
 
-    def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
+    def load_config(self, dico_config, available_joint_priors={}, load_setup=False):
+        """load the configuration specified by the dictionnary
+
+        :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
+            read from the parameter file.
+        """
         logger.debug("List of Param names: {}".format(self.paramfile_info["Param names"]))
-        for param_name in self.paramfile_info["Param names"]:
+        for param_name in self.paramfile_info[key_params_fileinfo]:
             param = getattr(self, param_name)
-            if param.name_code in dico_config:
+            if param.code_name in dico_config:
                 param.main = True
-                param.load_config(dico_config[param.name_code])
+                param.load_config(dico_config[param.get_name(code_version=True)], available_joint_priors=available_joint_priors,
+                                  load_setup=load_setup)
             else:
                 param.main = False
