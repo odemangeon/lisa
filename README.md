@@ -58,7 +58,8 @@ setupfile_noise_model = join(lisa_main_folder, setup_files_folder, "noise_model_
 
 ## Quick start
 
-Copy paste the python file: script_analysis/script_mcmcexploration.py in another folder where you are going to work. Modify it to suit your needs.
+Copy/paste the python file: script_analysis/script_mcmcexploration.py in another folder where you are going to work. Modify it to suit your needs.
+When the exploration is performed, you can Copy/paste the python file script_analysis/script_chainanalysis.py in the same directory and modify it to suit your needs and interpret the results.
 
 ## Description of the different folders in the repository
 

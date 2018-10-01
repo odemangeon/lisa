@@ -102,12 +102,12 @@ class StellarActNoiseModel(Core_Noise_Model):
                    "{} parameter !")
         star = cls.get_star(model_instance)
         for param in cls.get_star_params_GP(model_instance):
-            if param.name not in star.parameters:
+            if param.get_name() not in star.parameters:
                 raise ValueError(err_msg.format(instmod_fullname, cls.category,
-                                                param.full_name, ""))
+                                                param.get_name(include_prefix=True, recursive=True), ""))
             if not(param.main):
                 raise ValueError(err_msg.format(instmod_fullname, cls.category,
-                                                param.full_name, "main"))
+                                                param.get_name(include_prefix=True, recursive=True), "main"))
 
     @classmethod
     def get_prefilledlnlike(cls, l_params, model_instance, l_instmod_obj=None):
@@ -167,9 +167,9 @@ class StellarActNoiseModel(Core_Noise_Model):
     # def get_star_param_GP_names(cls, model_instance, free=False, full_name=False):
     #     """Return the list of the names of the paramaters of the GP model."""
     #     if full_name:
-    #         return [param.full_name for param in cls.get_star_params_GP(model_instance, free=free)]
+    #         return [param.get_name(include_prefix=True, recursive=True) for param in cls.get_star_params_GP(model_instance, free=free)]
     #     else:
-    #         return [param.name for param in cls.get_star_params_GP(model_instance, free=free)]
+    #         return [param.get_name() for param in cls.get_star_params_GP(model_instance, free=free)]
 
     @classmethod
     def get_star_params_GP(cls, model_instance, free=False):
@@ -217,13 +217,13 @@ class StellarActNoiseModel(Core_Noise_Model):
         l_idx_param_noisemod = []
         for param in cls.get_star_params_GP(model_instance):
             if param.free:
-                dico[param.name] = "param_noisemod[{}]".format(i_noisemod)
+                dico[param.get_name()] = "param_noisemod[{}]".format(i_noisemod)
                 i_noisemod += 1
-                if param.full_name not in l_params_new:
-                    l_params_new.append(param.full_name)
-                l_idx_param_noisemod.append(l_params_new.index(param.full_name))
+                if param.get_name(include_prefix=True, recursive=True) not in l_params_new:
+                    l_params_new.append(param.get_name(include_prefix=True, recursive=True))
+                l_idx_param_noisemod.append(l_params_new.index(param.get_name(include_prefix=True, recursive=True)))
             else:
-                dico[param.name] = "{}".format(param.value)
+                dico[param.get_name()] = "{}".format(param.value)
         ker = cls.kernel_text.format(amp_RV=dico[amp_RV], evol_timescal=dico[evol_timescal],
                                      periodic_timescal=dico[periodic_timescal],
                                      period=dico[period])
@@ -275,7 +275,7 @@ class StellarActNoiseModel(Core_Noise_Model):
     #     for param in cls.get_star_params_GP(model_instance):
     #         if param.free:
     #             if param not in l_params_new:
-    #                 l_params_new.append(param.full_name)
+    #                 l_params_new.append(param.get_name(include_prefix=True, recursive=True))
     #             i += 1
     #         else:
     #             l.append(param.value)
