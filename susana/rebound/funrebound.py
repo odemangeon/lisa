@@ -29,7 +29,7 @@ def transitbat(z, rp, u):
     Uses the batman package
     '''
 
-    from batman import _quadratic_ld
+    from  batman import _quadratic_ld
     '''
     _quadratic_ld._quadratic_ld(self.ds, params.rp, params.u[0], params.u[1], self.nthreads)
     '''
