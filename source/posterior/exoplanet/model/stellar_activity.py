@@ -15,6 +15,7 @@ model the residuals.
 from logging import getLogger
 
 from ..dataset_and_instrument.rv import RV_inst_cat
+from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.parameter import Parameter
 
 
@@ -40,9 +41,8 @@ def apply_parametrisation_stellar_activity(model_instance, instmod_fullname):
     inst_cat = inst.category
     if inst_cat == RV_inst_cat:
         star.add_parameter(Parameter(name=amp_RV, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
-    elif inst_cat == RV_inst_cat:
-        raise NotImplementedError("Stellar activity noise model for LC instrument is not yet"
-                                  "implemented")
+    elif inst_cat == LC_inst_cat:
+        star.add_parameter(Parameter(name=amp_LC, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
     else:
         raise ValueError("Stellar activity noise model cannot be used for instrument category {}"
                          "".format(inst_cat))
