@@ -255,23 +255,23 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                     template_preambule_pl += template_batman_pl_4
                     l_par_bat.append({})
                     for planet in planets.values():
-                        l_par_bat[ii][planet.name] = TransitParams()
+                        l_par_bat[ii][planet.get_name()] = TransitParams()
                 else:
                     l_par_bat.append({})
                     for planet in planets.values():
-                        l_par_bat[ii][planet.name] = TransitParams()
+                        l_par_bat[ii][planet.get_name()] = TransitParams()
                         if multi:  # time of inf. conjunction
-                            l_par_bat[ii][planet.name].t0 = ldict[l_time_vec][ii].mean()
+                            l_par_bat[ii][planet.get_name()].t0 = ldict[l_time_vec][ii].mean()
                         else:
-                            l_par_bat[ii][planet.name].t0 = ldict[time_vec][ii].mean()
-                        l_par_bat[ii][planet.name].per = 1.   # orbital period
-                        l_par_bat[ii][planet.name].rp = 0.1   # planet radius(in stel radii)
-                        l_par_bat[ii][planet.name].a = 15.    # semi-major axis(in stel radii)
-                        l_par_bat[ii][planet.name].inc = 87.  # orbital inclination (in degrees)
-                        l_par_bat[ii][planet.name].ecc = 0.   # eccentricity
-                        l_par_bat[ii][planet.name].w = 90.    # long. of periastron (in deg.)
-                        l_par_bat[ii][planet.name].limb_dark = LD_parcont.ld_type  # LD model
-                        l_par_bat[ii][planet.name].u = LD_parcont.init_LD_values  # LDC init val
+                            l_par_bat[ii][planet.get_name()].t0 = ldict[time_vec][ii].mean()
+                        l_par_bat[ii][planet.get_name()].per = 1.   # orbital period
+                        l_par_bat[ii][planet.get_name()].rp = 0.1   # planet radius(in stel radii)
+                        l_par_bat[ii][planet.get_name()].a = 15.    # semi-major axis(in stel radii)
+                        l_par_bat[ii][planet.get_name()].inc = 87.  # orbital inclination (in degrees)
+                        l_par_bat[ii][planet.get_name()].ecc = 0.   # eccentricity
+                        l_par_bat[ii][planet.get_name()].w = 90.    # long. of periastron (in deg.)
+                        l_par_bat[ii][planet.get_name()].limb_dark = LD_parcont.ld_type  # LD model
+                        l_par_bat[ii][planet.get_name()].u = LD_parcont.init_LD_values  # LDC init val
             else:
                 m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime,
                                          model=LD_parcont.ld_type)
@@ -288,23 +288,23 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                   "params_{planet}, {time_vec})\n")
                     l_par_bat.append({})
                     for planet in planets.values():
-                        l_par_bat[ii][planet.name] = TransitParams()
+                        l_par_bat[ii][planet.get_name()] = TransitParams()
                 else:
                     l_par_bat.append({})
                     for planet in planets.values():
-                        l_par_bat[ii][planet.name] = TransitParams()
+                        l_par_bat[ii][planet.get_name()] = TransitParams()
                         if multi:  # time of inf. conjunction
-                            l_par_bat[ii][planet.name].t0 = ldict[l_time_vec][ii].mean()
+                            l_par_bat[ii][planet.get_name()].t0 = ldict[l_time_vec][ii].mean()
                         else:
-                            l_par_bat[ii][planet.name].t0 = ldict[time_vec][ii].mean()
-                        l_par_bat[ii][planet.name].per = 1.   # orbital period
-                        l_par_bat[ii][planet.name].rp = 0.1   # planet radius(in stel radii)
-                        l_par_bat[ii][planet.name].a = 15.    # semi-major axis(in stel radii)
-                        l_par_bat[ii][planet.name].inc = 87.  # orbital inclination (in degrees)
-                        l_par_bat[ii][planet.name].ecc = 0.   # eccentricity
-                        l_par_bat[ii][planet.name].w = 90.    # long. of periastron (in deg.)
-                        l_par_bat[ii][planet.name].limb_dark = LD_parcont.ld_type  # LD model
-                        l_par_bat[ii][planet.name].u = LD_parcont.init_LD_values  # LDC init val
+                            l_par_bat[ii][planet.get_name()].t0 = ldict[time_vec][ii].mean()
+                        l_par_bat[ii][planet.get_name()].per = 1.   # orbital period
+                        l_par_bat[ii][planet.get_name()].rp = 0.1   # planet radius(in stel radii)
+                        l_par_bat[ii][planet.get_name()].a = 15.    # semi-major axis(in stel radii)
+                        l_par_bat[ii][planet.get_name()].inc = 87.  # orbital inclination (in degrees)
+                        l_par_bat[ii][planet.get_name()].ecc = 0.   # eccentricity
+                        l_par_bat[ii][planet.get_name()].w = 90.    # long. of periastron (in deg.)
+                        l_par_bat[ii][planet.get_name()].limb_dark = LD_parcont.ld_type  # LD model
+                        l_par_bat[ii][planet.get_name()].u = LD_parcont.init_LD_values  # LDC init val
             else:
                 m_pytransit = MandelAgol(model=LD_parcont.ld_type)
 
@@ -347,8 +347,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         l_whole_planets_lc.append("")
     for jj, planet in enumerate(planets.values()):
         # Initialise arg_list and param_nb for the current planet
-        arg_list[planet.name] = deepcopy(arg_list_before)
-        param_nb[planet.name] = param_nb_before
+        arg_list[planet.get_name()] = deepcopy(arg_list_before)
+        param_nb[planet.get_name()] = param_nb_before
 
         # Create the params_planet object
         if transit_model == "batman":
@@ -357,14 +357,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                 if dst is not None:
                     if multi:
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                          "".format(planet=planet.name,
+                                          "".format(planet=planet.get_name(),
                                                     instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                     dst_key=dst.number))
                         tt = ldict[l_time_vec][ii]
                     else:
-                        params_pl_inst = "params_{planet}".format(planet=planet.name)
+                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
                         tt = ldict[time_vec]
-                    ldict[params_pl_inst] = par_bat[planet.name]
+                    ldict[params_pl_inst] = par_bat[planet.get_name()]
                     supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
                     if supersamp > 1:
                         exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
@@ -375,22 +375,22 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                         m_batman = TransitModel(ldict[params_pl_inst], tt)
                     if multi:
                         m_pl_inst = ("m_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                     "".format(planet=planet.name,
+                                     "".format(planet=planet.get_name(),
                                                instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                dst_key=dst.number))
 
                     else:
-                        m_pl_inst = "m_{planet}".format(planet=planet.name)
+                        m_pl_inst = "m_{planet}".format(planet=planet.get_name())
                     ldict[m_pl_inst] = m_batman
                 else:
                     if multi:
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                          "".format(planet=planet.name,
+                                          "".format(planet=planet.get_name(),
                                                     instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
                                                     dst_key=dst.number))
                     else:
-                        params_pl_inst = "params_{planet}".format(planet=planet.name)
-                    ldict[params_pl_inst] = par_bat[planet.name]
+                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
+                    ldict[params_pl_inst] = par_bat[planet.get_name()]
 
         # Create two dictionaries which will contain the text for each planet parameter for the
         # current planet and for the whole system.
@@ -406,15 +406,15 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             params_planet["aR"] = ""
         for param in l_param:
             param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
-                                            key_arglist=[key_whole, planet.name], param_vector_name=par_vec_name)
-            params_whole[param.name] = param_text[key_whole]
-            params_planet[param.name] = param_text[planet.name]
+                                            key_arglist=[key_whole, planet.get_name()], param_vector_name=par_vec_name)
+            params_whole[param.get_name()] = param_text[key_whole]
+            params_planet[param.get_name()] = param_text[planet.get_name()]
 
         # Create the preambule text that compute intermediate variables
         # No need to make different cases for if batman or not or is dataset is None or not
         # because if one argument is not in the template, it is not used and this is it.
         preambule_planet = (template_preambule_pl.
-                            format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
+                            format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
                                    ecosw=params_planet["ecosw"],
                                    esinw=params_planet["esinw"],
                                    tic=params_planet["tic"], rhostar=rhostar,
@@ -424,7 +424,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                    # ld_param_list=ld_param_list,
                                    tab=tab))
         preambule_whole += (template_preambule_pl.
-                            format(planet=planet.name, ltime_vec=l_time_vec, time_vec=time_vec,
+                            format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
                                    ecosw=params_whole["ecosw"],
                                    esinw=params_whole["esinw"], tic=params_whole["tic"],
                                    cosinc=params_whole["cosinc"], P=params_whole["P"],
@@ -447,7 +447,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                 dst_nb = None
             else:
                 dst_nb = dst.number
-            l_planet_lc.append(template_planet_lc.format(planet=planet.name,
+            l_planet_lc.append(template_planet_lc.format(planet=planet.get_name(),
                                                          ltime_vec=l_time_vec,
                                                          time_vec=time_vec,
                                                          instmod_fullname=instmdl_fname,
@@ -459,7 +459,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                          ld_param_list=ld_param_list,
                                                          ii=ii
                                                          ))
-            l_whole_planets_lc[ii] += template_planet_lc.format(planet=planet.name,
+            l_whole_planets_lc[ii] += template_planet_lc.format(planet=planet.get_name(),
                                                                 ltime_vec=l_time_vec,
                                                                 time_vec=time_vec,
                                                                 instmod_fullname=instmdl_fname,
@@ -483,11 +483,11 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         # Finalise the  text of planet LC simulator function
         if argskwargs not in arguments:
             arguments = add_argskwargs_argument(arguments)
-        text_def_func[planet.name] = (template_function.
-                                      format(object=planet.name, preambule=preambule_planet,
+        text_def_func[planet.get_name()] = (template_function.
+                                      format(object=planet.get_name(), preambule=preambule_planet,
                                              arguments=arguments, returns=returns_pl, tab=tab))
         logger.debug("text of {object} LC simulator function :\n{text_func}"
-                     "".format(object=planet.name, text_func=text_def_func[planet.name]))
+                     "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
 
     # Fill returns text for the whole system
     returns_whole = ""
