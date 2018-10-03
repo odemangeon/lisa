@@ -90,7 +90,7 @@ class LC_Instrument(Core_Instrument):
             if isinstance(OOT_var_order, int) and OOT_var_order >= 0:
                 for order in range(OOT_var_order + 1):
                     inst_model.add_parameter(Parameter(name=(inst_model.get_OOT_param_name(order)),
-                                                       name_prefix=inst_model.full_name,
+                                                       name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
                                                        main=True,
                                                        unit="s^(-{})".format(order)))
             else:
