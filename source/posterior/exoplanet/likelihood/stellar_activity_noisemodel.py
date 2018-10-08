@@ -21,7 +21,7 @@ from collections import defaultdict
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
-from ..model.stellar_activity import amp_RV, evol_timescal, periodic_timescal, period
+from ..model.stellar_activity import amp, evol_timescal, periodic_timescal, period
 from ..model.stellar_activity import apply_parametrisation_stellar_activity
 from ...core.likelihood.core_noise_model import Core_Noise_Model
 # from ....tools.function_w_doc import DocFunction
@@ -41,9 +41,12 @@ class StellarActNoiseModel(Core_Noise_Model):
     __has_jitter__ = False
     __kwargs_needed__ = ["data", "data_err", "t"]
 
-    kernel_text = ("exp({amp_RV})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
+    kernel_text = ("exp({amp})**2.0 * ExpSquaredKernel({evol_timescal}**2) * "
                    "ExpSine2Kernel(2. / ({periodic_timescal})**2.0, {period})")
 
+    # Comment: There is no need to sort the times because George does it automicaticallyself.
+    # Before the version 0.3.1 of george, there was a sort argument (which was True by default) which need to
+    # Be True to sort the x values
     lnlikefunc_text = """def {func_name}(model, param_noisemod, l_datakwargs):
         gp = GP({kernel})
         dict_datakwargs = defaultdict(list)
@@ -51,8 +54,7 @@ class StellarActNoiseModel(Core_Noise_Model):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
             dict_datakwargs["data_err"].append(datakwargs["data_err"])
-        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]),
-                   sort=True)
+        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
         return gp.lnlikelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
         """
 
@@ -65,15 +67,14 @@ class StellarActNoiseModel(Core_Noise_Model):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
             dict_datakwargs["data_err"].append(datakwargs["data_err"])
-        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]),
-                   sort=True)
+        gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
         return gp.sample_conditional(concatenate(dict_datakwargs["data"]) - concatenate(model),
                                      tsim)
         """
 
     gpsim_function_name = "gp_sim"
 
-    __star_param_GP_names = [amp_RV, evol_timescal, periodic_timescal, period]
+    __star_param_GP_names = [amp, evol_timescal, periodic_timescal, period]
 
     @classmethod
     def apply_parametrisation(cls, model_instance, instmod_fullname=None):
@@ -112,6 +113,9 @@ class StellarActNoiseModel(Core_Noise_Model):
     @classmethod
     def get_prefilledlnlike(cls, l_params, model_instance, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
+
+        The l_instmod_obj argument is not used, because there is no parameter specific to the instrument
+        model used in this noise model.
 
         :param list_of_string l_params: Current list of parameters full names.
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
@@ -224,7 +228,7 @@ class StellarActNoiseModel(Core_Noise_Model):
                 l_idx_param_noisemod.append(l_params_new.index(param.get_name(include_prefix=True, recursive=True)))
             else:
                 dico[param.get_name()] = "{}".format(param.value)
-        ker = cls.kernel_text.format(amp_RV=dico[amp_RV], evol_timescal=dico[evol_timescal],
+        ker = cls.kernel_text.format(amp=dico[amp], evol_timescal=dico[evol_timescal],
                                      periodic_timescal=dico[periodic_timescal],
                                      period=dico[period])
         return ker, l_params_new, l_idx_param_noisemod

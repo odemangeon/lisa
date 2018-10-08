@@ -125,6 +125,11 @@ class LikelihoodCreator(object):
                             # **kwarg_data):
         """Return the log likelihood doc function corresponding to a datasim doc function.
 
+        This function prepares the inputs for __likelihood_creator function and then use it.
+        These inputs included the noise_model ln likelihood function, the indexes of the parameters
+        of the noise model (if any) and the dataset information required by the noise model.
+        __likelihood_creator just assembles all these to create the full ln likelihood.
+
         :param DatasimDocFunc datasim: DatasimDocFunc specifying the data type (instrument category)
             and at least instrument model you want to get the likelyhood function of. The datasim
             function thus need to specify all the instrument models for the function to be able to
@@ -169,7 +174,7 @@ class LikelihoodCreator(object):
             #                      "have an output that is not associated with a dataset.")
 
         # Initialise instmod4noisemod dictionary giving the the list of instrument model object for
-        # each noise model: key = noise model name, value: list of isntrument model object.
+        # each noise model: key = noise model name, value: list of instrument model objects.
         instmod4noisemod = defaultdict(list)
 
         # Initialise the output_info DataFrame for the LikelihoodDocFunc
@@ -196,7 +201,7 @@ class LikelihoodCreator(object):
             # ... add the instrument model obj to the list of instrument mod for the noise model
             instmod4noisemod[instmod.noise_model].append(instmod)
 
-        # Create the list of indexes for the datasim function in full list of param of the lnlike
+        # Create the list of indexes for the datasim function in the full list of params of the lnlike
         # function
         params_likelihood = datasim.params_model.copy()
         l_idx_param_dtsim = range(len(params_likelihood))
@@ -210,7 +215,7 @@ class LikelihoodCreator(object):
             (dico_noisemodel[noisemod_name][key_noisemod_likefunc],
              params_likelihood,
              dico_noisemodel[noisemod_name][key_lparnoisemod]
-             ) = noise_model.get_prefilledlnlike(params_likelihood,
+             ) = noise_model.get_prefilledlnlike(l_params=params_likelihood,
                                                  l_instmod_obj=instmod4noisemod[noisemod_name],
                                                  model_instance=self
                                                  )

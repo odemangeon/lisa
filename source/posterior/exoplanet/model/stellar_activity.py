@@ -22,8 +22,7 @@ from ...core.parameter import Parameter
 ## logger object
 logger = getLogger()
 
-amp_RV = "lnAmpSARV"
-amp_LC = "lnAmpSALC"
+amp = "lnAmpSA"
 evol_timescal = "tauESA"
 periodic_timescal = "tauPSA"
 period = "PSA"
@@ -40,9 +39,9 @@ def apply_parametrisation_stellar_activity(model_instance, instmod_fullname):
     inst = inst_model_obj.instrument
     inst_cat = inst.category
     if inst_cat == RV_inst_cat:
-        star.add_parameter(Parameter(name=amp_RV, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
+        star.add_parameter(Parameter(name=amp, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
     elif inst_cat == LC_inst_cat:
-        star.add_parameter(Parameter(name=amp_LC, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
+        star.add_parameter(Parameter(name=amp, name_prefix=star.get_name(include_prefix=True, recursive=True), main=True))
     else:
         raise ValueError("Stellar activity noise model cannot be used for instrument category {}"
                          "".format(inst_cat))

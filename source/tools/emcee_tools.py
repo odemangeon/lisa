@@ -442,37 +442,56 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
     if supersamp > 1:
         model = average_supersampled_values(model, supersamp)
 
-    # Compute the model + GP
+    # Compute GP contribution if needed.
     if noise_model is not None:
         if noise_model.has_GP:
+            # WARNING: Here for GP model. I take all the instruments with the same GP noise
+            # model to compute the GP contribution. FOr now it works but If at one point I want
+            # to use the same model for two different time of data (ex: RV and LC). It will not anymore.
+            # Create the simulated data (model) for all the datasets and get the datasim_all
             datasim_all = (model_instance.
                            create_datasimulator_alldatasets(dataset_db=model_instance.dataset_db))
             idx_datasim = []
             for param_name in datasim_all.params_model:
                 idx_datasim.append(l_param_name.index(param_name))
             model_all = datasim_all.function(param[idx_datasim])
+            print("model_all: {}".format(model_all))
+            # Get the list of instrument models which have the same GP noise model that the Current
+            # Dataset you try to model
             l_instmod_noisemod_cat = []
             for inst_mod in model_instance.get_instmodels_used():
                 if inst_mod.noise_model == noise_model.category:
                     l_instmod_noisemod_cat.append(inst_mod.get_name(include_prefix=True, recursive=True))
-            idx_noisemod_GP = [ii for ii, instmod_fullname in
-                               enumerate(datasim_all.instmodel_fullname)
-                               if instmod_fullname in l_instmod_noisemod_cat]
-            l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
-            model_noisemodel_GP = [mod_ii for ii, mod_ii in enumerate(model_all)
-                                   if ii in idx_noisemod_GP]
+            # Get the simulated data (model) of only the dataset with the current GP noisemodel
+            # Get the dataset kwargs mandatory for the GP simulation (l_datakwargs_noisemod)
+            l_datakwargs_noisemod = []
+            if datasim_all.multi_output:
+                idx_noisemod_GP = [ii for ii, instmod_fullname in
+                                   enumerate(datasim_all.instmodel_fullname)
+                                   if instmod_fullname in l_instmod_noisemod_cat]
+                l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
+                model_noisemodel_GP = [mod_ii for ii, mod_ii in enumerate(model_all)
+                                       if ii in idx_noisemod_GP]
+                for dataset_name in l_dataset_noisemod_cat:
+                    dataset = model_instance.dataset_db[dataset_name]
+                    l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
+            else:
+                model_noisemodel_GP = [model_all]
+                dataset_name = datasim_all.dataset.iloc[0]
+                dataset = model_instance.dataset_db[dataset_name]
+                l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
+            print("model: {}".format(model_noisemodel_GP))
+            print("l_datakwargs: {}".format(l_datakwargs_noisemod))
+            # Get the GP simulator for the current GP noise model
             (gpsim_func,
-             l_param_noisemod) = (noise_model.
-                                  get_gp_simulator(model_instance,
-                                                   l_param_name)
-                                  )
+             l_param_noisemod) = noise_model.get_gp_simulator(model_instance, l_param_name)
+            # Get the value of the parameter to provide to the GP simulator.
+            # WARNING: If one of the gp simulator parmameter is fixed it might not get it with the code
+            # below
             idx_noisemod = []
             for param_name in l_param_noisemod:
                 idx_noisemod.append(l_param_name.index(param_name))
-            l_datakwargs_noisemod = []
-            for dataset_name in l_dataset_noisemod_cat:
-                dataset = model_instance.dataset_db[dataset_name]
-                l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
+            # Compute the GP model
             gp_model = gpsim_func(model_noisemodel_GP, param[idx_noisemod],
                                   l_datakwargs_noisemod,
                                   t_model)
