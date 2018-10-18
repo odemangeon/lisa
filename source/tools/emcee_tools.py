@@ -47,8 +47,6 @@ mgr_noisemodel.load_setup()
 exptime_Kepler = 0.02043402778  # days
 
 
-
-
 def get_centre_gaussian(xdata, ydata):
     """Return the centre of a guassian
     :param xdata and ydata are the x and y that define the guassian
@@ -57,12 +55,11 @@ def get_centre_gaussian(xdata, ydata):
     """
     from lmfit.models import GaussianModel
     gmodel = GaussianModel()
-    params = gmodel.make_params(amplitude=ydata.max(),
-                            center=xdata.mean(),
-                            sigma=xdata.std())
+    params = gmodel.make_params(amplitude=ydata.max(), center=xdata.mean(), sigma=xdata.std())
     result = gmodel.fit(ydata, params, x=xdata)
     peak = result.values['center']
     return peak
+
 
 def gauspeak(values, nbins):
     """Return the centre of a guassian fit to an histrogram of values
@@ -71,17 +68,17 @@ def gauspeak(values, nbins):
     :param nbins int number of bins used in the histrogram
     return list of the guassian centre fit for each parameter
     """
-    number_fitted =  len(values[0,:])
-    peak =[]
-    for i in range(0,number_fitted):
-        ydata = np.histogram(values[:,i],nbins)[0]
-        bin_edges =np.histogram(values[:,i],nbins)[1]
-        delta = bin_edges[2]-bin_edges[1]
-        xdata = bin_edges[0:len(bin_edges)-1] + delta/2.
+    number_fitted = len(values[0, :])
+    peak = []
+    for i in range(0, number_fitted):
+        ydata = np.histogram(values[:, i], nbins)[0]
+        bin_edges = np.histogram(values[:, i], nbins)[1]
+        delta = bin_edges[2] - bin_edges[1]
+        xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
         centre_gaussian = get_centre_gaussian(xdata, ydata)
-        centre_gaussian = max(centre_gaussian , xdata[0])
-        centre_gaussian = min(centre_gaussian, xdata[nbins-1] )
-        peak.append (centre_gaussian )
+        centre_gaussian = max(centre_gaussian, xdata[0])
+        centre_gaussian = min(centre_gaussian, xdata[nbins - 1])
+        peak.append(centre_gaussian)
 
     return peak
 
@@ -93,15 +90,15 @@ def modepeak(values, nbins):
     :param nbins int number of bins used in the histrogram
     return list of the mode fit for each parameter
     """
-    number_fitted =  len(values[0,:])
-    peak =[]
-    for i in range(0,number_fitted):
-        ydata = np.histogram(values[:,i],nbins)[0]
-        bin_edges =np.histogram(values[:,i],nbins)[1]
-        delta = bin_edges[2]-bin_edges[1]
-        xdata = bin_edges[0:len(bin_edges)-1] + delta/2.
+    number_fitted = len(values[0, :])
+    peak = []
+    for i in range(0, number_fitted):
+        ydata = np.histogram(values[:, i], nbins)[0]
+        bin_edges = np.histogram(values[:, i], nbins)[1]
+        delta = bin_edges[2] - bin_edges[1]
+        xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
         indice = np.argmax(ydata)
-        peak.append (xdata[indice])
+        peak.append(xdata[indice])
 
     return peak
 
@@ -164,13 +161,13 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             if overwrite:
                 if cat == "chain":
                     with open(filename, "w") as f:
-                        f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior",])))
+                        f.write("i_walker\t{:s}\n".format("\t".join(l_param_name + ["lnposterior", ])))
             else:
                 raise ValueError("{} correspond to an existing file.".format(filename))
     if logger is None:
         tqdm_out = None
     else:
-        tqdm_out = TqdmToLogger(logger,level=INFO)
+        tqdm_out = TqdmToLogger(logger, level=INFO)
     with tqdm(total=nsteps, file=tqdm_out) as pbar:
         previous_i = -1
         for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
@@ -187,6 +184,7 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             pbar.update(i - previous_i)
             previous_i = i
         return result
+
 
 def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposterior"):
     """Read .dat file created by the explore function (save_to_file=True)
@@ -210,10 +208,11 @@ def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposteri
     df.set_index([walker_col, 'iteration'], inplace=True)
     l_param = list(df.columns)
     l_param.remove(lnpost_col)
-    return (concatenate([df.loc[walker,:][df.columns[:-1]].values[newaxis, ...] for walker in range(nb_walker)]),
-            concatenate([df.loc[walker,:][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]),
+    return (concatenate([df.loc[walker, :][df.columns[:-1]].values[newaxis, ...] for walker in range(nb_walker)]),
+            concatenate([df.loc[walker, :][lnpost_col].values[newaxis, ...] for walker in range(nb_walker)]),
             l_param
             )
+
 
 def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col="lnposterior"):
     """Read .dat file created by the explore function (save_to_file=True)
@@ -227,6 +226,7 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
     df = read_table(acceptfracdatfile, sep="\s+", header=0)
 
     return df[df.columns[-1]].values
+
 
 def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
@@ -795,9 +795,9 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
         res = array([chainI[walker, it, dim] for dim in range(ndim)])
     elif method == "gaussfit":
-        res = gauspeak( get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
+        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     elif method == "mode":
-        res = modepeak( get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
+        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
@@ -994,6 +994,7 @@ extension_pickle = {"chain": "_chain.pk",
                     "fitted_values": "_fitted_values.pk",
                     "fitted_values_sec": "_fitted_values_sec.pk",
                     }
+
 
 def pickle_stuff(stuff, filename):
     """Save stuff in a pickle file.
