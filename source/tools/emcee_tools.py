@@ -259,23 +259,185 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     fig.tight_layout(**kwargs_tl)
 
 
+def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwargs={}, model_instance=None,
+                            oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
+                            phasefold=False, phasefold_kwargs=None, datasim_dbf_instmod=None,
+                            zoom=None, show_title=True, show_legend=True, ax_data=None, ax_resi=None):
+    """Zoom on the data model overplot for one datasetself.
+
+    :param np.array param: Vector of parameter values for the model
+    :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
+        provided in param
+    :param DatasimDocFunc datasim: Datasimulator for the dataset.
+    :param Dataset dataset: Dataset
+    :param Core_Model model_instance: Core_Model instance
+    :param int oversamp: The model will be computed in oversamp times more points than the data
+    :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
+                                of points provided, meaning that we will actually compute the model at
+                                supersamp_model points spread over the exposure time (exptime) and then
+                                average over this points.
+    :param float exptime: exposure time for the supersampling
+    :param bool phasefold: If true the phase folded data and model are plotted accord to the ephemeris
+        provided in phasefold_kwargs.
+    :param dict phasefold_kwargs: Kwargs for the phase folded plot with 3 parameters
+        "planet" giving the planet name (string)
+        "P" giving the planet orbital period (float)
+        "tc" giving the time of inferior conjunction for the planet (float)
+    :param dict datasim_dbf_instmod: Database containing the datasim function per planet. For the folded
+        plot, we use the models for each planet contribution to be able to display the model and data
+        correspond only to the planet whose ephemeris is used to phase fold
+        (datasim_dbf.instrument_db[inst_mod_fullname]).
+    :param None/list_of_float zoom: If provided the plot will be zoom. Meaning that the model and data
+        will only be plotted between two time values. It should be a list-like object with two elements.
+        zoom[0] give the minimum time for the zoom and zoom[1] give the maximum.
+    :param bool show_title: If True, show the title giving the dataset name.
+    :param bool show_legend: If True, show the legend.
+    :param ~matplotlib.axes._axes.Axes ax_data: Axes instance where the data and model will be ploted
+    :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
+    """
+    # Create ax_data and/or ax_resi if not provided
+    if (ax_data is None) and (ax_resi is None):
+        fig, axes = subplots(nrows=2)
+        ax_data = axes[0]
+        ax_resi = axes[1]
+    elif ax_data is None:
+        fig, ax_data = subplots()
+    elif ax_resi is None:
+        fig, ax_resi = subplots()
+    # Initialise title
+    title = "{}".format(dataset.dataset_name)
+    # Get the instrument model object and the noise model object
+    inst_mod = model_instance.get_instmod(dataset.get_name())
+    noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+    # Get data point (time, data, data_err) and other kwargs
+    kwargs = dataset.get_kwargs()
+    t = kwargs.pop("t")
+    nt = len(t)
+    data = kwargs.pop("data")
+    data_err = kwargs.pop("data_err")
+    kwargs.update(datasim_kwargs)
+    # Extract the jitter information:
+    # jitter which give the value of the jitter (float)
+    # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
+    if noise_mod.has_jitter:
+        jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
+        if inst_mod.parameters[jitter_name].free:
+            idx_jitter = l_param_name.index(jitter_param_fullname)
+            jitter = param[idx_jitter]
+        else:
+            jitter = inst_mod.parameters[jitter_name].value
+        jitter_type = noise_mod.jitter_type
+    else:
+        jitter = None
+        jitter_type = None
+    # Apply jitter if needed
+    data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+    # Case of phase folding
+    if phasefold:
+        # Get the planet name, period and time of inferior conjunction from phasefold_kwargs
+        planet_name = phasefold_kwargs["planet"]
+        P = phasefold_kwargs["P"]
+        tc = phasefold_kwargs["tc"]
+        # Add planet name to title
+        title += "pl {}".format(planet_name)
+        # Get the datasim for this planet only
+        datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
+        # Get the datasims for the other planets
+        l_datasim_db_docfunc_others = []
+        for pl in phasefold_kwargs["planets"]:
+            if pl == planet_name:
+                continue
+            else:
+                l_datasim_db_docfunc_others.append(datasim_dbf_instmod[pl])
+        # Compute the data - other planets contributions
+        data_pl = data.copy()
+        for datasim_db in l_datasim_db_docfunc_others:
+            model, modelwGP, _ = compute_model(t, datasim_db, param, l_param_name,
+                                               datasim_kwargs=kwargs,
+                                               supersamp=supersamp_model, exptime=exptime,
+                                               noise_model=noise_mod,
+                                               model_instance=model_instance)
+            data_pl = data_pl - model
+        # Plot these data phase folded at the ephemeris of the planet.
+        pl_kwargs = {"color": "b", "fmt": "."}
+        _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc, data_err=data_err_new,
+                                                jitter=None, jitter_type=None, zoom=zoom, ax=ax_data,
+                                                pl_kwargs=pl_kwargs)
+        # Plot the model
+        phasemin = phases.min() if zoom is None else max([phases.min(), zoom[0]])
+        phasemax = phases.max() if zoom is None else min([phases.max(), zoom[0]])
+        tmin = tc + P * phasemin
+        tmax = tc + P * phasemax
+        plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
+                   supersamp=supersamp_model, exptime=exptime,
+                   datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
+                   noise_model=noise_mod,
+                   model_instance=model_instance,
+                   ax=ax_data)
+        # Plot the residuals
+        plot_residuals(t, data, datasim_docfunc_pl, param, l_param_name,
+                       data_err=data_err_new, jitter=None, jitter_type=None,
+                       supersamp=supersamp_model, exptime=exptime,
+                       datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
+                       noise_model=noise_mod,
+                       model_instance=model_instance,
+                       ax=ax_resi)
+    # Case of NOT phase folding
+    else:
+        # Perform the zoom if needed
+        if zoom is not None:
+            zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t, arrays=[data, data_err_new])
+            t = zoomed_arrays[0]
+            data = zoomed_arrays[1]
+            data_err_new = zoomed_arrays[2]
+        # plot the data
+        ax_data.errorbar(t, data, data_err_new, fmt=".", color="b")
+        # Plot the model
+        tmin = t.min()
+        tmax = t.max()
+        plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
+                   datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                   plot_phase=False, noise_model=noise_mod,
+                   model_instance=model_instance, ax=ax_data)
+        # Plot the residuals
+        plot_residuals(t, data, datasim, param, l_param_name, data_err=data_err_new,
+                       jitter=None, jitter_type=None,
+                       datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                       plot_phase=False, noise_model=noise_mod,
+                       model_instance=model_instance, ax=ax_resi)
+    # Print the title if required
+    if show_title:
+        ax_data.set_title(title)
+    # Plot the legend
+    if show_legend:
+        ax_data.legend(loc='upper right', shadow=True)
+
+
 def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kwargs={},
                         model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, kwargs_tl={}):
     """
-    :param np.array param:
-    :param list_of_string l_param_name:
-    :param  datasim_dbf:
+    :param np.array param: Vector of parameter values for the model
+    :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
+        provided in param
+    :param datasim_dbf: Datasimulator database
     :param DatasetDatabase dataset_db:
     :param Core_Model model_instance: Core_Model instance
-    :param int oversamp: The model will computed in oversamp times more points than the data
-    :param int supersamp_model: The model will computed in supersamp_model times more points and
-                                then averaged over bins of supersamp_model to take into account an
-                                increased exposure time.
-    :param float exptime:
-    :param bool phasefold:
-    :param dict phasefold_kwargs:
+    :param int oversamp: The model will be computed in oversamp times more points than the data
+    :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
+                                of points provided, meaning that we will actually compute the model at
+                                supersamp_model points spread over the exposure time (exptime) and then
+                                average over this points.
+    :param float exptime: exposure time for the supersampling
+    :param bool phasefold: If true the phase folded data and model are plotted.
+    :param dict phasefold_kwargs: Kwargs for the phase folded plot with 3 parameters:
+        "planets" giving the planet names (list)
+        "P" giving the planet periods (list)
+        "tc" giving the times of inferior conjunction for each planet (list)
+    :param plot_height:
+    :param plot_width:
+    :param kwargs_tl:
     """
     # Check that if phasefold is True phasefold_kwargs is not None
     if phasefold and (phasefold_kwargs is None):
@@ -290,131 +452,24 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
     gs = GridSpec(nrows=ndataset, ncols=1)
 
     for ii, dataset in enumerate(l_datasets):
+        (axes_data,
+         axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
+                                                      nplanet=len(phasefold_kwargs["planets"]),
+                                                      fig=fig,
+                                                      gs_from_sps_kw={"height_ratios": (3, 1)})
         inst_mod_fullname = datasim_dbf.get_instmod_fullname(dataset.dataset_name)
-        datasim_db_docfunc = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
-        inst_mod = model_instance.instruments[inst_mod_fullname]
-        noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-        kwargs = dataset.get_kwargs()
-        t = kwargs.pop("t")
-        nt = len(t)
-        data = kwargs.pop("data")
-        data_err = kwargs.pop("data_err")
-        kwargs.update(datasim_kwargs)
-
-        if noise_mod.has_jitter:
-            jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
-            if inst_mod.parameters[jitter_name].free:
-                idx_jitter = l_param_name.index(jitter_param_fullname)
-                jitter = param[idx_jitter]
-            else:
-                jitter = inst_mod.parameters[jitter_name].value
-            jitter_type = noise_mod.jitter_type
-        else:
-            jitter = None
-            jitter_type = None
-
-        if phasefold:
-            # Create the Axes for the comparison data/model and the residuals and set the title.
-            # and plot the data
-            (axes_data,
-             axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
-                                                          nplanet=len(phasefold_kwargs["planets"]),
-                                                          fig=fig,
-                                                          gs_from_sps_kw={"height_ratios": (3, 1)})
-            title_printed = False
-            for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
-                                                            phasefold_kwargs["P"],
-                                                            phasefold_kwargs["tc"],
-                                                            axes_data, axes_resi):
-                # Get the datasim for this planet only
-                datasim_db_docfunc_pl = datasim_dbf.instrument_db[inst_mod_fullname][planet_name]
-
-                # Get the datasims for the other planets
-                l_datasim_db_docfunc_others = []
-                for pl in phasefold_kwargs["planets"]:
-                    if pl == planet_name:
-                        continue
-                    else:
-                        l_datasim_db_docfunc_others.append(datasim_dbf.
-                                                           instrument_db[inst_mod_fullname]
-                                                           [pl])
-
-                if not(title_printed):
-                    ax_data.set_title(dataset.dataset_name)
-                    title_printed = True
-                # Plot the data
-                data_pl = data.copy()
-                pl_kwargs = {"color": "b", "fmt": "."}
-
-                for datasim_db in l_datasim_db_docfunc_others:
-                    model, modelwGP, _ = compute_model(t, datasim_db, param, l_param_name,
-                                                       datasim_kwargs=kwargs,
-                                                       supersamp=supersamp_model, exptime=exptime,
-                                                       noise_model=noise_mod,
-                                                       model_instance=model_instance)
-                    data_pl = data_pl - model
-                _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc,
-                                                        data_err=data_err,
-                                                        jitter=jitter, jitter_type=jitter_type,
-                                                        ax=ax_data,
-                                                        pl_kwargs=pl_kwargs)
-
-                # Plot the model
-                phasemin = phases.min()
-                phasemax = phases.max()
-                tmin = tc + P * phasemin
-                tmax = tc + P * phasemax
-                plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc_pl, param, l_param_name,
-                           supersamp=supersamp_model, exptime=exptime,
-                           datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
-                           noise_model=noise_mod,
-                           model_instance=model_instance,
-                           ax=ax_data)
-                # Plot residuals
-                plot_residuals(t, data, datasim_db_docfunc_pl, param, l_param_name,
-                               data_err=data_err, jitter=jitter, jitter_type=jitter_type,
-                               supersamp=supersamp_model, exptime=exptime,
-                               datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
-                               noise_model=noise_mod,
-                               model_instance=model_instance,
-                               ax=ax_resi)
-        else:
-            # Create the Axes for the comparison data/model and the residuals and set the title.
-            # and plot the data
-            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig,
-                                                     gs_from_sps_kw={"height_ratios": (3, 1)})
-            ax_data.set_title(dataset.dataset_name)
-
-            if jitter is None:
-                data_err_new = data_err
-            else:
-                if jitter_type == "multi":
-                    data_err_new = data_err * exp(jitter)
-                elif jitter_type == "add":
-                    data_err_new = sqrt(data_err**2 * (1 + exp(2 * jitter)))
-                else:
-                    raise ValueError("jitter_type should be in ['multi', 'add']")
-
-            ax_data.errorbar(t, data, data_err_new, fmt=".", color="b")
-
-            # Plot the model
-            tmin = t.min()
-            tmax = t.max()
-            plot_model(tmin, tmax, nt * oversamp, datasim_db_docfunc, param, l_param_name,
-                       datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                       plot_phase=False, noise_model=noise_mod,
-                       model_instance=model_instance, ax=ax_data)
-
-            # Plot the residuals
-            plot_residuals(t, data, datasim_db_docfunc, param, l_param_name, data_err=data_err,
-                           jitter=jitter, jitter_type=jitter_type,
-                           datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                           plot_phase=False, noise_model=noise_mod,
-                           model_instance=model_instance, ax=ax_resi)
-
-        # Plot the legend
-        ax_data.legend(loc='upper right', shadow=True)
-
+        datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
+        datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
+        for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
+                                                        phasefold_kwargs["P"],
+                                                        phasefold_kwargs["tc"],
+                                                        axes_data, axes_resi):
+            overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
+                                    datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                    oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                    phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
+                                    datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
+                                    show_legend=True, ax_data=ax_data, ax_resi=ax_resi)
     fig.tight_layout(**kwargs_tl)
 
 
@@ -512,6 +567,8 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
                noise_model=None, model_instance=None,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None,
                ax=None):
+    """
+    """
     # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
     # tmax_plus), the model time vector (t)
     tsamp = (tmax - tmin) / (nt - 1)  # nt - 1 because this the number of intervals
@@ -555,118 +612,190 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
-                   noise_model=None, model_instance=None,
+                   noise_model=None, model_instance=None, zoom=None,
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
-
+    """
+    :param array t:
+    :param array data:
+    :param datasim_db_docfunc:
+    :param param:
+    :param l_param_name:
+    :param datasim_kwargs:
+    :param data_err:
+    :param jitter:
+    :param jitter_type:
+    :param supersamp:
+    :param exptime:
+    :param plot_phase: If True, plot phase folded residuals
+    :param P:
+    :param tc:
+    :param noise_model:
+    :param model_instance:
+    :param zoom:
+    :param pl_kwargs_model:
+    :param bool show_model: To show the residuals of the model only when the noise model is a GP.
+    :param pl_kwargs_modelandGP:
+    :param bool show_modelandGP:
+    :param ax:
+    """
+    # Create a new figure and ax if needed
+    ax = __get_default_ax(ax=ax)
+    # Compute residual
     model, model_wGP, _ = compute_model(t, datasim_db_docfunc, param, l_param_name,
                                         datasim_kwargs=datasim_kwargs, supersamp=supersamp,
                                         exptime=exptime,
                                         noise_model=noise_model,
                                         model_instance=model_instance)
-
     residual = data - model
-
-    # Create a new figure and ax if needed
-    ax = __get_default_ax(ax=ax)
-
-    # Plot the residuals
-    kwarg_model = {"label": "model", "color": "g", "fmt": "."}
+    # Apply jitter if needed
+    data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+    # Determine if noise model is GP
     if noise_model is None:
         noise_modelGP = False
     else:
         noise_modelGP = noise_model.has_GP
-
+    # Perform zoom if needed (I do the zoom after computing the model with all the data because
+    # I am not sure that doing the zoom before will not change the result for GP noise model.)
+    # I do the zoom only if I don't want to phase fold, because in this case I can do it inside plot_phase_folded_timeserie
+    if (zoom is not None) and not(plot_phase):
+        extra_arrays_to_zoom = [data, model, residual] if data_err is None else [data, model, residual, data_err_new]
+        if noise_modelGP:
+            extra_arrays_to_zoom.append(model_wGP)
+        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t, arrays=extra_arrays_to_zoom)
+        t_zoom = zoomed_arrays[0]
+        data_zoom = zoomed_arrays[1]
+        residual_zoom = zoomed_arrays[2]
+        if data_err is None:
+            data_err_new_zoom = None
+            model_wGP_zoom = None if not(noise_modelGP) else zoomed_arrays[3]
+        else:
+            data_err_new_zoom = zoomed_arrays[3]
+            model_wGP_zoom = None if not(noise_modelGP) else zoomed_arrays[4]
+    # Plot the residuals of model only (even if noise model is GP)
     if show_model or not(noise_modelGP):
+        kwarg_model = {"label": "model", "color": "g", "fmt": "."}
         if pl_kwargs_model is not None:
             kwarg_model.update(pl_kwargs_model)
         if plot_phase:
-            plot_phase_folded_timeserie(t, residual, P, tc,
-                                        data_err=data_err, jitter=jitter, jitter_type=jitter_type,
-                                        ax=ax, pl_kwargs=kwarg_model)
+            plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err_new, zoom=zoom, ax=ax,
+                                        pl_kwargs=kwarg_model)
         else:
-            if jitter is None:
-                ax.errorbar(t, residual, data_err, **kwarg_model)
+            if zoom is not None:
+                ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model)
             else:
-                if jitter_type == "multi":
-                    ax.errorbar(t, residual, data_err * exp(jitter), **kwarg_model)
-                elif jitter_type == "add":
-                    ax.errorbar(t, residual, sqrt(data_err**2 * (1 + exp(2 * jitter))),
-                                **kwarg_model)
-                else:
-                    raise ValueError("jitter_type should be in ['multi', 'add']")
-
-    # Plot the model + GP
-    if noise_model is not None:
-        if noise_model.has_GP and show_modelandGP:
-            residual_wGP = data - model_wGP
-            kwarg_GP = {"label": "model+GP", "color": "r", "fmt": ".", "alpha": 0.6}
-            if pl_kwargs_modelandGP is not None:
-                kwarg_GP.update(pl_kwargs_modelandGP)
-            if plot_phase:
-                plot_phase_folded_timeserie(t, residual_wGP, P, tc, data_err=data_err,
-                                            jitter=jitter, jitter_type=jitter_type,
-                                            ax=ax, pl_kwargs=kwarg_GP)
+                ax.errorbar(t, residual, data_err_new, **kwarg_model)
+    # Plot the residuals of model + GP
+    if (noise_model is not None) and noise_modelGP and show_modelandGP:
+        residual_wGP = data - model_wGP if zoom is None else data_zoom - model_wGP_zoom
+        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": ".", "alpha": 0.6}
+        if pl_kwargs_modelandGP is not None:
+            kwarg_GP.update(pl_kwargs_modelandGP)
+        if plot_phase:
+            plot_phase_folded_timeserie(t, residual_wGP, P, tc, data_err=data_err_new, zoom=zoom, ax=ax,
+                                        pl_kwargs=kwarg_GP)
+        else:
+            if zoom is not None:
+                ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP)
             else:
-                if jitter is None:
-                    ax.errorbar(t, residual_wGP, data_err, **kwarg_GP)
-                else:
-                    if jitter_type == "multi":
-                        ax.errorbar(t, residual_wGP, data_err * exp(jitter), **kwarg_GP)
-                    elif jitter_type == "add":
-                        ax.errorbar(t, residual_wGP, sqrt(data_err**2 * (1 + exp(2 * jitter))),
-                                    **kwarg_GP)
-                    else:
-                        raise ValueError("jitter_type should be in ['multi', 'add']")
-
+                ax.errorbar(t, residual_wGP, data_err_new, **kwarg_GP)
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
     ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
 
 
+def apply_jitter(data_err, jitter, jitter_type):
+    """Apply jitter to the data error bar
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    :param str jitter_type: jitter_type ("multi" or "add")
+    """
+    # Adapt the data_err to the jitter value is needed.
+    if jitter_type == "multi":
+        data_err_new = data_err * exp(jitter)
+    elif jitter_type == "add":
+        data_err_new = sqrt(data_err**2 * (1 + exp(2 * jitter)))
+    else:
+        raise ValueError("jitter_type should be in ['multi', 'add']")
+    return data_err_new
+
+
+def apply_zoom(zoom, base_array, arrays=None):
+    """Apply jitter to the data error bar
+
+    :param list_of_float zoom: It should be a list-like object with two elements.
+        zoom[0] give the minimum value in zoom_base_array for the zoom and zoom[1] give the maximum.
+    :param array_of_float base_array: Array on which the zoom in based. The idx of the elements
+        which satisfy zoom[0] < zoom_base_array < zoom[1], will be used to cut both zoom_base_array
+        and zoomed_arrays
+    :param None/list_of_array arrays: List of array to zoom.
+    :return list_of_array zoomed_arrays: List of zoomed arrays, the first one is the zoomed based array
+    :return array idx_zoom: array of indexes which satisfy the zoom
+    """
+    idx_zoom = where((base_array > zoom[0]) & (base_array < zoom[1]))[0]
+    zoomed_arrays = []
+    zoomed_arrays.append(base_array[idx_zoom])
+    if arrays is not None:
+        for arr in arrays:
+            zoomed_arrays.append(arr[idx_zoom])
+    return zoomed_arrays, idx_zoom
+
+
 def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitter_type=None,
-                                ax=None, pl_kwargs=None):
+                                zoom=None, ax=None, pl_kwargs=None):
     """Plot a phase folded representation of a lc
 
-    :param Dataset dataset: LC dataset
+    :param array_float t: time array
+    :param array_float data: data array
     :param float P: Period of the planet
     :param float tc: Time of inferior conjuction of the planet
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    :param str jitter_type: jitter_type ("multi" or "add")
+    :param None/list_of_float zoom: If provided the plot will be zoom. Meaning that the model and data
+        will only be plotted between two phase values. It should be a list-like object with two elements.
+        zoom[0] give the minimum phase for the zoom and zoom[1] give the maximum.
+    :param ~matplotlib.axes._axes.Axes ax: Axes instance where the data and model will be ploted
+    :param dict pl_kwargs: Keyword argument passed to pl.errorbar function
 
-    P and tc needs to have the same unit than the time in dataset.
+    P and tc needs to have the same unit than the t
     """
-    # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t, P, T0=(tc + P / 2)) - 0.5
-
-    # Sort with respect to phase
-    sortIndi = argsort(phases)
-
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
-
+    # Obtain the phases with respect to some ephemerid P and tc
+    phases = foldAt(t, P, T0=(tc + P / 2)) - 0.5
+    # Sort with respect to phase
+    sortIndi = argsort(phases)
+    # If data error provided
+    if data_err is not None:
+        # Apply jitter if needed
+        data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+        # Create the sorted data_err vector
+        data_err_new_sort = data_err_new[sortIndi]
+    # Create the sorted phase, sorted data vectors
+    phase_sort = phases[sortIndi]
+    data_sort = data[sortIndi]
+    # Perform zoom if needed
+    if zoom is not None:
+        extra_arrays_to_zoom = [data_sort] if data_err is None else [data_sort, data_err_new_sort]
+        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=phase_sort, arrays=extra_arrays_to_zoom)
+        phase_sort = zoomed_arrays[0]
+        data_sort = zoomed_arrays[1]
+        data_err_new_sort = None if data_err is None else zoomed_arrays[2]
     # Check the errorbar kwargs
     kw = dict() if pl_kwargs is None else pl_kwargs.copy()
     if "fmt" not in kw:
         kw["fmt"] = "-"
     if "color" not in kw:
         kw["color"] = "r"
-
     # Plot the phase folded data
     if data_err is not None:
-        if jitter is None:
-            line = ax.errorbar(phases[sortIndi], data[sortIndi], data_err[sortIndi], **kw)
-        else:
-            if jitter_type == "multi":
-                line = ax.errorbar(phases[sortIndi], data[sortIndi],
-                                   data_err[sortIndi] * exp(jitter), **kw)
-            elif jitter_type == "add":
-                line = ax.errorbar(phases[sortIndi], data[sortIndi],
-                                   sqrt(data_err[sortIndi]**2 * (1 + exp(2 * jitter))), **kw)
-            else:
-                raise ValueError("jitter_type should be in ['multi', 'add']")
+        line = ax.errorbar(phase_sort, data_sort, data_err_new_sort, **kw)
     else:
-        line = ax.errorbar(phases[sortIndi], data[sortIndi], **kw)
+        line = ax.errorbar(phase_sort, data_sort, **kw)
     return line, phases
 
 
