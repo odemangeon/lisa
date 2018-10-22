@@ -307,7 +307,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     # Initialise title
     title = "{}".format(dataset.dataset_name)
     # Get the instrument model object and the noise model object
-    inst_mod = model_instance.get_instmod(dataset.get_name())
+    inst_mod = model_instance.get_instmod(dataset.dataset_name)
     noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
     # Get data point (time, data, data_err) and other kwargs
     kwargs = dataset.get_kwargs()
@@ -452,22 +452,37 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
     gs = GridSpec(nrows=ndataset, ncols=1)
 
     for ii, dataset in enumerate(l_datasets):
-        (axes_data,
-         axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
-                                                      nplanet=len(phasefold_kwargs["planets"]),
-                                                      fig=fig,
-                                                      gs_from_sps_kw={"height_ratios": (3, 1)})
         inst_mod_fullname = datasim_dbf.get_instmod_fullname(dataset.dataset_name)
         datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
         datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
-        for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
-                                                        phasefold_kwargs["P"],
-                                                        phasefold_kwargs["tc"],
-                                                        axes_data, axes_resi):
+        if phasefold:
+            # Create two sets of axes to produce a phase-folded dataset+model  and the residuals plot
+            # for each planet
+            nplanet = 1 if phasefold_kwargs is None else len(phasefold_kwargs["planets"])
+            (axes_data,
+             axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
+                                                          nplanet=nplanet,
+                                                          fig=fig,
+                                                          gs_from_sps_kw={"height_ratios": (3, 1)})
+            # Produce the phase-folded plots for each planet
+            for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
+                                                            phasefold_kwargs["P"],
+                                                            phasefold_kwargs["tc"],
+                                                            axes_data, axes_resi):
+                overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
+                                        datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                        oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                        phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
+                                        datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
+                                        show_legend=True, ax_data=ax_data, ax_resi=ax_resi)
+        else:
+            # Create the two axes data+model and residuals
+            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig, gs_from_sps_kw={"height_ratios": (3, 1)})
+            # Produce the plots
             overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                     datasim_kwargs=datasim_kwargs, model_instance=model_instance,
                                     oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                    phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
+                                    phasefold=phasefold,
                                     datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
                                     show_legend=True, ax_data=ax_data, ax_resi=ax_resi)
     fig.tight_layout(**kwargs_tl)
