@@ -301,7 +301,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     """
     # Ensure that zoom has the good format
     if zoom is None:
-        zoom = [None, None]
+        zoom = [[None, None], ]
         nb_plots = 1
     elif isinstance(zoom[0], Number):
         zoom = [zoom, ]
@@ -314,13 +314,16 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         ax_data = axes[0]
         ax_resi = axes[1]
     elif ax_data is None:
-        fig, ax_data = subplots(ncols=nb_plots)
+        fig, ax_data = subplots(ncols=nb_plots, squeeze=False)
+        ax_data = ax_data[0]
     elif ax_resi is None:
-        fig, ax_resi = subplots(ncols=nb_plots)
-    elif isinstance(ax_data, Axes):
-        ax_data = [ax_data, ]
-    elif isinstance(ax_resi, Axes):
-        ax_resi = [ax_resi, ]
+        fig, ax_resi = subplots(ncols=nb_plots, squeeze=False)
+        ax_resi = ax_resi[0]
+    else:
+        if isinstance(ax_data, Axes):
+            ax_data = [ax_data, ]
+        if isinstance(ax_resi, Axes):
+            ax_resi = [ax_resi, ]
     # Initialise title
     title = "{}".format(dataset.dataset_name)
     # Get the instrument model object and the noise model object
@@ -377,11 +380,11 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
             data_pl = data_pl - model
         # Plot these data phase folded at the ephemeris of the planet.
         pl_kwargs = {"color": "b", "fmt": "."}
-        _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc, data_err=data_err_new,
-                                                jitter=None, jitter_type=None, zoom=zoom, ax=ax_data,
-                                                pl_kwargs=pl_kwargs)
         # Plot the model
         for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
+            _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc, data_err=data_err_new,
+                                                    jitter=None, jitter_type=None, zoom=zoom, ax=ax_data_i,
+                                                    pl_kwargs=pl_kwargs)
             phasemin = phases.min() if zoom[0] is None else max([phases.min(), zoom[0]])
             phasemax = phases.max() if zoom[1] is None else min([phases.max(), zoom[1]])
             tmin = tc + P * phasemin
@@ -409,11 +412,15 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                 t_i = zoomed_arrays[0]
                 data_i = zoomed_arrays[1]
                 data_err_new_i = zoomed_arrays[2]
+            else:
+                t_i = t
+                data_i = data
+                data_err_new_i = data_err_new
             # plot the data
-            ax_data.errorbar(t_i, data_i, data_err_new_i, fmt=".", color="b")
+            ax_data_i.errorbar(t_i, data_i, data_err_new_i, fmt=".", color="b")
             # Plot the model
-            tmin = t.min()
-            tmax = t.max()
+            tmin = t_i.min()
+            tmax = t_i.max()
             plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
                        datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
                        plot_phase=False, noise_model=noise_mod,
@@ -426,10 +433,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                            model_instance=model_instance, ax=ax_resi_i)
     # Print the title if required
     if show_title:
-        ax_data.set_title(title)
+        ax_data[0].set_title(title)
     # Plot the legend
     if show_legend:
-        ax_data.legend(loc='upper right', shadow=True)
+        ax_data[0].legend(loc='upper right', shadow=True)
 
 
 def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kwargs={},
