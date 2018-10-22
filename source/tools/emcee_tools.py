@@ -7,10 +7,11 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger, INFO
-from matplotlib.pyplot import subplots, figure, Subplot  # , figure, plot, show
+from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
 from numpy import percentile, exp, newaxis, concatenate, std
+from numbers import Number
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -287,23 +288,39 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         plot, we use the models for each planet contribution to be able to display the model and data
         correspond only to the planet whose ephemeris is used to phase fold
         (datasim_dbf.instrument_db[inst_mod_fullname]).
-    :param None/list_of_float zoom: If provided the plot will be zoom. Meaning that the model and data
-        will only be plotted between two time values. It should be a list-like object with two elements.
-        zoom[0] give the minimum time for the zoom and zoom[1] give the maximum.
+    :param None/list_of_float zoom: If provided the plot will be zoomed. Meaning that the model and data
+        will only be plotted between two abscisse values. It should be a list-like object with two elements.
+        zoom[0] give the minimum abscisse value for the zoom and zoom[1] give the maximum. If phasefold
+        is true the abscisse values are interpreted ass orbital phases, if not as times.
+        You also have the possibility to produce several zooms. In this case, zoom should be an array
+        or list of list  object where zoom[i][0] is the min abscisse value and zoom[i][1] the max.
     :param bool show_title: If True, show the title giving the dataset name.
     :param bool show_legend: If True, show the legend.
     :param ~matplotlib.axes._axes.Axes ax_data: Axes instance where the data and model will be ploted
     :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
     """
+    # Ensure that zoom has the good format
+    if zoom is None:
+        zoom = [None, None]
+        nb_plots = 1
+    elif isinstance(zoom[0], Number):
+        zoom = [zoom, ]
+        nb_plots = 1
+    else:
+        nb_plots = np.shape(zoom)[0]
     # Create ax_data and/or ax_resi if not provided
     if (ax_data is None) and (ax_resi is None):
-        fig, axes = subplots(nrows=2)
+        fig, axes = subplots(nrows=2, ncols=nb_plots, squeeze=False)
         ax_data = axes[0]
         ax_resi = axes[1]
     elif ax_data is None:
-        fig, ax_data = subplots()
+        fig, ax_data = subplots(ncols=nb_plots)
     elif ax_resi is None:
-        fig, ax_resi = subplots()
+        fig, ax_resi = subplots(ncols=nb_plots)
+    elif isinstance(ax_data, Axes):
+        ax_data = [ax_data, ]
+    elif isinstance(ax_resi, Axes):
+        ax_resi = [ax_resi, ]
     # Initialise title
     title = "{}".format(dataset.dataset_name)
     # Get the instrument model object and the noise model object
@@ -364,47 +381,49 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                                                 jitter=None, jitter_type=None, zoom=zoom, ax=ax_data,
                                                 pl_kwargs=pl_kwargs)
         # Plot the model
-        phasemin = phases.min() if zoom is None else max([phases.min(), zoom[0]])
-        phasemax = phases.max() if zoom is None else min([phases.max(), zoom[0]])
-        tmin = tc + P * phasemin
-        tmax = tc + P * phasemax
-        plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
-                   supersamp=supersamp_model, exptime=exptime,
-                   datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
-                   noise_model=noise_mod,
-                   model_instance=model_instance,
-                   ax=ax_data)
-        # Plot the residuals
-        plot_residuals(t, data, datasim_docfunc_pl, param, l_param_name,
-                       data_err=data_err_new, jitter=None, jitter_type=None,
+        for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
+            phasemin = phases.min() if zoom[0] is None else max([phases.min(), zoom[0]])
+            phasemax = phases.max() if zoom[1] is None else min([phases.max(), zoom[1]])
+            tmin = tc + P * phasemin
+            tmax = tc + P * phasemax
+            plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
                        supersamp=supersamp_model, exptime=exptime,
-                       datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
+                       datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
                        noise_model=noise_mod,
                        model_instance=model_instance,
-                       ax=ax_resi)
+                       ax=ax_data_i)
+            # Plot the residuals
+            plot_residuals(t, data, datasim_docfunc_pl, param, l_param_name,
+                           data_err=data_err_new, jitter=None, jitter_type=None,
+                           supersamp=supersamp_model, exptime=exptime,
+                           datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
+                           noise_model=noise_mod,
+                           model_instance=model_instance,
+                           ax=ax_resi_i)
     # Case of NOT phase folding
     else:
-        # Perform the zoom if needed
-        if zoom is not None:
-            zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t, arrays=[data, data_err_new])
-            t = zoomed_arrays[0]
-            data = zoomed_arrays[1]
-            data_err_new = zoomed_arrays[2]
-        # plot the data
-        ax_data.errorbar(t, data, data_err_new, fmt=".", color="b")
-        # Plot the model
-        tmin = t.min()
-        tmax = t.max()
-        plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
-                   datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                   plot_phase=False, noise_model=noise_mod,
-                   model_instance=model_instance, ax=ax_data)
-        # Plot the residuals
-        plot_residuals(t, data, datasim, param, l_param_name, data_err=data_err_new,
-                       jitter=None, jitter_type=None,
+        for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
+            # Perform the zoom if needed
+            if (zoom_i[0] is not None) and (zoom_i[1] is not None):
+                zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom_i, base_array=t, arrays=[data, data_err_new])
+                t_i = zoomed_arrays[0]
+                data_i = zoomed_arrays[1]
+                data_err_new_i = zoomed_arrays[2]
+            # plot the data
+            ax_data.errorbar(t_i, data_i, data_err_new_i, fmt=".", color="b")
+            # Plot the model
+            tmin = t.min()
+            tmax = t.max()
+            plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
                        datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
                        plot_phase=False, noise_model=noise_mod,
-                       model_instance=model_instance, ax=ax_resi)
+                       model_instance=model_instance, ax=ax_data_i)
+            # Plot the residuals
+            plot_residuals(t_i, data_i, datasim, param, l_param_name, data_err=data_err_new_i,
+                           jitter=None, jitter_type=None,
+                           datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                           plot_phase=False, noise_model=noise_mod,
+                           model_instance=model_instance, ax=ax_resi_i)
     # Print the title if required
     if show_title:
         ax_data.set_title(title)
