@@ -417,7 +417,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
                         model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, kwargs_tl={}):
-    """
+    """Overplot datasets and model for each dataset and provide the residuals.
+
+    WARNING: In its current status (using the new overplot_one_data_model function). This function has
+    not been tested with phasefold=True.
+
     :param np.array param: Vector of parameter values for the model
     :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
         provided in param
@@ -452,7 +456,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
     gs = GridSpec(nrows=ndataset, ncols=1)
 
     for ii, dataset in enumerate(l_datasets):
-        inst_mod_fullname = datasim_dbf.get_instmod_fullname(dataset.dataset_name)
+        inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
         datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
         datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
         if phasefold:
