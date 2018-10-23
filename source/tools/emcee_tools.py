@@ -518,6 +518,68 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
     fig.tight_layout(**kwargs_tl)
 
 
+def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
+                                       datasim_kwargs={}, model_instance=None,
+                                       oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
+                                       zoom_width=0.25, show_title=True, show_legend=True,
+                                       plot_height=2, plot_width=2, kwargs_tl={}):
+    """Zoom on the data model overplot for one datasetself.
+
+    :param float/list_of_float P: Orbital period(s)
+    :param float/list_of_float t_tr: Transit time(s), t0(s) of the ephemeris
+    :param string/list_of_string planet_name: Planet name(s)
+    :param np.array param: Vector of parameter values for the model
+    :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
+        provided in param
+    :param DatasimDocFunc datasim: Datasimulator for the dataset.
+    :param Dataset dataset: Dataset
+    :param Core_Model model_instance: Core_Model instance
+    :param int oversamp: The model will be computed in oversamp times more points than the data
+    :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
+                                of points provided, meaning that we will actually compute the model at
+                                supersamp_model points spread over the exposure time (exptime) and then
+                                average over this points.
+    :param float exptime: exposure time for the supersampling
+    :param float zoom_width: Width of the zoom.
+    :param bool show_title: If True, show the title giving the dataset name.
+    :param bool show_legend: If True, show the legend.
+    """
+    # Get the min and max time of the dataset.
+    t = dataset.get_time()
+    t_max = max(t)
+    t_min = min(t)
+    # Define the zooms for each planet ephemeris
+    zoom_planets = []
+    P = [P, ] if isinstance(P, Number) else P
+    t_tr = [t_tr, ] if isinstance(t_tr, Number) else t_tr
+    planet_name = [planet_name, ] if isinstance(planet_name, str) else planet_name
+    nb_pl = len(P)
+    for jj, P_pl, t_tr_pl in zip(range(nb_pl), P, t_tr):
+        zoom_planets.append([])
+        nb_per_min = int((t_min - t_tr_pl) // P_pl)
+        nb_per_min = nb_per_min if nb_per_min > 0 else nb_per_min - 1
+        nb_per_max = int((t_max - t_tr_pl) // P_pl)
+        nb_per_max = nb_per_max if nb_per_max < 0 else nb_per_max + 1
+        for ii in range(nb_per_min, nb_per_max + 1):
+            t_tr_ii = t_tr_pl + P_pl * ii
+            zoom_min_ii = t_tr_ii - zoom_width / 2.
+            zoom_max_ii = t_tr_ii + zoom_width / 2.
+            if (zoom_max_ii < t_min) or (zoom_min_ii > t_max):
+                continue
+            else:
+                zoom_planets[jj].append([zoom_min_ii, zoom_max_ii])
+    # Defines the fig and axes
+    nb_max_zoom = max([len(zoom_pl) for zoom_pl in zoom_planets])
+    fig, axes = subplots(nrows=2 * nb_pl, ncols=nb_max_zoom, figsize=(plot_width * nb_max_zoom, nb_pl * plot_height))
+    for jj in range(nb_pl):
+        overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
+                                datasim_kwargs=datasim_kwargs, model_instance=model_instance, oversamp=oversamp,
+                                supersamp_model=supersamp_model, exptime=exptime_Kepler, phasefold=False,
+                                zoom=zoom_planets[jj], show_title=False, show_legend=False, ax_data=axes[jj * 2],
+                                ax_resi=axes[jj * 2 + 1])
+    fig.tight_layout(**kwargs_tl)
+
+
 def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
                   supersamp=1, exptime=exptime_Kepler,
                   noise_model=None, model_instance=None):
