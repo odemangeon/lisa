@@ -364,7 +364,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
         # Get the datasims for the other planets
         l_datasim_db_docfunc_others = []
-        for pl in phasefold_kwargs["planets"]:
+        for pl in model_instance.planets.keys():
             if pl == planet_name:
                 continue
             else:
@@ -383,10 +383,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         # Plot the model
         for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
             _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc, data_err=data_err_new,
-                                                    jitter=None, jitter_type=None, zoom=zoom, ax=ax_data_i,
+                                                    jitter=None, jitter_type=None, zoom=zoom_i, ax=ax_data_i,
                                                     pl_kwargs=pl_kwargs)
-            phasemin = phases.min() if zoom[0] is None else max([phases.min(), zoom[0]])
-            phasemax = phases.max() if zoom[1] is None else min([phases.max(), zoom[1]])
+            phasemin = phases.min() if zoom_i[0] is None else max([phases.min(), zoom_i[0]])
+            phasemax = phases.max() if zoom_i[1] is None else min([phases.max(), zoom_i[1]])
             tmin = tc + P * phasemin
             tmax = tc + P * phasemax
             plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
@@ -886,12 +886,13 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
     phase_sort = phases[sortIndi]
     data_sort = data[sortIndi]
     # Perform zoom if needed
-    if zoom is not None:
-        extra_arrays_to_zoom = [data_sort] if data_err is None else [data_sort, data_err_new_sort]
-        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=phase_sort, arrays=extra_arrays_to_zoom)
-        phase_sort = zoomed_arrays[0]
-        data_sort = zoomed_arrays[1]
-        data_err_new_sort = None if data_err is None else zoomed_arrays[2]
+    if (zoom is not None):
+        if (zoom[0] is not None) and (zoom[1] is not None):
+            extra_arrays_to_zoom = [data_sort] if data_err is None else [data_sort, data_err_new_sort]
+            zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=phase_sort, arrays=extra_arrays_to_zoom)
+            phase_sort = zoomed_arrays[0]
+            data_sort = zoomed_arrays[1]
+            data_err_new_sort = None if data_err is None else zoomed_arrays[2]
     # Check the errorbar kwargs
     kw = dict() if pl_kwargs is None else pl_kwargs.copy()
     if "fmt" not in kw:
