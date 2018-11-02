@@ -19,6 +19,8 @@ Rely on python3.6. Python package dependencies:
 - gzip
 - pandas
 - george
+- celerite
+- radvel
 
 2. Clone the repository
 
