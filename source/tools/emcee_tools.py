@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, exp, newaxis, concatenate, std
+from numpy import percentile, exp, newaxis, concatenate, std, isfinite, delete
 from numbers import Number
 # from sys import stdout
 import matplotlib.gridspec as gridspec
@@ -1046,35 +1046,48 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     return res
 
 
-def get_clean_flatchain(chainI, l_walker=None, l_burnin=None):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
     :param ChainInterpret chainI:
     :param int_iteratable l_walkers: list of valid walkers
     :param int_iteratable l_burnin: list of burnin iterations for each valid walker
+    :param bool force_finite: If True the function will suppress every iteration for which one of the
+        parameter values provided is not finite.
     :return np.array res: cleaned flat chain
     """
+    res = None
+    # If no walker list is provided nor burnin list, the result is the whole flatten chain
     if (l_walker is None) and (l_burnin is None):
-        return chainI.flatchain
-    else:
-        l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=chainI.shape[0])
-    if l_burnin is None:
-        s = chainI[l_walker, ...].shape
-        return chainI[l_walker, ...].reshape(s[0] * s[1], s[2])
-    else:
-        l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=chainI.shape[0])
-    ndim = chainI.dim
-    res = []
-    if ndim == 1:
-        for walker, burnin in zip(l_walker, l_burnin):
-            res.extend(chainI[walker, burnin:])
-        return array(res).transpose()
-    else:
-        for dim in range(ndim):
-            res.append([])
+        res = chainI.flatchain
+    # If no then just select the walkers provided by l_walker and return the flat chain
+    elif l_burnin is None:
+        sh = chainI[l_walker, ...].shape
+        res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
+    # If no walker list is provided get the default list
+    elif l_walker is None:
+        l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
+    # If res is None then at this point we have a l_burnin and a l_walker
+    if res is None:
+        ndim = chainI.dim
+        res = []
+        # Case where there is only one free parameter
+        if ndim == 1:
             for walker, burnin in zip(l_walker, l_burnin):
-                res[dim].extend(chainI[walker, burnin:, dim])
-        return array(res).transpose()
+                res.extend(chainI[walker, burnin:])
+            res = array(res).transpose()
+        # Case where there is several free parameter
+        else:
+            for dim in range(ndim):
+                res.append([])
+                for walker, burnin in zip(l_walker, l_burnin):
+                    res[dim].extend(chainI[walker, burnin:, dim])
+            res = array(res).transpose()
+    # Remove iteration where one of the parameter is not finite
+    if force_finite:
+        return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
+    else:
+        return res
 
 
 def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
