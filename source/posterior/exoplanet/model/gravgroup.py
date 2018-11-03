@@ -73,7 +73,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available rv models, the 1st element is used as default
-    _rv_models = ["ajplanet"]
+    _rv_models = ["radvel", "ajplanet"]
 
     ## List of available lc models, the 1st element is used as default
     _transit_models = ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"]
@@ -568,6 +568,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,
                                        RV_inst_db=self.instruments[RV_inst_cat],
+                                       rv_model=self.rv_model,
                                        inst_models=inst_models, datasets=datasets)
 
     def _create_datasimulator_LC(self, inst_models, datasets=None):

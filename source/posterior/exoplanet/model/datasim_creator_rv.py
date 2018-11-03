@@ -10,6 +10,8 @@ from copy import deepcopy
 import math as mt
 
 from ajplanet import pl_rv_array
+from radvel.kepler import rv_drive
+
 
 # from ..dataset_and_instrument.rv import RV_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
@@ -32,6 +34,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
                             RV_globalref_instname=None,
                             RV_instref_modnames=None,
                             RV_inst_db=None,
+                            rv_model="radvel",
                             inst_models=None, datasets=None,
                             param_vector_name=par_vec_name):
     """Return a radial velocity datasimulator functions.
@@ -50,6 +53,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         full name) used as reference for the instrument
     :param dict RV_inst_db: key=instrument name, value=dict: key= instrument model name,
         value=instrument model object.
+    :param str rv_model: Package used for the radial velocity model ("ajplanet" or "radvel")
     :param Instrument_Model/list_of_Instrument_Model/None inst_models:
         If None the datasimulator does not include any contribution from the instrument.
         If Instrument_Model, return a datasimulator docfunc for this instrument model
@@ -152,7 +156,10 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     {tab}omega_{planet} = atan2({esinw}, {ecosw})
     {tab}tp_{planet} = gettp_fast({P}, {tic}, ecc_{planet}, omega_{planet})
     """
-    template_planet_rv = "+ pl_rv_array({time}, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet}, {P})"
+    if rv_model == "ajplanet":
+        template_planet_rv = "+ pl_rv_array({time}, 0., {K}, omega_{planet}, ecc_{planet}, tp_{planet}, {P})"
+    else:
+        template_planet_rv = "+ rv_drive({time}, [{P},  tp_{planet}, ecc_{planet}, omega_{planet}, {K}], use_c_kepler_solver=True)"
 
     # Initialise the text for the whole system preambule
     preambule_whole = ""
@@ -246,7 +253,10 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         ldict["sqrt"] = mt.sqrt
         ldict["atan2"] = mt.atan2
         ldict["gettp_fast"] = gettp_fast
-        ldict["pl_rv_array"] = pl_rv_array
+        if rv_model == "ajplanet":
+            ldict["pl_rv_array"] = pl_rv_array
+        else:
+            ldict["rv_drive"] = rv_drive
         logger.debug("text of {object} RV simulator function :\n{text_func}"
                      "".format(object=obj_key, text_func=text_def_func[obj_key]))
         exec(text_def_func[obj_key], ldict)
