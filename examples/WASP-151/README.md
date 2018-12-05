@@ -2,9 +2,11 @@
 
 ## How to run it
 
+In the terminal and in the current directory:
 ```bash
-ipython
+$ ipython
 ```
+Then in ipython
 
 ```python3
 %run script.py
