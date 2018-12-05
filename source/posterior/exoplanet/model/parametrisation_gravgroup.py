@@ -6,9 +6,6 @@ parametrisation module
 The Objective of this file is to define the different type of parametrisation available.
 """
 from logging import getLogger
-from collections import Counter
-
-# import astropy.units as unt
 
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
@@ -225,17 +222,14 @@ class GravGroup_Parametrisation(object):
                 inst_name = inst_model.instrument.get_name()
                 inst_model.DeltaRV.main = DeltaRV_main
                 if DeltaRV_main:
-                    if ((inst_name == RVrefglobal_instname) and
-                       (inst_model.get_name() == RVrefglobal_modname)):
+                    if (inst_name == RVrefglobal_instname) and (inst_model.get_name() == RVrefglobal_modname):
                         inst_model.DeltaRV.free = False
                         inst_model.DeltaRV.value = 0.0
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             list_instmodel = self.get_instmodel_objs(inst_cat="LC")
             for inst_model in list_instmodel:
-                (inst_model.
-                 init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs["with_OOT_var"],
-                                         OOT_var_order=(self.parametrisation_kwargs.
-                                                        get("OOT_var_order", None))))
+                inst_model.init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs.get("with_OOT_var", False),
+                                                   OOT_var_order=self.parametrisation_kwargs.get("OOT_var_order", None))
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
