@@ -213,7 +213,7 @@ class GravGroup_Parametrisation(object):
     def apply_instmodel_parametrisation(self):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""
         if RV_inst_cat in set(self.dataset_db.inst_categories):
-            DeltaRV_main = self.parametrisation_kwargs["with_DeltaRV"]
+            DeltaRV_main = self.parametrisation_kwargs.get("with_DeltaRV", False)
             if DeltaRV_main:
                 RVrefglobal_instname = self.RV_globalref_instname
                 RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
