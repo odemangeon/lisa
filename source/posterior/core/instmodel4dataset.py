@@ -69,9 +69,16 @@ class Instmodel4Dataset(LockableDict):
             file_info = interpret_data_filename(dataset_name)
             if (file_info["inst_name"] == inst_name) or (inst_name is None):
                 if sortby_instname:
-                    result[file_info["inst_name"]].append(mod_name)
+                    add_to_results = True
+                    if file_info["inst_name"] in result:
+                        if mod_name in result[file_info["inst_name"]]:
+                            add_to_results = False
+                    if add_to_results:
+                        result[file_info["inst_name"]].append(mod_name)
                 else:
-                    result.append("{}_{}".format(file_info["inst_name"], mod_name))
+                    inst_mod_name = "{}_{}".format(file_info["inst_name"], mod_name)
+                    if not(inst_mod_name in result):
+                        result.append(inst_mod_name)
         return result
 
     def get_instmod_fullname(self, dataset_name):

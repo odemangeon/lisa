@@ -214,17 +214,15 @@ class GravGroup_Parametrisation(object):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""
         if RV_inst_cat in set(self.dataset_db.inst_categories):
             DeltaRV_main = self.parametrisation_kwargs.get("with_DeltaRV", False)
-            if DeltaRV_main:
-                RVrefglobal_instname = self.RV_globalref_instname
-                RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
+            RVrefglobal_instname = self.RV_globalref_instname
+            RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
             list_instmodel = self.get_instmodel_objs(inst_cat="RV")
             for inst_model in list_instmodel:
                 inst_name = inst_model.instrument.get_name()
                 inst_model.DeltaRV.main = DeltaRV_main
-                if DeltaRV_main:
-                    if (inst_name == RVrefglobal_instname) and (inst_model.get_name() == RVrefglobal_modname):
-                        inst_model.DeltaRV.free = False
-                        inst_model.DeltaRV.value = 0.0
+                if not(DeltaRV_main) or ((inst_name == RVrefglobal_instname) and (inst_model.get_name() == RVrefglobal_modname)):
+                    inst_model.DeltaRV.free = False
+                    inst_model.DeltaRV.value = 0.0
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             list_instmodel = self.get_instmodel_objs(inst_cat="LC")
             for inst_model in list_instmodel:

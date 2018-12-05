@@ -20,6 +20,7 @@ logger = getLogger()
 
 key_params_fileinfo = "Param names"
 
+
 class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_ParamContainer."""
 
@@ -155,7 +156,6 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             with this name exists or "duplicates" if several parameters with this name exists. Returned
             only if return_error is True
         """
-
         result_found = False
         for code_version in [True, False]:
             result, error_msg, l_paramnames = self._get_parameter_4_naming_kwargs(name, return_l_param_name=True,
@@ -195,7 +195,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         else:
             return result
 
-    def _has_parameter_4_naming_kwargs(self, name,  kwargs_get_name=None, **kwargs):
+    def _has_parameter_4_naming_kwargs(self, name, kwargs_get_name=None, **kwargs):
         """Return True in the parameter designated by the name provided exists.
 
         :param str name: Name of the Parameter looked for.

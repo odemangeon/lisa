@@ -142,7 +142,7 @@ class ParamContainerDatabase(object):
                 selectedkwargs = (self.paramcontainers[paramcont_cat].
                                   get_subkwargs_4_get_list_params(model_instance, **kwargs))
                 result.extend(self.paramcontainers[paramcont_cat].
-                              get_list_params(**selectedkwargs))
+                              get_list_params(main=main, free=free, **selectedkwargs))
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
                     result.extend(param_cont.get_list_params(main=main, free=free))
