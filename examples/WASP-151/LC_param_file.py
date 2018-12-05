@@ -2,7 +2,7 @@
 # -*- coding:  utf-8 -*-
 
 # Light-curve parametrisation file of WASP-151
-transit_model = 'pytransit-MandelAgol'
+transit_model = 'batman'
 
 # Limb-darkening.
 # Associate LC instrument models with LD param containers.
@@ -22,8 +22,8 @@ LDs = {'A': {'IAC80_default0': 'LDR',
        }
 
 # Supersampling and exposure_time
-SuperSamps = {'IAC80_default0': {'supersamp':  1, 'exptime': 0.02043402778},
-              'IAC80_default1': {'supersamp':  1, 'exptime': 0.02043402778},
+SuperSamps = {'IAC80_default0': {'supersamp': 1, 'exptime': 0.02043402778},
+              'IAC80_default1': {'supersamp': 1, 'exptime': 0.02043402778},
               'EulerCam_default': {'supersamp': 1, 'exptime': 0.02043402778},
               'K2_default': {'supersamp': 10, 'exptime': 0.02043402778},
               'TRAPPIST_default': {'supersamp': 1, 'exptime': 0.02043402778},
