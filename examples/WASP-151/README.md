@@ -9,5 +9,5 @@ $ ipython
 Then in ipython
 
 ```python3
-%run script.py
+In [1]: %run script.py
 ```
