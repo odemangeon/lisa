@@ -136,8 +136,7 @@ class GravGroup_Parametrisation(object):
                             "".format(len(l_missing), l_missing))
 
         # Check that no extra keywords arguments is provided.
-        l_unexpected += [arg for arg in kwargs if arg not in (l_mandatory_keywords +
-                                                              l_optional_keywords)]
+        l_unexpected += [arg for arg in kwargs if arg not in (l_mandatory_keywords + l_optional_keywords)]
         if len(l_unexpected) > 0:
             raise TypeError("apply_parametrisation got {} unexpected keyword argument: {}"
                             "".format(len(l_unexpected), l_unexpected))
@@ -211,10 +210,8 @@ class GravGroup_Parametrisation(object):
         star_name = list(self.paramcontainers["stars"].keys())[0]
         self.paramcontainers["stars"][star_name].v0.main = True
         self.paramcontainers["stars"][star_name].v0.unit = "[amplitude of the RV data]"
-        (self.paramcontainers["stars"][star_name].
-         init_RVdrift_parameters)(with_RVdrift=self.parametrisation_kwargs["with_RVdrift"],
-                                  RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order",
-                                                                                None))
+        self.paramcontainers["stars"][star_name].init_RVdrift_parameters(with_RVdrift=self.parametrisation_kwargs.get("with_RVdrift", False),
+                                                                         RVdrift_order=self.parametrisation_kwargs.get("RVdrift_order", None))
 
     def apply_instmodel_parametrisation(self):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""
