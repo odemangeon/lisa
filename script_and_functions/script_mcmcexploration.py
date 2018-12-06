@@ -23,6 +23,8 @@ import source.posterior.core.posterior as cpost
 import source.tools.emcee_tools as et
 import source.tools.mylogger as ml
 
+
+## Definition of the parameters
 obj_name = "WASP-151"  # Change
 model_category = "GravitionalGroups"
 nb_planet = 1
@@ -31,6 +33,8 @@ transit_model = "batman"  # None will select the default model being batman
 parametrisation = "EXOFAST"  # None will select the default parametrisation which is EXOFAST for this model
 with_DeltaRV = True
 kwargs_post = {}
+data_folder = getcwd()  # Change if needed: Folder where the data are located
+run_folder = getcwd()  # Change if needed: Folder where the outputs will be put
 
 # Pre-minimisation parameters
 do_preminimization = True
@@ -57,10 +61,10 @@ logger.info("1. Create a Posterior instance and give it the name of the object s
 post_instance = cpost.Posterior(object_name=obj_name)
 
 logger.info("2. (Facultative) Define the folder where the data regarding this object are stored.")
-post_instance.dataset_db.data_folder = "."  # Change if needed: Folder where the data are located
+post_instance.dataset_db.data_folder = data_folder
 
 logger.info("2. (Facultative) Define the run folder where the config files and outputs will be.")
-post_instance.run_folder = "."  # Change if needed: Folder where the outputs will be put
+post_instance.run_folder = run_folder
 
 logger.info("3. Add datasets from a datasets file.")
 post_instance.load_datasetsfile("datasets.txt")  # Change if needed by the name you gave or want to give to your dataset file.
@@ -129,7 +133,7 @@ p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
                                  init_distrib=init_distrib)
 
 if not load_from_pickle and do_preminimization:
-    logger.info("15. AMOEBA minimization")
+    logger.info("17. AMOEBA minimization")
     p1 = zeros_like(p0)
 
     def lnpostfnminus(p):
@@ -142,7 +146,7 @@ if not load_from_pickle and do_preminimization:
 else:
     p1 = p0
 
-logger.info("17. Perform MCMC exploration")
+logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
            filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), l_param_name=l_param_name, logger=logger4emceerun)
