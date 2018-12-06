@@ -39,7 +39,7 @@ from scipy.stats import mode
 
 
 ## Logger Object
-logger = getLogger()
+logger = getLogger(__name__)
 
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()
@@ -1004,8 +1004,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
         logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
                               mad_lnposterior))
-    l_selected_walker = where(walkers_percentile_lnposterior >
-                              (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
+    l_selected_walker = where(walkers_percentile_lnposterior > (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
@@ -1099,7 +1098,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     :param float last: last portion of the chain to be used in the Geweke diagnostic.
         Default to 0.5 (i.e. last 50 % of the chain)
     :param int intervals: Number of sub-chains to analyze. Defaults to 20.
-    :param int_iteratable l_walker: list of valid walkers
+    :param int_iterable l_walker: list of valid walkers
     """
     nwalker = chains.shape[0]
     ndim = chains.shape[-1]
@@ -1111,23 +1110,30 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
 
     # Compute the start step of the last part of the chain and compute median and MAD of the last
     # part of the chain for each parameter
-    last_start_step = nsteps - int(nsteps * last)
+    nb_step_last = int(nsteps * last)
+    last_start_step = nsteps - nb_step_last
+    logger.info("Number of steps in last portion of the chains for geweke convergence estimate: {}".format(nb_step_last))
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
-    print("l_med_last: {}".format(l_med_last))
+    logger.info("Median value for each parameter (over all specified walkers) in the last portion of"
+                " the chains: {}".format(l_med_last))
     l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     l_mad_last_is0 = [mad_dim == 0.0 for mad_dim in l_mad_last]
     if any(l_mad_last_is0):
         for dim in np.where(l_mad_last_is0)[0]:
-            print("MAD returned 0.0 for parameter number: {}. Compute std.".format(dim))
+            logger.debug("MAD returned 0.0 for parameter number: {}. Compute std.".format(dim))
             l_mad_last[dim] = std(chains[l_walker, last_start_step:, dim])
             if l_mad_last[dim] == 0.0:
                 raise ValueError("MAD and std returned zero for parameter number: {}.".format(dim))
-    print("l_mad_last: {}".format(l_mad_last))
+    logger.info("MAD value for each parameter (over all specified walkers) in the last portion of"
+                " the chains: {}".format(l_mad_last))
 
     # Compute the start steps of all the first parts of the chains that we will use for the Geweke
     # diagnostic (first_start_steps) and length of those first part (first_length).
-    first_start_steps = [int(i * (last_start_step / intervals)) for i in range(intervals)]
     first_length = int(nsteps * first)
+    logger.info("Number of steps in each interval of first portion of the chains: {}".format(first_length))
+    first_start_steps = [int(i * (last_start_step / intervals)) for i in range(intervals)]
+    logger.debug("First step of each interval in the first portion of the chains: {}".format(first_start_steps))
+
     # Then for each parameter and for each walker and for each first part compute the Geweke z-score
     zscores = ones((nwalker, intervals, ndim)) * nan
     for dim, med_last, mad_last in zip(range(ndim), l_med_last, l_mad_last):
