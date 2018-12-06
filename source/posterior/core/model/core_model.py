@@ -344,7 +344,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         else:
             return array([dico_initvals[param_name] for param_name in list_paramnames])
 
-
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.
 
@@ -516,7 +515,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def read_parameter_file(self):
         """Read the content of the parameter file."""
         if self.isdefined_paramfile:
-            exec(open(self.param_file).read())
+            with open(self.param_file) as f:
+                exec(f.read())
             dico = locals().copy()
             dico.pop("self")
             logger.debug("Parameter file read.\nContent of the parameter file: {}"

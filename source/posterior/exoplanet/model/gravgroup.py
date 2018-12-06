@@ -478,7 +478,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     def read_LC_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_LCparamfile:
-            exec(open(self.lc_param_file).read())
+            with open(self.lc_param_file) as f:
+                exec(f.read())
             dico = locals().copy()
             dico.pop("self")
             logger.debug("LC parameter file read.\nContent of the parameter file: {}"
