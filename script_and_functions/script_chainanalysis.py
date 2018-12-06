@@ -55,12 +55,12 @@ chainI = et.ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
 
 logger.info("1. Plot raw traces and lnpost histogram")
 et.plot_chains(chain, lnprobability, l_param_name)
-pl.savefig("./images/traces_raw.png")
+pl.savefig("./images/traces_raw.pdf")
 pl.close("all")
 
 pl.figure()
 pl.hist(lnprobability[:, int(nstep / 2):].flatten(), bins='auto')
-pl.savefig("./images/lnpost_hist_raw.png")
+pl.savefig("./images/lnpost_hist_raw.pdf")
 pl.close("all")
 
 logger.info("2. Select walkers with acceptance_fraction and plot lnpost histogram")
@@ -68,12 +68,12 @@ l_walker_acceptfrac, _ = et.acceptancefraction_selection(acceptance_fraction,
                                                          sig_fact=2, quantile=50, verbose=1)
 # l_walker_acceptfrac = np.arange(nwalker)
 et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_acceptfrac)
-pl.savefig("./images/traces_accfrac_select.png")
+pl.savefig("./images/traces_accfrac_select.pdf")
 pl.close("all")
 
 pl.figure()
 pl.hist(lnprobability[l_walker_acceptfrac, int(nstep / 2):].flatten(), bins='auto')
-pl.savefig("./images/lnpost_hist_accefrac_select.png")
+pl.savefig("./images/lnpost_hist_accefrac_select.pdf")
 pl.close("all")
 
 logger.info("3. Select walkers with ln posterior probability and plot lnpost histogram")
@@ -81,12 +81,12 @@ l_walker_lnpost, _ = et.lnposterior_selection(lnprobability, sig_fact=2, quantil
                                               quantile_walker=90, verbose=1)
 # l_walker_lnpost = np.arange(nwalker)
 et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_lnpost)
-pl.savefig("./images/traces_lnpost_select.png")
+pl.savefig("./images/traces_lnpost_select.pdf")
 pl.close("all")
 
 pl.figure()
 pl.hist(lnprobability[l_walker_lnpost, int(nstep / 2):].flatten(), bins='auto')
-pl.savefig("./images/lnpost_hist_lnpost_select.png")
+pl.savefig("./images/lnpost_hist_lnpost_select.pdf")
 pl.close("all")
 
 logger.info("4. Plot trace after acceptance fraction and ln posterior selection and plot lnpost "
@@ -96,12 +96,12 @@ l_walker = list(set(l_walker_acceptfrac) & set(l_walker_lnpost))
 logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
             "".format((nwalker - len(l_walker)), nwalker))
 et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker)
-pl.savefig("./images/traces_accfrac&lnpost_select.png")
+pl.savefig("./images/traces_accfrac&lnpost_select.pdf")
 pl.close("all")
 
 pl.figure()
 pl.hist(lnprobability[l_walker, int(nstep / 2):].flatten(), bins='auto')
-pl.savefig("./images/lnpost_hist_accfrac&lnpost_select.png")
+pl.savefig("./images/lnpost_hist_accfrac&lnpost_select.pdf")
 pl.close("all")
 
 logger.info("5. Determine convergence and burnin values and plot lnpost histogram")
@@ -113,20 +113,20 @@ l_burnin, l_walker_geweke = et.geweke_selection(zscores, first_steps=first_steps
 
 et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_geweke,
                l_burnin=l_burnin)
-pl.savefig("./images/traces_geweke_select.png")
+pl.savefig("./images/traces_geweke_select.pdf")
 pl.close("all")
 
 pl.figure()
 pl.hist(et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_geweke,
                                l_burnin=l_burnin),
         bins='auto')
-pl.savefig("./images/lnpost_hist_geweke_select.png")
+pl.savefig("./images/lnpost_hist_geweke_select.pdf")
 pl.close("all")
 
 et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_geweke,
                l_burnin=l_burnin, suppress_burnin=True)
 
-pl.savefig("./images/traces_geweke_select_burnsupress.png")
+pl.savefig("./images/traces_geweke_select_burnsupress.pdf")
 pl.close("all")
 
 logger.info("6. Determine best fit values and error bars for main parameters")
@@ -168,7 +168,7 @@ logger.info("7. Do correlation plot for main free parameters")
 corner(et.get_clean_flatchain(chainI, l_walker=l_walker_geweke, l_burnin=l_burnin),
        labels=l_param_chainI, truths=fitted_values)
 
-pl.savefig("./images/corner.png")
+pl.savefig("./images/corner.pdf")
 pl.close("all")
 
 
@@ -178,7 +178,7 @@ et.overplot_data_model(fitted_values, l_param_chainI,
                        post_instance.noisemodels.dataset_db,
                        oversamp=30)
 
-pl.savefig("./images/data_comparison.png")
+pl.savefig("./images/data_comparison.pdf")
 pl.close("all")
 
 planet_name = []
@@ -197,7 +197,7 @@ et.overplot_data_model(fitted_values, l_param_chainI,
                                          "P": periods,
                                          "tc": tcs})
 
-pl.savefig("./images/data_comparison_pholded.png")
+pl.savefig("./images/data_comparison_pholded.pdf")
 pl.close("all")
 
 logger.info("9. Determine best fit values and error bars for secondary parameters")
@@ -224,11 +224,11 @@ chainIsec, l_param_name_sec = cv.get_secondary_chains(post_instance.model, chain
                                                       #                       "error": 64}
                                                                    })
 et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
-pl.savefig("./images/traces_secondary_raw.png")
+pl.savefig("./images/traces_secondary_raw.pdf")
 pl.close("all")
 
 et.plot_chains(chainIsec, lnprobability, l_param_name_sec, l_walker=l_walker_geweke)
-pl.savefig("./images/traces_secondary_geweke_select.png")
+pl.savefig("./images/traces_secondary_geweke_select.pdf")
 pl.close("all")
 
 fitted_values_sec = et.get_fitted_values(chainIsec, method="median", l_param_name=l_param_name_sec,
@@ -296,5 +296,5 @@ logger.info("11. Do correlation plot for secondary free parameters")
 # In this case there is nan values in the D14 and D23 chains and it makes corner crash
 corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_geweke, l_burnin=l_burnin),
        labels=l_param_name_sec, truths=fitted_values_sec)
-pl.savefig("./images/corner_sec.png")
+pl.savefig("./images/corner_sec.pdf")
 pl.close("all")

@@ -17,7 +17,7 @@ from source.tools.emcee_tools import read_chaindatfile, plot_chains
 # Argument parsing
 parser = argparse.ArgumentParser()
 parser.add_argument("chain_datfile", help="Path to the chain.dat file.", type=str)
-parser.add_argument("--outfile", help="Path of the output file containing the trace plot.", type=str, default="trace_plot.png")
+parser.add_argument("--outfile", help="Path of the output file containing the trace plot.", type=str, default="trace_plot.pdf")
 args = parser.parse_args()
 
 # Get current date and time

@@ -36,8 +36,9 @@ xtol_preminimization = 1e-12
 
 # emcee parameters
 nwalker_fact = 2.5
-nsteps_MCMC = 100000
+nsteps_MCMC = 10000
 save_to_file = True
+cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
@@ -94,7 +95,10 @@ logger.info("13. Create posterior functions")
 post_instance.get_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
-logger.info("14. Create sampler")
+logger.info("14. Save posterior instance")
+post_instance.save_post_instance()
+
+logger.info("15. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
 lnpostfn = post_instance.lnposteriors.dataset_db["all"].function
 arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
@@ -103,7 +107,7 @@ lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
 sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn)
 
-logger.info("15. Create initial value")
+logger.info("16. Create initial value")
 if load_from_pickle:
     logger.info("0. Load from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
@@ -129,11 +133,10 @@ else:
     p1 = p0
 
 logger.info("17. Perform MCMC exploration")
+logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
            filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), l_param_name=l_param_name, logger=logger)
-
 et.save_emceesampler(sampler, l_param_name, obj_name)
-post_instance.save_post_instance()
 
 chain = sampler.chain
 lnprobability = sampler.lnprobability
