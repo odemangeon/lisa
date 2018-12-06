@@ -395,7 +395,7 @@ class PolarPrior(Core_JointPrior_Function):
 
         r = mt.sqrt(x * x + y * y)
         theta = mt.atan2(y, x)
-        return dico_logpdf["x"](x) + dico_logpdf["y"](y)
+        return dico_logpdf["r"](r) + dico_logpdf["theta"](theta)
 
     def ravs(self, nb_values=1):
         """Return values of the parameters drawn from the joint prior.
