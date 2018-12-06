@@ -8,7 +8,7 @@ import numpy as np
 # instruments LC
 K2 = {'default': {'jitter': {'free': True,
                              'value': None,  # unit: None
-                             'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                             'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                        'joint_prior_ref': None
                                        }
                              },
@@ -21,7 +21,7 @@ K2 = {'default': {'jitter': {'free': True,
 
 EulerCam = {'default': {'jitter': {'free': True,
                                    'value': None,  # unit: None
-                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                              'joint_prior_ref': None
                                              }
                                    },
@@ -34,14 +34,14 @@ EulerCam = {'default': {'jitter': {'free': True,
 
 IAC80 = {'default0': {'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                            'joint_prior_ref': None
                                            }
                                  },
                       },
          'default1': {'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                            'joint_prior_ref': None
                                            }
                                  },
@@ -54,7 +54,7 @@ IAC80 = {'default0': {'jitter': {'free': True,
 
 TRAPPIST = {'default': {'jitter': {'free': True,
                                    'value': None,  # unit: None
-                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                              'joint_prior_ref': None
                                              }
                                    },
@@ -75,7 +75,7 @@ SOPHIE = {'default': {'DeltaRV': {'free': False,
                                   },
                       'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                 'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                            'joint_prior_ref': None
                                            }
                                  },
@@ -91,13 +91,13 @@ SOPHIE = {'default': {'DeltaRV': {'free': False,
 
 CORALIE = {'default': {'DeltaRV': {'free': True,
                                    'value': None,  # unit: [amplitude of the RV data]
-                                   'prior': {'category': 'normal', 'args': {'mu': -0.1, 'sigma': 0.05},
+                                   'prior': {'category': 'normal', 'args': {'mu': 0.1, 'sigma': 0.05},
                                              'joint_prior_ref': None
                                              }
                                    },
                        'jitter': {'free': True,
                                   'value': None,  # unit: None
-                                  'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1},
+                                  'prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [-1, 1]},
                                             'joint_prior_ref': None
                                             }
                                   },

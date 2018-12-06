@@ -23,14 +23,16 @@ import source.posterior.core.posterior as cpost
 import source.tools.emcee_tools as et
 import source.tools.mylogger as ml
 
+## Definition of the parameters
 obj_name = "WASP-151"
 model_category = "GravitionalGroups"
 nb_planet = 1
 parametrisation = "EXOFAST"
 kwargs_post = {}
+data_folder = "./data/"
 
 # Pre-minimisation parameters
-do_preminimization = True
+do_preminimization = False
 N_maxiter_preminimization = 100
 xtol_preminimization = 1e-12
 
@@ -54,7 +56,7 @@ logger.info("1. Create a Posterior instance and give it the name of the object s
 post_instance = cpost.Posterior(object_name=obj_name)
 
 logger.info("2. (Facultative) Define the folder where the data regarding this object are stored.")
-post_instance.dataset_db.data_folder = "./data/"
+post_instance.dataset_db.data_folder = data_folder
 
 logger.info("2. (Facultative) Define the run folder where the config files and outputs will be.")
 post_instance.run_folder = getcwd()
@@ -119,7 +121,7 @@ p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
                                  init_distrib=init_distrib)
 
 if not load_from_pickle and do_preminimization:
-    logger.info("16. AMOEBA minimization")
+    logger.info("17. AMOEBA minimization")
     p1 = zeros_like(p0)
 
     def lnpostfnminus(p):
@@ -132,10 +134,10 @@ if not load_from_pickle and do_preminimization:
 else:
     p1 = p0
 
-logger.info("17. Perform MCMC exploration")
+logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
-           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), l_param_name=l_param_name, logger=logger)
+           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), l_param_name=l_param_name, logger=logger4emceerun)
 et.save_emceesampler(sampler, l_param_name, obj_name)
 
 chain = sampler.chain
