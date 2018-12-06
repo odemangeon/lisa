@@ -31,7 +31,7 @@ from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments
                                                   par_vec_name, key_param, add_argskwargs_argument, argskwargs,
                                                   add_nonparam_argument)
 from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ....tools.convert import getecc_fast, getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ....tools.convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
 
 ## Logger object
 logger = getLogger()
@@ -430,24 +430,24 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     param_planets_reb = "["
     if parametrisation == "Standard":
         template_param_conv = """
-        {tab}ecc_{planet} = getecc_fast({secosw}, {sesinw})
-        {tab}omega_{planet} = getomega_fast({secosw}, {sesinw})
+        {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})
+        {tab}omega_{planet} = getomega_fast({ecosw}, {esinw})
         {tab}MeanAnomaly_{planet} = getMref_4_tic_fast({tic}, {P}, ecc_{planet}, omega_{planet}, {t_ref})
         """
         template_param_conv = dedent(template_param_conv)
-        ldict["getecc_fast"] = getecc_fast
+        ldict["sqrt"] = np.sqrt
         ldict["getomega_fast"] = getomega_fast
         ldict["getMref_4_tic_fast"] = getMref_4_tic_fast
         params_whole = {}
         for planet in planets.values():
-            l_param = [planet.M, planet.P, planet.secosw, planet.sesinw, planet.inc, planet.OMEGA,
+            l_param = [planet.M, planet.P, planet.ecosw, planet.esinw, planet.inc, planet.OMEGA,
                        planet.tic]
             for param in l_param:
                 params_whole[param.get_name()] = add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
                                                                     param_nb=param_nb, key_arglist=key_whole,
                                                                     param_vector_name=par_vec_name)[key_whole]
-            param_conv += template_param_conv.format(planet=planet.get_name(), secosw=params_whole["secosw"],
-                                                     sesinw=params_whole["secosw"], tic=params_whole["tic"],
+            param_conv += template_param_conv.format(planet=planet.get_name(), ecosw=params_whole["ecosw"],
+                                                     esinw=params_whole["esinw"], tic=params_whole["tic"],
                                                      P=params_whole["P"], t_ref=time_ref_dyn, tab=tab)
             param_planets_reb += ", ".join([params_whole["M"], params_whole["P"], "ecc_{}".format(planet.get_name()),
                                             params_whole["inc"], params_whole["OMEGA"], "omega_{}".format(planet.get_name()),
