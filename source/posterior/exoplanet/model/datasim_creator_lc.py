@@ -6,22 +6,19 @@ Datasim creator LC module.
 from logging import getLogger
 from textwrap import dedent
 from copy import deepcopy
-from math import acos, degrees, sqrt, atan2
+from math import acos, degrees, sqrt
 
 from batman import TransitModel, TransitParams
 # from pytransit import MandelAgol
 
-# from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
 from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
                                                             l_time_vec, add_timeref_arguments,
                                                             time_ref, l_time_ref)
-# from ...core.dataset_and_instrument.instrument import Instrument_Model
-# from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
                                                   par_vec_name, add_argskwargs_argument, argskwargs)
-from ....tools.convert import getaoverr
+from ....tools.convert import getaoverr, getomega_fast, getomega_deg_fast
 
 
 ## Logger object
@@ -162,7 +159,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     if transit_model == "batman":
         template_preambule_pl += """
-        {tab}omega_{planet} = degrees(atan2({esinw}, {ecosw}))
+        {tab}omega_{planet} = getomega_deg_fast({esinw}, {ecosw})
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
 
         for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
@@ -219,7 +216,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         """
     else:
         template_preambule_pl += """
-        {tab}omega_{planet} = atan2({esinw}, {ecosw})
+        {tab}omega_{planet} = getomega_fast({esinw}, {ecosw})
         {tab}inc_{planet} = acos({cosinc})
         """
     template_preambule_pl = dedent(template_preambule_pl)
@@ -483,9 +480,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         # Finalise the  text of planet LC simulator function
         if argskwargs not in arguments:
             arguments = add_argskwargs_argument(arguments)
-        text_def_func[planet.get_name()] = (template_function.
-                                      format(object=planet.get_name(), preambule=preambule_planet,
-                                             arguments=arguments, returns=returns_pl, tab=tab))
+        text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(), preambule=preambule_planet,
+                                                                     arguments=arguments, returns=returns_pl,
+                                                                     tab=tab))
         logger.debug("text of {object} LC simulator function :\n{text_func}"
                      "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
 
@@ -507,15 +504,16 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
         ldict["sqrt"] = sqrt
-        ldict["atan2"] = atan2
         ldict["acos"] = acos
         if parametrisation == "Multis":
             ldict["getaoverr"] = getaoverr
         if transit_model == "batman":
             if not(has_dataset):
                 ldict["TransitModel"] = TransitModel
+            ldict["getomega_deg_fast"] = getomega_deg_fast
             ldict["degrees"] = degrees
         else:
+            ldict["getomega_fast"] = getomega_fast
             ldict["m"] = m_pytransit
         logger.debug("text of {object} LC simulator function :\n{text_func}"
                      "".format(object=obj_key, text_func=text_def_func[obj_key]))
