@@ -84,7 +84,7 @@ do_MComp_Folded = True
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
 load_from_pickle = False
-exploration_output_folder = getcwd()
+exploration_output_folder = join(getcwd(), "outputs/exploration")
 exploration_pickle_folder = join(exploration_output_folder, "pickles")
 
 ## logger
