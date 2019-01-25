@@ -1342,29 +1342,43 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
 
 
 def load_emceesampler(obj_name, folder="."):
-    """Save Emcee sampler elements."""
+    """Save Emcee sampler elements.
+
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param str folder:
+    """
+    if folder is None:
+        folder = getcwd()
 
     # Save chain in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["chain"]), "rb") as fchain:
+    with open(join(folder, "{}{}".format(obj_name, extension_pickle["chain"])), "rb") as fchain:
         chain = load(fchain)
 
     # Save lnprobability in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["lnpost"]), "rb") as flnprob:
+    with open(join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])), "rb") as flnprob:
         lnprobability = load(flnprob)
 
     # Save acceptance_fraction in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["acceptfrac"]), "rb") as faccfrac:
+    with open(join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])), "rb") as faccfrac:
         acceptance_fraction = load(faccfrac)
 
     # Save l_param_name in a pickle
-    with open("{}{}".format(obj_name, extension_pickle["l_param_name"]), "rb") as flparam:
+    with open(join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])), "rb") as flparam:
         l_param_name = load(flparam)
 
     return chain, lnprobability, acceptance_fraction, l_param_name
 
 
-def load_chain_analysis(obj_name, folder="."):
-    """Save Emcee sampler elements."""
+def load_chain_analysis(obj_name, folder=None):
+    """Save Emcee sampler elements.
+
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param str folder:
+    """
+    if folder is None:
+        folder = getcwd()
 
     # load df_fittedval from a pickle
     file_df_fittedval = "{}{}".format(obj_name, extension_pickle["df_fittedval"])
