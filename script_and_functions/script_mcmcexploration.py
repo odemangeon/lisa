@@ -9,6 +9,7 @@ import sys
 from logging import DEBUG, INFO
 from math import ceil
 from os import getcwd
+from os.path import join
 
 from scipy.optimize import minimize
 from numpy import zeros_like
@@ -35,6 +36,9 @@ with_DeltaRV = True
 kwargs_post = {}
 data_folder = getcwd()  # Change if needed: Folder where the data are located
 run_folder = getcwd()  # Change if needed: Folder where the outputs will be put
+exploration_output_folder = join(getcwd(), "outputs/chain_analysis")
+exploration_pickle_folder = join(exploration_output_folder, "pickles")
+dat_folder = join(exploration_output_folder, "dats")
 
 # Pre-minimisation parameters
 do_preminimization = True
@@ -149,8 +153,8 @@ else:
 logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
-           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), l_param_name=l_param_name, logger=logger4emceerun)
-et.save_emceesampler(sampler, l_param_name, obj_name)
+           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=dat_folder, l_param_name=l_param_name, logger=logger4emceerun)
+et.save_emceesampler(sampler, l_param_name, obj_name, folder=dat_folder)
 
 chain = sampler.chain
 lnprobability = sampler.lnprobability

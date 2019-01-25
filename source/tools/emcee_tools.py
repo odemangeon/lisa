@@ -20,6 +20,7 @@ from collections import OrderedDict  # defaultdict
 from tqdm import tqdm
 from PyAstronomy.pyasl import foldAt
 from dill import dump, load
+from os import makedirs, getcwd
 from os.path import isfile, join
 from pandas import read_table
 # import pprint
@@ -148,9 +149,24 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
 
 
 def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
-            filename_acceptfrac="acceptfrac.dat", overwrite=None, l_param_name=None, logger=None):
+            filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
+            logger=None):
+    """Perform an emcee exploration.
+
+    :param emcee.EnsembleSampler sampler: EnsembleSampler instance
+    :param array p0: Initial position for each walker and each parameter
+    :param bool save_to_file: If True the status of the chains are stored at each iteration in .dat files
+    :param str filename_chain: File name to use to save the chains (if save_to_file is True)
+    :param str filename_acceptfrac: File name to use to save the acceptance fraction of the chains (if save_to_file is True)
+    :param str dat_folder: Folder where the chain and acceptance fraction dat file will be (if save_to_file is True)
+    :param bool overwrite: If True already existing .dat files with the same names are automatically overwritten
+    :param list_of_str l_param_name: List of the parameter names
+    """
     if save_to_file:
-        for filename, cat in [(filename_chain, "chain"), (filename_acceptfrac, "acceptfrac")]:
+        makedirs(dat_folder, exist_ok=True)
+        file_chain = join(dat_folder, filename_chain)
+        file_acceptfrac = join(dat_folder, filename_acceptfrac)
+        for filename, cat in [(file_chain, "chain"), (file_acceptfrac, "acceptfrac")]:
             if isfile(filename):
                 if overwrite is None:
                     l_reponses_possibles = ["y", "n"]
@@ -1266,8 +1282,18 @@ def pickle_stuff(stuff, filename):
         dump(stuff, fpickle)
 
 
-def save_emceesampler(sampler, l_param_name=None, obj_name=""):
-    """Save Emcee sampler elements."""
+def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
+    """Save Emcee EnsembleSampler instance elements into pickle files.
+
+    :param emcee.EnsembleSampler sampler: EnsembleSampler instance to save
+    :param list_of_str l_param_name: list of the parameter names
+    :param str obj_name: Object name
+    :param str folder: Folder where to put the pickle files
+    """
+    if folder is None:
+        folder = getcwd()
+    else:
+        makedirs(folder, exist_ok=True)
 
     # Save chain in a pickle
     pickle_stuff(sampler.chain, "{}{}".format(obj_name, extension_pickle["chain"]))
