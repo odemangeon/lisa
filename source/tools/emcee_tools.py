@@ -1296,28 +1296,32 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
         makedirs(folder, exist_ok=True)
 
     # Save chain in a pickle
-    pickle_stuff(sampler.chain, "{}{}".format(obj_name, extension_pickle["chain"]))
+    pickle_stuff(sampler.chain, join(folder, "{}{}".format(obj_name, extension_pickle["chain"])))
 
     # Save lnprobability in a pickle
-    pickle_stuff(sampler.lnprobability, "{}{}".format(obj_name, extension_pickle["lnpost"]))
+    pickle_stuff(sampler.lnprobability, join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])))
 
     # Save acceptance_fraction in a pickle
-    pickle_stuff(sampler.acceptance_fraction, "{}{}".format(obj_name, extension_pickle["acceptfrac"]))
+    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])))
 
     # Save l_param_name in a pickle
     if l_param_name is not None:
-        pickle_stuff(l_param_name, "{}{}".format(obj_name, extension_pickle["l_param_name"]))
+        pickle_stuff(l_param_name, join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])))
 
 
-def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None):
+def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
     """Save chain analysis results.
 
     TODO: Update to use pickle_stuff
     """
+    if folder is None:
+        folder = getcwd()
+    else:
+        makedirs(folder, exist_ok=True)
 
     # Save df_fittedval in a pickle
     if df_fittedval is not None:
-        with open("{}{}".format(obj_name, extension_pickle["df_fittedval"]), "wb") as fdffitval:
+        with open(join(folder, "{}{}".format(obj_name, extension_pickle["df_fittedval"])), "wb") as fdffitval:
             dump(df_fittedval, fdffitval)
 
     # Save fitted_values in a pickle
@@ -1325,7 +1329,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open("{}{}".format(obj_name, extension_pickle["fitted_values"]), "wb") as ffitval:
+        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values"])), "wb") as ffitval:
             dump(fitted_values, ffitval)
 
     # Save fitted_values in a pickle
@@ -1333,7 +1337,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open("{}{}".format(obj_name, extension_pickle["fitted_values_sec"]), "wb") as ffitvals:
+        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])), "wb") as ffitvals:
             dump(fitted_values_sec, ffitvals)
 
 

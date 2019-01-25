@@ -32,7 +32,11 @@ from source.tools.chain_interpreter import ChainsInterpret
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
 kwargs_datasim = {}
-images_folder = getcwd()
+
+chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
+plot_folder = join(chain_analysis_output_folder, "plots")
+chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
+table_folder = join(chain_analysis_output_folder, "tables")
 
 # Raw chains and hist plots
 do_RP = True  # Do chain plot and histogram plot for raw chains
@@ -74,12 +78,14 @@ do_corner = True
 
 # Do model comparison
 do_MComp = True
+do_MComp_Folded = True
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
 load_from_pickle = False
-pickle_folder = getcwd()  # Change if needed: Folder where the pickle files are located
+exploration_output_folder = getcwd()
+exploration_pickle_folder = join(exploration_output_folder, "pickles")
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -91,10 +97,10 @@ if load_from_pickle:
     logger.info("0. Load from pickle")
     # recreate post_instance object
     post_instance = cpost.Posterior(object_name=obj_name)
-    post_instance.init_from_pickle()
+    post_instance.init_from_pickle(pickle_folder=exploration_pickle_folder)
     l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
     chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name,
-                                                                                   folder=pickle_folder)
+                                                                                   folder=exploration_pickle_folder)
     print("l_param_name from posterior:\n{}".format(l_param_name_bis))
     print("l_param_name from pickle:\n{}".format(l_param_name))
 
@@ -106,12 +112,12 @@ chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     et.plot_chains(chain, lnprobability, l_param_name)
-    pl.savefig(join(images_folder, "traces_raw.pdf"))
+    pl.savefig(join(plot_folder, "traces_raw.pdf"))
     pl.close("all")
 
     pl.figure()
     pl.hist(lnprobability[:, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(images_folder, "lnpost_hist_raw.pdf"))
+    pl.savefig(join(plot_folder, "lnpost_hist_raw.pdf"))
     pl.close("all")
 
 
@@ -121,12 +127,12 @@ if do_AFS:
                                                       verbose=verbose_AFS)
     # l_walker_acceptfrac = np.arange(nwalker)
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_AFS)
-    pl.savefig(join(images_folder, "traces_accfrac_select.pdf"))
+    pl.savefig(join(plot_folder, "traces_accfrac_select.pdf"))
     pl.close("all")
 
     pl.figure()
     pl.hist(lnprobability[l_walker_AFS, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(images_folder, "lnpost_hist_accefrac_select.pdf"))
+    pl.savefig(join(plot_folder, "lnpost_hist_accefrac_select.pdf"))
     pl.close("all")
 else:
     l_walker_AFS = np.arange(nwalker)
@@ -138,12 +144,12 @@ if do_LPS:
                                                quantile_walker=quantile_walker_LPS, verbose=verbose_LPS)
     # l_walker_lnpost = np.arange(nwalker)
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_LPS)
-    pl.savefig(join(images_folder, "traces_lnpost_select.pdf"))
+    pl.savefig(join(plot_folder, "traces_lnpost_select.pdf"))
     pl.close("all")
 
     pl.figure()
     pl.hist(lnprobability[l_walker_LPS, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(images_folder, "lnpost_hist_lnpost_select.pdf"))
+    pl.savefig(join(plot_folder, "lnpost_hist_lnpost_select.pdf"))
     pl.close("all")
 else:
     l_walker_LPS = np.arange(nwalker)
@@ -156,12 +162,12 @@ if do_AFSLPSP:
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker)
-    pl.savefig(join(images_folder, "traces_accfrac&lnpost_select.pdf"))
+    pl.savefig(join(plot_folder, "traces_accfrac&lnpost_select.pdf"))
     pl.close("all")
 
     pl.figure()
     pl.hist(lnprobability[l_walker, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(images_folder, "lnpost_hist_accfrac&lnpost_select.pdf"))
+    pl.savefig(join(plot_folder, "lnpost_hist_accfrac&lnpost_select.pdf"))
     pl.close("all")
 
 if do_GS:
@@ -211,20 +217,20 @@ if do_GS:
 
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
                    l_burnin=l_burnin)
-    pl.savefig(join(images_folder, "traces_geweke_select.pdf"))
+    pl.savefig(join(plot_folder, "traces_geweke_select.pdf"))
     pl.close("all")
 
     pl.figure()
     pl.hist(et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_conv,
                                    l_burnin=l_burnin),
             bins='auto')
-    pl.savefig(join(images_folder, "lnpost_hist_geweke_select.pdf"))
+    pl.savefig(join(plot_folder, "lnpost_hist_geweke_select.pdf"))
     pl.close("all")
 
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
                    l_burnin=l_burnin, suppress_burnin=True)
 
-    pl.savefig(join(images_folder, "traces_geweke_select_burnsupress.pdf"))
+    pl.savefig(join(plot_folder, "traces_geweke_select_burnsupress.pdf"))
     pl.close("all")
 else:
     l_walker_conv = l_walker
@@ -244,11 +250,10 @@ if do_bestfit:
     df_fittedval = pd.DataFrame(index=l_param_chainI, data={'value': fitted_values, 'sigma-': sigma_m,
                                                             'sigma+': sigma_p})
 
-    et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values,
-                                                    "l_param": l_param_chainI},
-                           df_fittedval=df_fittedval)
+    et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+                           df_fittedval=df_fittedval, folder=chain_analysis_pickle_folder)
 
-    et.write_latex_table("{}_latex_parameter_table.tex".format(obj_name), df_fittedval, obj_name)
+    et.write_latex_table(join(table_folder, "{}_latex_parameter_table.tex".format(obj_name)), df_fittedval, obj_name)
 
 
 if do_corner:
@@ -256,7 +261,7 @@ if do_corner:
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_conv, l_burnin=l_burnin),
            labels=l_param_chainI, truths=fitted_values)
 
-    pl.savefig(join(images_folder, "corner.pdf"))
+    pl.savefig(join(plot_folder, "corner.pdf"))
     pl.close("all")
 
 
@@ -269,29 +274,30 @@ if do_MComp:
                            model_instance=post_instance.model,
                            oversamp=30)
 
-    pl.savefig(join(images_folder, "data_comparison.pdf"))
+    pl.savefig(join(plot_folder, "data_comparison.pdf"))
     pl.close("all")
 
-# planet_name = []
-# periods = {}
-# tics = {}
-# for planet in post_instance.model.planets.values():
-#     planet_name.append(planet.get_name())
-#     periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
-#     tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
-#
-# et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
-#                        datasim_dbf=post_instance.datasimulators,
-#                        # datasim_kwargs=dict(tref_dyn=tref_dyn),
-#                        dataset_db=post_instance.dataset_db,
-#                        model_instance=post_instance.model,
-#                        oversamp=30, phasefold=True,
-#                        phasefold_kwargs={"planets": list(periods.keys()),
-#                                          "P": periods.values(),
-#                                          "tc": tics.values()})
-#
-# pl.savefig("./images/data_comparison_pholded.png")
-# pl.close("all")
+    if do_MComp_Folded:
+        planet_name = []
+        periods = {}
+        tics = {}
+        for planet in post_instance.model.planets.values():
+            planet_name.append(planet.get_name())
+            periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
+            tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
+
+        et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
+                               datasim_dbf=post_instance.datasimulators,
+                               # datasim_kwargs=dict(tref_dyn=tref_dyn),
+                               dataset_db=post_instance.dataset_db,
+                               model_instance=post_instance.model,
+                               oversamp=30, phasefold=True,
+                               phasefold_kwargs={"planets": list(periods.keys()),
+                                                 "P": periods.values(),
+                                                 "tc": tics.values()})
+
+        pl.savefig(join(plot_folder, "data_comparison_pholded.png"))
+        pl.close("all")
 #
 # logger.info("9. Determine best fit values and error bars for secondary parameters")
 # # Compute other parameters

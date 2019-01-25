@@ -414,7 +414,12 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     _extension_postinstance = "_posterior_instance.pk"
 
-    def save_post_instance(self):
+    def save_post_instance(self, pickle_folder=".", pickle_filename=None):
+        """Save the instance (the constituent of the instance) into a pickle file.
+
+        :param str pickle_folder: path to the folder containing the pickle file.
+        :param str pickle_filename: Name of the posterior instance pickle file
+        """
         # strcture to store the informations about the Posterior instance
         dico = {}
         dico["object_name"] = self.object_name
@@ -426,12 +431,21 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         dico["model_auto_init_kwargs"] = self.model.automatic_init_kwargs
 
         # Save it to a pickle
-        with open("{}{}".format(self.object_name, self._extension_postinstance), "wb") as fpostinst:
+        if pickle_filename is None:
+            pickle_filename = "{}{}".format(self.object_name, self._extension_postinstance)
+        with open(join(pickle_folder, pickle_filename), "wb") as fpostinst:
             dump(dico, fpostinst)
 
-    def init_from_pickle(self):
+    def init_from_pickle(self, pickle_folder=".", pickle_filename=None):
+        """Initialize the instance from the post_instance pickle file produced with save_post_instance.
+
+        :param str pickle_folder: path to the folder containing the pickle file.
+        :param str pickle_filename: Name of the posterior instance pickle file
+        """
         # load the dictionary
-        with open("{}{}".format(self.object_name, self._extension_postinstance), "rb") as fdico:
+        if pickle_filename is None:
+            pickle_filename = "{}{}".format(self.object_name, self._extension_postinstance)
+        with open(join(pickle_folder, pickle_filename), "rb") as fdico:
             dico = load(fdico)
 
         # post_instance = Posterior(object_name=dico["object_name"])
