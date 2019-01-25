@@ -172,8 +172,6 @@ if do_AFSLPSP:
 
 if do_GS:
     logger.info("5. Determine convergence and burnin values and plot lnpost histogram")
-    first_perc_GS = 50  # Percentage of the chains used in each intervals to address convergence
-    interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
     last_step = nstep * last_perc_GS / 100
     if last_step < last_min_GS:
         last_step = last_min_GS
