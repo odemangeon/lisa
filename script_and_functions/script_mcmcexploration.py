@@ -111,7 +111,7 @@ post_instance.get_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
 logger.info("14. Save posterior instance")
-post_instance.save_post_instance()
+post_instance.save_post_instance(pickle_folder=exploration_pickle_folder)
 
 logger.info("15. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
