@@ -8,8 +8,8 @@ Script template to perform an MCMC exploration.
 import sys
 from logging import DEBUG, INFO
 from math import ceil
-from os import getcwd
-from os.path import join
+from os import getcwd, makedirs
+from os.path import join, isdir
 
 from scipy.optimize import minimize
 from numpy import zeros_like
@@ -36,9 +36,12 @@ with_DeltaRV = True
 kwargs_post = {}
 data_folder = getcwd()  # Change if needed: Folder where the data are located
 run_folder = getcwd()  # Change if needed: Folder where the outputs will be put
-exploration_output_folder = join(getcwd(), "outputs/chain_analysis")
+exploration_output_folder = join(getcwd(), "outputs/exploration")
+makedirs(exploration_output_folder, exist_ok=True)
 exploration_pickle_folder = join(exploration_output_folder, "pickles")
+makedirs(exploration_pickle_folder, exist_ok=True)
 dat_folder = join(exploration_output_folder, "dats")
+makedirs(dat_folder, exist_ok=True)
 
 # Pre-minimisation parameters
 do_preminimization = True
@@ -75,18 +78,18 @@ post_instance.load_datasetsfile("datasets.txt")  # Change if needed by the name 
 
 logger.info("4. Add a model")
 post_instance.define_model(category=model_category, name=obj_name, stars=1, planets=nb_planet,
-                           parametrisation=parametrisation, rv_model=rv_model, transit_model=transit_model)
+                           rv_model=rv_model, transit_model=transit_model)
 
-logger.info("5. Create and modify LC parameter file")
-post_instance.model.create_LC_param_file(paramfile_path="LC_param_file.py")
+logger.info("5. Create inst_cat specific parameter file")
+post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
-input("Modifiy the LC paramerisation file")
+input("Modifiy the inst_cat specific paramerisation file: {}".format(post_instance.model.paramfile4instcat))
 
-logger.info("6. Load the paramerisation file")
-post_instance.model.load_LC_param_file()
+logger.info("6. Load inst_cat specific parameter file")
+post_instance.model.load_instcat_paramfile()
 
-logger.info("7. Apply a parametrisation to the model")
-post_instance.model.apply_parametrisation(with_DeltaRV=with_DeltaRV)
+logger.info("7. Set parametrisation of the model")
+post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV)
 
 logger.info("8. Create and modify the paramerisation file")
 post_instance.model.create_parameter_file("param_file.py")

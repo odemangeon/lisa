@@ -29,7 +29,7 @@ logger = getLogger()
 mgr_LD = Manager_LD()
 
 
-class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):
+class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):  # GravGroupDyn_Parametrisation has to be before GravGroup to overriding GravGroup_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string

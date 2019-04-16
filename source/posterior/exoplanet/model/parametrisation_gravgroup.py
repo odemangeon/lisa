@@ -9,6 +9,7 @@ from logging import getLogger
 
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
+from ...core.model.core_parametrisation import Core_Parametrisation
 
 
 ## Logger Object
@@ -18,35 +19,12 @@ logger = getLogger()
 # TODO: At one point, it might be usefull to make a Core_Parametrisation class
 
 
-class GravGroup_Parametrisation(object):
+class GravGroup_Parametrisation(Core_Parametrisation):
     """docstring for the interface class GravGroup_Parametrisation."""
 
-    @property
-    def available_parametrisations(self):
+    def add_available_parametrisations(self):
         """List of the available parametrisation."""
-        return ["EXOFAST", "Multis"]
-
-    @property
-    def parametrisation(self):
-        """Dictionary defining the available parametrisation and their apply functions."""
-        return self.__parametrisation
-
-    # TODO: If I do a Core_Parametrisation Class, this should go there
-    @parametrisation.setter
-    def parametrisation(self, value=None):
-        """Set the parametrisation to use."""
-        # If no parametrisation is provided I chose what I think is best.
-        if value is None:
-            self.__parametrisation = self._choose_default_parametrisation()
-            logger.info("No parametrisation provided. The automatically selected parametrisation is"
-                        ": {}".format(self.__parametrisation))
-        # If a parametrisation is provided, I check that it's an available one and a valid one given
-        # the circumstances (number of planets).
-        else:
-            self._check_availability_parametrisation(value)
-            self._check_validity_parametrisation(value)
-            self.__parametrisation = value
-        logger.info("The parametrisation has been set: {}".format(self.__parametrisation))
+        return self.available_parametrisations.extend(["EXOFAST", "Multis"])
 
     def _choose_default_parametrisation(self):
         """Return the best parametrisation when no choice is made by the user."""
@@ -55,20 +33,6 @@ class GravGroup_Parametrisation(object):
         else:
             return "EXOFAST"
 
-    # TODO: If I do a Core_Parametrisation Class, this should go there
-    def _check_availability_parametrisation(self, parametrisation):
-        """Check that the parametrisation requested is in the list of available parametrisations.
-
-        If not raise ValueError
-
-        :param str parametrisation: String which designate the parametrisation. Should be in
-            self.available_parametrisations
-        """
-        if parametrisation not in self.available_parametrisations:
-            raise ValueError("{} is not in the list of available parametrisation ({})"
-                             "".format(parametrisation, self.available_parametrisations))
-
-    # TODO: If I do a Core_Parametrisation Class, this should go there
     def _check_validity_parametrisation(self, parametrisation):
         """Check that the parametrisation requested is valid for the current model.
 
@@ -79,15 +43,6 @@ class GravGroup_Parametrisation(object):
             self.available_parametrisations
         """
         pass
-
-    @property
-    def parametrisation_kwargs(self):
-        """Dictionary giving the keyword arguments of the apply_parametrisation method."""
-        try:
-            return self.__parametrisation_kwargs
-        except:
-            self.__parametrisation_kwargs = {}
-            return self.__parametrisation_kwargs
 
     def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation pointed by the parametrisation property."""
@@ -235,8 +190,3 @@ class GravGroup_Parametrisation(object):
             for LD_parcont in self.get_list_LD_parconts():
                 for param in LD_parcont.get_list_params():
                     param.main = True
-
-    def save_parametrisation_kwargs(self, **kwargs):
-        """Save the keyword arguments of the parmetrisation function in parametrisation_kwargs."""
-        for key, value in kwargs.items():
-            self.parametrisation_kwargs[key] = value

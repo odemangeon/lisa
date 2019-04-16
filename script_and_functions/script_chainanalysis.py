@@ -7,7 +7,7 @@ Script template to analysis the chains obtained during the MCMC exploration
 """
 import sys
 from logging import DEBUG, INFO
-from os import getcwd
+from os import getcwd, makedirs
 from os.path import join
 
 from corner import corner
@@ -34,9 +34,13 @@ obj_name = "WASP-151"  # Change
 kwargs_datasim = {}
 
 chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
+makedirs(chain_analysis_output_folder, exist_ok=True)
 plot_folder = join(chain_analysis_output_folder, "plots")
+makedirs(plot_folder, exist_ok=True)
 chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
+makedirs(chain_analysis_pickle_folder, exist_ok=True)
 table_folder = join(chain_analysis_output_folder, "tables")
+makedirs(table_folder, exist_ok=True)
 
 # Raw chains and hist plots
 do_RP = True  # Do chain plot and histogram plot for raw chains

@@ -38,7 +38,7 @@ from .datasim_creator_lc import create_datasimulator_LC
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
-from ...core.model.core_model import Core_Model
+from ...core.model.core_model import Core_Model, create_key, load_key
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
 
@@ -53,7 +53,7 @@ logger = getLogger()
 mgr_LD = Manager_LD()
 
 
-class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
+class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string
@@ -77,8 +77,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                   }
 
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
-                 transit_model=None, rv_model=None, parametrisation=None,
-                 stars=None, planets=None, run_folder=None):
+                 transit_model=None, rv_model=None, stars=None, planets=None, run_folder=None):
         """docstring GravGroup init method."""
         super(GravGroup, self).__init__(name=name, dataset_db=dataset_db, run_folder=run_folder,
                                         instmodel4dataset=instmodel4dataset,
@@ -134,17 +133,22 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
         else:
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
-        # Set parametrisation
-        self.parametrisation = parametrisation
 
-        # Fill the datasimcreatorname4instcat dictionnary
+        # Initialise available parametrisation
+        GravGroup_Parametrisation.add_available_parametrisations(self)
+
+        # Fill the datasimcreatorname4instcat dictionary
         self.datasimcreatorname4instcat[RV_inst_cat] = "sim_RV"
         self.datasimcreatorname4instcat[LC_inst_cat] = "sim_LC"
 
-        # Fill the datasimcreator dictionnary
+        # Fill the datasimcreator dictionary
         self.datasimcreator["sim_RV"] = self._create_datasimulator_RV
         self.datasimcreator["sim_LC"] = self._create_datasimulator_LC
 
+        # Fill the handlers4instcatparamfile dictionary
+        self.handlers4instcatparamfile[RV_inst_cat] = {create_key: None, load_key: None}
+        self.handlers4instcatparamfile[LC_inst_cat] = {create_key: self.create_LC_param_file,
+                                                       load_key: self.load_LC_param_file}
         ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
         ## separation binary star. This is kept for later.
@@ -297,25 +301,11 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
     def set_RVref4inst_modname(self, inst_name, inst_model_name):
         self.__RV_references[inst_name] = inst_model_name
 
-    @property
-    def lc_param_file(self):
-        """Path to the light-curve parametrisation file"""
-        return self.__lc_param_file
-
-    @lc_param_file.setter
-    def lc_param_file(self, path):
-        """Path to the light-curve parametrisation file"""
-        file_exists = isfile(path)
-        if file_exists:
-            self.__lc_param_file = path
-        else:
-            raise AssertionError("File {} doesn't exists".format(path))
-
     __ld_dict_name = "LDs"
     __ldmod_dict_name = "LD_models"
     __supersamp_dict = "SuperSamps"
 
-    def create_LC_param_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
+    def create_LC_param_file(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
         """Create a parameter file for the light-curve parametrisation.
 
         :param string paramfile_path: Path to the LC_param_file.
@@ -325,6 +315,8 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
             to create it ? "absolute", "run_folder" or "error". If this not provide the program will
             ask you interactively.
         """
+        if paramfile_path is None:
+            paramfile_path = "LC_param_file.py"
         file_path = self.look4runfile(file_path=paramfile_path)
         if file_path is not None:
             answers_list_yn = ['y', 'n']
@@ -458,17 +450,17 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
             logger.info("Parameter file created at path: {}".format(file_path))
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
-        self.lc_param_file = file_path
+        self.paramfile4instcat[LC_inst_cat] = file_path
 
     @property
     def isdefined_LCparamfile(self):
         """Return True is the attribute param_file has been defined."""
-        return self.lc_param_file is not None
+        return self.isdefined_paramfile_instcat(inst_cat=LC_inst_cat)
 
     def read_LC_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_LCparamfile:
-            with open(self.lc_param_file) as f:
+            with open(self.paramfile4instcat[LC_inst_cat]) as f:
                 exec(f.read())
             dico = locals().copy()
             dico.pop("self")
@@ -476,7 +468,7 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
                          "".format(dico.keys()))
             return dico
         else:
-            raise IOError("Impossible to read LC parameter file: {}".format(self.param_file))
+            raise IOError("Impossible to read LC parameter file: {}".format(self.self.paramfile4instcat[LC_inst_cat]))
 
     def load_LC_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
@@ -531,23 +523,6 @@ class GravGroup(Core_Model, GravGroup_Parametrisation, SuperSampExpTimeAttr):
 
     def get_list_LD_parconts(self):
         return self.paramcontainers[CoreLD.category].values()
-
-    @property
-    def automatic_init_kwargs(self):
-        """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
-        dico = super(GravGroup, self).automatic_init_kwargs
-        if LC_inst_cat in self.dataset_db.inst_categories:
-            dico["lc_param_file"] = self.lc_param_file
-        dico["kwargs_parametrisation"] = self.parametrisation_kwargs
-        return dico
-
-    def automatic_model_initialisation(self, kwargs_parametrisation, lc_param_file=None, **kwargs):
-        """load the parameter file."""
-        if LC_inst_cat in self.dataset_db.inst_categories:
-            self.lc_param_file = lc_param_file
-            self.load_LC_param_file()
-        self.apply_parametrisation(**kwargs_parametrisation)
-        super(GravGroup, self).automatic_model_initialisation(**kwargs)
 
     def _create_datasimulator_RV(self, inst_models=None, datasets=None):
         return create_datasimulator_RV(star=list(self.stars.values())[0],
