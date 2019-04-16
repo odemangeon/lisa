@@ -5,7 +5,10 @@ Script to produce custom plots of CORALIE-153 RV data
 
 @TODO:
 """
-from __future__ import print_function
+from os import getcwd
+from os.path import join
+
+import numpy as np
 
 from logging import DEBUG, INFO
 from matplotlib.gridspec import GridSpec
@@ -19,33 +22,49 @@ import source.tools.emcee_tools as et
 import source.posterior.core.posterior as cpost
 import source.tools.mylogger as ml
 
+from source.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+
 # from ipdb import set_trace
 
+mgr_noisemodel = Manager_NoiseModel()
+mgr_noisemodel.load_setup()
 
 @styler
-def create_RV_plots(fig, ndataset, nplanet, periods, tcs, datasim_dbf, dataset_db, noisemodel_dbf,
-                    instrument_db, RV_references, fitted_values, l_param_name, fig_param=None,
-                    *args, **kwargs):
+def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, dataset_db, model_instance, fitted_values,
+                    l_param_name, star, fig_param=None, show_legend=True, legend_param=None, show_xlabel=True,
+                    show_ylabel=True, *args, **kwargs):
+    """Produce a clean RV plot.
+
+    :param fig: Figure instance (provided by the styler)
+    :param dico_datasetname: Dictionary providing the datasets to load and use
+    :param list_of_str planets: List of planet names (used to infer the number of planets and create the good number of subplots)
+    :param periods: Orbital periods for each planets (used to phase fold)
+    :param tcs: Time of inferior conjunction for each planet (used to phase fold)
+    :param model_instance: Core_Model subclass instance
+    :param fitted_values: Fitted values
+    :param list_of_str l_param_name: List of parameter names
+    :param star: Star instance
+    :param fig_param: Dictionary providing keyword arguments for the figure definition. For example,
+        right, left, bottom, top keywords can be defined and they will be passed to the GridSpec init function
+    :param bool show_legend: If True, show the legend
+    :param legend_param: Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
+    :param bool show_xlabel: If True, show the x label
+    :param bool show_ylabel: If True, show the y labels
+    """
 
     ###########
     # Load Data
     ###########
 
-    # Define dataset names
-    datasetname = OrderedDict()
-    # 1. SOPHIE
-    datasetname["SOPHIE"] = {}
-    datasetname["SOPHIE"]["0"] = "RV_WASP-153_SOPHIE_0"
-
     # Load the defined datasets
-    dataset = {}
-    kwargs = {}
-    for inst in datasetname:
-        dataset[inst] = {}
-        kwargs[inst] = {}
-        for key in datasetname[inst]:
-            dataset[inst][key] = dataset_db[datasetname[inst][key]]
-            kwargs[inst][key] = dataset[inst][key].get_kwargs()
+    dico_dataset = {}
+    dico_kwargs = {}
+    for inst in dico_datasetname:
+        dico_dataset[inst] = {}
+        dico_kwargs[inst] = {}
+        for key in dico_datasetname[inst]:
+            dico_dataset[inst][key] = dataset_db[dico_datasetname[inst][key]]
+            dico_kwargs[inst][key] = dico_dataset[inst][key].get_kwargs()
 
     ##################################################
     # Compute the phases associated to the time values
@@ -140,6 +159,8 @@ def create_RV_plots(fig, ndataset, nplanet, periods, tcs, datasim_dbf, dataset_d
     ###################
     # Plots preparation
     ###################
+    fontsize = 5
+    nplanet = len(planets)
 
     # Create the gridspec
     if fig_param is None:
@@ -175,9 +196,11 @@ def create_RV_plots(fig, ndataset, nplanet, periods, tcs, datasim_dbf, dataset_d
     ax_resi = ax_resi[0]
 
     # Set the axis labels
-    ax_data.set_ylabel(r"RV [$\kms$]")
-    ax_resi.set_ylabel(r"O - C [$\kms$]")
-    ax_resi.set_xlabel("Orbital phase")
+    if show_ylabel:
+        ax_data.set_ylabel(r"RV [$\kms$]")
+        ax_resi.set_ylabel(r"O - C [$\kms$]")
+    if show_xlabel:
+        ax_resi.set_xlabel("Orbital phase")
 
     # Align y labels
     x_ylabel_coord = -0.15  # for y label alignment
@@ -250,38 +273,50 @@ def create_RV_plots(fig, ndataset, nplanet, periods, tcs, datasim_dbf, dataset_d
     ###################
     # Finalise the plot
     ###################
-    ax_data.legend()
+    if show_legend:
+        ax_data.legend(**legend_param)
 
 
 if __name__ == "__main__":
     # Define the object name
     obj_name = "WASP-153"
 
+    # Define dataset names to be loaded
+    datasetname = OrderedDict()
+    # 1. SOPHIE
+    datasetname["SOPHIE"] = {}
+    datasetname["SOPHIE"]["0"] = "RV_WASP-153_SOPHIE_0"
+
+    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
+    plot_folder = join(chain_analysis_output_folder, "plots")
+
+    load_from_pickle = True
+    exploration_output_folder = join(getcwd(), "outputs/exploration")
+    exploration_pickle_folder = join(exploration_output_folder, "pickles")
+
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                             fh_lvl=DEBUG, fh_file="{}.log".format(obj_name))
-
-    load_from_pickle = True
 
     logger.info("1. Load from pickle if necessary")
     if load_from_pickle:
         # recreate post_instance object
         post_instance = cpost.Posterior(object_name=obj_name)
-        post_instance.init_from_pickle()
+        post_instance.init_from_pickle(pickle_folder=exploration_pickle_folder)
         l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
         # chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name,
         #                                                                                folder=".")
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=".")
+                                                                                        folder=exploration_pickle_folder)
         fitted_values = fitted_values_dic["array"]
         l_param_name = fitted_values_dic["l_param"]
         planet_name = []
         periods = []
         tcs = []
         for planet in post_instance.model.planets.values():
-            planet_name.append(planet.name)
-            periods.append(df_fittedval.loc[planet.P.full_name, 'value'])
-            tcs.append(df_fittedval.loc[planet.tc.full_name, 'value'])
+            planet_name.append(planet.get_name())
+            periods.append(df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value'])
+            tcs.append(df_fittedval.loc[planet.tc.get_name(include_prefix=True, recursive=True), 'value'])
 
     dataset_db = post_instance.dataset_db
     datasim_dbf = post_instance.datasimulators
@@ -289,14 +324,12 @@ if __name__ == "__main__":
     instrument_db = post_instance.model.instruments
     RV_references = post_instance.model.RV_references
 
-    create_RV_plots(nplanet=1, ndataset=1, periods=periods, tcs=tcs,
+    create_RV_plots(datasetname=datasetname, nplanet=1, periods=periods, tcs=tcs,
                     datasim_dbf=datasim_dbf, dataset_db=dataset_db, noisemodel_dbf=noisemodel_dbf,
                     instrument_db=instrument_db, RV_references=RV_references,
                     fitted_values=fitted_values, l_param_name=l_param_name,
-                    figsize=(None, 0.5), tight=False,
-                    # dpi=200,
-                    dpi=300,
-                    fig_param={"top": 0.98, "bottom": 0.18},
-                    save="./images/custom_data_comp_RV.pdf"
-                    # save="./images/custom_data_comp_RV.png"
+                    fig_param={"top": 0.98, "bottom": 0.18}, show_legend=False, show_x_label=False,
+                    # Styler arguments
+                    figsize=(None, 0.5), tight=False, dpi=300,
+                    save=join(plot_folder, "custom_data_comp_RV.pdf")
                     )

@@ -294,7 +294,7 @@ if do_MComp:
                                                  "P": periods.values(),
                                                  "tc": tics.values()})
 
-        pl.savefig(join(plot_folder, "data_comparison_pholded.png"))
+        pl.savefig(join(plot_folder, "data_comparison_pholded.pdf"))
         pl.close("all")
 #
 # logger.info("9. Determine best fit values and error bars for secondary parameters")
