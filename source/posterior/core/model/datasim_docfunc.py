@@ -85,8 +85,7 @@ class DatasimDocFunc(DocFunction):
         self.__param_model_list = list(params_model)
 
     def _init_arg_list(self, params_model, mand_kwargs, opt_kwargs):
-        # Check the content of dataset_kwargs: If provided set include_dataset_kwarg to False,
-        # otherwise to True. Also define the arg_list parameter for __init__ method of DocFunction
+        # Define the arg_list parameter for __init__ method of DocFunction
         arg_list = str(params_model)
         if mand_kwargs is not None:
             arg_list += ", " + mand_kwargs.strip("[]")
