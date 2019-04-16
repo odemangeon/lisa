@@ -161,7 +161,7 @@ class Parameter(Named, Parameter_Prior):
         text += text_tab + space_entete_param + "'value': {},  # unit: {}\n".format(self.value,
                                                                                     self.unit)
         # Finally the prior info
-        text += Parameter_Prior.get_paramfile_section(self, text_tab = text_tab + space_entete_param)
+        text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
         return text
 
     def load_config(self, dico_config, **kwargs_prior):
