@@ -1109,8 +1109,8 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     """Adapted the geweke test for multiple wlaker exploration.
 
     :param emcee.EnsembleSampler sampler:
-    :param float first: first portion of the chain to be used in the Geweke diagnostic.
-        Default to 0.1 (i.e. first 10 % of the chain)
+    :param float first: Portion of the chain to be used in each interval of the first portion of the chains
+        for the the Geweke diagnostic. Default to 0.1 (i.e. first 10 % of the chain)
     :param float last: last portion of the chain to be used in the Geweke diagnostic.
         Default to 0.5 (i.e. last 50 % of the chain)
     :param int intervals: Number of sub-chains to analyze. Defaults to 20.
