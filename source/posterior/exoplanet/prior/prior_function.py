@@ -5,7 +5,7 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any
+from numpy import pi, inf, ones, where, any, arange, nan
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ....tools.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
@@ -335,7 +335,7 @@ class Ptphiprior(Core_JointPrior_Function):
         :param float t_ref: Reference time for the definition of the boundaries of the prior on t.
             outside of the interval [t_ref - P/2, t_ref + P/2] the prior probability is 0.
         :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
-            error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
+            error. Defines the inferior and superior limits on phase (Phi) when t_prior is defined.
         """
         self.t_ref = t_ref
         if P_prior is None:
@@ -448,3 +448,155 @@ class Ptphiprior(Core_JointPrior_Function):
                 dico_ravs["t"][indexes] = self.dico_priors_arg["t"]["priorfunc_instance"].ravs(nb_values=len(indexes))
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             return dico_ravs["P"], dico_ravs["t"]
+
+
+class Transitingprior(Core_JointPrior_Function):
+    """Prior defined for the a/R, cosinc and Rrat to ensure that a planet is transit (or not).
+
+    IMPORTANT NOTE: This prior is not properly normalized when the transiting and grazing conditions
+    are more restrictive than the aR, cosinc Rrat priors
+    """
+
+    __category__ = "transitiing"
+    __mandatory_args__ = ['transiting', 'allow_grazing']
+    __extra_args__ = ['Rrat_prior', 'b_prior']
+    __params__ = ['aR', 'cosinc', 'Rrat']
+
+    def set_dico_priors_arg(self, transiting, allow_grazing, aR_prior=None, Rrat_prior=None, b_prior=None):
+        """Fill self.dico_priors_arg and set self.allow_grazing, self.transiting, self.b_prior_defined
+
+        The argument defines the marginal prior of the Rrat and the hidden parameter "b".
+        They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
+        like for marginal priors.
+
+        :param bool transiting: True if you want to force the planet to be transiting, False otherwise
+        :param bool allow_grazing: True if you want to allow grazing transits (whatever the value of transiting)
+        :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
+            error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
+        """
+        self.transiting = transiting
+        self.allow_grazing = allow_grazing
+        if Rrat_prior is None:
+            Rrat_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
+        self.dico_priors_arg["Rrat"] = Rrat_prior
+        if b_prior is None:
+            if self.transiting:
+                if self.allow_grazing:
+                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                else:
+                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
+            else:
+                if self.allow_grazing:
+                    b_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                else:
+                    b_prior = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        self.dico_priors_arg["b"] = b_prior
+        if aR_prior is None:
+            aR_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+        self.dico_priors_arg["aR"] = aR_prior
+
+    def create_logpdf(self, params):
+        """Return the logarithmic probability density function for the joint prior.
+
+        :param dict params: Dictionnary which contains the Parameter instances required by the prior.
+            The keys are parameter keys in the self.params list and the values are the parameter instances
+            as associated in the parameter file.
+        :return function logpdf: log pdf the order in which the parameter should be provided is
+            provided by self.params
+        """
+        (param_nb,
+         arg_list,
+         param_vector_name,
+         ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        ldict["dico_logpdf"] = dico_logpdf
+        ldict["inf"] = inf
+        dico_text_params = {}
+        for param_key in self.params:
+            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)
+        function_name = "logpdf_{}".format(self.category)
+        if self.transiting:
+            if self.allow_grazing:
+                text_comp = "b > 1 + {Rrat}".format(Rrat=dico_text_params["Rrat"])
+            else:
+                text_comp = "b > 1 - {Rrat}".format(Rrat=dico_text_params["Rrat"])
+        else:
+            if self.allow_grazing:
+                text_comp = "b < 1 - {Rrat}".format(Rrat=dico_text_params["Rrat"])
+            else:
+                text_comp = "b < 1 + {Rrat}".format(Rrat=dico_text_params["Rrat"])
+        text_function = """
+        def {function_name}({param_vector_name}):
+            b = {aR} * {cosinc}
+            if {text_comp}:
+                return -inf
+            else:
+                return dico_logpdf['b'](b) + dico_logpdf['Rrat']({Rrat}) + dico_logpdf['aR']({aR})
+        """
+        text_function = dedent(text_function)
+        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
+                                             aR=dico_text_params["aR"], cosinc=dico_text_params["cosinc"],
+                                             Rrat=dico_text_params["Rrat"], text_comp=text_comp)
+        logger.debug("text of joint prior {category}:\n{text_func}"
+                     "".format(category=self.category, text_func=text_function))
+        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+        exec(text_function, ldict)
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list))
+
+    def logpdf(self, aR, cosinc, Rrat):
+        dico_logpdf = self.dico_priorfunction
+
+        b = aR * cosinc
+        if self.transiting:
+            if self.allow_grazing:
+                comp = (b > (1 + Rrat))
+            else:
+                comp = (b > (1 - Rrat))
+        else:
+            if self.allow_grazing:
+                comp = (b < (1 - Rrat))
+            else:
+                comp = (b < (1 + Rrat))
+        if comp:
+            return -inf
+        else:
+            return dico_logpdf["b"](b) + dico_logpdf["Rrat"](Rrat) + dico_logpdf["aR"](aR)
+
+    def ravs(self, nb_values=1):
+        """Return values of the parameters drawn from the joint prior.
+
+        :param int nb_values: Number of values to draw for each parameter.
+        :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
+            for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
+            The order of the parameters in the tuple is provided by self.params.
+        """
+        dico_ravs = {}
+        dico_pick = {}  # Indicate if you should pick random values (True) or if the value is fixed (False).
+        indexes = arange(nb_values)
+        for param, dico in self.dico_priors_arg.items():
+            value = dico.get("value", None)
+            if value is None:
+                dico_pick[param] = True
+                dico_ravs[param] = ones(len(indexes)) * nan
+            else:
+                dico_pick[param] = False
+                dico_ravs[param] = ones(len(indexes)) * value
+        while len(indexes) > 0:
+            for param, dico in self.dico_priors_arg.items():
+                if dico_pick[param]:
+                    dico_ravs[param][indexes] = dico["priorfunc_instance"].ravs(nb_values=len(indexes))
+            if self.transiting:
+                if self.allow_grazing:
+                    indexes = where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0]
+                else:
+                    indexes = where(dico_ravs["b"] > (1 - dico_ravs["Rrat"]))[0]
+            else:
+                if self.allow_grazing:
+                    indexes = where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0]
+                else:
+                    indexes = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
+        if nb_values == 1:
+            dico_ravs[param] = dico_ravs[param][0]
+        return dico_ravs['aR'], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
