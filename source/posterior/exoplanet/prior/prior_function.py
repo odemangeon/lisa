@@ -459,7 +459,7 @@ class Transitingprior(Core_JointPrior_Function):
 
     __category__ = "transitiing"
     __mandatory_args__ = ['transiting', 'allow_grazing']
-    __extra_args__ = ['Rrat_prior', 'b_prior']
+    __extra_args__ = ['Rrat_prior', 'b_prior', 'aR_prior']
     __params__ = ['aR', 'cosinc', 'Rrat']
 
     def set_dico_priors_arg(self, transiting, allow_grazing, aR_prior=None, Rrat_prior=None, b_prior=None):
@@ -598,5 +598,6 @@ class Transitingprior(Core_JointPrior_Function):
                 else:
                     indexes = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
         if nb_values == 1:
-            dico_ravs[param] = dico_ravs[param][0]
+            for param, dico in self.dico_priors_arg.items():
+                dico_ravs[param] = dico_ravs[param][0]
         return dico_ravs['aR'], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
