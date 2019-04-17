@@ -14,6 +14,7 @@ The objective of this module is to define the Core_NoiseModel Class and the stan
 from logging import getLogger
 from numpy import sum as npsum
 from numpy import log as nplog
+from numpy import pi
 from math import exp
 # from collections import OrderedDict
 
@@ -26,6 +27,10 @@ logger = getLogger()
 
 jitter_name = "jitter"
 
+twopi = 2 * pi
+
+
+## Foreman-Mackey multiplicative jitter. Jitter param in log scale
 
 class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     """docstring for GaussianNoiseModel_wdfmjitter."""
@@ -137,15 +142,14 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + model**2 *
-                                    exp(2 * param_noisemod[idx_jitter_param]))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+                inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
@@ -181,32 +185,8 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             l_params_noisemod_new = l_params_noisemod
         return l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
 
-    # def _lnlike_dataset_creator(self, dataset_key=None):
-    #     datasim_func = self.get_datasim_function(dataset_key)
-    #     jitter_free = self.get_jitterparam(dataset_key).free
-    #     jitter_value = self.get_jitterparam(dataset_key).value
-    #     if jitter_free:
-    #         def lnlike_dfmjitter(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p[1:], **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * p[0]))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     else:
-    #         def lnlike_dfmjitter(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p, **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     return lnlike_dfmjitter
-    #
-    # def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-    #     if self.get_jitterparam(dataset_key).free:
-    #         model = self.get_datasim_function(dataset_key)(p[1:], **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * p[0]))
-    #     else:
-    #         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 +
-    #                             model**2 * exp(2 * self.get_jitterparam(dataset_key).value))
-    #     return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
+## Multiplicative jitter. Jitter param in log scale
 
 class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjittermulti."""
@@ -248,41 +228,16 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermulti_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
-
-    # def _lnlike_dataset_creator(self, dataset_key=None):
-    #     datasim_func = self.get_datasim_function(dataset_key)
-    #     jitter_free = self.get_jitterparam(dataset_key).free
-    #     jitter_value = self.get_jitterparam(dataset_key).value
-    #     if jitter_free:
-    #         def lnlike_jittermulti(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p[1:], **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     else:
-    #         def lnlike_jittermulti(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p, **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     return lnlike_jittermulti
-    #
-    # def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-    #     if self.get_jitterparam(dataset_key).free:
-    #         model = self.get_datasim_function(dataset_key)(p[1:], **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
-    #     else:
-    #         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.get_jitterparam(dataset_key).value))
-    #     return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
 
 
 class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
@@ -327,50 +282,131 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
                 Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                     nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
                 inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
                 Bualev_coeff = 1.0 / (1 - (nparam / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                     nplog(inv_sigma2)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermultiBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
 
-    # def _lnlike_dataset_creator(self, dataset_key=None):
-    #     datasim_func = self.get_datasim_function(dataset_key)
-    #     jitter_free = self.get_jitterparam(dataset_key).free
-    #     jitter_value = self.get_jitterparam(dataset_key).value
-    #     if jitter_free:
-    #         def lnlike_jittermultiBaluev(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p[1:], **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
-    #             Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-    #                                  nplog(inv_sigma2)))
-    #     else:
-    #         def lnlike_jittermultiBaluev(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p, **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
-    #             Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-    #                                  nplog(inv_sigma2)))
-    #     return lnlike_jittermultiBaluev
-    #
-    # def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-    #     if self.get_jitterparam(dataset_key).free:
-    #         model = self.get_datasim_function(dataset_key)(p[1:], **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * exp(2 * p[0]))
-    #     else:
-    #         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * exp(2 * self.get_jitterparam(dataset_key).value))
-    #     Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #     return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(inv_sigma2)))
 
+## Addtive jitter which add a fraction of the existing error. Jitter param in log scale
+
+class GaussianNoiseModel_wjitteraddfrac(GaussianNoiseModel_wdfmjitter):
+    """docstring for GaussianNoiseModel_wjitteradd."""
+
+    __category__ = "gaussian_jitter_add_frac"
+    __jitter_type__ = "add"
+
+    @classmethod
+    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+                                     instmod_obj):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        :param list_of_string l_params_lnlike: Current list of parameters full names for the
+            lnlikehood function.
+        :param list_of_string l_params_noisemod: Current list of parameters full names for the
+            noise model only.
+        :param list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        :param InstrumentModel instmod_obj: Instument_Model for which we want to produce the ln
+            likelihood.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_lnlike_new: Updated list of parameters full names for the
+            lnlikehood function.
+        :return list_of_string l_params_noisemod_new: Updated list of parameters full names for the
+            noise model only.
+        :return list_of_int l_idx_param_noisemod_new: Updated list of the index of the noise model
+            parameters in the updated list of parameters (l_params_new).
+        """
+        # Get jitter parameter for the instrument model
+        jitter_param = instmod_obj.parameters[jitter_name]
+        (l_params_lnlike_new, l_params_noisemod_new,
+         l_idx_param_noisemod_new) = cls._update_lists_params(l_params_lnlike, l_params_noisemod,
+                                                              l_idx_param_noisemod, jitter_param)
+
+        # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
+        if jitter_param.free:
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+
+            def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
+        else:
+            jitter_value = jitter_param.value
+
+            def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
+
+        return (lnlike_jitteraddfrac_1instmod, l_params_lnlike_new, l_params_noisemod_new,
+                l_idx_param_noisemod_new)
+
+
+class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
+    """docstring for GaussianNoiseModel_wjitteraddBaluev."""
+
+    __category__ = "gaussian_jitter_add_frac_Baluev"
+    __jitter_type__ = "add"
+
+    @classmethod
+    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+                                     instmod_obj):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        :param list_of_string l_params_lnlike: Current list of parameters full names for the
+            lnlikehood function.
+        :param list_of_string l_params_noisemod: Current list of parameters full names for the
+            noise model only.
+        :param list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        :param InstrumentModel instmod_obj: Instument_Model for which we want to produce the ln
+            likelihood.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_lnlike_new: Updated list of parameters full names for the
+            lnlikehood function.
+        :return list_of_string l_params_noisemod_new: Updated list of parameters full names for the
+            noise model only.
+        :return list_of_int l_idx_param_noisemod_new: Updated list of the index of the noise model
+            parameters in the updated list of parameters (l_params_new).
+        """
+        # Get jitter parameter for the instrument model
+        jitter_param = instmod_obj.parameters[jitter_name]
+        (l_params_lnlike_new, l_params_noisemod_new,
+         l_idx_param_noisemod_new) = cls._update_lists_params(l_params_lnlike, l_params_noisemod,
+                                                              l_idx_param_noisemod, jitter_param)
+
+        # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
+        nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
+        if jitter_param.free:
+            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+
+            def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
+                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
+        else:
+            jitter_value = jitter_param.value
+
+            def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
+                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
+
+        return (lnlike_jitteraddfracBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
+                l_idx_param_noisemod_new)
+
+
+## Purely Addtive jitter which add a fraction of the existing error. Jitter param in LINEAR scale
 
 class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjitteradd."""
@@ -411,131 +447,15 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
-            def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+            def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 + param_noisemod[idx_jitter_param]**2)
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
-            def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
+            def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
+                inv_sigma2 = 1.0 / (data_err**2 + jitter_value**2)
+                return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
-        return (lnlike_jittermulti_1instmod, l_params_lnlike_new, l_params_noisemod_new,
+        return (lnlike_jitteradd_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
-
-    # def _lnlike_dataset_creator(self, dataset_key=None):
-    #     datasim_func = self.get_datasim_function(dataset_key)
-    #     jitter_free = self.get_jitterparam(dataset_key).free
-    #     jitter_value = self.get_jitterparam(dataset_key).value
-    #     if jitter_free:
-    #         def lnlike_jitteradd(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p[1:], **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     else:
-    #         def lnlike_jitteradd(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p, **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-    #     return lnlike_jitteradd
-    #
-    # def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-    #     if self.get_jitterparam(dataset_key).free:
-    #         model = self.get_datasim_function(dataset_key)(p[1:], **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
-    #     else:
-    #         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * (1 +
-    #                                            exp(2 * self.get_jitterparam(dataset_key).value)))
-    #     return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(inv_sigma2)))
-
-
-class GaussianNoiseModel_wjitteraddBaluev(GaussianNoiseModel_wdfmjitter):
-    """docstring for GaussianNoiseModel_wjitteraddBaluev."""
-
-    __category__ = "gaussian_jitter_add_Baluev"
-    __jitter_type__ = "add"
-
-    @classmethod
-    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
-        """Return a ln likelihood function prefilled with the fixed parameters.
-
-        :param list_of_string l_params_lnlike: Current list of parameters full names for the
-            lnlikehood function.
-        :param list_of_string l_params_noisemod: Current list of parameters full names for the
-            noise model only.
-        :param list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
-            the updated list of parameters (l_params_new).
-        :param InstrumentModel instmod_obj: Instument_Model for which we want to produce the ln
-            likelihood.
-        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
-            model the simulated data (array), param_noisemod the free parameters value for the noise
-            model, the list of dataset kwargs and returns the ln posterior value
-        :return list_of_string l_params_lnlike_new: Updated list of parameters full names for the
-            lnlikehood function.
-        :return list_of_string l_params_noisemod_new: Updated list of parameters full names for the
-            noise model only.
-        :return list_of_int l_idx_param_noisemod_new: Updated list of the index of the noise model
-            parameters in the updated list of parameters (l_params_new).
-        """
-        # Get jitter parameter for the instrument model
-        jitter_param = instmod_obj.parameters[jitter_name]
-        (l_params_lnlike_new, l_params_noisemod_new,
-         l_idx_param_noisemod_new) = cls._update_lists_params(l_params_lnlike, l_params_noisemod,
-                                                              l_idx_param_noisemod, jitter_param)
-
-        # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
-        nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
-        if jitter_param.free:
-            idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
-
-            def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                     nplog(inv_sigma2)))
-        else:
-            jitter_value = jitter_param.value
-
-            def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
-                return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-                                     nplog(inv_sigma2)))
-
-        return (lnlike_jittermulti_1instmod, l_params_lnlike_new, l_params_noisemod_new,
-                l_idx_param_noisemod_new)
-
-    # def _lnlike_dataset_creator(self, dataset_key=None):
-    #     datasim_func = self.get_datasim_function(dataset_key)
-    #     jitter_free = self.get_jitterparam(dataset_key).free
-    #     jitter_value = self.get_jitterparam(dataset_key).value
-    #     if jitter_free:
-    #         def lnlike_jitteraddBaluev(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p[1:], **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
-    #             Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-    #                                  nplog(inv_sigma2)))
-    #     else:
-    #         def lnlike_jitteraddBaluev(p, data, data_err, **kwarg_data):
-    #             model = datasim_func(p, **kwarg_data)
-    #             inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-    #             Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #             return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-    #                                  nplog(inv_sigma2)))
-    #     return lnlike_jitteraddBaluev
-    #
-    # def _lnlike_dataset(self, p, data, data_err, dataset_key=None, **kwarg_data):
-    #     if self.get_jitterparam(dataset_key).free:
-    #         model = self.get_datasim_function(dataset_key)(p[1:], **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * p[0])))
-    #     else:
-    #         model = self.get_datasim_function(dataset_key)(p, **kwarg_data)
-    #         inv_sigma2 = 1.0 / (data_err**2 * (1 +
-    #                                            exp(2 * self.get_jitterparam(dataset_key).value)))
-    #     Bualev_coeff = 1.0 / (1 - (len(p) / len(data)))
-    #     return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff -
-    #                          nplog(inv_sigma2)))
