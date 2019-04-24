@@ -52,19 +52,24 @@ logger = getLogger()
 
 
 class UniformPrior(Core_Prior_Function):
+    """Unifor Prior
+
+    :param float vmin: Inferior boundary of the prior
+    :param float vmax: Superior boundary of the prior
+    """
 
     __category__ = "uniform"
     __mandatory_args__ = ["vmin", "vmax"]
     __extra_args__ = []
+    __default_extra_args__ = {}
 
-    def __init__(self, vmin, vmax):
-        if vmin >= vmax:
+    def __init__(self, *args, **kwargs):
+        super(UniformPrior, self).__init__(*args, **kwargs)
+        if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
-        self.vmin = vmin
-        self.vmax = vmax
-        self.C = 1. / (vmax - vmin)
+        self.C = 1. / (self.vmax - self.vmin)
         self.lnC = mt.log(self.C)
-        self.lims = [vmin, vmax]
+        self.lims = [self.vmin, self.vmax]
 
     def create_logpdf(self):
         lnC = mt.log(1. / (self.vmax - self.vmin))
@@ -98,25 +103,31 @@ class UniformPrior(Core_Prior_Function):
 
 
 class NormalPrior(Core_Prior_Function):
+    """Normal or gaussian prior
+
+    :param float mu: Mean of the gaussian
+    :param float sigma: standard deviation of the gaussian
+    :param list_of_2_floats lims: Absolute boundaries for a truncated gaussian
+    :param list_of_2_floats sigma_lims: Boundaries in number of sigmas for a truncated gaussian. For
+        example for +- 2 sigma boundaries, put [2, 2].
+    """
 
     __category__ = "normal"
     __mandatory_args__ = ["mu", "sigma"]
     __extra_args__ = ["lims", "sigma_lims"]
+    __default_extra_args__ = {"lims": [-inf, inf], "sigma_lims": [None, None]}
 
-    def __init__(self, mu, sigma, lims=None, sigma_lims=None):
-        self.mu = float(mu)
-        self.sigma = float(sigma)
-        self._f1 = 1. / mt.sqrt(2. * pi * sigma * sigma)
+    def __init__(self, *args, **kwargs):
+        super(NormalPrior, self).__init__(*args, **kwargs)
+        self.mu = float(self.mu)
+        self.sigma = float(self.sigma)
+        self._f1 = 1. / mt.sqrt(2. * pi * self.sigma * self.sigma)
         self._lf1 = mt.log(self._f1)
-        self._f2 = 1. / (2. * sigma * sigma)
-        if (lims is not None) and (sigma_lims is not None):
+        self._f2 = 1. / (2. * self.sigma * self.sigma)
+        if ("lims" in kwargs) and ("sigma_lims" in kwargs):
             raise ValueError("You cannot set both lims and sigma_lims")
-        elif lims is not None:
-            self.lims = np.array(lims)
-        elif sigma_lims is not None:
-            self.lims = [self.mu - sigma_lims[0] * self.sigma, self.mu + sigma_lims[1] * self.sigma]
-        else:
-            self.lims = np.array([-inf, inf])
+        if "sigma_lims" in kwargs:
+            self.lims = [self.mu - self.sigma_lims[0] * self.sigma, self.mu + self.sigma_lims[1] * self.sigma]
         self.vmin, self.vmax = self.lims
         if self.vmin >= self.vmax:
             raise ValueError("lims should be a 2 element iterable where the first element is "
@@ -156,21 +167,26 @@ class NormalPrior(Core_Prior_Function):
 
 
 class LogNormPrior(Core_Prior_Function):
+    """Log normal or log gaussian prior.
+
+    :param float mu: Mean of the gaussian
+    :param float sigma: standard deviation of the gaussian
+    :param list_of_2_floats lims: Absolute boundaries for a truncated gaussian
+    """
 
     __category__ = "lognormal"
     __mandatory_args__ = ["mu", "sigma"]
     __extra_args__ = ["lims"]
+    __default_extra_args__ = {"lims": [0, inf]}
 
-    def __init__(self, mu, sigma, lims=None):
-        self.lims = np.array(lims) if lims is not None else np.array([0, inf])
+    def __init__(self, *args, **kwargs):
+        super(LogNormPrior, self).__init__(*args, **kwargs)
         self.vmin, self.vmax = self.lims
         if self.vmin >= self.vmax:
             raise ValueError("lims should be a 2 element iterable where the first element is "
                              "strictly inferior to the second")
-        self.mu = mu
-        self.sigma = sigma
-        self.C = -mt.log(sigma * mt.sqrt(2 * pi))
-        self._B = 2 * sigma**2
+        self.C = -mt.log(self.sigma * mt.sqrt(2 * pi))
+        self.B = 2 * self.sigma**2
 
     def create_logpdf(self):
         C = -mt.log(self.sigma * mt.sqrt(2 * pi))
@@ -213,19 +229,23 @@ class LogNormPrior(Core_Prior_Function):
 
 
 class JeffreysPrior(Core_Prior_Function):
+    """Jeffreys Prior
 
+    :param float vmin: Inferior boundary of the prior
+    :param float vmax: Superior boundary of the prior
+    """
     __category__ = "jeffreys"
     __mandatory_args__ = ["vmin", "vmax"]
     __extra_args__ = []
+    __default_extra_args__ = {}
 
-    def __init__(self, vmin, vmax):
-        if vmin >= vmax:
+    def __init__(self, *args, **kwargs):
+        super(JeffreysPrior, self).__init__(*args, **kwargs)
+        if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
-        self.vmin = vmin
-        self.vmax = vmax
-        self.C = vmax / vmin
+        self.C = self.vmax / self.vmin
         self.lnC = mt.log(self.C)
-        self.lims = [vmin, vmax]
+        self.lims = [self.vmin, self.vmax]
 
     def create_logpdf(self):
         vmin = self.vmin
@@ -262,32 +282,37 @@ class JeffreysPrior(Core_Prior_Function):
 
 
 class SinePrior(Core_Prior_Function):
+    """Sine Prior
+
+    :param float vmin: Inferior boundary of the prior
+    :param float vmax: Superior boundary of the prior
+    :param bool rad: If true the argument of the pdf function is expected in radians, otherwise in degrees.
+    """
 
     __category__ = "sine"
     __mandatory_args__ = ["vmin", "vmax"]
-    __extra_args__ = []
+    __extra_args__ = ["rad"]
+    __default_extra_args__ = {"rad": True}
 
-    def __init__(self, vmin, vmax, rad=True):
-        if vmin >= vmax:
+    def __init__(self, *args, **kwargs):
+        super(SinePrior, self).__init__(*args, **kwargs)
+        if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
-        self.rad = rad
         self.degtorad = pi / 180.0
-        if rad:
-            if vmin < 0. or vmin > 180.:
+        if self.rad:
+            if self.vmin < 0. or self.vmin > 180.:
                 raise ValueError("vmin should between 0. and 180")
-            if vmax < 0. or vmax > 180.:
-                raise ValueError("vmin should between 0. and 180")
-            self.C = 1. / (np.cos(vmin) - np.cos(vmax))
+            if self.vmax < 0. or self.vmax > 180.:
+                raise ValueError("vmax should between 0. and 180")
+            self.C = 1. / (np.cos(self.vmin) - np.cos(self.vmax))
         else:
-            if vmin < 0. or vmin > pi:
+            if self.vmin < 0. or self.vmin > pi:
                 raise ValueError("vmin should between 0. and pi")
-            if vmax < 0. or vmax > pi:
-                raise ValueError("vmin should between 0. and pi")
-            self.C = 1. / ((np.cos(vmin * self.degtorad) - np.cos(vmax * self.degtorad)) / self.degtorad)
-        self.vmin = vmin
-        self.vmax = vmax
+            if self.vmax < 0. or self.vmax > pi:
+                raise ValueError("vmax should between 0. and pi")
+            self.C = 1. / ((np.cos(self.vmin * self.degtorad) - np.cos(self.vmax * self.degtorad)) / self.degtorad)
         self.lnC = mt.log(self.C)
-        self.lims = [vmin, vmax]
+        self.lims = [self.vmin, self.vmax]
 
     def create_logpdf(self):
         vmin = self.vmin
@@ -337,20 +362,24 @@ class SinePrior(Core_Prior_Function):
 
 
 class PolarPrior(Core_JointPrior_Function):
-    """docstring for PolarPrior."""
+    """Polar Prior
+
+    Performs the transformation from cartesian to polar coordinate to be able to set prior on the
+    polar coordinates.
+
+    :param float r_prior: Prior definition on the radial coordinate
+    :param float theta_prior: Prior definition on the angular coordinate
+    """
 
     __category__ = "polar"
     __mandatory_args__ = []
-    __extra_args__ = ['r_prior', 'theta_prior']
-    __params__ = ['x', 'y']
-
-    def set_dico_priors_arg(self, r_prior=None, theta_prior=None):
-        if r_prior is None:
-            r_prior = {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
-        self.dico_priors_arg["r"] = r_prior
-        if theta_prior is None:
-            theta_prior = {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-        self.dico_priors_arg["theta"] = theta_prior
+    __extra_args__ = []
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ["r", "theta"]
+    __default_hidden_priors__ = {"r": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
+                                 "theta": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
+                                 }
+    __param_refs__ = ['x', 'y']
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -417,22 +446,3 @@ class PolarPrior(Core_JointPrior_Function):
         x = dico_ravs["r"] * np.cos(dico_ravs["r"])
         y = dico_ravs["r"] * np.sin(dico_ravs["r"])
         return x, y
-
-    # def __init__(self, r_prior=None, theta_prior=None):
-    #     # Set the dico_priors_arg which contains the prior args for the underlying hidden parameters
-    #     self.dico_priors_arg = {}
-    #     if r_prior is None:
-    #         r_prior = {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
-    #     self.dico_priors_arg["r"] = r_prior
-    #     if theta_prior is None:
-    #         theta_prior = {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-    #     self.dico_priors_arg["theta"] = theta_prior
-    #     # Check the prior category and arguments and create the prior function instances
-    #     for param, prior_args in self.dico_priors_arg.items():
-    #         if manager.is_available_priortype(prior_args["category"]):
-    #             priorfunction_subclass = manager.get_priorfunc_subclass(prior_args["category"])
-    #             priorfunction_subclass.check_args(list(prior_args["args"].keys()))
-    #         else:
-    #             raise ValueError("prior_category {} is not in the list of available prior types: {}"
-    #                              "".format(prior_args["category"], manager.get_available_priors()))
-    #         self.dico_priors_arg[param]["priorfunc_instance"] = priorfunction_subclass(**prior_args["args"])
