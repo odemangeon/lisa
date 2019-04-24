@@ -470,12 +470,15 @@ class Core_JointPrior_Function(Core_Prior_Function):
             else:
                 l_priordef = [self.priordef_hiddenparams[hidden_param_ref], ]
             for ii, priordef in enumerate(l_priordef):
-                if manager.is_available_priortype(priordef["category"]):
-                    priorfunction_subclass = manager.get_priorfunc_subclass(priordef["category"])
-                    priorfunction_subclass.check_args(list(priordef["args"].keys()))
+                if priordef is None:
+                    priorfunction_subclass = None
                 else:
-                    raise ValueError("prior_category {} is not in the list of available prior types: {}"
-                                     "".format(priordef["category"], manager.get_available_priors()))
+                    if manager.is_available_priortype(priordef["category"]):
+                        priorfunction_subclass = manager.get_priorfunc_subclass(priordef["category"])
+                        priorfunction_subclass.check_args(list(priordef["args"].keys()))
+                    else:
+                        raise ValueError("prior_category {} is not in the list of available prior types: {}"
+                                         "".format(priordef["category"], manager.get_available_priors()))
                 if multiple:
                     self.priorinstance_hiddenparams[hidden_param_ref][ii](priorfunction_subclass(**priordef["args"]))
                 else:
