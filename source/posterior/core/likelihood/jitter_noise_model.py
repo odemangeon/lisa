@@ -351,7 +351,7 @@ class GaussianNoiseModel_wjittermultilog(GaussianNoiseModel_wdfmjitter):
                 l_idx_param_noisemod_new)
 
 
-class GaussianNoiseModel_wjittermultilogBaluev(GaussianNoiseModel_wdfmjitter):
+class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
     """docstring for GaussianNoiseModel_wjittermultiBaluev."""
 
     __category__ = "gaussian_jitter_multi_Baluev_log"
