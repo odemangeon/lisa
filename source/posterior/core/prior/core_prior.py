@@ -531,9 +531,10 @@ class Core_JointPrior_Function(Core_Prior_Function):
         if sum(self.multiple_params) != sum(self.multiple_hidden_params):
             raise ValueError("The number of multiple parameters and multiple hidden parameters are different."
                              "The automatic get_nb_hiddenparams function cannot apply. Override it.")
-        if any(logical_not(logical_xor(self.multiple_params, self.multiple_hidden_params))):
-            raise ValueError("The multiple_params and multiple_hidden_params list are not identical."
-                             "The automatic get_nb_hiddenparams cannot be applied. Override it.")
+        if any(self.multiple_params) or any(self.multiple_hidden_params):
+            if any(logical_not(logical_xor(self.multiple_params, self.multiple_hidden_params))):
+                raise ValueError("The multiple_params and multiple_hidden_params list are not identical."
+                                 "The automatic get_nb_hiddenparams cannot be applied. Override it.")
         # Set the list of hidden parameter references for which we want to infer the number
         if hidden_param_ref is None:
             l_hiddenparam_refs = self.hidden_param_refs
@@ -544,9 +545,13 @@ class Core_JointPrior_Function(Core_Prior_Function):
                 l_hiddenparam_refs = [hidden_param_ref, ]
         # Infer the number of hidden parameters of the references in l_hiddenparam_refs
         res = {}
-        for hidden_param_ref in l_hiddenparam_refs:
-            idx = self.hidden_param_refs.index(hidden_param_ref)
-            res[hidden_param_ref] = self.get_params_nb(self.param_refs[idx])
+        if any(self.multiple_params) or any(self.multiple_hidden_params):
+            for hidden_param_ref in l_hiddenparam_refs:
+                idx = self.hidden_param_refs.index(hidden_param_ref)
+                res[hidden_param_ref] = self.get_params_nb(self.param_refs[idx])
+        else:
+            for hidden_param_ref in l_hiddenparam_refs:
+                res[hidden_param_ref] = 1
         if output_in_dict:
             return res
         else:
@@ -565,10 +570,9 @@ class Core_JointPrior_Function(Core_Prior_Function):
         return self.param_name_fulllist.index(param_name)
 
     def set_priordef_hiddenparams(self, hiddenparam_priordef):
-        """Set the content   self.dico_priors_arg dictionary and set attributes for each mandatory_args.
+        """Set the content of self.priordef_hiddenparams
 
-        Create an instance attribute for each mandatory_args.
-        Fill self.dico_priors_arg. It's a dictionary which contains the definition of the priors
+        Fill self.priordef_hiddenparams. It's a dictionary which contains the definition of the priors
         of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
         the prior to be used for each hidden parameter. It should follow the following format:
         {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
@@ -582,7 +586,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
         # Compare the number of parameters to the number of prior provided for the hidden parameters.
         for hidden_param_ref, multiple in zip(self.hidden_param_refs, self.multiple_hidden_params, self):
             nb_hiddenparam = self.infer_hiddenparams_nb(hidden_param_ref=hidden_param_ref)
-            priordef_provided = hiddenparam_priordef.get(hidden_param_ref, None)
+            priordef_provided = hiddenparam_priordef.get(hidden_param_ref + self.hiddenparampriorarg_ext, None)
             if isinstance(priordef_provided, list):
                 l_priordef_provided = priordef_provided.copy()
             else:
