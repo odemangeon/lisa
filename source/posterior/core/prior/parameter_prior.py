@@ -31,7 +31,6 @@ class Parameter_Prior(object):
     # (TODO: Doesn't seems to be used, suppress ?)
     # joint_prior_pos = None
 
-
     def __init__(self, paramfile_info, prior_category=None, prior_args=None, joint_prior_ref=None,
                  available_joint_priors={}):
         """Initialise the information related to the Prior for the Parameter instance.
@@ -177,8 +176,7 @@ class Parameter_Prior(object):
         # Classical marginal prior keys
         text = text_tab + entete_prior + "'category': '{}', 'args': {},\n".format(self.prior_category, self.prior_args)
         # Joint prior keys (for later use, not implemented yet in what follows)
-        text += (text_tab + space_entete_prior +
-                 "'joint_prior_ref': None\n")
+        text += (text_tab + space_entete_prior + "'joint_prior_ref': None\n")
         text += text_tab + space_entete_prior + "}\n"
         text += text_tab + "},\n"
         return text
