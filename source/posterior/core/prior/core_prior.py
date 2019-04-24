@@ -68,7 +68,9 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
         at the instanciation of the Prior class. The difference between extra and madantory arguments
         is that the extra argument will be attributed a default value if they are not provided. This
         default value is provided by __default_extra_args__.
-    __default_extra_args__ : Default value for each one of the extra arguments listed in __extra_args__.
+    __default_extra_args__ : Dictionary giving the default value for each one of the extra arguments
+        listed in __extra_args__. If no entry is provided for an extra argument, the default value is
+        assumed to be None.
     __joint__              : Specify of the Prior is a joint prior. This is inherited from Core_Prior_Function
         or Core_JointPrior_Function and doesn't need to be redefined in the Subclass.
 
@@ -183,9 +185,9 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
         :param dict_of_dict_of_str: dictionary giving the arguments provided to the __init__ method and
             sorted into categories (mandatory and extra).
         """
-        for arg_key, default_value in zip(self.extra_args, self.default_extra_args):
+        for arg_key in self.extra_args:
             if arg_key not in dico_args[self.extra_key]:
-                dico_args[self.extra_key][arg_key] = default_value
+                dico_args[self.extra_key][arg_key] = self.default_extra_args.get(arg_key, None)
 
 
 class Core_JointPrior_Function(Core_Prior_Function):
@@ -267,7 +269,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
         - mandatory_args
         - extra_args
         - hidden_params_prior definition for the hidden prior. These arguments name should be hiddenparam_prior
-            where hiddenparam is one element in the self.__hidden_params__ list. The value of this argument
+            where hiddenparam is one element in the self.__hidden_param_refs__ list. The value of this argument
             should a dict {'category': prior_cat, 'args': {dict of prior args and values}} or a list of
             these dictionaries if the hiddent parameter can be multiple (specified by self.__multiple_hidden_params__)
         Only mandatory arguments can by *args
@@ -520,7 +522,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
         of a reference), one might have to infer the number of hidden parameters. This function is made
         to do that generically. If you want to have a different behavior overwrite it.
 
-        :param None/str hidden_param_ref: If not None, should be in self.__hidden_params__
+        :param None/str hidden_param_ref: If not None, should be in self.__hidden_param_refs__
         :param bool output_in_dict: If False result is a number, if True it's a dict of numbers, keys being
             parameters references (in self.__params__) and values being the number of parameters of this
             reference.
@@ -534,7 +536,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
                              "The automatic get_nb_hiddenparams cannot be applied. Override it.")
         # Set the list of hidden parameter references for which we want to infer the number
         if hidden_param_ref is None:
-            l_hiddenparam_refs = self.hidden_params
+            l_hiddenparam_refs = self.hidden_param_refs
         else:
             if isinstance(hidden_param_ref, list):
                 l_hiddenparam_refs = hidden_param_ref
@@ -543,8 +545,8 @@ class Core_JointPrior_Function(Core_Prior_Function):
         # Infer the number of hidden parameters of the references in l_hiddenparam_refs
         res = {}
         for hidden_param_ref in l_hiddenparam_refs:
-            idx = self.hidden_params.index(hidden_param_ref)
-            res[hidden_param_ref] = self.get_params_nb(self.params[idx])
+            idx = self.hidden_param_refs.index(hidden_param_ref)
+            res[hidden_param_ref] = self.get_params_nb(self.param_refs[idx])
         if output_in_dict:
             return res
         else:
