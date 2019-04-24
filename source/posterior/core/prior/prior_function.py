@@ -376,10 +376,12 @@ class PolarPrior(Core_JointPrior_Function):
     __extra_args__ = []
     __default_extra_args__ = {}
     __hidden_param_refs__ = ["r", "theta"]
+    __multiple_hidden_params__ = [False, False]
     __default_hidden_priors__ = {"r": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
                                  "theta": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
                                  }
     __param_refs__ = ['x', 'y']
+    __multiple_params__ = [False, False]
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
