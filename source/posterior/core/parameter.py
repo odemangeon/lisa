@@ -49,8 +49,9 @@ class Parameter(Named, Parameter_Prior):
         :param dict kwargs_getname_4_codename: Parameters for the Named.get_name method to construct
             the parameter names for reference in codes.
 
-        Keyword arguments are provided to Parameter_Prior.__init__ (see its docstring for more
-        info).
+        Keyword arguments (kwargs_prior) are provided to Parameter_Prior.__init__ (see its docstring
+        for more info). They can be used to change the default prior for a parameter (which is uniform
+        between 0 and 1 otherwise.)
         """
         super(Parameter, self).__init__(name=name, prefix=name_prefix, kwargs_getname_4_storename=kwargs_getname_4_storename,
                                         kwargs_getname_4_codename=kwargs_getname_4_codename)
@@ -134,7 +135,10 @@ class Parameter(Named, Parameter_Prior):
 
     @property
     def paramfile_info(self):
-        """Dictionary with contain the name of the information which can be set in the param file."""
+        """Dictionary with contain the name of the information which can be set in the param file.
+
+        It is filled in the __init__ method of this class.
+        """
         return self.__paramfile_info
 
     def get_paramfile_section(self, text_tab="", texttab_1tline=True,
