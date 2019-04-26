@@ -14,7 +14,7 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-from collections import OrderedDict  # , defaultdict
+# from collections import OrderedDict  # , defaultdict
 from numpy import array, ones
 # from copy import deepcopy
 
@@ -38,7 +38,7 @@ from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder
-from ....tools.miscellaneous import spacestring_like
+# from ....tools.miscellaneous import spacestring_like
 
 
 ## Logger
@@ -330,7 +330,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Get the list of parameter instances (and parameter name if needed)
         if list_paramnames is None:
             list_params = self.get_list_params(main=True, free=True, recursive=True)
-            list_paramnames = [param.get_name(include_prefix=True, recursive=True) for param in list_param]
+            list_paramnames = [param.get_name(include_prefix=True, recursive=True) for param in list_params]
         else:
             list_params = []
             for param_name in list_paramnames:
