@@ -5,11 +5,11 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan
+from numpy import pi, inf, ones, where, any, arange, nan, array
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ....tools.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....tools.convert import gethplus, gethminus, getkplus, getkminus
+from ....tools.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
@@ -24,44 +24,34 @@ class HKPPrior(Core_JointPrior_Function):
 
     __category__ = "hkP"
     __mandatory_args__ = []
-    __extra_args__ = ['Pb_prior', 'Pc_prior', 'eb_prior', 'ec_prior', 'omegab_prior', 'omegac_prior']
-    __params__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc']
-
-    def set_dico_priors_arg(self, Pb_prior=None, Pc_prior=None, eb_prior=None, ec_prior=None,
-                            omegab_prior=None, omegac_prior=None):
-        """Fill self.dico_priors_arg.
-
-        The argument defines the marginal prior of the hidden parameters "Pb", "Pc", "eb", "ec", "omegab",
-        "omegac". They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
-        like for marginal priors
-        """
-        for Pname, P_prior in zip(["Pb", "Pc"], [Pb_prior, Pc_prior]):
-            if P_prior is None:
-                P_prior = {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}}
-            self.dico_priors_arg[Pname] = P_prior
-        for ename, e_prior in zip(["eb", "ec"], [eb_prior, ec_prior]):
-            if e_prior is None:
-                e_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
-            self.dico_priors_arg[ename] = e_prior
-        for omeganame, omega_prior in zip(["omegab", "omegac"], [omegab_prior, omegac_prior]):
-            if omega_prior is None:
-                omega_prior = {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-            self.dico_priors_arg[omeganame] = omega_prior
+    __extra_args__ = []
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ['Pb', 'Pc', 'eb', 'ec', 'omegab', 'omegac']
+    __multiple_hidden_params__ = [False, False, False, False, False, False]
+    __default_hidden_priors__ = {"Pb": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
+                                 "Pc": {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
+                                 "eb": {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 "ec": {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 "omegab": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+                                 "omegac": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
+                                 }
+    __param_refs__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc']
+    __multiple_params__ = [False, False, False, False, False, False]
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
-            The keys are parameter keys in the self.params list and the values are the parameter instances
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
             as associated in the parameter file.
         :return function logpdf: log pdf the order in which the parameter should be provided is
-            provided by self.params
+            provided by self.param_refs
         """
         (param_nb,
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["getecc_plb_4_handk_fast"] = getecc_plb_4_handk_fast
         ldict["getecc_plc_4_handk_fast"] = getecc_plc_4_handk_fast
@@ -69,7 +59,7 @@ class HKPPrior(Core_JointPrior_Function):
         ldict["getomega_plc_4_handk_fast"] = getomega_plc_4_handk_fast
         ldict["inf"] = inf
         dico_text_params = {}
-        for param_key in self.params:
+        for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
         function_name = "logpdf_{}".format(self.category)
@@ -97,7 +87,7 @@ class HKPPrior(Core_JointPrior_Function):
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, hplus, hminus, kplus, kminus, Pb, Pc):
-        dico_logpdf = self.dico_priorfunction
+        dico_logpdf = self.priorinstance_hiddenparams
 
         eb = getecc_plb_4_handk_fast(hplus, hminus, kplus, kminus, Pc / Pb)
         ec = getecc_plc_4_handk_fast(hplus, hminus, kplus, kminus)
@@ -112,10 +102,10 @@ class HKPPrior(Core_JointPrior_Function):
         :param int nb_values: Number of values to draw for each parameter.
         :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
-            The order of the parameters in the tuple is provided by self.params.
+            The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}
-        for param, dico in self.dico_priors_arg.items():
+        for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
                 dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
@@ -136,75 +126,59 @@ class HKPtPrior(Core_JointPrior_Function):
 
     __category__ = "hkPt"
     __mandatory_args__ = ['t_ref']
-    __extra_args__ = ['Pb_prior', 'Pc_prior', 'eb_prior', 'ec_prior', 'omegab_prior', 'omegac_prior',
-                      'tb_prior', 'tc_prior', 'Phi_lims', 'Phib_prior', 'Phic_prior']
-    __params__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc', 'tb', 'tc']
+    __extra_args__ = ['Phi_lims']
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ['Pb', 'Pc', 'eb', 'ec', 'omegab', 'omegac', 'tb', 'tc', 'Phib', 'Phic']
+    __multiple_hidden_params__ = [False, False, False, False, False, False, False, False, False, False]
+    __default_hidden_priors__ = {'Pb': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
+                                 'Pc': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
+                                 'eb': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 'ec': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 'omegab': {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+                                 'omegac': {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+                                 'Phib': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
+                                 'Phic': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}},
+                                 }
+    __param_refs__ = ['hplus', 'hminus', 'kplus', 'kminus', 'Pb', 'Pc', 'tb', 'tc']
+    __multiple_params__ = [False, False, False, False, False, False, False, False]
 
-    def set_dico_priors_arg(self, t_ref, Pb_prior=None, Pc_prior=None, eb_prior=None, ec_prior=None,
-                            omegab_prior=None, omegac_prior=None, tb_prior=None, tc_prior=None, Phi_lims=None,
-                            Phib_prior=None, Phic_prior=None):
-        """Fill self.dico_priors_arg.
-
-        The argument defines the marginal prior of the hidden parameters "Pb", "Pc", "eb", "ec", "omegab",
-        "omegac". They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
-        like for marginal priors
-        You have to choose between the t_prior(s) and Phi_prior(s), you cannot use both for the same planet.
-
-        :param float t_ref: Reference time for the definition of the boundaries of the prior on t.
-            outside of the interval [t_ref - P/2, t_ref + P/2] the prior probability is 0.
-        :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
-            error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
-        """
-        self.t_ref = t_ref
-        for Pname, P_prior in zip(["Pb", "Pc"], [Pb_prior, Pc_prior]):
-            if P_prior is None:
-                P_prior = {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}}
-            self.dico_priors_arg[Pname] = P_prior
+    def __init__(self, params, *args, **kwargs):
+        super(HKPtPrior, self).__init__(params, *args, **kwargs)
         self.use_phi = {}
-        for tname, t_prior, Phiname, Phi_prior, planet_name in zip(["tb", "tc"], [tb_prior, tc_prior],
-                                                                   ["Phib", "Phib"], [Phib_prior, Phic_prior],
+        for tname, t_prior, Phiname, Phi_prior, planet_name in zip(["tb", "tc"],
+                                                                   [self.dico_args[self.hiddenparamprior_key].get("tb_prior", None), self.dico_args[self.hiddenparamprior_key].get("tc_prior", None)],
+                                                                   ["Phib", "Phib"],
+                                                                   [self.dico_args[self.hiddenparamprior_key].get("Phib_prior", None), self.dico_args[self.hiddenparamprior_key].get("Phic_prior", None)],
                                                                    ["b", "c"]):
             if (t_prior is not None) and (Phi_prior is not None):
                 raise ValueError("t_prior and Phi_prior cannot be set at the same time. It's one or the other.")
             elif (t_prior is None) and (Phi_prior is None):
                 self.use_phi[planet_name] = True
-                Phi_prior = {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}}
-                self.dico_priors_arg["Phi"] = Phi_prior
             elif t_prior is not None:
                 self.use_phi[planet_name] = False
-                self.dico_priors_arg[tname] = t_prior
             else:
                 self.use_phi[planet_name] = True
-                self.dico_priors_arg["Phi"] = Phi_prior
-                if Phi_lims is not None:
-                    raise ValueError("Phi_lims should not be set when Phi_prior is provided")
+            if self.use_phi[planet_name] and (self.Phi_lims is not None):
+                raise ValueError("Phi_lims should not be set when Phi_prior is provided")
         if any([not(use_phi) for use_phi in self.use_phi.values()]):
-            if Phi_lims is None:
-                Phi_lims = (-0.5, 0.5)
-            self.Phi_min, self.Phi_max = Phi_lims
-        for ename, e_prior in zip(["eb", "ec"], [eb_prior, ec_prior]):
-            if e_prior is None:
-                e_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
-            self.dico_priors_arg[ename] = e_prior
-        for omeganame, omega_prior in zip(["omegab", "omegac"], [omegab_prior, omegac_prior]):
-            if omega_prior is None:
-                omega_prior = {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-            self.dico_priors_arg[omeganame] = omega_prior
+            if self.Phi_lims is None:
+                self.Phi_lims = (-0.5, 0.5)
+            self.Phi_min, self.Phi_max = self.Phi_lims
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
-            The keys are parameter keys in the self.params list and the values are the parameter instances
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
             as associated in the parameter file.
         :return function logpdf: log pdf the order in which the parameter should be provided is
-            provided by self.params
+            provided by self.param_refs
         """
         (param_nb,
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["getecc_plb_4_handk_fast"] = getecc_plb_4_handk_fast
         ldict["getecc_plc_4_handk_fast"] = getecc_plc_4_handk_fast
@@ -212,7 +186,7 @@ class HKPtPrior(Core_JointPrior_Function):
         ldict["getomega_plc_4_handk_fast"] = getomega_plc_4_handk_fast
         ldict["inf"] = inf
         dico_text_params = {}
-        for param_key in self.params:
+        for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
         logpdf_torPhi = {}
@@ -262,7 +236,7 @@ class HKPtPrior(Core_JointPrior_Function):
     def logpdf(self, hplus, hminus, kplus, kminus, Pb, Pc, tb, tc):
         if Pc / Pb < 1:
             return -inf
-        dico_logpdf = self.dico_priorfunction
+        dico_logpdf = self.priorinstance_hiddenparams
         Phib = (tb - self.t_ref) / Pb
         Phic = (tc - self.t_ref) / Pc
         res_Phiort = {}
@@ -286,10 +260,10 @@ class HKPtPrior(Core_JointPrior_Function):
         :param int nb_values: Number of values to draw for each parameter.
         :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
-            The order of the parameters in the tuple is provided by self.params.
+            The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}
-        for param, dico in self.dico_priors_arg.items():
+        for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
                 dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
@@ -310,7 +284,7 @@ class HKPtPrior(Core_JointPrior_Function):
                 Phi = (tt[planet_name] - self.t_ref) / dico_ravs["P{}".format(planet_name)]
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
                 while len(indexes) > 0:
-                    tt[planet_name][indexes] = self.dico_priors_arg["t{}".format(planet_name)]["priorfunc_instance"].ravs(nb_values=len(indexes))
+                    tt[planet_name][indexes] = self.hiddenparam_defs["t{}".format(planet_name)]["priorfunc_instance"].ravs(nb_values=len(indexes))
                     indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
         return hplus, hminus, kplus, kminus, dico_ravs["Pb"], dico_ravs["Pc"], tt["b"], tt["c"]
 
@@ -321,61 +295,52 @@ class Ptphiprior(Core_JointPrior_Function):
 
     __category__ = "Ptphi"
     __mandatory_args__ = ['t_ref']
-    __extra_args__ = ['P_prior', 't_prior', 'Phi_prior', 'Phi_lims']
-    __params__ = ['P', 't']
+    __extra_args__ = ['Phi_lims']
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ['P', 't', 'Phi']
+    __default_hidden_priors__ = {'P': {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}},
+                                 'Phi': {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}}
+                                 }
+    __multiple_hidden_params__ = [False, False, False]
+    __param_refs__ = ['P', 't']
+    __multiple_params__ = [False, False]
 
-    def set_dico_priors_arg(self, t_ref, P_prior=None, t_prior=None, Phi_prior=None, Phi_lims=None):
-        """Fill self.dico_priors_arg and set self.t_ref and self.use_phi.
-
-        The argument defines the marginal prior of the hidden parameters "P", "t" or "P", "Phi".
-        They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
-        like for marginal priors.
-        You have to choose between t_prior and Phi_prior, you cannot use both.
-
-        :param float t_ref: Reference time for the definition of the boundaries of the prior on t.
-            outside of the interval [t_ref - P/2, t_ref + P/2] the prior probability is 0.
-        :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
-            error. Defines the inferior and superior limits on phase (Phi) when t_prior is defined.
-        """
-        self.t_ref = t_ref
-        if P_prior is None:
-            P_prior = {"category": "jeffreys", "args": {"vmin": 0.01, "vmax": 1000.}}
-        self.dico_priors_arg["P"] = P_prior
+    def __init__(self, params, *args, **kwargs):
+        super(HKPtPrior, self).__init__(params, *args, **kwargs)
+        t_prior = self.dico_args[self.hiddenparamprior_key].get("t_prior", None)
+        Phi_prior = self.dico_args[self.hiddenparamprior_key].get("Phi_prior", None)
         if (t_prior is not None) and (Phi_prior is not None):
             raise ValueError("t_prior and Phi_prior cannot be set at the same time. It's one or the other.")
         elif (t_prior is None) and (Phi_prior is None):
             self.use_phi = True
-            Phi_prior = {"category": "uniform", "args": {"vmin": -0.5, "vmax": 0.5}}
-            self.dico_priors_arg["Phi"] = Phi_prior
         elif t_prior is not None:
             self.use_phi = False
-            self.dico_priors_arg["t"] = t_prior
-            if Phi_lims is None:
-                Phi_lims = (-0.5, 0.5)
-            self.Phi_min, self.Phi_max = Phi_lims
         else:
             self.use_phi = True
-            self.dico_priors_arg["Phi"] = Phi_prior
-            if Phi_lims is not None:
-                raise ValueError("Phi_lims should not be set when Phi_prior is provided")
+        if self.use_phi and (self.Phi_lims is not None):
+            raise ValueError("Phi_lims should not be set when Phi_prior is provided")
+        if not(self.use_phi):
+            if self.Phi_lims is None:
+                self.Phi_lims = (-0.5, 0.5)
+            self.Phi_min, self.Phi_max = self.Phi_lims
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
-            The keys are parameter keys in the self.params list and the values are the parameter instances
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
             as associated in the parameter file.
         :return function logpdf: log pdf the order in which the parameter should be provided is
-            provided by self.params
+            provided by self.param_refs
         """
         (param_nb,
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         dico_text_params = {}
-        for param_key in self.params:
+        for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
         function_name = "logpdf_{}".format(self.category)
@@ -410,7 +375,7 @@ class Ptphiprior(Core_JointPrior_Function):
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, P, t):
-        dico_logpdf = self.dico_priorfunction
+        dico_logpdf = self.priorinstance_hiddenparams
 
         Phi = (t - self.t_ref) / P
         if self.use_phi:
@@ -427,10 +392,10 @@ class Ptphiprior(Core_JointPrior_Function):
         :param int nb_values: Number of values to draw for each parameter.
         :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
-            The order of the parameters in the tuple is provided by self.params.
+            The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}
-        for param, dico in self.dico_priors_arg.items():
+        for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
                 dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
@@ -445,7 +410,7 @@ class Ptphiprior(Core_JointPrior_Function):
             Phi = (dico_ravs["t"] - self.t_ref) / dico_ravs["P"]
             indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             while len(indexes) > 0:
-                dico_ravs["t"][indexes] = self.dico_priors_arg["t"]["priorfunc_instance"].ravs(nb_values=len(indexes))
+                dico_ravs["t"][indexes] = self.hiddenparam_defs["t"]["priorfunc_instance"].ravs(nb_values=len(indexes))
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             return dico_ravs["P"], dico_ravs["t"]
 
@@ -455,64 +420,73 @@ class Transitingprior(Core_JointPrior_Function):
 
     IMPORTANT NOTE: This prior is not properly normalized when the transiting and grazing conditions
     are more restrictive than the aR, cosinc Rrat priors
+
+    TODO: Make it multiple
+
+    :param bool transiting: True if you want to force the planet to be transiting, False otherwise
+    :param bool allow_grazing: True if you want to allow grazing transits (whatever the value of transiting)
+    :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
+        error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
     """
 
-    __category__ = "transitiing"
+    __category__ = "transiting"
     __mandatory_args__ = ['transiting', 'allow_grazing']
-    __extra_args__ = ['Rrat_prior', 'b_prior', 'aR_prior']
-    __params__ = ['aR', 'cosinc', 'Rrat']
+    __extra_args__ = []
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ['Rrat', 'b', 'aR']
+    __multiple_hidden_params__ = [False, False, False]
+    __default_hidden_priors__ = {'Rrat': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 'b': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
+                                 'aR': {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                                 }
+    __param_refs__ = ['aR', 'cosinc', 'Rrat']
+    __multiple_params__ = [False, False, False]
 
-    def set_dico_priors_arg(self, transiting, allow_grazing, aR_prior=None, Rrat_prior=None, b_prior=None):
-        """Fill self.dico_priors_arg and set self.allow_grazing, self.transiting, self.b_prior_defined
+    def set_hiddenparam_defs(self, hiddenparam_def_provided):
+        """Set the content of self.hiddenparam_defs
 
-        The argument defines the marginal prior of the Rrat and the hidden parameter "b".
-        They should follow the following format: {"category": priorcat, "args": {"arg1":0, "arg2":1}}
-        like for marginal priors.
+        Fill self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
+        of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
+        the prior to be used for each hidden parameter. It should follow the following format:
+        {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
 
-        :param bool transiting: True if you want to force the planet to be transiting, False otherwise
-        :param bool allow_grazing: True if you want to allow grazing transits (whatever the value of transiting)
-        :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
-            error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
+        :param dict_of_dict hiddenparam_def_provided: dictionary providing the hidden parameters prior definitions
+            provided by the user in the parameter file.
+            Structure: {"hidden_param_ref" + "_prior": {"category": prior_cat, "args": {dict of prior arguments}}}
         """
-        self.transiting = transiting
-        self.allow_grazing = allow_grazing
-        if Rrat_prior is None:
-            Rrat_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
-        self.dico_priors_arg["Rrat"] = Rrat_prior
+        super(Transitingprior, self).set_hiddenparam_defs(hiddenparam_def_provided)
+        # The default b prior in __default_hidden_priors__ is for a transiting non grazing case.
+        # Below I adapt the default b prior if it's not the case.
+        b_prior = hiddenparam_def_provided.get("b_prior", None)
         if b_prior is None:
             if self.transiting:
                 if self.allow_grazing:
                     b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
-                else:
-                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
             else:
                 if self.allow_grazing:
                     b_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
                 else:
                     b_prior = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
-        self.dico_priors_arg["b"] = b_prior
-        if aR_prior is None:
-            aR_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-        self.dico_priors_arg["aR"] = aR_prior
+        self.hiddenparam_defs["b"] = b_prior
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
-            The keys are parameter keys in the self.params list and the values are the parameter instances
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
             as associated in the parameter file.
         :return function logpdf: log pdf the order in which the parameter should be provided is
-            provided by self.params
+            provided by self.param_refs
         """
         (param_nb,
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["inf"] = inf
         dico_text_params = {}
-        for param_key in self.params:
+        for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
         function_name = "logpdf_{}".format(self.category)
@@ -546,7 +520,7 @@ class Transitingprior(Core_JointPrior_Function):
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, aR, cosinc, Rrat):
-        dico_logpdf = self.dico_priorfunction
+        dico_logpdf = self.priorinstance_hiddenparams
 
         b = aR * cosinc
         if self.transiting:
@@ -570,12 +544,12 @@ class Transitingprior(Core_JointPrior_Function):
         :param int nb_values: Number of values to draw for each parameter.
         :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
-            The order of the parameters in the tuple is provided by self.params.
+            The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}
         dico_pick = {}  # Indicate if you should pick random values (True) or if the value is fixed (False).
         indexes = arange(nb_values)
-        for param, dico in self.dico_priors_arg.items():
+        for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
                 dico_pick[param] = True
@@ -584,7 +558,7 @@ class Transitingprior(Core_JointPrior_Function):
                 dico_pick[param] = False
                 dico_ravs[param] = ones(len(indexes)) * value
         while len(indexes) > 0:
-            for param, dico in self.dico_priors_arg.items():
+            for param, dico in self.hiddenparam_defs.items():
                 if dico_pick[param]:
                     dico_ravs[param][indexes] = dico["priorfunc_instance"].ravs(nb_values=len(indexes))
             if self.transiting:
@@ -598,6 +572,244 @@ class Transitingprior(Core_JointPrior_Function):
                 else:
                     indexes = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
         if nb_values == 1:
-            for param, dico in self.dico_priors_arg.items():
+            for param, dico in self.hiddenparam_defs.items():
                 dico_ravs[param] = dico_ravs[param][0]
         return dico_ravs['aR'], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
+
+
+class TransitingRhoprior(Core_JointPrior_Function):
+    """Prior defined for the a/R, cosinc and Rrat to ensure that a planet is transit (or not).
+
+    IMPORTANT NOTE: This prior is not properly normalized when the transiting and grazing conditions
+    are more restrictive than the aR, cosinc Rrat priors
+
+    :param bool transiting: True if you want to force the planet to be transiting, False otherwise
+    :param bool allow_grazing: True if you want to allow grazing transits (whatever the value of transiting)
+    :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
+        error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
+    """
+
+    __category__ = "transiting_rho"
+    __mandatory_args__ = ['transiting', 'allow_grazing']
+    __extra_args__ = []
+    __default_extra_args__ = []
+    __params__ = ['rhostar', 'P', 'cosinc', 'Rrat']
+    __multiple_params__ = [False, True, True, True]
+    __hidden_param_refs__ = ['rhostar', 'P', 'Rrat', 'b']
+    __multiple_hidden_params__ = [False, True, True, True]
+    __default_hidden_priors__ = {'rhostar': {'category': 'normal', 'args': {'mu': 1, 'sigma': 0.1, 'lims': [0., None]}},
+                                 'P': {'category': 'jeffreys', 'args': {'vmin': 0.1, 'vmax': 1e4}},
+                                 'Rrat': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}},
+                                 'b': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}}
+                                 }
+
+    def __init__(self, params, *args, **kwargs):
+        super(TransitingRhoprior, self).__init__(params, *args, **kwargs)
+        # Check that P, cosinc and Rrat have the same number of parameters.
+        if not(self.get_params_nb(param_ref="P") == self.get_params_nb(param_ref="cosinc") == self.get_params_nb(param_ref="Rrat")):
+            raise ValueError("You should have the same number of P, cosinc and Rrat parameters. One of each per planet !")
+        self.nb_planet = self.get_params_nb(param_ref="P")
+        # transiting and allow_grazing are also multiples so check the transiting and allow_grazing have
+        # the good dimensions
+        for arg in [self.transiting, self.allow_grazing]:
+            if isinstance(arg, list) and (len(arg) != self.nb_planet):
+                raise ValueError("If you provided transiting or allow_grazing as a list, it should have "
+                                 "the same length as params['P']. One per planet.")
+            else:
+                arg = [arg for i in range(self.nb_planet)]
+
+    def set_hiddenparam_defs(self, hiddenparam_def_provided):
+        """Set the content of self.hiddenparam_defs
+
+        Fill self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
+        of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
+        the prior to be used for each hidden parameter. It should follow the following format:
+        {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
+
+        :param dict_of_dict hiddenparam_def_provided: dictionary providing the hidden parameters prior definitions
+            provided by the user in the parameter file.
+            Structure: {"hidden_param_ref" + "_prior": {"category": prior_cat, "args": {dict of prior arguments}}}
+        """
+        super(TransitingRhoprior, self).set_hiddenparam_defs(hiddenparam_def_provided)
+        b_prior = hiddenparam_def_provided.get("b_prior", None)
+        if b_prior is None:
+            if self.transiting:
+                if self.allow_grazing:
+                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                else:
+                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
+            else:
+                if self.allow_grazing:
+                    b_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                else:
+                    b_prior = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        self.hiddenparam_defs["b"] = [b_prior for i in self.hiddenparam_defs["b"]]
+
+    def create_logpdf(self, params):
+        """Return the logarithmic probability density function for the joint prior.
+
+        :param dict params: Dictionnary which contains the Parameter instances required by the prior.
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
+            as associated in the parameter file.
+        :return function logpdf: log pdf the order in which the parameter should be provided is
+            provided by self.param_refs
+        """
+        (param_nb,
+         arg_list,
+         param_vector_name,
+         ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+        dico_logpdf = {}
+        for hidden_param_ref, multiple in zip(self.hidden_param_refs, self.multiple_hidden_params):
+            if multiple:
+                dico_logpdf[hidden_param_ref] = [priorfunc.create_logpdf() for priorfunc in self.priorinstance_hiddenparams[hidden_param_ref]]
+            else:
+                dico_logpdf[hidden_param_ref] = self.priorinstance_hiddenparams[hidden_param_ref].create_logpdf()
+        ldict["dico_logpdf"] = dico_logpdf
+        ldict["getaoverr"] = getaoverr
+        ldict["inf"] = inf
+        ldict["array"] = array
+        ldict["nb_planet"] = self.nb_planet
+        dico_text_params = {}
+        for param_ref, multiple in zip(self.param_refs, self.multiple_params):
+            if multiple:
+                dico_text_params[param_ref] = [add_param_argument(param=param_ref_ii, arg_list=arg_list, key_param=key_param,
+                                                                  param_nb=param_nb, param_vector_name=par_vec_name)
+                                               for param_ref_ii in params[param_ref]]
+            else:
+                dico_text_params[param_ref] = add_param_argument(param=params[param_ref], arg_list=arg_list, key_param=key_param,
+                                                                 param_nb=param_nb, param_vector_name=par_vec_name)
+        function_name = "logpdf_{}".format(self.category)
+        list_comp = "["
+        for idx_planet in range(self.get_params_nb("P")):
+            if self.transiting[idx_planet]:
+                if self.allow_grazing[idx_planet]:
+                    list_comp += "b[{idx_planet}] > 1 + {Rrat}".format(idx_planet=idx_planet,
+                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                else:
+                    list_comp += "b[{idx_planet}] > 1 - {Rrat}".format(idx_planet=idx_planet,
+                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+            else:
+                if self.allow_grazing:
+                    list_comp += "b[{idx_planet}] < 1 - {Rrat}".format(idx_planet=idx_planet,
+                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                else:
+                    list_comp += "b[{idx_planet}] < 1 + {Rrat}".format(idx_planet=idx_planet,
+                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+            list_comp += ", "
+        list_comp += "]"
+        text_function = """
+        def {function_name}({param_vector_name}):
+            b = getaoverr(array({P}), {rhostar}) * array({cosinc})
+            if any({list_comp}):
+                return -inf
+            else:
+                return (dico_logpdf['rhostar']({rhostar}) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(nb_planet)]) +
+                        sum([dico_logpdf['Rrat'][ii]({Rrat}[ii]) for ii in range(nb_planet)]) +
+                        sum([dico_logpdf['P'][ii]({P}[ii]) for ii in range(nb_planet)])
+                        )
+        """
+        text_function = dedent(text_function)
+        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
+                                             P=dico_text_params["P"], cosinc=dico_text_params["cosinc"],
+                                             Rrat=dico_text_params["Rrat"], rhostar=dico_text_params["rhostar"],
+                                             list_comp=list_comp)
+        logger.debug("text of joint prior {category}:\n{text_func}"
+                     "".format(category=self.category, text_func=text_function))
+        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+        exec(text_function, ldict)
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list))
+
+    def logpdf(self, rhostar, P, cosinc, Rrat):
+        dico_logpdf = self.priorinstance_hiddenparams
+        aR = getaoverr(P, rhostar)
+        b = aR * cosinc
+        if self.transiting:
+            if self.allow_grazing:
+                comp = (b > (1 + Rrat))
+            else:
+                comp = (b > (1 - Rrat))
+        else:
+            if self.allow_grazing:
+                comp = (b < (1 - Rrat))
+            else:
+                comp = (b < (1 + Rrat))
+        if comp:
+            return -inf
+        else:
+            return (dico_logpdf['rhostar'](rhostar) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(self.nb_planet)]) +
+                    sum([dico_logpdf['Rrat'][ii]({Rrat}[ii]) for ii in range(self.nb_planet)]) +
+                    sum([dico_logpdf['P'][ii]({P}[ii]) for ii in range(self.nb_planet)])
+                    )
+
+    def ravs(self, nb_values=1):
+        """Return values of the parameters drawn from the joint prior.
+
+        :param int nb_values: Number of values to draw for each parameter.
+        :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
+            for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
+            The order of the parameters in the tuple is provided by self.param_refs.
+        """
+        dico_ravs = {}
+        dico_pick = {}  # Indicate if you should pick random values (True) or if the value is fixed (False).
+        indexes = arange(nb_values)
+        for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
+            if multiple:
+                dico_ravs[hiddenparam_ref] = []
+                dico_pick[hiddenparam_ref] = []
+                for ii in range(self.nb_planet):
+                    value = self.hiddenparam_defs[hiddenparam_ref][ii].get("value", None)
+                    if value is None:
+                        dico_pick[hiddenparam_ref].append(True)
+                        dico_ravs[hiddenparam_ref].append(ones(len(indexes)) * nan)
+                    else:
+                        dico_pick[hiddenparam_ref].append(False)
+                        dico_ravs[hiddenparam_ref].append(ones(len(indexes)) * value)
+            else:
+                value = self.hiddenparam_defs[hiddenparam_ref].get("value", None)
+                if value is None:
+                    dico_pick[hiddenparam_ref] = True
+                    dico_ravs[hiddenparam_ref] = ones(len(indexes)) * nan
+                else:
+                    dico_pick[hiddenparam_ref] = False
+                    dico_ravs[hiddenparam_ref] = ones(len(indexes)) * value
+        while len(indexes) > 0:
+            for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
+                if multiple:
+                    for ii in range(self.nb_planet):
+                        if dico_pick[hiddenparam_ref][ii]:
+                            dico_ravs[hiddenparam_ref][ii][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref][ii].ravs(nb_values=len(indexes))
+                else:
+                    if dico_pick[hiddenparam_ref]:
+                        dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+            l_indexes = []
+            for ii in range(self.nb_planet):
+                if self.transiting[ii]:
+                    if self.allow_grazing[ii]:
+                        l_indexes.append(where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0])
+                    else:
+                        l_indexes.append(where(dico_ravs["b"] > (1 - dico_ravs["Rrat"]))[0])
+                else:
+                    if self.allow_grazing[ii]:
+                        l_indexes.append(where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0])
+                    else:
+                        l_indexes.append(where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0])
+            indexes = list(l_indexes[0].union(l_indexes[1:]))
+        if nb_values == 1:
+            for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
+                if multiple:
+                    for ii in range(self.nb_planet):
+                        dico_ravs[hiddenparam_ref][ii] = dico_ravs[hiddenparam_ref][ii][0]
+                else:
+                    dico_ravs[hiddenparam_ref] = dico_ravs[hiddenparam_ref][0]
+        dico_ravs["cosinc"] = []
+        for ii in range(self.nb_planet):
+            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+        l_res = []
+        for param_ref, multiple in zip(self.param_refs, self.multiple_hidden_params):
+            if multiple:
+                for ii in range(self.nb_planet):
+                    l_res.append(dico_ravs[hiddenparam_ref][ii])
+            else:
+                l_res.append(dico_ravs[hiddenparam_ref])
+        return tuple(l_res)

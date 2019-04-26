@@ -387,21 +387,21 @@ class PolarPrior(Core_JointPrior_Function):
         """Return the logarithmic probability density function for the joint prior.
 
         :param dict params: Dictionnary which contains the Parameter instances required by the prior.
-            The keys are parameter keys in the self.params list and the values are the parameter instances
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
             as associated in the parameter file.
         :return function logpdf: log pdf the order in which the parameter should be provided is
-            provided by self.params
+            provided by self.param_refs
         """
         (param_nb,
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.dico_priorfunction.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["atan2"] = mt.atan2
         ldict["sqrt"] = mt.sqrt
         dico_text_params = {}
-        for param_key in self.params:
+        for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
         function_name = "logpdf_{}".format(self.category)
@@ -422,7 +422,7 @@ class PolarPrior(Core_JointPrior_Function):
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, x, y):
-        dico_logpdf = self.dico_priorfunction
+        dico_logpdf = self.priorinstance_hiddenparams
 
         r = mt.sqrt(x * x + y * y)
         theta = mt.atan2(y, x)
@@ -434,10 +434,10 @@ class PolarPrior(Core_JointPrior_Function):
         :param int nb_values: Number of values to draw for each parameter.
         :return tuple_of_float/ nb_values: Tuple for which each element contains the value(s) drawn
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
-            The order of the parameters in the tuple is provided by self.params.
+            The order of the parameters in the tuple is provided by self.param_refs.
         """
         dico_ravs = {}
-        for param, dico in self.dico_priors_arg.items():
+        for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
                 dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
