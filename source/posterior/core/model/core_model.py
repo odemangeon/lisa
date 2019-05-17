@@ -586,7 +586,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     def automatic_model_initialisation(self, param_file, paramfile4instcat, kwargs_parametrisation):
         """load the parameter file."""
-        self.set_parametrisation(**kwargs_parametrisation)
         self.param_file = param_file
         for key in paramfile4instcat:
             if isfile(paramfile4instcat[key]):
@@ -594,7 +593,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             else:
                 raise AssertionError("File {} doesn't exists".format(paramfile4instcat[key]))
             self.handlers4instcatparamfile[load_key]()
-        # self.apply_parametrisation(**kwargs_parametrisation)  # In principle not needed since replaced by set.set_parametrisation(**kwargs_parametrisation) at the beginning. TBC
+        self.set_parametrisation(**kwargs_parametrisation)
         self.update_paramfile_info()
         self.load_parameter_file()
 
