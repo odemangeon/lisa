@@ -46,10 +46,11 @@ class Metaclass_PriorFunction(MandatoryReadOnlyAttr, MandatoryMethods):
 class Metaclass_JointPriorFunction(Metaclass_PriorFunction):
     """Metaclass for Joint Prior Function class.
     """
+
     @property
     def all_args(cls):
         """Return the name of the prior type."""
-        return cls.mandatory_args + cls.extra_args + cls.hidden_params
+        return cls.mandatory_args + cls.extra_args + [ref + cls.hiddenparampriorarg_ext for ref in cls.hidden_param_refs]
 
 
 class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
@@ -97,6 +98,7 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
     # Key for the dictionary sorting the arguments
     mandatory_key = "mandatory"
     extra_key = "extra"
+    l_dico_args_keys = [mandatory_key, extra_key]
 
     def __init__(self, *args, **kwargs):
         super(Core_Prior_Function, self).__init__()
@@ -107,7 +109,7 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
         # Set defaults values for non provided extra_args
         self._set_extraarg_defaultvalues(self.dico_args)
         # Create and set attributes for the madatory and extra arguments.
-        self._set_mandatory_and_extra_attributes(self, self.dico_args)
+        self._set_mandatory_and_extra_attributes(self.dico_args)
         # Make Prior_Function an abstract class
         if type(self) is Core_Prior_Function:
             raise NotImplementedError("Core_Prior_Function should not be instanciated!")
@@ -158,11 +160,11 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
             into argument categories (mandatory, extra, ...). The structure of this dict is:
             {arg_category: {arg_key: arg_value, },}
         """
-        dico_args = {self.mandatory_key: {}, self.extra_key: {}}
+        dico_args = {key: {} for key in self.l_dico_args_keys}
         for value, arg_key in zip(args, self.mandatory_args + self.extra_args):
             dico_args[self.dicokey4argkey[arg_key]][arg_key] = value
-        for arg_key, value in kwargs:
-            if (arg_key not in self.dicokey4argkey):
+        for arg_key, value in kwargs.items():
+            if arg_key not in self.dicokey4argkey:
                 raise ValueError("Argument not recognized: {}".format(arg_key))
             if arg_key in dico_args[self.dicokey4argkey[arg_key]]:
                 raise ValueError("{} argument is provided multiple times.".format(arg_key))
@@ -190,7 +192,7 @@ class Core_Prior_Function(object, metaclass=Metaclass_PriorFunction):
                 dico_args[self.extra_key][arg_key] = self.default_extra_args.get(arg_key, None)
 
 
-class Core_JointPrior_Function(Core_Prior_Function):
+class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPriorFunction):
     """docstring for Core_JointPrior_Function.
 
     When creating a new Joint Prior, you need to create a subclass of Core_Prior_Function.
@@ -248,14 +250,15 @@ class Core_JointPrior_Function(Core_Prior_Function):
     # __mandatoryattrs__ = ["category", "mandatory_args", "extra_args", "join", "default_extra_args",
     #                       "param_refs", "multiple_params", "hidden_param_refs", "multiple_hidden_params",
     #                       "default_hidden_priors"]
-    __mandatoryattrs__ = Core_Prior_Function.__mandatoryattrs__.extend(["param_refs", "multiple_params",
-                                                                        "hidden_param_refs", "multiple_hidden_params",
-                                                                        "default_hidden_priors"])
+    __mandatoryattrs__ = Core_Prior_Function.__mandatoryattrs__ + ["param_refs", "multiple_params",
+                                                                   "hidden_param_refs", "multiple_hidden_params",
+                                                                   "default_hidden_priors"]
     # __mandatorymeths__ = ["create_logpdf", "ravs", "set_dico_priors_arg"]
-    __mandatorymeths__ = Core_Prior_Function.__mandatorymeths__.extend(["set_dico_priors_arg", ])
+    __mandatorymeths__ = Core_Prior_Function.__mandatorymeths__ + ["set_hiddenparam_defs", "infer_hiddenparams_nb"]
     __joint__ = True
     # Key for the dictionary sorting the arguments
     hiddenparamprior_key = "hidden_param_prior"
+    l_dico_args_keys = Core_Prior_Function.l_dico_args_keys + [hiddenparamprior_key, ]
     # Extension to hidden param reference used for the argument to provide the hidden param prior definition
     hiddenparampriorarg_ext = "_prior"
 
@@ -348,7 +351,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
         The types of arguments are mandatory, extra and hidden_param_prior
         """
         dicokey4argkey = super(Core_JointPrior_Function, self).dicokey4argkey
-        for arg_key in self.hidden_param_ref:
+        for arg_key in self.hidden_param_refs:
             dicokey4argkey[arg_key + self.hiddenparampriorarg_ext] = self.hiddenparamprior_key
         return dicokey4argkey
 
@@ -371,7 +374,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
         value = Prior instances for the hidden parameter or a list of Prior instances if the hidden
             parameter is multiple (specified by self.__multiple_hidden_params__).
         """
-        return self.__priorinstances_hiddenparams
+        return self.__priorinstance_hiddenparams
 
     @property
     def param_name_lists(self):
@@ -402,11 +405,11 @@ class Core_JointPrior_Function(Core_Prior_Function):
         Initialise self.param_name_reflist.
         """
         self.__param_name_lists = {}
-        for hidden_param_ref, multiple in zip(self.param_refs, self.multiple_params):
+        for param_ref, multiple in zip(self.param_refs, self.multiple_params):
             if multiple:
-                self.__param_name_lists[hidden_param_ref] = []
+                self.__param_name_lists[param_ref] = []
             else:
-                self.__param_name_lists[hidden_param_ref] = None
+                self.__param_name_lists[param_ref] = None
 
     def _init_hiddenparam_defs(self):
         """Initialise the dictionary of definitions dictionary for the prior of the hidden parameters.
@@ -432,6 +435,7 @@ class Core_JointPrior_Function(Core_Prior_Function):
                 dico[hidden_param_ref] = [dico_default_values.get(hidden_param_ref, None) for i in range(nb_hiddenparam)]
             else:
                 dico[hidden_param_ref] = dico_default_values.get(hidden_param_ref, None)
+        return dico
 
     def _set_param_name_lists(self, params):
         """Set the list of parameter names used by this joint prior.

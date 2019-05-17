@@ -593,7 +593,7 @@ class TransitingRhoprior(Core_JointPrior_Function):
     __mandatory_args__ = ['transiting', 'allow_grazing']
     __extra_args__ = []
     __default_extra_args__ = []
-    __params__ = ['rhostar', 'P', 'cosinc', 'Rrat']
+    __param_refs__ = ['rhostar', 'P', 'cosinc', 'Rrat']
     __multiple_params__ = [False, True, True, True]
     __hidden_param_refs__ = ['rhostar', 'P', 'Rrat', 'b']
     __multiple_hidden_params__ = [False, True, True, True]

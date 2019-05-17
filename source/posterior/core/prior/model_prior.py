@@ -123,7 +123,9 @@ class Model_Prior(object):
         # For each parameter in the list of marginal (step 1): Create an entry in
         # "marginal" (see step 2) which to the full name of the parameter associate the
         # marginal prior function.
+        logger.info("Creating marginal priors")
         for full_name, param in marginal.items():
+            logger.info("Creating marginal priors for {}".format(full_name))
             prior_func = manager.get_priorfunc_subclass(param.prior_category)(**param.prior_args)
             priors["marginal"][full_name] = prior_func.create_logpdf()
         # For each parameter in the list of joint (step 1):
@@ -131,17 +133,19 @@ class Model_Prior(object):
         # that it has already been created for another parameter.
         # If not, get the info from self.joint_prior_container, create the joint prior instance
         # Create the logpdf
+        logger.info("Creating joint priors")
         for full_name, param in joint.items():
             joint_prior_info = self.joint_prior_container[param.joint_prior_ref]
-            joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(**joint_prior_info["args"])
+            joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(joint_prior_info["params"], **joint_prior_info["args"])
             if param.joint_prior_ref not in priors["joint"]["logpdf"]:
+                logger.info("Creating joint priors reference {}".format(param.joint_prior_ref))
                 params = {param_ref: self.get_parameter(param_name, recursive=True) for param_ref, param_name in joint_prior_info["params"].items()}
                 priors["joint"]["logpdf"][param.joint_prior_ref] = {"function": joint_prior_func.create_logpdf(params),
-                                                                    "nb_param": len(joint_prior_func.params)}
+                                                                    "nb_param": len(joint_prior_func.param_refs)}
             idx = None
             for param_ref, param_name in joint_prior_info["params"].items():
                 if param.name.is_name(param_name):
-                    idx = joint_prior_func.params.index(param_ref)
+                    idx = joint_prior_func.param_refs.index(param_ref)
             if idx is None:
                 raise ValueError("Parameter {} not found in joint prior info dictionary: {}"
                                  "".format(full_name, joint_prior_info["params"]))
