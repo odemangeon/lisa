@@ -164,7 +164,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
             dico["transit_model"] = self.transit_model
         if RV_inst_cat in self.dataset_db.inst_categories:
             dico["rv_model"] = self.rv_model
-        dico["parametrisation"] = self.parametrisation
+        # dico["parametrisation"] = self.parametrisation
         return dico
 
     @property

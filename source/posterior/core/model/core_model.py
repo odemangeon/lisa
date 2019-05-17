@@ -137,7 +137,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     @property
     def init_kwargs(self):
-        """Return the dictionary giving the arguments for the define_model method of Posterior."""
+        """Return the dictionary giving the arguments for the define_model method of Posterior.
+
+        TODO: Maybe There is some common initialisation that could be done. TBC
+        """
         raise NotImplementedError("You need to create this property for your model !")
 
     @property
@@ -348,13 +351,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         dico_initvals = {}
         joint = {}
         for param_name, param in zip(list_paramnames, list_params):
+            logger.info("Generate initial positions for param {}".format(param_name))
             if param.joint:
                 if param.joint_prior_ref not in joint:
                     joint[param.joint_prior_ref] = {"prior_info": self.joint_prior_container[param.joint_prior_ref],
                                                     "param_name": ["" for ii in range(len(self.joint_prior_container[param.joint_prior_ref]["params"]))]}
                 joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
                 found = False
-                for ii, param_key in enumerate(joint_prior_class.params):
+                for ii, param_key in enumerate(joint_prior_class.param_refs):
                     if param.name.is_name(joint[param.joint_prior_ref]["prior_info"]["params"][param_key]):
                         found = True
                         break
@@ -375,7 +379,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Produce the initial values for each parameter with the joint priors and store the result in a dictionary
         # with for key the parameter name and for value the initial value(s).
         for joint_prior_ref, dico in joint.items():
-            joint_prior_instance = manager_prior.get_priorfunc_subclass(dico["prior_info"]["category"])(**dico["prior_info"]["args"])
+            joint_prior_instance = manager_prior.get_priorfunc_subclass(dico["prior_info"]["category"])(dico["prior_info"]["params"], **dico["prior_info"]["args"])
             vals = joint_prior_instance.ravs(nb_values=nb_values)
             for ii, param_name in enumerate(joint[joint_prior_ref]["param_name"]):
                 dico_initvals[param_name] = vals[ii]
@@ -582,6 +586,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     def automatic_model_initialisation(self, param_file, paramfile4instcat, kwargs_parametrisation):
         """load the parameter file."""
+        self.set_parametrisation(**kwargs_parametrisation)
         self.param_file = param_file
         for key in paramfile4instcat:
             if isfile(paramfile4instcat[key]):
@@ -589,7 +594,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             else:
                 raise AssertionError("File {} doesn't exists".format(paramfile4instcat[key]))
             self.handlers4instcatparamfile[load_key]()
-        self.apply_parametrisation(**kwargs_parametrisation)
+        # self.apply_parametrisation(**kwargs_parametrisation)  # In principle not needed since replaced by set.set_parametrisation(**kwargs_parametrisation) at the beginning. TBC
         self.update_paramfile_info()
         self.load_parameter_file()
 
