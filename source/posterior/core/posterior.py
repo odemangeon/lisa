@@ -97,13 +97,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())
-        # TODO: This looks like it's not used ! IF not also suppress noisemodels property below
-        self.__noisemodel_db = DatabaseFunc(object_stored="noise model",
-                                            instmodel4dataset=self.instmodel4dataset,
-                                            database_name=self.object_name, instordered=False,
-                                            use_samelock=self.samelock,
-                                            lock_dataset=self.get_dataset_Lock_instance(),
-                                            lock_database=self.get_database_Lock_instance())
 
     @property
     def object_name(self):
@@ -289,11 +282,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
     @property
-    def noisemodels(self):
-        """Return the current content lnprior database."""
-        return self.__noisemodel_db
-
-    @property
     def lnlikelihoods(self):
         """Return the current content lnprior database."""
         return self.__lnlike_db
@@ -447,13 +435,15 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             pickle_filename = "{}{}".format(self.object_name, self._extension_postinstance)
         with open(join(pickle_folder, pickle_filename), "rb") as fdico:
             dico = load(fdico)
-
-        # post_instance = Posterior(object_name=dico["object_name"])
+        # define data and run folder
         self.dataset_db.data_folder = dico["data_folder"]
         self.run_folder = dico["run_folder"]
+        # load datasetfile
         self.load_datasetsfile(dico["dataset_file"])
+        # define model
         self.define_model(category=dico["model_category"], name=dico["object_name"],
                           **dico["model_kwargs"])
+        # Automatic model_init: Set parameterisation, set param_file and inst_cat_param_file and load them
         self.model.automatic_model_initialisation(**dico["model_auto_init_kwargs"])
         self.get_datasimulators()
         self.get_lnlikelihoods()
