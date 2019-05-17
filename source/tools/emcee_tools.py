@@ -455,7 +455,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         ax_data[0].legend(loc='upper right', shadow=True)
 
 
-def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kwargs={},
+def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets=None, datasim_kwargs={},
                         model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, kwargs_tl={}):
@@ -490,7 +490,9 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, datasim_kw
         raise ValueError("If you want to phase fold, you have to provide the phasefold_kwargs")
 
     # Get the list of all datasets names and the number of datasets
-    l_datasets = dataset_db.get_datasets()
+    if l_datasets is None:
+        l_datasets = dataset_db.get_datasets()
+    print(l_datasets)
     ndataset = len(l_datasets)
 
     # Create the figure and grid which will harbor the plots for each dataset
