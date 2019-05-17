@@ -5,7 +5,7 @@ Script to produce custom plots of CORALIE-153 RV data
 
 @TODO:
 """
-from os import getcwd
+from os import getcwd, makedirs
 from os.path import join
 
 import numpy as np
@@ -289,6 +289,7 @@ if __name__ == "__main__":
 
     chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
     plot_folder = join(chain_analysis_output_folder, "plots")
+    makedirs(plot_folder, exist_ok=True)
 
     load_from_pickle = True
     exploration_output_folder = join(getcwd(), "outputs/exploration")
