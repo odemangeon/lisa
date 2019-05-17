@@ -196,6 +196,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         if "name" not in kwargs:
             kwargs.update({"name": "default"})
         # Get the CoreModel subclass associated to the provided category
+        logger.info("Defining new model of category {}...".format(category))
         model_subclass = manager_model.get_model_subclass(category)
         # Get the dictionary giving the noise model category associated to each instrument model
         # (designated by their full name)
