@@ -131,7 +131,7 @@ if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=".")
+                                                                                        folder=exploration_pickle_folder)
     else:
         pass
     init_distrib = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
