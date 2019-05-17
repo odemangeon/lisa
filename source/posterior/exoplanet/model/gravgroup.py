@@ -134,9 +134,6 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
 
-        # Initialise available parametrisation
-        GravGroup_Parametrisation.add_available_parametrisations(self)
-
         # Fill the datasimcreatorname4instcat dictionary
         self.datasimcreatorname4instcat[RV_inst_cat] = "sim_RV"
         self.datasimcreatorname4instcat[LC_inst_cat] = "sim_LC"

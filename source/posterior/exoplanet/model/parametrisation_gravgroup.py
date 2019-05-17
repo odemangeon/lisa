@@ -22,9 +22,10 @@ logger = getLogger()
 class GravGroup_Parametrisation(Core_Parametrisation):
     """docstring for the interface class GravGroup_Parametrisation."""
 
-    def add_available_parametrisations(self):
+    @property
+    def available_parametrisations(self):
         """List of the available parametrisation."""
-        return self.available_parametrisations.extend(["EXOFAST", "Multis"])
+        return super(Core_Parametrisation, self).available_parametrisations.extend(["EXOFAST", "Multis"])
 
     def _choose_default_parametrisation(self):
         """Return the best parametrisation when no choice is made by the user."""

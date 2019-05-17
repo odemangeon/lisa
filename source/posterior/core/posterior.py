@@ -349,7 +349,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
     def _create_lnposterior(self, lnlike_func, lnprior_func):
-                            # **kwarg_data):
         """Return the log posterior function."""
         arg_list = lnlike_func.arg_list.copy()
 

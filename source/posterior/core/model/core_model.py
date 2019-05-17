@@ -123,8 +123,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Initialise paramfile4instcat which has to be file by the create_paramfile function specified in handlers4instcatparamfile
         # Define the path to the parameter file specific to each instrument category if exists (key: inst_cat, value: path of param file)
         self.__paramfile4instcat = {}
-        # Initialise available_parametrisations
-        self.init_available_parametrisation()
+        # Initialise parametrisation related attributes
+        self.init_parametrisation_attributes()
         # Initialise parameterisation
         self.parametrisation
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE

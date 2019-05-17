@@ -14,13 +14,16 @@ logger = getLogger()
 class Core_Parametrisation(object):
     """docstring for the interface class Core_Parametrisation."""
 
-    def init_available_parametrisation(self):
+    def init_parametrisation_attributes(self):
         """
         """
         # Initialise available_parametrisations list should be filled in the Child Class
         # Define name of the parametrisation available (list of string)
         self.__available_parametrisations = []
+        # Initialise the self.parametrisation hidden variable
         self.__parametrisation = None
+        # Initialise the self.parametrisation_kwargs hidden variable
+        self.__parametrisation_kwargs = {}
 
     def set_parametrisation(self, parametrisation, **kwargs):
         """Choose the parametrisation to use and apply it.
@@ -88,11 +91,7 @@ class Core_Parametrisation(object):
     @property
     def parametrisation_kwargs(self):
         """Dictionary giving the keyword arguments of the apply_parametrisation method."""
-        try:
-            return self.__parametrisation_kwargs
-        except:
-            self.__parametrisation_kwargs = {}
-            return self.__parametrisation_kwargs
+        return self.__parametrisation_kwargs
 
     def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation pointed by the parametrisation property."""

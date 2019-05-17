@@ -27,7 +27,7 @@ class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):
     @property
     def available_parametrisations(self):
         """List of the available parametrisation."""
-        return ["Standard", "Np"]
+        return super(GravGroup_Parametrisation, self).available_parametrisations.extend(["Standard", "Np"])
 
     def _choose_default_parametrisation(self):
         """Return the best parametrisation when no choice is made by the user."""
