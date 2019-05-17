@@ -294,6 +294,8 @@ if __name__ == "__main__":
     load_from_pickle = True
     exploration_output_folder = join(getcwd(), "outputs/exploration")
     exploration_pickle_folder = join(exploration_output_folder, "pickles")
+    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
+    chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -308,7 +310,7 @@ if __name__ == "__main__":
         # chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name,
         #                                                                                folder=".")
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=exploration_pickle_folder)
+                                                                                        folder=chain_analysis_pickle_folder)
         fitted_values = fitted_values_dic["array"]
         l_param_name = fitted_values_dic["l_param"]
         planet_name = []
@@ -317,7 +319,7 @@ if __name__ == "__main__":
         for planet in post_instance.model.planets.values():
             planet_name.append(planet.get_name())
             periods.append(df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value'])
-            tcs.append(df_fittedval.loc[planet.tc.get_name(include_prefix=True, recursive=True), 'value'])
+            tcs.append(df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value'])
 
     dataset_db = post_instance.dataset_db
     datasim_dbf = post_instance.datasimulators
