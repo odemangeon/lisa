@@ -926,42 +926,59 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
 
 
 def add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=None):
+    """Add two axes to a subplotspec (created with gridspec) for data and residual plot.
+
+    Kept for retrocompatibility.
+    """
+    if gs_from_sps_kw is None:
+        gs_from_sps_kw = {}
+    if "height_ratios" not in gs_from_sps_kw:
+        gs_from_sps_kw["height_ratios"] = (4, 1)
+    return tuple(add_axeswithsharex(subplotspec, fig, 2, gs_from_sps_kw=gs_from_sps_kw))
+
+
+def add_axeswithsharex(subplotspec, fig, nb_axes, gs_from_sps_kw=None):
     """Add two axes to a subplotspec (created with gridspec) for data and residual plot. """
     # Set the default values for GridSpecFromSubplotSpec
     kw = dict() if gs_from_sps_kw is None else gs_from_sps_kw.copy()
     if "hspace" not in kw:
         kw["hspace"] = 0.1
-    if "height_ratios" not in kw:
-        kw["height_ratios"] = (4, 1)
 
     # Create the two axes, share x axis and set the ticks and ticks label properties
-    gs = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=subplotspec, **kw)
+    gs = gridspec.GridSpecFromSubplotSpec(nb_axes, 1, subplot_spec=subplotspec, **kw)
     ax0 = Subplot(fig, gs[0])
     ax0.locator_params(axis="y", tight=True, nbins=4)
     ax0.tick_params(labelbottom="off")
     fig.add_subplot(ax0)
-    ax1 = Subplot(fig, gs[1], sharex=ax0)
-    fig.add_subplot(ax1)
-    ax1.locator_params(axis="y", tight=True, nbins=4)
-
-    # Return the two axes
-    return ax0, ax1
+    l_axes = [ax0, ]
+    for idx in range(1, nb_axes):
+        l_axes.append(Subplot(fig, gs[idx], sharex=ax0))
+        l_axes[idx].locator_params(axis="y", tight=True, nbins=4)
+        fig.add_subplot(l_axes[idx])
+    # Return the  axes
+    return l_axes
 
 
 def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=None):
+    """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
+
+    Kept for retrocompatibility.
+    """
+    axes_planets = add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes=2, gs_from_sps_kw=gs_from_sps_kw)
+    return [axes[0] for axes in axes_planets], [axes[1] for axes in axes_planets]
+
+
+def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps_kw=None):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
     """
     # Create the nplanet axes
     gs = gridspec.GridSpecFromSubplotSpec(1, nplanet, subplot_spec=subplotspec)
 
     # Create the two axes for the data and the residuals for each planet
-    axes_data = []
-    axes_resi = []
+    axes_planets = []
     for gs_elem in gs:
-        ax_data, ax_resi = add_twoaxeswithsharex(gs_elem, fig, gs_from_sps_kw=gs_from_sps_kw)
-        axes_data.append(ax_data)
-        axes_resi.append(ax_resi)
-    return axes_data, axes_resi
+        axes_planets.append(add_axeswithsharex(gs_elem, fig, nb_axes=nb_axes, gs_from_sps_kw=gs_from_sps_kw))
+    return axes_planets
 
 
 # Work in Progress to detect outliers before plotting
