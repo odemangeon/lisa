@@ -99,6 +99,6 @@ class Core_Parametrisation(object):
 
     def save_parametrisation_kwargs(self, **kwargs):
         """Save the keyword arguments of the parmetrisation function in parametrisation_kwargs."""
-        self.parametrisation_kwargs["parameterisation"] = self.parametrisation
+        self.parametrisation_kwargs["parametrisation"] = self.parametrisation
         for key, value in kwargs.items():
             self.parametrisation_kwargs[key] = value
