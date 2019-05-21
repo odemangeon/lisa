@@ -135,6 +135,7 @@ class Model_Prior(object):
         # Create the logpdf
         logger.info("Creating joint priors")
         for full_name, param in joint.items():
+            logger.info("looking into joint priors of param {}".format(full_name))
             joint_prior_info = self.joint_prior_container[param.joint_prior_ref]
             joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(joint_prior_info["params"], **joint_prior_info["args"])
             if param.joint_prior_ref not in priors["joint"]["logpdf"]:

@@ -306,7 +306,7 @@ class Ptphiprior(Core_JointPrior_Function):
     __multiple_params__ = [False, False]
 
     def __init__(self, params, *args, **kwargs):
-        super(HKPtPrior, self).__init__(params, *args, **kwargs)
+        super(Ptphiprior, self).__init__(params, *args, **kwargs)
         t_prior = self.dico_args[self.hiddenparamprior_key].get("t_prior", None)
         Phi_prior = self.dico_args[self.hiddenparamprior_key].get("Phi_prior", None)
         if (t_prior is not None) and (Phi_prior is not None):
@@ -337,7 +337,7 @@ class Ptphiprior(Core_JointPrior_Function):
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items() if priorfunc is not None}
         ldict["dico_logpdf"] = dico_logpdf
         dico_text_params = {}
         for param_key in self.param_refs:
@@ -396,13 +396,14 @@ class Ptphiprior(Core_JointPrior_Function):
         """
         dico_ravs = {}
         for param, dico in self.hiddenparam_defs.items():
-            value = dico.get("value", None)
-            if value is None:
-                dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
-            else:
-                dico_ravs[param] = ones(nb_values) * value
-            if dico_ravs[param].size == 1:
-                dico_ravs[param] = dico_ravs[param][0]
+            if dico is not None:
+                value = dico.get("value", None)
+                if value is None:
+                    dico_ravs[param] = self.priorinstance_hiddenparams[param].ravs(nb_values=nb_values)
+                else:
+                    dico_ravs[param] = ones(nb_values) * value
+                if dico_ravs[param].size == 1:
+                    dico_ravs[param] = dico_ravs[param][0]
         if self.use_phi:
             t = dico_ravs["Phi"] * dico_ravs["P"] + self.t_ref
             return dico_ravs["P"], t
@@ -410,7 +411,7 @@ class Ptphiprior(Core_JointPrior_Function):
             Phi = (dico_ravs["t"] - self.t_ref) / dico_ravs["P"]
             indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             while len(indexes) > 0:
-                dico_ravs["t"][indexes] = self.hiddenparam_defs["t"]["priorfunc_instance"].ravs(nb_values=len(indexes))
+                dico_ravs["t"][indexes] = self.priorinstance_hiddenparams["t"].ravs(nb_values=len(indexes))
                 indexes = where((Phi > self.Phi_max) | (Phi < self.Phi_min))[0]
             return dico_ravs["P"], dico_ravs["t"]
 

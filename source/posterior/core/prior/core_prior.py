@@ -483,10 +483,11 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
                     else:
                         raise ValueError("prior_category {} is not in the list of available prior types: {}"
                                          "".format(paramdef["category"], manager.get_available_priors()))
-                if multiple:
-                    self.priorinstance_hiddenparams[hidden_param_ref][ii](priorfunction_subclass(**paramdef["args"]))
-                else:
-                    self.priorinstance_hiddenparams[hidden_param_ref] = priorfunction_subclass(**paramdef["args"])
+                if priorfunction_subclass is not None:
+                    if multiple:
+                        self.priorinstance_hiddenparams[hidden_param_ref][ii](priorfunction_subclass(**paramdef["args"]))
+                    else:
+                        self.priorinstance_hiddenparams[hidden_param_ref] = priorfunction_subclass(**paramdef["args"])
 
     def get_params_nb(self, param_ref=None, output_in_dict=False):
         """Return the number of parameters of the joint pdf function.
