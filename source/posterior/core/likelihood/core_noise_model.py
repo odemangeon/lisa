@@ -136,8 +136,9 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         and thus a modification of the error bars, you should overwrite this method.
 
         :param array_float data_err: data error array
+        :return array_float res: new variance
         """
-        return data_err
+        return data_err**2
 
 
 class GaussianNoiseModel(Core_Noise_Model):

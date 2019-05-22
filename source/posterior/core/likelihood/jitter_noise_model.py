@@ -32,11 +32,13 @@ twopi = 2 * pi
 
 ## Defintion of the apply jitter functions
 def apply_jitter_dfm(data_err, jitter, model):
-    """Apply jitter to the data error bar accordint the Daniel Foreman-Mackey example
+    """Apply jitter to the data error bar according the Daniel Foreman-Mackey example
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
     :param array_float model: model values
+    :param bool var: If true return Variance, else std
+    :return array_float res: new variance
     """
     return data_err**2 + model**2 * exp(2 * jitter)
 
@@ -46,6 +48,7 @@ def apply_jitter_multi(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return (data_err * jitter)**2
 
@@ -55,6 +58,7 @@ def get_Baluev_coeff(nparam, ndata):
 
     :param int nparam: Number of model parameters
     :param int ndata: Number of data points
+    :return array_float res: new variance
     """
     return 1 - (nparam / ndata)
 
@@ -64,6 +68,7 @@ def apply_jitter_multi_log(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return data_err**2 * exp(2 * jitter)
 
@@ -73,6 +78,7 @@ def apply_jitter_addfrac_log(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return data_err**2 * (1 + exp(2 * jitter))
 
@@ -82,6 +88,7 @@ def apply_jitter_addfrac(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return data_err**2 * (1 + jitter**2)
 
@@ -91,6 +98,7 @@ def apply_jitter_add(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return data_err**2 + jitter**2
 
@@ -100,6 +108,7 @@ def apply_jitter_addlog(data_err, jitter):
 
     :param array_float data_err: data error array
     :param float jitter: jitter value
+    :return array_float res: new variance
     """
     return data_err**2 + exp(2 * jitter)
 
@@ -267,6 +276,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         :param array_float data_err: data error array
         :param float jitter: jitter value
         :param array_float model: model values
+        :return array_float res: new variance
         """
         return apply_jitter_dfm(data_err, jitter, model)
 
@@ -334,6 +344,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_multi(data_err, jitter)
 
@@ -404,6 +415,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
         :param float jitter: jitter value
         :param int nparam: Number of model parameters
         :param int ndata: Number of data points
+        :return array_float res: new variance
         """
         return apply_jitter_multi(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
@@ -469,6 +481,7 @@ class GaussianNoiseModel_wjittermultilog(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_multi_log(data_err, jitter)
 
@@ -539,6 +552,7 @@ class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
         :param float jitter: jitter value
         :param int nparam: Number of model parameters
         :param int ndata: Number of data points
+        :return array_float res: new variance
         """
         return apply_jitter_multi_log(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
@@ -607,6 +621,7 @@ class GaussianNoiseModel_wjitteraddfraclog(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_addfrac_log(data_err, jitter)
 
@@ -678,6 +693,7 @@ class GaussianNoiseModel_wjitteraddfracBaluevlog(GaussianNoiseModel_wdfmjitter):
         :param float jitter: jitter value
         :param int nparam: Number of model parameters
         :param int ndata: Number of data points
+        :return array_float res: new variance
         """
         return apply_jitter_addfrac_log(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
@@ -744,6 +760,7 @@ class GaussianNoiseModel_wjitteraddfrac(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_addfrac(data_err, jitter)
 
@@ -815,6 +832,7 @@ class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
             :param float jitter: jitter value
             :param int nparam: Number of model parameters
             :param int ndata: Number of data points
+            :return array_float res: new variance
             """
             return apply_jitter_addfrac(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
@@ -883,6 +901,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_add(data_err, jitter)
 
@@ -949,5 +968,6 @@ class GaussianNoiseModel_wjitteraddlog(GaussianNoiseModel_wdfmjitter):
 
         :param array_float data_err: data error array
         :param float jitter: jitter value
+        :return array_float res: new variance
         """
         return apply_jitter_addlog(data_err, jitter)
