@@ -30,8 +30,81 @@ jitter_name = "jitter"
 twopi = 2 * pi
 
 
-## Foreman-Mackey multiplicative jitter. Jitter param in log scale
+## Defintion of the apply jitter functions
+def apply_jitter_dfm(data_err, jitter, model):
+    """Apply jitter to the data error bar accordint the Daniel Foreman-Mackey example
 
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    :param array_float model: model values
+    """
+    return data_err**2 + model**2 * exp(2 * jitter)
+
+
+def apply_jitter_multi(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return (data_err * jitter)**2
+
+
+def get_Baluev_coeff(nparam, ndata):
+    """Apply jitter to the data error bar.
+
+    :param int nparam: Number of model parameters
+    :param int ndata: Number of data points
+    """
+    return 1 - (nparam / ndata)
+
+
+def apply_jitter_multi_log(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return data_err**2 * exp(2 * jitter)
+
+
+def apply_jitter_addfrac_log(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return data_err**2 * (1 + exp(2 * jitter))
+
+
+def apply_jitter_addfrac(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return data_err**2 * (1 + jitter**2)
+
+
+def apply_jitter_add(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return data_err**2 + jitter**2
+
+
+def apply_jitter_addlog(data_err, jitter):
+    """Apply jitter to the data error bar.
+
+    :param array_float data_err: data error array
+    :param float jitter: jitter value
+    """
+    return data_err**2 + exp(2 * jitter)
+
+
+## Foreman-Mackey multiplicative jitter. Jitter param in log scale
 class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     """docstring for GaussianNoiseModel_wdfmjitter."""
 
@@ -142,13 +215,15 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                # inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                inv_sigma2 = 1.0 / apply_jitter_dfm(data_err, param_noisemod[idx_jitter_param], model)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
+                # inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * jitter_value))
+                inv_sigma2 = 1.0 / apply_jitter_dfm(data_err, jitter_value, model)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new,
@@ -184,6 +259,16 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             l_idx_param_noisemod_new = l_idx_param_noisemod
             l_params_noisemod_new = l_params_noisemod
         return l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter, model):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        :param array_float model: model values
+        """
+        return apply_jitter_dfm(data_err, jitter, model)
 
 
 ## Multiplicative jitter.
@@ -229,17 +314,28 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
+                # inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
+                inv_sigma2 = 1.0 / apply_jitter_multi(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err * jitter_value)**2
+                # inv_sigma2 = 1.0 / (data_err * jitter_value)**2
+                inv_sigma2 = 1.0 / apply_jitter_multi(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermulti_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_multi(data_err, jitter)
 
 
 class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
@@ -282,19 +378,34 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_multi(data_err, param_noisemod[idx_jitter_param])
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err * jitter_value)**2
-                Bualev_coeff = 1.0 / (1 - (nparam / len(data)))
+                # inv_sigma2 = 1.0 / (data_err * jitter_value)**2
+                # Bualev_coeff = 1.0 / (1 - (nparam / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_multi(data_err, jitter_value)
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermultiBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter, nparam, ndata):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        :param int nparam: Number of model parameters
+        :param int ndata: Number of data points
+        """
+        return apply_jitter_multi(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
 
 # Jitter param in log scale
@@ -338,17 +449,28 @@ class GaussianNoiseModel_wjittermultilog(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                inv_sigma2 = 1.0 / apply_jitter_multi_log(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
+                # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
+                inv_sigma2 = 1.0 / apply_jitter_multi_log(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermulti_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_multi_log(data_err, jitter)
 
 
 class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
@@ -391,19 +513,34 @@ class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_multi_log(data_err, param_noisemod[idx_jitter_param])
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
-                Bualev_coeff = 1.0 / (1 - (nparam / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * jitter_value))
+                # Bualev_coeff = 1.0 / (1 - (nparam / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_multi_log(data_err, jitter_value)
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jittermultiBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter, nparam, ndata):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        :param int nparam: Number of model parameters
+        :param int ndata: Number of data points
+        """
+        return apply_jitter_multi_log(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
 
 ## Addtive jitter which add a fraction of the existing error.
@@ -450,17 +587,28 @@ class GaussianNoiseModel_wjitteraddfraclog(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac_log(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac_log(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteraddfrac_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_addfrac_log(data_err, jitter)
 
 
 class GaussianNoiseModel_wjitteraddfracBaluevlog(GaussianNoiseModel_wdfmjitter):
@@ -504,19 +652,34 @@ class GaussianNoiseModel_wjitteraddfracBaluevlog(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac_log(data_err, param_noisemod[idx_jitter_param])
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * jitter_value)))
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac_log(data_err, jitter_value)
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteraddfracBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter, nparam, ndata):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        :param int nparam: Number of model parameters
+        :param int ndata: Number of data points
+        """
+        return apply_jitter_addfrac_log(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
 
 # Jitter param in linear scale
@@ -561,17 +724,28 @@ class GaussianNoiseModel_wjitteraddfrac(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + jitter_value**2))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + jitter_value**2))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteraddfrac_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_addfrac(data_err, jitter)
 
 
 class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
@@ -615,19 +789,34 @@ class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac(data_err, param_noisemod[idx_jitter_param])
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 * (1 + jitter_value**2))
-                Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                # inv_sigma2 = 1.0 / (data_err**2 * (1 + jitter_value**2))
+                # Bualev_coeff = 1.0 / (1 - ((nparam + 1) / len(data)))
+                inv_sigma2 = 1.0 / apply_jitter_addfrac(data_err, jitter_value)
+                Bualev_coeff = 1.0 / get_Baluev_coeff(nparam, len(data))
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 * Bualev_coeff - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteraddfracBaluev_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+        @classmethod
+        def apply_jitter(cls, data_err, jitter, nparam, ndata):
+            """Apply jitter to the data error bar.
+
+            :param array_float data_err: data error array
+            :param float jitter: jitter value
+            :param int nparam: Number of model parameters
+            :param int ndata: Number of data points
+            """
+            return apply_jitter_addfrac(data_err, jitter) * get_Baluev_coeff(nparam, ndata)
 
 
 ## Purely Addtive jitter
@@ -674,17 +863,28 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + param_noisemod[idx_jitter_param]**2)
+                # inv_sigma2 = 1.0 / (data_err**2 + param_noisemod[idx_jitter_param]**2)
+                inv_sigma2 = 1.0 / apply_jitter_add(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + jitter_value**2)
+                # inv_sigma2 = 1.0 / (data_err**2 + jitter_value**2)
+                inv_sigma2 = 1.0 / apply_jitter_add(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteradd_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_add(data_err, jitter)
 
 
 # Jitter param in log scale
@@ -729,14 +929,25 @@ class GaussianNoiseModel_wjitteraddlog(GaussianNoiseModel_wdfmjitter):
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + exp(2 * param_noisemod[idx_jitter_param]))
+                # inv_sigma2 = 1.0 / (data_err**2 + exp(2 * param_noisemod[idx_jitter_param]))
+                inv_sigma2 = 1.0 / apply_jitter_addlog(data_err, param_noisemod[idx_jitter_param])
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
         else:
             jitter_value = jitter_param.value
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
-                inv_sigma2 = 1.0 / (data_err**2 + exp(2 * jitter_value))
+                # inv_sigma2 = 1.0 / (data_err**2 + exp(2 * jitter_value))
+                inv_sigma2 = 1.0 / apply_jitter_addlog(data_err, jitter_value)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
         return (lnlike_jitteradd_1instmod, l_params_lnlike_new, l_params_noisemod_new,
                 l_idx_param_noisemod_new)
+
+    @classmethod
+    def apply_jitter(cls, data_err, jitter):
+        """Apply jitter to the data error bar.
+
+        :param array_float data_err: data error array
+        :param float jitter: jitter value
+        """
+        return apply_jitter_addlog(data_err, jitter)

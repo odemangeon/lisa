@@ -128,6 +128,17 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         raise ValueError("l_instmod_obj should be an Instrument_Model or an Iterable of "
                          "Instrument_Models")
 
+    @classmethod
+    def apply_jitter(cls, data_err):
+        """Apply jitter to the data error bar.
+
+        But default this function doesn't do anything, if your noise model include jitter model
+        and thus a modification of the error bars, you should overwrite this method.
+
+        :param array_float data_err: data error array
+        """
+        return data_err
+
 
 class GaussianNoiseModel(Core_Noise_Model):
     """docstring for GaussianNoiseModel."""

@@ -849,8 +849,7 @@ def apply_jitter(data_err, jitter, jitter_type):
 
 
 def apply_zoom(zoom, base_array, arrays=None):
-    """Apply jitter to the data error bar
-
+    """
     :param list_of_float zoom: It should be a list-like object with two elements.
         zoom[0] give the minimum value in zoom_base_array for the zoom and zoom[1] give the maximum.
     :param array_of_float base_array: Array on which the zoom in based. The idx of the elements
