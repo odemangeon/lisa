@@ -959,25 +959,25 @@ def add_axeswithsharex(subplotspec, fig, nb_axes, gs_from_sps_kw=None):
     return l_axes
 
 
-def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=None):
+def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=None, add_axeswithsharex_kw=None):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
 
     Kept for retrocompatibility.
     """
-    axes_planets = add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes=2, gs_from_sps_kw=gs_from_sps_kw)
+    axes_planets = add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes=2, gs_from_sps_kw=gs_from_sps_kw, add_axeswithsharex_kw=add_axeswithsharex_kw)
     return [axes[0] for axes in axes_planets], [axes[1] for axes in axes_planets]
 
 
-def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps_kw=None):
+def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps_kw=None, add_axeswithsharex_kw=None):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
     """
     # Create the nplanet axes
-    gs = gridspec.GridSpecFromSubplotSpec(1, nplanet, subplot_spec=subplotspec)
+    gs = gridspec.GridSpecFromSubplotSpec(1, nplanet, subplot_spec=subplotspec, **gs_from_sps_kw)
 
     # Create the two axes for the data and the residuals for each planet
     axes_planets = []
     for gs_elem in gs:
-        axes_planets.append(add_axeswithsharex(gs_elem, fig, nb_axes=nb_axes, gs_from_sps_kw=gs_from_sps_kw))
+        axes_planets.append(add_axeswithsharex(gs_elem, fig, nb_axes=nb_axes, gs_from_sps_kw=add_axeswithsharex_kw))
     return axes_planets
 
 
