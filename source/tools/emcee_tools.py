@@ -897,7 +897,7 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
     # If data error provided
     if data_err is not None:
         # Apply jitter if needed
-        data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+        data_err_new = data_err if jitter is None else sqrt(apply_jitter(data_err, jitter, jitter_type))
         # Create the sorted data_err vector
         data_err_new_sort = data_err_new[sortIndi]
     # Create the sorted phase, sorted data vectors
