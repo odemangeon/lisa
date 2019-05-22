@@ -31,6 +31,7 @@ from .time_series_toolbox import get_time_supersampled, average_supersampled_val
 from .human_machine_interface.QCM import QCM_utilisateur
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 # from ..posterior.core.posterior import alldtst_key
 
 
@@ -840,9 +841,9 @@ def apply_jitter(data_err, jitter, jitter_type):
     """
     # Adapt the data_err to the jitter value is needed.
     if jitter_type == "multi":
-        data_err_new = data_err * exp(jitter)
+        data_err_new = sqrt(apply_jitter_multi(data_err, jitter))
     elif jitter_type == "add":
-        data_err_new = sqrt(data_err**2 * (1 + exp(2 * jitter)))
+        data_err_new = sqrt(apply_jitter_add(data_err, jitter))
     else:
         raise ValueError("jitter_type should be in ['multi', 'add']")
     return data_err_new
