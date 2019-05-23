@@ -158,7 +158,7 @@ logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
            filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=dat_folder, l_param_name=l_param_name, logger=logger4emceerun)
-et.save_emceesampler(sampler, l_param_name, obj_name, folder=dat_folder)
+et.save_emceesampler(sampler, l_param_name, obj_name, folder=exploration_pickle_folder)
 
 chain = sampler.chain
 lnprobability = sampler.lnprobability
