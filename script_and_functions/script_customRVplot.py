@@ -9,6 +9,7 @@ from os import getcwd, makedirs
 from os.path import join
 
 import numpy as np
+import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
 from matplotlib.gridspec import GridSpec
@@ -23,6 +24,7 @@ import source.posterior.core.posterior as cpost
 import source.tools.mylogger as ml
 
 from source.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from source.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 
 # from ipdb import set_trace
 
@@ -89,7 +91,8 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
                   wspace=None, hspace=None)
 
     # Set parameters for the instrument gridspec
-    gs_from_sps_kw = {"height_ratios": (3, 1)}  # Between the data plot and the resiudals plot
+    add_axeswithsharex_kw = {"height_ratios": (3, 1)}  # Between the data plot and the resiudals plot
+    gs_from_sps_kw = {"width_ratios": (2.5, 1)}
 
     # Set the plots keywords arguments
     pl_kwarg_data = {"color": None, "fmt": ".", "alpha": 1.}
@@ -105,13 +108,16 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
 
     # Create the axes
     (ax_data, ax_resi) = et.add_twoaxeswithsharex_perplanet(gs[0], nplanet=nplanet, fig=fig,
-                                                            gs_from_sps_kw=gs_from_sps_kw)
+                                                            gs_from_sps_kw=gs_from_sps_kw,
+                                                            add_axeswithsharex_kw=add_axeswithsharex_kw)
     ax_data0 = ax_data[0]
     ax_resi0 = ax_resi[0]
 
     # Set the axis labels
     ax_data0.set_ylabel(r"RV [$\kms$]", fontsize=fontsize)
+    # ax_data0.set_ylabel("RV [m.s-1]", fontsize=fontsize)
     ax_resi0.set_ylabel(r"O - C [$\kms$]", fontsize=fontsize)
+    # ax_resi0.set_ylabel("O - C [m.s-1]", fontsize=fontsize)
     for res_ax in ax_resi:
         res_ax.set_xlabel("Orbital phase", fontsize=fontsize)
 
@@ -182,11 +188,9 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
                     else:
                         dico_jitter[inst][key]["value"] = inst_mod.jitter.value
                     if dico_jitter[inst][key]["type"] == "multi":
-                        data_err[inst][key] *= np.exp(dico_jitter[inst][key]["value"])
+                        data_err[inst][key] = np.sqrt(apply_jitter_multi(data_err[inst][key], dico_jitter[inst][key]["value"]))
                     elif dico_jitter[inst][key]["type"] == "add":
-                        data_err[inst][key] = np.sqrt(data_err[inst][key]**2 *
-                                                      (1 +
-                                                       np.exp(2 * dico_jitter[inst][key]["value"])))
+                        data_err[inst][key] = np.sqrt(apply_jitter_add(data_err[inst][key], dico_jitter[inst][key]["value"]))
                     else:
                         raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
                 else:
@@ -198,13 +202,17 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
         ####################################################
         deltaRV = OrderedDict()
         RVrefglobal_instname = model_instance.RV_references["global"]
+        # For each instrument name
         for inst in dico_datasetname:
             RVref4inst_modname = model_instance.RV_references[inst]
             deltaRV[inst] = OrderedDict()
+            # For each instrument model
             for key in dico_datasetname[inst]:
                 instmod_fullname_key = datasim_dbf.get_instmod_fullname(dico_datasetname[inst][key])
                 instmodobj_key = model_instance.instruments[instmod_fullname_key]
                 deltaRV[inst][key] = 0.0
+                # If the current instrument is not the instrument of the global reference:
+                # Add to Delta_RV the values of delta RV of the current instrument model reference to the global reference.
                 if inst != RVrefglobal_instname:
                     instmod_RVref4inst = model_instance.instruments["RV"][inst][RVref4inst_modname]
                     if instmod_RVref4inst.DeltaRV.main:
@@ -213,6 +221,8 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
                             deltaRV[inst][key] += fitted_values[idx_deltaRV]
                         else:
                             deltaRV[inst][key] += instmod_RVref4inst.DeltaRV.value
+                # If the current instrument model is not the reference instrument model for the instrument:
+                # Add to Delta_RV the values of delta RV of the current instrument model to the current instrument model reference.
                 if instmodobj_key.get_name() != RVref4inst_modname:
                     if instmodobj_key.DeltaRV.main:
                         if instmodobj_key.DeltaRV.free:
@@ -229,40 +239,48 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
         # Plot the data
         ###############
         idx_star_v0 = l_param_name.index(star.v0.get_name(include_prefix=True, recursive=True))
+        data_pl = OrderedDict()
         for inst in dico_datasetname:
+            data_pl[inst] = OrderedDict()
             for key in dico_datasetname[inst]:
-                # Get the datasim for this planet only
-                inst_mod_fullname = datasim_dbf.get_instmod_fullname(dico_datasetname[inst][key])
-                # datasim_db_docfunc_pl = datasim_dbf.instrument_db[inst_mod_fullname][planet_name]
-                # Get the datasims for the other planets
-                l_datasim_db_docfunc_others = []
-                for pl in planets:
-                    if pl == planet_name:
-                        continue
-                    else:
-                        l_datasim_db_docfunc_others.append(datasim_dbf.
-                                                           instrument_db[inst_mod_fullname]
-                                                           [pl])
-                data_pl = dico_kwargs[inst][key]["data"] - deltaRV[inst][key]
+                # The data to plot for a planet and an instrument are the raw data to which you substract
+                # the delta RV to the global reference (deltaRV[inst][key]) and then to which you substract the
 
+                # Remove the DeltaRV to the global RV reference
+                data_pl[inst][key] = dico_kwargs[inst][key]["data"] - deltaRV[inst][key]
+
+                # Remove the other planets contributions
+                # Get the current instrument model and noise model
                 inst_mod_fullname = datasim_dbf.get_instmod_fullname(dico_datasetname[inst][key])
                 inst_mod = model_instance.instruments[inst_mod_fullname]
                 noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
 
+                # Get the datasims for the other planets
+                l_datasim_db_docfunc_others = []
+                for plnt in planets:
+                    if plnt == planet_name:
+                        continue
+                    else:
+                        l_datasim_db_docfunc_others.append(datasim_dbf.
+                                                           instrument_db[inst_mod_fullname]
+                                                           [plnt])
+
+                # Compute and remove the other planet contribution
                 for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
                     kwargs_dataset = dico_kwargs[inst][key].copy()
                     kwargs_dataset.pop("data_err")
                     kwargs_dataset.pop("data")
-                    model, modelwGP, _ = et.compute_model(kwargs_dataset.pop("t"),
-                                                          datasim_db_docfunc_other,
-                                                          fitted_values, l_param_name,
-                                                          datasim_kwargs=kwargs_dataset,
-                                                          noise_model=noise_model,
-                                                          model_instance=model_instance)
-                    data_pl = data_pl - (model - deltaRV[inst][key] - fitted_values[idx_star_v0])
+                    model, _, _ = et.compute_model(kwargs_dataset.pop("t"),
+                                                   datasim_db_docfunc_other,
+                                                   fitted_values, l_param_name,
+                                                   datasim_kwargs=kwargs_dataset,
+                                                   noise_model=noise_model,
+                                                   model_instance=model_instance)
+                    data_pl[inst][key] = data_pl[inst][key] - (model - deltaRV[inst][key] - fitted_values[idx_star_v0])
 
+                # Plot the data
                 et.plot_phase_folded_timeserie(t=dico_kwargs[inst][key]["t"],
-                                               data=data_pl,
+                                               data=data_pl[inst][key],
                                                data_err=dico_kwargs[inst][key]["data_err"],
                                                jitter=dico_jitter[inst][key]["value"],
                                                jitter_type=dico_jitter[inst][key]["type"],
@@ -284,7 +302,7 @@ def create_RV_plots(fig, dico_datasetname, planets, periods, tcs, datasim_dbf, d
         for inst in dico_datasetname:
             for key in dico_datasetname[inst]:
                 et.plot_residuals(t=dico_kwargs[inst][key]["t"],
-                                  data=dico_kwargs[inst][key]["data"],
+                                  data=data_pl[inst][key] + deltaRV[inst][key],  # dico_kwargs[inst][key]["data"],
                                   data_err=dico_kwargs[inst][key]["data_err"],
                                   jitter=dico_jitter[inst][key]["value"],
                                   jitter_type=dico_jitter[inst][key]["type"],
@@ -306,9 +324,17 @@ if __name__ == "__main__":
 
     # Define dataset names to be loaded
     dico_datasetname = OrderedDict()
-    # 1. SOPHIE
-    dico_datasetname["SOPHIE"] = {}
-    dico_datasetname["SOPHIE"]["0"] = "RV_WASP-153_SOPHIE_0"
+    dico_datasetname["ESPRESSO"] = {}
+    dico_datasetname["ESPRESSO"]["0"] = "RV_HD75289_ESPRESSO_0"
+    dico_datasetname["CORALIE"] = {}
+    dico_datasetname["CORALIE"]["0"] = "RV_HD75289_CORALIE_0"
+    dico_datasetname["CORALIE"]["1"] = "RV_HD75289_CORALIE_1"
+    dico_datasetname["CORALIE"]["2"] = "RV_HD75289_CORALIE_2"
+    dico_datasetname["HARPS"] = {}
+    dico_datasetname["HARPS"]["0"] = "RV_HD75289_HARPS_0"
+    dico_datasetname["UCLES"] = {}
+    dico_datasetname["UCLES"]["0"] = "RV_HD75289_UCLES_0"
+    dico_datasetname["UCLES"]["1"] = "RV_HD75289_UCLES_1"
 
     chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
     plot_folder = join(chain_analysis_output_folder, "plots")
@@ -349,7 +375,11 @@ if __name__ == "__main__":
     model_instance = post_instance.model
     star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
 
-    create_RV_plots(dico_datasetname=dico_datasetname, planets=planet_name, periods=periods, tcs=tics,
+    # fig = pl.figure()
+
+    create_RV_plots(
+                    fig=fig,
+                    dico_datasetname=dico_datasetname, planets=planet_name, periods=periods, tcs=tics,
                     datasim_dbf=datasim_dbf, dataset_db=dataset_db, model_instance=model_instance,
                     fitted_values=fitted_values, l_param_name=l_param_name,
                     star=post_instance.model.stars[list(post_instance.model.stars)[0]],
