@@ -32,6 +32,7 @@ from .human_machine_interface.QCM import QCM_utilisateur
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from ..posterior.exoplanet.model.gravgroup import ext_plonly
 # from ..posterior.core.posterior import alldtst_key
 
 
@@ -381,15 +382,15 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
         # Get the datasims for the other planets
         l_datasim_db_docfunc_others = []
-        for pl in model_instance.planets.keys():
-            if pl == planet_name:
+        for plnt in model_instance.planets.keys():
+            if plnt == planet_name:
                 continue
             else:
-                l_datasim_db_docfunc_others.append(datasim_dbf_instmod[pl])
+                l_datasim_db_docfunc_others.append(datasim_dbf_instmod[plnt + ext_plonly])
         # Compute the data - other planets contributions
         data_pl = data.copy()
-        for datasim_db in l_datasim_db_docfunc_others:
-            model, modelwGP, _ = compute_model(t, datasim_db, param, l_param_name,
+        for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
+            model, modelwGP, _ = compute_model(t, datasim_db_docfunc_other, param, l_param_name,
                                                datasim_kwargs=kwargs,
                                                supersamp=supersamp_model, exptime=exptime,
                                                noise_model=noise_mod,
@@ -413,7 +414,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                        model_instance=model_instance,
                        ax=ax_data_i)
             # Plot the residuals
-            plot_residuals(t, data, datasim_docfunc_pl, param, l_param_name,
+            plot_residuals(t=t, data=data_pl, datasim_db_docfunc=datasim_docfunc_pl, param=param, l_param_name=l_param_name,
                            data_err=data_err_new, jitter=None, jitter_type=None,
                            supersamp=supersamp_model, exptime=exptime,
                            datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
@@ -499,19 +500,23 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     fig = figure(figsize=(plot_width, ndataset * plot_height))
     gs = GridSpec(nrows=ndataset, ncols=1)
 
+    # For each dataset
     for ii, dataset in enumerate(l_datasets):
+        # Get the instrument model name associated to the dataset
         inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
+        # Get the datasimulator for the whole system
         datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
+        # Get the datasimulators databases with the datasimulators for the whole system and the individual parts.
         datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
         if phasefold:
-            # Create two sets of axes to produce a phase-folded dataset+model  and the residuals plot
-            # for each planet
-            nplanet = 1 if phasefold_kwargs is None else len(phasefold_kwargs["planets"])
+            # Get the number of planets in the system.
+            nplanet = len(phasefold_kwargs["planets"])
+            # Create the two axes data+model and residuals per planet
             (axes_data,
              axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
                                                           nplanet=nplanet,
                                                           fig=fig,
-                                                          gs_from_sps_kw={"height_ratios": (3, 1)})
+                                                          add_axeswithsharex_kw={"height_ratios": (3, 1)})
             # Produce the phase-folded plots for each planet
             for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
                                                             phasefold_kwargs["P"],
@@ -970,6 +975,8 @@ def add_twoaxeswithsharex_perplanet(subplotspec, nplanet, fig, gs_from_sps_kw=No
 def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps_kw=None, add_axeswithsharex_kw=None):
     """Add two axes per planet to a subplotspec (created with gridspec) for data and residual plot.
     """
+    if gs_from_sps_kw is None:
+        gs_from_sps_kw = {}
     # Create the nplanet axes
     gs = gridspec.GridSpecFromSubplotSpec(1, nplanet, subplot_spec=subplotspec, **gs_from_sps_kw)
 

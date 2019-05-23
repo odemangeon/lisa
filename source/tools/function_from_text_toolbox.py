@@ -24,6 +24,7 @@ key_opt_kwargs = "optional_kwargs"
 
 argskwargs = ", *args, **kwargs"
 
+
 def init_arglist_paramnb_arguments_ldict(key_param, keys=None, key_mand_kwargs=None, key_opt_kwargs=None,
                                          param_vector_name=par_vec_name):
     """Initialise the arg_list, param_nb, ldict dictionaries and the argument string.
@@ -45,7 +46,7 @@ def init_arglist_paramnb_arguments_ldict(key_param, keys=None, key_mand_kwargs=N
             the dictionary is skipped
         value = dict with three str keys (defined by key_param, key_mand_kwargs, key_opt_kwargs), whose values are
             initialised as two empty lists
-    :return str arguments: "p", every datasimulator takes at least the vector of parameters as
+    :return str arguments: It is what is provided by param_vector_name, every datasimulator takes at least the vector of parameters as
         argument
     :return dict ldict: dictionary initialised to be used as local dictionary argument of the exec
         function.

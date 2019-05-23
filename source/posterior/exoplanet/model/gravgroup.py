@@ -52,6 +52,8 @@ logger = getLogger()
 
 mgr_LD = Manager_LD()
 
+ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
+
 
 class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
     """docstring for GravGroup."""
@@ -528,6 +530,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
                                        key_param=self.key_param,
                                        key_mand_kwargs=self.key_mand_kwargs,
                                        key_opt_kwargs=self.key_opt_kwargs,
+                                       ext_plonly=ext_plonly,
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,
                                        RV_inst_db=self.instruments[RV_inst_cat],
