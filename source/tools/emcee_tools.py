@@ -493,7 +493,6 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     # Get the list of all datasets names and the number of datasets
     if l_datasets is None:
         l_datasets = dataset_db.get_datasets()
-    print(l_datasets)
     ndataset = len(l_datasets)
 
     # Create the figure and grid which will harbor the plots for each dataset
@@ -636,7 +635,6 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             for param_name in datasim_all.params_model:
                 idx_datasim.append(l_param_name.index(param_name))
             model_all = datasim_all.function(param[idx_datasim])
-            print("model_all: {}".format(model_all))
             # Get the list of instrument models which have the same GP noise model that the Current
             # Dataset you try to model
             l_instmod_noisemod_cat = []
@@ -661,8 +659,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
                 dataset_name = datasim_all.dataset.iloc[0]
                 dataset = model_instance.dataset_db[dataset_name]
                 l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
-            print("model: {}".format(model_noisemodel_GP))
-            print("l_datakwargs: {}".format(l_datakwargs_noisemod))
+
             # Get the GP simulator for the current GP noise model
             (gpsim_func,
              l_param_noisemod) = noise_model.get_gp_simulator(model_instance, l_param_name)
@@ -835,6 +832,8 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
 def apply_jitter(data_err, jitter, jitter_type):
     """Apply jitter to the data error bar
 
+    WARNING THIS FUNCTION RETURNS THE STD NOT THE VAR
+
     :param array_float data_err: data error array
     :param float jitter: jitter value
     :param str jitter_type: jitter_type ("multi" or "add")
@@ -897,7 +896,7 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
     # If data error provided
     if data_err is not None:
         # Apply jitter if needed
-        data_err_new = data_err if jitter is None else sqrt(apply_jitter(data_err, jitter, jitter_type))
+        data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
         # Create the sorted data_err vector
         data_err_new_sort = data_err_new[sortIndi]
     # Create the sorted phase, sorted data vectors
