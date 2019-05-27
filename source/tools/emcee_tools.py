@@ -1011,6 +1011,8 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
     :param int verbose: if 1 speaks otherwise not
     """
+    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
+                "".format(quantile=quantile, sigma=sig_fact))
     percentile_acceptance_frac = percentile(acceptance_fraction, quantile)
     mad_acceptance_frac = mad(acceptance_fraction)
     if verbose == 1:
@@ -1038,6 +1040,9 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
+    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} \%;"
+                "reference quantile across walkers = {quantile} \%; sigma_clip at {sigma} sigma"
+                "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
     walkers_percentile_lnposterior = percentile(lnprobability, quantile_walker, axis=1)
     percentile_lnposterior = percentile(walkers_percentile_lnposterior, quantile)
     mad_lnposterior = mad(walkers_percentile_lnposterior)
@@ -1141,6 +1146,8 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     :param int intervals: Number of sub-chains to analyze. Defaults to 20.
     :param int_iterable l_walker: list of valid walkers
     """
+    logger.info("Geweke z score computation parameters: first = {first}, last = {last}, intervals = {intervals}"
+                "".format(first=first, last=last, intervals=intervals))
     nwalker = chains.shape[0]
     ndim = chains.shape[-1]
     # Get the list of valid walkers (l_walker), the number of parameters (ndim) and the number of
@@ -1217,6 +1224,7 @@ def geweke_selection(zscores, first_steps=None, geweke_thres=2., l_walker=None, 
     :param numpy.ndarray zscores:
     :param int_iteratable l_walker: list of valid walkers
     """
+    logger.info("Geweke selection parameters: geweke_threshold = {geweke_thres}".format(geweke_thres=geweke_thres))
     res = abs(zscores) <= geweke_thres
     nwalker = zscores.shape[0]
     intervals = zscores.shape[1]
