@@ -544,6 +544,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
                                        key_param=self.key_param,
                                        key_mand_kwargs=self.key_mand_kwargs,
                                        key_opt_kwargs=self.key_opt_kwargs,
+                                       ext_plonly=ext_plonly,
                                        parametrisation=self.parametrisation,
                                        ldmodel4instmodfname=self.ldmodel4instmodfname,
                                        LDs=self.LDs, transit_model=self.transit_model,

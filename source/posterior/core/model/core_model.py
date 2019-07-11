@@ -592,7 +592,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 self.paramfile4instcat[key] = paramfile4instcat[key]
             else:
                 raise AssertionError("File {} doesn't exists".format(paramfile4instcat[key]))
-            self.handlers4instcatparamfile[load_key]()
+        self.load_instcat_paramfile()
         self.set_parametrisation(**kwargs_parametrisation)
         self.update_paramfile_info()
         self.load_parameter_file()
