@@ -119,8 +119,15 @@ class Parameter_Prior(object):
                 # Set category to None for no confusion
                 self.__prior_info["category"] = None
                 # Check that the parameter is indeed mentioned as parameter of the joint prior
-                for param_name in available_joint_priors[joint_prior_ref]["params"].values():
-                    found = self.name.is_name(param_name)
+                for param_name_or_l_param_name in available_joint_priors[joint_prior_ref]["params"].values():
+                    if isinstance(param_name_or_l_param_name, list):  # For Joint param with multiple params parameters, the contant of "params" can be a list of parameter names
+                        l_param_name = param_name_or_l_param_name
+                    else:
+                        l_param_name = [param_name_or_l_param_name, ]
+                    for param_name in l_param_name:
+                        found = self.name.is_name(param_name)
+                        if found:
+                            break
                     if found:
                         break
                 if not(found):

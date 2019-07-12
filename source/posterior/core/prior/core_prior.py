@@ -274,7 +274,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
         - hidden_params_prior definition for the hidden prior. These arguments name should be hiddenparam_prior
             where hiddenparam is one element in the self.__hidden_param_refs__ list. The value of this argument
             should a dict {'category': prior_cat, 'args': {dict of prior args and values}} or a list of
-            these dictionaries if the hiddent parameter can be multiple (specified by self.__multiple_hidden_params__)
+            these dictionaries if the hidden parameter can be multiple (specified by self.__multiple_hidden_params__)
         Only mandatory arguments can by *args
         """
         # __init__ method of Core_Prior_Function.
@@ -402,7 +402,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
     def _init_param_name_lists(self):
         """Initialise the lists of parameter names used by the joint prior.
 
-        Initialise self.param_name_reflist.
+        Initialise self.param_name_lists.
         """
         self.__param_name_lists = {}
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
@@ -446,7 +446,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
             list, value = name (full name) of the model parameter(s). It can be a str or list of str,
             if the parameter is multiple (specified by self.__multiple_params__)
         """
-        # Set self.param_name_reflist
+        # Set self.param_name_lists
         for param_ref, param_ref_value in params.items():
             # For each parameter reference, check if this can be a multiple parameter reference.
             idx = self.param_refs.index(param_ref)
@@ -485,7 +485,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
                                          "".format(paramdef["category"], manager.get_available_priors()))
                 if priorfunction_subclass is not None:
                     if multiple:
-                        self.priorinstance_hiddenparams[hidden_param_ref][ii](priorfunction_subclass(**paramdef["args"]))
+                        self.priorinstance_hiddenparams[hidden_param_ref][ii] = priorfunction_subclass(**paramdef["args"])
                     else:
                         self.priorinstance_hiddenparams[hidden_param_ref] = priorfunction_subclass(**paramdef["args"])
 
@@ -493,7 +493,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
         """Return the number of parameters of the joint pdf function.
 
         If param_ref is None, it return the total number of parameters. If it's equal to one of the element
-        if self.__params__, it return the number of parameters of this specific reference.
+        if self.__param_refs__, it return the number of parameters of this specific reference.
 
         If you want to get the number of parameters all references included, it's the default behavior:
         self.get_params_nb().
@@ -505,7 +505,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
         :return int or dict_of_int res_nb/res: Number of parameters
         """
         if param_ref is None:
-            l_param_refs = self.params
+            l_param_refs = self.param_refs
         else:
             if isinstance(param_ref, list):
                 l_param_refs = param_ref
@@ -513,7 +513,11 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
                 l_param_refs = [param_ref, ]
         res = {}
         for param_ref in l_param_refs:
-            res[param_ref] = len(self.param_name_reflist[param_ref])
+            param_name_or_l_param_name = self.param_name_lists[param_ref]
+            if isinstance(param_name_or_l_param_name, str):
+                res[param_ref] = 1
+            else:
+                res[param_ref] = len(param_name_or_l_param_name)
         if output_in_dict:
             return res
         else:
@@ -523,7 +527,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
             return res_nb
 
     def infer_hiddenparams_nb(self, hidden_param_ref=None, output_in_dict=False):
-        """Infer the number of hidden params of each category from self.param_name_reflist
+        """Infer the number of hidden params of each category from self.param_name_lists
 
         In case of multiple parameters, and if one chose not to explicitly provide the prior for each
         hidden parameters (leaving them to default value or specifying the same for all hidden param
@@ -540,7 +544,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
             raise ValueError("The number of multiple parameters and multiple hidden parameters are different."
                              "The automatic get_nb_hiddenparams function cannot apply. Override it.")
         if any(self.multiple_params) or any(self.multiple_hidden_params):
-            if any(logical_not(logical_xor(self.multiple_params, self.multiple_hidden_params))):
+            if any(logical_xor(self.multiple_params, self.multiple_hidden_params)):
                 raise ValueError("The multiple_params and multiple_hidden_params list are not identical."
                                  "The automatic get_nb_hiddenparams cannot be applied. Override it.")
         # Set the list of hidden parameter references for which we want to infer the number

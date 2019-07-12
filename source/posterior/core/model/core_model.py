@@ -355,15 +355,33 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             if param.joint:
                 if param.joint_prior_ref not in joint:
                     joint[param.joint_prior_ref] = {"prior_info": self.joint_prior_container[param.joint_prior_ref],
-                                                    "param_name": ["" for ii in range(len(self.joint_prior_container[param.joint_prior_ref]["params"]))]}
-                joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
+                                                    "param_name": []}
+                    joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
+                    for param_key, multiple in zip(joint_prior_class.param_refs, joint_prior_class.multiple_params):
+                        if multiple:
+                            joint[param.joint_prior_ref]["param_name"].append(["" for param_ref in joint[param.joint_prior_ref]["prior_info"]["params"][param_key]])
+                        else:
+                            joint[param.joint_prior_ref]["param_name"].append("")
+                else:
+                    joint_prior_class = manager_prior.get_priorfunc_subclass(joint[param.joint_prior_ref]["prior_info"]["category"])
                 found = False
-                for ii, param_key in enumerate(joint_prior_class.param_refs):
-                    if param.name.is_name(joint[param.joint_prior_ref]["prior_info"]["params"][param_key]):
-                        found = True
+
+                for ii, param_key, multiple in zip(range(len(joint_prior_class.param_refs)), joint_prior_class.param_refs, joint_prior_class.multiple_params):
+                    if multiple:
+                        l_param_refs = joint[param.joint_prior_ref]["prior_info"]["params"][param_key]
+                    else:
+                        l_param_refs = [joint[param.joint_prior_ref]["prior_info"]["params"][param_key], ]
+                    for jj, param_ref in enumerate(l_param_refs):
+                        if param.name.is_name(param_ref):
+                            found = True
+                            break
+                    if found:
                         break
                 if found:
-                    joint[param.joint_prior_ref]["param_name"][ii] = param_name
+                    if multiple:
+                        joint[param.joint_prior_ref]["param_name"][ii][jj] = param_name
+                    else:
+                        joint[param.joint_prior_ref]["param_name"][ii] = param_name
                 else:
                     raise ValueError("Parameter {} not found in the joint prior {} parameters dictionary {}"
                                      "".format(param.get_name(include_prefix=True, recursive=True),
@@ -381,8 +399,12 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         for joint_prior_ref, dico in joint.items():
             joint_prior_instance = manager_prior.get_priorfunc_subclass(dico["prior_info"]["category"])(dico["prior_info"]["params"], **dico["prior_info"]["args"])
             vals = joint_prior_instance.ravs(nb_values=nb_values)
-            for ii, param_name in enumerate(joint[joint_prior_ref]["param_name"]):
-                dico_initvals[param_name] = vals[ii]
+            for ii, param_name_or_l_param_name in enumerate(joint[joint_prior_ref]["param_name"]):
+                if isinstance(param_name_or_l_param_name, list):
+                    for jj, param_name in enumerate(param_name_or_l_param_name):
+                        dico_initvals[param_name] = vals[ii][jj]
+                else:
+                    dico_initvals[param_name_or_l_param_name] = vals[ii]
         # Produce the output
         if output_dico:
             return dico_initvals

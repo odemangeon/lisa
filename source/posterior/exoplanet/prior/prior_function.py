@@ -584,10 +584,10 @@ class TransitingRhoprior(Core_JointPrior_Function):
     IMPORTANT NOTE: This prior is not properly normalized when the transiting and grazing conditions
     are more restrictive than the aR, cosinc Rrat priors
 
-    :param bool transiting: True if you want to force the planet to be transiting, False otherwise
-    :param bool allow_grazing: True if you want to allow grazing transits (whatever the value of transiting)
-    :param list_like_of_2_floats Phi_lims: Should only be set when t_prior is provided, otherwise it triggers an
-        error. Defines the inferior and superior limits and phase (Phi) when t_prior is defined.
+    :param bool transiting: List of bool indicating if you want each planet to be transiting or not transiting.
+        True if you want to force the planet to be transiting, False otherwise
+    :param bool allow_grazing: List of bool indicating if you want allow each planet to be grazing.
+        True if you want to allow grazing transits (whatever the value of transiting)
     """
 
     __category__ = "transiting_rho"
@@ -684,35 +684,37 @@ class TransitingRhoprior(Core_JointPrior_Function):
         for idx_planet in range(self.get_params_nb("P")):
             if self.transiting[idx_planet]:
                 if self.allow_grazing[idx_planet]:
-                    list_comp += "b[{idx_planet}] > 1 + {Rrat}".format(idx_planet=idx_planet,
-                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] > (1 + {Rrat})".format(idx_planet=idx_planet,
+                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
                 else:
-                    list_comp += "b[{idx_planet}] > 1 - {Rrat}".format(idx_planet=idx_planet,
-                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] > (1 - {Rrat})".format(idx_planet=idx_planet,
+                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
             else:
                 if self.allow_grazing:
-                    list_comp += "b[{idx_planet}] < 1 - {Rrat}".format(idx_planet=idx_planet,
-                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] < (1 - {Rrat})".format(idx_planet=idx_planet,
+                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
                 else:
-                    list_comp += "b[{idx_planet}] < 1 + {Rrat}".format(idx_planet=idx_planet,
-                                                                       Rrat=dico_text_params["Rrat"][idx_planet])
+                    list_comp += "b[{idx_planet}] < (1 + {Rrat})".format(idx_planet=idx_planet,
+                                                                         Rrat=dico_text_params["Rrat"][idx_planet])
             list_comp += ", "
         list_comp += "]"
         text_function = """
         def {function_name}({param_vector_name}):
-            b = getaoverr(array({P}), {rhostar}) * array({cosinc})
+            P = array([{P}])
+            Rrat = array([{Rrat}])
+            b = getaoverr(P, {rhostar}) * array([{cosinc}])
             if any({list_comp}):
                 return -inf
             else:
                 return (dico_logpdf['rhostar']({rhostar}) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(nb_planet)]) +
-                        sum([dico_logpdf['Rrat'][ii]({Rrat}[ii]) for ii in range(nb_planet)]) +
-                        sum([dico_logpdf['P'][ii]({P}[ii]) for ii in range(nb_planet)])
+                        sum([dico_logpdf['Rrat'][ii](Rrat[ii]) for ii in range(nb_planet)]) +
+                        sum([dico_logpdf['P'][ii](P[ii]) for ii in range(nb_planet)])
                         )
         """
         text_function = dedent(text_function)
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             P=dico_text_params["P"], cosinc=dico_text_params["cosinc"],
-                                             Rrat=dico_text_params["Rrat"], rhostar=dico_text_params["rhostar"],
+                                             P=", ".join(dico_text_params["P"]), cosinc=", ".join(dico_text_params["cosinc"]),
+                                             Rrat=", ".join(dico_text_params["Rrat"]), rhostar=dico_text_params["rhostar"],
                                              list_comp=list_comp)
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
@@ -787,15 +789,18 @@ class TransitingRhoprior(Core_JointPrior_Function):
             for ii in range(self.nb_planet):
                 if self.transiting[ii]:
                     if self.allow_grazing[ii]:
-                        l_indexes.append(where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0])
+                        l_indexes.append(where(dico_ravs["b"][ii] > (1 + dico_ravs["Rrat"][ii]))[0])
                     else:
-                        l_indexes.append(where(dico_ravs["b"] > (1 - dico_ravs["Rrat"]))[0])
+                        l_indexes.append(where(dico_ravs["b"][ii] > (1 - dico_ravs["Rrat"][ii]))[0])
                 else:
                     if self.allow_grazing[ii]:
-                        l_indexes.append(where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0])
+                        l_indexes.append(where(dico_ravs["b"][ii] < (1 - dico_ravs["Rrat"][ii]))[0])
                     else:
-                        l_indexes.append(where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0])
-            indexes = list(l_indexes[0].union(l_indexes[1:]))
+                        l_indexes.append(where(dico_ravs["b"][ii] < (1 + dico_ravs["Rrat"][ii]))[0])
+            set_indexes = set([])
+            for indexes in l_indexes:
+                set_indexes = set_indexes.union(indexes)
+            indexes = list(set_indexes)
         if nb_values == 1:
             for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
                 if multiple:
@@ -807,10 +812,6 @@ class TransitingRhoprior(Core_JointPrior_Function):
         for ii in range(self.nb_planet):
             dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"]))
         l_res = []
-        for param_ref, multiple in zip(self.param_refs, self.multiple_hidden_params):
-            if multiple:
-                for ii in range(self.nb_planet):
-                    l_res.append(dico_ravs[hiddenparam_ref][ii])
-            else:
-                l_res.append(dico_ravs[hiddenparam_ref])
+        for param_ref, multiple in zip(self.param_refs, self.multiple_params):
+            l_res.append(dico_ravs[param_ref])
         return tuple(l_res)

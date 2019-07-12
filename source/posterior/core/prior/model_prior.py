@@ -140,13 +140,19 @@ class Model_Prior(object):
             joint_prior_func = manager.get_priorfunc_subclass(joint_prior_info["category"])(joint_prior_info["params"], **joint_prior_info["args"])
             if param.joint_prior_ref not in priors["joint"]["logpdf"]:
                 logger.info("Creating joint priors reference {}".format(param.joint_prior_ref))
-                params = {param_ref: self.get_parameter(param_name, recursive=True) for param_ref, param_name in joint_prior_info["params"].items()}
+                params = {}
+                for param_ref, param_name_or_l_param_name in joint_prior_info["params"].items():
+                    if isinstance(param_name_or_l_param_name, list):  # If joint prior has multiple parameters param_name_or_l_param_name is a list of parameter names
+                        params[param_ref] = [self.get_parameter(param_name, recursive=True) for param_name in param_name_or_l_param_name]
+                    else:
+                        params[param_ref] = self.get_parameter(param_name_or_l_param_name, recursive=True)
                 priors["joint"]["logpdf"][param.joint_prior_ref] = {"function": joint_prior_func.create_logpdf(params),
-                                                                    "nb_param": len(joint_prior_func.param_refs)}
+                                                                    "nb_param": joint_prior_func.get_params_nb()}
             idx = None
-            for param_ref, param_name in joint_prior_info["params"].items():
+            for ii, param_name in enumerate(joint_prior_func.param_name_fulllist):
                 if param.name.is_name(param_name):
-                    idx = joint_prior_func.param_refs.index(param_ref)
+                    idx = ii
+                    break
             if idx is None:
                 raise ValueError("Parameter {} not found in joint prior info dictionary: {}"
                                  "".format(full_name, joint_prior_info["params"]))
@@ -210,6 +216,7 @@ class Model_Prior(object):
         arg_list = OrderedDict()
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
+        print('joint_lnpriors', joint_lnpriors)
         docf = self.__joint_lnprior_creator(marginal_lnpriors + list(joint_lnpriors.values()), arg_list)
         return docf
 
