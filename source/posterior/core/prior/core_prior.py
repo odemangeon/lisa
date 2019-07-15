@@ -10,7 +10,7 @@ Note: Manager_Prior was initially in a separate module but I had to put the clas
 using the manager in the __init__ of Core_JointPrior_Function.
 """
 from logging import getLogger
-from numpy import logical_not, logical_xor
+from numpy import logical_xor  # logical_not
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr, MandatoryMethods
 from ....software_parameters import setupfile_prior

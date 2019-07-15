@@ -10,7 +10,7 @@ from logging import getLogger
 from collections import OrderedDict
 
 from ...tools.metaclasses import MandatoryReadOnlyAttr
-from ...tools.name import Named, check_getname_kwargs
+from ...tools.name import Named  # , check_getname_kwargs
 from ...tools.miscellaneous import spacestring_like
 from .parameter import Parameter
 

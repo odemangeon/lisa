@@ -216,7 +216,6 @@ class Model_Prior(object):
         arg_list = OrderedDict()
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
-        print('joint_lnpriors', joint_lnpriors)
         docf = self.__joint_lnprior_creator(marginal_lnpriors + list(joint_lnpriors.values()), arg_list)
         return docf
 
