@@ -156,14 +156,12 @@ class DatasimulatorCreator(object):
 
         # Initialise the list of Datasim list of DatasimDocFunc
         l_datsim = []
+        l_params = []
         l_allparams = []
         l_params_idx = []
         inst_cats = []
         inst_model_fullnames = []
         datasets = []
-
-        logger.debug("Creation of datasimulator for all datasets. Datasim creator inputs:\n {}"
-                     "".format(datsimC_inputs))
 
         # For each datasimcreator creator name, ...
         for datsimC_name in datsimC_inputs:
@@ -183,6 +181,7 @@ class DatasimulatorCreator(object):
             # model parameter for the all datasets function
             idx_par = []
             # For each parameter in the list of this function, ...
+            l_params.append(l_datsim[-1].params_model)
             for par in l_datsim[-1].params_model:
                 # ... if the param is not in the list of all parameters already, add it
                 if par not in l_allparams:
@@ -190,6 +189,17 @@ class DatasimulatorCreator(object):
                 # ... get the index of this parameter in the list of all the parameters
                 idx_par.append(l_allparams.index(par))
             l_params_idx.append(idx_par)
+
+        logger.debug("Creation of datasimulator for all datasets.\nList of parameters names:\n{}\n"
+                     "Input for the creation of the individual datasimulators:\n{}\n"
+                     "List of datasim functions obtained: {}\n"
+                     "List of parameter names for each individual datasimulator:\n{}\n"
+                     "List of param indexes for each individual datasimulator:\n{}\n"
+                     "List of instrument categories: {}\n"
+                     "List of instrument instrument model full names: {}\n"
+                     "List of datasets: {}"
+                     "".format(l_allparams, datsimC_inputs, l_datsim, l_params, l_params_idx, inst_cats,
+                               inst_model_fullnames, datasets))
 
         # Create the datasim_alldatasets
         return self.__datasim_alldatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,

@@ -1441,9 +1441,18 @@ def load_chain_analysis(obj_name, folder=None):
 
 
 def get_param_value_OrderedDict(values, l_param_names):
-    """Return an Orderedictwith associate the parameter name to its value.
+    """Return an Orderedict with associate the parameter name to its value.
     """
     res = OrderedDict()
     for val, name in zip(values, l_param_names):
         res[name] = val
     return res
+
+
+def get_param_vector(df_val, l_param_name):
+    """
+    """
+    p = []
+    for param_name in l_param_name:
+        p.append(df_val.loc[param_name, "value"])
+    return np.array(p)

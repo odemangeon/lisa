@@ -13,6 +13,7 @@ The objective of this module is to define the class LikelihoodCreator.
 """
 from logging import getLogger
 from collections import defaultdict  # , OrderedDict
+import numpy as np
 # from copy import deepcopy
 
 from .manager_noise_model import Manager_NoiseModel
@@ -86,10 +87,6 @@ class LikelihoodCreator(object):
         datasim_func = datasim.function
         dataset_included_in_datasim = datasim.include_dataset_kwarg
 
-        logger.debug("Creation of likelihood from datasim function {} with the following dico_noisemodel:\n "
-                     "{}\nInformation about the datasim function:\n{}".format(datasim, dico_noisemodel,
-                                                                              datasim._info))
-
         if dataset_included_in_datasim:
             if not(include_dataset):
                 logger.warning("Include_dataset is False but the datasim doc function provided in "
@@ -122,7 +119,6 @@ class LikelihoodCreator(object):
         return lnlike
 
     def _create_lnlikelihood(self, datasim):
-                            # **kwarg_data):
         """Return the log likelihood doc function corresponding to a datasim doc function.
 
         This function prepares the inputs for __likelihood_creator function and then use it.
@@ -219,6 +215,12 @@ class LikelihoodCreator(object):
                                                  l_instmod_obj=instmod4noisemod[noisemod_name],
                                                  model_instance=self
                                                  )
+
+        logger.debug("Creation of a likelihood for datasim function:\n {}\nList of the indexes for the datasim"
+                     " function:\n{}\nAssociated dictionary of noise models:\n{}\nList of parameters"
+                     "for the likelihood function:\n{}"
+                     "".format(datasim._info, l_idx_param_dtsim, dico_noisemodel,
+                               params_likelihood))
 
         return LikelihoodDocFunc(self.__likelihood_creator(datasim, l_idx_param_dtsim,
                                                            dico_noisemodel),

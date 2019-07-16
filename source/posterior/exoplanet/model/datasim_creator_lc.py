@@ -534,8 +534,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             returns_pl_only += template_returns_pl_only.format(planets_lc=planet_only_lc)
             returns_pl += ", "
             returns_pl_only += ", "
-        returns_pl = returns_pl[:-2]
-        returns_pl_only = returns_pl_only[:-2]
+        if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
+            returns_pl = returns_pl[:-2]
+            returns_pl_only = returns_pl_only[:-2]
 
         # Finalise the  text of planet LC simulator function
         if argskwargs not in arguments:
@@ -557,7 +558,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         returns_whole += template_returns_instmod.format(oot_var=oot_var,
                                                          planets_lc=whole_planet_lc)
         returns_whole += ", "
-    returns_whole = returns_whole[:-2]
+    if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
+        returns_whole = returns_whole[:-2]
 
     # Finalise the text of whole system LC simulator function
     text_def_func[key_whole] = (template_function.
