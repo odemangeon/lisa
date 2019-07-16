@@ -42,6 +42,8 @@ exploration_pickle_folder = join(exploration_output_folder, "pickles")
 makedirs(exploration_pickle_folder, exist_ok=True)
 dat_folder = join(exploration_output_folder, "dats")
 makedirs(dat_folder, exist_ok=True)
+chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
+chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
 
 # Pre-minimisation parameters
 do_preminimization = True
@@ -131,7 +133,7 @@ if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=exploration_pickle_folder)
+                                                                                        folder=chain_analysis_pickle_folder)
     else:
         pass
     init_distrib = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
