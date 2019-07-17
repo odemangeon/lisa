@@ -412,20 +412,25 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
                 self.__param_name_lists[param_ref] = None
 
     def _init_hiddenparam_defs(self):
-        """Initialise the dictionary of definitions dictionary for the prior of the hidden parameters.
+        """Initialise the dictionary of the definitions of the prior of the hidden parameters.
 
-        Initialise self.dico_hiddenparam_defs.
+        Initialise self.hiddenparam_defs. For each hidden parameter reference:
+        - if it can be multiple, it infer the number of hidden parameters and it attribute to self.hiddenparam_defs
+        for this hidden parameter reference a list with this number of elements which all contains the
+        default hidden prior definition specified by self.default_hidden_priors.
+        - else it attribute to self.hiddenparam_defs for this hidden parameter reference the default
+        hidden prior definition specified by self.default_hidden_priors (not a list).
         """
-        self.__hiddenparam_defs = self.__get_hidden_param_default_dict(dico_default_values=self.default_hidden_priors)
+        self.__hiddenparam_defs = self._get_hidden_param_default_dict(dico_default_values=self.default_hidden_priors)
 
     def _init_priorinstance_hiddenparams(self):
         """Initialise the dictionary of Prior instances for the hidden parameters.
 
         Initialise self.dico_priorinstance_hiddenparams.
         """
-        self.__priorinstance_hiddenparams = self.__get_hidden_param_default_dict()
+        self.__priorinstance_hiddenparams = self._get_hidden_param_default_dict()
 
-    def __get_hidden_param_default_dict(self, dico_default_values=None):
+    def _get_hidden_param_default_dict(self, dico_default_values=None):
         if dico_default_values is None:
             dico_default_values = {}
         dico = {}
@@ -584,36 +589,50 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
     def set_hiddenparam_defs(self, hiddenparam_def_provided):
         """Set the content of self.hiddenparam_defs
 
-        Fill self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
+        Upodate self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
         of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
         the prior to be used for each hidden parameter. It should follow the following format:
         {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
 
+        This function update the hidden parameters prior definition according to what as been provided
+        by the user via hiddenparam_def_provided (which comes from the param_file). For each hidden parameter
+        ref, it checks if the input provided by the use as the good format and size, especially for multiple
+        hidden parameters. Then it attribute the new hidden parameter prior definition if one has been
+        provided (not None).
+
         :param dict_of_dict hiddenparam_def_provided: dictionary providing the hidden parameters prior definitions
-            provided by the user in the parameter file.
+            provided by the user in the parameter file. If the use wants to keep the default, he should not
+            provide anything or provide None.
             Structure: {"hidden_param_ref" + "_prior": {"category": prior_cat, "args": {dict of prior arguments}}}
         """
-        # I should be able to define a default set_hiddenparam_defs function with
+        # self._init_hiddenparam_defs already initialise self.hiddenparam_defs with, for each hidden parameter
+        # ref the a list of the default hidden parameter prior definition if it's multiple or directly
+        # the default hidden parameter prior definition if not.
         # self.param_name_lists and self.default_hidden_priors
-        # Compare the number of parameters to the number of prior provided for the hidden parameters.
         for hidden_param_ref, multiple in zip(self.hidden_param_refs, self.multiple_hidden_params):
+            # Infer the number of hidden param for a given hidden parameter reference (from the number
+            # of parameters provided, self.param_name_lists)
             nb_hiddenparam = self.infer_hiddenparams_nb(hidden_param_ref=hidden_param_ref)
-            paramdef_provided = hiddenparam_def_provided.get(hidden_param_ref + self.hiddenparampriorarg_ext, None)
-            if isinstance(paramdef_provided, list):
-                l_paramdef_provided = paramdef_provided.copy()
+            # Get the hidden parameter prior definition provided by the user or None if nothing was provided.
+            hiddenparamdef_provided = hiddenparam_def_provided.get(hidden_param_ref + self.hiddenparampriorarg_ext, None)
+            # Wether or not the use provided a list, transform it into one.
+            if isinstance(hiddenparamdef_provided, list):
+                l_hiddenparamdef_provided = hiddenparamdef_provided.copy()
             else:
-                l_paramdef_provided = [paramdef_provided for i in range(nb_hiddenparam)]
-            if len(l_paramdef_provided) != nb_hiddenparam:
+                l_hiddenparamdef_provided = [hiddenparamdef_provided for i in range(nb_hiddenparam)]
+            # Ensure that if the user provided a list, it has the correct number of elements.
+            if len(l_hiddenparamdef_provided) != nb_hiddenparam:
                 raise ValueError("The hidden parameter prior definition is invalid for a parameter with"
                                  "the following characteristics: multiple={}, nb_hidden_param={}."
-                                 "Provided defintion: {} ".format(multiple, nb_hiddenparam, paramdef_provided))
-            for ii, paramdef in enumerate(l_paramdef_provided):
+                                 "Provided defintion: {} ".format(multiple, nb_hiddenparam, hiddenparamdef_provided))
+            #
+            for ii, hiddenparamdef in enumerate(l_hiddenparamdef_provided):
                 if multiple:
-                    if paramdef is not None:
-                        self.hiddenparam_defs[hidden_param_ref][ii] = paramdef
+                    if hiddenparamdef is not None:
+                        self.hiddenparam_defs[hidden_param_ref][ii] = hiddenparamdef
                 else:
-                    if paramdef is not None:
-                        self.hiddenparam_defs[hidden_param_ref] = paramdef
+                    if hiddenparamdef is not None:
+                        self.hiddenparam_defs[hidden_param_ref] = hiddenparamdef
 
 
 # TODO: Store in different place the joint and marginal priors ?

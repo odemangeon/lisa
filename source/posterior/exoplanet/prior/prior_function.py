@@ -434,41 +434,42 @@ class Transitingprior(Core_JointPrior_Function):
     __mandatory_args__ = ['transiting', 'allow_grazing']
     __extra_args__ = []
     __default_extra_args__ = {}
+    __param_refs__ = ['aR', 'cosinc', 'Rrat']
+    __multiple_params__ = [False, False, False]
     __hidden_param_refs__ = ['Rrat', 'b', 'aR']
     __multiple_hidden_params__ = [False, False, False]
     __default_hidden_priors__ = {'Rrat': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
                                  'b': {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}},
                                  'aR': {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
                                  }
-    __param_refs__ = ['aR', 'cosinc', 'Rrat']
-    __multiple_params__ = [False, False, False]
 
-    def set_hiddenparam_defs(self, hiddenparam_def_provided):
-        """Set the content of self.hiddenparam_defs
+    def _get_hidden_param_default_dict(self, dico_default_values=None):
+        """Update Core_JointPrior_Function._get_hidden_param_default_dict
 
-        Fill self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
-        of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
-        the prior to be used for each hidden parameter. It should follow the following format:
-        {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
-
-        :param dict_of_dict hiddenparam_def_provided: dictionary providing the hidden parameters prior definitions
-            provided by the user in the parameter file.
-            Structure: {"hidden_param_ref" + "_prior": {"category": prior_cat, "args": {dict of prior arguments}}}
+        Adapt the default prior for b to the value of transiting and allow_grazing
         """
-        super(Transitingprior, self).set_hiddenparam_defs(hiddenparam_def_provided)
-        # The default b prior in __default_hidden_priors__ is for a transiting non grazing case.
-        # Below I adapt the default b prior if it's not the case.
-        b_prior = hiddenparam_def_provided.get("b_prior", None)
-        if b_prior is None:
+        dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
+        if self.multiple_hidden_params[1]:  # 1 is for b
+            nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
+            for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+                if transiting_ii:
+                    if allow_grazing_ii:
+                        dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                else:
+                    if allow_grazing_ii:
+                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                    else:
+                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        else:
             if self.transiting:
                 if self.allow_grazing:
-                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+                    dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
             else:
                 if self.allow_grazing:
-                    b_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
                 else:
-                    b_prior = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
-        self.hiddenparam_defs["b"] = b_prior
+                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        return dico
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -483,24 +484,32 @@ class Transitingprior(Core_JointPrior_Function):
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+        # Create the logpdf function for each hidden parameter
         dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        # Put variables that you want to have available when you execute the text of the joint
+        # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
         ldict["inf"] = inf
+        # Associate each parameter with value: a number of it's is fixed or a p[i] if it's free.
         dico_text_params = {}
         for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)
+        # Define the joint logpdf function name
         function_name = "logpdf_{}".format(self.category)
+        # For the prior you will need to compare the value of b with the condition for transiting and
+        # grazind. Make the text that performs this comparison
         if self.transiting:
             if self.allow_grazing:
-                text_comp = "b > 1 + {Rrat}".format(Rrat=dico_text_params["Rrat"])
+                text_comp = "b > (1 + {Rrat})".format(Rrat=dico_text_params["Rrat"])
             else:
-                text_comp = "b > 1 - {Rrat}".format(Rrat=dico_text_params["Rrat"])
+                text_comp = "b > (1 - {Rrat})".format(Rrat=dico_text_params["Rrat"])
         else:
             if self.allow_grazing:
-                text_comp = "b < 1 - {Rrat}".format(Rrat=dico_text_params["Rrat"])
+                text_comp = "b < (1 - {Rrat})".format(Rrat=dico_text_params["Rrat"])
             else:
-                text_comp = "b < 1 + {Rrat}".format(Rrat=dico_text_params["Rrat"])
+                text_comp = "b < (1 + {Rrat})".format(Rrat=dico_text_params["Rrat"])
+        # Define the full template for the logpdf function text
         text_function = """
         def {function_name}({param_vector_name}):
             b = {aR} * {cosinc}
@@ -510,13 +519,16 @@ class Transitingprior(Core_JointPrior_Function):
                 return dico_logpdf['b'](b) + dico_logpdf['Rrat']({Rrat}) + dico_logpdf['aR']({aR})
         """
         text_function = dedent(text_function)
+        # Fill the template of the logpdf function
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
                                              aR=dico_text_params["aR"], cosinc=dico_text_params["cosinc"],
                                              Rrat=dico_text_params["Rrat"], text_comp=text_comp)
+
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
         logger.debug("Parameters for joint prior {category}:\n{dico_param}"
                      "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+
         exec(text_function, ldict)
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
@@ -547,21 +559,32 @@ class Transitingprior(Core_JointPrior_Function):
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
             The order of the parameters in the tuple is provided by self.param_refs.
         """
-        dico_ravs = {}
-        dico_pick = {}  # Indicate if you should pick random values (True) or if the value is fixed (False).
-        indexes = arange(nb_values)
-        for param, dico in self.hiddenparam_defs.items():
-            value = dico.get("value", None)
+        dico_ravs = {}  # dict containing the randomly drawn values for each hidden parameter
+        dico_pick = {}  # dict indicating if you should pick random values (True) or if the value is
+        # fixed (False) for each hidden parameter
+
+        # Initialise the dictionary and the arrays which will contain the randomly drawn values. The array
+        # already have the good dimension. If the value for a hidden parameter is fixed than the array
+        # should be full with this value other, it's full of nans.
+        for hiddenparam, dico_prior_def in self.hiddenparam_defs.items():
+            value = dico_prior_def.get("value", None)
             if value is None:
-                dico_pick[param] = True
-                dico_ravs[param] = ones(len(indexes)) * nan
+                dico_pick[hiddenparam] = True
+                dico_ravs[hiddenparam] = ones(nb_values) * nan
             else:
-                dico_pick[param] = False
-                dico_ravs[param] = ones(len(indexes)) * value
-        while len(indexes) > 0:
-            for param, dico in self.hiddenparam_defs.items():
-                if dico_pick[param]:
-                    dico_ravs[param][indexes] = dico["priorfunc_instance"].ravs(nb_values=len(indexes))
+                dico_pick[hiddenparam] = False
+                dico_ravs[hiddenparam] = ones(nb_values) * value
+
+        # Indexes is the list of indexes in the arrays for which the random pick should be redrawn
+        # (it doesn't satisfy the condition)
+        indexes = arange(nb_values)  # We initialise indexes with the list of all element in array
+        while len(indexes) > 0:  # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
+            # For all hidden parameter redo the drawn for indexes where the condition is not satisfied.
+            for hiddenparam_ref in self.hidden_param_refs:
+                if dico_pick[hiddenparam_ref]:
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+
+            # Check if and where the condition is not satisfy.
             if self.transiting:
                 if self.allow_grazing:
                     indexes = where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0]
@@ -572,13 +595,15 @@ class Transitingprior(Core_JointPrior_Function):
                     indexes = where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0]
                 else:
                     indexes = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
+        # If you just ask one value, return just one value per parameter instead of an array with only one element.
         if nb_values == 1:
             for param, dico in self.hiddenparam_defs.items():
                 dico_ravs[param] = dico_ravs[param][0]
+
         return dico_ravs['aR'], dico_ravs["b"] / dico_ravs["aR"], dico_ravs["Rrat"]
 
 
-class TransitingRhoprior(Core_JointPrior_Function):
+class TransitingRhoprior(Transitingprior):
     """Prior defined for the a/R, cosinc and Rrat to ensure that a planet is transit (or not).
 
     IMPORTANT NOTE: This prior is not properly normalized when the transiting and grazing conditions
@@ -605,46 +630,20 @@ class TransitingRhoprior(Core_JointPrior_Function):
                                  }
 
     def __init__(self, params, *args, **kwargs):
-        super(TransitingRhoprior, self).__init__(params, *args, **kwargs)
+        super(Transitingprior, self).__init__(params, *args, **kwargs)
         # Check that P, cosinc and Rrat have the same number of parameters.
         if not(self.get_params_nb(param_ref="P") == self.get_params_nb(param_ref="cosinc") == self.get_params_nb(param_ref="Rrat")):
             raise ValueError("You should have the same number of P, cosinc and Rrat parameters. One of each per planet !")
         self.nb_planet = self.get_params_nb(param_ref="P")
         # transiting and allow_grazing are also multiples so check the transiting and allow_grazing have
-        # the good dimensions
+        # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
+        # to all planets.
         for arg in [self.transiting, self.allow_grazing]:
             if isinstance(arg, list) and (len(arg) != self.nb_planet):
                 raise ValueError("If you provided transiting or allow_grazing as a list, it should have "
                                  "the same length as params['P']. One per planet.")
             else:
                 arg = [arg for i in range(self.nb_planet)]
-
-    def set_hiddenparam_defs(self, hiddenparam_def_provided):
-        """Set the content of self.hiddenparam_defs
-
-        Fill self.hiddenparam_defs. It's a dictionary which contains the definition of the priors
-        of the hidden parameters. Keys are hidden parameter name and values are dictionary defining
-        the prior to be used for each hidden parameter. It should follow the following format:
-        {"category": priorcat, "args": {"arg1":0, "arg2":1}} like for marginal priors
-
-        :param dict_of_dict hiddenparam_def_provided: dictionary providing the hidden parameters prior definitions
-            provided by the user in the parameter file.
-            Structure: {"hidden_param_ref" + "_prior": {"category": prior_cat, "args": {dict of prior arguments}}}
-        """
-        super(TransitingRhoprior, self).set_hiddenparam_defs(hiddenparam_def_provided)
-        b_prior = hiddenparam_def_provided.get("b_prior", None)
-        if b_prior is None:
-            if self.transiting:
-                if self.allow_grazing:
-                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
-                else:
-                    b_prior = {"category": "uniform", "args": {"vmin": 0., "vmax": 1.}}
-            else:
-                if self.allow_grazing:
-                    b_prior = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                else:
-                    b_prior = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
-        self.hiddenparam_defs["b"] = [b_prior for i in self.hiddenparam_defs["b"]]
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -659,17 +658,21 @@ class TransitingRhoprior(Core_JointPrior_Function):
          arg_list,
          param_vector_name,
          ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+        # Create the logpdf function for each hidden parameter
         dico_logpdf = {}
         for hidden_param_ref, multiple in zip(self.hidden_param_refs, self.multiple_hidden_params):
             if multiple:
                 dico_logpdf[hidden_param_ref] = [priorfunc.create_logpdf() for priorfunc in self.priorinstance_hiddenparams[hidden_param_ref]]
             else:
                 dico_logpdf[hidden_param_ref] = self.priorinstance_hiddenparams[hidden_param_ref].create_logpdf()
+        # Put variables that you want to have available when you execute the text of the joint
+        # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
         ldict["getaoverr"] = getaoverr
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
+        # Associate each parameter with value: a number of it's is fixed or a p[i] if it's free.
         dico_text_params = {}
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
             if multiple:
@@ -679,7 +682,10 @@ class TransitingRhoprior(Core_JointPrior_Function):
             else:
                 dico_text_params[param_ref] = add_param_argument(param=params[param_ref], arg_list=arg_list, key_param=key_param,
                                                                  param_nb=param_nb, param_vector_name=par_vec_name)
+        # Define the joint logpdf function name
         function_name = "logpdf_{}".format(self.category)
+        # For each planet, you will need to compare the value of b with the condition for transiting and
+        # grazind. Make list of texts that performs this comparison (one element of the list per planet)
         list_comp = "["
         for idx_planet in range(self.get_params_nb("P")):
             if self.transiting[idx_planet]:
@@ -698,6 +704,7 @@ class TransitingRhoprior(Core_JointPrior_Function):
                                                                          Rrat=dico_text_params["Rrat"][idx_planet])
             list_comp += ", "
         list_comp += "]"
+        # Define the full template for the logpdf function text
         text_function = """
         def {function_name}({param_vector_name}):
             P = array([{P}])
@@ -712,18 +719,24 @@ class TransitingRhoprior(Core_JointPrior_Function):
                         )
         """
         text_function = dedent(text_function)
+        # Fill the template of the logpdf function
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
                                              P=", ".join(dico_text_params["P"]), cosinc=", ".join(dico_text_params["cosinc"]),
                                              Rrat=", ".join(dico_text_params["Rrat"]), rhostar=dico_text_params["rhostar"],
                                              list_comp=list_comp)
+
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
         logger.debug("Parameters for joint prior {category}:\n{dico_param}"
                      "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+
         exec(text_function, ldict)
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
     def logpdf(self, rhostar, P, cosinc, Rrat):
+        """ NOT WORKING because need to take into account the multiple parameter (multiple planetss)
+        """
+        raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
         aR = getaoverr(P, rhostar)
         b = aR * cosinc
@@ -753,9 +766,13 @@ class TransitingRhoprior(Core_JointPrior_Function):
             for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
             The order of the parameters in the tuple is provided by self.param_refs.
         """
-        dico_ravs = {}
-        dico_pick = {}  # Indicate if you should pick random values (True) or if the value is fixed (False).
-        indexes = arange(nb_values)
+        dico_ravs = {}  # dict containing the randomly drawn values for each hidden parameter
+        dico_pick = {}   # dict indicating if you should pick random values (True) or if the value is
+        # fixed (False) for each hidden parameter
+
+        # Initialise the dictionary and the arrays which will contain the randomly drawn values. The array
+        # already have the good dimension. If the value for a hidden parameter is fixed than the array
+        # should be full with this value other, it's full of nans.
         for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
             if multiple:
                 dico_ravs[hiddenparam_ref] = []
@@ -764,19 +781,24 @@ class TransitingRhoprior(Core_JointPrior_Function):
                     value = self.hiddenparam_defs[hiddenparam_ref][ii].get("value", None)
                     if value is None:
                         dico_pick[hiddenparam_ref].append(True)
-                        dico_ravs[hiddenparam_ref].append(ones(len(indexes)) * nan)
+                        dico_ravs[hiddenparam_ref].append(ones(nb_values) * nan)
                     else:
                         dico_pick[hiddenparam_ref].append(False)
-                        dico_ravs[hiddenparam_ref].append(ones(len(indexes)) * value)
+                        dico_ravs[hiddenparam_ref].append(ones(nb_values) * value)
             else:
                 value = self.hiddenparam_defs[hiddenparam_ref].get("value", None)
                 if value is None:
                     dico_pick[hiddenparam_ref] = True
-                    dico_ravs[hiddenparam_ref] = ones(len(indexes)) * nan
+                    dico_ravs[hiddenparam_ref] = ones(nb_values) * nan
                 else:
                     dico_pick[hiddenparam_ref] = False
-                    dico_ravs[hiddenparam_ref] = ones(len(indexes)) * value
-        while len(indexes) > 0:
+                    dico_ravs[hiddenparam_ref] = ones(nb_values) * value
+
+        # Indexes is the list of indexes in the arrays for which the random pick should be redrawn
+        # (it doesn't satisfy the condition)
+        indexes = arange(nb_values)  # We initialise indexes with the list of all element in array
+        while len(indexes) > 0:   # While there is at least one drawn that doesn't satisfy the condition, do a new draw.
+            # For all hidden parameter redo the drawn for indexes where the condition is not satisfied.
             for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
                 if multiple:
                     for ii in range(self.nb_planet):
@@ -785,7 +807,13 @@ class TransitingRhoprior(Core_JointPrior_Function):
                 else:
                     if dico_pick[hiddenparam_ref]:
                         dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+
+            # Check if and where the condition is not satisfy.
+            # The conditions can be statisfied for one planet and not another, so we need a list of indexes.
+            # One element correspond to one planet and will give the indexes that don't satisfy the condition
+            # for this planet.
             l_indexes = []
+            # For each planet, check the condition
             for ii in range(self.nb_planet):
                 if self.transiting[ii]:
                     if self.allow_grazing[ii]:
@@ -797,10 +825,15 @@ class TransitingRhoprior(Core_JointPrior_Function):
                         l_indexes.append(where(dico_ravs["b"][ii] < (1 - dico_ravs["Rrat"][ii]))[0])
                     else:
                         l_indexes.append(where(dico_ravs["b"][ii] < (1 + dico_ravs["Rrat"][ii]))[0])
+            # Then we are going to combine these indexes. If at least one planet doesn't satisfy the
+            # condition we will redrawn the parameters for all the planets (because rhos star is common
+            # to all planets)
             set_indexes = set([])
             for indexes in l_indexes:
                 set_indexes = set_indexes.union(indexes)
             indexes = list(set_indexes)
+
+        # If you just ask one value, return just one value per parameter instead of an array with only one element.
         if nb_values == 1:
             for hiddenparam_ref, multiple in zip(self.hiddenparam_defs, self.multiple_hidden_params):
                 if multiple:
@@ -808,9 +841,14 @@ class TransitingRhoprior(Core_JointPrior_Function):
                         dico_ravs[hiddenparam_ref][ii] = dico_ravs[hiddenparam_ref][ii][0]
                 else:
                     dico_ravs[hiddenparam_ref] = dico_ravs[hiddenparam_ref][0]
+        # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
             dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+        # Format the return which should be a tuple of list of arrays or arrays depending on wether a
+        # parameter can be multiple or not.
+        # It should be ( np.array(rhostar), [np.array(P) for each planet], [np.array(cosinc) for each planet],
+        # , [np.array(aR) for each planet] )
         l_res = []
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
             l_res.append(dico_ravs[param_ref])
