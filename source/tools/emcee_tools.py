@@ -12,6 +12,8 @@ import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
 from numpy import percentile, exp, newaxis, concatenate, std, isfinite, delete
 from numbers import Number
+from collections import Iterable
+
 # from sys import stdout
 import matplotlib.gridspec as gridspec
 from matplotlib.gridspec import GridSpec
@@ -809,11 +811,14 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
         if plot_phase:
             plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err_new, zoom=zoom, ax=ax,
                                         pl_kwargs=kwarg_model)
+            residual_out = residual
         else:
             if zoom is not None:
                 ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model)
+                residual_out = residual_zoom
             else:
                 ax.errorbar(t, residual, data_err_new, **kwarg_model)
+                residual_out = residual
     # Plot the residuals of model + GP
     if (noise_model is not None) and noise_modelGP and show_modelandGP:
         residual_wGP = data - model_wGP if zoom is None else data_zoom - model_wGP_zoom
@@ -828,10 +833,13 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                 ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP)
             else:
                 ax.errorbar(t, residual_wGP, data_err_new, **kwarg_GP)
+    else:
+        residual_wGP = None
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
     ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
+    return residual_out, residual_wGP
 
 
 def apply_jitter(data_err, jitter, jitter_type):
@@ -874,7 +882,7 @@ def apply_zoom(zoom, base_array, arrays=None):
 
 
 def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitter_type=None,
-                                zoom=None, ax=None, pl_kwargs=None):
+                                zoom=None, ax=None, pl_kwargs=None, auto_ylims=False, auto_ylims_kwargs=None):
     """Plot a phase folded representation of a lc
 
     :param array_float t: time array
@@ -889,6 +897,10 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
         zoom[0] give the minimum phase for the zoom and zoom[1] give the maximum.
     :param ~matplotlib.axes._axes.Axes ax: Axes instance where the data and model will be ploted
     :param dict pl_kwargs: Keyword argument passed to pl.errorbar function
+    :param bool auto_ylims: Indicate if you want to apply the auto_ylims function to define the limits
+        of the y axis. If zoom is provided this argument is ignored and auto_ylims is not applied.
+    :param dict auto_ylims_kwargs: Dictionary of keyword arguments to be passed to auto_ylims on top of
+        y and ax.
 
     P and tc needs to have the same unit than the t
     """
@@ -923,10 +935,12 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
         kw["color"] = "r"
     # Plot the phase folded data
     if data_err is not None:
-        line = ax.errorbar(phase_sort, data_sort, data_err_new_sort, **kw)
+        ebcont = ax.errorbar(phase_sort, data_sort, data_err_new_sort, **kw)
     else:
-        line = ax.errorbar(phase_sort, data_sort, **kw)
-    return line, phases
+        ebcont = ax.errorbar(phase_sort, data_sort, **kw)
+    if auto_ylims and (zoom is None):
+        auto_y_lims(data_sort, ax)
+    return ebcont, phases
 
 
 def add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=None):
@@ -1456,3 +1470,84 @@ def get_param_vector(df_val, l_param_name):
     for param_name in l_param_name:
         p.append(df_val.loc[param_name, "value"])
     return np.array(p)
+
+
+def auto_y_lims(y, ax, pad=0.1):
+    """Define the axis limits on the y axis to show the signal but ignore the obvious outliers.
+
+    :param 1D_iterable y: y values
+    :param AxesSubplot ax: matplotlib.axes._subplots.AxesSubplot instance to use.
+    :param float/list_of_2_floats pad: pad values to use below and on top of the 99.5% interval limits.
+        If to values are provided the first is used for bottom pad and the top used for top pad.
+    """
+    if isinstance(pad, Iterable):
+        if len(pad) == 2:
+            pad_low, pad_bottom = pad
+        else:
+            raise ValueError("pad should be a float of an Iterable of 2 floats.")
+    else:
+        pad_low = pad_bottom = pad
+    # Get y lims that bound 99.5% of the y values
+    N = int(0.995 * len(y))
+    hi, lo = y[np.argsort(y)][[N, -N]]
+    pad_low, pad_bottom = [(hi - lo) * pad for pad in [pad_low, pad_bottom]]
+    ylim = (lo - pad_low, hi + pad_bottom)
+    ax.set_ylim(ylim)
+
+
+def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
+    """Indicates y outliers which are off axis by an arrow.
+
+    This function a portion of code extracted from Rodrigo Luger's Everest github repository:
+    https://github.com/rodluger/everest/blob/master/everest/user.py
+
+    :param 1D_iterable x: x values
+    :param 1D_iterable y: y values
+    :param AxesSubplot ax: matplotlib.axes._subplots.AxesSubplot instance to use.
+    :param string default_color: String giving the color to use for a normal outliers (not identified
+        in a masks provided in masksncolors)
+    :param dict masksncolors: Dictionary with keys the name of the mask and values are dictionary themselves
+        with up to 3 keys "mask", "color" and "plot".
+        "mask" is the only mandatory key. It's values gives the list of indexes in y that masked y values
+        for this mask.
+        "color" is a string given the color to give to the arrows for these masked values. If color is
+        omitted None will passed as color.
+        "plot" is a bool that says if you want to plot an arrow for these masked data points that are
+        of axis. If plot is ommitted, True is assumed.
+
+    kwargs are passed to arrowprops of annotate
+    """
+    if masksncolors is None:
+        masksncolors = {}
+    ylim = ax.get_ylim()
+    # Indicate off-axis outliers
+    for ii in np.where(y < ylim[0])[0]:
+        found_in_mask = False
+        plot = True
+        for mnc in masksncolors:
+            if ii in mnc["mask"]:
+                found_in_mask = True
+                plot = mnc.get("plot", True)
+                if plot:
+                    color2use = mnc.get("color", None)
+                break
+        if not(found_in_mask):
+            color2use = color
+        ax.annotate('', xy=(x[ii], ylim[0]), xycoords='data',
+                    xytext=(0, 10), textcoords='offset points',
+                    arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
+    for ii in np.where(y > ylim[1])[0]:
+        found_in_mask = False
+        plot = True
+        for mnc in masksncolors:
+            if ii in mnc["mask"]:
+                found_in_mask = True
+                plot = mnc.get("plot", True)
+                if plot:
+                    color2use = mnc.get("color", None)
+                break
+        if not(found_in_mask):
+            color2use = color
+        ax.annotate('', xy=(x[ii], ylim[1]), xycoords='data',
+                    xytext=(0, -10), textcoords='offset points',
+                    arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
