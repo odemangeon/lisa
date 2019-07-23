@@ -24,7 +24,7 @@ import pandas as pd
 import lisa.posterior.core.posterior as cpost
 import lisa.tools.emcee_tools as et
 import lisa.tools.stats.distribution_anali as da
-import lisa.tools.convert as cv
+import lisa.posterior.exoplanet.model.convert as cv
 import lisa.tools.mylogger as ml
 from source.tools.chain_interpreter import ChainsInterpret
 

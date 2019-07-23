@@ -31,7 +31,7 @@ from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments
                                                   par_vec_name, key_param, add_argskwargs_argument, argskwargs,
                                                   add_nonparam_argument)
 from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ....tools.convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ....posterior.exoplanet.model.convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
 
 ## Logger object
 logger = getLogger()

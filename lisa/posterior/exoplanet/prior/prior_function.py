@@ -8,8 +8,8 @@ from textwrap import dedent
 from numpy import pi, inf, ones, where, any, arange, nan, array
 
 from ...core.prior.core_prior import Core_JointPrior_Function
-from ....tools.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....tools.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
+from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
+from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 

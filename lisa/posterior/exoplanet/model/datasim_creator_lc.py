@@ -18,7 +18,7 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
                                                             time_ref, l_time_ref)
 from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
                                                   par_vec_name, add_argskwargs_argument, argskwargs)
-from ....tools.convert import getaoverr, getomega_fast, getomega_deg_fast
+from ....posterior.exoplanet.model.convert import getaoverr, getomega_fast, getomega_deg_fast
 
 
 ## Logger object

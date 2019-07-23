@@ -20,7 +20,7 @@ Module to test convert system parameters module and exemplify usage
 
 
 import numpy as np
-from source.tools import convert as ct
+from lisa.posterior.exoplanet.model import convert as ct
 #import math
 #import scipy.constants as konst
 #Code that converts the fitted parameters to the ones we want

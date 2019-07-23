@@ -23,7 +23,7 @@ from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, t
 # from ...core.dataset_and_instrument.dataset import Dataset
 from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
                                                   par_vec_name, add_argskwargs_argument, argskwargs)
-from ....tools.convert import gettp_fast
+from ....posterior.exoplanet.model.convert import gettp_fast
 
 
 ## Logger object
