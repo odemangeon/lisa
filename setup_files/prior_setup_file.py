@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 from source.posterior.core.prior.core_prior import Manager_Prior
-import source.posterior.core.prior.prior_function as pf_stdrd
-import source.posterior.exoplanet.prior.prior_function as pf_exop
+import lisa.posterior.core.prior.prior_function as pf_stdrd
+import lisa.posterior.exoplanet.prior.prior_function as pf_exop
 
 
 manager = Manager_Prior()

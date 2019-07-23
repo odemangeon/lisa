@@ -19,9 +19,9 @@ from PyAstronomy.pyasl import foldAt
 
 from fig_styler import styler
 
-import source.tools.emcee_tools as et
-import source.posterior.core.posterior as cpost
-import source.tools.mylogger as ml
+import lisa.tools.emcee_tools as et
+import lisa.posterior.core.posterior as cpost
+import lisa.tools.mylogger as ml
 from source.tools.miscellaneous import interpret_data_filename
 
 from source.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel

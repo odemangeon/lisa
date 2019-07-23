@@ -16,10 +16,10 @@ from numpy import median
 import numpy as np
 # from ipdb import set_trace
 
-import source.posterior.core.posterior as cpost
-import source.tools.emcee_tools as et
-import source.tools.stats.distribution_anali as da
-import source.tools.convert as cv
+import lisa.posterior.core.posterior as cpost
+import lisa.tools.emcee_tools as et
+import lisa.tools.stats.distribution_anali as da
+import lisa.tools.convert as cv
 
 
 ## logger

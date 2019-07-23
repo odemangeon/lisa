@@ -12,8 +12,8 @@ from sys import stdout
 import os
 import numpy as np
 
-import source.posterior.exoplanet.model.gravgroup as exomdl
-import source.posterior.core.prior.manager_prior as mgrp
+import lisa.posterior.exoplanet.model.gravgroup as exomdl
+import lisa.posterior.core.prior.manager_prior as mgrp
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 from source.posterior.core.datasetsfile_db import DatasetsFileDb
 

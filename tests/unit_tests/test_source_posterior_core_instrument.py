@@ -7,7 +7,7 @@ import logging
 import unittest
 import sys
 
-import source.posterior.core.dataset_and_instrument.instrument as inst
+import lisa.posterior.core.dataset_and_instrument.instrument as inst
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:

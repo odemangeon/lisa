@@ -21,9 +21,9 @@ from fig_styler import styler
 
 # from ipdb import set_trace
 
-import source.posterior.core.posterior as cpost
-import source.tools.emcee_tools as et
-import source.tools.mylogger as ml
+import lisa.posterior.core.posterior as cpost
+import lisa.tools.emcee_tools as et
+import lisa.tools.mylogger as ml
 
 
 @styler

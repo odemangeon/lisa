@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
-import source.posterior.core.model.manager_model as mgr
+import lisa.posterior.core.model.manager_model as mgr
 from source.posterior.exoplanet.model.gravgroup import GravGroup
 from source.posterior.exoplanet.model.gravgroup_dynam import GravGroupDyn
 

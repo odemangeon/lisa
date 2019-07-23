@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-import source.tools.dico_database as ddb
+import lisa.tools.dico_database as ddb
 
 level_logger = DEBUG
 level_handler = INFO

@@ -8,7 +8,7 @@ from logging import DEBUG
 from unittest import TestCase, main
 from sys import stdout
 
-import source.tools.metaclasses as meta
+import lisa.tools.metaclasses as meta
 
 logger = getLogger()
 if logger.level > DEBUG:

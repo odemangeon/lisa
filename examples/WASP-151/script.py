@@ -19,9 +19,9 @@ lisa_folder = "../.."
 if lisa_folder not in sys.path:
     sys.path.append(lisa_folder)
 
-import source.posterior.core.posterior as cpost
-import source.tools.emcee_tools as et
-import source.tools.mylogger as ml
+import lisa.posterior.core.posterior as cpost
+import lisa.tools.emcee_tools as et
+import lisa.tools.mylogger as ml
 
 ## Definition of the parameters
 obj_name = "WASP-151"

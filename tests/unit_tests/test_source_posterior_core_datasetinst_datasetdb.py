@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG
 from sys import stdout
 
-import source.posterior.core.dataset_and_instrument.dataset_database as ddb
+import lisa.posterior.core.dataset_and_instrument.dataset_database as ddb
 
 logger = getLogger()
 if logger.level > DEBUG:

@@ -7,7 +7,7 @@ import logging
 import unittest
 import sys
 
-import source.posterior.core.dataset_and_instrument.dataset as dst
+import lisa.posterior.core.dataset_and_instrument.dataset as dst
 from source.posterior.exoplanet.dataset_and_instrument.lc import K2
 
 logger = logging.getLogger()

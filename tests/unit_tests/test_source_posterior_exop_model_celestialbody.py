@@ -8,7 +8,7 @@ import unittest
 import sys
 # from ipdb import set_trace
 
-import source.posterior.exoplanet.model.celestial_bodies as cb
+import lisa.posterior.exoplanet.model.celestial_bodies as cb
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:

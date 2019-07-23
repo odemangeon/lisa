@@ -10,7 +10,7 @@ import sys
 
 # from unittest.mock import patch
 
-import source.posterior.core.model.manager_model as mgr
+import lisa.posterior.core.model.manager_model as mgr
 
 from source.posterior.core.model.core_model import Core_Model
 

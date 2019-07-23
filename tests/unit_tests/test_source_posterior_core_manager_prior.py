@@ -10,8 +10,8 @@ import sys
 
 # from unittest.mock import patch
 
-import source.posterior.core.prior.manager_prior as mgr
-import source.posterior.core.prior.prior_function as pf
+import lisa.posterior.core.prior.manager_prior as mgr
+import lisa.posterior.core.prior.prior_function as pf
 
 
 # from source.posterior.core.priors.core_priors import priors

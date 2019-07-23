@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
-import source.posterior.core.likelihood.manager_noise_model as mgr
-import source.posterior.core.likelihood.jitter_noise_model as jnm
-import source.posterior.core.likelihood.core_noise_model as cnm
-import source.posterior.exoplanet.likelihood.stellar_activity_noisemodel as sanm
+import lisa.posterior.core.likelihood.manager_noise_model as mgr
+import lisa.posterior.core.likelihood.jitter_noise_model as jnm
+import lisa.posterior.core.likelihood.core_noise_model as cnm
+import lisa.posterior.exoplanet.likelihood.stellar_activity_noisemodel as sanm
 
 manager = mgr.Manager_NoiseModel()
 

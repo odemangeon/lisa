@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
-import source.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
+import lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
 from source.posterior.core.dataset_and_instrument.instrument import Default_Instrument
 from source.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument, LC_Dataset
 from source.posterior.exoplanet.dataset_and_instrument.rv import RV_Instrument, RV_Dataset

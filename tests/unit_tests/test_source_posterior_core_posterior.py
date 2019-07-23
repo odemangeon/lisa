@@ -10,7 +10,7 @@ import os
 
 from unittest.mock import patch
 
-import source.posterior.core.posterior as pst
+import lisa.posterior.core.posterior as pst
 
 from source.software_parameters import input_data_folder
 from source.posterior.core.dataset_and_instrument.manager_dataset_instrument import \
@@ -18,8 +18,8 @@ from source.posterior.core.dataset_and_instrument.manager_dataset_instrument imp
 from source.posterior.core.model.manager_model import \
     Manager_Model
 from source.posterior.core.model.core_model import Core_Model
-import source.posterior.exoplanet.dataset_and_instrument.lc as lc
-import source.posterior.exoplanet.dataset_and_instrument.rv as rv
+import lisa.posterior.exoplanet.dataset_and_instrument.lc as lc
+import lisa.posterior.exoplanet.dataset_and_instrument.rv as rv
 from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
 from source.posterior.core.likelihood.jitter_noise_model import GaussianNoiseModel
 

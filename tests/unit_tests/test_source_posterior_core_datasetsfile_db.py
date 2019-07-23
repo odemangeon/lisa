@@ -9,7 +9,7 @@ from logging import DEBUG, INFO
 from sys import stdout
 from os import remove
 
-import source.posterior.core.datasetsfile_db as dfdb
+import lisa.posterior.core.datasetsfile_db as dfdb
 
 level_logger = DEBUG
 level_handler = INFO
