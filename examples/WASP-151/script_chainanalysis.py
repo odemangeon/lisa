@@ -23,8 +23,8 @@ import pandas as pd
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
+import lisa.posterior.exoplanet.exploration_analysis_tools as eat
 import lisa.tools.stats.distribution_anali as da
-import lisa.posterior.exoplanet.model.convert as cv
 import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret
 
@@ -294,26 +294,27 @@ if do_MComp:
 logger.info("9. Determine best fit values and error bars for secondary parameters")
 # Compute other parameters
 # Transit depth, T14, T12, b, i, omega, ecc, Mp, Rp, rho*, rhopl, a, Teff
-chainIsec, l_param_name_sec = cv.get_secondary_chains(post_instance.model, chainI,
-                                                      # star_kwargs={"M": {"value": 1.20,
-                                                      #                    "error": 0.09},
-                                                      #              "R": {"value": 1.18,
-                                                      #                    "error": 0.20},
-                                                      #              "Teff": {"value": 5914,
-                                                      #                       "error": 64}
-                                                      star_kwargs={"M": {"value": 1,
-                                                                         "error": 0.1},
-                                                                   "rho": {"value": 0.3,
-                                                                           "error": 0.01},
-                                                                   "Teff": {"value": 5914,
-                                                                            "error": 64}
-                                                      # star_kwargs={"M": {"value": 1.295,
-                                                      #                    "error": 0.077},
-                                                      #              "R": {"value": 1.59,
-                                                      #                    "error": 0.09},
-                                                      #              "Teff": {"value": 5914,
-                                                      #                       "error": 64}
-                                                                   })
+chainIsec, l_param_name_sec = eat.get_secondary_chains(post_instance.model, chainI,
+                                                       # star_kwargs={"M": {"value": 1.20,
+                                                       #                    "error": 0.09},
+                                                       #              "R": {"value": 1.18,
+                                                       #                    "error": 0.20},
+                                                       #              "Teff": {"value": 5914,
+                                                       #                       "error": 64}
+                                                       star_kwargs={"M": {"value": 1,
+                                                                          "error": 0.1},
+                                                                    "rho": {"value": 0.3,
+                                                                            "error": 0.01},
+                                                                    "Teff": {"value": 5914,
+                                                                             "error": 64}
+                                                       # star_kwargs={"M": {"value": 1.295,
+                                                       #                    "error": 0.077},
+                                                       #              "R": {"value": 1.59,
+                                                       #                    "error": 0.09},
+                                                       #              "Teff": {"value": 5914,
+                                                       #                       "error": 64}
+                                                                    }
+                                                       )
 et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
 pl.savefig(join(images_folder, "traces_secondary_raw.pdf"))
 pl.close("all")
