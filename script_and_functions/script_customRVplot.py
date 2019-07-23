@@ -37,7 +37,6 @@ mgr_noisemodel.load_setup()
 def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, dataset_db, model_instance,
                     fitted_values, l_param_name, star,
                     fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, *args, **kwargs):
-    nplanet = len(planets)
     """Produce a clean RV plot.
 
     :param fig: Figure instance (provided by the styler)
@@ -409,7 +408,7 @@ if __name__ == "__main__":
     dataset_db = post_instance.dataset_db
     datasim_dbf = post_instance.datasimulators
     model_instance = post_instance.model
-    star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
+    star = post_instance.model.stars[list(post_instance.model.stars)[0]]
 
     # fig = pl.figure()
 
@@ -417,8 +416,7 @@ if __name__ == "__main__":
                     # fig=fig,
                     datasetnames=datasetnames, planets=planet_name, periods=periods, tcs=tics,
                     datasim_dbf=datasim_dbf, dataset_db=dataset_db, model_instance=model_instance,
-                    fitted_values=fitted_values, l_param_name=l_param_name,
-                    star=post_instance.model.stars[list(post_instance.model.stars)[0]],
+                    fitted_values=fitted_values, l_param_name=l_param_name, star=star,
                     figsize=(2, 1), tight=True,
                     # dpi=200,
                     dpi=300,

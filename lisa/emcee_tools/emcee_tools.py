@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, exp, newaxis, concatenate, std, isfinite, delete
+from numpy import percentile, newaxis, concatenate, std
 from numbers import Number
 from collections import Iterable
 
@@ -27,18 +27,17 @@ from os.path import isfile, join
 from pandas import read_table
 # import pprint
 
-from .stats.loc_scale_estimator import mad
-from .tqdm_logger import TqdmToLogger
-from .time_series_toolbox import get_time_supersampled, average_supersampled_values
-from .human_machine_interface.QCM import QCM_utilisateur
+from ..tools.stats.loc_scale_estimator import mad
+from ..tools.tqdm_logger import TqdmToLogger
+from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
+from ..tools.human_machine_interface.QCM import QCM_utilisateur
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from ..posterior.exoplanet.model.gravgroup import ext_plonly
 # from ..posterior.core.posterior import alldtst_key
 
-
-from scipy.stats import mode
+# from scipy.stats import mode
 
 # from ipdb import set_trace
 

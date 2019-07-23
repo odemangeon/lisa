@@ -23,7 +23,7 @@ import pandas as pd
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-import lisa.posterior.exoplanet.exploration_analysis_tools as eat
+import lisa.posterior.exoplanet.exploration_analysis_tools.secondary_parameters as sp
 import lisa.tools.stats.distribution_anali as da
 import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret

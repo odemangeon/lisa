@@ -5,7 +5,6 @@ Script template to analysis the chains obtained during the MCMC exploration
 
 @TODO:
 """
-import sys
 from logging import DEBUG, INFO
 from os import getcwd, makedirs
 from os.path import join
@@ -23,7 +22,7 @@ import pandas as pd
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-import lisa.posterior.exoplanet.exploration_analysis_tools as eat
+import lisa.posterior.exoplanet.exploration_analysis_tools.secondary_parameters as sp
 import lisa.tools.stats.distribution_anali as da
 import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret
@@ -79,10 +78,15 @@ method_bestfit = "median"
 
 # Do Corner plot
 do_corner = True
+sampling_corner = 10
 
 # Do model comparison
 do_MComp = True
 do_MComp_Folded = True
+
+# Do compute secondary parameters
+do_SecParam = True
+sampling_corner_sec = 100
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
@@ -260,7 +264,7 @@ if do_bestfit:
 
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
-    corner(et.get_clean_flatchain(chainI, l_walker=l_walker_conv, l_burnin=l_burnin),
+    corner(et.get_clean_flatchain(chainI[:, ::sampling_corner, :], l_walker=l_walker_conv, l_burnin=l_burnin),
            labels=l_param_chainI, truths=fitted_values)
 
     pl.savefig(join(plot_folder, "corner.pdf"))
@@ -300,63 +304,66 @@ if do_MComp:
 
         pl.savefig(join(plot_folder, "data_comparison_pholded.pdf"))
         pl.close("all")
-#
-# logger.info("9. Determine best fit values and error bars for secondary parameters")
-# # Compute other parameters
-# # Transit depth, T14, T12, b, i, omega, ecc, Mp, Rp, rho*, rhopl, a, Teff
-# chainIsec, l_param_name_sec = eat.get_secondary_chains(post_instance.model, chainI,
-#                                                       # star_kwargs={"M": {"value": 1.20,
-#                                                       #                    "error": 0.09},
-#                                                       #              "R": {"value": 1.18,
-#                                                       #                    "error": 0.20},
-#                                                       #              "Teff": {"value": 5914,
-#                                                       #                       "error": 64}
-#                                                       star_kwargs={"M": {"value": 1.336,
-#                                                                          "error": 0.086},
-#                                                                    "rho": {"value": 0.26,
-#                                                                            "error": 0.04},
-#                                                                    "Teff": {"value": 5914,
-#                                                                             "error": 64}
-#                                                       # star_kwargs={"M": {"value": 1.295,
-#                                                       #                    "error": 0.077},
-#                                                       #              "R": {"value": 1.59,
-#                                                       #                    "error": 0.09},
-#                                                       #              "Teff": {"value": 5914,
-#                                                       #                       "error": 64}
-#                                                                    })
-# et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
-# pl.savefig("./images/traces_secondary_raw.pdf")
-# pl.close("all")
-#
-# et.plot_chains(chainIsec, lnprobability, l_param_name_sec, l_walker=l_walker_geweke)
-# pl.savefig("./images/traces_secondary_geweke_select.pdf")
-# pl.close("all")
-#
-# fitted_values_sec = et.get_fitted_values(chainIsec, method="median", l_param_name=l_param_name_sec,
-#                                          l_walker=l_walker_geweke, l_burnin=l_burnin,
-#                                          lnprobability=lnprobability)
-# sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
-#                                                                  l_walker=l_walker_geweke,
-#                                                                  l_burnin=l_burnin),
-#                                           level=1, centre=fitted_values_sec,
-#                                           l_param_name=l_param_name_sec)
-# df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_name_sec,
-#                                                      data={'value': fitted_values_sec,
-#                                                            'sigma-': sigma_m_sec,
-#                                                            'sigma+': sigma_p_sec})])
-# df_fittedval = df_fittedval[~df_fittedval.index.duplicated(keep='last')]
-# df_fittedval.to_pickle("df_fittedval.pk")
-#
-# et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
-#                        fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
-#                        df_fittedval=df_fittedval)
 
-# logger.info("10. Print best fit values and error bars in a latex file")
-# et.write_latex_table("latex_parameter_table_wsecondary.tex", df_fittedval, obj_name)
+if do_SecParam:
+    logger.info("9. Determine best fit values and error bars for secondary parameters")
+    chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
+                                                          # star_kwargs={"M": {"value": 1.20,
+                                                          #                    "error": 0.09},
+                                                          #              "R": {"value": 1.18,
+                                                          #                    "error": 0.20},
+                                                          #              "Teff": {"value": 5914,
+                                                          #                       "error": 64}
+                                                          #              }
+                                                          star_kwargs={"M": {"value": 1.336,
+                                                                             "error": 0.086},
+                                                                       "rho": {"value": 0.26,
+                                                                               "error": 0.04},
+                                                                       "Teff": {"value": 5914,
+                                                                                "error": 64}
+                                                                       }
+                                                          # star_kwargs={"M": {"value": 1.295,
+                                                          #                    "error": 0.077},
+                                                          #              "R": {"value": 1.59,
+                                                          #                    "error": 0.09},
+                                                          #              "Teff": {"value": 5914,
+                                                          #                       "error": 64}
+                                                          #              }
+                                                          )
+    logger.info("Plot raw traces for secondary parameters")
+    et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
+    pl.savefig(join(plot_folder, "traces_secondary_raw.pdf"))
+    pl.close("all")
 
-# logger.info("11. Do correlation plot for secondary free parameters")
-# # In this case there is nan values in the D14 and D23 chains and it makes corner crash
-# corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_geweke, l_burnin=l_burnin),
-#        labels=l_param_name_sec, truths=fitted_values_sec)
-# pl.savefig("./images/corner_sec.pdf")
-# pl.close("all")
+    logger.info("Plot geweke select traces for secondary parameters")
+    et.plot_chains(chainIsec, lnprobability, l_param_name_sec, l_walker=l_walker_conv, l_burnin=l_burnin)
+    pl.savefig(join(plot_folder, "traces_secondary_geweke_select.pdf"))
+    pl.close("all")
+
+    logger.info("Determine best fit values and error bars for secondary parameters")
+    fitted_values_sec = et.get_fitted_values(chainIsec, method="median", l_param_name=l_param_name_sec,
+                                             l_walker=l_walker_conv, l_burnin=l_burnin,
+                                             lnprobability=lnprobability)
+    sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
+                                                                     l_walker=l_walker_conv,
+                                                                     l_burnin=l_burnin),
+                                              level=1, centre=fitted_values_sec,
+                                              l_param_name=l_param_name_sec)
+    df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_name_sec,
+                                                         data={'value': fitted_values_sec,
+                                                               'sigma-': sigma_m_sec,
+                                                               'sigma+': sigma_p_sec})])
+    df_fittedval = df_fittedval[~df_fittedval.index.duplicated(keep='last')]
+
+    et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+                           fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
+                           df_fittedval=df_fittedval, folder=chain_analysis_pickle_folder)
+
+    et.write_latex_table(join(table_folder, "{}_latex_parameter_table_wsecondary.tex".format(obj_name)), df_fittedval, obj_name)
+
+    logger.info("Do correlation plot for secondary free parameters")
+    # In this case there is nan values in the D14 and D23 chains and it makes corner crash
+    corner(et.get_clean_flatchain(chainIsec[:, ::sampling_corner, :], l_walker=l_walker_conv, l_burnin=l_burnin),
+           labels=l_param_name_sec, truths=fitted_values_sec)
+    pl.savefig(join(plot_folder, "corner_sec.pdf"))
+    pl.close("all")

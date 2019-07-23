@@ -15,8 +15,11 @@ from logging import getLogger
 logger = getLogger()
 
 
-def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None):
+def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None, units=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
+
+    :param dict units: Dictionary specifying the unit of some of the parameter. Possible parameters:
+        "K": value can be "kms" or "ms".
     """
     # Create a dictionary with the main parameter values either chain (if free) or one value
     dico_par = {}
@@ -34,25 +37,31 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
     star = list(model.stars.values())[0]
 
     # Decide if you use rho or R as main stellar physical parameter
-    if ("rho" not in star_kwargs) and ("R" not in star_kwargs):
-        intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
-                             "'R']\n")
-        reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
-    else:
-        reply = None
-    if reply == "rho":
-        Rstar_infered = True
+    if star.rho.main:
         l_param_star = [star.M, star.rho, star.Teff]
-    elif reply == "R":
-        Rstar_infered = False
-        l_param_star = [star.M, star.R, star.Teff]
+        Rstar_infered = True
     else:
-        if "rho" in star_kwargs:
+        if ("rho" not in star_kwargs) and ("R" not in star_kwargs):
+            intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
+                                 "'R']\n")
+            reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
+        elif ("rho" in star_kwargs) and ("R" in star_kwargs):
+            raise ValueError("You should not provide both rho and R of the star.")
+        else:
+            reply = None
+        if reply == "rho":
             Rstar_infered = True
             l_param_star = [star.M, star.rho, star.Teff]
-        else:
+        elif reply == "R":
             Rstar_infered = False
             l_param_star = [star.M, star.R, star.Teff]
+        else:
+            if "rho" in star_kwargs:
+                Rstar_infered = True
+                l_param_star = [star.M, star.rho, star.Teff]
+            else:
+                Rstar_infered = False
+                l_param_star = [star.M, star.R, star.Teff]
 
     # Simulate stellar Mass, Teff, radius or rho chains if needed
     for param in l_param_star:
@@ -97,80 +106,99 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                                                                      dico_par[star.M.get_name(include_prefix=True, recursive=True)])
         l_parname_sec_chain.append(star.R.get_name(include_prefix=True, recursive=True))
 
+    # Define units of parameter for which the unit can vary depending on the dataset.
+    if units is None:
+        units = {}
+    K_unit = units.get("K", "kms")
+    if K_unit == "kms":
+        Kfact = 1000
+    elif K_unit == "ms":
+        Kfact = 1
+    else:
+        raise ValueError("Unit of K can be 'kms' or 'ms'.")
+
     if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
         # Iterate over planet related secondary
         for planet in model.planets.values():
             # Prepare the list of tuples secondary parameter name, function, parameters
             l_tup_planet = []
             # Transit depth
-            l_tup_planet.append((planet.Trdepth.get_name(include_prefix=True, recursive=True), cv.get_transit_depth,
+            l_tup_planet.append((planet.Trdepth.get_name(include_prefix=True, recursive=True), cv.get_transit_depth, [],
                                  [planet.Rrat.get_name(include_prefix=True, recursive=True)]))
             # Inclination
-            l_tup_planet.append((planet.inc.get_name(include_prefix=True, recursive=True), cv.getinc,
+            l_tup_planet.append((planet.inc.get_name(include_prefix=True, recursive=True), cv.getinc, [],
                                  [planet.cosinc.get_name(include_prefix=True, recursive=True)]))
             # eccentricity
-            l_tup_planet.append((planet.ecc.get_name(include_prefix=True, recursive=True), cv.getecc,
+            l_tup_planet.append((planet.ecc.get_name(include_prefix=True, recursive=True), cv.getecc, [],
                                  [planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
             # omega : argument of periastron in degrees
-            l_tup_planet.append((planet.omega.get_name(include_prefix=True, recursive=True), cv.getomega_deg,
+            l_tup_planet.append((planet.omega.get_name(include_prefix=True, recursive=True), cv.getomega_deg, [],
                                  [planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
-            # b: impact parameter
-            l_tup_planet.append((planet.b.get_name(include_prefix=True, recursive=True), cv.getb,
-                                 [planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
-                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
+
+            if model.parametrisation == "EXOFAST":
+                # b: impact parameter
+                l_tup_planet.append((planet.b.get_name(include_prefix=True, recursive=True), cv.getb, [],
+                                     [planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
+                                      planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
+            elif model.parametrisation == "Multis":
+                l_tup_planet.append((planet.aR.get_name(include_prefix=True, recursive=True), cv.getaoverr, [],
+                                     [planet.P.get_name(include_prefix=True, recursive=True), star.rho.get_name(include_prefix=True, recursive=True)]))
+                l_tup_planet.append((planet.b.get_name(include_prefix=True, recursive=True), cv.getb, [],
+                                     [planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
+                                      planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
             # Rp: planetary radius
-            l_tup_planet.append((planet.R.get_name(include_prefix=True, recursive=True), cv.getRp,
+            l_tup_planet.append((planet.R.get_name(include_prefix=True, recursive=True), cv.getRp, [],
                                  [planet.Rrat.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
             # D14: full transit duration
-            l_tup_planet.append((planet.D14.get_name(include_prefix=True, recursive=True), cv.getD14,
+            l_tup_planet.append((planet.D14.get_name(include_prefix=True, recursive=True), cv.getD14, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True),
                                   planet.Rrat.get_name(include_prefix=True, recursive=True)]))
             # D12: ingress/egress duration
-            l_tup_planet.append((planet.D23.get_name(include_prefix=True, recursive=True), cv.getD23,
+            l_tup_planet.append((planet.D23.get_name(include_prefix=True, recursive=True), cv.getD23, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True),
                                   planet.Rrat.get_name(include_prefix=True, recursive=True)]))
             # Mp: Planetary mass
-            l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp,
+            l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp, [Kfact, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
             # a: semi major axis
-            l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta,
+            l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), planet.M.get_name(include_prefix=True, recursive=True)]))
             # rhostar: Density of the star
-            l_tup_planet.append((planet.rhostar.get_name(include_prefix=True, recursive=True), cv.getrhostar,
+            l_tup_planet.append((planet.rhostar.get_name(include_prefix=True, recursive=True), cv.getrhostar, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True)]))
             # loggstar: logg of the star
-            l_tup_planet.append((planet.loggstar.get_name(include_prefix=True, recursive=True), cv.getloggstar,
+            l_tup_planet.append((planet.loggstar.get_name(include_prefix=True, recursive=True), cv.getloggstar, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
             # circtime: circularisation timescale of the planet
-            l_tup_planet.append((planet.circtime.get_name(include_prefix=True, recursive=True), cv.getcirctime,
+            l_tup_planet.append((planet.circtime.get_name(include_prefix=True, recursive=True), cv.getcirctime, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True),
                                   planet.M.get_name(include_prefix=True, recursive=True), planet.Rrat.get_name(include_prefix=True, recursive=True)]))
             # rhoplanet: Density of the planet
-            l_tup_planet.append((planet.rho.get_name(include_prefix=True, recursive=True), cv.getrhopl,
+            l_tup_planet.append((planet.rho.get_name(include_prefix=True, recursive=True), cv.getrhopl, [],
                                  [planet.M.get_name(include_prefix=True, recursive=True), planet.R.get_name(include_prefix=True, recursive=True)]))
             # Teq: Equilibrium temperature
-            l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl,
+            l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
 
             # L: Stellar luminosity
-            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs,
+            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs, [],
                                  [star.R.get_name(include_prefix=True, recursive=True), star.Teff.get_name(include_prefix=True, recursive=True)]))
 
             # Fi: Planetary insolation flux
-            l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi,
+            l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
 
             # H: Scale Height
-            l_tup_planet.append((planet.H.get_name(include_prefix=True, recursive=True), cv.getscaleheigh,
+            l_tup_planet.append((planet.H.get_name(include_prefix=True, recursive=True), cv.getscaleheigh, [],
                                  [planet.M.get_name(include_prefix=True, recursive=True), planet.R.get_name(include_prefix=True, recursive=True), planet.Teq.get_name(include_prefix=True, recursive=True)]))
 
             # Compute the secondary parameter
-            for sec_paraname, func, param_list in l_tup_planet:
+            for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
-                values = func(*[dico_par[param] for param in param_list])
+                values = func(*[dico_par[param] for param in param_list], *args)
                 if isinstance(values, Number) or isinstance(values, ndarray):
                     dico_par[sec_paraname] = values
                     if isinstance(values, Number):
@@ -242,45 +270,45 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Prepare the list of tuples secondary parameter name, function, parameters
             l_tup_planet = []
             # eccentricity
-            l_tup_planet.append((planet.ecc.get_name(include_prefix=True, recursive=True), cv.getecc,
+            l_tup_planet.append((planet.ecc.get_name(include_prefix=True, recursive=True), cv.getecc, [],
                                  [planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
             # omega : argument of periastron in degrees
-            l_tup_planet.append((planet.omega.get_name(include_prefix=True, recursive=True), cv.getomega_deg,
+            l_tup_planet.append((planet.omega.get_name(include_prefix=True, recursive=True), cv.getomega_deg, [],
                                  [planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
             # Mpsini: Planetary mass sinus inclination
-            l_tup_planet.append((planet.Msini.get_name(include_prefix=True, recursive=True), cv.getMpsininc,
+            l_tup_planet.append((planet.Msini.get_name(include_prefix=True, recursive=True), cv.getMpsininc, [Kfact, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True)]))
             # Mp: Planetary mass
             if planet.inc.get_name(include_prefix=True, recursive=True) in dico_par:
-                l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp,
+                l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp, [Kfact, ],
                                      [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                       planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
             # a: semi major axis
             if planet.inc.get_name(include_prefix=True, recursive=True) in dico_par:
-                l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta,
+                l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                      [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                       planet.M.get_name(include_prefix=True, recursive=True)]))
             else:
-                l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta,
+                l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                      [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                       planet.Msini.get_name(include_prefix=True, recursive=True)]))
             # aR: semi major axis in stellar radius
-            l_tup_planet.append((planet.aR.get_name(include_prefix=True, recursive=True), cv.getaoverr_fromRstar,
+            l_tup_planet.append((planet.aR.get_name(include_prefix=True, recursive=True), cv.getaoverr_fromRstar, [],
                                  [planet.a.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
             # Teq: Equilibrium temperature
-            l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl,
+            l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
             # L: Stellar luminosity
-            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs,
+            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs, [],
                                  [star.R.get_name(include_prefix=True, recursive=True), star.Teff.get_name(include_prefix=True, recursive=True)]))
             # Fi: Planetary insolation flux
-            l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi,
+            l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
             # Compute teh secondary parameter
-            for sec_paraname, func, param_list in l_tup_planet:
+            for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
-                values = func(*[dico_par[param] for param in param_list])
+                values = func(*[dico_par[param] for param in param_list], *args)
                 if isinstance(values, Number) or isinstance(values, ndarray):
                     dico_par[sec_paraname] = values
                     if isinstance(values, Number):
