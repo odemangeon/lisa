@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-from source.tools.miscellaneous import (interpret_data_filename, get_filename_from_file_path,
+from lisa.tools.miscellaneous import (interpret_data_filename, get_filename_from_file_path,
                                         spacestring_like, get_filename_woext_from_filename)
 
 level_logger = DEBUG

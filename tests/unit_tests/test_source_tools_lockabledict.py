@@ -9,7 +9,7 @@ from logging import DEBUG, INFO
 from sys import stdout
 from copy import copy
 
-from source.tools.lockable_dict import LockableDict, Lock
+from lisa.tools.lockable_dict import LockableDict, Lock
 
 level_logger = DEBUG
 level_handler = DEBUG

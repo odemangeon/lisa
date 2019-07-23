@@ -11,7 +11,7 @@ from sys import stdout
 
 import lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
 import lisa.posterior.core.dataset_and_instrument.instrument as inst
-from source.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument
+from lisa.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument
 
 level_logger = DEBUG
 level_handler = INFO

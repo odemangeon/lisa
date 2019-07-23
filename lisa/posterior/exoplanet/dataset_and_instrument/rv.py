@@ -11,8 +11,8 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from source.posterior.core.dataset_and_instrument.dataset import Dataset
-from source.posterior.core.dataset_and_instrument.instrument import Core_Instrument
+from lisa.posterior.core.dataset_and_instrument.dataset import Dataset
+from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
 
 ## Logger

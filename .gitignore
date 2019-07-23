@@ -7,7 +7,7 @@ __pycache__/
 #*#
 
 # Common stuff
-source/software_parameters.py
+lisa/software_parameters.py
 
 # Olivier's stuff
 setenv_lisa.bash

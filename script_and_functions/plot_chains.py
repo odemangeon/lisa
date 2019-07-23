@@ -12,7 +12,7 @@ from datetime import datetime
 from os.path import splitext
 from os import remove
 
-from source.tools.emcee_tools import read_chaindatfile, plot_chains
+from lisa.emcee_tools.emcee_tools import read_chaindatfile, plot_chains
 
 # Argument parsing
 parser = argparse.ArgumentParser()

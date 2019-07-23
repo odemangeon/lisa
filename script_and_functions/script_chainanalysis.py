@@ -22,11 +22,11 @@ import pandas as pd
 #     sys.path.append(lisa_folder)
 
 import lisa.posterior.core.posterior as cpost
-import lisa.tools.emcee_tools as et
+import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.stats.distribution_anali as da
 import lisa.posterior.exoplanet.model.convert as cv
 import lisa.tools.mylogger as ml
-from source.tools.chain_interpreter import ChainsInterpret
+from lisa.tools.chain_interpreter import ChainsInterpret
 
 
 ## Definition of the parameters

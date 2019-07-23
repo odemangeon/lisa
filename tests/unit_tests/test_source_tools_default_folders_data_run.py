@@ -11,9 +11,9 @@ from unittest.mock import patch
 from os import mkdir, rmdir, remove
 from os.path import join
 
-from source.tools.default_folders_data_run import RunFolder, DataFolder
-from source.software_parameters import input_run_folder
-from source.software_parameters import input_data_folder
+from lisa.tools.default_folders_data_run import RunFolder, DataFolder
+from lisa.software_parameters import input_run_folder
+from lisa.software_parameters import input_data_folder
 
 level_logger = DEBUG
 level_handler = INFO

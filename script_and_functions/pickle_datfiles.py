@@ -11,7 +11,7 @@ from datetime import datetime
 from os.path import splitext, basename
 from os import remove
 
-from source.tools.emcee_tools import read_chaindatfile, read_acceptfracdatfile, extension_pickle, pickle_stuff
+from lisa.emcee_tools.emcee_tools import read_chaindatfile, read_acceptfracdatfile, extension_pickle, pickle_stuff
 
 # Argument parsing
 parser = argparse.ArgumentParser()

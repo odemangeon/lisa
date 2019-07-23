@@ -17,7 +17,7 @@ import numpy as np
 # from ipdb import set_trace
 
 import lisa.posterior.core.posterior as cpost
-import lisa.tools.emcee_tools as et
+import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.stats.distribution_anali as da
 import lisa.posterior.exoplanet.model.convert as cv
 

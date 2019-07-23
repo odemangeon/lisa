@@ -3,8 +3,8 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-from source.posterior.core.database_func import DatabaseFunc, DatabaseInstLvlDataset
-from source.tools.lockable_dict import Lock
+from lisa.posterior.core.database_func import DatabaseFunc, DatabaseInstLvlDataset
+from lisa.tools.lockable_dict import Lock
 # from ipdb import set_trace
 
 

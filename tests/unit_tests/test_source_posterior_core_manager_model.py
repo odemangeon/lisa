@@ -12,7 +12,7 @@ import sys
 
 import lisa.posterior.core.model.manager_model as mgr
 
-from source.posterior.core.model.core_model import Core_Model
+from lisa.posterior.core.model.core_model import Core_Model
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:

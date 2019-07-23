@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-from source.tools.function_w_doc import DocFunction
+from lisa.tools.function_w_doc import DocFunction
 
 level_logger = DEBUG
 level_handler = INFO

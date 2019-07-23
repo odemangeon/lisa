@@ -14,7 +14,7 @@ import lisa.posterior.core.prior.manager_prior as mgr
 import lisa.posterior.core.prior.prior_function as pf
 
 
-# from source.posterior.core.priors.core_priors import priors
+# from lisa.posterior.core.priors.core_priors import priors
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:

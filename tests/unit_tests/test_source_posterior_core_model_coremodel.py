@@ -8,10 +8,10 @@ from unittest import TestCase, main
 from sys import stdout
 
 import lisa.posterior.core.model.core_model as cmdl
-from source.posterior.exoplanet.model.celestial_bodies import Star, Planet
-from source.posterior.core.prior.core_prior import Manager_Prior
-from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
-from source.posterior.core.dataset_and_instrument.instrument import instrument_model_category
+from lisa.posterior.exoplanet.model.celestial_bodies import Star, Planet
+from lisa.posterior.core.prior.core_prior import Manager_Prior
+from lisa.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+from lisa.posterior.core.dataset_and_instrument.instrument import instrument_model_category
 
 
 log_level = DEBUG

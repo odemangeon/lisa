@@ -19,13 +19,13 @@ from PyAstronomy.pyasl import foldAt
 
 from fig_styler import styler
 
-import lisa.tools.emcee_tools as et
+import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
 import lisa.tools.mylogger as ml
-from source.tools.miscellaneous import interpret_data_filename
+from lisa.tools.miscellaneous import interpret_data_filename
 
-from source.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from source.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 
 # from ipdb import set_trace
 

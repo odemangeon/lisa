@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG
 from sys import stdout
 
-from source.tools.database_with_instrument_level import DatabaseInstLevel
+from lisa.tools.database_with_instrument_level import DatabaseInstLevel
 
 logger = getLogger()
 if logger.level > DEBUG:

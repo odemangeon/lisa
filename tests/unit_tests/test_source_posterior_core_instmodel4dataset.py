@@ -3,8 +3,8 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 
-from source.posterior.core.instmodel4dataset import Instmodel4Dataset
-from source.tools.lockable_dict import Lock
+from lisa.posterior.core.instmodel4dataset import Instmodel4Dataset
+from lisa.tools.lockable_dict import Lock
 # from ipdb import set_trace
 
 

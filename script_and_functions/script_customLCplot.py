@@ -22,7 +22,7 @@ from fig_styler import styler
 # from ipdb import set_trace
 
 import lisa.posterior.core.posterior as cpost
-import lisa.tools.emcee_tools as et
+import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.mylogger as ml
 
 

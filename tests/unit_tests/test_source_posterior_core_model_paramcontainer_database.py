@@ -7,10 +7,10 @@ from logging import getLogger, StreamHandler, Formatter, DEBUG, INFO
 from unittest import TestCase, main
 from sys import stdout
 
-from source.posterior.core.model.paramcontainers_database import ParamContainerDatabase
-from source.posterior.exoplanet.model.celestial_bodies import Planet, Star
-from source.posterior.exoplanet.dataset_and_instrument.rv import HARPS, SOPHIE_HE
-from source.posterior.core.dataset_and_instrument.instrument import instrument_model_category
+from lisa.posterior.core.model.paramcontainers_database import ParamContainerDatabase
+from lisa.posterior.exoplanet.model.celestial_bodies import Planet, Star
+from lisa.posterior.exoplanet.dataset_and_instrument.rv import HARPS, SOPHIE_HE
+from lisa.posterior.core.dataset_and_instrument.instrument import instrument_model_category
 
 
 log_level = DEBUG

@@ -2,8 +2,8 @@ import rebound
 import numpy as np
 import sys
 sys.path.append("/Users/sbarros/Documents/work/python/photodynamic/lisa/")
-from source.tools.emcee_tools import get_time_supersampled
-from source.tools.emcee_tools import average_supersampled_values
+from lisa.emcee_tools.emcee_tools import get_time_supersampled
+from lisa.emcee_tools.emcee_tools import average_supersampled_values
 
 
 def transitpy(z, rp, u):

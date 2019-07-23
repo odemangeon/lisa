@@ -18,7 +18,7 @@ if centre is given it is used for the limits otherwise the rob_mon is used and r
 @todo:
 """
 from logging import getLogger
-from source.tools.stats.loc_scale_estimator import rob_mom
+from lisa.tools.stats.loc_scale_estimator import rob_mom
 import numpy as np
 
 

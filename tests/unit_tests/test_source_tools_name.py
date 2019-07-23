@@ -8,7 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG
 from sys import stdout
 
-from source.tools.name import Name, check_name_for_prohibitedchar, check_name, check_name_code
+from lisa.tools.name import Name, check_name_for_prohibitedchar, check_name, check_name_code
 
 logger = getLogger()
 if logger.level > DEBUG:

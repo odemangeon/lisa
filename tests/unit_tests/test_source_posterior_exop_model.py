@@ -14,8 +14,8 @@ import numpy as np
 
 import lisa.posterior.exoplanet.model.gravgroup as exomdl
 import lisa.posterior.core.prior.manager_prior as mgrp
-from source.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
-from source.posterior.core.datasetsfile_db import DatasetsFileDb
+from lisa.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+from lisa.posterior.core.datasetsfile_db import DatasetsFileDb
 
 level_logger = DEBUG
 level_handler = DEBUG
