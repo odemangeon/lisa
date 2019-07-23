@@ -21,7 +21,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from logging import getLogger
-from numpy import inf
+from numpy import inf, isfinite
 from dill import dump, load
 from os.path import join
 from textwrap import dedent
@@ -341,8 +341,10 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         arg_list = lnlike_func.arg_list.copy()
 
         def lnpost(p, data, data_err, **kwarg_data):
-            return (lnlike_func.function(p, data, data_err, **kwarg_data) +
-                    lnprior_func.function(p))
+            lnprior_val = lnprior_func.function(p)
+            if not isfinite(lnprior_val):
+                return -inf
+            return lnlike_func.function(p, data, data_err, **kwarg_data) + lnprior_val
 
         return DocFunction(function=lnpost, arg_list=arg_list)
 
@@ -386,7 +388,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                     #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
                     lnprior_val = prior_func(p)
                     # logger.debug("lnprior: {}".format(lnprior_val))
-                    if lnprior_val == -inf:
+                    if not isfinite(lnprior_val):
                         return -inf
                     else:
                         # lnlike_val = like_func(p)
