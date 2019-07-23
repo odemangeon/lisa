@@ -26,18 +26,10 @@ import math
 # import matplotlib.pyplot as plt
 
 import astropy.constants as const
-from collections import Counter
-from numbers import Number
-from numpy import ndarray, stack
-from numpy import random
 from logging import getLogger
 
 # from IPython import get_ipython
 from numpy import pi
-
-from .human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
-from .human_machine_interface.QCM import QCM_utilisateur
-from .chain_interpreter import ChainsInterpret
 
 
 logger = getLogger()
