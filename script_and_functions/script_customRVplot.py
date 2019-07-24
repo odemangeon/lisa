@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 """
-Script to produce custom plots of CORALIE-153 RV data
+Script to produce pretty plots of RV data
 
 @TODO:
 """
@@ -37,6 +37,7 @@ mgr_noisemodel.load_setup()
 def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, dataset_db, model_instance,
                     fitted_values, l_param_name, star,
                     fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, *args, **kwargs):
+    nplanet = len(planets)
     """Produce a clean RV plot.
 
     :param fig: Figure instance (provided by the styler)
@@ -58,8 +59,8 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         - 'pad_resi': float of Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
         - 'y_unit': unit of RVs
     :param dict pl_kwargs: Dictionary with keys a instrument name (ex: "ESPRESSO") and values
-        ""
-        a dictionary that will be passed as kew
+        a dictionary with 2 possible keys "data" and "model" that will be passed as keyword arguments
+        to the plotting functions
     :param bool show_legend: If True, show the legend
     :param legend_param: Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
     :param bool show_xlabel: If True, show the x label
@@ -250,7 +251,8 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         data_pl = OrderedDict()
         for datasetname in datasetnames:
             # The data to plot for a planet and an instrument are the raw data to which you substract
-            # the delta RV to the global reference (deltaRV[inst][key]) and then to which you substract the
+            # the delta RV to the global reference (deltaRV[datasetname]) and then to which you substract the
+            # other planets contribution
 
             # Remove the DeltaRV to the global RV reference
             data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname]
@@ -267,9 +269,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                 if plnt == planet_name:
                     continue
                 else:
-                    l_datasim_db_docfunc_others.append(datasim_dbf.
-                                                       instrument_db[inst_mod_fullname]
-                                                       [plnt])
+                    l_datasim_db_docfunc_others.append(datasim_dbf.instrument_db[inst_mod_fullname][plnt])
 
             # Compute and remove the other planet contribution
             for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
@@ -340,6 +340,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         pad_resi = fig_param.get("pad_resi", (0.1, 0.1))
         et.auto_y_lims(y_residuals_all, ax_resi_pl, pad=pad_resi)
         # Indicate values that are off y-axis with anarrows
+        # Also print the rms of the residuals
         if ii == 0:
             rms_resi = []
             rms_resi_label = []
@@ -416,7 +417,8 @@ if __name__ == "__main__":
                     # fig=fig,
                     datasetnames=datasetnames, planets=planet_name, periods=periods, tcs=tics,
                     datasim_dbf=datasim_dbf, dataset_db=dataset_db, model_instance=model_instance,
-                    fitted_values=fitted_values, l_param_name=l_param_name, star=star,
+                    fitted_values=fitted_values, l_param_name=l_param_name,
+                    star=star,
                     figsize=(2, 1), tight=True,
                     # dpi=200,
                     dpi=300,
