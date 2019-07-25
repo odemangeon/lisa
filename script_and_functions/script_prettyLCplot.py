@@ -372,15 +372,15 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Plot the data
             # print(dico_jitter[datasetname])
-            ebcont, _ = et.plot_phase_folded_timeserie(t=dico_kwargs[datasetname]["t"],
-                                                       data=data_pl[datasetname],
-                                                       data_err=dico_kwargs[datasetname]["data_err"],
-                                                       jitter=dico_jitter[datasetname]["value"],
-                                                       jitter_type=dico_jitter[datasetname]["type"],
-                                                       P=Per, tc=tc,
-                                                       ax=axes_data[datasetname][jj],
-                                                       pl_kwargs=pl_kwarg_final[datasetname]["data"],
-                                                       )
+            ebcont, _, _ = et.plot_phase_folded_timeserie(t=dico_kwargs[datasetname]["t"],
+                                                          data=data_pl[datasetname],
+                                                          data_err=dico_kwargs[datasetname]["data_err"],
+                                                          jitter=dico_jitter[datasetname]["value"],
+                                                          jitter_type=dico_jitter[datasetname]["type"],
+                                                          Per=Per, tref=tc,
+                                                          ax=axes_data[datasetname][jj],
+                                                          pl_kwargs=pl_kwarg_final[datasetname]["data"],
+                                                          )
             ebcont_binned = axes_data[datasetname][jj].errorbar(midbins[datasetname], databinned_pl[datasetname],
                                                                 yerr=binstd[datasetname],
                                                                 **pl_kwarg_final[datasetname]["databinned"])
@@ -403,12 +403,12 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         #################################
         for datasetname in datasetnames:
             et.plot_model(tmin_model, tmax_model, npt_model, datasim_docfunc[datasetname][planet_name],
-                          fitted_values, l_param_name, plot_phase=True, P=Per, tc=tc,
+                          fitted_values, l_param_name, plot_phase=True, Per=Per, tref=tc,
                           pl_kwargs_model=pl_kwarg_final[datasetname]["model"],
                           ax=axes_data[datasetname][jj])
             et.plot_model(tmin_model, tmax_model, npt_model, datasim_docfunc[datasetname][planet_name],
                           fitted_values, l_param_name, supersamp=supersamp_bin_model, exptime=exptime_bin,
-                          plot_phase=True, P=Per, tc=tc,
+                          plot_phase=True, Per=Per, tref=tc,
                           # noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
                           pl_kwargs_model=pl_kwarg_final[datasetname]["modelbinned"],
                           ax=axes_data[datasetname][jj])
@@ -422,8 +422,7 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         residual_binned_wGP_pl = OrderedDict()
         pad_resi = fig_param.get("pad_resi", (0.1, 0.1))
         for datasetname in datasetnames:
-            (residual_pl[datasetname],
-             residual_wGP_pl[datasetname]
+            (residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts, labels
              ) = et.plot_residuals(t=dico_kwargs[datasetname]["t"],
                                    data=data_pl[datasetname],
                                    data_err=dico_kwargs[datasetname]["data_err"],
@@ -431,12 +430,11 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                                    jitter_type=dico_jitter[datasetname]["type"],
                                    datasim_db_docfunc=datasim_docfunc[datasetname][planet_name],
                                    param=fitted_values, l_param_name=l_param_name,
-                                   plot_phase=True, P=Per, tc=tc,
+                                   plot_phase=True, Per=Per, tref=tc,
                                    pl_kwargs_model=pl_kwarg_final[datasetname]["data"],
                                    ax=axes_resi[datasetname][jj])
             phase_tref = foldAt(dico_kwargs[datasetname]["tref"], Per, T0=(tc + Per / 2)) - 0.5
-            (residual_binned_pl[datasetname],
-             residual_binned_wGP_pl[datasetname]
+            (residual_binned_pl[datasetname], residual_binned_wGP_pl[datasetname], ebconts, labels
              ) = et.plot_residuals(t=dico_kwargs[datasetname]["tref"] + Per * (midbins[datasetname] - phase_tref),
                                    data=binval[datasetname]["uncorr"],
                                    data_err=binstd[datasetname],
@@ -444,7 +442,7 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                                    datasim_kwargs={"tref": dico_kwargs[datasetname]["tref"]},
                                    param=fitted_values, l_param_name=l_param_name,
                                    supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                   plot_phase=True, P=Per, tc=tc,
+                                   plot_phase=True, Per=Per, tref=tc,
                                    # noise_model=noise_model, noisemod_allkwargs=noisemod_allkwargs,
                                    pl_kwargs_model=pl_kwarg_final[datasetname]["databinned"],
                                    ax=axes_resi[datasetname][jj])

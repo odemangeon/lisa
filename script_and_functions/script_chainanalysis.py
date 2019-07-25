@@ -272,7 +272,7 @@ if do_corner:
 
 
 if do_MComp:
-    logger.info("8. Do data comparision plots")
+    logger.info("8. Do data comparison plots")
     et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
                            datasim_dbf=post_instance.datasimulators,
                            datasim_kwargs=kwargs_datasim,

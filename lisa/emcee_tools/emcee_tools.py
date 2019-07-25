@@ -27,6 +27,7 @@ from os.path import isfile, join
 from pandas import read_table
 # import pprint
 
+from ..tools.miscellaneous import interpret_data_filename
 from ..tools.stats.loc_scale_estimator import mad
 from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
@@ -282,7 +283,10 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
 def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwargs={}, model_instance=None,
                             oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                             phasefold=False, phasefold_kwargs=None, datasim_dbf_instmod=None,
-                            zoom=None, show_title=True, show_legend=True, ax_data=None, ax_resi=None):
+                            zoom=None, show_title=True, show_legend=True,
+                            pl_data_kwargs=None, pl_model_kwargs=None, pl_resi_kwargs=None,
+                            kwargs_tick_params=None,
+                            ax_data=None, ax_resi=None):
     """Zoom on the data model overplot for one datasetself.
 
     :param np.array param: Vector of parameter values for the model
@@ -315,8 +319,21 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         or list of list  object where zoom[i][0] is the min abscisse value and zoom[i][1] the max.
     :param bool show_title: If True, show the title giving the dataset name.
     :param bool show_legend: If True, show the legend.
+    :param dict pl_data_kwargs: Keywords argument for the plot of the data
+    :param dict pl_model_kwargs: Keywords argument for the plot of the model. Can have two keys: "model"
+        and "model+GP" and the values are dictionaries that will be passed to plot_model with the arguments
+        pl_kwargs_model and pl_kwargs_modelandGP.
+    :param dict pl_resi_kwargs: Keywords argument for the plot of the residuals. Can have two keys: "model"
+        and "model+GP" and the values are dictionaries that will be passed to plot_model with the arguments
+        pl_kwargs_model and pl_kwargs_modelandGP. Not that the color of the residuals are taken from the
+        color of the model, so if you specify a color here, it will be ovewritten.
     :param ~matplotlib.axes._axes.Axes ax_data: Axes instance where the data and model will be ploted
     :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
+    :param dict kwargs_tick_params: Keywords arguments passed to tick_params if the function as to create
+        the data or residuals axes.
+    :return list_of_list_of_ErrorbarContainer_or_Lines all_ebconts_lines: All ErrorbarContainer and lines
+        plotted by the function
+    :return list_of_list_of_labels: All labels of the plots made by the function
     """
     # Ensure that zoom has the good format
     if zoom is None:
@@ -328,23 +345,42 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     else:
         nb_plots = np.shape(zoom)[0]
     # Create ax_data and/or ax_resi if not provided
+    created_ax_data = False
+    created_ax_resi = False
     if (ax_data is None) and (ax_resi is None):
         fig, axes = subplots(nrows=2, ncols=nb_plots, squeeze=False)
         ax_data = axes[0]
         ax_resi = axes[1]
+        created_ax_data = True
+        created_ax_resi = True
     elif ax_data is None:
         fig, ax_data = subplots(ncols=nb_plots, squeeze=False)
         ax_data = ax_data[0]
+        created_ax_data = True
     elif ax_resi is None:
         fig, ax_resi = subplots(ncols=nb_plots, squeeze=False)
         ax_resi = ax_resi[0]
+        created_ax_resi = True
     else:
         if isinstance(ax_data, Axes):
             ax_data = [ax_data, ]
         if isinstance(ax_resi, Axes):
             ax_resi = [ax_resi, ]
-    # Initialise title
-    title = "{}".format(dataset.dataset_name)
+    # Format the axes:
+    if created_ax_data or created_ax_resi:
+        kwargs_tick_params_final = {'axis': 'both', 'which': 'major', 'direction': "in", 'bottom': "on",
+                                    'left': "on", 'top': "on", 'right': "on", 'reset': False}
+        if kwargs_tick_params is not None:
+            kwargs_tick_params_final.update(kwargs_tick_params)
+    for ax_data_i, ax_resi_i in zip(ax_data, ax_resi):
+        if created_ax_data:
+            ax_data_i.tick_params(**kwargs_tick_params_final)
+        if created_ax_resi:
+            ax_resi_i.tick_params(**kwargs_tick_params_final)
+    # Initialise the title (necessary here, because below the title will be completed with the planet
+    # name if phasefold)
+    filename_info = interpret_data_filename(dataset.dataset_name)
+    title = "{}({})".format(filename_info["inst_name"], filename_info["number"])
     # Get the instrument model object and the noise model object
     inst_mod = model_instance.get_instmod(dataset.dataset_name)
     noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
@@ -371,6 +407,22 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         jitter_type = None
     # Apply jitter if needed
     data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+    # Intialise the returns variables:
+    all_ebconts_lines = []
+    all_labels = []
+    # Initialise keywords argument for the plotting of the data
+    pl_data_kwargs_final = {"color": "C0", "fmt": ".", 'label': "data"}
+    if pl_data_kwargs is not None:
+        pl_data_kwargs_final.update(pl_data_kwargs)
+    pl_model_kwargs_final = {"model": {"color": "C1"}, "model+GP": {"color": "C2"}}
+    if pl_model_kwargs is not None:
+        pl_model_kwargs_final.update(pl_model_kwargs)
+    pl_resi_kwargs_final = {"model": {}, "model+GP": {}}
+    if pl_resi_kwargs is not None:
+        pl_resi_kwargs_final.update(pl_model_kwargs)
+    # Enforce the color of the residuals to be the same than the color of the associated model
+    pl_resi_kwargs_final["model"]["color"] = pl_model_kwargs_final["model"]["color"]
+    pl_resi_kwargs_final["model+GP"]["color"] = pl_model_kwargs_final["model+GP"]["color"]
     # Case of phase folding
     if phasefold:
         # Get the planet name, period and time of inferior conjunction from phasefold_kwargs
@@ -378,7 +430,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         P = phasefold_kwargs["P"]
         tc = phasefold_kwargs["tc"]
         # Add planet name to title
-        title += "pl {}".format(planet_name)
+        title += ": pl {}".format(planet_name)
         # Get the datasim for this planet only
         datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
         # Get the datasims for the other planets
@@ -398,30 +450,35 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                                                model_instance=model_instance)
             data_pl = data_pl - model
         # Plot these data phase folded at the ephemeris of the planet.
-        pl_kwargs = {"color": "b", "fmt": "."}
         # Plot the model
         for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
-            _, phases = plot_phase_folded_timeserie(t=t, data=data_pl, P=P, tc=tc, data_err=data_err_new,
-                                                    jitter=None, jitter_type=None, zoom=zoom_i, ax=ax_data_i,
-                                                    pl_kwargs=pl_kwargs)
+            (ebcont_data, label_data, phases
+             ) = plot_phase_folded_timeserie(t=t, data=data_pl, Per=P, tref=tc, data_err=data_err_new,
+                                             jitter=None, jitter_type=None, zoom=zoom_i, ax=ax_data_i,
+                                             pl_kwargs=pl_data_kwargs_final)
             phasemin = phases.min() if zoom_i[0] is None else max([phases.min(), zoom_i[0]])
             phasemax = phases.max() if zoom_i[1] is None else min([phases.max(), zoom_i[1]])
             tmin = tc + P * phasemin
             tmax = tc + P * phasemax
-            plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
-                       supersamp=supersamp_model, exptime=exptime,
-                       datasim_kwargs={'tref': tmin}, plot_phase=True, P=P, tc=tc,
-                       noise_model=noise_mod,
-                       model_instance=model_instance,
-                       ax=ax_data_i)
+            (lines_model, labels_model
+             ) = plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
+                            supersamp=supersamp_model, exptime=exptime, datasim_kwargs={'tref': tmin},
+                            plot_phase=True, Per=P, tref=tc,
+                            noise_model=noise_mod, model_instance=model_instance,
+                            pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
+                            ax=ax_data_i)
             # Plot the residuals
-            plot_residuals(t=t, data=data_pl, datasim_db_docfunc=datasim_docfunc_pl, param=param, l_param_name=l_param_name,
-                           data_err=data_err_new, jitter=None, jitter_type=None,
-                           supersamp=supersamp_model, exptime=exptime,
-                           datasim_kwargs=kwargs, plot_phase=True, P=P, tc=tc,
-                           noise_model=noise_mod,
-                           model_instance=model_instance,
-                           ax=ax_resi_i)
+            (residual_out, residual_wGP, ebconts_resi, labels_resi
+             ) = plot_residuals(t=t, data=data_pl, datasim_db_docfunc=datasim_docfunc_pl, param=param,
+                                l_param_name=l_param_name, data_err=data_err_new, jitter=None, jitter_type=None,
+                                supersamp=supersamp_model, exptime=exptime,
+                                datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
+                                noise_model=noise_mod,
+                                model_instance=model_instance,
+                                pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
+                                ax=ax_resi_i)
+            all_ebconts_lines.append((ebcont_data, lines_model, ebconts_resi))
+            all_labels.append((label_data, labels_model, labels_resi))
     # Case of NOT phase folding
     else:
         for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
@@ -436,43 +493,49 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                 data_i = data
                 data_err_new_i = data_err_new
             # plot the data
-            ax_data_i.errorbar(t_i, data_i, data_err_new_i, fmt=".", color="b")
+            ebcont_data = ax_data_i.errorbar(t_i, data_i, data_err_new_i, **pl_data_kwargs_final)
             # Plot the model
             tmin = t_i.min()
             tmax = t_i.max()
-            plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
-                       datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                       plot_phase=False, noise_model=noise_mod,
-                       model_instance=model_instance, ax=ax_data_i)
+            (lines_model, labels_model
+             ) = plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
+                            datasim_kwargs=kwargs, supersamp=supersamp_model,
+                            exptime=exptime, plot_phase=False, noise_model=noise_mod, model_instance=model_instance,
+                            pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
+                            ax=ax_data_i)
             # Plot the residuals
-            plot_residuals(t_i, data_i, datasim, param, l_param_name, data_err=data_err_new_i,
-                           jitter=None, jitter_type=None,
-                           datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                           plot_phase=False, noise_model=noise_mod,
-                           model_instance=model_instance, ax=ax_resi_i)
+            (residual_out, residual_wGP, lines_resi, labels_resi
+             ) = plot_residuals(t_i, data_i, datasim, param, l_param_name, data_err=data_err_new_i,
+                                jitter=None, jitter_type=None,
+                                datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                                plot_phase=False, noise_model=noise_mod, model_instance=model_instance,
+                                pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
+                                ax=ax_resi_i)
+            all_ebconts_lines.append((ebcont_data, lines_model, lines_resi))
+            all_labels.append((pl_data_kwargs_final["label"], labels_model, labels_resi))
     # Print the title if required
     if show_title:
         ax_data[0].set_title(title)
     # Plot the legend
     if show_legend:
         ax_data[0].legend(loc='upper right', shadow=True)
+    return all_ebconts_lines, all_labels
 
 
 def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets=None, datasim_kwargs={},
                         model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
-                        plot_height=2, plot_width=8, kwargs_tl={}):
+                        plot_height=2, plot_width=8, fig_kwargs=None, gs_kwargs=None,
+                        kwargs_gs_from_sps=None, kwargs_add_axeswithsharex=None, kwargs_tick_params=None,
+                        kwargs_tl=None):
     """Overplot datasets and model for each dataset and provide the residuals.
-
-    WARNING: In its current status (using the new overplot_one_data_model function). This function has
-    not been tested with phasefold=True.
 
     :param np.array param: Vector of parameter values for the model
     :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
         provided in param
     :param datasim_dbf: Datasimulator database
-    :param DatasetDatabase dataset_db:
-    :param Core_Model model_instance: Core_Model instance
+    :param DatasetDatabase dataset_db: Dataset database
+    :param Core_Model model_instance: Model instance
     :param int oversamp: The model will be computed in oversamp times more points than the data
     :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
                                 of points provided, meaning that we will actually compute the model at
@@ -486,6 +549,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         "tc" giving the times of inferior conjunction for each planet (list)
     :param plot_height:
     :param plot_width:
+    :param dict fig_kwargs:
+    :param dict gs_kwargs:
+    :param dict kwargs_gs_from_sps:
+    :param dict kwargs_add_axeswithsharex:
+    :param dict kwargs_tick_params: Keywords arguments passed to tick_params
     :param kwargs_tl:
     """
     # Check that if phasefold is True phasefold_kwargs is not None
@@ -498,10 +566,27 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     ndataset = len(l_datasets)
 
     # Create the figure and grid which will harbor the plots for each dataset
-    fig = figure(figsize=(plot_width, ndataset * plot_height))
-    gs = GridSpec(nrows=ndataset, ncols=1)
+    # Set defaults values of fig_kwargs
+    if fig_kwargs is None:
+        fig_kwargs = {}
+    fig = figure(figsize=(plot_width, ndataset * plot_height), **fig_kwargs)
+    gs_kwargs_final = {"bottom": 0.04, "top": 0.9, "left": 0.07, "right": 0.82, "hspace": 0.3}
+    if gs_kwargs is not None:
+        gs_kwargs_final.update(gs_kwargs)
+    gs = GridSpec(nrows=ndataset, ncols=1, **gs_kwargs_final)
+
+    # Define the keywords for tick_params:
+    kwargs_tick_params_final = {'axis': 'both', 'which': 'major', 'direction': "in", 'bottom': "on",
+                                'left': "on", 'top': "on", 'right': "on", 'reset': False}
+    if kwargs_tick_params is not None:
+        kwargs_tick_params_final.update(kwargs_tick_params)
+
+    # Define the suptitle
+    fig.suptitle(model_instance.get_name())
 
     # For each dataset
+    ebconts_lines_4_legend = []
+    labels_4_legend = []
     for ii, dataset in enumerate(l_datasets):
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
@@ -512,33 +597,65 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         if phasefold:
             # Get the number of planets in the system.
             nplanet = len(phasefold_kwargs["planets"])
+            # Define parameters for the creation of the per planet axes.
+            gs_from_sps_kw_final = {"wspace": 0.25}
+            if kwargs_gs_from_sps is not None:
+                gs_from_sps_kw_final.update(kwargs_gs_from_sps)
+            add_axeswithsharex_kw_final = {"height_ratios": (3, 1)}
+            if kwargs_add_axeswithsharex is not None:
+                add_axeswithsharex_kw_final.update(kwargs_add_axeswithsharex)
             # Create the two axes data+model and residuals per planet
-            (axes_data,
-             axes_resi) = add_twoaxeswithsharex_perplanet(gs[ii],
-                                                          nplanet=nplanet,
-                                                          fig=fig,
-                                                          add_axeswithsharex_kw={"height_ratios": (3, 1)})
+            (axes_data, axes_resi
+             ) = add_twoaxeswithsharex_perplanet(gs[ii], nplanet=nplanet, fig=fig, gs_from_sps_kw=gs_from_sps_kw_final,
+                                                 add_axeswithsharex_kw=add_axeswithsharex_kw_final)
+            for ax_data_i, ax_resi_i in zip(axes_data, axes_resi):
+                ax_data_i.tick_params(**kwargs_tick_params_final)
+                ax_resi_i.tick_params(**kwargs_tick_params_final)
             # Produce the phase-folded plots for each planet
             for planet_name, P, tc, ax_data, ax_resi in zip(phasefold_kwargs["planets"],
                                                             phasefold_kwargs["P"],
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
-                overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                        datasim_kwargs=datasim_kwargs, model_instance=model_instance,
-                                        oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                        phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
-                                        datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                        show_legend=True, ax_data=ax_data, ax_resi=ax_resi)
+                (all_ebconts_lines, all_labels
+                 ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
+                                             dataset=dataset, datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                             oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                             phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
+                                             datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
+                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
         else:
             # Create the two axes data+model and residuals
             ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig, gs_from_sps_kw={"height_ratios": (3, 1)})
+            ax_data.tick_params(**kwargs_tick_params_final)
+            ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                    datasim_kwargs=datasim_kwargs, model_instance=model_instance,
-                                    oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                    phasefold=phasefold,
-                                    datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                    show_legend=True, ax_data=ax_data, ax_resi=ax_resi)
+            (all_ebconts_lines, all_labels
+             ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
+                                         datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                         oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                         phasefold=phasefold,
+                                         datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
+                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
+        for ebconts_lines, labels in zip(all_ebconts_lines, all_labels):
+            for ebcont_line, label in zip(ebconts_lines, labels):
+                if isinstance(label, list):
+                    l_labels = label
+                    l_ebconts_line = ebcont_line
+                else:
+                    l_labels = [label, ]
+                    l_ebconts_line = [ebcont_line]
+                for ebcont_line_i, label_i in zip(l_ebconts_line, l_labels):
+                    if not(label_i in labels_4_legend) and (label_i is not None):
+                        labels_4_legend.append(label_i)
+                        ebconts_lines_4_legend.append(ebcont_line_i)
+    # Create the legend for the full figure
+    fig.legend(handles=ebconts_lines_4_legend,     # The line objects
+               labels=labels_4_legend,   # The labels for each line
+               loc="center right",   # Position of legend
+               borderaxespad=1,    # Small spacing around legend box
+               )
+    if kwargs_tl is None:
+        kwargs_tl = {}
     fig.tight_layout(**kwargs_tl)
 
 
@@ -692,11 +809,43 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
 
 def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
                supersamp=1, exptime=exptime_Kepler,
-               plot_phase=False, P=None, tc=None,
+               plot_phase=False, Per=None, tref=None,
                noise_model=None, model_instance=None,
-               pl_kwargs_model=None, pl_kwargs_modelandGP=None,
+               pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True, force_plot_phase_GP=False,
                ax=None):
-    """
+    """Plot the model.
+
+    :param float tmin: Min value of the time vector over which the model will be evaluated and plotted
+    :param float tmax: Max value of the time vector over which the model will be evaluated and plotted
+    :param int nt: Number of values of the time vector over which the model will be evaluated and plotted
+    :param DatasimDocFunc datasim_db_docfunc: Function computing the model
+    :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
+    :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
+        by param (will be passed on to compute_model)
+    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_db_docfunc
+        (will be passed on to compute_model)
+    :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
+    :param float exptime: Exposure time for the model (will be passed on to compute_model)
+    :param bool plot_phase: If true, plot the phase folded model.
+    :param float Per: Period for the phase folding
+    :param float tref: Reference time for the phase folding
+    :param Core_Noise_Model noise_model: Instance of a Subclass of Core_Noise_Model indicating the noise model
+        used for the dataset this model is simulating. It used if the noise model include a GP to also
+        plot the GP.
+    :param Core_Model model_instance: Instance of a Subclass of Core_Model giving the full model used.
+    :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
+    :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
+    :param bool show_modelandGP: Indicate if you want to plot the model+GP.
+    :param bool force_plot_phase_GP: It usually doesn't make much sens to plot the GP phase-folded. If you
+        want to do it anyway set force_plot_phase_GP to True. This override show_modelandGP when plot_phase
+        is True.
+    :param ~matplotlib.axes._axes.Axes ax: Axes instance where the model will be ploted
+    :return list_of_ErrorbarContainer ebconts: List of lines plotted. The first element is the lines
+        plotted for the model alone. The second element is the lines plotted for the model+GP (exists
+        only if the noise model include a GP).
+    :return list_of_Lines labels: List of labels for the lines. The first element is the label for the
+        model alone. The second element is the label for the model+GP (exists only if the noise
+        model include a GP).
     """
     # Create the time sampling (tsamp) and the tmin and tmax for the model computation (tmin_moins,
     # tmax_plus), the model time vector (t)
@@ -714,60 +863,78 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
 
-    # Plot the model
+    # Intialise the returns variables:
+    ebconts = []   # List of line plotted by the function. Will contain 2 elements if GP, 1 otherwise.
+    labels = []   # List of labels. Will contain 2 elements if GP, 1 otherwise.
+    # Define the keyword arguments for the plot of the model
     kwarg_model = {"label": "model", "color": "g", "fmt": "-", "alpha": 0.6}
     if pl_kwargs_model is not None:
         kwarg_model.update(pl_kwargs_model)
+    # Plot the model
     if plot_phase:
-        line, _ = plot_phase_folded_timeserie(t_plot, model, P, tc, ax=ax, pl_kwargs=kwarg_model)
+        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref, ax=ax, pl_kwargs=kwarg_model)
     else:
-        line = ax.errorbar(t_plot, model, **kwarg_model)
+        ebcont = ax.errorbar(t_plot, model, **kwarg_model)
+    ebconts.append(ebcont)
+    labels.append(kwarg_model["label"])
 
     # Plot the model + GP
-    if model_wGP is not None:
+    if ((model_wGP is not None) and show_modelandGP) and (not(plot_phase) or force_plot_phase_GP):
         kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 0.6}
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
         if plot_phase:
-            line_wGP, _ = plot_phase_folded_timeserie(t_plot, model_wGP, P, tc, ax=ax,
-                                                      pl_kwargs=kwarg_GP)
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref, ax=ax, pl_kwargs=kwarg_GP)
         else:
-            line_wGP = ax.errorbar(t_plot, model_wGP, **kwarg_GP)
-    else:
-        line_wGP = None
-    return line, line_wGP
+            ebcont_wGP = ax.errorbar(t_plot, model_wGP, **kwarg_GP)
+        ebconts.append(ebcont_wGP)
+        labels.append(kwarg_GP["label"])
+    return ebconts, labels
 
 
 def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
-                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, P=None, tc=None,
+                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, Per=None, tref=None,
                    noise_model=None, model_instance=None, zoom=None,
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
-    """
-    :param array t:
-    :param array data:
-    :param datasim_db_docfunc:
-    :param param:
-    :param l_param_name:
-    :param datasim_kwargs:
-    :param data_err:
-    :param jitter:
-    :param jitter_type:
-    :param supersamp:
-    :param exptime:
-    :param plot_phase: If True, plot phase folded residuals
-    :param P:
-    :param tc:
-    :param noise_model:
-    :param model_instance:
-    :param zoom:
-    :param pl_kwargs_model:
-    :param bool show_model: To show the residuals of the model only when the noise model is a GP.
-    :param pl_kwargs_modelandGP:
-    :param bool show_modelandGP:
-    :param ax:
+    """Plot the residuals of the model.
+    :param array t: Time vector of the data
+    :param array data: Data vector
+    :param DatasimDocFunc datasim_db_docfunc: Function computing the model
+    :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
+    :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
+        by param (will be passed on to compute_model)
+    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_db_docfunc
+        (will be passed on to compute_model)
+    :param array data_err: Data error vector
+    :param float jitter: Value of the jitter
+    :param string jitter_type: Type of jitter
+    :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
+    :param float exptime: Exposure time for the model (will be passed on to compute_model)
+    :param bool plot_phase: If true, plot the phase folded model.
+    :param float Per: Period for the phase folding
+    :param float tref: Reference time for the phase folding
+    :param Core_Noise_Model noise_model: Instance of a Subclass of Core_Noise_Model indicating the noise model
+        used for the dataset this model is simulating. It used if the noise model include a GP to also
+        plot the GP.
+    :param Core_Model model_instance: Instance of a Subclass of Core_Model giving the full model used.
+    :param zoom: TBD
+    :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
+    :param bool show_model: To show the residuals of the model. It is only used when the noise model is
+        includes a GP, because if not the residual of the model are always plotted.
+    :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
+    :param bool show_modelandGP: Indicate if you want to plot the residuals of the model+GP.
+    :param ~matplotlib.axes._axes.Axes ax: Axes instance where the model will be plotted
+    :return array residual_out: Residuals of the model (eventually only the zoomed part)
+    :return array residual_wGP: Residuals of the model+GP (eventually only the zoomed part)
+    :return list_of_ErrorbarContainer ebconts: List of lines plotted. The first element is the lines
+        plotted for the model alone. The second element is the lines plotted for the model+GP (exists
+        only if the noise model include a GP).
+    :return list_of_Lines labels: List of labels for the lines. The first element is the label for the
+        model alone. The second element is the label for the model+GP (exists only if the noise
+        model include a GP).
     """
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -802,22 +969,27 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
         else:
             data_err_new_zoom = zoomed_arrays[3]
             model_wGP_zoom = None if not(noise_modelGP) else zoomed_arrays[4]
+    # Intialise the returns variables:
+    ebconts = []   # List of line plotted by the function. Will contain 2 elements if GP, 1 otherwise.
+    labels = []   # List of labels. Will contain 2 elements if GP, 1 otherwise.
     # Plot the residuals of model only (even if noise model is GP)
     if show_model or not(noise_modelGP):
         kwarg_model = {"label": "model", "color": "g", "fmt": "."}
         if pl_kwargs_model is not None:
             kwarg_model.update(pl_kwargs_model)
         if plot_phase:
-            plot_phase_folded_timeserie(t, residual, P, tc, data_err=data_err_new, zoom=zoom, ax=ax,
-                                        pl_kwargs=kwarg_model)
+            ebcont, _, _ = plot_phase_folded_timeserie(t, residual, Per, tref, data_err=data_err_new,
+                                                       zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
             residual_out = residual
         else:
             if zoom is not None:
-                ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model)
+                ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model)
                 residual_out = residual_zoom
             else:
-                ax.errorbar(t, residual, data_err_new, **kwarg_model)
+                ebcont = ax.errorbar(t, residual, data_err_new, **kwarg_model)
                 residual_out = residual
+        ebconts.append(ebcont)
+        labels.append(kwarg_model["label"])
     # Plot the residuals of model + GP
     if (noise_model is not None) and noise_modelGP and show_modelandGP:
         residual_wGP = data - model_wGP if zoom is None else data_zoom - model_wGP_zoom
@@ -825,20 +997,22 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
         if plot_phase:
-            plot_phase_folded_timeserie(t, residual_wGP, P, tc, data_err=data_err_new, zoom=zoom, ax=ax,
-                                        pl_kwargs=kwarg_GP)
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t, residual_wGP, Per, tref, data_err=data_err_new,
+                                                           zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
         else:
             if zoom is not None:
-                ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP)
+                ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP)
             else:
-                ax.errorbar(t, residual_wGP, data_err_new, **kwarg_GP)
+                ebcont_wGP = ax.errorbar(t, residual_wGP, data_err_new, **kwarg_GP)
+        ebconts.append(ebcont_wGP)
+        labels.append(kwarg_GP["label"])
     else:
         residual_wGP = None
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
     ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
-    return residual_out, residual_wGP
+    return residual_out, residual_wGP, ebconts, labels
 
 
 def apply_jitter(data_err, jitter, jitter_type):
@@ -880,14 +1054,16 @@ def apply_zoom(zoom, base_array, arrays=None):
     return zoomed_arrays, idx_zoom
 
 
-def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitter_type=None,
+def plot_phase_folded_timeserie(t, data, Per, tref, data_err=None, jitter=None, jitter_type=None,
                                 zoom=None, ax=None, pl_kwargs=None, auto_ylims=False, auto_ylims_kwargs=None):
-    """Plot a phase folded representation of a lc
+    """Plot a phase folded representation of a time series.
+
+    Per and tref needs to have the same unit than the t
 
     :param array_float t: time array
     :param array_float data: data array
-    :param float P: Period of the planet
-    :param float tc: Time of inferior conjuction of the planet
+    :param float Per: Period of the planet
+    :param float tref: Time of inferior conjuction of the planet
     :param array_float data_err: data error array
     :param float jitter: jitter value
     :param str jitter_type: jitter_type ("multi" or "add")
@@ -900,13 +1076,14 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
         of the y axis. If zoom is provided this argument is ignored and auto_ylims is not applied.
     :param dict auto_ylims_kwargs: Dictionary of keyword arguments to be passed to auto_ylims on top of
         y and ax.
-
-    P and tc needs to have the same unit than the t
+    :return ErrorbarContainer ebcont: Pass on the return of the errorbar function used to plot.
+    :return string label: label used for the plot. None is no label has been provided.
+    :return array phases: Array of phases computed and used for the plot.
     """
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t, P, T0=(tc + P / 2)) - 0.5
+    phases = foldAt(t, Per, T0=(tref + Per / 2)) - 0.5
     # Sort with respect to phase
     sortIndi = argsort(phases)
     # If data error provided
@@ -939,7 +1116,7 @@ def plot_phase_folded_timeserie(t, data, P, tc, data_err=None, jitter=None, jitt
         ebcont = ax.errorbar(phase_sort, data_sort, **kw)
     if auto_ylims and (zoom is None):
         auto_y_lims(data_sort, ax)
-    return ebcont, phases
+    return ebcont, kw.get("label", None), phases
 
 
 def add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=None):
@@ -998,23 +1175,6 @@ def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps
     for gs_elem in gs:
         axes_planets.append(add_axeswithsharex(gs_elem, fig, nb_axes=nb_axes, gs_from_sps_kw=add_axeswithsharex_kw))
     return axes_planets
-
-
-# Work in Progress to detect outliers before plotting
-# def apply_mask(x=None):
-#     '''
-#     Returns the outlier mask, an array of indices corresponding to the non-outliers.
-#
-#     :param numpy.ndarray x: If specified, returns the masked version of :py:obj:`x` instead.
-#        Default :py:obj:`None`
-#
-#     WORK IN PROGRESS
-#     '''
-#
-#     if x is None:
-#         return np.delete(np.arange(len(self.time)), self.mask)
-#     else:
-#         return np.delete(x, self.mask, axis=0)
 
 
 def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):

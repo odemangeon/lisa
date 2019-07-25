@@ -286,14 +286,14 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Plot the data
             # print(dico_jitter[datasetname])
-            ebcont, _ = et.plot_phase_folded_timeserie(t=dico_kwargs[datasetname]["t"],
-                                                       data=data_pl[datasetname],
-                                                       data_err=dico_kwargs[datasetname]["data_err"],
-                                                       jitter=dico_jitter[datasetname]["value"],
-                                                       jitter_type=dico_jitter[datasetname]["type"],
-                                                       P=Per, tc=tc,
-                                                       ax=ax_data_pl, pl_kwargs=pl_kwarg_final[datasetname]["data"],
-                                                       )
+            ebcont, _, _ = et.plot_phase_folded_timeserie(t=dico_kwargs[datasetname]["t"],
+                                                          data=data_pl[datasetname],
+                                                          data_err=dico_kwargs[datasetname]["data_err"],
+                                                          jitter=dico_jitter[datasetname]["value"],
+                                                          jitter_type=dico_jitter[datasetname]["type"],
+                                                          Per=Per, tref=tc,
+                                                          ax=ax_data_pl, pl_kwargs=pl_kwarg_final[datasetname]["data"],
+                                                          )
             if pl_kwarg_final[datasetname]["data"]["color"] is None:
                 pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
         # Set the y axis limits
@@ -308,7 +308,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         # Plot the model
         ################
         et.plot_model(tmin_model, tmax_model, npt_model, datasim_RVrefglobal, fitted_values,
-                      l_param_name, plot_phase=True, P=Per, tc=tc,
+                      l_param_name, plot_phase=True, Per=Per, tref=tc,
                       pl_kwargs_model=pl_kwarg_final[datasetname]["model"],
                       ax=ax_data_pl)
 
@@ -318,8 +318,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         residual_pl = OrderedDict()
         residual_wGP_pl = OrderedDict()
         for datasetname in datasetnames:
-            (residual_pl[datasetname],
-             residual_wGP_pl[datasetname]
+            (residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts, labels
              ) = et.plot_residuals(t=dico_kwargs[datasetname]["t"],
                                    data=data_pl[datasetname] + deltaRV[datasetname],  # dico_kwargs[inst][key]["data"],
                                    data_err=dico_kwargs[datasetname]["data_err"],
@@ -327,7 +326,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                                    jitter_type=dico_jitter[datasetname]["type"],
                                    datasim_db_docfunc=datasim_docfunc[datasetname][planet_name],
                                    param=fitted_values, l_param_name=l_param_name,
-                                   plot_phase=True, P=Per, tc=tc,
+                                   plot_phase=True, Per=Per, tref=tc,
                                    pl_kwargs_model=pl_kwarg_final[datasetname]["data"],
                                    ax=ax_resi_pl)
         # Set the y axis limits
