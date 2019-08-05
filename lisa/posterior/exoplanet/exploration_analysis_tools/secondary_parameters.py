@@ -308,7 +308,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
-                if sec_paraname == "HD80869_b_M":
                 values = func(*[dico_par[param] for param in param_list], *args)
                 if isinstance(values, Number) or isinstance(values, ndarray):
                     dico_par[sec_paraname] = values
