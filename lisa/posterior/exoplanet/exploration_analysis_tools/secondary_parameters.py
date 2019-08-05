@@ -240,9 +240,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                         if "error" in planet_kwargs[pl_name][param.get_name()]:
                             param_error = planet_kwargs[pl_name][param.get_name()]["error"]
                             ask_param_error = False
-                    print("ask_param_value", ask_param_value)
-                    print("param_value", param_value)
-                    print("param_error", param_error)
                     if ask_param_value:
                         # Ask to provide a stellar mass value
                         intitule_question = ("Enter a {} value. If you just press enter {}"
@@ -252,8 +249,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                                            default_value=dico_def_value[param.get_name()])
                     else:
                         answered = False
-                    print("param_value", param_value)
-                    print("param_error", param_error)
                     # If replied ask to provide and mass error value, otherwise assume no error
                     if ask_param_error and not(ask_param_value and not(answered)):
                         intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
@@ -262,8 +257,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                     else:
                         if ask_param_value and not(answered):
                             param_error = 0.
-                    print("param_value", param_value)
-                    print("param_error", param_error)
                     # if provided simulated a stellar mass chains else only give a fixed value.
                     if param_error == 0.:
                         dico_par[param.get_name(include_prefix=True, recursive=True)] = param_value
@@ -316,10 +309,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
                 if sec_paraname == "HD80869_b_M":
-                    print("inputs:", args)
-                    print("inputs:", param_list)
-                    print("shape:", array([dico_par[param] for param in param_list]).shape)
-                    print("inputs:", {param: mean(array(dico_par[param])) for param in param_list})
                 values = func(*[dico_par[param] for param in param_list], *args)
                 if isinstance(values, Number) or isinstance(values, ndarray):
                     dico_par[sec_paraname] = values
