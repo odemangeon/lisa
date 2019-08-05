@@ -623,8 +623,8 @@ def getMpsininc(P, K, Ms, ecc, Kfact=1000):
     http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
 
     :param float/np.ndarray P: Planetary orbital period in days
-    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet in
-                               meter per second
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet.
+        K * Kfact should be in m/s.
     :param float/np.ndarray Ms: Stellar mass in solar mass
     :param float/np.ndarray ecc: Planet orbital eccentricity
     :param float/np.ndarray Kfact: Facteur to convert the K value in meter per sec

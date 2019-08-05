@@ -2,7 +2,7 @@
 """
 from collections import Counter
 from numbers import Number
-from numpy import ndarray, stack
+from numpy import ndarray, stack, arcsin, sqrt, rad2deg, mean, array
 from numpy import random
 
 from ..model import convert as cv
@@ -44,7 +44,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
         if ("rho" not in star_kwargs) and ("R" not in star_kwargs):
             intitule_question = ("Do you want to provide the stellar density or radius ? ['rho', "
                                  "'R']\n")
-            reply = QCM_utilisateur(intitule_question, l_reponses_possible=['rho', 'R'])
+            reply = QCM_utilisateur(intitule_question, l_reponses_possibles=['rho', 'R'])
         elif ("rho" in star_kwargs) and ("R" in star_kwargs):
             raise ValueError("You should not provide both rho and R of the star.")
         else:
@@ -221,7 +221,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
 
     elif Counter(["RV", ]) == Counter(model.dataset_db.inst_categories):
         # Default value for planet_kwargs and simulate if needed
-        dico_def_value = {"inc": 90.}
+        dico_def_value = {"inc": rad2deg(arcsin(sqrt(3 / 4)))}
         if planet_kwargs is None:
             planet_kwargs = {}
         for planet in model.planets.values():
@@ -231,8 +231,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Simulate planet inclination if needed.
             for param in [planet.inc]:
                 if param.main is False:
-                    ask_param_value = False
-                    ask_param_error = False
+                    ask_param_value = True
+                    ask_param_error = True
                     if param.get_name() in planet_kwargs[pl_name]:
                         if "value" in planet_kwargs[pl_name][param.get_name()]:
                             param_value = planet_kwargs[pl_name][param.get_name()]["value"]
@@ -240,6 +240,9 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                         if "error" in planet_kwargs[pl_name][param.get_name()]:
                             param_error = planet_kwargs[pl_name][param.get_name()]["error"]
                             ask_param_error = False
+                    print("ask_param_value", ask_param_value)
+                    print("param_value", param_value)
+                    print("param_error", param_error)
                     if ask_param_value:
                         # Ask to provide a stellar mass value
                         intitule_question = ("Enter a {} value. If you just press enter {}"
@@ -249,6 +252,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                                            default_value=dico_def_value[param.get_name()])
                     else:
                         answered = False
+                    print("param_value", param_value)
+                    print("param_error", param_error)
                     # If replied ask to provide and mass error value, otherwise assume no error
                     if ask_param_error and not(ask_param_value and not(answered)):
                         intitule_question = ("Enter a {} error (1 sigma). If you just press enter "
@@ -257,6 +262,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                     else:
                         if ask_param_value and not(answered):
                             param_error = 0.
+                    print("param_value", param_value)
+                    print("param_error", param_error)
                     # if provided simulated a stellar mass chains else only give a fixed value.
                     if param_error == 0.:
                         dico_par[param.get_name(include_prefix=True, recursive=True)] = param_value
@@ -305,9 +312,14 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
-            # Compute teh secondary parameter
+            # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
+                if sec_paraname == "HD80869_b_M":
+                    print("inputs:", args)
+                    print("inputs:", param_list)
+                    print("shape:", array([dico_par[param] for param in param_list]).shape)
+                    print("inputs:", {param: mean(array(dico_par[param])) for param in param_list})
                 values = func(*[dico_par[param] for param in param_list], *args)
                 if isinstance(values, Number) or isinstance(values, ndarray):
                     dico_par[sec_paraname] = values
