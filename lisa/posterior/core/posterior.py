@@ -48,7 +48,52 @@ alldtst_key = DatabaseFunc._alldtst_key
 
 class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
                 DatasetsFileDbAttr):
-    """docstring for Posterior."""
+    """Posterior is main class of lisa.
+
+    It allows to define the datasets that you want to analyse, the model that you want to use to analyse
+    these datasets, the noise models that you want to use. Finally, it produces function to simulate
+    the datasets (datasimulators), logn priors (lnpriors), logn likelihoods (lnlikelihoods) and logn
+    posteriors (lnposteriors).
+
+    An instance of posterior has the following set of attributes:
+    - dataset_db: Database for the datasets (empty at init - see definition lisa.posterior.dataset_and_instrument)
+    - name: Instance of Name (fully defined at init - see definition lisa.tools.name)
+    - run_folder: Define the "run" folder (can be defined at init or later - see definition lisa.tools.default_folders_data_run).
+        Folder where the parameter files should be.
+    - model: Instance of a Subclass of Core_Model (None at init - see CoreModel definition lisa.posterior.core.model.core_model)
+        This should be defined after initialisation using the define_model method.
+    - datasetsfile_db: Database containing the content of the dataset file (empty at init - see definition
+        lisa.posterior.core.datasetsfile_dbs).
+    - datasimulators: Database containing the datasimulator functions.
+    - lnpriors: Database containing the lnprior functions.
+    - lnlikelihoods: Database containing the lnlikelihood functions.
+    - lnposteriors: Database containing the lnposterior functions.
+
+    The traditional sequence of use is:
+    >>> post_instance = Posterior(object_name="HD209458")
+    >>> post_instance.dataset_db.data_folder = "data_folder"  # Defines the folder where the dataset files are.
+    >>> post_instance.run_folder = "run_folder"  # Defines the folder where the parameter files are/will be.
+    >>> post_instance.load_datasetsfile("datasets.txt")  # Create the file defining the datasets to be used
+    # and the associated instrument and noise models
+    >>> post_instance.define_model(category="GravitionalGroups", name="HD209458", stars=1, planets=1)
+    # Define the model that you want to use to interpret the data. The arguments depends on the model
+    # that you want to use.
+    >>> post_instance.model.create_instcat_paramfile()  # Create parameter files specific to the instrument
+    # categories used by the datasets to analyse.
+    >>> post_instance.model.load_instcat_paramfile()  # Load the parameter files specific to the instrument
+    # categories used by the datasets to analyse.
+    >>> post_instance.model.set_parametrisation(parametrisation="EXOFAST")  # Define the parametrisation
+    # to be used
+    >>> post_instance.model.create_parameter_file("param_file.py")  # Create the file defining the priors
+    # to be used for each main parameter of the model.
+    >>> post_instance.model.load_parameter_file()  # Load the parameter file defining the priors to be used
+    # for each main parameter.
+    >>> post_instance.get_datasimulators()  # Create the datasimulator functions
+    >>> post_instance.get_lnlikelihoods()  # Create the lnlikelihood functions
+    >>> post_instance.get_individal_lnpriors()  # Create the individual lnprior functions
+    >>> post_instance.get_lnpriors()  # Create the lnprior functions
+    >>> post_instance.get_lnposteriors()  # Create the lnposterior functions.
+    """
 
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
 
@@ -70,6 +115,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         RunFolder.__init__(self, run_folder=run_folder)
         # Initialize instmodel4dataset attribute and assign it dataset_lock
         Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())
+        # Initialize datasetfile attribute and assign it instmodel4dataset,
         DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
                                     instmodel4dataset=self.instmodel4dataset)
         # Initialise the model attribute
@@ -173,9 +219,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
     def define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.
 
-        For now only assignement to None is possible.
-        This function should check that the category is an available Core_Model Subclass
-
         :param str category: String which refers to an available Core_Model Subclass that has been
             defined in the model_setup_file.
         :param bool load_setup: If True load the list of available Models from the model_setup_file.
@@ -226,7 +269,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     @property
     def islocked_dataset_db(self):
-        """Return True if dataset_db is frozen."""
+        """True if dataset_db is frozen."""
         return self.dataset_db.locked
 
     def rm_model(self):
@@ -236,12 +279,12 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     @property
     def isdefined_model(self):
-        """Return true if a model is defined."""
+        """True if a model is defined."""
         return self.model is not None
 
     @property
     def lnpriors(self):
-        """Return the current content lnprior database."""
+        """Lnprior database."""
         return self.__lnprior_db
 
     def get_individal_lnpriors(self):
@@ -266,7 +309,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     @property
     def datasimulators(self):
-        """Return the current content lnprior database."""
+        """Datasimulator database."""
         return self.__datasim_db
 
     def get_datasimulators(self):
