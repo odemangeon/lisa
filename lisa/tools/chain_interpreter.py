@@ -37,17 +37,17 @@ class ChainsInterpret(np.ndarray):
     def __getitem__(self, indexing):
         if isinstance(indexing, str):
             idx = self.paramname_idx[indexing]
-            indexing = (slice(None, None, None), idx)
+            indexing = (..., idx)
         if isinstance(indexing, tuple):
             if isinstance(indexing[-1], str):
-                l = list(indexing[:-1])
-                l.append(self.paramname_idx[indexing[-1]])
-                indexing = list(l)
+                ll = list(indexing[:-1])
+                ll.append(self.paramname_idx[indexing[-1]])
+                indexing = list(ll)
             elif isinstance(indexing[-1], Iterable):
                 if isinstance(indexing[-1][0], str):
-                    l = list(indexing[:-1])
-                    l.append([self.paramname_idx[parname] for parname in indexing[-1]])
-                    indexing = list(l)
+                    ll = list(indexing[:-1])
+                    ll.append([self.paramname_idx[parname] for parname in indexing[-1]])
+                    indexing = list(ll)
         return super(ChainsInterpret, self).__getitem__(indexing)
 
     @property
