@@ -184,29 +184,6 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         for filepath in l_dataset_path:
             self._add_a_dataset_from_path(filepath, force=force)
 
-    # The idea is that now this is dealt by the posterior instance that read the datasetsfile and
-    # update the datasetsfile_db and trigger the filling of the dataset_db
-    # with _add_datasets_from_listdatasetpath
-    # def _add_datasets_from_datasetfile(self, path_datasets_file, load_setup=False, force=False):
-    #     """Add the datasets specified in the datasets_file to the dataset database.
-    #     ----
-    #     Arguments:
-    #         path_datasets_file  : string,
-    #             path to the datasets file.
-    #         load_setup          : bool, (default: False)
-    #             tell if you want to manager to laod the inst_and_dataset_setup file.
-    #         force               : boolean, (default: False),
-    #             True to force the addition of the dataset
-    #     """
-    #     file_path = self.look4runfile(file_path=path_datasets_file)
-    #     list_files = list(read_datafile(file_path).keys())
-    #     logger.debug("List of files to use: {}".format(list_files))
-    #     if load_setup:
-    #         manager_inst.load_setup()
-    #     for filepath in list_files:
-    #         self._add_a_dataset_from_path(filepath, force=force)
-    #     self.datasets_file = file_path
-
     def get_datasets(self, inst_name=None, inst_cat=None, sortby_instcat=False,
                      sortby_instname=False, sortby_nb=False):
         """Return datasets from the dataset database."""
@@ -290,10 +267,10 @@ class DatasetDbAttr(object):
     def dataset_db(self, dataset_db):
         """Return the dataset_datase."""
         if self.isdefined_datasetdb:
-                logger.warning("The dataset database has already been defined for instance {} of "
-                               "class {}. One should not redefined it, so set command is ignored."
-                               "".format(self.get_name(), self.__class__.__name__))
-                raise Warning("The dataset database has already been define set command Ignored")
+            logger.warning("The dataset database has already been defined for instance {} of "
+                           "class {}. One should not redefined it, so set command is ignored."
+                           "".format(self.get_name(), self.__class__.__name__))
+            raise Warning("The dataset database has already been define set command Ignored")
         else:
             if dataset_db is None:
                 logger.debug("No dataset database provided for instance {} of class {}."
