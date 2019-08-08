@@ -3,12 +3,10 @@
 """
 dataset_database module.
 
-The objective of this package is to provides the core DatasetDatabase class.
-
-@ DONE:
-    -
-@TODO:
-    -
+The objective of this package is to provides the DatasetDatabase and DatasetDbAttr classes.
+The DatasetDatabase class define a database to store and query the datasets considered for the analysis.
+The DatasetDbAttr class is an interface class created to provide the dataset_db property to the
+lisa.posterior.core.posterior.Posterior class. This property is a DatasetDatabase instance.
 """
 from logging import getLogger
 # from os.path import join, isfile
@@ -60,7 +58,12 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
 
 
 class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
-    """docstring for DatasetDatabase."""
+    """Database which contains all the datasets used for the analysis.
+
+    In standard use you are not supposed to handle this class directly. Datasets should be added
+    throught the dataset file, using the lisa.posterior.core.posterior.Posterior.load_datasetsfile
+    method.
+    """
     def __init__(self, object_name, lock=None):
         # Initialise the name of the datatabase
         Named.__init__(self, name=object_name)
@@ -76,17 +79,16 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
 
     @property
     def object_name(self):
-        """Return the name of the object studied."""
+        """Return the name of the object studied by the datasets in this database."""
         return self.name.get(include_prefix=False, code_version=False)
 
     def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.
-        ----
-        Arguments:
-            dataset : Subclass of Dataset object,
-                Instance of a subclass of Dataset.
-            force   : boolean, (default: False),
-                True to force the addition of the dataset
+
+        See also _add_a_dataset_from_path and _add_datasets_from_listdatasetpath methods
+
+        :param Dataset dataset: Instance of a subclass of Dataset.
+        :param bool force: True to force the addition of the dataset
         """
         if self.locked:
             raise ValueError("The dataset dabase has been locked you can not add a new dataset.")
@@ -105,11 +107,9 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         self[inst_category][inst_name][str(number)] = dataset
 
     def isavailable_dataset(self, dataset):
-        """Return True sif filename correspond to a dataset that is in the database.
-        ----
-        Arguments:
-            dataset : string or Instance of Dataset Subclass,
-                String giving the filename of the dataset or the dataset itself.
+        """Return True if dataset corresponds to a dataset that is in the database.
+
+        :param str/Dataset dataset: String giving the filename of the dataset or the dataset itself.
         """
         if isinstance(dataset, str):
             filename_info = interpret_data_filename(interpret_data_filename)
@@ -130,37 +130,32 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         else:
             return False
 
-    def rm_dataset(self, inst_category, inst_name, number=0):
+    def rm_dataset(self, inst_cat, inst_name, number=0):
         """Remove a dataset from the the dataset database.
-        ----
-        Arguments:
-            inst_category   : string,
-                Type of instrument associated to the dataset you want to remove
-            inst_name   : string,
-                Name of the instrument associated to the dataset you want to remove
-            number      : int, (default: 0)
-                Number associated to the dataset you want to remove.
+
+        :param str inst_cat: Category of instrument associated to the dataset you want to remove
+        :param str inst_name: Name of the instrument associated to the dataset you want to remove
+        :param int number: Number associated to the dataset you want to remove.
         """
         if self.locked:
             raise ValueError("The dataset dabase has been locked you can not remove datasets.")
-        self[inst_category][inst_name].pop(str(number))
-        if len(self[inst_category][inst_name]) == 0:
-            self[inst_category].pop(inst_name)
-            if len(self[inst_category]) == 0:
-                self.pop(inst_category)
+        self[inst_cat][inst_name].pop(str(number))
+        if len(self[inst_cat][inst_name]) == 0:
+            self[inst_cat].pop(inst_name)
+            if len(self[inst_cat]) == 0:
+                self.pop(inst_cat)
 
     # Now I request the addition of dataset to be done with the dataset file because like that I can
     # specify and pass the information about the name of the instrument model and the noise model
     def _add_a_dataset_from_path(self, datafile_path, load_setup=False, force=False):
         """Add a dataset designated by its path to the dataset database.
-        ----
-        Arguments:
-            datafile_path   : string,
-                path to the data file.
-            load_setup      : bool, (default: False)
-                tell if you want to manager to laod the inst_and_dataset_setup file.
-            force           : boolean, (default: False),
-                True to force the addition of the dataset
+
+        See also _add_a_dataset and _add_datasets_from_listdatasetpath methods
+
+        :param str datafile_path: path to the dataset file.
+        :param bool load_setup: True if you want to manager instrument to load the inst_and_dataset_setup
+            file.
+        :param bool force: True to force the addition of the dataset
         """
         file_path = self.look4datafile(datafile_path)
         if file_path is None:
@@ -171,43 +166,77 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         logger.info("dataset added to the database: {}".format(datafile_path))
 
     def _add_datasets_from_listdatasetpath(self, l_dataset_path, force=False):
-        """Add the datasets specified in the datasets_file to the dataset database.
-        ----
-        Arguments:
-            path_datasets_file  : string,
-                path to the datasets file.
-            load_setup          : bool, (default: False)
-                tell if you want to manager to laod the inst_and_dataset_setup file.
-            force               : boolean, (default: False),
-                True to force the addition of the dataset
+        """Add the datasets specified in a list of dataset paths to the database.
+
+        See also _add_a_dataset and _add_a_dataset_from_path methods
+
+        :param list_str l_dataset_path: List of path to dataset files to be added to the database.
+        :param bool force: True to force the addition of the datasets
         """
         for filepath in l_dataset_path:
             self._add_a_dataset_from_path(filepath, force=force)
 
     def get_datasets(self, inst_name=None, inst_cat=None, sortby_instcat=False,
                      sortby_instname=False, sortby_nb=False):
-        """Return datasets from the dataset database."""
+        """Return datasets from the database.
+
+        :param str/None inst_name: Name of the instrument associated to the dataset(s) you want. If None,
+            all available instrument names are considered.
+        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) you want. If None,
+            all available instrument categories are considered.
+        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+            matching the request will be merged in the same list. If False, all instrument categories
+            matching the request will have there own key in a dictionary.
+        :param bool sortby_instname: Specify the format of the output. If true, all instrument names
+            matching the request will be merged in the same list. If False, all instrument names
+            matching the request will have there own key in a dictionary.
+        :param bool sortby_nb: Specify the format of the output. If true, all dataset numbers
+            matching the request will be merged in the same list. If False, all dataset numbers
+            will have there own key in a dictionary.
+        :return list/dictionary_of_Datasets res: All the dataset instances matching the request (inst_name, inst_cat).
+            The format can be a list or a dictionary depending on the values passed to sortby_instcat,
+            sortby_instname, sortby_nb.
+        """
         return self.get_lvl3_values(level1_key=inst_cat, level2_key=inst_name,
                                     sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                                     sortby_lvl3key=sortby_nb)
 
     @property
     def inst_categories(self):
-        """Return the list of the types of instruments associated to the dataset in the database."""
+        """Return the list of the categories of instruments associated to the dataset in the database."""
         return list(self.keys())
 
     def get_instnames(self, inst_cat=None, sortby_instcat=False):
-        """Return the names of instruments.
+        """Return the names of instruments used by the datasets in the database.
 
-        If inst_category provided return only the name of the instrument for this category.
-        Otherwise return a dict which associate the list of instrument names to each instrument
-        category available in the database.
+        :param str/None inst_cat: Category of instrument(s) associated to the instrument name(s) you want.
+            If None, all available instrument categories are considered.
+        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+            matching the request will be merged in the same list. If False, all instrument categories
+            matching the request will have there own key in a dictionary.
+        :return list/dict_of_str res: All the instrument names matching the request (inst_cat). The
+            format can be a list or a dictionary depending on the values passed to sortby_instcat.
         """
         return self.get_lvl2_keys(level1_key=inst_cat, sortby_lvl1key=sortby_instcat)
 
     def get_instruments(self, inst_name=None, inst_cat=None,
                         sortby_instname=False, sortby_instcat=False):
-        """Return the dict of instruments used by the dataset in the database"""
+        """Return Core_Instrument subclass instances used by the datasets in the database.
+
+        :param str/None inst_name: Name of the instrument you want. If None, all available instrument
+            names are considered.
+        :param str/None inst_cat: Category of instrument(s) associated to the instrument(s) you want.
+            If None, all available instrument categories are considered.
+        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+            matching the request will be merged in the same list. If False, all instrument categories
+            matching the request will have there own key in a dictionary.
+        :param bool sortby_instname: Specify the format of the output. If true, all instrument names
+            matching the request will be merged in the same list. If False, all instrument names
+            matching the request will have there own key in a dictionary.
+        :return list/dict_of_Core_Instrument: All the available instruments (Core_Instrument subclass
+            instances) matching the request (inst_name, inst_cat). The format can be a list or a dictionary
+            depending on the values passed to sortby_instcat and sortby_instname.
+        """
         inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
         result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                              default_value=[])
@@ -228,14 +257,44 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
 
     def get_datasetnbs(self, inst_name=None, inst_cat=None,
                        sortby_instcat=False, sortby_instname=False):
-        """Return the numbers of the datasets."""
+        """Return the number(s) of the datasets int the database.
+
+        :param str/None inst_name: Name of the instrument associated to the datasets of which you want
+            the numbers. If None, all available instrument names are considered.
+        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) of which you want
+            the numbers. If None, all available instrument categories are considered.
+        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+            matching the request will be merged in the same list. If False, all instrument categories
+            matching the request will have there own key in a dictionary.
+        :param bool sortby_instname: Specify the format of the output. If true, all instrument names
+            matching the request will be merged in the same list. If False, all instrument names
+            matching the request will have there own key in a dictionary.
+        :return list/dict_of_int: All the available dataset numbers matching the request (inst_name,
+            inst_cat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
+            and sortby_instname.
+        """
         inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
         return self.get_lvl3_keys(level1_key=inst_cat, level2_key=inst_name,
                                   sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
 
     def get_datasetnames(self, inst_name=None, inst_cat=None,
                          sortby_instcat=False, sortby_instname=False):
-        """Return the dict of instruments used by the dataset in the database"""
+        """Return the name of the datasets in the database.
+
+        :param str/None inst_name: Name of the instrument associated to the datasets of which you want
+            the names. If None, all available instrument names are considered.
+        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) of which you want
+            the names. If None, all available instrument categories are considered.
+        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+            matching the request will be merged in the same list. If False, all instrument categories
+            matching the request will have there own key in a dictionary.
+        :param bool sortby_instname: Specify the format of the output. If true, all instrument names
+            matching the request will be merged in the same list. If False, all instrument names
+            matching the request will have there own key in a dictionary.
+        :return list/dict_of_int: All the available dataset names matching the request (inst_name,
+            inst_cat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
+            and sortby_instname.
+        """
         inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
         result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                              default_value=[])
@@ -250,22 +309,26 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
 
 
 class DatasetDbAttr(object):
-    """docstring for ProvideDatasetDbAttr."""
+    """DatasetDbAttr is an Interface class for Posterior.
+
+    It provide a dataset_db property which is a DatasetDatabase instance and the methods to define if.
+    See the DatasetDatabase class for more information about the behavior of a DatasetDatabase instance.
+    """
     def __init__(self, dataset_db=None):
-        # 1.
+        # 1. Initialise the dataset_db property
         self.dataset_db = dataset_db
-        # 2.
+        # 2. Make sure that this class is not used directly
         if type(self) is DatasetDbAttr:
             raise NotImplementedError("DatasetDbAttr should not be instanciated !")
 
     @property
     def dataset_db(self):
-        """Return the dataset_datase."""
+        """The DatasetDatabase instance (see lisa.posterior.core.dataset_and_isntrument.dataset_database)."""
         return self.__dataset_db
 
     @dataset_db.setter
     def dataset_db(self, dataset_db):
-        """Return the dataset_datase."""
+        """Set the dataset_db property."""
         if self.isdefined_datasetdb:
             logger.warning("The dataset database has already been defined for instance {} of "
                            "class {}. One should not redefined it, so set command is ignored."
