@@ -6,9 +6,6 @@ datasimulator module.
 The objective of this module is to define the class DatasimulatorCreator and provide tools to create
 your datasimulator.
 
-@DONE:
-    -
-
 @TODO:
     - implement boolean argument used_instmodel_only in create_datasimulators
 """
@@ -30,7 +27,10 @@ root_name_func_datsim = "_create_datasimulator"
 
 
 class DatasimulatorCreator(object):
-    """docstring for DatasimulatorCreator."""
+    """DatasimulatorCreator is an Interface class for Core_Model.
+
+    It provides methods to create datasimulator functions for a model.
+    """
 
     key_param = key_param
     key_mand_kwargs = key_mand_kwargs
