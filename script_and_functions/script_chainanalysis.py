@@ -264,7 +264,7 @@ if do_bestfit:
 
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
-    corner(et.get_clean_flatchain(chainI[:, ::sampling_corner, :], l_walker=l_walker_conv, l_burnin=l_burnin),
+    corner(et.get_clean_flatchain(chainI, l_walker=l_walker_conv, l_burnin=l_burnin)[::sampling_corner, :],
            labels=l_param_chainI, truths=fitted_values)
 
     pl.savefig(join(plot_folder, "corner.pdf"))
@@ -363,7 +363,7 @@ if do_SecParam:
 
     logger.info("Do correlation plot for secondary free parameters")
     # In this case there is nan values in the D14 and D23 chains and it makes corner crash
-    corner(et.get_clean_flatchain(chainIsec[:, ::sampling_corner, :], l_walker=l_walker_conv, l_burnin=l_burnin),
+    corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_conv, l_burnin=l_burnin)[::sampling_corner_sec, :],
            labels=l_param_name_sec, truths=fitted_values_sec)
     pl.savefig(join(plot_folder, "corner_sec.pdf"))
     pl.close("all")
