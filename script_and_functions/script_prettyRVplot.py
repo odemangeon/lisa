@@ -76,9 +76,12 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
     # Load the defined datasets
     dico_dataset = {}
     dico_kwargs = {}
+    dico_nb_dstperinst = defaultdict(lambda : 0)
     for datasetname in datasetnames:
         dico_dataset[datasetname] = dataset_db[datasetname]
         dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
+        filename_info = interpret_data_filename(datasetname)
+        dico_nb_dstperinst[filename_info["inst_name"]] += 1
 
     ###################
     # Plots preparation
@@ -117,8 +120,12 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
     pl_kwarg_final = {}
     for datasetname in datasetnames:
         filename_info = interpret_data_filename(datasetname)
+        if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
+            label_dst = filename_info["inst_name"]
+        else:
+            label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
         pl_kwarg_final[datasetname] = {"model": deepcopy(pl_kwarg_model),
-                                       "data": {"label": filename_info["inst_name"], }}
+                                       "data": {"label": label_dst, }}
         pl_kwarg_final[datasetname]["data"].update(deepcopy(pl_kwarg_data))
         # Update with the user's inputs
         pl_kwarg_final[datasetname]["data"].update(pl_kwargs.get(datasetname, {}).get('data', {}))
@@ -349,7 +356,11 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
             if ii == 0:
                 rms_resi.append("{:.2f}".format(np.std(residual_pl[datasetname])))
                 filename_info = interpret_data_filename(datasetname)
-                rms_resi_label.append(filename_info["inst_name"] + "({})".format(filename_info["number"]))
+                if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
+                    label_rms_resi_ii = filename_info["inst_name"]
+                else:
+                    label_rms_resi_ii = filename_info["inst_name"] + "({})".format(filename_info["number"])
+                rms_resi_label.append(label_rms_resi_ii)
         if ii == 0:
             ax_resi_pl.text(0.0, 1.05, r"rms = {} {} ({})".format(", ".join(rms_resi), y_unit, ", ".join(rms_resi_label)),
                             fontsize=fontsize, transform=ax_resi_pl.transAxes)
