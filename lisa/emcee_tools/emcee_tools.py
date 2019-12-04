@@ -195,11 +195,11 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             position = result[0]
             lnprob = result[1]
             if save_to_file:
-                with open(filename_chain, "a") as f:
+                with open(file_chain, "a") as f:
                     for k in range(position.shape[0]):
                         f.write("{:4d} {:s} {:>16.14g}\n".format(k, " ".join(["{:>16.14g}".format(xx) for xx in position[k]]), lnprob[k]))
                 acceptance_fraction = sampler.acceptance_fraction
-                with open(filename_acceptfrac, "w") as f:
+                with open(file_acceptfrac, "w") as f:
                     for k, acceptfrac in enumerate(acceptance_fraction):
                         f.write("{:4d} {:>15f}\n".format(k, acceptfrac))
             pbar.update(i - previous_i)
