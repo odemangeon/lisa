@@ -87,6 +87,7 @@ do_MComp_Folded = True
 # Do compute secondary parameters
 do_SecParam = True
 sampling_corner_sec = 100
+units = {"K": "kms"}
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
@@ -314,21 +315,22 @@ if do_SecParam:
                                                           #                    "error": 0.20},
                                                           #              "Teff": {"value": 5914,
                                                           #                       "error": 64}
-                                                          #              }
+                                                          #              },
                                                           star_kwargs={"M": {"value": 1.336,
                                                                              "error": 0.086},
                                                                        "rho": {"value": 0.26,
                                                                                "error": 0.04},
                                                                        "Teff": {"value": 5914,
                                                                                 "error": 64}
-                                                                       }
+                                                                       },
                                                           # star_kwargs={"M": {"value": 1.295,
                                                           #                    "error": 0.077},
                                                           #              "R": {"value": 1.59,
                                                           #                    "error": 0.09},
                                                           #              "Teff": {"value": 5914,
                                                           #                       "error": 64}
-                                                          #              }
+                                                          #              },
+                                                           units=units
                                                           )
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
