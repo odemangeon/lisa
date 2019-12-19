@@ -327,7 +327,7 @@ def getecc(ecosw, esinw):
     :param np.array/float ecosw: eccentricity.cos(omega)
     :param np.array/float esinw: eccentricity.sin(omega)
     """
-    return ecosw**2 + esinw**2
+    return np.sqrt(ecosw**2 + esinw**2)
 
 
 def getecc_fast(ecosw, esinw):
@@ -336,7 +336,7 @@ def getecc_fast(ecosw, esinw):
     :param np.array/float ecosw: eccentricity.cos(omega)
     :param np.array/float esinw: eccentricity.sin(omega)
     """
-    return ecosw * ecosw + esinw * esinw
+    return math.sqrt(ecosw * ecosw + esinw * esinw)
 
 
 def getecc_plc_4_handk(hplus, hminus, kplus, kminus):
