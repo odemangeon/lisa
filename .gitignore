@@ -8,6 +8,9 @@ __pycache__/
 
 # Common stuff
 lisa/software_parameters.py
+examples/WASP-151/outputs/
+list_imported_modules.txt
+
 
 # Olivier's stuff
 setenv_lisa.bash
