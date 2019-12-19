@@ -26,7 +26,7 @@ Rely on python3.6. Python package dependencies:
 
 3. Create the software parameters file:
 
-In lisa/source/ create a file called software_parameters.py which contains the following lines:
+In lisa/lisa/ create a file called software_parameters.py which contains the following lines:
 
 ```python3
 #!/usr/bin/python
