@@ -269,6 +269,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
         for planet in model.planets.values():
             # Prepare the list of tuples secondary parameter name, function, parameters
             l_tup_planet = []
+            # Time of periastron passage
+            l_tup_planet.append((planet.tp.get_name(include_prefix=True, recursive=True), cv.gettp, [],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.tic.get_name(include_prefix=True, recursive=True),
+                                  planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
             # eccentricity
             l_tup_planet.append((planet.ecc.get_name(include_prefix=True, recursive=True), cv.getecc, [],
                                  [planet.ecosw.get_name(include_prefix=True, recursive=True), planet.esinw.get_name(include_prefix=True, recursive=True)]))
