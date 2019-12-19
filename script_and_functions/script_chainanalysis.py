@@ -330,7 +330,7 @@ if do_SecParam:
                                                           #              "Teff": {"value": 5914,
                                                           #                       "error": 64}
                                                           #              },
-                                                           units=units
+                                                          units=units
                                                           )
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
