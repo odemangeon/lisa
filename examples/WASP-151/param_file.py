@@ -8,7 +8,7 @@ import numpy as np
 # instruments LC
 K2 = {'default': {'jitter': {'free': True,
                              'value': None,  # unit: None
-                             'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-4},
+                             'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-5},
                                        'joint_prior_ref': None
                                        }
                              },
@@ -21,7 +21,7 @@ K2 = {'default': {'jitter': {'free': True,
 
 EulerCam = {'default': {'jitter': {'free': True,
                                    'value': None,  # unit: None
-                                   'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-3},
+                                   'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-4},
                                              'joint_prior_ref': None
                                              }
                                    },
@@ -34,14 +34,14 @@ EulerCam = {'default': {'jitter': {'free': True,
 
 IAC80 = {'default0': {'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-3},
+                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-4},
                                            'joint_prior_ref': None
                                            }
                                  },
                       },
          'default1': {'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-3},
+                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-4},
                                            'joint_prior_ref': None
                                            }
                                  },
@@ -54,7 +54,7 @@ IAC80 = {'default0': {'jitter': {'free': True,
 
 TRAPPIST = {'default': {'jitter': {'free': True,
                                    'value': None,  # unit: None
-                                   'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-3},
+                                   'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1e-4},
                                              'joint_prior_ref': None
                                              }
                                    },
@@ -75,7 +75,7 @@ SOPHIE = {'default': {'DeltaRV': {'free': False,
                                   },
                       'jitter': {'free': True,
                                  'value': None,  # unit: None
-                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 0.02},
+                                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 0.005},
                                            'joint_prior_ref': None
                                            }
                                  },
@@ -97,7 +97,7 @@ CORALIE = {'default': {'DeltaRV': {'free': True,
                                    },
                        'jitter': {'free': True,
                                   'value': None,  # unit: None
-                                  'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 0.02},
+                                  'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 0.005},
                                             'joint_prior_ref': None
                                             }
                                   },
@@ -237,7 +237,7 @@ WASP151 = {           }
 # Joint parameters
 # Define below the joint parameter distributions.
 joint_prior = {# Example:
-               'polarew': {'category': 'polar', 'args': {'r_prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 1.0, 'lims':[0, 1]}},
+               'polarew': {'category': 'polar', 'args': {'r_prior': {'category': 'normal', 'args': {'mu': 0.0, 'sigma': 0.1, 'lims': [0, 1]}},
                                                          'theta_prior': {'category': 'uniform', 'args': {'vmin': -np.pi, 'vmax': np.pi}}
                                                          },
                            'params': {'x': 'b_ecosw', 'y': 'b_esinw'}
@@ -246,13 +246,13 @@ joint_prior = {# Example:
                                                     'P_prior': {"category": 'normal', 'args': {'mu': 4.5334, 'sigma': 0.003}},
                                                     't_prior': {"category": 'normal', 'args': {'mu': 57741.00885442065, 'sigma': 0.1}},
                                                     },
-                      'params': {'P': 'b_P', 't': 'b_tic'}
+                      'params': {'P': 'b_P', 't': 'b_tic'},
                       },
                'transiting': {'category': 'transiting', 'args': {'transiting': True, 'allow_grazing': True,
-                                                                 'Rrat_prior': {"category": 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0}},
-                                                                 'b_prior': {"category": 'uniform', 'args': {'vmin': 0.0, 'vmax': 2.0}},
-                                                                 'aR_prior': {"category": 'jeffreys', 'args': {'vmin': 1.0, 'vmax': 100.0}}
+                                                                 'Rrat_prior': {"category": 'uniform', 'args': {'vmin': 0., 'vmax': 1.}},
+                                                                 'b_prior': {"category": 'uniform', 'args': {'vmin': 0., 'vmax': 2.}},
+                                                                 'aR_prior': {"category": 'jeffreys', 'args': {'vmin': 1., 'vmax': 100.}}
                                                                  },
-                              'params': {'aR':'b_aR', 'cosinc': 'b_cosinc', 'Rrat':'b_Rrat'}
+                              'params': {'aR': 'b_aR', 'cosinc': 'b_cosinc', 'Rrat': 'b_Rrat'}
                               }
                }
