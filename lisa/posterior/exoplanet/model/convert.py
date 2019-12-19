@@ -668,7 +668,7 @@ def gettp(P, tc, ecosw, esinw):
     omega = getomega(ecosw, esinw)
     ecc = getecc(ecosw, esinw)
     f = pi * 0.5 - omega
-    E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
+    E = 2.0 * np.arctan2(np.tan(f / 2.0) * np.sqrt((1.0 - ecc)), np.sqrt((1.0 + ecc)))
     mshift = E - ecc * np.sin(E)
     return tc - P * mshift / (2.0 * pi)
 
@@ -687,7 +687,7 @@ def gettp_fast(P, tc, ecc, omega):
     # if ecc == 0.:
     #     return tc - P / 4.
     f = pi * 0.5 - omega
-    E = 2.0 * math.atan(math.sqrt((1.0 - ecc) / (1.0 + ecc)) * math.tan(f / 2.0))
+    E = 2.0 * math.atan2(math.tan(f / 2.0) * math.sqrt((1.0 - ecc)), math.sqrt((1.0 + ecc)))
     mshift = E - ecc * math.sin(E)
     return tc - P * mshift / (2.0 * pi)
 
@@ -706,7 +706,7 @@ def get_meanA(P, tc, treference, ecosw, esinw):
     omega = getomega(ecosw, esinw)
     ecc = getecc(ecosw, esinw)
     f = pi * 0.5 - omega
-    E = 2.0 * np.arctan(np.sqrt((1.0 - ecc) / (1.0 + ecc)) * np.tan(f / 2.0))
+    E = 2.0 * np.arctan2(np.tan(f / 2.0) * np.sqrt((1.0 - ecc)), np.sqrt((1.0 + ecc)))
     mshift = E - ecc * np.sin(E)
     meananomaly = 2.0 * pi * ((treference - tc) / P) + mshift
     return meananomaly % 2.0 * pi
@@ -890,7 +890,7 @@ def getE_4_f(f, ecc, positive=True):
     :param float/np.array positive: if True, the result is in [0, 2.pi], else in [-pi, pi].
     :return float/np.array ee: eccentric anomaly in radians
     """
-    ee = 2 * np.arctan(np.tan(f / 2) * np.sqrt((1 - ecc) / (1 + ecc)))  # eccentric anomaly
+    ee = 2 * np.arctan2(np.tan(f / 2) * np.sqrt((1 - ecc)), np.sqrt((1 + ecc)))  # eccentric anomaly
     if ee < 0 and positive:
         return 2 * np.pi + ee
     else:
@@ -906,7 +906,7 @@ def getE_4_f_fast(f, ecc):
     :param ecc: eccentricity [0, 1]
     :return ee: eccentric anomaly in radians in [-pi, pi].
     """
-    return 2 * math.atan(math.tan(f / 2) * math.sqrt((1 - ecc) / (1 + ecc)))
+    return 2 * math.atan2(math.tan(f / 2) * math.sqrt((1 - ecc)), math.sqrt((1 + ecc)))
 
 
 def getE_4_f_fast_positive(f, ecc):
@@ -918,7 +918,7 @@ def getE_4_f_fast_positive(f, ecc):
     :param ecc: eccentricity [0, 1]
     :return ee: eccentric anomaly in radians in [0, 2.pi].
     """
-    ee = 2 * math.atan(math.tan(f / 2) * math.sqrt((1 - ecc) / (1 + ecc)))
+    ee = 2 * math.atan2(math.tan(f / 2) * math.sqrt((1 - ecc)), math.sqrt((1 + ecc)))
     if ee < 0:
         return 2 * np.pi + ee
     else:
