@@ -9,7 +9,8 @@ def get_def_output_folders(run_folder=None):
 
     :param str run_folder: Path to run_folder where the output folder tree is expected to be. If None,
         the current working directory is used instead
-    :return dict output_folders: key, path
+    :return dict output_folders: Dictionary which gives the path to the output folders. The available keys
+        are: pickles_explore, pickles_analyze, dats, plots, tables
     """
     if run_folder is None:
         run_folder = getcwd()
