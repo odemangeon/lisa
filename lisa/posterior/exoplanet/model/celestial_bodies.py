@@ -125,6 +125,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="MeanAnomaly", name_prefix=self.name, main=False))
         ## Reference time of inferior conjunction
         self.add_parameter(Parameter(name="tic", name_prefix=self.name, main=False))
+        ## Reference time of periastron passage
+        self.add_parameter(Parameter(name="tp", name_prefix=self.name, main=False))
         ## Radial velocity semi-amplitude
         self.add_parameter(Parameter(name="K", name_prefix=self.name, main=False))
         ## log Radial velocity semi-amplitude
