@@ -261,8 +261,13 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     lnprob_min = lnprobability[l_walker, ...].min()
     lnprob_max = lnprobability[l_walker, ...].max()
     for walker, burnin in zip(l_walker, l_burnin):
-        ax[0].set_title("lnpost")
-        line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+        if lnprobability[walker, :].min() < 0:
+            ax[0].set_title("lnpost - lnpost.min() + 1 ")
+            line = ax[0].plot(lnprobability[walker, :] - lnprobability[walker, :].min() + 1, alpha=0.5)
+        else:
+            ax[0].set_title("lnpost")
+            line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+        ax[0].set_yscale("log")
         ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
                      alpha=0.5)
     for i in range(ndim):
