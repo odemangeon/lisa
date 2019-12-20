@@ -27,6 +27,7 @@ import lisa.tools.stats.distribution_anali as da
 import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret
 from lisa.explore_analyze.misc import get_def_output_folders
+from lisa.explore_analyze.plot import hist_lnprob
 
 
 ## Definition of the parameters
@@ -34,6 +35,11 @@ obj_name = "WASP-151"  # Change
 kwargs_datasim = {}
 
 output_folders = get_def_output_folders(run_folder=getcwd())
+
+# Histograms Parameters
+hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
+n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
+do_hist = True  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
 
 # Raw chains and hist plots
 do_RP = True  # Do chain plot and histogram plot for raw chains
@@ -86,7 +92,7 @@ units = {"K": "kms"}
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
-load_from_pickle = False
+load_from_pickle = True
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -116,11 +122,12 @@ if do_RP:
     pl.savefig(join(output_folders["plots"], "traces_raw.pdf"))
     pl.close("all")
 
-    pl.figure()
-    pl.hist(lnprobability[:, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(output_folders["plots"], "lnpost_hist_raw.pdf"))
-    pl.close("all")
-
+    if do_hist:
+        lnprob_val = lnprobability[:, int(nstep * (1 - hist_perc / 100)):].flatten()
+        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax.set_title(f"Histogram of the last {hist_perc}% of the RAW lnprobability")
+        pl.savefig(join(output_folders["plots"], "lnpost_hist_raw.pdf"))
+        pl.close("all")
 
 if do_AFS:
     logger.info("2. Select walkers with acceptance_fraction and plot lnpost histogram")
@@ -131,10 +138,12 @@ if do_AFS:
     pl.savefig(join(output_folders["plots"], "traces_accfrac_select.pdf"))
     pl.close("all")
 
-    pl.figure()
-    pl.hist(lnprobability[l_walker_AFS, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(output_folders["plots"], "lnpost_hist_accefrac_select.pdf"))
-    pl.close("all")
+    if do_hist:
+        lnprob_val = lnprobability[l_walker_AFS, int(nstep * (1 - hist_perc / 100)):].flatten()
+        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low acceptance chains")
+        pl.savefig(join(output_folders["plots"], "lnpost_hist_accefrac_select.pdf"))
+        pl.close("all")
 else:
     l_walker_AFS = np.arange(nwalker)
 
@@ -148,10 +157,12 @@ if do_LPS:
     pl.savefig(join(output_folders["plots"], "traces_lnpost_select.pdf"))
     pl.close("all")
 
-    pl.figure()
-    pl.hist(lnprobability[l_walker_LPS, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(output_folders["plots"], "lnpost_hist_lnpost_select.pdf"))
-    pl.close("all")
+    if do_hist:
+        lnprob_val = lnprobability[l_walker_LPS, int(nstep * (1 - hist_perc / 100)):].flatten()
+        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior chains")
+        pl.savefig(join(output_folders["plots"], "lnpost_hist_lnpost_select.pdf"))
+        pl.close("all")
 else:
     l_walker_LPS = np.arange(nwalker)
 
@@ -166,10 +177,12 @@ if do_AFSLPSP:
     pl.savefig(join(output_folders["plots"], "traces_accfrac&lnpost_select.pdf"))
     pl.close("all")
 
-    pl.figure()
-    pl.hist(lnprobability[l_walker, int(nstep / 2):].flatten(), bins='auto')
-    pl.savefig(join(output_folders["plots"], "lnpost_hist_accfrac&lnpost_select.pdf"))
-    pl.close("all")
+    if do_hist:
+        lnprob_val = lnprobability[l_walker, int(nstep * (1 - hist_perc / 100)):].flatten()
+        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains")
+        pl.savefig(join(output_folders["plots"], "lnpost_hist_accfrac&lnpost_select.pdf"))
+        pl.close("all")
 
 if do_GS:
     logger.info("5. Determine convergence and burnin values and plot lnpost histogram")
@@ -219,12 +232,13 @@ if do_GS:
     pl.savefig(join(output_folders["plots"], "traces_geweke_select.pdf"))
     pl.close("all")
 
-    pl.figure()
-    pl.hist(et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_conv,
-                                   l_burnin=l_burnin),
-            bins='auto')
-    pl.savefig(join(output_folders["plots"], "lnpost_hist_geweke_select.pdf"))
-    pl.close("all")
+    if do_hist:
+        lnprob_val = et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_conv,
+                                            l_burnin=l_burnin)
+        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
+        pl.savefig(join(output_folders["plots"], "lnpost_hist_geweke_select.pdf"))
+        pl.close("all")
 
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
                    l_burnin=l_burnin, suppress_burnin=True)
@@ -301,27 +315,13 @@ if do_MComp:
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
     chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
-                                                          # star_kwargs={"M": {"value": 1.20,
-                                                          #                    "error": 0.09},
-                                                          #              "R": {"value": 1.18,
-                                                          #                    "error": 0.20},
-                                                          #              "Teff": {"value": 5914,
-                                                          #                       "error": 64}
-                                                          #              },
-                                                          star_kwargs={"M": {"value": 1.336,
-                                                                             "error": 0.086},
-                                                                       "rho": {"value": 0.26,
-                                                                               "error": 0.04},
-                                                                       "Teff": {"value": 5914,
-                                                                                "error": 64}
+                                                          star_kwargs={"M": {"value": 1.077,
+                                                                             "error": 0.081},
+                                                                       "R": {"value": 1.14,
+                                                                             "error": 0.03},
+                                                                       "Teff": {"value": 5871,
+                                                                                "error": 57}
                                                                        },
-                                                          # star_kwargs={"M": {"value": 1.295,
-                                                          #                    "error": 0.077},
-                                                          #              "R": {"value": 1.59,
-                                                          #                    "error": 0.09},
-                                                          #              "Teff": {"value": 5914,
-                                                          #                       "error": 64}
-                                                          #              },
                                                           units=units
                                                           )
     logger.info("Plot raw traces for secondary parameters")
