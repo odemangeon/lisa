@@ -5,11 +5,11 @@ Script template to perform an MCMC exploration.
 
 @TODO:
 """
-import sys
+# import sys
 from logging import DEBUG, INFO
 from math import ceil
 from os import getcwd, makedirs
-from os.path import join, isdir
+from os.path import join
 
 from scipy.optimize import minimize
 from numpy import zeros_like
@@ -53,7 +53,7 @@ xtol_preminimization = 1e-12
 # emcee parameters
 nwalker_fact = 2.5
 nsteps_MCMC = 10000
-save_to_file = True
+save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
