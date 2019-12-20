@@ -5,16 +5,16 @@ Script to produce pretty plots of RV data
 
 @TODO:
 """
-from os import getcwd, makedirs
+from os import getcwd
 from os.path import join
 
 import numpy as np
-import matplotlib.pyplot as pl
+# import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
 from matplotlib.gridspec import GridSpec
 from copy import deepcopy
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from PyAstronomy.pyasl import foldAt
 
 from fig_styler import styler
@@ -26,6 +26,7 @@ from lisa.tools.miscellaneous import interpret_data_filename
 
 from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from lisa.explore_analyze.misc import get_def_output_folders
 
 # from ipdb import set_trace
 
@@ -36,6 +37,7 @@ mgr_noisemodel.load_setup()
 @styler
 def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, dataset_db, model_instance,
                     fitted_values, l_param_name, star,
+                    remove_GP=False,
                     fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, *args, **kwargs):
     nplanet = len(planets)
     """Produce a clean RV plot.
@@ -49,16 +51,17 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
     :param fitted_values: Fitted values
     :param list_of_str l_param_name: List of parameter names
     :param star: Star instance
+    :param bool remove_GP: If True the GP model is remove from the data for the plot.
     :param dict fig_param: Dictionary providing keyword arguments for the figure definition and settings:
         - 'right', 'left', 'bottom', 'top' keywords can be defined and they will be passed to the GridSpec init function
         - 'x_ylabel_coord' to shift from the y axis to the label
         - 'add_axeswithsharex_kw' dictionary of kwargs to pass to add_axeswithsharex which creates the
            data + residuals axes.
         - 'gs_from_sps_kw' dictionary of kwargs which will be passed on to add_twoaxeswithsharex_perplanet.
-        - 'pad_data': float of Iterable of 2 floats which define the bottom and top pad to apply for data axes.
-        - 'pad_resi': float of Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+        - 'pad_data': Iterable of 2 floats which define the bottom and top pad to apply for data axes.
+        - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
         - 'y_unit': unit of RVs
-    :param dict pl_kwargs: Dictionary with keys a instrument name (ex: "ESPRESSO") and values
+    :param dict pl_kwargs: Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") and values
         a dictionary with 2 possible keys "data" and "model" that will be passed as keyword arguments
         to the plotting functions
     :param bool show_legend: If True, show the legend
@@ -73,16 +76,15 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
     # Load Data
     ###########
 
-    # Load the defined datasets
+    # Load the defined datasets and check how many dataset there is by instrument.
     dico_dataset = {}
     dico_kwargs = {}
-    dico_nb_dstperinst = defaultdict(lambda : 0)
+    dico_nb_dstperinst = defaultdict(lambda: 0)
     for datasetname in datasetnames:
         dico_dataset[datasetname] = dataset_db[datasetname]
         dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
         filename_info = interpret_data_filename(datasetname)
         dico_nb_dstperinst[filename_info["inst_name"]] += 1
-
     ###################
     # Plots preparation
     ###################
@@ -270,6 +272,22 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
             inst_mod = model_instance.instruments[inst_mod_fullname]
             noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
 
+            # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+            kwargs_dataset = dico_kwargs[datasetname].copy()
+            t_dst = kwargs_dataset.pop("t")
+            kwargs_dataset.pop("data")
+            kwargs_dataset.pop("data_err")
+
+            # Remove GP model
+            if remove_GP:
+                model_dst, model_wGP_dst, t_dst = et.compute_model(t_dst,
+                                                                   datasim_dbf.instrument_db[inst_mod_fullname]["whole"],
+                                                                   fitted_values, l_param_name,
+                                                                   datasim_kwargs=kwargs_dataset,
+                                                                   noise_model=noise_model,
+                                                                   model_instance=model_instance)
+                data_pl[datasetname] = data_pl[datasetname] - (model_wGP_dst - model_dst)
+
             # Get the datasims for the other planets
             l_datasim_db_docfunc_others = []
             for plnt in planets:
@@ -280,10 +298,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Compute and remove the other planet contribution
             for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
-                kwargs_dataset = dico_kwargs[datasetname].copy()
-                kwargs_dataset.pop("data_err")
-                kwargs_dataset.pop("data")
-                model, _, _ = et.compute_model(kwargs_dataset.pop("t"),
+                model, _, _ = et.compute_model(t_dst,
                                                datasim_db_docfunc_other,
                                                fitted_values, l_param_name,
                                                datasim_kwargs=kwargs_dataset,
@@ -354,7 +369,7 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
             et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["data"]["color"],
                                    alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
             if ii == 0:
-                rms_resi.append("{:.2f}".format(np.std(residual_pl[datasetname])))
+                rms_resi.append("{:.3f}".format(np.std(residual_pl[datasetname])))
                 filename_info = interpret_data_filename(datasetname)
                 if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
                     label_rms_resi_ii = filename_info["inst_name"]
@@ -377,21 +392,15 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
 if __name__ == "__main__":
     # Define the object name
-    obj_name = "TOI-175"
+    obj_name = "HD27969"
 
     # Define dataset names to be loaded
-    datasetnames = ["RV_TOI-175_HARPS_0", "RV_TOI-175_ESPRESSO_0"]
+    datasetnames = ["RV_HD27969_SOPHIEp_0", ]
 
-    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
-    plot_folder = join(chain_analysis_output_folder, "plots")
-    makedirs(plot_folder, exist_ok=True)
+    run_folder = getcwd()
+    output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = True
-    exploration_output_folder = join(getcwd(), "outputs/exploration")
-    exploration_pickle_folder = join(exploration_output_folder, "pickles")
-    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
-    chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
-    chain_analysis_plots_folder = join(chain_analysis_output_folder, "plots")
+    load_from_pickle = False
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -401,11 +410,11 @@ if __name__ == "__main__":
     if load_from_pickle:
         # recreate post_instance object
         post_instance = cpost.Posterior(object_name=obj_name)
-        post_instance.init_from_pickle(pickle_folder=exploration_pickle_folder)
+        post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
         l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=chain_analysis_pickle_folder)
+                                                                                        folder=output_folders["pickles_analyze"])
         fitted_values = fitted_values_dic["array"]
         l_param_name = fitted_values_dic["l_param"]
         planet_name = []
@@ -432,9 +441,14 @@ if __name__ == "__main__":
                     figsize=(2, 1), tight=True,
                     # dpi=200,
                     dpi=300,
-                    fig_param={"top": 0.97, "bottom": 0.04, "left": 0.08, 'x_ylabel_coord': -0.2, 'pad_data': (0.1, 0.1),
-                               "y_unit": r"$\ms$", "gs_from_sps_kw": {"wspace": 0.2}},
-                    pl_kwargs={"RV_TOI-175_HARPS_0": {"data": {"alpha": 0.3}}},
-                    type="A&Afw",
-                    save=join(chain_analysis_plots_folder, "custom_data_comp_RV.pdf")
+                    fig_param={"top": 0.95, "bottom": 0.08, "left": 0.15, 'x_ylabel_coord': -0.12,
+                               'pad_data': (0.1, 0.35),
+                               'pad_resi': (0.1, 0.1),
+                               "y_unit": r"$\kms$",
+                               # "gs_from_sps_kw": {"wspace": 0.2}
+                               },
+                    pl_kwargs={"RV_HD27969_SOPHIEp_0": {"data": {"alpha": 0.5}},
+                               },
+                    type="A&A",  # "A&Afw"
+                    save=join(output_folders["plots"], "custom_data_comp_RV.pdf")
                     )
