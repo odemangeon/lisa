@@ -253,6 +253,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
     ndim = chains.shape[-1]
     nwalker = chains.shape[0]
+
     fig, ax = subplots(nrows=ndim + 1, sharex=True, squeeze=True,
                        figsize=(plot_width, ndim * plot_height))
     l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
@@ -261,13 +262,26 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     lnprob_min = lnprobability[l_walker, ...].min()
     lnprob_max = lnprobability[l_walker, ...].max()
     for walker, burnin in zip(l_walker, l_burnin):
-        if lnprobability[walker, :].min() < 0:
-            ax[0].set_title("lnpost - lnpost.min() + 1 ")
-            line = ax[0].plot(lnprobability[walker, :] - lnprobability[walker, :].min() + 1, alpha=0.5)
+        min_log10 = np.sign(lnprobability.min()) * np.log10(abs(lnprobability.min()))
+        max_log10 = np.sign(lnprobability.max()) * np.log10(abs(lnprobability.max()))
+        if np.sign(max_log10) * np.sign(min_log10) < 0:
+            log_scale = False
+        elif (max_log10 - min_log10) > 1.5:
+            log_scale = True
         else:
-            ax[0].set_title("lnpost")
+            log_scale = False
+        if log_scale:
+            if np.sign(min_log10) > 0:
+                line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                ax[0].set_yscale("log")
+                ax[0].set_title("lnprobability")
+            else:
+                line = ax[0].plot(np.sign(lnprobability[walker, :]) * np.log10(abs(lnprobability[walker, :])), alpha=0.5)
+                lnprob_min, lnprob_max = (min_log10, max_log10)
+                ax[0].set_title("log10(lnprobability)")
+        else:
             line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
-        ax[0].set_yscale("log")
+            ax[0].set_title("lnprobability")
         ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
                      alpha=0.5)
     for i in range(ndim):
@@ -283,6 +297,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
                                  alpha=0.5)
     ax[ndim].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
+    return fig
 
 
 def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwargs={}, model_instance=None,
