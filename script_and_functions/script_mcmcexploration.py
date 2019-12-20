@@ -5,10 +5,9 @@ Script template to perform an MCMC exploration.
 
 @TODO:
 """
-# import sys
 from logging import DEBUG, INFO
 from math import ceil
-from os import getcwd, makedirs
+from os import getcwd
 from os.path import join
 
 from scipy.optimize import minimize
@@ -23,7 +22,7 @@ from emcee import EnsembleSampler
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.mylogger as ml
-
+from lisa.explore_analyze.misc import get_def_output_folders
 
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
@@ -34,16 +33,10 @@ transit_model = "batman"  # None will select the default model being batman
 parametrisation = "EXOFAST"  # None will select the default parametrisation which is EXOFAST for this model
 with_DeltaRV = True
 kwargs_post = {}
-data_folder = getcwd()  # Change if needed: Folder where the data are located
-run_folder = getcwd()  # Change if needed: Folder where the outputs will be put
-exploration_output_folder = join(getcwd(), "outputs/exploration")
-makedirs(exploration_output_folder, exist_ok=True)
-exploration_pickle_folder = join(exploration_output_folder, "pickles")
-makedirs(exploration_pickle_folder, exist_ok=True)
-dat_folder = join(exploration_output_folder, "dats")
-makedirs(dat_folder, exist_ok=True)
-chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
-chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
+
+data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
+run_folder = getcwd()
+output_folders = get_def_output_folders(run_folder=run_folder)
 
 # Pre-minimisation parameters
 do_preminimization = True
@@ -117,7 +110,7 @@ post_instance.get_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
 logger.info("14. Save posterior instance")
-post_instance.save_post_instance(pickle_folder=exploration_pickle_folder)
+post_instance.save_post_instance(pickle_folder=output_folders["pickles_explore"])
 
 logger.info("15. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
@@ -133,7 +126,7 @@ if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=chain_analysis_pickle_folder)
+                                                                                        folder=output_folders["pickles_analyze"])
     else:
         pass
     init_distrib = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
@@ -159,8 +152,8 @@ else:
 logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
-           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=dat_folder, l_param_name=l_param_name, logger=logger4emceerun)
-et.save_emceesampler(sampler, l_param_name, obj_name, folder=exploration_pickle_folder)
+           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=output_folders["dats"], l_param_name=l_param_name, logger=logger4emceerun)
+et.save_emceesampler(sampler, l_param_name, obj_name, folder=output_folders["pickles_explore"])
 
 chain = sampler.chain
 lnprobability = sampler.lnprobability
