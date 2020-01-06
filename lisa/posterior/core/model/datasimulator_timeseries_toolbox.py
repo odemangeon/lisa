@@ -158,7 +158,8 @@ def add_timeref_arguments(arguments, multi, arg_list, key_arglist, key_mand_kwar
             tref = None
         timeref_arg_name = timeref_name
         (arguments, timeref_arg
-         ) = add_nonparam_argument(arguments, timeref_name, arg_list, key_arglist, key_mand_kwargs,
-                                   key_opt_kwargs, ldict, add_to_ldict=add_to_ldict,
+         ) = add_nonparam_argument(arguments=arguments, new_arg_name=timeref_name, arg_list=arg_list,
+                                   key_arglist=key_arglist, key_mand_kwargs=key_mand_kwargs,
+                                   key_opt_kwargs=key_opt_kwargs, ldict=ldict, add_to_ldict=add_to_ldict,
                                    new_arg_value=tref)
     return arguments, timeref_arg_name, timeref_arg
