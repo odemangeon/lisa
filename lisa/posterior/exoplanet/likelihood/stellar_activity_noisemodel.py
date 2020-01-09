@@ -55,7 +55,7 @@ class StellarActNoiseModel(Core_Noise_Model):
             dict_datakwargs["data"].append(datakwargs["data"])
             dict_datakwargs["data_err"].append(datakwargs["data_err"])
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.lnlikelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
+        return gp.log_likelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
         """
 
     function_name = "lnlike"
