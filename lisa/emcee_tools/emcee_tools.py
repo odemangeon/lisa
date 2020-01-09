@@ -777,7 +777,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             idx_datasim = []
             for param_name in datasim_all.params_model:
                 idx_datasim.append(l_param_name.index(param_name))
-            model_all = datasim_all.function(param[idx_datasim])
+            model_all = datasim_all.function(param[idx_datasim], **datasim_kwargs)
             # Get the list of instrument models which have the same GP noise model that the Current
             # Dataset you try to model
             l_instmod_noisemod_cat = []
