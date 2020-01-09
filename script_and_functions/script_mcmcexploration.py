@@ -119,7 +119,7 @@ arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
 lnpriorfn = post_instance.lnpriors.dataset_db["all"].function
 lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
-sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn)
+sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn, kwargs=kwargs_post)
 
 logger.info("16. Create initial value")
 if load_from_pickle:
