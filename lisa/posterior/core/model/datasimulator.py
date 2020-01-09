@@ -105,9 +105,12 @@ class DatasimulatorCreator(object):
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
         return db
 
-    def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model, inst_cat,
-                                      inst_model_fullname=None, dataset=None):
+    def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model, mand_kwargs, opt_kwargs,
+                                      inst_cat, inst_model_fullname=None, dataset=None):
         """Return the datasimulator for a given instrument model.
+
+        WARNING/TODO eventually: For now *args, **kwargs of the datasim_alldatasets are passed to all the datasim function.
+        This might not be always desired.
 
         :param list_DatasimDocFunc l_datasim: List of DatasimDocFunc
         :parama list_list_int l_params_idx: List of list of indexes in the param array for each
@@ -123,6 +126,8 @@ class DatasimulatorCreator(object):
         return DatasimDocFunc(function=datasim_alldatasets,
                               params_model=params_model,
                               inst_cat=inst_cat,
+                              mand_kwargs=mand_kwargs,
+                              opt_kwargs=opt_kwargs,
                               include_dataset_kwarg=l_datasim[0].include_dataset_kwarg,
                               inst_model_fullname=inst_model_fullname,
                               dataset=dataset)
@@ -158,6 +163,8 @@ class DatasimulatorCreator(object):
         l_datsim = []
         l_params = []
         l_allparams = []
+        l_allmand_kwargs = []
+        l_allopt_kwargs = []
         l_params_idx = []
         inst_cats = []
         inst_model_fullnames = []
@@ -182,6 +189,10 @@ class DatasimulatorCreator(object):
             idx_par = []
             # For each parameter in the list of this function, ...
             l_params.append(l_datsim[-1].params_model)
+            # WARNING/TODO: This two lines are a quick and very dirty way to pass the mand and opt kwargs to the __datasim_alldatasets_creator
+            # and after the DatasimDocFunc init because if several functions use the same kwargs, it will then appear several times
+            l_allmand_kwargs.append(l_datsim[-1].mand_kwargs_list)
+            l_allopt_kwargs.append(l_datsim[-1].opt_kwargs_list)
             for par in l_datsim[-1].params_model:
                 # ... if the param is not in the list of all parameters already, add it
                 if par not in l_allparams:
@@ -202,8 +213,9 @@ class DatasimulatorCreator(object):
                                inst_model_fullnames, datasets))
 
         # Create the datasim_alldatasets
+        # This
         return self.__datasim_alldatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,
-                                                  params_model=l_allparams,
+                                                  params_model=l_allparams, mand_kwargs=str(l_allmand_kwargs), opt_kwargs=str(l_allopt_kwargs),
                                                   inst_cat=inst_cats,
                                                   inst_model_fullname=inst_model_fullnames,
                                                   dataset=datasets)
