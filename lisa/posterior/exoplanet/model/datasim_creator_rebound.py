@@ -665,6 +665,8 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     logger.debug("text of Rebound simulator function for {instmod_fullname}:\n{text_func}"
                  "".format(object=key_whole, instmod_fullname=inst_model_full_name,
                            text_func=text_def_func))
+    # with open("/Users/olivier/Softwares/Specific_Analysis/TOI-175/Dynam/supernova/datasim.py", "w+") as f:
+    #     f.write(text_def_func)
     exec(text_def_func, ldict)
     params_model = arg_list[key_whole][key_param]
     if len(arg_list[key_whole][key_mand_kwargs]) > 0:
