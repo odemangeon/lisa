@@ -308,7 +308,7 @@ if do_MComp:
 
         et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
                                datasim_dbf=post_instance.datasimulators,
-                               # datasim_kwargs=dict(tref_dyn=tref_dyn),
+                               datasim_kwargs=kwargs_datasim,
                                dataset_db=post_instance.dataset_db,
                                model_instance=post_instance.model,
                                oversamp=30, phasefold=True,
