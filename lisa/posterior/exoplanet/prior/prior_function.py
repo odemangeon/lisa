@@ -515,7 +515,7 @@ class Transitingprior(Core_JointPrior_Function):
             b = {aR} * {cosinc}
             if {text_comp}:
                 return -inf
-            elif abs{cosinc} > 1:
+            elif abs({cosinc}) > 1:
                 return -inf
             else:
                 return dico_logpdf['b'](b) + dico_logpdf['Rrat']({Rrat}) + dico_logpdf['aR']({aR})
