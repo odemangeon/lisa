@@ -90,6 +90,7 @@ sampling_corner = 10
 # Do model comparison
 do_MComp = True
 do_MComp_Folded = True
+oversamp_MComp = 30
 
 # Do compute secondary parameters
 do_SecParam = True
@@ -292,7 +293,7 @@ if do_MComp:
                            datasim_kwargs=kwargs_datasim,
                            dataset_db=post_instance.dataset_db,
                            model_instance=post_instance.model,
-                           oversamp=30)
+                           oversamp=oversamp_MComp)
 
     pl.savefig(join(output_folders["plots"], "data_comparison.pdf"))
     pl.close("all")
@@ -311,7 +312,7 @@ if do_MComp:
                                datasim_kwargs=kwargs_datasim,
                                dataset_db=post_instance.dataset_db,
                                model_instance=post_instance.model,
-                               oversamp=30, phasefold=True,
+                               oversamp=oversamp_MComp, phasefold=True,
                                phasefold_kwargs={"planets": list(periods.keys()),
                                                  "P": periods.values(),
                                                  "tc": tics.values()})
