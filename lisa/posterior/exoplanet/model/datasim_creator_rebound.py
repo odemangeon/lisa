@@ -85,6 +85,12 @@ time_ref_dyn = "{}_dyn".format(time_ref)
 ## String used for the time of step of the dynamical model
 deltat_dyn = "dt_dyn"
 
+## String used for the integrator of the dynamical model
+integrator_name = "integrator"
+
+## String used for the integrator of the dynamical model
+exact_finish_time_name = "exact_finish_time"
+
 ## String used for the numbre of threads for the flux computation
 nthreads = "nthreads"
 
@@ -512,7 +518,19 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     (arguments, deltadyn_arg
      ) = add_nonparam_argument(arguments=arguments, new_arg_name=deltat_dyn, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
                                key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
-                               def_arg_value=0.01)
+                               def_arg_value=1e-3)
+
+    # Add the integrator for rebound as argument
+    (arguments, integrator_arg
+     ) = add_nonparam_argument(arguments=arguments, new_arg_name=integrator_name, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               def_arg_value="'whfast'")
+
+    # Add the exact_finish_time for rebound as argument
+    (arguments, integrator_arg
+     ) = add_nonparam_argument(arguments=arguments, new_arg_name=exact_finish_time_name, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               def_arg_value=1)
 
     ## Create the template for the text of the rebound wrapper and add the rebound wrapper function
     ## to ldict
@@ -525,10 +543,11 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         returns_rebound_wrap += "rvs"
     text_rebound_wrap = """
         {{tab}}{returns} = rebound_wrap_r_z_vz({param_planets}, {M_star}, {timeref_dyn},
-        {{tab}}                                dt={dt_dyn}, lc_times={time_vec_lc},
+        {{tab}}                                dt={dt_dyn}, integrator={integrator}, exact_finish_time={exact_finish_time},
+        {{tab}}                                lc_times={time_vec_lc},
         {{tab}}                                rv_times={time_vec_rv})
         """.format(returns=returns_rebound_wrap, param_planets=param_planets_reb, M_star=M_star,
-                   timeref_dyn=time_ref_dyn, dt_dyn=deltat_dyn,
+                   timeref_dyn=time_ref_dyn, dt_dyn=deltat_dyn, integrator=integrator_name, exact_finish_time=exact_finish_time_name,
                    time_vec_lc="dico_times['{}']".format(LC_inst_cat),
                    time_vec_rv="dico_times['{}']".format(RV_inst_cat))
     text_rebound_wrap = dedent(text_rebound_wrap).format(tab=tab)
@@ -691,8 +710,8 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     return dico_docf
 
 
-def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersamp=1,
-                        exptime=exptime_Kp_lc, lc_times=None, rv_times=None):
+def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=1e-3, integrator="integrator", exact_finish_time=1,
+                        supersamp=1, exptime=exptime_Kp_lc, lc_times=None, rv_times=None):
     """Return the projected distance, z coordinate and/or radial velocities.
 
     :param Iterable param_planet: Planets parameters at the reference time (treference) in this
@@ -705,6 +724,7 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
     :param float treference: Time at which the parameters are given
     :param float dt: Time step for the integration [days]. Should be < 1/20 of shortest planetary
         orbit
+    :param string integrator: Integrator to use with rebound common integrators or integrator and ias15
     :param int supersamp: Super sampling factor to apply (>= 1)
     :param float exptime: Exposure time of the time vector, in the same unit than the other time
         values like dt [days].
@@ -731,7 +751,7 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
         else:
             ltimes = lc_times
         np_lc = len(lc_times)
-        lc_or_rv = [True for ii in range(np_lc)]
+        lc_or_rv = [True for ii in range(np_lc)]  # lc_or_rv indicate if a given time is used for lc: True or rv: False.
 
     # If simulated times for the radial velocity curve are required, ...
     if rv_times is not None:
@@ -763,7 +783,7 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
     # npoints = len(ltimes)
 
     sim = rebound.Simulation()
-    sim.integrator = 'whfast'  # 'ias15'
+    sim.integrator = integrator  # 'ias15', whfast
     sim.t = treference
     sim.units = ('d', 'AU', 'Msun')
     # sim.dt = stepdt # Sets the timestep (will change for adaptive integrators such as IAS15).
@@ -794,7 +814,10 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
         rvs = np.zeros((np_rv))
         ii_rv = 0
     for ii, time in enumerate(ltimes):
-        sim.integrate(time, exact_finish_time=1)
+        if sim.integrator in ["whfast", ]:
+            sim.integrate(time, exact_finish_time=exact_finish_time)
+        else:
+            sim.integrate(time)
         if lc_or_rv[ii]:
             for jj in range(0, nplanets):
                 rr[ii_lc, jj] = np.sqrt((particles[jj + 1].x - particles[0].x)**2 +
@@ -805,6 +828,14 @@ def rebound_wrap_r_z_vz(param_planet, stellar_mass, treference, dt=0.01, supersa
             rvs[ii_rv] = - particles[0].vz * au_meter / day_sec  # The minus sign is necessary because the z axis is oriented towards us.
             ii_rv += 1
 
+    # print(f"sim.integrator : {sim.integrator}")
+    # print(f"sim.dt : {sim.dt}")
+    # print(f"ltimes : {ltimes}")
+    # print(f"rvs : {rvs}")
+    # print(f"rvs : {rvs}")
+    # print(sim.status())
+    # print("end status")
+    # input()
     # separate rvs and flux
     # if lc_times is not None:
     #     mflux = _quadratic_ld(distance[:, 0] / rstar, rp[0], u[0], u[1], nthreads)
