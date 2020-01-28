@@ -65,10 +65,10 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
     __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
 
     ## List of available rv models, the 1st element is used as default
-    _rv_models = ["radvel", "ajplanet"]
+    _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models
 
     ## List of available lc models, the 1st element is used as default
-    _transit_models = ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"]
+    _transit_models = ["batman", ]  # ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"] Temporarily? remove pytransit from the available transit_models
 
     ## List of available limb-darkening models for each lc_models, the 1st element is used as
     ## default

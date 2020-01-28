@@ -9,7 +9,7 @@ from copy import deepcopy
 
 import math as mt
 
-from ajplanet import pl_rv_array
+#from ajplanet import pl_rv_array  # Temporarily remove ajplanet from the available rv_models
 from radvel.kepler import rv_drive
 
 
