@@ -6,7 +6,7 @@
 
 Rely on python3.6. Python package dependencies:
 - unittest
-- ajplanet
+- ajplanet*
 - matplotlib
 - astropy
 - scipy
@@ -15,12 +15,15 @@ Rely on python3.6. Python package dependencies:
 - batman
 - numpy
 - dill
-- pytransit
+- pytransit*
 - gzip
 - pandas
 - george
 - celerite
 - radvel
+- emcee=2.2.1
+- tqdm
+- PyAstronomy
 
 2. Clone the repository
 
