@@ -51,13 +51,11 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):  # GravGroupDyn_Par
     ## The available LD models are defined in GravGroup and I keep it like that
 
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
-                 dynamical_model=None, transit_model=None, parametrisation=None,
-                 stars=None, planets=None, run_folder=None):
+                 dynamical_model=None, transit_model=None, stars=None, planets=None, run_folder=None):
         """docstring GravGroupDyn init method."""
         super(GravGroupDyn, self).__init__(name=name, dataset_db=dataset_db, instmodel4dataset=instmodel4dataset,
                                            l_instmod_fullnames=l_instmod_fullnames,
                                            transit_model=transit_model, rv_model=None,
-                                           parametrisation=parametrisation,
                                            stars=stars, planets=planets, run_folder=run_folder)
         # if LC_inst_cat in self.dataset_db.inst_categories:
         #     self._produce_LC = True

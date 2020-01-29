@@ -195,11 +195,11 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             position = result[0]
             lnprob = result[1]
             if save_to_file:
-                with open(filename_chain, "a") as f:
+                with open(file_chain, "a") as f:
                     for k in range(position.shape[0]):
                         f.write("{:4d} {:s} {:>16.14g}\n".format(k, " ".join(["{:>16.14g}".format(xx) for xx in position[k]]), lnprob[k]))
                 acceptance_fraction = sampler.acceptance_fraction
-                with open(filename_acceptfrac, "w") as f:
+                with open(file_acceptfrac, "w") as f:
                     for k, acceptfrac in enumerate(acceptance_fraction):
                         f.write("{:4d} {:>15f}\n".format(k, acceptfrac))
             pbar.update(i - previous_i)
@@ -253,6 +253,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
     ndim = chains.shape[-1]
     nwalker = chains.shape[0]
+
     fig, ax = subplots(nrows=ndim + 1, sharex=True, squeeze=True,
                        figsize=(plot_width, ndim * plot_height))
     l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
@@ -261,8 +262,26 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     lnprob_min = lnprobability[l_walker, ...].min()
     lnprob_max = lnprobability[l_walker, ...].max()
     for walker, burnin in zip(l_walker, l_burnin):
-        ax[0].set_title("lnpost")
-        line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+        min_log10 = np.sign(lnprobability.min()) * np.log10(abs(lnprobability.min()))
+        max_log10 = np.sign(lnprobability.max()) * np.log10(abs(lnprobability.max()))
+        if np.sign(max_log10) * np.sign(min_log10) < 0:
+            log_scale = False
+        elif (max_log10 - min_log10) > 1.5:
+            log_scale = True
+        else:
+            log_scale = False
+        if log_scale:
+            if np.sign(min_log10) > 0:
+                line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                ax[0].set_yscale("log")
+                ax[0].set_title("lnprobability")
+            else:
+                line = ax[0].plot(np.sign(lnprobability[walker, :]) * np.log10(abs(lnprobability[walker, :])), alpha=0.5)
+                lnprob_min, lnprob_max = (min_log10, max_log10)
+                ax[0].set_title("log10(lnprobability)")
+        else:
+            line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+            ax[0].set_title("lnprobability")
         ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
                      alpha=0.5)
     for i in range(ndim):
@@ -278,6 +297,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
                                  alpha=0.5)
     ax[ndim].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
+    return fig
 
 
 def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwargs={}, model_instance=None,
@@ -757,7 +777,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             idx_datasim = []
             for param_name in datasim_all.params_model:
                 idx_datasim.append(l_param_name.index(param_name))
-            model_all = datasim_all.function(param[idx_datasim])
+            model_all = datasim_all.function(param[idx_datasim], **datasim_kwargs)
             # Get the list of instrument models which have the same GP noise model that the Current
             # Dataset you try to model
             l_instmod_noisemod_cat = []

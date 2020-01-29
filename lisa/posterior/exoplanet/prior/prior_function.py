@@ -5,7 +5,7 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array
+from numpy import pi, inf, ones, where, any, arange, nan, array, logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
@@ -515,6 +515,8 @@ class Transitingprior(Core_JointPrior_Function):
             b = {aR} * {cosinc}
             if {text_comp}:
                 return -inf
+            elif abs({cosinc}) > 1:
+                return -inf
             else:
                 return dico_logpdf['b'](b) + dico_logpdf['Rrat']({Rrat}) + dico_logpdf['aR']({aR})
         """
@@ -583,18 +585,20 @@ class Transitingprior(Core_JointPrior_Function):
             for hiddenparam_ref in self.hidden_param_refs:
                 if dico_pick[hiddenparam_ref]:
                     dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
-
+            # Check if cosinc is below 1
+            indexes_cosinc = where(dico_ravs["b"] / dico_ravs["Rrat"] > 1)[0]
             # Check if and where the condition is not satisfy.
             if self.transiting:
                 if self.allow_grazing:
-                    indexes = where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0]
+                    indexes_tr = where(dico_ravs["b"] > (1 + dico_ravs["Rrat"]))[0]
                 else:
-                    indexes = where(dico_ravs["b"] > (1 - dico_ravs["Rrat"]))[0]
+                    indexes_tr = where(dico_ravs["b"] > (1 - dico_ravs["Rrat"]))[0]
             else:
                 if self.allow_grazing:
-                    indexes = where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0]
+                    indexes_tr = where(dico_ravs["b"] < (1 - dico_ravs["Rrat"]))[0]
                 else:
-                    indexes = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
+                    indexes_tr = where(dico_ravs["b"] < (1 + dico_ravs["Rrat"]))[0]
+            indexes = array(list(set(list(indexes_cosinc) + list(indexes_tr))))
         # If you just ask one value, return just one value per parameter instead of an array with only one element.
         if nb_values == 1:
             for param, dico in self.hiddenparam_defs.items():
@@ -711,6 +715,8 @@ class TransitingRhoprior(Transitingprior):
             Rrat = array([{Rrat}])
             b = getaoverr(P, {rhostar}) * array([{cosinc}])
             if any({list_comp}):
+                return -inf
+            elif any(np.abs([{cosinc}]) > 1):
                 return -inf
             else:
                 return (dico_logpdf['rhostar']({rhostar}) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(nb_planet)]) +

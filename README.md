@@ -6,7 +6,7 @@
 
 Rely on python3.6. Python package dependencies:
 - unittest
-- ajplanet
+- ajplanet*
 - matplotlib
 - astropy
 - scipy
@@ -15,18 +15,21 @@ Rely on python3.6. Python package dependencies:
 - batman
 - numpy
 - dill
-- pytransit
+- pytransit*
 - gzip
 - pandas
 - george
 - celerite
 - radvel
+- emcee=2.2.1
+- tqdm
+- PyAstronomy
 
 2. Clone the repository
 
 3. Create the software parameters file:
 
-In lisa/source/ create a file called software_parameters.py which contains the following lines:
+In lisa/lisa/ create a file called software_parameters.py which contains the following lines:
 
 ```python3
 #!/usr/bin/python

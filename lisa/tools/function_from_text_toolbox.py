@@ -124,7 +124,6 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
     It should also be called after init_arguments since it uses its output.
-    If multi is True time_vec will be added, otherwise l_time_vec will be.
 
     :param str arguments: string giving the current text of arguments
     :param str new_arg_name: Str used to design the new argument

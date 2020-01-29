@@ -9,7 +9,7 @@ from copy import deepcopy
 from math import acos, degrees, sqrt
 
 from batman import TransitModel, TransitParams
-# from pytransit import MandelAgol
+# from pytransit import MandelAgol  # Temporarily? remove pytransit from the available rv_models
 
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets

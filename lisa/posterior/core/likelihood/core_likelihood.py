@@ -13,7 +13,7 @@ The objective of this module is to define the class LikelihoodCreator.
 """
 from logging import getLogger
 from collections import defaultdict  # , OrderedDict
-import numpy as np
+# import numpy as np
 # from copy import deepcopy
 
 from .manager_noise_model import Manager_NoiseModel
@@ -41,7 +41,10 @@ key_dtkwarg = "datakwargs"
 
 
 class LikelihoodCreator(object):
-    """docstring for LikelihoodCreator."""
+    """LikelihoodCreator is an Interface class for Core_Model.
+
+    It provides methods to create likelihood functions for a model.
+    """
 
     def __likelihood_creator(self, datasim, l_idx_param_dtsim, dico_noisemodel,
                              include_dataset=True):
@@ -233,7 +236,9 @@ class LikelihoodCreator(object):
     # But actually, I think that _create_lnlikelihood might be able to do this case too (To Be Checked)
     def create_lnlikelihoods(self, datasim_inst_db,
                              affectinstmodel4dataset=False, lock_db=False, pickleable=False):
-        """Return the likelihood for each instrument model used.
+        """Return the likelihood for each instrument model used (without dataset harcoded).
+
+        This function will create a lnlikelihood function for each datasimulator in datasim_inst_db.
 
         :param DatabaseInstLvlDataset datasim_inst_db: DatabaseInstLvlDataset which gives the
             datasim doc function for each instrument model used and each component in the object

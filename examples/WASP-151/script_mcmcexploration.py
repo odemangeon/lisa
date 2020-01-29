@@ -46,7 +46,7 @@ xtol_preminimization = 1e-12
 # emcee parameters
 nwalker_fact = 2.5
 nsteps_MCMC = 10000
-save_to_file = False
+save_to_file = True
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
@@ -119,7 +119,7 @@ arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
 lnpriorfn = post_instance.lnpriors.dataset_db["all"].function
 lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
-sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn, kwargs=kwargs_post)
+sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn)
 
 logger.info("16. Create initial value")
 if load_from_pickle:
