@@ -28,7 +28,8 @@ from pandas import read_table
 # import pprint
 
 from ..tools.miscellaneous import interpret_data_filename
-from ..tools.stats.loc_scale_estimator import mad
+# from ..tools.stats.loc_scale_estimator import mad
+import scipy.stats.median_absolute_deviation as mad
 from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
