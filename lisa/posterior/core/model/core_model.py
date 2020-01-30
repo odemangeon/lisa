@@ -634,13 +634,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         if paramfile_path is None:
             paramfile_path = {}
-        if (answer_overwrite is None) or isinstance(bool, answer_overwrite):
+        if (answer_overwrite is None) or isinstance(answer_overwrite, bool):
             def_answer_overwrite = answer_overwrite
             dict_answer_overwrite = {}
         else:
             dict_answer_overwrite = answer_overwrite
             def_answer_overwrite = dict_answer_overwrite.get("def", None)
-        if (answer_create is None) or isinstance(bool, answer_create):
+        if (answer_create is None) or isinstance(answer_create, bool):
             def_answer_create = answer_create
             dict_answer_create = {}
         else:
