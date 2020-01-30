@@ -631,21 +631,29 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
         :param dict_of_str paramfile_path: Dictionary giving the path of the specific parameter file
             you want for an instrument category. (key: inst_cat, value: path to the paramter file)
+        :param None/str/dict_of_None/str answer_overwrite: str should be 'y' or 'n. When it's a dictionary
+            keys are instrument categories and values are 'y' or 'n'.
+        :param None/str/dict_of_None/str answer_create: str should be 'y' or 'n. When it's a dictionary
+            keys are instrument categories and values are 'y' or 'n'.
         """
         if paramfile_path is None:
             paramfile_path = {}
-        if (answer_overwrite is None) or isinstance(bool, answer_overwrite):
+        if (answer_overwrite is None) or isinstance(answer_overwrite, str):
             def_answer_overwrite = answer_overwrite
             dict_answer_overwrite = {}
-        else:
+        elif isinstance(answer_overwrite, dict):
             dict_answer_overwrite = answer_overwrite
             def_answer_overwrite = dict_answer_overwrite.get("def", None)
-        if (answer_create is None) or isinstance(bool, answer_create):
+        else:
+            ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
+        if (answer_create is None) or isinstance(answer_create, str):
             def_answer_create = answer_create
             dict_answer_create = {}
-        else:
+        elif isinstance(answer_create, dict):
             dict_answer_create = answer_create
             def_answer_create = dict_answer_create.get("def", None)
+        else:
+            ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
         for inst_cat in self.instruments_categories:
             if self.handlers4instcatparamfile[inst_cat][create_key] is not None:
                 self.handlers4instcatparamfile[inst_cat][create_key](paramfile_path.get(inst_cat, None),

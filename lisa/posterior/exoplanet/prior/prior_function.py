@@ -5,7 +5,7 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, logical_or
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs  # logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
@@ -676,6 +676,7 @@ class TransitingRhoprior(Transitingprior):
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
+        ldict["abs"] = abs
         # Associate each parameter with value: a number of it's is fixed or a p[i] if it's free.
         dico_text_params = {}
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
@@ -716,7 +717,7 @@ class TransitingRhoprior(Transitingprior):
             b = getaoverr(P, {rhostar}) * array([{cosinc}])
             if any({list_comp}):
                 return -inf
-            elif any(np.abs([{cosinc}]) > 1):
+            elif any(abs([{cosinc}]) > 1):
                 return -inf
             else:
                 return (dico_logpdf['rhostar']({rhostar}) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(nb_planet)]) +

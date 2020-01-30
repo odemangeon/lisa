@@ -76,10 +76,13 @@ post_instance.define_model(category=model_category, name=obj_name, stars=1, plan
                            rv_model=rv_model, transit_model=transit_model)
 
 logger.info("5. Create inst_cat specific parameter file")
-post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
+if cluster:
+    post_instance.model.create_instcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
+else:
+    post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
-if len(post_instance.model.paramfile4instcat) > 0:
-    input("Modifiy the inst_cat specific paramerisation file: {}".format(post_instance.model.paramfile4instcat))
+    if len(post_instance.model.paramfile4instcat) > 0:
+        input("Modifiy the inst_cat specific paramerisation file: {}".format(post_instance.model.paramfile4instcat))
 
 logger.info("6. Load inst_cat specific parameter file")
 post_instance.model.load_instcat_paramfile()
@@ -88,7 +91,12 @@ logger.info("7. Set parametrisation of the model")
 post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV)
 
 logger.info("8. Create and modify the paramerisation file")
-post_instance.model.create_parameter_file("param_file.py")
+if cluster:
+    post_instance.model.create_parameter_file("param_file.py", answer_overwrite="n", answer_create=None)
+else:
+    post_instance.model.create_parameter_file("param_file.py")
+
+    input("Modifiy the paramerisation file")
 
 input("Modifiy the paramerisation file")
 
