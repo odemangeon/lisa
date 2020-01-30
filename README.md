@@ -24,6 +24,7 @@ Rely on python3.6. Python package dependencies:
 - emcee=2.2.1
 - tqdm
 - PyAstronomy
+- statsmodel
 
 2. Clone the repository
 
