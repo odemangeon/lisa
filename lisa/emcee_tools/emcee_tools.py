@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, newaxis, concatenate, std
+from numpy import nanpercentile, newaxis, concatenate, std
 from numbers import Number
 from collections import Iterable
 
