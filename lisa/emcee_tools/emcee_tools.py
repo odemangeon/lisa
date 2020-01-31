@@ -1207,8 +1207,8 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     """
     logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
                 "".format(quantile=quantile, sigma=sig_fact))
-    percentile_acceptance_frac = percentile(acceptance_fraction, quantile)
-    mad_acceptance_frac = mad(acceptance_fraction)
+    percentile_acceptance_frac = nanpercentile(acceptance_fraction, quantile)
+    mad_acceptance_frac = mad(acceptance_fraction, axis=None, nan_policy="omit")
     if verbose == 1:
         logger.info("Acceptance fraction of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(acceptance_fraction, quantile, percentile_acceptance_frac,
@@ -1237,9 +1237,9 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} \%;"
                 "reference quantile across walkers = {quantile} \%; sigma_clip at {sigma} sigma"
                 "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
-    walkers_percentile_lnposterior = percentile(lnprobability, quantile_walker, axis=1)
-    percentile_lnposterior = percentile(walkers_percentile_lnposterior, quantile)
-    mad_lnposterior = mad(walkers_percentile_lnposterior)
+    walkers_percentile_lnposterior = nanpercentile(lnprobability, quantile_walker, axis=1)
+    percentile_lnposterior = nanpercentile(walkers_percentile_lnposterior, quantile)
+    mad_lnposterior = mad(walkers_percentile_lnposterior, axis=None, nan_policy="omit")
     if verbose == 1:
         logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
@@ -1358,7 +1358,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     logger.info("Median value for each parameter (over all specified walkers) in the last portion of"
                 " the chains: {}".format(l_med_last))
-    l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    l_mad_last = [mad(chains[l_walker, last_start_step:, dim], axis=None, nan_policy="omit") for dim in range(ndim)]
     l_mad_last_is0 = [mad_dim == 0.0 for mad_dim in l_mad_last]
     if any(l_mad_last_is0):
         for dim in np.where(l_mad_last_is0)[0]:
@@ -1382,7 +1382,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
         for i, walker in enumerate(l_walker):
             for j, first_start in enumerate(first_start_steps):
                 med_first = median(chains[walker, first_start:(first_start + first_length), dim])
-                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim])
+                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim], axis=None, nan_policy="omit")
                 # Compute the zscore, but if the dispersion of the first part is too big compared to
                 # the last part, I don't consider the first part as converge what the zscore.
                 if mad_first < (5 * mad_last):
