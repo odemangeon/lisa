@@ -98,8 +98,6 @@ else:
 
     input("Modifiy the paramerisation file")
 
-input("Modifiy the paramerisation file")
-
 logger.info("9. Load the paramerisation file")
 post_instance.model.load_parameter_file()
 
