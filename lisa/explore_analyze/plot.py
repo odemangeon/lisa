@@ -1,5 +1,5 @@
 from matplotlib.pyplot import subplots
-from numpy import sign, log10, logspace
+from numpy import sign, log10, logspace, isfinite
 
 
 def hist_lnprob(lnprobability, n_bins=None, ax=None):
@@ -7,8 +7,11 @@ def hist_lnprob(lnprobability, n_bins=None, ax=None):
     """
     if ax is None:
         fig, ax = subplots()
-    min_log10 = sign(lnprobability.min()) * log10(abs(lnprobability.min()))
-    max_log10 = sign(lnprobability.max()) * log10(abs(lnprobability.max()))
+    lnprobability_plot = lnprobability.copy()
+    # Remove non finite values that would make the plot crash.
+    lnprobability_plot = lnprobability_plot[isfinite(lnprobability_plot)]
+    min_log10 = sign(lnprobability_plot.min()) * log10(abs(lnprobability_plot.min()))
+    max_log10 = sign(lnprobability_plot.max()) * log10(abs(lnprobability_plot.max()))
     if sign(max_log10) * sign(min_log10) < 0:
         log_scale = False
         if (max_log10 - min_log10) > 1:
@@ -29,13 +32,13 @@ def hist_lnprob(lnprobability, n_bins=None, ax=None):
                 bins = - logspace(abs(max_log10), abs(min_log10), n_bins)[::-1]
     if log_scale:
         if sign(min_log10) > 0:
-            ax.hist(lnprobability, bins=bins)
+            ax.hist(lnprobability_plot, bins=bins)
             ax.set_xscale("log")
-            ax.set_xlabel("lnprobability")
+            ax.set_xlabel("lnprobability_plot")
         else:
-            ax.hist(sign(lnprobability) * log10(abs(lnprobability)), bins=sign(bins) * log10(abs(bins)))
-            ax.set_xlabel("log10(lnprobability)")
+            ax.hist(sign(lnprobability_plot) * log10(abs(lnprobability_plot)), bins=sign(bins) * log10(abs(bins)))
+            ax.set_xlabel("log10(lnprobability_plot)")
     else:
-        ax.hist(lnprobability, bins=bins)
-        ax.set_xlabel("lnprobability")
+        ax.hist(lnprobability_plot, bins=bins)
+        ax.set_xlabel("lnprobability_plot")
     return ax
