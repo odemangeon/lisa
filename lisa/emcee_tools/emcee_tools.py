@@ -7,7 +7,7 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger, INFO
-from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
+from matplotlib.pyplot import subplots, figure, Subplot, Axes, savefig  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
 from numpy import nanpercentile, newaxis, concatenate, std
@@ -37,7 +37,7 @@ from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from ..posterior.exoplanet.model.gravgroup import ext_plonly
-# from ..posterior.core.posterior import alldtst_key
+from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
 
@@ -1198,12 +1198,20 @@ def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps
     return axes_planets
 
 
-def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):
-    """Return selected walker based on the acceptance fraction.
+def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1, plot=False):
+    """Return selected walkers based on the acceptance fraction.
+
+    The walkers are selected if:
+    accept_fract_walker > (quantile_value - sig_fact * MAD(acceptance_fraction))
 
     :param np.array acceptance_fraction: Value of the acceptance fraction for each walker.
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
+    :param float quantile: quantile that will be used as value for the acceptance fraction selection
     :param int verbose: if 1 speaks otherwise not
+    :param bool plot: If True, produces an histogram of the acceptance fractions and show the quantile
+        value and the threshold.
+    :return list_of_int l_selected_walker: list of selected walkers
+    :return int nb_rejected: Number of rejected walkers
     """
     logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
                 "".format(quantile=quantile, sigma=sig_fact))
@@ -1213,8 +1221,21 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
         logger.info("Acceptance fraction of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(acceptance_fraction, quantile, percentile_acceptance_frac,
                               mad_acceptance_frac))
-    l_selected_walker = where(acceptance_fraction > (percentile_acceptance_frac -
-                                                     sig_fact * mad_acceptance_frac))[0]
+    threshold = percentile_acceptance_frac - sig_fact * mad_acceptance_frac
+    l_selected_walker = where(acceptance_fraction > threshold)[0]
+    if plot:
+        fig, ax = subplots()
+        ax.hist(acceptance_fraction * 100, bins="auto")
+        ylims = ax.get_ylim()
+        ax.vlines(percentile_acceptance_frac * 100, *ylims, color="k", linestyle="dashed",
+                  label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}")
+        ax.vlines(threshold * 100, *ylims, color="r",
+                  label=f"threshold = {(threshold * 100):.2f}")
+        ax.set_ylim(ylims)
+        ax.set_xlabel("Acceptance fraction [%]")
+        ax.set_ylabel("Counts")
+        ax.set_title(f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %")
+        ax.legend()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected,
@@ -1222,7 +1243,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     return l_selected_walker, nb_rejected
 
 
-def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1):
+def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1, plot=False):
     """Return selected walker based on the acceptance fraction.
 
     :param np.array lnprobability: Values of the lnprobability taken by each walker at each iteration
@@ -1231,6 +1252,8 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :param float quantile_walker: Quantile used to assert the lnprobability for each walker. 50 is
         the meadian, 100 is the highest lnprobability.
     :param int verbose: if 1 speaks otherwise not
+    :param bool plot: If True, produces an histogram of the acceptance fractions and show the quantile
+        value and the threshold.
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
@@ -1244,7 +1267,27 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
         logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
                               mad_lnposterior))
-    l_selected_walker = where(walkers_percentile_lnposterior > (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
+    threshold = percentile_lnposterior - (sig_fact * mad_lnposterior)
+    if plot:
+        fig, ax = subplots()
+        ax, did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax)
+        ylims = ax.get_ylim()
+        label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
+        label_thresh = f"threshold = {threshold:.2f}"
+        if did_log10:
+            ax.vlines(np.log10(percentile_lnposterior), *ylims, color="k", linestyle="dashed",
+                      label=label_perc)
+            ax.vlines(np.log10(threshold), *ylims, color="r",
+                      label=label_thresh)
+        else:
+            ax.vlines(percentile_lnposterior, *ylims, color="k", linestyle="dashed",
+                      label=label_perc)
+            ax.vlines(threshold, *ylims, color="r",
+                      label=label_thresh)
+        ax.set_ylim(ylims)
+        ax.set_title(f"Histogram of the lnposetrior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f} %")
+        ax.legend()
+    l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
