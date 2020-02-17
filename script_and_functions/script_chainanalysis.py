@@ -160,7 +160,11 @@ if do_AFS:
     logger.info("2. Select walkers with acceptance_fraction and plot lnpost histogram")
     l_walker_AFS, _ = et.acceptancefraction_selection(acceptance_fraction, sig_fact=sig_fact_AFS, quantile=quantile_AFS,
                                                       verbose=verbose_AFS, plot=plot_hist_AF)
-    # l_walker_acceptfrac = np.arange(nwalker)
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "hist_accept_frac.pdf"))
+    else:
+        pl.show()
+    pl.close("all")
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_AFS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], "traces_accfrac_select.pdf"))
@@ -186,7 +190,11 @@ if do_LPS:
     l_walker_LPS, _ = et.lnposterior_selection(lnprobability, sig_fact=sig_fact_LPS, quantile=quantile_LPS,
                                                quantile_walker=quantile_walker_LPS, verbose=verbose_LPS,
                                                plot=plot_hist_Post)
-    # l_walker_lnpost = np.arange(nwalker)
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "hist_lnpost_select.pdf"))
+    else:
+        pl.show()
+    pl.close("all")
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_LPS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], "traces_lnpost_select.pdf"))
