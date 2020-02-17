@@ -325,7 +325,7 @@ if do_bestfit:
     df_fittedval = pd.DataFrame(index=l_param_chainI, data={'value': fitted_values, 'sigma-': sigma_m,
                                                             'sigma+': sigma_p})
 
-    if if save_results_bestfit:
+    if save_results_bestfit:
         et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
                                df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
