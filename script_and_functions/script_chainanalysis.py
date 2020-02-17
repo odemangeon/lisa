@@ -148,7 +148,7 @@ if do_RP:
 
     if do_hist:
         lnprob_val = lnprobability[:, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the RAW lnprobability")
         if save_plots:
             pl.savefig(join(output_folders["plots"], "lnpost_hist_raw.pdf"))
@@ -170,7 +170,7 @@ if do_AFS:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_AFS, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low acceptance chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], "lnpost_hist_accefrac_select.pdf"))
@@ -196,7 +196,7 @@ if do_LPS:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_LPS, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], "lnpost_hist_lnpost_select.pdf"))
@@ -222,7 +222,7 @@ if do_AFSLPSP:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], "lnpost_hist_accfrac&lnpost_select.pdf"))
@@ -292,7 +292,7 @@ if do_GS:
     if do_hist:
         lnprob_val = et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_conv,
                                             l_burnin=l_burnin)
-        ax = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
         if save_plots:
             pl.savefig(join(output_folders["plots"], "lnpost_hist_geweke_select.pdf"))
