@@ -43,6 +43,9 @@ star_kwargs = {"M": {"value": 1.077,
 
 output_folders = get_def_output_folders(run_folder=getcwd())
 
+# Save plots ?
+save_plots = True
+
 # Histograms Parameters
 hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
 n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
@@ -56,6 +59,7 @@ do_AFS = True
 sig_fact_AFS = 2
 quantile_AFS = 75
 verbose_AFS = 1
+plot_hist_AF = True
 
 # Ln Posterior selection
 do_LPS = True
@@ -63,6 +67,7 @@ sig_fact_LPS = 2
 quantile_LPS = 75
 quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
 verbose_LPS = 1
+plot_hist_Post = True
 
 # Chains and hist plots after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
@@ -78,10 +83,12 @@ min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in ea
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
 interval_perc_GS = 50  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
+do_geweke_plot = True
 
 # Determine best fit values and error bars
 do_bestfit = True
 method_bestfit = "median"
+save_results_bestfit = True
 
 # Do Corner plot
 do_corner = True
@@ -96,6 +103,7 @@ oversamp_MComp = 30
 do_SecParam = True
 sampling_corner_sec = 100
 units = {"K": "kms"}
+save_results_bestfit_secpar = True
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
@@ -127,30 +135,42 @@ chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     et.plot_chains(chain, lnprobability, l_param_name)
-    pl.savefig(join(output_folders["plots"], "traces_raw.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_raw.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_hist:
         lnprob_val = lnprobability[:, int(nstep * (1 - hist_perc / 100)):].flatten()
         ax = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the RAW lnprobability")
-        pl.savefig(join(output_folders["plots"], "lnpost_hist_raw.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "lnpost_hist_raw.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 
 if do_AFS:
     logger.info("2. Select walkers with acceptance_fraction and plot lnpost histogram")
     l_walker_AFS, _ = et.acceptancefraction_selection(acceptance_fraction, sig_fact=sig_fact_AFS, quantile=quantile_AFS,
-                                                      verbose=verbose_AFS)
+                                                      verbose=verbose_AFS, plot=plot_hist_AF)
     # l_walker_acceptfrac = np.arange(nwalker)
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_AFS)
-    pl.savefig(join(output_folders["plots"], "traces_accfrac_select.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_accfrac_select.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_AFS, int(nstep * (1 - hist_perc / 100)):].flatten()
         ax = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low acceptance chains")
-        pl.savefig(join(output_folders["plots"], "lnpost_hist_accefrac_select.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "lnpost_hist_accefrac_select.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 else:
     l_walker_AFS = np.arange(nwalker)
@@ -159,17 +179,24 @@ else:
 if do_LPS:
     logger.info("3. Select walkers with ln posterior probability and plot lnpost histogram")
     l_walker_LPS, _ = et.lnposterior_selection(lnprobability, sig_fact=sig_fact_LPS, quantile=quantile_LPS,
-                                               quantile_walker=quantile_walker_LPS, verbose=verbose_LPS)
+                                               quantile_walker=quantile_walker_LPS, verbose=verbose_LPS,
+                                               plot=plot_hist_Post)
     # l_walker_lnpost = np.arange(nwalker)
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_LPS)
-    pl.savefig(join(output_folders["plots"], "traces_lnpost_select.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_lnpost_select.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_LPS, int(nstep * (1 - hist_perc / 100)):].flatten()
         ax = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior chains")
-        pl.savefig(join(output_folders["plots"], "lnpost_hist_lnpost_select.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "lnpost_hist_lnpost_select.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 else:
     l_walker_LPS = np.arange(nwalker)
@@ -182,14 +209,20 @@ if do_AFSLPSP:
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker)
-    pl.savefig(join(output_folders["plots"], "traces_accfrac&lnpost_select.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_accfrac&lnpost_select.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_hist:
         lnprob_val = lnprobability[l_walker, int(nstep * (1 - hist_perc / 100)):].flatten()
         ax = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains")
-        pl.savefig(join(output_folders["plots"], "lnpost_hist_accfrac&lnpost_select.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "lnpost_hist_accfrac&lnpost_select.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 
 if do_GS:
@@ -234,10 +267,21 @@ if do_GS:
                                               intervals=intervals, l_walker=l_walker)
     l_burnin, l_walker_conv = et.geweke_selection(zscores, first_steps=l_first_i_step, geweke_thres=geweke_thres,
                                                   l_walker=l_walker)
+    if do_geweke_plot:
+        et.geweke_plot(zscores, first_steps=l_first_i_step, l_param_name=l_param_chainI, geweke_thres=geweke_thres,
+                       plot_height=2, plot_width=8)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "geweke_plot.pdf"))
+        else:
+            pl.show()
+        pl.close("all")
 
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
                    l_burnin=l_burnin)
-    pl.savefig(join(output_folders["plots"], "traces_geweke_select.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_geweke_select.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_hist:
@@ -245,13 +289,18 @@ if do_GS:
                                             l_burnin=l_burnin)
         ax = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
-        pl.savefig(join(output_folders["plots"], "lnpost_hist_geweke_select.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "lnpost_hist_geweke_select.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 
     et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
                    l_burnin=l_burnin, suppress_burnin=True)
-
-    pl.savefig(join(output_folders["plots"], "traces_geweke_select_burnsupress.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_geweke_select_burnsupress.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 else:
     l_walker_conv = l_walker
@@ -271,18 +320,21 @@ if do_bestfit:
     df_fittedval = pd.DataFrame(index=l_param_chainI, data={'value': fitted_values, 'sigma-': sigma_m,
                                                             'sigma+': sigma_p})
 
-    et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
-                           df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
+    if if save_results_bestfit:
+        et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+                               df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
-    et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table.tex".format(obj_name)), df_fittedval, obj_name)
+        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table.tex".format(obj_name)), df_fittedval, obj_name)
 
 
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_conv, l_burnin=l_burnin)[::sampling_corner, :],
            labels=l_param_chainI, truths=fitted_values)
-
-    pl.savefig(join(output_folders["plots"], "corner.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "corner.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
 
@@ -294,8 +346,10 @@ if do_MComp:
                            dataset_db=post_instance.dataset_db,
                            model_instance=post_instance.model,
                            oversamp=oversamp_MComp)
-
-    pl.savefig(join(output_folders["plots"], "data_comparison.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "data_comparison.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     if do_MComp_Folded:
@@ -316,8 +370,10 @@ if do_MComp:
                                phasefold_kwargs={"planets": list(periods.keys()),
                                                  "P": periods.values(),
                                                  "tc": tics.values()})
-
-        pl.savefig(join(output_folders["plots"], "data_comparison_pholded.pdf"))
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], "data_comparison_pholded.pdf"))
+        else:
+            pl.show()
         pl.close("all")
 
 if do_SecParam:
@@ -328,12 +384,18 @@ if do_SecParam:
                                                           )
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
-    pl.savefig(join(output_folders["plots"], "traces_secondary_raw.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_secondary_raw.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     logger.info("Plot geweke select traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_name_sec, l_walker=l_walker_conv, l_burnin=l_burnin)
-    pl.savefig(join(output_folders["plots"], "traces_secondary_geweke_select.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "traces_secondary_geweke_select.pdf"))
+    else:
+        pl.show()
     pl.close("all")
 
     logger.info("Determine best fit values and error bars for secondary parameters")
@@ -351,15 +413,19 @@ if do_SecParam:
                                                                'sigma+': sigma_p_sec})])
     df_fittedval = df_fittedval[~df_fittedval.index.duplicated(keep='last')]
 
-    et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
-                           fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
-                           df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
+    if save_results_bestfit_secpar:
+        et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+                               fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
+                               df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
-    et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary.tex".format(obj_name)), df_fittedval, obj_name)
+        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary.tex".format(obj_name)), df_fittedval, obj_name)
 
     logger.info("Do correlation plot for secondary free parameters")
     # In this case there is nan values in the D14 and D23 chains and it makes corner crash
     corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_conv, l_burnin=l_burnin)[::sampling_corner_sec, :],
            labels=l_param_name_sec, truths=fitted_values_sec)
-    pl.savefig(join(output_folders["plots"], "corner_sec.pdf"))
+    if save_plots:
+        pl.savefig(join(output_folders["plots"], "corner_sec.pdf"))
+    else:
+        pl.show()
     pl.close("all")
