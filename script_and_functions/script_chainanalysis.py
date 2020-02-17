@@ -43,6 +43,11 @@ star_kwargs = {"M": {"value": 1.077,
 
 output_folders = get_def_output_folders(run_folder=getcwd())
 
+# At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
+# in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
+# load_from_pickle to True
+load_from_pickle = True
+
 # Save plots ?
 save_plots = True
 
