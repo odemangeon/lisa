@@ -7,7 +7,7 @@ The objective of this module is to provide a toolbox for the exploitation and vi
 results.
 """
 from logging import getLogger, INFO
-from matplotlib.pyplot import subplots, figure, Subplot, Axes, savefig  # , figure, plot, show
+from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
 from numpy import nanpercentile, newaxis, concatenate, std
@@ -1224,18 +1224,31 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     threshold = percentile_acceptance_frac - sig_fact * mad_acceptance_frac
     l_selected_walker = where(acceptance_fraction > threshold)[0]
     if plot:
-        fig, ax = subplots()
-        ax.hist(acceptance_fraction * 100, bins="auto")
-        ylims = ax.get_ylim()
-        ax.vlines(percentile_acceptance_frac * 100, *ylims, color="k", linestyle="dashed",
-                  label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}")
-        ax.vlines(threshold * 100, *ylims, color="r",
-                  label=f"threshold = {(threshold * 100):.2f}")
-        ax.set_ylim(ylims)
-        ax.set_xlabel("Acceptance fraction [%]")
-        ax.set_ylabel("Counts")
-        ax.set_title(f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %")
-        ax.legend()
+        # Histogram
+        fig, ax = subplots(nrows=2)
+        ax[0].hist(acceptance_fraction * 100, bins="auto")
+        ylims = ax[0].get_ylim()
+        ax[0].vlines(percentile_acceptance_frac * 100, *ylims, color="k", linestyle="dashed",
+                     label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}")
+        ax[0].vlines(threshold * 100, *ylims, color="r", label=f"threshold ({sig_fact} sigma) = {(threshold * 100):.2f}")
+        ax[0].set_ylim(ylims)
+        ax[0].set_xlabel("Acceptance fraction [%]")
+        ax[0].set_ylabel("Counts")
+        ax[0].set_title(f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %")
+        ax[0].legend()
+        # Cumulative histogram
+        ax[1].hist(acceptance_fraction * 100, bins="auto", cumulative=True, density=True)
+        xlims = ax[1].get_xlim()
+        ylims = ax[1].get_ylim()
+        ax[1].hlines(quantile / 100, xlims[0], percentile_acceptance_frac * 100, color="k", linestyle="dashed")
+        ax[1].vlines(percentile_acceptance_frac * 100, ylims[0], quantile / 100, color="k", linestyle="dashed")
+        ax[1].vlines(threshold * 100, *ylims, color="r")
+        ax[1].set_ylim(ylims)
+        ax[1].set_xlim(xlims)
+        ax[1].set_xlabel("Acceptance fraction [%]")
+        ax[1].set_ylabel("CDF")
+        ax[1].set_title(f"Cumulative histogram of the acceptance fraction (normalized)")
+        fig.tight_layout()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected,
@@ -1269,24 +1282,43 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
                               mad_lnposterior))
     threshold = percentile_lnposterior - (sig_fact * mad_lnposterior)
     if plot:
-        fig, ax = subplots()
-        ax, did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax)
-        ylims = ax.get_ylim()
+        # Histogram
+        fig, ax = subplots(nrows=2)
+        ax[0], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[0])
+        ylims = ax[0].get_ylim()
+        label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
+        label_thresh = f"threshold ({sig_fact} sigma) = {threshold:.2f}"
+        if did_log10:
+            ax[0].vlines(np.log10(percentile_lnposterior), *ylims, color="k", linestyle="dashed",
+                         label=label_perc)
+            ax[0].vlines(np.log10(threshold), *ylims, color="r", label=label_thresh)
+        else:
+            ax[0].vlines(percentile_lnposterior, *ylims, color="k", linestyle="dashed",
+                         label=label_perc)
+            ax[0].vlines(threshold, *ylims, color="r", label=label_thresh)
+        ax[0].set_ylim(ylims)
+        ax[0].set_ylabel("Counts")
+        ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}")
+        ax[0].legend()
+        # Cumulative histogram
+        ax[1], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
+        ylims = ax[1].get_ylim()
+        xlims = ax[1].get_xlim()
         label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
         label_thresh = f"threshold = {threshold:.2f}"
         if did_log10:
-            ax.vlines(np.log10(percentile_lnposterior), *ylims, color="k", linestyle="dashed",
-                      label=label_perc)
-            ax.vlines(np.log10(threshold), *ylims, color="r",
-                      label=label_thresh)
+            ax[1].hlines(quantile / 100, xlims[0], np.log10(percentile_lnposterior), color="k", linestyle="dashed")
+            ax[1].vlines(np.log10(percentile_lnposterior), ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].vlines(np.log10(threshold), *ylims, color="r")
         else:
-            ax.vlines(percentile_lnposterior, *ylims, color="k", linestyle="dashed",
-                      label=label_perc)
-            ax.vlines(threshold, *ylims, color="r",
-                      label=label_thresh)
-        ax.set_ylim(ylims)
-        ax.set_title(f"Histogram of the lnposetrior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f} %")
-        ax.legend()
+            ax[1].hlines(quantile / 100, xlims[0], percentile_lnposterior, color="k", linestyle="dashed")
+            ax[1].vlines(percentile_lnposterior, ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].vlines(threshold, *ylims, color="r")
+        ax[1].set_ylim(ylims)
+        ax[1].set_xlim(xlims)
+        ax[1].set_ylabel("CDF")
+        ax[1].set_title(f"Cumulative histogram of the lnposterior fraction (normalized)")
+        fig.tight_layout()
     l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
