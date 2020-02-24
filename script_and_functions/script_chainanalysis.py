@@ -108,12 +108,8 @@ oversamp_MComp = 30
 do_SecParam = True
 sampling_corner_sec = 100
 units = {"K": "kms"}
+omega_0to360 = True
 save_results_bestfit_secpar = True
-
-# At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
-# in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
-# load_from_pickle to True
-load_from_pickle = True
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -395,6 +391,13 @@ if do_SecParam:
                                                           star_kwargs=star_kwargs,
                                                           units=units
                                                           )
+    if omega_0to360:
+        # Change the range of omega from -180 to 180 to 0 to 360, because omega seems to be centered around 180.
+        mask = np.zeros_like(chainIsec).astype(bool)
+        for plnt in list(periods.keys()):
+            mask[:, :, chainIsec.paramname_idx[f"{obj_name}_{plnt}_omega"]] = (chainIsec[:, :, f"{obj_name}_{plnt}_omega"] < 0)
+            chainIsec[mask] = chainIsec[mask] + 360
+
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
     if save_plots:
