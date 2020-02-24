@@ -48,7 +48,7 @@ class ChainsInterpret(np.ndarray):
                     ll = list(indexing[:-1])
                     ll.append([self.paramname_idx[parname] for parname in indexing[-1]])
                     indexing = list(ll)
-        return super(ChainsInterpret, self).__getitem__(indexing)
+        return super(ChainsInterpret, self).__getitem__(tuple(indexing))
 
     @property
     def paramname_idx(self):
