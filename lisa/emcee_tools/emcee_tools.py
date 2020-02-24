@@ -1343,7 +1343,7 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     elif method == "MAP":
         if (l_walker is not None) or (l_burnin is not None):
             logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
-        walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
+        walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         res = array([chainI[walker, it, dim] for dim in range(ndim)])
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
