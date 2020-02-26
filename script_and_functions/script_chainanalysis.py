@@ -47,9 +47,11 @@ output_folders = get_def_output_folders(run_folder=getcwd())
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
 load_from_pickle = True
+extension_exploration = ""
 
 # Save plots ?
 save_plots = True
+extension_outputs = ""
 
 # Histograms Parameters
 hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
@@ -123,7 +125,7 @@ if load_from_pickle:
     post_instance = cpost.Posterior(object_name=obj_name)
     post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
     l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
-    chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name,
+    chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
                                                                                    folder=output_folders["pickles_explore"])
     print("l_param_name from posterior:\n{}".format(l_param_name_bis))
     print("l_param_name from pickle:\n{}".format(l_param_name))
@@ -330,10 +332,11 @@ if do_bestfit:
                                                             'sigma+': sigma_p})
 
     if save_results_bestfit:
-        et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+        et.save_chain_analysis(obj_name, extension_analysis=extension_outputs, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
                                df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
-        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table.tex".format(obj_name)), df_fittedval, obj_name)
+        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table{}.tex".format(obj_name, extension_outputs)),
+                             df_fittedval, obj_name)
 
 
 if do_corner:
@@ -430,11 +433,12 @@ if do_SecParam:
     df_fittedval = df_fittedval[~df_fittedval.index.duplicated(keep='last')]
 
     if save_results_bestfit_secpar:
-        et.save_chain_analysis(obj_name, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
+        et.save_chain_analysis(obj_name, extension_analysis=extension_outputs, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
                                fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
                                df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
-        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary.tex".format(obj_name)), df_fittedval, obj_name)
+        et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary{}.tex".format(obj_name, extension_outputs)),
+                             df_fittedval, obj_name)
 
     logger.info("Do correlation plot for secondary free parameters")
     # In this case there is nan values in the D14 and D23 chains and it makes corner crash

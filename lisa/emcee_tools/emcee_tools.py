@@ -1560,13 +1560,13 @@ def write_latex_table(filename, df_fitval, obj_name=None):
         f.write("\\end{table}\n")
 
 
-extension_pickle = {"chain": "_chain.pk",
-                    "lnpost": "_lnprobability.pk",
-                    "acceptfrac": "_acceptance_fraction.pk",
-                    "l_param_name": "_l_param_name.pk",
-                    "df_fittedval": "_df_fittedval.pk",
-                    "fitted_values": "_fitted_values.pk",
-                    "fitted_values_sec": "_fitted_values_sec.pk",
+extension_pickle = {"chain": "_chain",
+                    "lnpost": "_lnprobability",
+                    "acceptfrac": "_acceptance_fraction",
+                    "l_param_name": "_l_param_name",
+                    "df_fittedval": "_df_fittedval",
+                    "fitted_values": "_fitted_values",
+                    "fitted_values_sec": "_fitted_values_sec",
                     }
 
 
@@ -1584,12 +1584,14 @@ def pickle_stuff(stuff, filename):
         dump(stuff, fpickle)
 
 
-def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
+def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_exploration="", folder=None):
     """Save Emcee EnsembleSampler instance elements into pickle files.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance to save
     :param list_of_str l_param_name: list of the parameter names
     :param str obj_name: Object name
+    :param str extension_exploration: extension to add at the end of the pickle file to differentiate
+        several explorations
     :param str folder: Folder where to put the pickle files
     """
     if folder is None:
@@ -1598,23 +1600,29 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
         makedirs(folder, exist_ok=True)
 
     # Save chain in a pickle
-    pickle_stuff(sampler.chain, join(folder, "{}{}".format(obj_name, extension_pickle["chain"])))
+    pickle_stuff(sampler.chain, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
 
     # Save lnprobability in a pickle
-    pickle_stuff(sampler.lnprobability, join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])))
+    pickle_stuff(sampler.lnprobability, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
 
     # Save acceptance_fraction in a pickle
-    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])))
+    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)))
 
     # Save l_param_name in a pickle
     if l_param_name is not None:
-        pickle_stuff(l_param_name, join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])))
+        pickle_stuff(l_param_name, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)))
 
 
-def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
+def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
     """Save chain analysis results.
 
-    TODO: Update to use pickle_stuff
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
+    :param np.ndarray fitted_values: Best fit values for the main parameters (values only, no error bars)
+    :param np.ndarray fitted_values_sec: Best fit values for the secondary parameters (values only, no error bars)
+    :param pd.DataFrame df_fittedval: Best fit values end 68% confidence interval for the main and secondary parameters
     """
     if folder is None:
         folder = getcwd()
@@ -1623,7 +1631,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
 
     # Save df_fittedval in a pickle
     if df_fittedval is not None:
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["df_fittedval"])), "wb") as fdffitval:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)), "wb") as fdffitval:
             dump(df_fittedval, fdffitval)
 
     # Save fitted_values in a pickle
@@ -1631,7 +1639,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values"])), "wb") as ffitval:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)), "wb") as ffitval:
             dump(fitted_values, ffitval)
 
     # Save fitted_values in a pickle
@@ -1639,51 +1647,58 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])), "wb") as ffitvals:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)), "wb") as ffitvals:
             dump(fitted_values_sec, ffitvals)
 
 
-def load_emceesampler(obj_name, folder="."):
+def load_emceesampler(obj_name, extension_exploration="", folder="."):
     """Save Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
+    :param str extension_exploration: extension to add at the end of the pickle file to differentiate
+        several explorations
     :param str folder:
     """
     if folder is None:
         folder = getcwd()
 
     # Save chain in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["chain"])), "rb") as fchain:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)), "rb") as fchain:
         chain = load(fchain)
 
     # Save lnprobability in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])), "rb") as flnprob:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)), "rb") as flnprob:
         lnprobability = load(flnprob)
 
     # Save acceptance_fraction in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])), "rb") as faccfrac:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)), "rb") as faccfrac:
         acceptance_fraction = load(faccfrac)
 
     # Save l_param_name in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])), "rb") as flparam:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)), "rb") as flparam:
         l_param_name = load(flparam)
 
     return chain, lnprobability, acceptance_fraction, l_param_name
 
 
-def load_chain_analysis(obj_name, folder=None):
+def load_chain_analysis(obj_name, extension_analysis="", folder=None):
     """Save Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
     :param str folder:
+    :return np.ndarray fitted_values: Best fit values for the main parameters (values only, no error bars)
+    :return np.ndarray fitted_values_sec: Best fit values for the secondary parameters (values only, no error bars)
+    :return pd.DataFrame df_fittedval: Best fit values end 68% confidence interval for the main and secondary parameters
     """
     if folder is None:
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_df_fittedval = "{}{}".format(obj_name, extension_pickle["df_fittedval"])
+    file_df_fittedval = "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)
     if isfile(join(folder, file_df_fittedval)):
         with open(join(folder, file_df_fittedval), "rb") as fdffitval:
             df_fittedval = load(fdffitval)
@@ -1691,7 +1706,7 @@ def load_chain_analysis(obj_name, folder=None):
         df_fittedval = None
 
     # Load fitted_values from a pickle
-    file_fitted_values = "{}{}".format(obj_name, extension_pickle["fitted_values"])
+    file_fitted_values = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)
     if isfile(join(folder, file_fitted_values)):
         with open(join(folder, file_fitted_values), "rb") as ffitval:
             fitted_values = load(ffitval)
@@ -1699,7 +1714,7 @@ def load_chain_analysis(obj_name, folder=None):
         fitted_values = None
 
     # Load fitted_values_sec from a pickle
-    file_fitted_values_sec = "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])
+    file_fitted_values_sec = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)
     if isfile(join(folder, file_fitted_values_sec)):
         with open(join(folder, file_fitted_values_sec), "rb") as ffitvals:
             fitted_values_sec = load(ffitvals)
