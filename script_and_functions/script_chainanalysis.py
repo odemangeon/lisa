@@ -91,6 +91,8 @@ def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_interva
 interval_perc_GS = 50  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
 do_geweke_plot = True
+apply_min_burnin = True
+min_burnin = 20000
 
 # Determine best fit values and error bars
 do_bestfit = True
@@ -278,6 +280,13 @@ if do_GS:
                                               intervals=intervals, l_walker=l_walker)
     l_burnin, l_walker_conv = et.geweke_selection(zscores, first_steps=l_first_i_step, geweke_thres=geweke_thres,
                                                   l_walker=l_walker)
+
+    if apply_min_burnin:
+        logger.info(f"Mininum burnin of {min_burnin} applied.")
+        for ii in range(len(l_burnin)):
+            if l_burnin[ii] < min_burnin:
+                l_burnin[ii] = min_burnin
+
     if do_geweke_plot:
         et.geweke_plot(zscores, first_steps=l_first_i_step, l_param_name=l_param_chainI, geweke_thres=geweke_thres,
                        plot_height=2, plot_width=8)
@@ -316,6 +325,18 @@ if do_GS:
 else:
     l_walker_conv = l_walker
     l_burnin = [0 for i in l_walker_conv]
+    if apply_min_burnin:
+        logger.info(f"Mininum burnin of {min_burnin} applied.")
+        for ii in range(len(l_burnin)):
+            if l_burnin[ii] < min_burnin:
+                l_burnin[ii] = min_burnin
+
+        et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
+                       l_burnin=l_burnin, suppress_burnin=True)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+        else:
+            pl.show()
 
 
 if do_bestfit:
