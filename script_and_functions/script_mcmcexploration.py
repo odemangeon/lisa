@@ -53,6 +53,7 @@ cluster = False  # If you run this code on a cluster (not in ipython) change to 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
 load_from_pickle = False
+extension_analysis = ""
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -132,7 +133,7 @@ logger.info("16. Create initial value")
 if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
-        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                         folder=output_folders["pickles_analyze"])
     else:
         pass

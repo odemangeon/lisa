@@ -496,7 +496,8 @@ if __name__ == "__main__":
     run_folder = getcwd()
     output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = True
+    load_from_pickle = False
+    extension_analysis = ""
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -509,7 +510,7 @@ if __name__ == "__main__":
         post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
         l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
-        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                         folder=output_folders["pickles_analyze"])
         fitted_values = fitted_values_dic["array"]
         l_param_name = fitted_values_dic["l_param"]
