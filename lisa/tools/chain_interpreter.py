@@ -56,6 +56,11 @@ class ChainsInterpret(np.ndarray):
         return self.__paramname_idx
 
     @property
+    def param_names(self):
+        """Return the list of parameters names."""
+        return list(self.__paramname_idx.keys())
+
+    @property
     def flatchain(self):
         """
         A shortcut for accessing chain flattened along the zeroth (walker)

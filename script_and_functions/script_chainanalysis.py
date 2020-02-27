@@ -152,7 +152,8 @@ if load_from_pickle:
 
 nstep = chain.shape[1]
 nwalker = chain.shape[0]
-l_param_chainI = l_param_name + ["lnposterior"]
+lnprobability_name = "lnposterior"
+l_param_chainI = l_param_name + [lnprobability_name]
 chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
 
 if do_RP:
@@ -323,7 +324,7 @@ if do_GS:
     pl.close("all")
 
     if do_hist:
-        lnprob_val = et.get_clean_flatchain(chainI[:, :, "lnposterior"], l_walker=l_walker_conv,
+        lnprob_val = et.get_clean_flatchain(chainI[:, :, lnprobability_name], l_walker=l_walker_conv,
                                             l_burnin=l_burnin)
         ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
@@ -396,7 +397,7 @@ if do_bestfit:
     logger.info("6. Determine best fit values and error bars for main parameters")
     fitted_values = et.get_fitted_values(chainI, method=method_bestfit, l_param_name=l_param_chainI,
                                          l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                         lnprobability=lnprobability)
+                                         lnprobability_name=lnprobability_name)
 
     sigma_p, _, sigma_m = da.getconfi(et.get_clean_flatchain(chainI, l_walker=l_walker_PS,
                                                              l_burnin=l_burnin_PS),
@@ -468,6 +469,10 @@ if do_SecParam:
                                                           star_kwargs=star_kwargs,
                                                           units=units
                                                           )
+
+    l_param_chainIsec = l_param_name_sec + [lnprobability_name]
+    chainIsec = ChainsInterpret(np.dstack((chainIsec, lnprobability)), l_param_chainIsec)
+
     if omega_0to360:
         # Change the range of omega from -180 to 180 to 0 to 360, because omega seems to be centered around 180.
         mask = np.zeros_like(chainIsec).astype(bool)
@@ -476,7 +481,7 @@ if do_SecParam:
             chainIsec[mask] = chainIsec[mask] + 360
 
     logger.info("Plot raw traces for secondary parameters")
-    et.plot_chains(chainIsec, lnprobability, l_param_name_sec)
+    et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
     else:
@@ -484,7 +489,7 @@ if do_SecParam:
     pl.close("all")
 
     logger.info("Plot geweke select traces for secondary parameters")
-    et.plot_chains(chainIsec, lnprobability, l_param_name_sec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
+    et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
     else:
@@ -492,15 +497,15 @@ if do_SecParam:
     pl.close("all")
 
     logger.info("Determine best fit values and error bars for secondary parameters")
-    fitted_values_sec = et.get_fitted_values(chainIsec, method="median", l_param_name=l_param_name_sec,
+    fitted_values_sec = et.get_fitted_values(chainIsec, method="median", l_param_name=l_param_chainIsec,
                                              l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                             lnprobability=lnprobability)
+                                             lnprobability_name=lnprobability_name)
     sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
                                                                      l_walker=l_walker_PS,
                                                                      l_burnin=l_burnin_PS),
                                               level=1, centre=fitted_values_sec,
-                                              l_param_name=l_param_name_sec)
-    df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_name_sec,
+                                              l_param_name=l_param_chainIsec)
+    df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_chainIsec,
                                                          data={'value': fitted_values_sec,
                                                                'sigma-': sigma_m_sec,
                                                                'sigma+': sigma_p_sec})])
@@ -508,7 +513,7 @@ if do_SecParam:
 
     if save_results_bestfit_secpar:
         et.save_chain_analysis(obj_name, extension_analysis=extension_outputs, fitted_values={"array": fitted_values, "l_param": l_param_chainI},
-                               fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_name_sec},
+                               fitted_values_sec={"array": fitted_values_sec, "l_param": l_param_chainIsec},
                                df_fittedval=df_fittedval, folder=output_folders["pickles_analyze"])
 
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary{}.tex".format(obj_name, extension_outputs)),
@@ -517,7 +522,7 @@ if do_SecParam:
     logger.info("Do correlation plot for secondary free parameters")
     # In this case there is nan values in the D14 and D23 chains and it makes corner crash
     corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner_sec, :],
-           labels=l_param_name_sec, truths=fitted_values_sec)
+           labels=l_param_chainIsec, truths=fitted_values_sec)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.pdf"))
     else:

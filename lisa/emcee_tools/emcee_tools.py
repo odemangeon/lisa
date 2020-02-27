@@ -1327,13 +1327,15 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
 
 
 def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
-                      lnprobability=None, verbose=1):
+                      lnprobability_name="lnposterior",
+                      verbose=1):
     """Return the fitted values from the sampler.
 
     :param ChainInterpret chainI:
     :param string method: method used to extract the fitted values ["MAP", "median", "gausfit", "mode"]
     :param int_iteratable l_walkers: list of valid walkers
     :param int burnin: index of the first iteration to consider.
+    :param str lnprobability_name: Name of the lnprobability values in chainI
     :param int verbose: if 1 speaks otherwise not
     """
     ndim = chainI.dim
@@ -1341,10 +1343,14 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin),
                            axis=0)
     elif method == "MAP":
-        if (l_walker is not None) or (l_burnin is not None):
-            logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
-        walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
-        res = array([chainI[walker, it, dim] for dim in range(ndim)])
+        if lnprobability_name not in chainI.param_names:
+            raise ValueError(f"{lnprobability_name} is not in chainI.param_names")
+        # if (l_walker is not None) or (l_burnin is not None):
+        #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
+        # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
+        # res = array([chainI[walker, it, dim] for dim in range(ndim)])
+        i_MAP_flatchain = argmax(get_clean_flatchain(chainI[lnprobability_name], l_walker=l_walker, l_burnin=l_burnin))
+        res = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)[i_MAP_flatchain, :]
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     elif method == "mode":
@@ -1374,13 +1380,17 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
     # If no walker list is provided nor burnin list, the result is the whole flatten chain
     if (l_walker is None) and (l_burnin is None):
         res = chainI.flatchain
-    # If no then just select the walkers provided by l_walker and return the flat chain
+    # If no burnin then just select the walkers provided by l_walker and return the flat chain
     elif l_burnin is None:
         sh = chainI[l_walker, ...].shape
         res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
-    # If no walker list is provided get the default list
+    # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
+    # It is the default one (meaning all walkers). If it's not the case it whoud com
     elif l_walker is None:
         l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
+        if len(l_walker) != len(l_burnin):
+            raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
+                             "l_walker is all available walkers, but dimensions do not match.")
     # If res is None then at this point we have a l_burnin and a l_walker
     if res is None:
         ndim = chainI.dim
@@ -1389,14 +1399,13 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
         if ndim == 1:
             for walker, burnin in zip(l_walker, l_burnin):
                 res.extend(chainI[walker, burnin:])
-            res = array(res).transpose()
         # Case where there is several free parameter
         else:
             for dim in range(ndim):
                 res.append([])
                 for walker, burnin in zip(l_walker, l_burnin):
                     res[dim].extend(chainI[walker, burnin:, dim])
-            res = array(res).transpose()
+        res = array(res).transpose()
     # Remove iteration where one of the parameter is not finite
     if force_finite:
         return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
