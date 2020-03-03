@@ -2,7 +2,7 @@
 """
 from collections import Counter
 from numbers import Number
-from numpy import ndarray, stack, arcsin, sqrt, rad2deg, mean, array
+from numpy import ndarray, stack, arcsin, sqrt, rad2deg
 from numpy import random
 
 from ..model import convert as cv
@@ -15,7 +15,7 @@ from logging import getLogger
 logger = getLogger()
 
 
-def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None, units=None):
+def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None, units=None, units_dict=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
 
     :param dict units: Dictionary specifying the unit of some of the parameter. Possible parameters:
@@ -35,6 +35,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
     l_parname_sec_fixed = []
 
     star = list(model.stars.values())[0]
+
+    #
+    if units_dict is None:
+        units_dict = {}
 
     # Decide if you use rho or R as main stellar physical parameter
     if star.rho.main:
@@ -163,6 +167,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp, [Kfact, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
+            # Mp/(Ms)**(2/3): Planetary mass over Stellar mass power 2/3
+            l_tup_planet.append((planet.MoverMs23rd.get_name(include_prefix=True, recursive=True), cv.getMpoverMs23rd, [units_dict, ],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
             # a: semi major axis
             l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), planet.M.get_name(include_prefix=True, recursive=True)]))
@@ -282,6 +290,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Mpsini: Planetary mass sinus inclination
             l_tup_planet.append((planet.Msini.get_name(include_prefix=True, recursive=True), cv.getMpsininc, [Kfact, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True)]))
+            # Mpsini/(Ms)**(2/3): Planetary mass sin(inc) over Stellar mass power 2/3
+            l_tup_planet.append((planet.MsinioverMs23rd.get_name(include_prefix=True, recursive=True), cv.getMpsinincoverMs23rd, [units_dict, ],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True)]))
             # Mp: Planetary mass
             if planet.inc.get_name(include_prefix=True, recursive=True) in dico_par:

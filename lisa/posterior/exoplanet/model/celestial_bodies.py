@@ -93,8 +93,12 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the planet
         self.add_parameter(Parameter(name="M", name_prefix=self.name, main=False))
+        ## Mass of the planet over (Mass of the star)**(2/3)
+        self.add_parameter(Parameter(name="MoverMs23rd", name_prefix=self.name, main=False))
         ## Mass sin i of the planet
         self.add_parameter(Parameter(name="Msini", name_prefix=self.name, main=False))
+        ## Mass sin i of the planet over (Mass of the star)**(2/3)
+        self.add_parameter(Parameter(name="MsinioverMs23rd", name_prefix=self.name, main=False))
         ## Mean density of the planet
         self.add_parameter(Parameter(name="rho", name_prefix=self.name, main=False))
         ## Density of the star from the transit

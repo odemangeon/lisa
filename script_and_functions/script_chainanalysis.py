@@ -14,6 +14,7 @@ import matplotlib.pyplot as pl
 # from numpy import median, zeros, where, sqrt
 import numpy as np
 import pandas as pd
+import astropy.units as uu
 
 # If needed, add lisa folder to the python path here
 # lisa_folder = ".."  # Change this if needed
@@ -130,6 +131,7 @@ oversamp_MComp = 30
 do_SecParam = True
 sampling_corner_sec = 100
 units = {"K": "kms"}
+units_dict = {"K": uu.km / uu.s}
 omega_0to360 = True
 save_results_bestfit_secpar = True
 
@@ -467,7 +469,7 @@ if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
     chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
                                                           star_kwargs=star_kwargs,
-                                                          units=units
+                                                          units=units, units_dict=units_dict
                                                           )
 
     l_param_chainIsec = l_param_name_sec + [lnprobability_name]
