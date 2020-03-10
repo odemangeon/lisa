@@ -876,7 +876,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
     model, model_wGP, t = compute_model(t_plot, datasim_db_docfunc, param, l_param_name,
-                                        datasim_kwargs=datasim_kwargs, supersamp=1,
+                                        datasim_kwargs=datasim_kwargs, supersamp=supersamp,
                                         exptime=exptime_Kepler,
                                         noise_model=noise_model,
                                         model_instance=model_instance)
