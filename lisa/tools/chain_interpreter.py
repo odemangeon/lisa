@@ -42,18 +42,23 @@ class ChainsInterpret(np.ndarray):
             if isinstance(indexing[-1], str):
                 ll = list(indexing[:-1])
                 ll.append(self.paramname_idx[indexing[-1]])
-                indexing = list(ll)
+                indexing = tuple(ll)
             elif isinstance(indexing[-1], Iterable):
                 if isinstance(indexing[-1][0], str):
                     ll = list(indexing[:-1])
                     ll.append([self.paramname_idx[parname] for parname in indexing[-1]])
-                    indexing = list(ll)
+                    indexing = tuple(ll)
         return super(ChainsInterpret, self).__getitem__(indexing)
 
     @property
     def paramname_idx(self):
         """Return the list of parameters names."""
         return self.__paramname_idx
+
+    @property
+    def param_names(self):
+        """Return the list of parameters names."""
+        return list(self.__paramname_idx.keys())
 
     @property
     def flatchain(self):

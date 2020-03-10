@@ -25,7 +25,8 @@ import math
 # Code that converts the fitted parameters to the ones we want
 # import matplotlib.pyplot as plt
 
-import astropy.constants as const
+import astropy.constants as cst
+import astropy.units as uu
 from logging import getLogger
 
 # from IPython import get_ipython
@@ -36,23 +37,23 @@ logger = getLogger()
 
 # http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7
-g = const.G.value
-au = const.au.value
+g = cst.G.value
+au = cst.au.value
 gm = 1.32712440041e20
 msun = gm / g
-mjup = const.M_jup.value  # msun/msunjup
+mjup = cst.M_jup.value  # msun/msunjup
 msunjup = msun / mjup
-mearth = const.M_earth.value  # 5.9742e27 was wrong
-Teffsun = ((const.L_sun / (const.sigma_sb * 4 * pi * const.R_sun**2))**(1 / 4.)).value
+mearth = cst.M_earth.value  # 5.9742e27 was wrong
+Teffsun = ((cst.L_sun / (cst.sigma_sb * 4 * pi * cst.R_sun**2))**(1 / 4.)).value
 
-rsun = const.R_sun.value
-rjup = const.R_jup.value
-rearth = const.R_earth.value
+rsun = cst.R_sun.value
+rjup = cst.R_jup.value
+rearth = cst.R_earth.value
 
 densun = 1.409  # g/cm^3
 denjup = 1.33  # g/cm^3
 
-grav = const.G.cgs.value  # g in  cgs
+grav = cst.G.cgs.value  # g in  cgs
 
 
 def get_transit_depth(Rrat):
@@ -635,6 +636,33 @@ def getMpsininc(P, K, Ms, ecc, Kfact=1000):
             (P / 365.25)**(1.0 / 3.0))
 
 
+def getMpsinincoverMs23rd(P, K, ecc, units=None):
+    """Return the planetary mass
+
+    Adapted from equation 14 page 3, assuming that the planet mass in negligeable compared to the
+    stellar mass
+    http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+
+    :param float/np.ndarray P: Planetary orbital period (by default in days)
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet (by default in m/s)
+    :param float/np.ndarray ecc: Planet orbital eccentricity
+    :param dict_of_units units: Dictionary providing the units of the inputs and outputs. Keys must be in
+        ["P", "K", "MpsinincoverMs23rd", "output"] and values must by units from the astropy.units module. If the unit
+        of a given input/output is not provided, then the default value is used.
+    :return float/np.ndarray MpoverMs23rd: Mp/(Ms)**(2/3) (by default in Mjup**(1/3))
+    """
+    if units is None:
+        units = {}
+    # Define output unit as several keys can be used.
+    ouput_unit_found = [key for key in ["MpsinincoverMs23rd", "MsinincoverMs23rd", "ouput"] if key in units]
+    if len(ouput_unit_found) == 0:
+        ouput_unit = uu.Mjup**(1 / 3)
+    else:
+        ouput_unit = units[ouput_unit_found[0]]
+    fact = 1 * units.get("K", uu.m / uu.s) * (cst.G)**(-1. / 3.) * (4 * np.pi**2)**(-1. / 6.) * (1 * units.get("P", uu.day))**(1. / 3.)
+    return (fact * K * np.sqrt(1.0 - ecc**2.0) * P**(1. / 3.)).to(ouput_unit).value
+
+
 def getMp(P, K, Ms, ecc, inc, Kfact=1000):
     """Return the planetary mass
 
@@ -653,6 +681,35 @@ def getMp(P, K, Ms, ecc, inc, Kfact=1000):
     """
     return (K * Kfact / 28.4329 * np.sqrt(1.0 - ecc**2.0) * Ms**(2.0 / 3.0) *
             (P / 365.25)**(1.0 / 3.0)) / np.sin(np.deg2rad(inc))
+
+
+def getMpoverMs23rd(P, K, ecc, inc, units=None):
+    """Return the planetary mass
+
+    Adapted from equation 14 page 3, assuming that the planet mass in negligeable compared to the
+    stellar mass
+    http://exoplanets.astro.yale.edu/workshop/EPRV/Bibliography_files/Radial_Velocity.pdf
+
+    :param float/np.ndarray P: Planetary orbital period (by default in days)
+    :param float/np.ndarray K: Radial velocity semi-amplitude of a star associated to a planet (by default in m/s)
+    :param float/np.ndarray ecc: Planet orbital eccentricity
+    :param float/np.ndarray inc: Planet orbital inclination (by default in degrees)
+    :param dict_of_units units: Dictionary providing the units of the inputs and outputs. Keys must be in
+        ["P", "K", "inc", "MpoverMs23rd", "output"] and values must by units from the astropy.units module. If the unit
+        of a given input/output is not provided, then the default value is used.
+    :return float/np.ndarray MpoverMs23rd: Mp/(Ms)**(2/3) (by default in Mjup**(1/3))
+    """
+    if units is None:
+        units = {}
+    # Define output unit as several keys can be used.
+    ouput_unit_found = [key for key in ["MpoverMs23rd", "MoverMs23rd", "ouput"] if key in units]
+    if len(ouput_unit_found) == 0:
+        ouput_unit = uu.Mjup**(1 / 3)
+    else:
+        ouput_unit = units[ouput_unit_found[0]]
+    fact = 1 * units.get("K", uu.m / uu.s) * (cst.G)**(-1. / 3.) * (4 * np.pi**2)**(-1. / 6.) * (1 * units.get("P", uu.day))**(1. / 3.)
+    return (fact * K * np.sqrt(1.0 - ecc**2.0) * P**(1. / 3.) /
+            np.sin((inc * units.get("inc", uu.deg)).to(uu.rad).value)).to(ouput_unit).value
 
 
 def gettp(P, tc, ecosw, esinw):
@@ -813,7 +870,7 @@ def getgpl(M, R):
 
     :return float/np.ndarray gpl: Planetary surface gravity (im m.s-2)
     """
-    return const.G.value * M * mjup / np.power(R * rjup, 2)
+    return cst.G.value * M * mjup / np.power(R * rjup, 2)
 
 
 def getM_4_E(E, ecc):

@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
-from numpy import percentile, newaxis, concatenate, std
+from numpy import nanpercentile, newaxis, concatenate, std
 from numbers import Number
 from collections import Iterable
 
@@ -37,7 +37,7 @@ from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from ..posterior.exoplanet.model.gravgroup import ext_plonly
-# from ..posterior.core.posterior import alldtst_key
+from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
 
@@ -876,7 +876,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
     model, model_wGP, t = compute_model(t_plot, datasim_db_docfunc, param, l_param_name,
-                                        datasim_kwargs=datasim_kwargs, supersamp=1,
+                                        datasim_kwargs=datasim_kwargs, supersamp=supersamp,
                                         exptime=exptime_Kepler,
                                         noise_model=noise_model,
                                         model_instance=model_instance)
@@ -1198,23 +1198,57 @@ def add_axeswithsharex_perplanet(subplotspec, nplanet, fig, nb_axes, gs_from_sps
     return axes_planets
 
 
-def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1):
-    """Return selected walker based on the acceptance fraction.
+def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, verbose=1, plot=False):
+    """Return selected walkers based on the acceptance fraction.
+
+    The walkers are selected if:
+    accept_fract_walker > (quantile_value - sig_fact * MAD(acceptance_fraction))
 
     :param np.array acceptance_fraction: Value of the acceptance fraction for each walker.
     :param float sig_fact: acceptance fraction below mean - sig_fact * sigma will be rejected
+    :param float quantile: quantile that will be used as value for the acceptance fraction selection
     :param int verbose: if 1 speaks otherwise not
+    :param bool plot: If True, produces an histogram of the acceptance fractions and show the quantile
+        value and the threshold.
+    :return list_of_int l_selected_walker: list of selected walkers
+    :return int nb_rejected: Number of rejected walkers
     """
     logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
                 "".format(quantile=quantile, sigma=sig_fact))
-    percentile_acceptance_frac = percentile(acceptance_fraction, quantile)
-    mad_acceptance_frac = mad(acceptance_fraction)
+    percentile_acceptance_frac = nanpercentile(acceptance_fraction, quantile)
+    mad_acceptance_frac = mad(acceptance_fraction, axis=None, nan_policy="omit")
     if verbose == 1:
         logger.info("Acceptance fraction of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(acceptance_fraction, quantile, percentile_acceptance_frac,
                               mad_acceptance_frac))
-    l_selected_walker = where(acceptance_fraction > (percentile_acceptance_frac -
-                                                     sig_fact * mad_acceptance_frac))[0]
+    threshold = percentile_acceptance_frac - sig_fact * mad_acceptance_frac
+    l_selected_walker = where(acceptance_fraction > threshold)[0]
+    if plot:
+        # Histogram
+        fig, ax = subplots(nrows=2)
+        ax[0].hist(acceptance_fraction * 100, bins="auto")
+        ylims = ax[0].get_ylim()
+        ax[0].vlines(percentile_acceptance_frac * 100, *ylims, color="k", linestyle="dashed",
+                     label=f"{quantile} % percentile value = {(percentile_acceptance_frac * 100):.2f}")
+        ax[0].vlines(threshold * 100, *ylims, color="r", label=f"threshold ({sig_fact} sigma) = {(threshold * 100):.2f}")
+        ax[0].set_ylim(ylims)
+        ax[0].set_xlabel("Acceptance fraction [%]")
+        ax[0].set_ylabel("Counts")
+        ax[0].set_title(f"Histogram of the acceptance fraction\nMAD = {(mad_acceptance_frac * 100):.2f} %")
+        ax[0].legend()
+        # Cumulative histogram
+        ax[1].hist(acceptance_fraction * 100, bins="auto", cumulative=True, density=True)
+        xlims = ax[1].get_xlim()
+        ylims = ax[1].get_ylim()
+        ax[1].hlines(quantile / 100, xlims[0], percentile_acceptance_frac * 100, color="k", linestyle="dashed")
+        ax[1].vlines(percentile_acceptance_frac * 100, ylims[0], quantile / 100, color="k", linestyle="dashed")
+        ax[1].vlines(threshold * 100, *ylims, color="r")
+        ax[1].set_ylim(ylims)
+        ax[1].set_xlim(xlims)
+        ax[1].set_xlabel("Acceptance fraction [%]")
+        ax[1].set_ylabel("CDF")
+        ax[1].set_title(f"Cumulative histogram of the acceptance fraction (normalized)")
+        fig.tight_layout()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected,
@@ -1222,7 +1256,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     return l_selected_walker, nb_rejected
 
 
-def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1):
+def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walker=50, verbose=1, plot=False):
     """Return selected walker based on the acceptance fraction.
 
     :param np.array lnprobability: Values of the lnprobability taken by each walker at each iteration
@@ -1231,20 +1265,61 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :param float quantile_walker: Quantile used to assert the lnprobability for each walker. 50 is
         the meadian, 100 is the highest lnprobability.
     :param int verbose: if 1 speaks otherwise not
+    :param bool plot: If True, produces an histogram of the acceptance fractions and show the quantile
+        value and the threshold.
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
     logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} \%;"
                 "reference quantile across walkers = {quantile} \%; sigma_clip at {sigma} sigma"
                 "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
-    walkers_percentile_lnposterior = percentile(lnprobability, quantile_walker, axis=1)
-    percentile_lnposterior = percentile(walkers_percentile_lnposterior, quantile)
-    mad_lnposterior = mad(walkers_percentile_lnposterior)
+    walkers_percentile_lnposterior = nanpercentile(lnprobability, quantile_walker, axis=1)
+    percentile_lnposterior = nanpercentile(walkers_percentile_lnposterior, quantile)
+    mad_lnposterior = mad(walkers_percentile_lnposterior, axis=None, nan_policy="omit")
     if verbose == 1:
         logger.info("lnposterior of the walkers: {}\nquantile {}%: {}, MAD:{}"
                     "".format(walkers_percentile_lnposterior, quantile, percentile_lnposterior,
                               mad_lnposterior))
-    l_selected_walker = where(walkers_percentile_lnposterior > (percentile_lnposterior - (sig_fact * mad_lnposterior)))[0]
+    threshold = percentile_lnposterior - (sig_fact * mad_lnposterior)
+    if plot:
+        # Histogram
+        fig, ax = subplots(nrows=2)
+        ax[0], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[0])
+        ylims = ax[0].get_ylim()
+        label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
+        label_thresh = f"threshold ({sig_fact} sigma) = {threshold:.2f}"
+        if did_log10:
+            ax[0].vlines(np.log10(percentile_lnposterior), *ylims, color="k", linestyle="dashed",
+                         label=label_perc)
+            ax[0].vlines(np.log10(threshold), *ylims, color="r", label=label_thresh)
+        else:
+            ax[0].vlines(percentile_lnposterior, *ylims, color="k", linestyle="dashed",
+                         label=label_perc)
+            ax[0].vlines(threshold, *ylims, color="r", label=label_thresh)
+        ax[0].set_ylim(ylims)
+        ax[0].set_ylabel("Counts")
+        ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}")
+        ax[0].legend()
+        # Cumulative histogram
+        ax[1], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
+        ylims = ax[1].get_ylim()
+        xlims = ax[1].get_xlim()
+        label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
+        label_thresh = f"threshold = {threshold:.2f}"
+        if did_log10:
+            ax[1].hlines(quantile / 100, xlims[0], np.log10(percentile_lnposterior), color="k", linestyle="dashed")
+            ax[1].vlines(np.log10(percentile_lnposterior), ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].vlines(np.log10(threshold), *ylims, color="r")
+        else:
+            ax[1].hlines(quantile / 100, xlims[0], percentile_lnposterior, color="k", linestyle="dashed")
+            ax[1].vlines(percentile_lnposterior, ylims[0], quantile / 100, color="k", linestyle="dashed")
+            ax[1].vlines(threshold, *ylims, color="r")
+        ax[1].set_ylim(ylims)
+        ax[1].set_xlim(xlims)
+        ax[1].set_ylabel("CDF")
+        ax[1].set_title(f"Cumulative histogram of the lnposterior fraction (normalized)")
+        fig.tight_layout()
+    l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
@@ -1252,13 +1327,15 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
 
 
 def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
-                      lnprobability=None, verbose=1):
+                      lnprobability_name="lnposterior",
+                      verbose=1):
     """Return the fitted values from the sampler.
 
     :param ChainInterpret chainI:
     :param string method: method used to extract the fitted values ["MAP", "median", "gausfit", "mode"]
     :param int_iteratable l_walkers: list of valid walkers
     :param int burnin: index of the first iteration to consider.
+    :param str lnprobability_name: Name of the lnprobability values in chainI
     :param int verbose: if 1 speaks otherwise not
     """
     ndim = chainI.dim
@@ -1266,10 +1343,14 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin),
                            axis=0)
     elif method == "MAP":
-        if (l_walker is not None) or (l_burnin is not None):
-            logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
-        walker, it = unravel_index(argmax(lnprobability), dims=lnprobability.shape)
-        res = array([chainI[walker, it, dim] for dim in range(ndim)])
+        if lnprobability_name not in chainI.param_names:
+            raise ValueError(f"{lnprobability_name} is not in chainI.param_names")
+        # if (l_walker is not None) or (l_burnin is not None):
+        #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
+        # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
+        # res = array([chainI[walker, it, dim] for dim in range(ndim)])
+        i_MAP_flatchain = argmax(get_clean_flatchain(chainI[lnprobability_name], l_walker=l_walker, l_burnin=l_burnin))
+        res = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)[i_MAP_flatchain, :]
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     elif method == "mode":
@@ -1299,13 +1380,17 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
     # If no walker list is provided nor burnin list, the result is the whole flatten chain
     if (l_walker is None) and (l_burnin is None):
         res = chainI.flatchain
-    # If no then just select the walkers provided by l_walker and return the flat chain
+    # If no burnin then just select the walkers provided by l_walker and return the flat chain
     elif l_burnin is None:
         sh = chainI[l_walker, ...].shape
         res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
-    # If no walker list is provided get the default list
+    # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
+    # It is the default one (meaning all walkers). If it's not the case it whoud com
     elif l_walker is None:
         l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
+        if len(l_walker) != len(l_burnin):
+            raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
+                             "l_walker is all available walkers, but dimensions do not match.")
     # If res is None then at this point we have a l_burnin and a l_walker
     if res is None:
         ndim = chainI.dim
@@ -1314,14 +1399,13 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
         if ndim == 1:
             for walker, burnin in zip(l_walker, l_burnin):
                 res.extend(chainI[walker, burnin:])
-            res = array(res).transpose()
         # Case where there is several free parameter
         else:
             for dim in range(ndim):
                 res.append([])
                 for walker, burnin in zip(l_walker, l_burnin):
                     res[dim].extend(chainI[walker, burnin:, dim])
-            res = array(res).transpose()
+        res = array(res).transpose()
     # Remove iteration where one of the parameter is not finite
     if force_finite:
         return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
@@ -1358,7 +1442,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
     l_med_last = [median(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
     logger.info("Median value for each parameter (over all specified walkers) in the last portion of"
                 " the chains: {}".format(l_med_last))
-    l_mad_last = [mad(chains[l_walker, last_start_step:, dim]) for dim in range(ndim)]
+    l_mad_last = [mad(chains[l_walker, last_start_step:, dim], axis=None, nan_policy="omit") for dim in range(ndim)]
     l_mad_last_is0 = [mad_dim == 0.0 for mad_dim in l_mad_last]
     if any(l_mad_last_is0):
         for dim in np.where(l_mad_last_is0)[0]:
@@ -1382,7 +1466,7 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
         for i, walker in enumerate(l_walker):
             for j, first_start in enumerate(first_start_steps):
                 med_first = median(chains[walker, first_start:(first_start + first_length), dim])
-                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim])
+                mad_first = mad(chains[walker, first_start:(first_start + first_length), dim], axis=None, nan_policy="omit")
                 # Compute the zscore, but if the dispersion of the first part is too big compared to
                 # the last part, I don't consider the first part as converge what the zscore.
                 if mad_first < (5 * mad_last):
@@ -1485,13 +1569,13 @@ def write_latex_table(filename, df_fitval, obj_name=None):
         f.write("\\end{table}\n")
 
 
-extension_pickle = {"chain": "_chain.pk",
-                    "lnpost": "_lnprobability.pk",
-                    "acceptfrac": "_acceptance_fraction.pk",
-                    "l_param_name": "_l_param_name.pk",
-                    "df_fittedval": "_df_fittedval.pk",
-                    "fitted_values": "_fitted_values.pk",
-                    "fitted_values_sec": "_fitted_values_sec.pk",
+extension_pickle = {"chain": "_chain",
+                    "lnpost": "_lnprobability",
+                    "acceptfrac": "_acceptance_fraction",
+                    "l_param_name": "_l_param_name",
+                    "df_fittedval": "_df_fittedval",
+                    "fitted_values": "_fitted_values",
+                    "fitted_values_sec": "_fitted_values_sec",
                     }
 
 
@@ -1509,12 +1593,14 @@ def pickle_stuff(stuff, filename):
         dump(stuff, fpickle)
 
 
-def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
+def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_exploration="", folder=None):
     """Save Emcee EnsembleSampler instance elements into pickle files.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance to save
     :param list_of_str l_param_name: list of the parameter names
     :param str obj_name: Object name
+    :param str extension_exploration: extension to add at the end of the pickle file to differentiate
+        several explorations
     :param str folder: Folder where to put the pickle files
     """
     if folder is None:
@@ -1523,23 +1609,29 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", folder=None):
         makedirs(folder, exist_ok=True)
 
     # Save chain in a pickle
-    pickle_stuff(sampler.chain, join(folder, "{}{}".format(obj_name, extension_pickle["chain"])))
+    pickle_stuff(sampler.chain, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
 
     # Save lnprobability in a pickle
-    pickle_stuff(sampler.lnprobability, join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])))
+    pickle_stuff(sampler.lnprobability, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
 
     # Save acceptance_fraction in a pickle
-    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])))
+    pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)))
 
     # Save l_param_name in a pickle
     if l_param_name is not None:
-        pickle_stuff(l_param_name, join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])))
+        pickle_stuff(l_param_name, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)))
 
 
-def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
+def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
     """Save chain analysis results.
 
-    TODO: Update to use pickle_stuff
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
+    :param np.ndarray fitted_values: Best fit values for the main parameters (values only, no error bars)
+    :param np.ndarray fitted_values_sec: Best fit values for the secondary parameters (values only, no error bars)
+    :param pd.DataFrame df_fittedval: Best fit values end 68% confidence interval for the main and secondary parameters
     """
     if folder is None:
         folder = getcwd()
@@ -1548,7 +1640,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
 
     # Save df_fittedval in a pickle
     if df_fittedval is not None:
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["df_fittedval"])), "wb") as fdffitval:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)), "wb") as fdffitval:
             dump(df_fittedval, fdffitval)
 
     # Save fitted_values in a pickle
@@ -1556,7 +1648,7 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values"])), "wb") as ffitval:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)), "wb") as ffitval:
             dump(fitted_values, ffitval)
 
     # Save fitted_values in a pickle
@@ -1564,51 +1656,58 @@ def save_chain_analysis(obj_name, fitted_values=None, fitted_values_sec=None, df
         if "array" not in fitted_values or "l_param" not in fitted_values:
             raise ValueError("fitted_values should be a dictionary with 2 keys 'array' and "
                              "'l_param'")
-        with open(join(folder, "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])), "wb") as ffitvals:
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)), "wb") as ffitvals:
             dump(fitted_values_sec, ffitvals)
 
 
-def load_emceesampler(obj_name, folder="."):
+def load_emceesampler(obj_name, extension_exploration="", folder="."):
     """Save Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
+    :param str extension_exploration: extension to add at the end of the pickle file to differentiate
+        several explorations
     :param str folder:
     """
     if folder is None:
         folder = getcwd()
 
     # Save chain in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["chain"])), "rb") as fchain:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)), "rb") as fchain:
         chain = load(fchain)
 
     # Save lnprobability in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["lnpost"])), "rb") as flnprob:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)), "rb") as flnprob:
         lnprobability = load(flnprob)
 
     # Save acceptance_fraction in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["acceptfrac"])), "rb") as faccfrac:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)), "rb") as faccfrac:
         acceptance_fraction = load(faccfrac)
 
     # Save l_param_name in a pickle
-    with open(join(folder, "{}{}".format(obj_name, extension_pickle["l_param_name"])), "rb") as flparam:
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)), "rb") as flparam:
         l_param_name = load(flparam)
 
     return chain, lnprobability, acceptance_fraction, l_param_name
 
 
-def load_chain_analysis(obj_name, folder=None):
+def load_chain_analysis(obj_name, extension_analysis="", folder=None):
     """Save Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
     :param str folder:
+    :return np.ndarray fitted_values: Best fit values for the main parameters (values only, no error bars)
+    :return np.ndarray fitted_values_sec: Best fit values for the secondary parameters (values only, no error bars)
+    :return pd.DataFrame df_fittedval: Best fit values end 68% confidence interval for the main and secondary parameters
     """
     if folder is None:
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_df_fittedval = "{}{}".format(obj_name, extension_pickle["df_fittedval"])
+    file_df_fittedval = "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)
     if isfile(join(folder, file_df_fittedval)):
         with open(join(folder, file_df_fittedval), "rb") as fdffitval:
             df_fittedval = load(fdffitval)
@@ -1616,7 +1715,7 @@ def load_chain_analysis(obj_name, folder=None):
         df_fittedval = None
 
     # Load fitted_values from a pickle
-    file_fitted_values = "{}{}".format(obj_name, extension_pickle["fitted_values"])
+    file_fitted_values = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values"], extension_analysis)
     if isfile(join(folder, file_fitted_values)):
         with open(join(folder, file_fitted_values), "rb") as ffitval:
             fitted_values = load(ffitval)
@@ -1624,7 +1723,7 @@ def load_chain_analysis(obj_name, folder=None):
         fitted_values = None
 
     # Load fitted_values_sec from a pickle
-    file_fitted_values_sec = "{}{}".format(obj_name, extension_pickle["fitted_values_sec"])
+    file_fitted_values_sec = "{}{}{}.pk".format(obj_name, extension_pickle["fitted_values_sec"], extension_analysis)
     if isfile(join(folder, file_fitted_values_sec)):
         with open(join(folder, file_fitted_values_sec), "rb") as ffitvals:
             fitted_values_sec = load(ffitvals)

@@ -21,7 +21,7 @@ Module which defines the mode statistics functions
     more general. Work in progress.
 """
 
-from numpy import sqrt, percentile, histogram, median, where, zeros_like, logical_and, mean
+from numpy import sqrt, nanpercentile(, histogram, median, where, zeros_like, logical_and, mean
 
 
 def trimmode(data, bins=None, H_outliers=1, L_outliers=2, debug=False):
@@ -54,8 +54,8 @@ def trimmode(data, bins=None, H_outliers=1, L_outliers=2, debug=False):
     nb_pix = data.size
     if bins is None:
         bins = "sqrt"
-    vmax = percentile(data_f, 100 - H_outliers)
-    vmin = percentile(data_f, L_outliers)
+    vmax = nanpercentile((data_f, 100 - H_outliers)
+    vmin = nanpercentile((data_f, L_outliers)
     n, x_bins = histogram(data_f, bins=bins, range=(vmin, vmax))
     if debug:
         print("Median number of pixel per bin in the histogram : {}".format(median(n)))

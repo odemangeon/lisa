@@ -5,7 +5,7 @@ Script to produce pretty plots of LC data
 
 @TODO:
 """
-from os import getcwd, makedirs
+from os import getcwd
 from os.path import join
 
 import numpy as np
@@ -29,6 +29,7 @@ from matplotlib.offsetbox import AnchoredText
 
 from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from lisa.explore_analyze.misc import get_def_output_folders
 
 # from ipdb import set_trace
 
@@ -492,16 +493,11 @@ if __name__ == "__main__":
     # Define dataset names to be loaded
     datasetnames = ["LC_TOI-175_TESS_0", ]
 
-    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
-    plot_folder = join(chain_analysis_output_folder, "plots")
-    makedirs(plot_folder, exist_ok=True)
+    run_folder = getcwd()
+    output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = True
-    exploration_output_folder = join(getcwd(), "outputs/exploration")
-    exploration_pickle_folder = join(exploration_output_folder, "pickles")
-    chain_analysis_output_folder = join(getcwd(), "outputs/chain_analysis")
-    chain_analysis_pickle_folder = join(chain_analysis_output_folder, "pickles")
-    chain_analysis_plots_folder = join(chain_analysis_output_folder, "plots")
+    load_from_pickle = False
+    extension_analysis = ""
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -511,11 +507,11 @@ if __name__ == "__main__":
     if load_from_pickle:
         # recreate post_instance object
         post_instance = cpost.Posterior(object_name=obj_name)
-        post_instance.init_from_pickle(pickle_folder=exploration_pickle_folder)
+        post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
         l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
-        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
-                                                                                        folder=chain_analysis_pickle_folder)
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
+                                                                                        folder=output_folders["pickles_analyze"])
         fitted_values = fitted_values_dic["array"]
         l_param_name = fitted_values_dic["l_param"]
         planet_name = []
@@ -545,5 +541,5 @@ if __name__ == "__main__":
                                'phase_lims': {"all": (-0.03, 0.03), "b": (-0.029, 0.029), "c": (-0.022, 0.022), "d": (-0.0075, 0.0075)}},
                     pl_kwargs={},
                     type="A&Afw",
-                    save=join(chain_analysis_plots_folder, "custom_data_comp_LC.pdf")
+                    save=join(output_folders["plots"], "custom_data_comp_LC.pdf")
                     )

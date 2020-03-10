@@ -26,6 +26,7 @@ from lisa.explore_analyze.misc import get_def_output_folders
 
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
+extension_exploration = ""  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
 nb_planet = 1
 rv_model = "radvel"  # None will select the default model being radvel
@@ -52,6 +53,7 @@ cluster = False  # If you run this code on a cluster (not in ipython) change to 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
 load_from_pickle = False
+extension_analysis = ""
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -98,8 +100,6 @@ else:
 
     input("Modifiy the paramerisation file")
 
-input("Modifiy the paramerisation file")
-
 logger.info("9. Load the paramerisation file")
 post_instance.model.load_parameter_file()
 
@@ -133,7 +133,7 @@ logger.info("16. Create initial value")
 if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
-        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name,
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                         folder=output_folders["pickles_analyze"])
     else:
         pass
@@ -161,7 +161,7 @@ logger.info("18. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
            filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=output_folders["dats"], l_param_name=l_param_name, logger=logger4emceerun)
-et.save_emceesampler(sampler, l_param_name, obj_name, folder=output_folders["pickles_explore"])
+et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
 
 chain = sampler.chain
 lnprobability = sampler.lnprobability

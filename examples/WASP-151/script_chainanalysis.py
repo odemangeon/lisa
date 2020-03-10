@@ -33,6 +33,13 @@ from lisa.explore_analyze.plot import hist_lnprob
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
 kwargs_datasim = {}
+star_kwargs = {"M": {"value": 1.077,
+                     "error": 0.081},
+               "R": {"value": 1.14,
+                     "error": 0.03},
+               "Teff": {"value": 5871,
+                        "error": 57}
+               }
 
 output_folders = get_def_output_folders(run_folder=getcwd())
 
@@ -316,13 +323,7 @@ if do_MComp:
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
     chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
-                                                          star_kwargs={"M": {"value": 1.077,
-                                                                             "error": 0.081},
-                                                                       "R": {"value": 1.14,
-                                                                             "error": 0.03},
-                                                                       "Teff": {"value": 5871,
-                                                                                "error": 57}
-                                                                       },
+                                                          star_kwargs=star_kwargs,
                                                           units=units
                                                           )
     logger.info("Plot raw traces for secondary parameters")

@@ -243,8 +243,8 @@ joint_prior = {# Example:
                            'params': {'x': 'b_ecosw', 'y': 'b_esinw'}
                            },
                'Pt': {'category': 'Ptphi', 'args': {'t_ref': 57740,
-                                                    'P_prior': {"category": 'normal', 'args': {'mu': 4.5334, 'sigma': 0.003}},
-                                                    't_prior': {"category": 'normal', 'args': {'mu': 57741.00885442065, 'sigma': 0.1}},
+                                                    'P_prior': {"category": 'normal', 'args': {'mu': 4.533458617291885, 'sigma': 0.001}},
+                                                    't_prior': {"category": 'normal', 'args': {'mu': 57741.008282433526, 'sigma': 0.01}},
                                                     },
                       'params': {'P': 'b_P', 't': 'b_tic'},
                       },
