@@ -274,11 +274,15 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         text_l_jitter = "["
         for instmod_obj in l_instmod_obj:
             jitter_param = instmod_obj.parameters[jitter_name]
-            if jitter_param.free and (jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new):
-                l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
-                (l_params_new, l_params_noisemod_new,
-                 l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
-                                                                      l_idx_param_noisemod_new, jitter_param)
+            if jitter_param.free:
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new:
+                    (l_params_new, l_params_noisemod_new,
+                     l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
+                                                                          l_idx_param_noisemod_new, jitter_param)
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_noisemod_new:
+                    l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_idx_param_noisemod_new.append(l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
             if jitter_param.free:
                 text_l_jitter += f"{param_noisemod_name}[{l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))}], "
             else:
@@ -361,7 +365,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
                                                        l_idx_param_noisemod=l_idx_param_noisemod)
-        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
