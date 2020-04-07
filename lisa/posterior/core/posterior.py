@@ -338,7 +338,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             # db_lnlike = self.model.create_lnlikelihoods(datasim_inst_db=datasim_db)
             # self.lnlikelihoods.instrument_db.update(db_lnlike)
 
-            # Create the lnlikelihood function for each dataset
+            # Create the lnlikelihood function for each dataset. This in uses all the datasets in
+            # datasimulators.dataset_db, it includes the "all" dataset which includes all the datasets.
             (self.lnlikelihoods.dataset_db.
              update(self.model.
                     create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.
@@ -346,18 +347,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                                     )
                     )
              )
-            # (self.lnlikelihoods.dataset_db.
-            #  update(self.model.
-            #         create_lnlikelihoods_perdataset(lnlike_db=self.lnlikelihoods.instrument_db,
-            #                                         dataset_db=self.dataset_db,
-            #                                         instmodel4dataset=self.instmodel4dataset)))
-            # (self.lnlikelihoods.dataset_db['all'], dico_noisemodel_instance
-            #  ) = (self.model.
-            #       create_lnlikelihood_alldataset(datasim_db_dtset=self.datasimulators.dataset_db,
-            #                                      dataset_db=self.dataset_db,
-            #                                      instmodel4dataset=self.instmodel4dataset
-            #                                      )
-            #       )
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 

@@ -455,16 +455,16 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         # Get the datasim for this planet only
         datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
         # Get the datasims for the other planets
-        l_datasim_db_docfunc_others = []
+        l_datasim_docfunc_others = []
         for plnt in model_instance.planets.keys():
             if plnt == planet_name:
                 continue
             else:
-                l_datasim_db_docfunc_others.append(datasim_dbf_instmod[plnt + ext_plonly])
+                l_datasim_docfunc_others.append(datasim_dbf_instmod[plnt + ext_plonly])
         # Compute the data - other planets contributions
         data_pl = data.copy()
-        for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
-            model, modelwGP, _ = compute_model(t, datasim_db_docfunc_other, param, l_param_name,
+        for datasim_docfunc_other in l_datasim_docfunc_others:
+            model, modelwGP, _ = compute_model(t, datasim_docfunc_other, param, l_param_name,
                                                datasim_kwargs=kwargs,
                                                supersamp=supersamp_model, exptime=exptime,
                                                noise_model=noise_mod,
@@ -742,9 +742,11 @@ def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name
     fig.tight_layout(**kwargs_tl)
 
 
-def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
                   supersamp=1, exptime=exptime_Kepler,
                   noise_model=None, model_instance=None):
+    """
+    """
     # Supersample the time if needed
     if supersamp > 1:
         t_model = get_time_supersampled(t, supersamp, exptime)
@@ -758,8 +760,8 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
 
     # Compute the model values for each time
     idx_par = []
-    datasim_function = datasim_db_docfunc.function
-    datasim_paramnames = datasim_db_docfunc.params_model
+    datasim_function = datasim_docfunc.function
+    datasim_paramnames = datasim_docfunc.params_model
     for par in datasim_paramnames:
         idx_par.append(l_param_name.index(par))
     model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
@@ -771,7 +773,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
         if noise_model.has_GP:
             # WARNING: Here for GP model. I take all the instruments with the same GP noise
             # model to compute the GP contribution. FOr now it works but If at one point I want
-            # to use the same model for two different time of data (ex: RV and LC). It will not anymore.
+            # to use the same model for two different type of data (ex: RV and LC). It will not anymore.
             # Create the simulated data (model) for all the datasets and get the datasim_all
             datasim_all = (model_instance.
                            create_datasimulator_alldatasets(dataset_db=model_instance.dataset_db))
@@ -779,19 +781,20 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
             for param_name in datasim_all.params_model:
                 idx_datasim.append(l_param_name.index(param_name))
             model_all = datasim_all.function(param[idx_datasim], **datasim_kwargs)
-            # Get the list of instrument models which have the same GP noise model that the Current
-            # Dataset you try to model
-            l_instmod_noisemod_cat = []
-            for inst_mod in model_instance.get_instmodels_used():
-                if inst_mod.noise_model == noise_model.category:
-                    l_instmod_noisemod_cat.append(inst_mod.get_name(include_prefix=True, recursive=True))
             # Get the simulated data (model) of only the dataset with the current GP noisemodel
             # Get the dataset kwargs mandatory for the GP simulation (l_datakwargs_noisemod)
             l_datakwargs_noisemod = []
             if datasim_all.multi_output:
-                idx_noisemod_GP = [ii for ii, instmod_fullname in
-                                   enumerate(datasim_all.instmodel_fullname)
-                                   if instmod_fullname in l_instmod_noisemod_cat]
+                # Get the list of instrument models which have the same GP noise model that the Current
+                # Dataset you try to model
+                # Also get the indexes of the corresponding datasets
+                idx_noisemod_GP = []
+                l_instmod_noisemod_cat = []
+                for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
+                    inst_mod = model_instance.isntruments[instmod_fullname]
+                    if inst_mod.noise_model == noise_model.category:
+                        idx_noisemod_GP.append(ii)
+                        l_instmod_noisemod_cat.append(inst_mod)
                 l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
                 model_noisemodel_GP = [mod_ii for ii, mod_ii in enumerate(model_all)
                                        if ii in idx_noisemod_GP]
@@ -806,17 +809,17 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
 
             # Get the GP simulator for the current GP noise model
             (gpsim_func,
-             l_param_noisemod) = noise_model.get_gp_simulator(model_instance, l_param_name)
+             l_param_noisemod) = noise_model.get_gp_simulator(l_params=l_param_name, model_instance=model_instance,
+                                                              l_instmod_obj=l_instmod_noisemod_cat)
             # Get the value of the parameter to provide to the GP simulator.
             # WARNING: If one of the gp simulator parmameter is fixed it might not get it with the code
             # below
             idx_noisemod = []
             for param_name in l_param_noisemod:
                 idx_noisemod.append(l_param_name.index(param_name))
-            # Compute the GP model
-            gp_model = gpsim_func(model_noisemodel_GP, param[idx_noisemod],
-                                  l_datakwargs_noisemod,
-                                  t_model)
+            # Compute the GP model model, param_noisemod, l_datakwargs, tsim
+            gp_model = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
+                                  l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
             if supersamp > 1:
                 gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
             model_wGP = model + gp_model
@@ -828,7 +831,7 @@ def compute_model(t, datasim_db_docfunc, param, l_param_name, datasim_kwargs=Non
     return model, model_wGP, t_model
 
 
-def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_kwargs=None,
+def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
                supersamp=1, exptime=exptime_Kepler,
                plot_phase=False, Per=None, tref=None,
                noise_model=None, model_instance=None,
@@ -875,7 +878,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     tmax_plus = tmax + tsamp  # Add 1 point after tmax
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
-    model, model_wGP, t = compute_model(t_plot, datasim_db_docfunc, param, l_param_name,
+    model, model_wGP, t = compute_model(t_plot, datasim_docfunc, param, l_param_name,
                                         datasim_kwargs=datasim_kwargs, supersamp=supersamp,
                                         exptime=exptime_Kepler,
                                         noise_model=noise_model,
@@ -913,7 +916,7 @@ def plot_model(tmin, tmax, nt, datasim_db_docfunc, param, l_param_name, datasim_
     return ebconts, labels
 
 
-def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
+def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
                    supersamp=1, exptime=exptime_Kepler, plot_phase=False, Per=None, tref=None,
                    noise_model=None, model_instance=None, zoom=None,
@@ -923,7 +926,7 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
     """Plot the residuals of the model.
     :param array t: Time vector of the data
     :param array data: Data vector
-    :param DatasimDocFunc datasim_db_docfunc: Function computing the model
+    :param DatasimDocFunc datasim_docfunc: Function computing the model
     :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
     :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
         by param (will be passed on to compute_model)
@@ -960,7 +963,7 @@ def plot_residuals(t, data, datasim_db_docfunc, param, l_param_name,
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Compute residual
-    model, model_wGP, _ = compute_model(t, datasim_db_docfunc, param, l_param_name,
+    model, model_wGP, _ = compute_model(t, datasim_docfunc, param, l_param_name,
                                         datasim_kwargs=datasim_kwargs, supersamp=supersamp,
                                         exptime=exptime,
                                         noise_model=noise_model,
