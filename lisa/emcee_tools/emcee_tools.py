@@ -791,7 +791,7 @@ def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
                 idx_noisemod_GP = []
                 l_instmod_noisemod_cat = []
                 for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
-                    inst_mod = model_instance.isntruments[instmod_fullname]
+                    inst_mod = model_instance.instruments[instmod_fullname]
                     if inst_mod.noise_model == noise_model.category:
                         idx_noisemod_GP.append(ii)
                         l_instmod_noisemod_cat.append(inst_mod)
