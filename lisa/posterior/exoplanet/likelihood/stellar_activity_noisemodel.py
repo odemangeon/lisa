@@ -367,7 +367,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
                                                        l_idx_param_noisemod=l_idx_param_noisemod)
-        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
