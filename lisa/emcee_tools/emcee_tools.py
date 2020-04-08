@@ -490,7 +490,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                             ax=ax_data_i)
             # Plot the residuals
             (residual_out, residual_wGP, ebconts_resi, labels_resi
-             ) = plot_residuals(t=t, data=data_pl, datasim_db_docfunc=datasim_docfunc_pl, param=param,
+             ) = plot_residuals(t=t, data=data_pl, datasim_docfunc=datasim_docfunc_pl, param=param,
                                 l_param_name=l_param_name, data_err=data_err_new, jitter=None, jitter_type=None,
                                 supersamp=supersamp_model, exptime=exptime,
                                 datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
@@ -845,11 +845,11 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
     :param float tmin: Min value of the time vector over which the model will be evaluated and plotted
     :param float tmax: Max value of the time vector over which the model will be evaluated and plotted
     :param int nt: Number of values of the time vector over which the model will be evaluated and plotted
-    :param DatasimDocFunc datasim_db_docfunc: Function computing the model
+    :param DatasimDocFunc datasim_docfunc: Function computing the model
     :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
     :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
         by param (will be passed on to compute_model)
-    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_db_docfunc
+    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_docfunc
         (will be passed on to compute_model)
     :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
     :param float exptime: Exposure time for the model (will be passed on to compute_model)
@@ -933,7 +933,7 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
     :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
     :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
         by param (will be passed on to compute_model)
-    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_db_docfunc
+    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_docfunc
         (will be passed on to compute_model)
     :param array data_err: Data error vector
     :param float jitter: Value of the jitter
