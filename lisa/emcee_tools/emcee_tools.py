@@ -9,7 +9,7 @@ results.
 from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
-from numpy import linspace, median, where, array, argmax, unravel_index, ones, nan, sqrt, argsort
+from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argsort  # , unravel_index
 from numpy import nanpercentile, newaxis, concatenate, std
 from numbers import Number
 from collections import Iterable
@@ -612,6 +612,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
         # Get the datasimulator for the whole system
+        print(inst_mod_fullname)
+        print(datasim_dbf.instrument_db[inst_mod_fullname])
         datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
         # Get the datasimulators databases with the datasimulators for the whole system and the individual parts.
         datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
@@ -791,7 +793,7 @@ def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
                 idx_noisemod_GP = []
                 l_instmod_noisemod_cat = []
                 for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
-                    inst_mod = model_instance.isntruments[instmod_fullname]
+                    inst_mod = model_instance.instruments[instmod_fullname]
                     if inst_mod.noise_model == noise_model.category:
                         idx_noisemod_GP.append(ii)
                         l_instmod_noisemod_cat.append(inst_mod)
@@ -803,6 +805,7 @@ def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
                     l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
             else:
                 model_noisemodel_GP = [model_all]
+                l_instmod_noisemod_cat = [model_instance.instruments[instmod_fullname] for instmod_fullname in datasim_all.instmodel_fullname]
                 dataset_name = datasim_all.dataset.iloc[0]
                 dataset = model_instance.dataset_db[dataset_name]
                 l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))

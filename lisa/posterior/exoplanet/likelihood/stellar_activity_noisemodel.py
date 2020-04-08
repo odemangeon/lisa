@@ -63,7 +63,9 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.log_likelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
+        # print(type(dict_datakwargs["data"]), len(dict_datakwargs["data"]), dict_datakwargs["data"][0].shape)
+        # print(type(model), len(model), type(model[0]))
+        return gp.log_likelihood((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)))
         """
 
     function_name = "lnlike"
@@ -76,7 +78,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.sample_conditional(concatenate(dict_datakwargs["data"]) - concatenate(model),
+        return gp.sample_conditional((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)),
                                      tsim)
         """
 
@@ -274,11 +276,15 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         text_l_jitter = "["
         for instmod_obj in l_instmod_obj:
             jitter_param = instmod_obj.parameters[jitter_name]
-            if jitter_param.free and (jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new):
-                l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
-                (l_params_new, l_params_noisemod_new,
-                 l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
-                                                                      l_idx_param_noisemod_new, jitter_param)
+            l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+            if jitter_param.free:
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new:
+                    (l_params_new, l_params_noisemod_new,
+                     l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
+                                                                          l_idx_param_noisemod_new, jitter_param)
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_noisemod_new:
+                    l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_idx_param_noisemod_new.append(l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
             if jitter_param.free:
                 text_l_jitter += f"{param_noisemod_name}[{l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))}], "
             else:
