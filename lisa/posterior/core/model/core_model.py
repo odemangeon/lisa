@@ -269,7 +269,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     #         if self.has_parameter(param_name):
     #             return self.parameters[param_name]
 
-    def get_list_params(self, main=False, free=False, recursive=False, **kwargs):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, recursive=False, **kwargs):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameters
@@ -287,13 +287,19 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         result = []
         # Get parameters that in the model parameters and not in any specific param container
-        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free))
+        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate))
         # Get parameters that in the param containers
         if recursive:
-            result.extend(ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, **kwargs))
+            result_in_paramcont_db = ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, no_duplicate=no_duplicate, **kwargs)
+            if no_duplicate:
+                result_in_paramcont_db_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result_in_paramcont_db]
+                for param in result_in_paramcont_db:
+                    if param.get_name(include_prefix=True, recursive=True) in result_in_paramcont_db_name:
+                        result_in_paramcont_db_name.remove(param)
+                result.extend(result_in_paramcont_db_name)
         return result
 
-    def get_list_paramnames(self, main=False, free=False, recursive=False, **kwargs):
+    def get_list_paramnames(self, main=False, free=False, recursive=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters names in the model.
 
         :param bool main: If true (default false) returns only the main parameters
@@ -312,7 +318,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # get_name.
         if "recursive_naming" in kwargs:
             kwargs["recursive"] = kwargs.pop("recursive_naming")
-        for param in self.get_list_params(main=main, free=free, recursive=recursive):
+        for param in self.get_list_params(main=main, free=free, recursive=recursive, no_duplicate=no_duplicate):
             result.append(param.get_name(**kwargs))
         return result
 

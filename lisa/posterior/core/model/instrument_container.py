@@ -83,7 +83,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                                                   database_name="instrument container",
                                                   ordered=True)
 
-    def get_list_params(self, main=False, free=False, inst_models={}):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, inst_models={}):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameters
@@ -97,7 +97,13 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
         for inst_name, list_mod_name in inst_models.items():
             for inst_mod_name in list_mod_name:
                 mod = self[inst_name][inst_mod_name]
-                result.extend(mod.get_list_params(main=main, free=free))
+                result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+                if no_duplicate:
+                    result_mod_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result_mod]
+                    for param in result_mod:
+                        if param.get_name(include_prefix=True, recursive=True) in result_mod_param_name:
+                            result_mod.remove(param)
+                result.extend(result_mod)
         return result
 
     def get_subkwargs_4_get_list_params(self, model_instance=None, **kwargs):

@@ -74,25 +74,42 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         """Return the list of all parameters."""
         return list(self.parameters.keys())
 
-    def get_list_params(self, main=False, free=False):
+    def get_list_params(self, main=False, free=False, no_duplicate=True):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
-        :return list_of_param result: list of Parameter instances
-        """
-        if main:
-            result = []
-            for param in Core_ParamContainer.__get_list_all_params(self):
-                if free and (param.main) and (param.free):
-                    result.append(param)
-                elif not(free) and param.main:
-                    result.append(param)
-            return result
-        else:
-            return Core_ParamContainer.__get_list_all_params(self)
+        Parameters
+        ----------
+        main : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
 
-    def get_list_paramnames(self, main=False, free=False, **kwargs):
+        Returns
+        -------
+        result : list of Parameter
+            list of Parameter instances
+        """
+        result = []
+        for param in Core_ParamContainer.__get_list_all_params(self):
+            add_param = False
+            if main:
+                if free and param.main and param.free:
+                    add_param = True
+                elif not(free) and param.main:
+                    add_param = True
+            else:
+                add_param = True
+            if add_param:
+                if no_duplicate:
+                    if (param.get_name(include_prefix=True, recursive=True) not in [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]):
+                        result.append(param)
+                else:
+                    result.append(param)
+        return result
+
+    def get_list_paramnames(self, main=False, free=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameter names
@@ -104,7 +121,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         :return list_of_param result: list of Parameter instances
         """
         result = []
-        for param in Core_ParamContainer.get_list_params(self, main=main, free=free):
+        for param in Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate):
             result.append(param.get_name(**kwargs))
         return result
 

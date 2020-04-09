@@ -189,5 +189,5 @@ class GravGroup_Parametrisation(Core_Parametrisation):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             for LD_parcont in self.get_list_LD_parconts():
-                for param in LD_parcont.get_list_params():
+                for param in LD_parcont.get_list_params(no_duplicate=True):
                     param.main = True

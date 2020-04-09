@@ -23,7 +23,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
     """
     # Create a dictionary with the main parameter values either chain (if free) or one value
     dico_par = {}
-    for param in model.get_list_params(main=True, recursive=True):
+    for param in model.get_list_params(main=True, recursive=True, no_duplicate=True):
         if param.free:
             dico_par[param.get_name(include_prefix=True, recursive=True)] = chaininterpret[..., param.get_name(include_prefix=True, recursive=True)]
         else:

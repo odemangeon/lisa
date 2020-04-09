@@ -123,7 +123,7 @@ class ParamContainerDatabase(object):
         """Return the list of the paramcontainer categories in this ParamContainerDatabase."""
         return list(self.paramcontainers.keys())
 
-    def get_list_params(self, model_instance, main=False, free=False, **kwargs):
+    def get_list_params(self, model_instance, main=False, free=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters.
 
         :param Core_Model model_instance: Model instance which is used for the default value of
@@ -142,13 +142,19 @@ class ParamContainerDatabase(object):
                 selectedkwargs = (self.paramcontainers[paramcont_cat].
                                   get_subkwargs_4_get_list_params(model_instance, **kwargs))
                 result.extend(self.paramcontainers[paramcont_cat].
-                              get_list_params(main=main, free=free, **selectedkwargs))
+                              get_list_params(main=main, free=free, no_duplicate=no_duplicate, **selectedkwargs))
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
-                    result.extend(param_cont.get_list_params(main=main, free=free))
+                    result_param_cont = param_cont.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+                    if no_duplicate:
+                        result_param_cont_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result_param_cont]
+                        for param in result_param_cont:
+                            if param.get_name(include_prefix=True, recursive=True) in result_param_cont_name:
+                                result_param_cont.remove(param)
+                    result.extend()
         return result
 
-    def get_list_paramnames(self, model_instance=None, main=False, free=False, **kwargs):
+    def get_list_paramnames(self, model_instance=None, main=False, free=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameters
@@ -162,7 +168,7 @@ class ParamContainerDatabase(object):
             by args and kwargs.
         """
         result = []
-        for param in self.get_list_params(model_instance=model_instance, main=main, free=free):
+        for param in self.get_list_params(model_instance=model_instance, main=main, free=free, no_duplicate=no_duplicate):
             result.append(param.get_name(**kwargs))
         return result
 
