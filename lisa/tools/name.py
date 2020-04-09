@@ -253,41 +253,6 @@ class Named(object):
         """
         return self.get_name(**(self.code_name_rules))
 
-    # @property
-    # def name_prefix(self):
-    #     """Return the name of the instance."""
-    #     return self.name.name_prefix
-    #
-    # @property
-    # def name_prefix_code(self):
-    #     """Return the name of the instance."""
-    #     return self.name.name_prefix_code
-    #
-    # @property
-    # def hasnameprefix(self):
-    #     """Return True is name_prefix has been set already, False otherwise."""
-    #     return self.name.hasnameprefix()
-    #
-    # @name_prefix.setter
-    # def name_prefix(self, name_prefix):
-    #     """Set the prefix of the ame of the instance."""
-    #     self.name.name_prefix = name_prefix
-    #
-    # @property
-    # def full_name(self):
-    #     """Return the full name of the instance."""
-    #     return self.name.full_name
-    #
-    # @property
-    # def name_code(self):
-    #     """Return the name of the instance that can be used in code."""
-    #     return self.name.name_code
-    #
-    # @property
-    # def full_name_code(self):
-    #     """Return the full name of the CelestialBody."""
-    #     return self.name.full_name_code
-
     # DO NOT CHANGE THE DEFAULT VALUES !
     def get_name(self, include_prefix=False, code_version=False, recursive=False, prefix_kwargs=None):
         """Return the name of the parameter.
@@ -300,4 +265,5 @@ class Named(object):
             name_prefix
         :return str name: String providing the name of the instance
         """
-        return self.name.get(include_prefix=include_prefix, code_version=code_version, recursive=recursive, prefix_kwargs=prefix_kwargs)
+        return self.name.get(include_prefix=include_prefix, code_version=code_version, recursive=recursive,
+                             prefix_kwargs=prefix_kwargs)

@@ -23,9 +23,41 @@ logger = getLogger()
 
 
 # TODO: Add the possibility to add a description of the parameter.
+class Named_Parameter(Named):
+    """docstring for Named_Parameter(Named):."""
+
+    def get_name(self, include_prefix=False, code_version=False, recursive=False, prefix_kwargs=None,
+                 force_no_duplicate=False):
+        """Return the name of the parameter.
+
+        Parameters
+        ----------
+        include_prefix : bool
+            If True (default False) include the name prefix in the output.
+        code_version : bool
+            If True (default False) return the code version of the name of the parameter
+        recursive : bool
+            If True (default False) apply the arguments include_prefix, code_version, and recursive
+            itself to the prefix (Superseed the content of prefix_kwargs).
+        prefix_kwargs : dict
+            Dictionary with the arguments to pass to the get_name method of name_prefix
+        force_no_duplicate : bool
+            If True the function will not go to the duplicate if the parameter is a duplicate.
+
+        Returns
+        -------
+        name : str
+            String providing the name of the instance
+        """
+        if (self.duplicate is None) or force_no_duplicate:
+            return self.name.get(include_prefix=include_prefix, code_version=code_version, recursive=recursive,
+                                 prefix_kwargs=prefix_kwargs)
+        else:
+            return self.duplicate.name.get(include_prefix=include_prefix, code_version=code_version,
+                                           recursive=recursive, prefix_kwargs=prefix_kwargs)
 
 
-class Parameter(Named, Parameter_Prior):
+class Parameter(Named_Parameter, Parameter_Prior):
     """docstring for Parameter."""
 
     def __init__(self, name, name_prefix=None, unit=None, free=True, main=False, value=None,
