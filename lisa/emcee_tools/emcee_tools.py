@@ -464,11 +464,11 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         # Compute the data - other planets contributions
         data_pl = data.copy()
         for datasim_docfunc_other in l_datasim_docfunc_others:
-            model, modelwGP, _ = compute_model(t, datasim_docfunc_other, param, l_param_name,
-                                               datasim_kwargs=kwargs,
-                                               supersamp=supersamp_model, exptime=exptime,
-                                               noise_model=noise_mod,
-                                               model_instance=model_instance)
+            model, modelwGP, GP_pred_var, _ = compute_model(t, datasim_docfunc_other, param, l_param_name,
+                                                            datasim_kwargs=kwargs,
+                                                            supersamp=supersamp_model, exptime=exptime,
+                                                            noise_model=noise_mod,
+                                                            model_instance=model_instance)
             data_pl = data_pl - model
         # Plot these data phase folded at the ephemeris of the planet.
         # Plot the model
@@ -590,11 +590,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     # Set defaults values of fig_kwargs
     if fig_kwargs is None:
         fig_kwargs = {}
-    fig = figure(figsize=(plot_width, ndataset * plot_height), **fig_kwargs)
+    fig = figure(figsize=(plot_width, ndataset * plot_height), constrained_layout=True, **fig_kwargs)
     gs_kwargs_final = {"bottom": 0.04, "top": 0.9, "left": 0.07, "right": 0.82, "hspace": 0.3}
     if gs_kwargs is not None:
         gs_kwargs_final.update(gs_kwargs)
-    gs = GridSpec(nrows=ndataset, ncols=1, **gs_kwargs_final)
+    gs = GridSpec(nrows=ndataset, ncols=1, figure=fig, **gs_kwargs_final)
 
     # Define the keywords for tick_params:
     kwargs_tick_params_final = {'axis': 'both', 'which': 'major', 'direction': "in", 'bottom': "on",
@@ -612,8 +612,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
         # Get the datasimulator for the whole system
-        print(inst_mod_fullname)
-        print(datasim_dbf.instrument_db[inst_mod_fullname])
+        # print(inst_mod_fullname)
+        # print(datasim_dbf.instrument_db[inst_mod_fullname])
         datasim = datasim_dbf.instrument_db[inst_mod_fullname]["whole"]
         # Get the datasimulators databases with the datasimulators for the whole system and the individual parts.
         datasim_dbf_instmod = datasim_dbf.instrument_db[inst_mod_fullname]
@@ -679,7 +679,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
                )
     if kwargs_tl is None:
         kwargs_tl = {}
-    fig.tight_layout(**kwargs_tl)
+    # fig.tight_layout(**kwargs_tl)
 
 
 def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
@@ -821,17 +821,18 @@ def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
             for param_name in l_param_noisemod:
                 idx_noisemod.append(l_param_name.index(param_name))
             # Compute the GP model model, param_noisemod, l_datakwargs, tsim
-            gp_model = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
-                                  l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
+            res_model, GP_pred_var = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
+                                                l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
             if supersamp > 1:
-                gp_model = np.mean(gp_model.reshape(-1, supersamp), axis=1)
-            model_wGP = model + gp_model
+                res_model = average_supersampled_values(res_model, supersamp)
+                # res_model = np.mean(res_model.reshape(-1, supersamp), axis=1)
+            model_wGP = model + res_model
         else:
             model_wGP = None
     else:
         model_wGP = None
 
-    return model, model_wGP, t_model
+    return model, model_wGP, GP_pred_var, t_model
 
 
 def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
@@ -881,11 +882,11 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
     tmax_plus = tmax + tsamp  # Add 1 point after tmax
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
-    model, model_wGP, t = compute_model(t_plot, datasim_docfunc, param, l_param_name,
-                                        datasim_kwargs=datasim_kwargs, supersamp=supersamp,
-                                        exptime=exptime_Kepler,
-                                        noise_model=noise_model,
-                                        model_instance=model_instance)
+    model, model_wGP, GP_pred_var, t = compute_model(t_plot, datasim_docfunc, param, l_param_name,
+                                                     datasim_kwargs=datasim_kwargs, supersamp=supersamp,
+                                                     exptime=exptime_Kepler,
+                                                     noise_model=noise_model,
+                                                     model_instance=model_instance)
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -913,6 +914,11 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
         if plot_phase:
             ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref, ax=ax, pl_kwargs=kwarg_GP)
         else:
+            kwarg_GP_pred_var = kwarg_GP.copy()
+            kwarg_GP_pred_var["alpha"] = 0.4
+            kwarg_GP_pred_var.pop("fmt")
+            GP_pred_var = ax.fill_between(t_plot, model_wGP - np.sqrt(GP_pred_var), model_wGP + np.sqrt(GP_pred_var),
+                                          **kwarg_GP_pred_var)
             ebcont_wGP = ax.errorbar(t_plot, model_wGP, **kwarg_GP)
         ebconts.append(ebcont_wGP)
         labels.append(kwarg_GP["label"])
@@ -966,11 +972,11 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Compute residual
-    model, model_wGP, _ = compute_model(t, datasim_docfunc, param, l_param_name,
-                                        datasim_kwargs=datasim_kwargs, supersamp=supersamp,
-                                        exptime=exptime,
-                                        noise_model=noise_model,
-                                        model_instance=model_instance)
+    model, model_wGP, GP_pred_var, _ = compute_model(t, datasim_docfunc, param, l_param_name,
+                                                     datasim_kwargs=datasim_kwargs, supersamp=supersamp,
+                                                     exptime=exptime,
+                                                     noise_model=noise_model,
+                                                     model_instance=model_instance)
     residual = data - model
     # Apply jitter if needed
     data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)

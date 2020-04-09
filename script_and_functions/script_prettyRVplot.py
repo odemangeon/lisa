@@ -280,12 +280,12 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Remove GP model
             if remove_GP:
-                model_dst, model_wGP_dst, t_dst = et.compute_model(t_dst,
-                                                                   datasim_dbf.instrument_db[inst_mod_fullname]["whole"],
-                                                                   fitted_values, l_param_name,
-                                                                   datasim_kwargs=kwargs_dataset,
-                                                                   noise_model=noise_model,
-                                                                   model_instance=model_instance)
+                model_dst, model_wGP_dst, GP_pred_var, t_dst = et.compute_model(t_dst,
+                                                                                datasim_dbf.instrument_db[inst_mod_fullname]["whole"],
+                                                                                fitted_values, l_param_name,
+                                                                                datasim_kwargs=kwargs_dataset,
+                                                                                noise_model=noise_model,
+                                                                                model_instance=model_instance)
                 data_pl[datasetname] = data_pl[datasetname] - (model_wGP_dst - model_dst)
 
             # Get the datasims for the other planets
@@ -298,12 +298,12 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Compute and remove the other planet contribution
             for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
-                model, _, _ = et.compute_model(t_dst,
-                                               datasim_db_docfunc_other,
-                                               fitted_values, l_param_name,
-                                               datasim_kwargs=kwargs_dataset,
-                                               noise_model=noise_model,
-                                               model_instance=model_instance)
+                model, _, _, _ = et.compute_model(t_dst,
+                                                  datasim_db_docfunc_other,
+                                                  fitted_values, l_param_name,
+                                                  datasim_kwargs=kwargs_dataset,
+                                                  noise_model=noise_model,
+                                                  model_instance=model_instance)
                 data_pl[datasetname] = data_pl[datasetname] - (model - deltaRV[datasetname] - fitted_values[idx_star_v0])
 
             # Plot the data

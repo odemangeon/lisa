@@ -356,18 +356,18 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                 kwargs_dataset = dico_kwargs[datasetname].copy()
                 kwargs_dataset.pop("data_err")
                 kwargs_dataset.pop("data")
-                model, _, _ = et.compute_model(kwargs_dataset.pop("t"),
-                                               datasim_db_docfunc_other,
-                                               fitted_values, l_param_name,
-                                               datasim_kwargs=kwargs_dataset,
-                                               noise_model=noise_model,
-                                               model_instance=model_instance)
-                modelbinned, _, _ = et.compute_model(midbins[datasetname], datasim_db_docfunc_other,
-                                                     fitted_values, l_param_name,
-                                                     datasim_kwargs=kwargs_dataset, supersamp=supersamp_bin_model,
-                                                     exptime=exptime_bin,
-                                                     noise_model=noise_model,
-                                                     model_instance=model_instance)
+                model, _, _, _ = et.compute_model(kwargs_dataset.pop("t"),
+                                                  datasim_db_docfunc_other,
+                                                  fitted_values, l_param_name,
+                                                  datasim_kwargs=kwargs_dataset,
+                                                  noise_model=noise_model,
+                                                  model_instance=model_instance)
+                modelbinned, _, _, _ = et.compute_model(midbins[datasetname], datasim_db_docfunc_other,
+                                                        fitted_values, l_param_name,
+                                                        datasim_kwargs=kwargs_dataset, supersamp=supersamp_bin_model,
+                                                        exptime=exptime_bin,
+                                                        noise_model=noise_model,
+                                                        model_instance=model_instance)
                 data_pl[datasetname] = data_pl[datasetname] - model
                 databinned_pl[datasetname] = binval[datasetname]["uncorr"] - modelbinned
 
