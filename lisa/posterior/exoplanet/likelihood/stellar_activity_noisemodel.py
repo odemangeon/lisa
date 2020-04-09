@@ -289,15 +289,24 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         text_l_jitter = "["
         for instmod_obj in l_instmod_obj:
             jitter_param = instmod_obj.parameters[jitter_name]
+<<<<<<< HEAD
             l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+=======
+>>>>>>> f7de1c39d5fb0a856800c4c1cc5f994f481dadad
             if jitter_param.free:
                 if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new:
                     (l_params_new, l_params_noisemod_new,
                      l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
                                                                           l_idx_param_noisemod_new, jitter_param)
                 if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_noisemod_new:
+<<<<<<< HEAD
                     l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
                     l_idx_param_noisemod_new.append(l_params_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
+=======
+                    l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_idx_param_noisemod_new.append(l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
+>>>>>>> f7de1c39d5fb0a856800c4c1cc5f994f481dadad
             if jitter_param.free:
                 text_l_jitter += f"{param_noisemod_name}[{l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))}], "
             else:
