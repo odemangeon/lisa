@@ -180,8 +180,11 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
             # loggstar: logg of the star
-            l_tup_planet.append((planet.loggstar.get_name(include_prefix=True, recursive=True), cv.getloggstar, [],
-                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
+            l_tup_planet.append((planet.loggstar.get_name(include_prefix=True, recursive=True),
+                                 cv.getloggstar, [],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True),
+                                  star.R.get_name(include_prefix=True, recursive=True)]))
             # circtime: circularisation timescale of the planet
             l_tup_planet.append((planet.circtime.get_name(include_prefix=True, recursive=True), cv.getcirctime, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True),

@@ -329,14 +329,16 @@ def getplsurfaceg(per, ar, rp, inc, ecc, velocity):
     return surgp
 
 
-def getloggstar(P, aR, Rs):
+def getloggstar(P, aR, ecc, omega, Rs):
     """Return the logg value of the star computed from the transit.
 
     :param float/np.ndarray P: Planetary orbital period im days
     :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray ecc: Orbital eccentricity of the planetary orbit
+    :param float/np.ndarray omega: Argument of periastron of the stellar orbit in degrees
     :param float/np.ndarray Rs: Stellar radius in solar radius
     """
-    density = getrhostar(P, aR)  # densun in cgs and rsun in meters
+    density = getrhostar(P, aR, ecc, omega)  # densun in cgs and rsun in meters
     return np.log10(4. * np.pi * grav / 3.) + np.log10(density * densun * Rs * rsun * 100.)
 
 
