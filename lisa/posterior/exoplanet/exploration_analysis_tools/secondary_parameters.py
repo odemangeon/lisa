@@ -146,7 +146,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                       planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
             elif model.parametrisation == "Multis":
                 l_tup_planet.append((planet.aR.get_name(include_prefix=True, recursive=True), cv.getaoverr, [],
-                                     [planet.P.get_name(include_prefix=True, recursive=True), star.rho.get_name(include_prefix=True, recursive=True)]))
+                                     [planet.P.get_name(include_prefix=True, recursive=True), star.rho.get_name(include_prefix=True, recursive=True),
+                                      planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
                 l_tup_planet.append((planet.b.get_name(include_prefix=True, recursive=True), cv.getb, [],
                                      [planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                       planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
@@ -176,7 +177,8 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), planet.M.get_name(include_prefix=True, recursive=True)]))
             # rhostar: Density of the star
             l_tup_planet.append((planet.rhostar.get_name(include_prefix=True, recursive=True), cv.getrhostar, [],
-                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True)]))
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
             # loggstar: logg of the star
             l_tup_planet.append((planet.loggstar.get_name(include_prefix=True, recursive=True), cv.getloggstar, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
