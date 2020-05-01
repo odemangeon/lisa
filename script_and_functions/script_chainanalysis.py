@@ -89,7 +89,7 @@ last_min_GS = 50  # Minimum number of steps to use for the final state of the ch
 intervals_GS = 100  # Number of intervals in which the first percentage of the chain will be split to address convergence
 min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in each interval and the number of steps between to intervals
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
-interval_perc_GS = 50  # Percentage of the chains used in each intervals to address convergence
+interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
 do_geweke_plot = True
 apply_min_burnin = True
@@ -132,7 +132,7 @@ do_SecParam = True
 sampling_corner_sec = 100
 units = {"K": "kms"}
 units_dict = {"K": uu.km / uu.s}
-omega_0to360 = True
+omega_0to360 = False
 save_results_bestfit_secpar = True
 
 ## logger
