@@ -851,7 +851,7 @@ class TransitingRhoprior(Transitingprior):
         # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
-            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"], 0. 90.)) # WARNING: Quick fix - ecc and omega are not included in the prior
+            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"], 0., 90.))  # WARNING: Quick fix - ecc and omega are not included in the prior
         # Format the return which should be a tuple of list of arrays or arrays depending on wether a
         # parameter can be multiple or not.
         # It should be ( np.array(rhostar), [np.array(P) for each planet], [np.array(cosinc) for each planet],
