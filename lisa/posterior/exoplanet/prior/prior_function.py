@@ -714,7 +714,7 @@ class TransitingRhoprior(Transitingprior):
         def {function_name}({param_vector_name}):
             P = array([{P}])
             Rrat = array([{Rrat}])
-            b = getaoverr(P, {rhostar}) * array([{cosinc}])
+            b = getaoverr(P, {rhostar}, 0., 90.) * array([{cosinc}])  # WARNING: "0., 90.": Quick fix - ecc and omega are not included in the prior
             if any({list_comp}):
                 return -inf
             elif any(abs([{cosinc}]) > 1):
@@ -745,7 +745,7 @@ class TransitingRhoprior(Transitingprior):
         """
         raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
-        aR = getaoverr(P, rhostar)
+        aR = getaoverr(P, rhostar, 0, 90.)  # WARNING: Quick fix - ecc and omega are not included in the prior
         b = aR * cosinc
         if self.transiting:
             if self.allow_grazing:
@@ -851,7 +851,7 @@ class TransitingRhoprior(Transitingprior):
         # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
-            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"], 0. 90.)) # WARNING: Quick fix - ecc and omega are not included in the prior
         # Format the return which should be a tuple of list of arrays or arrays depending on wether a
         # parameter can be multiple or not.
         # It should be ( np.array(rhostar), [np.array(P) for each planet], [np.array(cosinc) for each planet],
