@@ -1349,8 +1349,10 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
-        i_MAP_flatchain = argmax(get_clean_flatchain(chainI[lnprobability_name], l_walker=l_walker, l_burnin=l_burnin))
-        res = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)[i_MAP_flatchain, :]
+        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)
+        idx_lnprobability = chainI.param_names.index(lnprobability_name)
+        i_MAP_flatchain = argmax(clean_flat_chains[:, idx_lnprobability])
+        res = clean_flat_chains(i_MAP_flatchain)
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     elif method == "mode":
