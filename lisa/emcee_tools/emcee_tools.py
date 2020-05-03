@@ -1352,7 +1352,7 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
         i_MAP_flatchain = argmax(clean_flat_chains[:, idx_lnprobability])
-        res = clean_flat_chains(i_MAP_flatchain)
+        res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
     elif method == "mode":
