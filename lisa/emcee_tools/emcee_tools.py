@@ -1213,7 +1213,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     :return list_of_int l_selected_walker: list of selected walkers
     :return int nb_rejected: Number of rejected walkers
     """
-    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
+    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} %; sigma_clip at {sigma} sigma"
                 "".format(quantile=quantile, sigma=sig_fact))
     percentile_acceptance_frac = nanpercentile(acceptance_fraction, quantile)
     mad_acceptance_frac = mad(acceptance_fraction, axis=None, nan_policy="omit")
@@ -1270,8 +1270,8 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
-    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} \%;"
-                "reference quantile across walkers = {quantile} \%; sigma_clip at {sigma} sigma"
+    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} %;"
+                "reference quantile across walkers = {quantile} %; sigma_clip at {sigma} sigma"
                 "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
     walkers_percentile_lnposterior = nanpercentile(lnprobability, quantile_walker, axis=1)
     percentile_lnposterior = nanpercentile(walkers_percentile_lnposterior, quantile)
@@ -1343,15 +1343,15 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin),
                            axis=0)
     elif method == "MAP":
-        if lnprobability_name not in chainI.param_names:
-            raise ValueError(f"{lnprobability_name} is not in chainI.param_names")
+        idx_lnprobability = chainI.param_names.index(lnprobability_name)
+        print(f"idx_lnprobability: {idx_lnprobability}")
         # if (l_walker is not None) or (l_burnin is not None):
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
         clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)
-        idx_lnprobability = chainI.param_names.index(lnprobability_name)
-        i_MAP_flatchain = argmax(clean_flat_chains[:, idx_lnprobability])
+        i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
+        print(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
         res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)

@@ -110,6 +110,12 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                                                                      dico_par[star.M.get_name(include_prefix=True, recursive=True)])
         l_parname_sec_chain.append(star.R.get_name(include_prefix=True, recursive=True))
 
+    # Compute stellar luminosity: L
+    dico_par[star.L.get_name(include_prefix=True, recursive=True)] = cv.getLs(
+        dico_par[star.R.get_name(include_prefix=True, recursive=True)],
+        dico_par[star.Teff.get_name(include_prefix=True, recursive=True)])
+    l_parname_sec_chain.append(star.L.get_name(include_prefix=True, recursive=True))
+
     # Define units of parameter for which the unit can vary depending on the dataset.
     if units is None:
         units = {}
@@ -195,10 +201,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
-
-            # L: Stellar luminosity
-            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs, [],
-                                 [star.R.get_name(include_prefix=True, recursive=True), star.Teff.get_name(include_prefix=True, recursive=True)]))
 
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
@@ -320,9 +322,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
-            # L: Stellar luminosity
-            l_tup_planet.append((star.L.get_name(include_prefix=True, recursive=True), cv.getLs, [],
-                                 [star.R.get_name(include_prefix=True, recursive=True), star.Teff.get_name(include_prefix=True, recursive=True)]))
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
@@ -345,8 +344,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                 else:
                     raise ValueError("Secondary parameter computation {} return an unexpected "
                                      "object type: {}".format(sec_paraname, type(values)))
-        if Rstar_infered:
-            l_parname_sec_chain.append(star.R.get_name(include_prefix=True, recursive=True))
         chainIsec = ChainsInterpret(stack([dico_par[param] for param in l_parname_sec_chain],
                                           axis=-1),
                                     l_parname_sec_chain)
