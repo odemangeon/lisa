@@ -95,7 +95,7 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
             path to the folder which contain the data. If provided the main_default_folder and
             objected argument are ignored.
     """
-    # 1. Check if the folder argument has been provided. If yes use this otherwise try use a folder
+    # 1. Check if the folder argument has been provided. If yes use this otherwise try to use a folder
     # with the object name in the folder designated by the main_default_folder provided in argument
     folder_provided = (folder != "default")
     if folder_provided:

@@ -104,12 +104,12 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
         raise ValueError("key_arglist should be None or a string or in iterable of string")
     param_text = {}
     if param.free:
-        param_name = param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False)
+        param_name = param.get_name(include_prefix=True, recursive=True, force_no_duplicate=True)
         for key in l_key_arglist:
             if param_name not in arg_list[key][key_param]:
-                param_nb[key] += 1
                 arg_list[key][key_param].append(param_name)
                 param_text[key] = "{}[{}]".format(param_vector_name, param_nb[key])
+                param_nb[key] += 1
             else:
                 param_text[key] = "{}[{}]".format(param_vector_name, arg_list[key][key_param].index(param_name))
     else:

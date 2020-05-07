@@ -48,7 +48,7 @@ alldtst_key = DatabaseFunc._alldtst_key
 
 class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
                 DatasetsFileDbAttr):
-    """Posterior is main class of lisa.
+    """Posterior is the main class of lisa.
 
     It allows to define the datasets that you want to analyse, the model that you want to use to analyse
     these datasets, the noise models that you want to use. Finally, it produces function to simulate
@@ -103,6 +103,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         :param str object_name : Name of the object studied.
         :param str/None run_folder: Path to the run folder
         """
+        # Initialise the model attribute
+        self.__model = None
         # Define the name of the object studied
         Named.__init__(self, name=object_name)
         # Define two locks: dataset_lock and database_lock
@@ -118,8 +120,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         # Initialize datasetfile attribute and assign it instmodel4dataset,
         DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
                                     instmodel4dataset=self.instmodel4dataset)
-        # Initialise the model attribute
-        self.__model = None
         # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
         # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,

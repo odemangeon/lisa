@@ -109,7 +109,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
         if unit is not None:
             self.unit = unit
         # Initialise the info regarding the content of the parametrisation file for a Parameter
-        self.__paramfile_info = {"caracteristics": ["free", "value"]  # Caracteristics beside the prior info
+        self.__paramfile_info = {"caracteristics": ["duplicate", "free", "value"]  # Caracteristics beside the prior info
                                  }
         # Initialisation relative to the Prior.
         Parameter_Prior.__init__(self, self.__paramfile_info, **kwargs_prior)
@@ -243,16 +243,18 @@ class Parameter(Named_Parameter, Parameter_Prior):
         if texttab_1tline:
             text += text_tab
         text += entete
-        # First key of the parameter dictionnary is 'free' for free parameter or fixed.
-        text += "'free': {},\n".format(self.free)
-        # Second key is the value
+        # Duplicate key
+        text += "'duplicate': {},\n".format(self.duplicate)
+        # Free key
+        text += text_tab + space_entete_param + "'free': {},\n".format(self.free)
+        # Value key
         text += text_tab + space_entete_param + "'value': {},  # unit: {}\n".format(self.value,
                                                                                     self.unit)
         # Finally the prior info
         text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
         return text
 
-    def load_config(self, dico_config, **kwargs_prior):
+    def load_config(self, dico_config, model_instance, **kwargs_prior):
         """Load the configuration specified by the parameter dictionnary.
 
         :param dict dico_config : Dictionnary giving the configuration.
@@ -260,6 +262,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
         Keyword arguments are provided to Parameter_Prior.load_config (see its docstring for more
         info).
         """
+        # dico_carac2load = self.paramfile_info["caracteristics"].copy()
         for carac in self.paramfile_info["caracteristics"]:
             if carac in dico_config:
                 if getattr(self, carac) != dico_config[carac]:
@@ -268,6 +271,15 @@ class Parameter(Named_Parameter, Parameter_Prior):
                                            self.get_name(include_prefix=True, recursive=True),
                                            getattr(self, carac),
                                            dico_config[carac]))
-                    setattr(self, carac, dico_config[carac])
+                    if carac == "duplicate":
+                        if dico_config[carac] is None:
+                            setattr(self, carac, dico_config[carac])
+                        else:
+                            param_duplicated = model_instance.get_parameter(dico_config[carac], main=True, free=True, recursive=True)
+                            setattr(self, carac, param_duplicated)
+                    else:
+                        setattr(self, carac, dico_config[carac])
+            else:
+                raise ValueError(f"key {carac} is missing from the dictionary of parameter {self.get_name(include_prefix=True, recursive=True)}")
         if self.free:
-            Parameter_Prior.load_config(self, dico_config, **kwargs_prior)
+            Parameter_Prior.load_config(self, dico_config=dico_config, **kwargs_prior)

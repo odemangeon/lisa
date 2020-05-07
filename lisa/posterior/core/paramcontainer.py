@@ -294,7 +294,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         self.update_paramfile_info()
         return text
 
-    def load_config(self, dico_config, available_joint_priors={}, load_setup=False):
+    def load_config(self, dico_config, model_instance, available_joint_priors={}, load_setup=False):
         """load the configuration specified by the dictionnary
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
@@ -305,7 +305,9 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             param = getattr(self, param_name)
             if param.code_name in dico_config:
                 param.main = True
-                param.load_config(dico_config[param.get_name(code_version=True)], available_joint_priors=available_joint_priors,
+                param.load_config(dico_config=dico_config[param.get_name(code_version=True)],
+                                  model_instance=model_instance,
+                                  available_joint_priors=available_joint_priors,
                                   load_setup=load_setup)
             else:
                 param.main = False

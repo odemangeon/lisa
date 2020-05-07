@@ -292,11 +292,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         if recursive:
             result_in_paramcont_db = ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, no_duplicate=no_duplicate, **kwargs)
             if no_duplicate:
-                result_in_paramcont_db_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result_in_paramcont_db]
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
                 for param in result_in_paramcont_db:
-                    if param.get_name(include_prefix=True, recursive=True) in result_in_paramcont_db_name:
-                        result_in_paramcont_db_name.remove(param)
-                result.extend(result_in_paramcont_db_name)
+                    if param.get_name(include_prefix=True, recursive=True) in result_param_name:
+                        result_in_paramcont_db.remove(param)
+            result.extend(result_in_paramcont_db)
         return result
 
     def get_list_paramnames(self, main=False, free=False, recursive=False, no_duplicate=True, **kwargs):
@@ -494,7 +494,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                     paramcont_dico = dico_config[paramcont_name]
                     logger.debug("Content of param dictionary for {} {}: {}"
                                  "".format(paramcont_type, paramcont_name, paramcont_dico))
-                    self.paramcontainers[paramcont_type][paramcont_name].load_config(paramcont_dico,
+                    self.paramcontainers[paramcont_type][paramcont_name].load_config(dico_config=paramcont_dico,
+                                                                                     model_instance=self,
                                                                                      available_joint_priors=self.joint_prior_container)
             elif paramcont_type == instmod_cat:
                 load_instrument_config(dico_config=dico_config,
@@ -503,7 +504,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                        model_instance=self,
                                        available_joint_priors=self.joint_prior_container)
             else:  # For the model parameters (those who do no belong in any param container)
-                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], available_joint_priors=self.joint_prior_container)
+                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], model_instance=self,
+                                                    available_joint_priors=self.joint_prior_container)
 
     @property
     def param_file(self):

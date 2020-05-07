@@ -99,9 +99,9 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                 mod = self[inst_name][inst_mod_name]
                 result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
                 if no_duplicate:
-                    result_mod_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result_mod]
+                    result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
                     for param in result_mod:
-                        if param.get_name(include_prefix=True, recursive=True) in result_mod_param_name:
+                        if param.get_name(include_prefix=True, recursive=True) in result_param_name:
                             result_mod.remove(param)
                 result.extend(result_mod)
         return result
