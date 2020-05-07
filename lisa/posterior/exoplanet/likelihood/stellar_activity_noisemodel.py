@@ -16,6 +16,7 @@ from logging import getLogger
 from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from numpy import concatenate, sqrt
+import numpy as np
 from collections import defaultdict
 # from collections import OrderedDict
 
@@ -60,10 +61,18 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
+            # print((sqrt(datakwargs["data_err"]**2 + jitter**2)).shape)
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
+        #print(concatenate(dict_datakwargs["t"]))
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.log_likelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
+        # print(type(dict_datakwargs["data"]), len(dict_datakwargs["data"]), dict_datakwargs["data"][0].shape)
+        # print(type(model), len(model), type(model[0]))
+        # print((concatenate(dict_datakwargs["data"]) - concatenate(model)).shape)
+        res = gp.log_likelihood((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)))
+        # print(res)
+        return res
+        # return gp.log_likelihood((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)))
         """
 
     function_name = "lnlike"
@@ -73,11 +82,17 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
+            #print(f"jitter: {{jitter}}")
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.sample_conditional(concatenate(dict_datakwargs["data"]) - concatenate(model),
-                                     tsim)
+        #print(f"std(resi):{{np.std((concatenate(dict_datakwargs['data']) - concatenate(model)).reshape((-1)))}}")
+        pred, pred_var = gp.predict((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)), tsim, return_var=True)
+        #print(f"std(pred): {{np.std(pred)}}")
+        #print(f"pred(var): {{pred_var}}")
+        return pred, pred_var
+        # return gp.sample_conditional((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)),
+        #                             tsim)
         """
 
     gpsim_function_name = "gp_sim"
@@ -274,11 +289,15 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         text_l_jitter = "["
         for instmod_obj in l_instmod_obj:
             jitter_param = instmod_obj.parameters[jitter_name]
-            if jitter_param.free and (jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new):
-                l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
-                (l_params_new, l_params_noisemod_new,
-                 l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
-                                                                      l_idx_param_noisemod_new, jitter_param)
+            l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+            if jitter_param.free:
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new:
+                    (l_params_new, l_params_noisemod_new,
+                     l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
+                                                                          l_idx_param_noisemod_new, jitter_param)
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_noisemod_new:
+                    l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_idx_param_noisemod_new.append(l_params_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
             if jitter_param.free:
                 text_l_jitter += f"{param_noisemod_name}[{l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))}], "
             else:
@@ -361,7 +380,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
                                                        l_idx_param_noisemod=l_idx_param_noisemod)
-        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
@@ -370,6 +389,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         ldict["ExpSine2Kernel"] = ExpSine2Kernel
         ldict["GP"] = GP
         ldict["sqrt"] = sqrt
+        ldict["np"] = np
         exec(func, ldict)
         return ldict[cls.gpsim_function_name], [l_params_new[idx] for idx in l_idx_param_noisemod]
 
