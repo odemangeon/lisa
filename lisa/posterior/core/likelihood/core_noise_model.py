@@ -40,7 +40,17 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
 
 
 class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
-    """Docstring for Core_Noise_Model class."""
+    """Docstring for Core_Noise_Model class.
+
+    This class deal with the choice and the parametrisation of the noise models. It also provides
+    the functions to compute the likelihood.
+
+    Methods
+    -------
+    apply_parametrisation: Create and set to main the parameters required by the noise model
+        This function is called by the Core_Model.set_noisemodels method
+    check_parametrisation: Check that the parameters required by the noise model exists and set to main
+    """
 
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
     __kwargs_needed__ = ["data", "data_err"]
@@ -56,6 +66,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     @classmethod
     def apply_parametrisation(cls, model_instance=None, instmod_fullname=None):
         """Add in the model the necessary main parameters for the noise model.
+
+        This function is called by Core_Model.set_noisemodels for each instrument model.
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
             noise model which requires parameter of the object studied (like GP and stellar
@@ -82,6 +94,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     @classmethod
     def get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
+
+        This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
 
         :param list_of_string l_params: Current list of parameters full names.
         :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of

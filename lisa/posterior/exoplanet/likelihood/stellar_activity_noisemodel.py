@@ -15,15 +15,17 @@ model the residuals.
 from logging import getLogger
 from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
-from math import exp
-from numpy import concatenate
+from numpy import concatenate, sqrt
+import numpy as np
 from collections import defaultdict
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
-from ..model.stellar_activity import amp, tau, gamma, logperiod
-from ..model.stellar_activity import apply_parametrisation_stellar_activity
-from ...core.likelihood.core_noise_model import Core_Noise_Model
+from ..dataset_and_instrument.rv import RV_inst_cat
+from ..dataset_and_instrument.lc import LC_inst_cat
+from ...core.parameter import Parameter
+from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
+
 # from ....tools.function_w_doc import DocFunction
 
 
@@ -32,8 +34,15 @@ logger = getLogger()
 
 stelact_GP_noisemodel = "stellar_activity"
 
+amp = "ampSA"
+tau = "tauSA"
+gamma = "gammaSA"
+logperiod = "lnperiodSA"
 
-class StellarActNoiseModel(Core_Noise_Model):
+param_noisemod_name = "param_noisemod"
+
+
+class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     """docstring for StellarActNoiseModel."""
 
     __category__ = stelact_GP_noisemodel
@@ -44,41 +53,59 @@ class StellarActNoiseModel(Core_Noise_Model):
     kernel_text = ("{amp}**2 * ExpSquaredKernel(metric={tau}) * "
                    "ExpSine2Kernel(gamma={gamma}, log_period={log_period})")
 
-    # Comment: There is no need to sort the times because George does it automicaticallyself.
+    # Comment: There is no need to sort the times because George does it automicatically.
     # Before the version 0.3.1 of george, there was a sort argument (which was True by default) which need to
     # Be True to sort the x values
     lnlikefunc_text = """def {func_name}(model, param_noisemod, l_datakwargs):
-        gp = GP({kernel})
         dict_datakwargs = defaultdict(list)
-        for datakwargs in l_datakwargs:
+        for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
-            dict_datakwargs["data_err"].append(datakwargs["data_err"])
+            # print((sqrt(datakwargs["data_err"]**2 + jitter**2)).shape)
+            dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
+        gp = GP({kernel})
+        #print(concatenate(dict_datakwargs["t"]))
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.log_likelihood(concatenate(dict_datakwargs["data"]) - concatenate(model))
+        # print(type(dict_datakwargs["data"]), len(dict_datakwargs["data"]), dict_datakwargs["data"][0].shape)
+        # print(type(model), len(model), type(model[0]))
+        # print((concatenate(dict_datakwargs["data"]) - concatenate(model)).shape)
+        res = gp.log_likelihood((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)))
+        # print(res)
+        return res
+        # return gp.log_likelihood((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)))
         """
 
     function_name = "lnlike"
 
     gpsim_func_text = """def {func_name}(model, param_noisemod, l_datakwargs, tsim):
-        gp = GP({kernel})
         dict_datakwargs = defaultdict(list)
-        for datakwargs in l_datakwargs:
+        for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
             dict_datakwargs["data"].append(datakwargs["data"])
-            dict_datakwargs["data_err"].append(datakwargs["data_err"])
+            #print(f"jitter: {{jitter}}")
+            dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
+        gp = GP({kernel})
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        return gp.sample_conditional(concatenate(dict_datakwargs["data"]) - concatenate(model),
-                                     tsim)
+        #print(f"std(resi):{{np.std((concatenate(dict_datakwargs['data']) - concatenate(model)).reshape((-1)))}}")
+        pred, pred_var = gp.predict((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)), tsim, return_var=True)
+        #print(f"std(pred): {{np.std(pred)}}")
+        #print(f"pred(var): {{pred_var}}")
+        return pred, pred_var
+        # return gp.sample_conditional((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)),
+        #                             tsim)
         """
 
     gpsim_function_name = "gp_sim"
 
     __star_param_GP_names = [amp, tau, gamma, logperiod]
 
+    __allowed_inst_cat = [RV_inst_cat, LC_inst_cat]
+
     @classmethod
-    def apply_parametrisation(cls, model_instance, instmod_fullname=None):
+    def apply_parametrisation(cls, model_instance, instmod_fullname):
         """Add in the model the necessary main parameters for the noise model.
+
+        This function is called by Core_Model.set_noisemodels for each instrument model.
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
             noise model which requires parameter of the object studied (like GP and stellar
@@ -86,11 +113,28 @@ class StellarActNoiseModel(Core_Noise_Model):
         :param string instmod_fullname: Full name of the instrument involved in the noise model and
             for which you want to apply the parametrisation for the noise modelling.
         """
-        apply_parametrisation_stellar_activity(model_instance=model_instance,
-                                               instmod_fullname=instmod_fullname)
+        # Load the star and inst_model object
+        star = model_instance.stars[list(model_instance.stars.keys())[0]]
+        inst_model_obj = model_instance.instruments[instmod_fullname]
+        inst = inst_model_obj.instrument
+        inst_cat = inst.category
+        if inst_cat not in cls.__allowed_inst_cat:
+            raise ValueError(f"Stellar activity noise model can only be used for instrument category "
+                             f"{cls.__allowed_inst_cat}, got {inst_cat}."
+                             )
+        # Set the star parameters (tau, gamma, logperiod, amp)
+        for param_name in cls.__star_param_GP_names:
+            if star.has_parameter(name=param_name):
+                param = star.get_parameter(name=param_name)
+                if not param.main:
+                    param.main = True
+            else:
+                star.add_parameter(Parameter(name=param_name, name_prefix=star.name, main=True))
+        # Set the instrument models parameters (jitter)
+        super(StellarActNoiseModel, cls).apply_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
 
     @classmethod
-    def check_parametrisation(cls, model_instance, instmod_fullname=None):
+    def check_parametrisation(cls, model_instance, instmod_fullname):
         """Check the parameteristion for the noise model.
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
@@ -99,51 +143,24 @@ class StellarActNoiseModel(Core_Noise_Model):
         :param string instmod_fullname: Full name of the instrument involved in the noise model and
             for which you want to apply the parametrisation for the noise modelling.
         """
+        # Check the star parameters
         err_msg = ("The noise model of instrument model {} being {}, it must have a {} "
                    "{} parameter !")
         star = cls.get_star(model_instance)
         for param in cls.get_star_params_GP(model_instance):
             if param.get_name() not in star.parameters:
-                raise ValueError(err_msg.format(instmod_fullname, cls.category,
-                                                param.get_name(include_prefix=True, recursive=True), ""))
+                raise ValueError(err_msg.format(instmod_fullname, cls.category, param.get_name(include_prefix=True,
+                                                                                               recursive=True
+                                                                                               ),
+                                                "")
+                                 )
             if not(param.main):
-                raise ValueError(err_msg.format(instmod_fullname, cls.category,
-                                                param.get_name(include_prefix=True, recursive=True), "main"))
-
-    @classmethod
-    def get_prefilledlnlike(cls, l_params, model_instance, l_instmod_obj=None):
-        """Return a ln likelihood function prefilled with the fixed parameters.
-
-        The l_instmod_obj argument is not used, because there is no parameter specific to the instrument
-        model used in this noise model.
-
-        :param list_of_string l_params: Current list of parameters full names.
-        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
-            noise model which requires parameter of the object studied (like GP and stellar
-            activity)
-        :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
-            instrument model for the ln likelihood to produce.
-        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
-            model the simulated data (array), param_noisemod the free parameters value for the noise
-            model, the list of dataset kwargs and returns the ln posterior value
-        :return list_of_string l_params_new: Updated list of parameters full names.
-        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
-            the updated list of parameters (l_params_new).
-        """
-        ldict = locals().copy()
-        # nb_free = cls.nb_params_GP_free
-        ker, l_params_new, l_idx_param_noisemod = cls.__get_text_define_GP(model_instance, l_params)
-        func = cls.lnlikefunc_text.format(func_name=cls.function_name, kernel=ker)
-        ldict["defaultdict"] = defaultdict
-        ldict["list"] = list
-        ldict["concatenate"] = concatenate
-        ldict["logger"] = logger
-        ldict["ExpSquaredKernel"] = ExpSquaredKernel
-        ldict["ExpSine2Kernel"] = ExpSine2Kernel
-        ldict["exp"] = exp
-        ldict["GP"] = GP
-        exec(func, ldict)
-        return ldict[cls.function_name], l_params_new, l_idx_param_noisemod
+                raise ValueError(err_msg.format(instmod_fullname, cls.category, param.get_name(include_prefix=True,
+                                                                                               recursive=True),
+                                                "main")
+                                 )
+        # Check the jitter parameter
+        cls.check_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
 
     @classmethod
     def get_necessary_datakwargs(cls, dataset):
@@ -202,39 +219,139 @@ class StellarActNoiseModel(Core_Noise_Model):
     #     return len(cls.get_star_params_GP(free=True))
 
     @classmethod
-    def __get_text_define_GP(cls, model_instance, l_params):
-        """Return the text of the GP kernel.
+    def __get_text_define_GP(cls, model_instance, l_params, l_params_noisemod, l_idx_param_noisemod):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
             noise model which requires parameter of the object studied (like GP and stellar
             activity).
         :param list_of_string l_params: Current list of parameters full names.
+        :param list_of_string l_params_noisemod: Current list of parameters full names for the
+            noise model only.
+        :param list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+
+        Returns
+        -------
         :return str ker: Text of the kernel. The index in the parameter array p are for the
             noise model parameter array only.
         :return list_of_string l_params_new: Updated list of parameters full names.
+        :return list_of_string l_params_noisemod_new: Updated list of parameters full names for the noise model
         :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
             the updated list of parameters (l_params_new).
         """
         dico = {}
         i_noisemod = 0
         l_params_new = l_params.copy()
-        l_idx_param_noisemod = []
+        l_params_noisemod_new = l_params_noisemod.copy()
+        l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
         for param in cls.get_star_params_GP(model_instance):
             if param.free:
-                dico[param.get_name()] = "param_noisemod[{}]".format(i_noisemod)
+                dico[param.get_name()] = f"{param_noisemod_name}[{i_noisemod}]"
                 i_noisemod += 1
                 if param.get_name(include_prefix=True, recursive=True) not in l_params_new:
                     l_params_new.append(param.get_name(include_prefix=True, recursive=True))
-                l_idx_param_noisemod.append(l_params_new.index(param.get_name(include_prefix=True, recursive=True)))
+                l_idx_param_noisemod_new.append(l_params_new.index(param.get_name(include_prefix=True, recursive=True)))
+                l_params_noisemod_new.append(param.get_name(include_prefix=True, recursive=True))
             else:
                 dico[param.get_name()] = "{}".format(param.value)
         ker = cls.kernel_text.format(amp=dico[amp], tau=dico[tau],
                                      gamma=dico[gamma],
                                      log_period=dico[logperiod])
-        return ker, l_params_new, l_idx_param_noisemod
+        return ker, l_params_new, l_params_noisemod_new, l_idx_param_noisemod_new
 
     @classmethod
-    def get_gp_simulator(cls, model_instance, l_params):
+    def __get_text_l_jitter(cls, l_instmod_obj, l_params, l_params_noisemod, l_idx_param_noisemod):
+        """Return the text of the white noise array, the list of all parameters.
+
+        Parameters
+        ----------
+        l_instmod_obj : InstrumentModel/list_of_InstrumentModel
+            Instument model or list of instrument model for the ln likelihood to produce.
+        l_params : list_of_string
+            Current list of parameters full names.
+
+        Returns
+        -------
+        text_l_jitter : str
+            Text giving the list of the indexes of the jitter parameters in the list of the noise model
+            parameters for each instrument in the list of instrument models
+        l_params_new : list_of_string
+            Current list of parameters full names.
+        """
+        l_params_new = l_params.copy()
+        l_params_noisemod_new = l_params_noisemod.copy()
+        l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
+        l_jitter_paramname = []
+        text_l_jitter = "["
+        for instmod_obj in l_instmod_obj:
+            jitter_param = instmod_obj.parameters[jitter_name]
+            l_jitter_paramname.append(jitter_param.get_name(include_prefix=True, recursive=True))
+            if jitter_param.free:
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_new:
+                    (l_params_new, l_params_noisemod_new,
+                     l_idx_param_noisemod_new) = cls._update_lists_params(l_params_new, l_params_noisemod_new,
+                                                                          l_idx_param_noisemod_new, jitter_param)
+                if jitter_param.get_name(include_prefix=True, recursive=True) not in l_params_noisemod_new:
+                    l_params_noisemod_new.append(jitter_param.get_name(include_prefix=True, recursive=True))
+                    l_idx_param_noisemod_new.append(l_params_new.index(jitter_param.get_name(include_prefix=True, recursive=True)))
+            if jitter_param.free:
+                text_l_jitter += f"{param_noisemod_name}[{l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))}], "
+            else:
+                text_l_jitter += f"{jitter_param.value}, "
+        text_l_jitter += "]"
+        return text_l_jitter, l_params_new, l_params_noisemod_new, l_idx_param_noisemod_new, l_jitter_paramname
+
+    @classmethod
+    def get_prefilledlnlike(cls, l_params, model_instance, l_instmod_obj):
+        """Return a ln likelihood function prefilled with the fixed parameters.
+
+        This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
+
+        :param list_of_string l_params: Current list of parameters full names.
+        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+            noise model which requires parameter of the object studied (like GP and stellar
+            activity)
+        :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
+            instrument model for the ln likelihood to produce.
+        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        :return list_of_string l_params_new: Updated list of parameters full names.
+        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
+            the updated list of parameters (l_params_new).
+        """
+        ldict = locals().copy()
+        l_params_new = l_params.copy()
+        (ker, l_params_new,
+         l_params_noisemod,
+         l_idx_param_noisemod) = cls.__get_text_define_GP(model_instance=model_instance, l_params=l_params_new,
+                                                          l_params_noisemod=[], l_idx_param_noisemod=[])
+        (text_l_jitter,
+         l_params_new,
+         l_params_noisemod,
+         l_idx_param_noisemod,
+         l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
+                                                       l_params_noisemod=l_params_noisemod,
+                                                       l_idx_param_noisemod=l_idx_param_noisemod)
+        func = cls.lnlikefunc_text.format(func_name=cls.function_name, kernel=ker, text_l_jitter=text_l_jitter)
+        ldict["defaultdict"] = defaultdict
+        ldict["list"] = list
+        ldict["concatenate"] = concatenate
+        ldict["logger"] = logger
+        ldict["ExpSquaredKernel"] = ExpSquaredKernel
+        ldict["ExpSine2Kernel"] = ExpSine2Kernel
+        ldict["GP"] = GP
+        ldict["sqrt"] = sqrt
+        logger.debug(f"Likelihood of the stellar activity model:\n {func}\nl_params_noisemod: {l_params_noisemod}, l_idx_param_noisemod: {l_idx_param_noisemod}")
+        exec(func, ldict)
+        return ldict[cls.function_name], l_params_new, l_params_noisemod, l_idx_param_noisemod
+
+    @classmethod
+    def get_gp_simulator(cls, l_params, model_instance, l_instmod_obj):
         """Return the simulated values with the GP at given simulated times.
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
@@ -251,16 +368,28 @@ class StellarActNoiseModel(Core_Noise_Model):
         :return list_of_str l_param_noise_mod: List of parameter full name for the noise model.
         """
         ldict = locals().copy()
-        ker, l_params_new, l_idx_param_noisemod = cls.__get_text_define_GP(model_instance, l_params)
-        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker)
+        l_params_new = l_params.copy()
+        (ker, l_params_new,
+         l_params_noisemod,
+         l_idx_param_noisemod) = cls.__get_text_define_GP(model_instance=model_instance, l_params=l_params_new,
+                                                          l_params_noisemod=[], l_idx_param_noisemod=[])
+        (text_l_jitter,
+         l_params_new,
+         l_params_noisemod,
+         l_idx_param_noisemod,
+         l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
+                                                       l_params_noisemod=l_params_noisemod,
+                                                       l_idx_param_noisemod=l_idx_param_noisemod)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
         ldict["logger"] = logger
         ldict["ExpSquaredKernel"] = ExpSquaredKernel
         ldict["ExpSine2Kernel"] = ExpSine2Kernel
-        # ldict["exp"] = exp
         ldict["GP"] = GP
+        ldict["sqrt"] = sqrt
+        ldict["np"] = np
         exec(func, ldict)
         return ldict[cls.gpsim_function_name], [l_params_new[idx] for idx in l_idx_param_noisemod]
 

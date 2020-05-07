@@ -127,16 +127,21 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     def apply_parametrisation(cls, model_instance, instmod_fullname):
         """Check that there is a jitter main parameter in the instrument model.
 
+        This function is called by Core_Model.set_noisemodels
+
         :param string instmod_fullname: Full name of the instrument involved in the noise model and
             for which you want to apply the parametrisation for the noise modelling.
         """
         inst_model_obj = model_instance.instruments[instmod_fullname]
-        if jitter_name in inst_model_obj.parameters:
-            jitter_param = inst_model_obj.parameters[jitter_name]
-            jitter_param.main = True
+        if inst_model_obj.has_parameter(name=jitter_name):
+            jitter_param = inst_model_obj.get_parameter(name=jitter_name)
+            if not jitter_param.main:
+                jitter_param.main = True
         else:
-            inst_model_obj.add_parameter(Parameter(name=jitter_name,
-                                                   name_prefix=inst_model_obj.name, main=True))
+            inst_model_obj.add_parameter(Parameter(name=jitter_name, name_prefix=inst_model_obj.name,
+                                                   main=True
+                                                   )
+                                         )
             logger.debug("{} main parameter added in instruments model {}."
                          "".format(jitter_name, instmod_fullname))
 
@@ -156,13 +161,19 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
     def get_prefilledlnlike(cls, l_params, l_instmod_obj, **kwargs):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
-        As this noise model doesn't require any parameters from the object model it doesn't need a
+        As this noise model doesn't require any parameters from the model instance, it doesn't need a
         model_instance argument. But as it might be privided one automatically, I put the keyword
         arguments **kwargs.
 
-        :param InstrumentModel/list_of_InstrumentModel l_instmod_obj: Instument model or list of
-            instrument model for the ln likelihood to produce.
+        Parameters
+        ----------
         :param list_of_string l_params: Current list of parameters full names.
+        l_instmod_obj: list_of_InstrumentModel
+            List of instrument model for the lnlikelihood. There is one element per dataset modeled by
+            the datasimulator following this noise model.
+
+        Returns
+        -------
         :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
             model the simulated data (array), param_noisemod the free parameters value for the noise
             model, the list of dataset kwargs and returns the ln posterior value
@@ -188,7 +199,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                 res += func(model[ii], param_noisemod, **datakwargs)
             return res
 
-        return lnlike_jitter, l_params_new, l_idx_param_noisemod
+        return lnlike_jitter, l_params_new, l_params_noisemod, l_idx_param_noisemod
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
