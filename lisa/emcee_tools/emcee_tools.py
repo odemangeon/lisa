@@ -336,7 +336,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     :param None/list_of_float zoom: If provided the plot will be zoomed. Meaning that the model and data
         will only be plotted between two abscisse values. It should be a list-like object with two elements.
         zoom[0] give the minimum abscisse value for the zoom and zoom[1] give the maximum. If phasefold
-        is true the abscisse values are interpreted ass orbital phases, if not as times.
+        is true the abscisse values are interpreted as orbital phases, not as times.
         You also have the possibility to produce several zooms. In this case, zoom should be an array
         or list of list  object where zoom[i][0] is the min abscisse value and zoom[i][1] the max.
     :param bool show_title: If True, show the title giving the dataset name.
@@ -357,6 +357,9 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     :return list_of_list_of_ErrorbarContainer_or_Lines all_ebconts_lines: All ErrorbarContainer and lines
         plotted by the function
     :return list_of_list_of_labels: All labels of the plots made by the function
+    :return times: times of the residuals. If phasefold is false it is the time only in the defined zoom is provided.
+        If phasefold is True the zoom is ignored for the residuals and all residuals and times in the dataset
+        are returned for each specified zoom.
     :return residual_out: Residuals of the model without GP
     :return residual_wGP: Residuals of the model with GP
     """
@@ -448,6 +451,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     # Enforce the color of the residuals to be the same than the color of the associated model
     pl_resi_kwargs_final["model"]["color"] = pl_model_kwargs_final["model"]["color"]
     pl_resi_kwargs_final["model+GP"]["color"] = pl_model_kwargs_final["model+GP"]["color"]
+    # Create residual_out and residual_wGP lists for each zoom
+    residual_out = []
+    residual_wGP = []
+    times = []
     # Case of phase folding
     if phasefold:
         # Get the planet name, period and time of inferior conjunction from phasefold_kwargs
@@ -493,7 +500,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
-            (residual_out, residual_wGP, ebconts_resi, labels_resi
+            (residual_out_i, residual_wGP_i, ebconts_resi, labels_resi
              ) = plot_residuals(t=t, data=data_pl, datasim_docfunc=datasim_docfunc_pl, param=param,
                                 l_param_name=l_param_name, data_err=data_err_new, jitter=None, jitter_type=None,
                                 supersamp=supersamp_model, exptime=exptime,
@@ -502,6 +509,9 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                                 model_instance=model_instance,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
+            residual_out.append(residual_out_i)
+            residual_wGP.append(residual_wGP_i)
+            times.append(t)
             all_ebconts_lines.append((ebcont_data, lines_model, ebconts_resi))
             all_labels.append((label_data, labels_model, labels_resi))
     # Case of NOT phase folding
@@ -529,13 +539,16 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
-            (residual_out, residual_wGP, lines_resi, labels_resi
+            (residual_out_i, residual_wGP_i, lines_resi, labels_resi
              ) = plot_residuals(t_i, data_i, datasim, param, l_param_name, data_err=data_err_new_i,
                                 jitter=None, jitter_type=None,
                                 datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
                                 plot_phase=False, noise_model=noise_mod, model_instance=model_instance,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
+            residual_out.append(residual_out_i)
+            residual_wGP.append(residual_wGP_i)
+            times.append(t_i)
             all_ebconts_lines.append((ebcont_data, lines_model, lines_resi))
             all_labels.append((pl_data_kwargs_final["label"], labels_model, labels_resi))
     # Print the title if required
@@ -545,7 +558,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     if show_legend:
         ax_data[0].legend(loc='upper right', shadow=True)
     if return_resi:
-        return all_ebconts_lines, all_labels, residual_out, residual_wGP
+        return all_ebconts_lines, all_labels, times, residual_out, residual_wGP
     else:
         return all_ebconts_lines, all_labels
 
@@ -658,7 +671,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
                 residuals[dataset.dataset_name][planet_name] = {}
-                (all_ebconts_lines, all_labels, residuals[dataset.dataset_name][planet_name]["wo GP"], residuals[dataset.dataset_name][planet_name]["w GP"]
+                (all_ebconts_lines, all_labels, residuals[dataset.dataset_name][planet_name]["time"],
+                 residuals[dataset.dataset_name][planet_name]["wo GP"], residuals[dataset.dataset_name][planet_name]["w GP"]
                  ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
                                              dataset=dataset, datasim_kwargs=datasim_kwargs, model_instance=model_instance,
                                              oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
@@ -672,7 +686,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
             ax_data.tick_params(**kwargs_tick_params_final)
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name]["whole"]["wo GP"], residuals[dataset.dataset_name]["whole"]["w GP"]
+            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name][planet_name]["time"],
+             residuals[dataset.dataset_name]["whole"]["wo GP"], residuals[dataset.dataset_name]["whole"]["w GP"]
              ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                          datasim_kwargs=datasim_kwargs, model_instance=model_instance,
                                          oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
