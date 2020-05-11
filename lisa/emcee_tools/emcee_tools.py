@@ -686,7 +686,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
             ax_data.tick_params(**kwargs_tick_params_final)
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name]["time"],
+            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name]["whole"]["time"],
              residuals[dataset.dataset_name]["whole"]["wo GP"], residuals[dataset.dataset_name]["whole"]["w GP"]
              ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                          datasim_kwargs=datasim_kwargs, model_instance=model_instance,
