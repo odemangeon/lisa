@@ -307,7 +307,8 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
                             zoom=None, show_title=True, show_legend=True,
                             pl_data_kwargs=None, pl_model_kwargs=None, pl_resi_kwargs=None,
                             kwargs_tick_params=None,
-                            ax_data=None, ax_resi=None):
+                            ax_data=None, ax_resi=None,
+                            return_resi=False):
     """Zoom on the data model overplot for one datasetself.
 
     :param np.array param: Vector of parameter values for the model
@@ -352,9 +353,12 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params if the function as to create
         the data or residuals axes.
+    :param bool return_resi: If true return the residuals
     :return list_of_list_of_ErrorbarContainer_or_Lines all_ebconts_lines: All ErrorbarContainer and lines
         plotted by the function
     :return list_of_list_of_labels: All labels of the plots made by the function
+    :return residual_out: Residuals of the model without GP
+    :return residual_wGP: Residuals of the model with GP
     """
     # Ensure that zoom has the good format
     if zoom is None:
@@ -540,7 +544,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     # Plot the legend
     if show_legend:
         ax_data[0].legend(loc='upper right', shadow=True)
-    return all_ebconts_lines, all_labels
+    if return_resi:
+        return all_ebconts_lines, all_labels, residual_out, residual_wGP
+    else:
+        return all_ebconts_lines, all_labels
 
 
 def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets=None, datasim_kwargs={},
@@ -548,7 +555,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, fig_kwargs=None, gs_kwargs=None,
                         kwargs_gs_from_sps=None, kwargs_add_axeswithsharex=None, kwargs_tick_params=None,
-                        kwargs_tl=None):
+                        kwargs_tl=None,
+                        return_resi=False):
     """Overplot datasets and model for each dataset and provide the residuals.
 
     :param np.array param: Vector of parameter values for the model
@@ -576,6 +584,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     :param dict kwargs_add_axeswithsharex:
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params
     :param kwargs_tl:
+    :param bool return_resi: If true return the residuals
     """
     # Check that if phasefold is True phasefold_kwargs is not None
     if phasefold and (phasefold_kwargs is None):
@@ -608,9 +617,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     # For each dataset
     ebconts_lines_4_legend = []
     labels_4_legend = []
+    residuals = OrderedDict()
     for ii, dataset in enumerate(l_datasets):
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
+        residuals[dataset.dataset_name] = OrderedDict()
         # Get the datasimulator for the whole system
         # print(inst_mod_fullname)
         # print(datasim_dbf.instrument_db[inst_mod_fullname])
@@ -639,26 +650,28 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
                                                             phasefold_kwargs["P"],
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
-                (all_ebconts_lines, all_labels
+                residuals[dataset.dataset_name][planet_name] = {}
+                (all_ebconts_lines, all_labels, residuals[dataset.dataset_name][planet_name]["wo GP"], residuals[dataset.dataset_name][planet_name]["w GP"]
                  ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
                                              dataset=dataset, datasim_kwargs=datasim_kwargs, model_instance=model_instance,
                                              oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                              phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
                                              datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
+                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi, return_resi=True)
         else:
+            residuals[dataset.dataset_name]["whole"] = {}
             # Create the two axes data+model and residuals
             ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig, gs_from_sps_kw={"height_ratios": (3, 1)})
             ax_data.tick_params(**kwargs_tick_params_final)
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            (all_ebconts_lines, all_labels
+            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name]["whole"]["wo GP"], residuals[dataset.dataset_name]["whole"]["w GP"]
              ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                          datasim_kwargs=datasim_kwargs, model_instance=model_instance,
                                          oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                          phasefold=phasefold,
                                          datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
+                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi, return_resi=True)
         for ebconts_lines, labels in zip(all_ebconts_lines, all_labels):
             for ebcont_line, label in zip(ebconts_lines, labels):
                 if isinstance(label, list):
@@ -680,6 +693,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     if kwargs_tl is None:
         kwargs_tl = {}
     # fig.tight_layout(**kwargs_tl)
+    if return_resi:
+        return residuals
 
 
 def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
