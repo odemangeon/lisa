@@ -585,6 +585,13 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params
     :param kwargs_tl:
     :param bool return_resi: If true return the residuals
+
+    Returns
+    -------
+    residuals: dictionary
+        keys are dataset names and values are dictionaries whose keys are either 'whole' if phasefold=False, or
+        planet names if phasefold=True and values are dictionaries with two keys 'w GP' and 'wo GP' and values
+        are the residuals with and without GP.
     """
     # Check that if phasefold is True phasefold_kwargs is not None
     if phasefold and (phasefold_kwargs is None):
@@ -844,8 +851,10 @@ def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
             model_wGP = model + res_model
         else:
             model_wGP = None
+            GP_pred_var = None
     else:
         model_wGP = None
+        GP_pred_var = None
 
     return model, model_wGP, GP_pred_var, t_model
 
