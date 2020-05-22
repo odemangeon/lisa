@@ -249,7 +249,15 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     @property
     def paramfile_info(self):
-        """Information about the content of the param file"""
+        """Information about the content of the param file.
+
+        Dictionary giving the content of the parameter file for the parameter container.
+        It should have a key whose name is provided by key_params_fileinfo and whose values is the list
+        of the name of the parameters of this parameter container.
+
+        Depending on the parameter container this dictionary can also have other keys specific to this
+        type of containers.
+        """
         return self.__paramfile_info
 
     def update_paramfile_info(self, recursive=False):
@@ -261,17 +269,26 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     def get_paramfile_section(self, text_tab="", texttab_1tline=True,
                               entete_symb=" = ", quote_name=False, **kwargs):
-        """Return the text to include in the parameter_file for this CelestialBody.
+        """Return the text to include in the parameter_file for the parameters in the ParamContainer
 
-        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
-                good alignment in the input file.
-        :param bool texttab_1tline: Wether to use the tab for the first line or not.
-        :param str entete_symb: Symbol to use after the paramcontainers name
-        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
+        Arguments
+        ---------
+        text_tab       : str
+            text giving the tabulation that needs to be added to this the text to obtain the good alignment
+            in the input file.
+        texttab_1tline : bool
+            Wether to use the tab for the first line or not.
+        entete_symb    : str
+            Symbol to use after the paramcontainers name
+        quote_name     : bool
+             Wether to put quote around the paramcontainer name or not.
 
         Keywords arguments are given to self.get_list_params (see docstring for details).
 
-        :return str text: Text for the parameter file.
+        Returns
+        -------
+        text : str
+            Text for the parameter file.
         """
         if quote_name:
             entete = "'{}'{}{{"

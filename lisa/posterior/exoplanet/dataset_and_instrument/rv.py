@@ -11,24 +11,75 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Dataset
+from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 
 
 ## Logger
 logger = getLogger()
 
-## LC instrument category
+## RV instrument category
 RV_inst_cat = "RV"
 
 
-class RV_Dataset(Dataset):
-    """docstring for RV_Datasetc class.
+class RV_Instrument(Core_Instrument):
+    """docstring for RV_Instrument."""
 
-    This class is designed to habor a radial velocity data file.
+    __category__ = RV_inst_cat
+    __sub_category__ = None
+    __params_model__ = {"driftRV": {"unit": "[amplitude of the RV data]/[time of the RV data]"},
+                        "DeltaRV": {"unit": "[amplitude of the RV data]"},
+                        }
+    __name_RV_ref_var__ = "RVref"
+    __name_RV_ref_global_var__ = "RVrefGlob"
+
+    @classmethod
+    def _get_inst_paramfilesection(cls, text_tab, model_instance, inst_name, entete_symb=": "):
+        def_instmod_name = (model_instance.get_instmodel_names(inst_name=inst_name,
+                                                               inst_fullcat=cls.category)[0])
+        return "{}'{}'{}'{}',\n".format(text_tab, cls.__name_RV_ref_var__, entete_symb, def_instmod_name)
+
+    @classmethod
+    def _get_instcat_paramfilesection(cls, text_tab, model_instance, entete_symb=": "):
+        RVrefglobale_instname = model_instance.RV_globalref_instname
+        return "{}'{}'{}'{}'\n".format(text_tab, cls.__name_RV_ref_global_var__, entete_symb, RVrefglobale_instname)
+
+    @classmethod
+    def _update_inst_paramfile_info(cls, paramfile_info_inst_RV_inst):
+        paramfile_info_inst_RV_inst.append(cls.__name_RV_ref_var__)
+
+    @classmethod
+    def _update_instcat_paramfile_info(cls, paramfile_info_inst_RV_misc):
+        paramfile_info_inst_RV_misc.append(cls.__name_RV_ref_global_var__)
+
+    @classmethod
+    def _load_config_listspecifickeys_inst(cls):
+        return [cls.__name_RV_ref_var__]
+
+    @classmethod
+    def _load_config_specifickeys_inst(cls, dico_config_inst, inst_name, model_instance):
+        model_instance.set_RVref4inst_modname(inst_name, dico_config_inst[cls.__name_RV_ref_var__])
+
+    @classmethod
+    def _load_config_instcat(cls, dico_config_fullcat, model_instance):
+        model_instance.set_RV_globalref_instname(dico_config_fullcat[cls.__name_RV_ref_global_var__])
+
+
+class RV_Dataset(Core_Dataset):
+    """docstring for RV_Dataset class.
+
+    This class is designed to habor an radial velocity data file.
     It contains functions to visualize (plot) and manipulate the radial velocities (detrend??)
+
+    To be properly ingested, the datasets of this type have to obey to the following format:
+    RV_{TARGETNAME}_{INSTRUMENTNAME}(_{NB}).txt
+    {TARGETNAME} is the name of the target,
+    {INSTRUMENTNAME} is the name of the instrument used,
+    {NB} is the number of the dataset if there is several dataset on the same target and with the same instrument.
+    The part in between parenthesis is facultative.
     """
 
+    __instrument_subclass__ = RV_Instrument
     __mandatory_columns__ = ["time", "RV", "RV_err"]
 
     ## name of the data  and data error columns
@@ -79,52 +130,6 @@ class RV_Dataset(Dataset):
         #
         # return DocFunction(function=datasim_func_fordataset, arg_list=arg_list_new)
         return datasim_func
-
-
-class RV_Instrument(Core_Instrument):
-    """docstring for RV_Instrument."""
-
-    __category__ = RV_inst_cat
-    __params_model__ = {"driftRV": {"unit": "[amplitude of the RV data]/[time of the RV data]"},
-                        "DeltaRV": {"unit": "[amplitude of the RV data]"},
-                        }
-    __name_RV_ref_var__ = "RVref"
-    __name_RV_ref_global_var__ = "RVrefGlob"
-
-    @classmethod
-    def _get_inst_paramfilesection(cls, text_tab, model_instance, inst_name):
-        def_instmod_name = (model_instance.get_instmodel_names(inst_name=inst_name,
-                                                               inst_cat=cls.category)[0])
-        return "{}'{}': '{}',\n".format(text_tab, cls.__name_RV_ref_var__, def_instmod_name)
-
-    @classmethod
-    def _get_instcat_paramfilesection(cls, text_tab, model_instance):
-        RVrefglobale_instname = model_instance.RV_globalref_instname
-        return "{}{} = '{}'\n".format(text_tab, cls.__name_RV_ref_global_var__,
-                                      RVrefglobale_instname)
-
-    @classmethod
-    def _update_inst_paramfile_info(cls, paramfile_info_inst_RV_inst):
-        paramfile_info_inst_RV_inst.append(cls.__name_RV_ref_var__)
-
-    @classmethod
-    def _update_instcat_paramfile_info(cls, paramfile_info_inst_RV_misc):
-        paramfile_info_inst_RV_misc.append(cls.__name_RV_ref_global_var__)
-
-    @classmethod
-    def _load_config_listspecifickeys_inst(cls):
-        return [cls.__name_RV_ref_var__]
-
-    @classmethod
-    def _load_config_specifickeys_inst(cls, dico_config_inst, inst_name, model_instance):
-        model_instance.set_RVref4inst_modname(inst_name, dico_config_inst[cls.__name_RV_ref_var__])
-
-    @classmethod
-    def _load_config_instcat(cls, dico_config, model_instance):
-        model_instance.set_RV_globalref_instname(dico_config[cls.__name_RV_ref_global_var__])
-
-    def __init__(self, name):
-        super(RV_Instrument, self).__init__(name=name)
 
 
 HARPS = RV_Instrument("HARPS")

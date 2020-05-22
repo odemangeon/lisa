@@ -34,13 +34,18 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     A datasimualtor function is created for the whole dataset_database and for each planet
     individually.
 
+    Arguments
+    ---------
     :param Star star: Star object
     :param dict_of_Planet planets: dictionary: key: planet name, value: Planet object
-    :param string key_whole: key to use to identify the whole system in the output dictionary
-        (dico_docf).
-    :param string key_param: Key used for the parameters entry of arg_list
-    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
-    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
+    key_whole       : String
+        key to use to identify the whole system in the output dictionary (dico_docf).
+    key_param       : String
+        Key used for the parameters entry of arg_list
+    key_mand_kwargs : String
+        Key used for the mandatory keyword argument entry of arg_list
+    key_opt_kwargs  : String
+        Key used for the optional keyword argument entry of arg_list
     :param str ext_plonly: extension to the planet name used for planet only model (without star, nor instrument)
     :param string parametrisation: String refering to the parametrisation to use
     :param dict_of_ ldmodel4instmodfname: Dictionary giving Limd darkening model to use for each
@@ -49,8 +54,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     :param string transit_model: String refering to the transit model to be used.
     :param dict_of_ SSE4instmodfname: Dictionary giving the supersampling factor and the exposure
         time to use for each instrument model
-    :param Instrument_Model inst_model: instance of Instrument_Model
-    :param Dataset/list_of_Dataset/None datasets:
+    inst_models : Instrument_Model or List of Inst Instrument_Model or None
+        List of instrument model object which if datasets is provided should correspond to the datasets provided.
+    datasets    : Dataset/list_of_Dataset/None
         If Dataset, the datasimulator include the kwargs of the dataset, so provided parameters
             of for the model, it simulates the data in the dataset.
         If None, the datasimulator function requires the time (and eventually the t_ref) on top
@@ -58,10 +64,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         If list of Dataset, it has to provide exactly one dataset (no None) for each Instrument
             model in inst_models and the produced datasimulator will include the kwargs of the
             datasets.
-    :param str param_vector_name: str giving the name of the vector of parameters argument of the
+    param_vector_name : String
+        string giving the name of the vector of parameters argument of the
         datasimulator function.
 
-    :return dict_of_DatasimDocFunc dico_docf: A dictionary with DocFunctions containing the data
+    Returns
+    -------
+    dico_docf : dict_of_DatasimDocFunc
+        A dictionary with DocFunctions containing the data
         simulator function for the whole system ("whole") and for the each planet individually
         ("planet_name")
     """
@@ -614,6 +624,8 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                l_timeref_format=None):
     """Get the out of transit variation contribution to the light-curve
 
+    Arguments
+    ---------
     :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
     :param list_of_Dataset l_dataset: Checked list of Dataset instance(s).
     :param bool multi: True if the datasim function needs multiple outputs.
@@ -636,6 +648,9 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
     :param str timeref_name: Str used to designate the time vector
     :param str l_timeref_name: Str used to designate the list of time references
     :param str l_timeref_format: Str used to access an element of l_timeref_name
+
+    Returns
+    -------
     :return list_of_string l_oot_var: list give the string representation of the contributions
         of the out of transit variation for each couple instrument model - dataset in
         l_inst_model and l_dataset.

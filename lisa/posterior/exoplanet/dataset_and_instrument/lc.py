@@ -11,7 +11,7 @@ import logging
 import matplotlib.pyplot as plt
 from numpy import array, percentile
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Dataset
+from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.parameter import Parameter
 
@@ -23,14 +23,70 @@ logger = logging.getLogger()
 LC_inst_cat = "LC"
 
 
-class LC_Dataset(Dataset):
-    """docstring for LC_Datasetc class.
+class LC_Instrument(Core_Instrument):
+    """docstring for LC_Instrument."""
+
+    __category__ = LC_inst_cat
+    __sub_category__ = None
+    # __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
+    #                     "driftOOT": {"unit": "wo unit/s"}}
+    __params_model__ = {}
+    __OOT_var_basename__ = "OOT"
+
+    @classmethod
+    def init_OOT_var_parameters(cls, inst_model, with_OOT_var=False, OOT_var_order=1):
+        """Initialise/Create the required parameter for the modelling of the out-of transit
+        variations."""
+        inst_model.__with_OOT_var = with_OOT_var
+        inst_model.__OOT_var_order = OOT_var_order
+        if with_OOT_var:
+            if isinstance(OOT_var_order, int) and OOT_var_order >= 0:
+                for order in range(OOT_var_order + 1):
+                    inst_model.add_parameter(Parameter(name=(inst_model.get_OOT_param_name(order)),
+                                                       name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
+                                                       main=True,
+                                                       unit="[time]^(-{})".format(order)))
+            else:
+                raise ValueError("If you want to model out-of-transit variations you need to "
+                                 "provide an OOT_var_order that is positive !")
+
+    @classmethod
+    def get_with_OOT_var(cls, inst_model):
+        """True if the instrument model includes out-of-transit variations."""
+        try:
+            return inst_model.__with_OOT_var
+        except AttributeError:
+            return False
+
+    @classmethod
+    def get_OOT_var_order(cls, inst_model):
+        """Return the order of the out-of-transit variation model or None, if it's not modeled."""
+        if cls.get_with_OOT_var(inst_model):
+            return inst_model.__OOT_var_order
+        else:
+            return None
+
+    def get_OOT_param_name(self, order, inst_model):  # instrument is necessary don't remove it
+        """Return the parameter name of the coefficient of the out-of-transit model."""
+        return "{}{}".format(self.__OOT_var_basename__, order)
+
+
+class LC_Dataset(Core_Dataset):
+    """docstring for LC_Dataset class.
 
     This class is designed to habor a light-curve data file for study of transits.
     It contains functions to visualize (plot) and manipulate the light-curve (cut around the
     transit, detrend)
+
+    To be properly ingested, the datasets of this type have to obey to the following format:
+    LC_{TARGETNAME}_{INSTRUMENTNAME}(_{NB}).txt
+    {TARGETNAME} is the name of the target,
+    {INSTRUMENTNAME} is the name of the instrument used,
+    {NB} is the number of the dataset if there is several dataset on the same target and with the same instrument.
+    The part in between parenthesis is facultative.
     """
 
+    __instrument_subclass__ = LC_Instrument
     __mandatory_columns__ = ["time", "flux", "flux_err"]
 
     ## name of the data  and data error columns
@@ -66,56 +122,6 @@ class LC_Dataset(Dataset):
 
     def create_datasimulator_for_dataset(self, datasim_func):
         return datasim_func
-
-
-class LC_Instrument(Core_Instrument):
-    """docstring for LC_Instrument."""
-
-    __category__ = LC_inst_cat
-    # __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
-    #                     "driftOOT": {"unit": "wo unit/s"}}
-    __params_model__ = {}
-    __OOT_var_basename__ = "OOT"
-
-    def __init__(self, name):
-        super(LC_Instrument, self).__init__(name=name)
-
-    @classmethod
-    def init_OOT_var_parameters(cls, inst_model, with_OOT_var=False, OOT_var_order=1):
-        """Initialise/Create the required parameter for the modelling of the out-of transit
-        variations."""
-        inst_model.__with_OOT_var = with_OOT_var
-        inst_model.__OOT_var_order = OOT_var_order
-        if with_OOT_var:
-            if isinstance(OOT_var_order, int) and OOT_var_order >= 0:
-                for order in range(OOT_var_order + 1):
-                    inst_model.add_parameter(Parameter(name=(inst_model.get_OOT_param_name(order)),
-                                                       name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
-                                                       main=True,
-                                                       unit="s^(-{})".format(order)))
-            else:
-                raise ValueError("If you want to model out-of-transit variations you need to "
-                                 "provide an OOT_var_order that is positive !")
-
-    @classmethod
-    def get_with_OOT_var(cls, inst_model):
-        """True if the instrument model includes out-of-transit variations."""
-        try:
-            return inst_model.__with_OOT_var
-        except:
-            return False
-
-    @classmethod
-    def get_OOT_var_order(cls, inst_model):
-        """Return the order of the out-of-transit variation model or None, if it's not modeled."""
-        if cls.get_with_OOT_var(inst_model):
-            return inst_model.__OOT_var_order
-        else:
-            return None
-
-    def get_OOT_param_name(self, order, inst_model):  # instrument is necessary don't remove it
-        """Return the parameter name of the coefficient of the out-of-transit model."""
-        return "{}{}".format(self.__OOT_var_basename__, order)
 
 
 K2 = LC_Instrument("K2")

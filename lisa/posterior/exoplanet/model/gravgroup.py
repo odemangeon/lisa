@@ -24,12 +24,13 @@ It could be:
     - Transform the attributes transit_model, rv_model and ld_model into set and get properties
 """
 from logging import getLogger
-from os.path import isfile, join
+# from os.path import isfile, join
 from collections import OrderedDict
 from string import ascii_lowercase
 from string import ascii_uppercase
 from textwrap import dedent
 
+from .indicator_model.core_indicator_model import IndicatorModelInterface
 from .celestial_bodies import Star, Planet
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
@@ -38,8 +39,9 @@ from .datasim_creator_lc import create_datasimulator_LC
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
+from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.model.core_model import Core_Model, create_key, load_key
-from ....tools.human_machine_interface.QCM import QCM_utilisateur
+# from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
 
 
@@ -55,14 +57,14 @@ mgr_LD = Manager_LD()
 ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
 
-class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
+class GravGroup(GravGroup_Parametrisation, IndicatorModelInterface, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string
     __category__ = "GravitionalGroups"
 
-    ## Set of possible instrument categories
-    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}
+    ## Set of possible instrument categories (Used by Core_Model._check_dataset_instcat)
+    __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat, IND_inst_cat}
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models
@@ -81,9 +83,8 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
     def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
                  transit_model=None, rv_model=None, stars=None, planets=None, run_folder=None):
         """docstring GravGroup init method."""
-        super(GravGroup, self).__init__(name=name, dataset_db=dataset_db, run_folder=run_folder,
-                                        instmodel4dataset=instmodel4dataset,
-                                        l_instmod_fullnames=l_instmod_fullnames)
+        Core_Model.__init__(self=self, name=name, dataset_db=dataset_db, run_folder=run_folder,
+                            instmodel4dataset=instmodel4dataset, l_instmod_fullnames=l_instmod_fullnames)
         if LC_inst_cat in self.dataset_db.inst_categories:
             # light-curve model
             self.transit_model = transit_model
@@ -104,7 +105,9 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
             for key in self.__RV_references:
                 if key != "global":
                     self.__RV_references[key] = self.get_instmodel_names(inst_name=key,
-                                                                         inst_cat=RV_inst_cat)[0]
+                                                                         inst_fullcat=RV_inst_cat)[0]
+        if IND_inst_cat in self.dataset_db.inst_categories:
+            IndicatorModelInterface.__init__(self=self)
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
         if isinstance(stars, int):
@@ -139,15 +142,19 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
         # Fill the datasimcreatorname4instcat dictionary
         self.datasimcreatorname4instcat[RV_inst_cat] = "sim_RV"
         self.datasimcreatorname4instcat[LC_inst_cat] = "sim_LC"
+        self.datasimcreatorname4instcat[IND_inst_cat] = "sim_IND"
 
         # Fill the datasimcreator dictionary
         self.datasimcreator["sim_RV"] = self._create_datasimulator_RV
         self.datasimcreator["sim_LC"] = self._create_datasimulator_LC
+        self.datasimcreator["sim_IND"] = self._create_datasimulator_IND
 
         # Fill the handlers4instcatparamfile dictionary
         self.handlers4instcatparamfile[RV_inst_cat] = {create_key: None, load_key: None}
         self.handlers4instcatparamfile[LC_inst_cat] = {create_key: self.create_LC_param_file,
                                                        load_key: self.load_LC_param_file}
+        self.handlers4instcatparamfile[IND_inst_cat] = {create_key: self.create_IND_param_file,
+                                                        load_key: self.load_IND_param_file}
         ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
         ## separation binary star. This is kept for later.
@@ -314,45 +321,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
             to create it ? "absolute", "run_folder" or "error". If this not provide the program will
             ask you interactively.
         """
-        if paramfile_path is None:
-            paramfile_path = "LC_param_file.py"
-        file_path = self.look4runfile(file_path=paramfile_path)
-        if file_path is not None:
-            answers_list_yn = ['y', 'n']
-            if answer_overwrite is None:
-                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                            "".format(file_path, answers_list_yn))
-                reply = QCM_utilisateur(question, answers_list_yn)
-            else:
-                if answer_overwrite in answers_list_yn:
-                    reply = answer_overwrite
-                else:
-                    raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
-        else:
-            answers_list_create = ["absolute", "error"]
-            if self.hasrun_folder:
-                answers_list_create.append("run_folder")
-                run_folder_path = join(self.run_folder, paramfile_path)
-            if answer_create is None:
-                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
-                            "{}".format(paramfile_path, paramfile_path))
-                if self.hasrun_folder:
-                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += "\nNot create it and raise an 'error' ? {}\n".format(answers_list_create)
-                reply = QCM_utilisateur(question, answers_list_create)
-            else:
-                if answer_create in answers_list_create:
-                    reply = answer_create
-                else:
-                    raise ValueError("answer_create should by in {}".format(answers_list_create))
-            if reply == "absolute":
-                file_path = paramfile_path
-            elif reply == "run_folder":
-                file_path = run_folder_path
-            else:
-                raise ValueError("File {} doesn't exist and the user doesn't want to create it."
-                                 "".format(paramfile_path))
-            reply = "y"
+        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='LC_param_file.txt', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)  # self._choose_parameter_file_path comes from Core_Model
         if reply == "y":
             with open(file_path, 'w') as f:
                 # Write the header
@@ -410,7 +379,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
                 default_supersamp = 1
                 default_exptime = 0.02043402778  # Kepler long cadence exposure time in days
                 first_instmodel = True
-                for instmod_obj in self.get_instmodel_objs(inst_cat=LC_inst_cat):
+                for instmod_obj in self.get_instmodel_objs(inst_fullcat=LC_inst_cat):
                     ld_tab = ""
                     ss_tab = ""
                     if not(first_instmodel):
@@ -467,7 +436,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
                          "".format(dico.keys()))
             return dico
         else:
-            raise IOError("Impossible to read LC parameter file: {}".format(self.self.paramfile4instcat[LC_inst_cat]))
+            raise IOError("Impossible to read LC parameter file: {}".format(self.paramfile4instcat[LC_inst_cat]))
 
     def load_LC_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
@@ -526,10 +495,10 @@ class GravGroup(GravGroup_Parametrisation, Core_Model, SuperSampExpTimeAttr):  #
     def _create_datasimulator_RV(self, inst_models=None, datasets=None):
         return create_datasimulator_RV(star=list(self.stars.values())[0],
                                        planets=self.planets,
-                                       key_whole=self.key_whole,
-                                       key_param=self.key_param,
-                                       key_mand_kwargs=self.key_mand_kwargs,
-                                       key_opt_kwargs=self.key_opt_kwargs,
+                                       key_whole=self.key_whole,  # self.key_whole comes from Core_Model
+                                       key_param=self.key_param,  # self.key_param comes from DatasimulatorCreator
+                                       key_mand_kwargs=self.key_mand_kwargs,  # self.key_mand_kwargs comes from DatasimulatorCreator
+                                       key_opt_kwargs=self.key_opt_kwargs,  # self.key_opt_kwargs comes from DatasimulatorCreator
                                        ext_plonly=ext_plonly,
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,

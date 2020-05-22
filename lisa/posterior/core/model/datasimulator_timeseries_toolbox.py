@@ -53,6 +53,9 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
         has_dataset is True. Otherwise it's not added
     :param bool backup_add_to_args: Decide wether or not to add the time to arguments, if the case
         where has_dataset is True but add_to_ldict is False.
+
+    Returns
+    -------
     :return str arguments: Updated string giving the new text of arguments
     :return str time_arg_name: String giving the name of the new time argument.
     :return str/None time_arg: String giving the argument and eventually the default value.

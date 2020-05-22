@@ -12,10 +12,11 @@ The objective of this package is to provides the class
 """
 from logging import getLogger
 
+from .dataset_and_instrument.dataset import Core_Dataset
 from .instmodel4dataset import Instmodel4DatasetAttr
 from ...tools.lockable_dict import LockableAttr, Lock
 from ...tools.database_with_instrument_level import DatabaseInstLevel
-from ...tools.miscellaneous import interpret_data_filename
+# from ...tools.miscellaneous import interpret_data_filename
 
 
 ## logger object
@@ -147,7 +148,7 @@ class DatabaseInstLvlDataset(DatabaseInstLevel, Instmodel4DatasetAttr, DstDbLock
     def __getitem__(self, key):
         if key in self.instmodel4dataset:
             inst_model = self.instmodel4dataset[key]
-            dataset_info = interpret_data_filename(key)
+            dataset_info = Core_Dataset.interpret_data_filename(key)
             instmodel_fullname = "{}_{}".format(dataset_info["inst_name"], inst_model)
             return self[instmodel_fullname]
         else:

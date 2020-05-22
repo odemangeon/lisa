@@ -9,7 +9,7 @@ The objective of this package is to provides the core Core_Model class.
     -
 
 @TODO:
-    - See if it's possible to put or at leat partially put get_paramfile_section,
+    - See if it's possible to put or at least partially put get_paramfile_section,
     update_paramfile_info, load_config in paramcontainers_database
 """
 from logging import getLogger
@@ -27,10 +27,9 @@ from ..paramcontainer import Core_ParamContainer, key_params_fileinfo
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..dataset_and_instrument.dataset_database import DatasetDbAttr
 from ..dataset_and_instrument.instrument import instrument_model_category as instmod_cat
-from ..dataset_and_instrument.instrument import load_instrument_config
-from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
-from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
-from ..dataset_and_instrument.instrument import interpret_instmod_fullname
+# from ..dataset_and_instrument.instrument import load_instrument_config
+# from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
+# from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..likelihood.core_likelihood import LikelihoodCreator
 from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ..prior.model_prior import Model_Prior, joint_prior_name
@@ -98,7 +97,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
         # Initialise the attributes related to the Prior
-        Model_Prior.__init__(self, self.paramfile_info)
+        Model_Prior.__init__(self, self.paramfile_info)  # self.paramfile_info comes from Core_ParamContainer
         # Initialise the instrument models
         self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
         # If no instmodel4dataset provided create it and then initialise the instmodel4dataset of
@@ -204,8 +203,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""
         for instmod_fullname in l_instmod_fullnames:
-            inst_mod_info = interpret_instmod_fullname(instmod_fullname)
-            inst = manager_inst.get_instrument(inst_mod_info["inst_name"])
+            inst_mod_info = manager_inst.interpret_instmod_fullname(instmod_fullname=instmod_fullname)
+            inst = manager_inst.get_inst(inst_name=inst_mod_info["inst_name"], inst_fullcat=inst_mod_info["inst_fullcategory"])
             self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
 
     def set_noisemodels(self, noisemod4instmodfullname):
@@ -240,34 +239,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             (res[dataset_name]
              ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
         return res
-
-    # def get_param(self, full_name):
-    #     """Return the instance of the Parameter designated by full_name.
-    #
-    #     :param str full_name:
-    #     """
-    #     logger.debug("Parameter full name: {}".format(full_name))
-    #     full_name_split = full_name.split("_")
-    #     if len(full_name_split) > 2:
-    #         for paramcont_cat in self.paramcont_categories:
-    #             if paramcont_cat is not instmod_cat:
-    #                 obj_name, subobj_name, param_name = full_name_split
-    #                 if subobj_name in self.paramcontainers[paramcont_cat]:
-    #                     if (self.paramcontainers[paramcont_cat][subobj_name].
-    #                        has_parameter(name=param_name)):
-    #                             return (self.paramcontainers[paramcont_cat][subobj_name].
-    #                                     parameters[param_name])
-    #
-    #             else:
-    #                 inst_name, inst_model, param_name = full_name_split
-    #                 inst_db = self.instruments
-    #                 inst_model = inst_db["{}_{}".format(inst_name, inst_model)]
-    #                 if inst_model is not None:
-    #                     return inst_model.parameters[param_name]
-    #     else:
-    #         obj_name, param_name = full_name_split
-    #         if self.has_parameter(param_name):
-    #             return self.parameters[param_name]
 
     def get_list_params(self, main=False, free=False, no_duplicate=True, recursive=False, **kwargs):
         """Return the list of all parameters.
@@ -420,11 +391,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
         """Return the text to include in the parameter_file for this Model.
 
-        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
-                good alignment in the input file.
-        :param str entete_symb: Symbol to use after the paramcontainers name
-        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
-        :return str text: Text for the parameter file.
+        Arguments
+        ---------
+        text_tab    : str
+            text giving the tabulation that needs to be added to this the text to obtain the good alignment
+            in the input file.
+        entete_symb : str
+            Symbol to use after the paramcontainers name
+        quote_name  : bool
+            Wether to put quote around the paramcontainer name or not.
+
+        Returns
+        -------
+        text : str
+            Text for the parameter file.
         """
         text = ""
         # For each paramcontainer in the param container database. Produce the param file section.
@@ -438,10 +418,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                                           quote_name=quote_name)
                     text += "\n\n"
             else:
-                text += get_instrument_paramfilesection(model_instance=self,
-                                                        inst_db=self.paramcontainers[parcont_type],
-                                                        text_tab=text_tab, entete_symb=entete_symb,
-                                                        quote_name=quote_name)
+                text += self.instruments.get_paramfile_section(model_instance=self, text_tab=text_tab,
+                                                               entete_symb=entete_symb, quote_name=quote_name)
         # Produce the param file section for the parameter of the model which are not in
         # any specific paramcontainer
         text += "# {}\n\n".format(self.category)
@@ -455,8 +433,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         return text
 
     def update_paramfile_info(self):
-        """Update the paramfile info attribute."""
-        self.paramfile_info.clear()
+        """Update the paramfile info attribute.
+
+        self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
+        expected content of the parameter file.
+
+        TODO: It doesn't seems to be including the joint_prior_dictionary. Check and include if needed.
+        """
+        self.paramfile_info.clear()  # self.paramfile_info comes from Core_ParamContainer
         # For each paramcontainer in the param container database. Produce the param file section.
         for parcont_type in self.paramcont_categories:
             # Instruments Param containers are a special case
@@ -467,8 +451,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                     parcont.update_paramfile_info()
             else:
                 self.paramfile_info[instmod_cat] = {}
-                update_instrument_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat],
-                                                 inst_db=self.paramcontainers[parcont_type])
+                self.instruments.update_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat])
         # Finally update the paramfile_info for the params in the model itself (which are not in any)
         # specific paramcontainer
         super(Core_Model, self).update_paramfile_info()
@@ -486,7 +469,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Load the new configuration from the parameter file for each Paramcontainer and parameter
         logger.debug("List of Core_ParamContainer types in param_file_info: {}"
                      "".format(self.paramfile_info.keys()))
-        for paramcont_type in self.paramfile_info.keys():
+        for paramcont_type in self.paramfile_info.keys():  # self.paramfile_info comes from Core_ParamContainer
             logger.debug("Content of param_file_info for {}: {}"
                          "".format(paramcont_type, self.paramfile_info[paramcont_type]))
             if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
@@ -498,11 +481,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                                                                      model_instance=self,
                                                                                      available_joint_priors=self.joint_prior_container)
             elif paramcont_type == instmod_cat:
-                load_instrument_config(dico_config=dico_config,
-                                       inst_db_info=self.paramfile_info[paramcont_type],
-                                       inst_db=self.paramcontainers[paramcont_type],
-                                       model_instance=self,
-                                       available_joint_priors=self.joint_prior_container)
+                self.instruments.load_config(dico_config=dico_config,
+                                             inst_db_info=self.paramfile_info[paramcont_type],
+                                             model_instance=self,
+                                             available_joint_priors=self.joint_prior_container)
             else:  # For the model parameters (those who do no belong in any param container)
                 super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], model_instance=self,
                                                     available_joint_priors=self.joint_prior_container)
@@ -529,14 +511,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def create_parameter_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
         """Create the parameter file.
 
-        :param string paramfile_path: Path to the param_file.
-        :param string answer_overwrite: If the LC_param_file already exists, do you want to
-            overwrite it ? "y" or "n". If this not provide the program will ask you interactively.
-        :param string answer_create: If the LC_param_file doesn't exists aleardy, where do you want
-            to create it ? "absolute", "run_folder" or "error". If this not provide the program will
-            ask you interactively.
+        Arguments
+        ---------
+        paramfile_path   : string
+            Path to the param_file.
+        answer_overwrite : string
+            If the LC_param_file already exists, do you want to overwrite it ? "y" or "n". If this not
+            provide the program will ask you interactively.
+        answer_create    : string
+            If the LC_param_file doesn't exists aleardy, where do you want to create it ? "absolute",
+            "run_folder" or "error". If this not provide the program will ask you interactively.
         """
+        # Check is the file path provided correspond to an exiting file
         file_path = self.look4runfile(file_path=paramfile_path)
+        # If path provided is an existing file, ask if you want to overwrite
         if file_path is not None:
             answers_list_yn = ['y', 'n']
             if answer_overwrite is None:
@@ -548,6 +536,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                     reply = answer_overwrite
                 else:
                     raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
+        # If path provided is not an existing file, ask if you want to created it
         else:
             answers_list_create = ["absolute", "error"]
             if self.hasrun_folder:
@@ -574,6 +563,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 raise ValueError("File {} doesn't exist and the user doesn't want to create it."
                                  "".format(paramfile_path))
             reply = "y"
+        # If the file needs to be created
         if reply == "y":
             with open(file_path, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
@@ -582,6 +572,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 f.write("# Parameters\n")
                 f.write(self.get_paramfile_section())
             logger.info("Parameter file created at path: {}".format(file_path))
+        # If the file doesn't need to be created
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
             self.update_paramfile_info()
@@ -629,7 +620,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     def _check_dataset_instcat(self):
         """Check that the instrument categories of the datasets are all handled by the model. """
-        if not(self.possible_inst_categories >= set(self.dataset_db.inst_categories)):
+        if not(self.possible_inst_categories >= set(self.dataset_db.inst_categories)):  # self.possible_inst_categories is defined in the Subclasses of Core_Model
             raise ValueError("Model of category {} cannot simulate data of the following category: {}."
                              " Remove the datasets of this(ese) category(ies) or change the model."
                              "".format(self.category, set(self.dataset_db.inst_categories) - self.possible_inst_categories))
@@ -662,7 +653,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             def_answer_create = dict_answer_create.get("def", None)
         else:
             ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
-        for inst_cat in self.instruments_categories:
+        for inst_fullcat in self.inst_fullcategories:
+            inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
             if self.handlers4instcatparamfile[inst_cat][create_key] is not None:
                 self.handlers4instcatparamfile[inst_cat][create_key](paramfile_path.get(inst_cat, None),
                                                                      answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
@@ -671,6 +663,71 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def load_instcat_paramfile(self):
         """Load the param files specific to each instrument category (if needed).
         """
-        for inst_cat in self.instruments_categories:
+        for inst_fullcat in self.inst_fullcategories:
+            inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
             if self.handlers4instcatparamfile[inst_cat][load_key] is not None:
                 self.handlers4instcatparamfile[inst_cat][load_key]()
+
+    def _choose_parameter_file_path(self, default_paramfile_path, paramfile_path=None, answer_overwrite=None, answer_create=None):
+        """Choose the path for any parameter file.
+
+        Arguments
+        ---------
+        default_paramfile_path : str
+            Default name for the parameter file
+        paramfile_path      : str
+            Path to the indicator parameter file (IND_param_file).
+        answer_overwrite    : str
+            If the IND_param_file already exists, do you want to
+            overwrite it ? "y" or "n". If this is not provided the program will ask you interactively.
+        answer_create       : str
+            If the IND_param_file doesn't exists already, where do you want
+            to create it ? "absolute", "run_folder" or "error". If this not provide the program will ask you interactively.
+
+        Returns
+        -------
+        file_path : str
+            Chosen path for the parameter file
+        reply     : str ("y" or "n")
+            If "y" this file should be created or overwriten, if "n" not.
+        """
+        if paramfile_path is None:
+            paramfile_path = default_paramfile_path
+        file_path = self.look4runfile(file_path=paramfile_path)
+        if file_path is not None:
+            answers_list_yn = ['y', 'n']
+            if answer_overwrite is None:
+                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
+                            "".format(file_path, answers_list_yn))
+                reply = QCM_utilisateur(question, answers_list_yn)
+            else:
+                if answer_overwrite in answers_list_yn:
+                    reply = answer_overwrite
+                else:
+                    raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
+        else:
+            answers_list_create = ["absolute", "error"]
+            if self.hasrun_folder:
+                answers_list_create.append("run_folder")
+                run_folder_path = join(self.run_folder, paramfile_path)
+            if answer_create is None:
+                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
+                            "{}".format(paramfile_path, paramfile_path))
+                if self.hasrun_folder:
+                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
+                question += "\nNot create it and raise an 'error' ? {}\n".format(answers_list_create)
+                reply = QCM_utilisateur(question, answers_list_create)
+            else:
+                if answer_create in answers_list_create:
+                    reply = answer_create
+                else:
+                    raise ValueError("answer_create should by in {}".format(answers_list_create))
+            if reply == "absolute":
+                file_path = paramfile_path
+            elif reply == "run_folder":
+                file_path = run_folder_path
+            else:
+                raise ValueError("File {} doesn't exist and the user doesn't want to create it."
+                                 "".format(paramfile_path))
+            reply = "y"
+        return file_path, reply

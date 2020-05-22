@@ -47,7 +47,7 @@ class DatasimulatorCreator(object):
         # Get the instrument category of the instrument model which will allow to get the correct
         # datasimulator creator function.
         inst_cat = instmod_obj.instrument.category
-        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset)
+        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset)  # self.get_datasimcreator is defined in Core_Model
 
     def create_datasimulators(self, affectinstmodel4dataset=False, lock_db=False):
         """Return a database with the datasim docfuncs for each instrument model used separatly.
@@ -77,9 +77,9 @@ class DatasimulatorCreator(object):
             # ... get the inst_cat, inst_name and inst_model_name for the storage in the database
             inst_model = instmod_obj.get_name()
             inst_name = instmod_obj.instrument.get_name()
-            inst_cat = instmod_obj.instrument.category
+            inst_fullcat = instmod_obj.instrument.full_category
             # ... create and store the datasimulator docfuncs in the database
-            db[inst_cat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
+            db[inst_fullcat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
         # If required lock the database
         if lock_db:
             db.lock()
@@ -100,22 +100,41 @@ class DatasimulatorCreator(object):
             dataset_name = dataset.dataset_name
             db[dataset_name] = {}
             # ... get the associated instrument model object
-            instmod_obj = self.get_instmod(dataset_name)
+            instmod_obj = self.get_instmod(dataset_name=dataset_name)
             # ... create and store the datasimulator
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
         return db
 
     def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model, mand_kwargs, opt_kwargs,
-                                      inst_cat, inst_model_fullname=None, dataset=None):
-        """Return the datasimulator for a given instrument model.
+                                      inst_fullcat, inst_model_fullname=None, dataset=None):
+        """Return the datasimulator for all datasets
 
         WARNING/TODO eventually: For now *args, **kwargs of the datasim_alldatasets are passed to all the datasim function.
         This might not be always desired.
 
-        :param list_DatasimDocFunc l_datasim: List of DatasimDocFunc
-        :parama list_list_int l_params_idx: List of list of indexes in the param array for each
-            datasim function in l_datasim.
-        :return function datasim_alldatasets: Function that gather al
+        Arguments
+        ---------
+        l_datasim           : List of DatasimDocFunc
+            list of datasimulators
+        l_params_idx        : List of list of int
+            List of list of indexes in the param array for each datasim function in l_datasim.
+        params_model        : List of string
+            Ordered list of parameters full name for the datasimulator being created
+        mand_kwargs         : String
+            String giving the mandatory keyword arguments for the datasimulator being created
+        opt_kwargs          : String
+            String giving the optional keyword arguments along with their default values
+        inst_fullcat        : String or List of string or None
+            Gives instrument full categories of the instrument models used
+        inst_model_fullname : String or List of string
+            Gives the full name of the instrument models used
+        dataset             : String or list of string or None
+            Gives the names of the datasets simulated
+
+        Returns
+        -------
+        datasim_alldatasets: DatasimDocFunc
+            Datasimulator for all datasets
         """
         def datasim_alldatasets(p, *args, **kwargs):
             l_res = []
@@ -125,7 +144,7 @@ class DatasimulatorCreator(object):
 
         return DatasimDocFunc(function=datasim_alldatasets,
                               params_model=params_model,
-                              inst_cat=inst_cat,
+                              inst_cat=inst_fullcat,
                               mand_kwargs=mand_kwargs,
                               opt_kwargs=opt_kwargs,
                               include_dataset_kwarg=l_datasim[0].include_dataset_kwarg,
@@ -166,7 +185,7 @@ class DatasimulatorCreator(object):
         l_allmand_kwargs = []
         l_allopt_kwargs = []
         l_params_idx = []
-        inst_cats = []
+        inst_fullcats = []
         inst_model_fullnames = []
         datasets = []
 
@@ -176,9 +195,9 @@ class DatasimulatorCreator(object):
             l_datsim.append(self.datasimcreator
                             [datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
                                            datsimC_inputs[datsimC_name]["datasets"])
-                            [self.key_whole])
+                            [self.key_whole])  # self.key_whole is defined in Core_Model
             # ... get the ordered list of instrument categories for this function
-            inst_cats = inst_cats + list(l_datsim[-1].inst_cat)
+            inst_fullcats = inst_fullcats + list(l_datsim[-1].inst_cat)
             # ... get the ordered list of instrument model full names for this function
             inst_model_fullnames = (inst_model_fullnames +
                                     list(l_datsim[-1].instmodel_fullname))
@@ -209,13 +228,13 @@ class DatasimulatorCreator(object):
                      "List of instrument categories: {}\n"
                      "List of instrument instrument model full names: {}\n"
                      "List of datasets: {}"
-                     "".format(l_allparams, datsimC_inputs, l_datsim, l_params, l_params_idx, inst_cats,
+                     "".format(l_allparams, datsimC_inputs, l_datsim, l_params, l_params_idx, inst_fullcats,
                                inst_model_fullnames, datasets))
 
         # Create the datasim_alldatasets
         # This
         return self.__datasim_alldatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,
                                                   params_model=l_allparams, mand_kwargs=str(l_allmand_kwargs), opt_kwargs=str(l_allopt_kwargs),
-                                                  inst_cat=inst_cats,
+                                                  inst_fullcat=inst_fullcats,
                                                   inst_model_fullname=inst_model_fullnames,
                                                   dataset=datasets)

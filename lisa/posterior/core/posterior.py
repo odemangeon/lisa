@@ -315,7 +315,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
     def get_datasimulators(self):
         """Get datasimulators from the model and store them into datasimulators."""
         if self.islocked_dataset_db:
-            self.datasimulators.instrument_db.update(self.model.create_datasimulators())
+            self.datasimulators.instrument_db.update(self.model.create_datasimulators())  # self.model.create_datasimulators is defined in Datasimulator
             (self.datasimulators.dataset_db.
              update(self.model.create_datasimulators_perdataset(dataset_db=self.dataset_db)))
             (self.datasimulators.dataset_db

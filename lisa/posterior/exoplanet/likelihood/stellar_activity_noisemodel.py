@@ -23,6 +23,7 @@ from collections import defaultdict
 # from ..model.celestial_bodies import Star
 from ..dataset_and_instrument.rv import RV_inst_cat
 from ..dataset_and_instrument.lc import LC_inst_cat
+from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.parameter import Parameter
 from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
 
@@ -47,7 +48,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
     __category__ = stelact_GP_noisemodel
     __has_GP__ = True
-    __has_jitter__ = False
+    __has_jitter__ = True
     __kwargs_needed__ = ["data", "data_err", "t"]
 
     kernel_text = ("{amp}**2 * ExpSquaredKernel(metric={tau}) * "
@@ -99,7 +100,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
     __star_param_GP_names = [amp, tau, gamma, logperiod]
 
-    __allowed_inst_cat = [RV_inst_cat, LC_inst_cat]
+    __allowed_inst_cat = [RV_inst_cat, LC_inst_cat, IND_inst_cat]
 
     @classmethod
     def apply_parametrisation(cls, model_instance, instmod_fullname):

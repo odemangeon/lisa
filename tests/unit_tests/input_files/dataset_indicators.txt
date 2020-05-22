@@ -1,0 +1,6 @@
+# Datasets file: List below all the files you want to use for this run
+# The first columns is the path to a dataset file
+# The second columns is the name of the instrument model used for this dataset
+# The third column is the noise model.
+IND-FWHM_TOI-175_ESPRESSO_0.txt  def     stellar_activity
+IND-FWHM_TOI-175_ESPRESSO_1.txt  def1    stellar_activity

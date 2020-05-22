@@ -14,18 +14,20 @@ from logging import getLogger
 from re import split
 from collections import OrderedDict
 
-from .dataset_and_instrument.dataset import dataset_name_from_file_name
+from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .database_instlevelsanddataset import DatabaseInstLvlDataset
-from ...tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
+from ...tools.miscellaneous import get_filename_from_file_path
 from ...tools.lockable_dict import LockableDict
 from .likelihood.manager_noise_model import Manager_NoiseModel
-from .dataset_and_instrument.instrument import build_instmod_fullname
 
 ## Logger object
 logger = getLogger()
 
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()
+
+mgr_inst_dst = Manager_Inst_Dataset()
+mgr_inst_dst.load_setup()
 
 
 def read_datasets_file(datasetsfile_path):
@@ -55,7 +57,33 @@ def read_datasets_file(datasetsfile_path):
 
 
 class DatasetsFileDb(DatabaseInstLvlDataset):
-    """docstring for DatasetsFile."""
+    """docstring for DatasetsFile.
+
+    Database with three levels inst_fullcat, inst_name, inst_model which contains the noise model to be
+    used for each instrument model.
+
+    Attributes
+    ----------
+    instmodel4dataset : dictionary
+        Provide the instrument model (values) to use for each dataset provided by their name (keys).
+
+    Properties
+    ----------
+    path4name         : dictionary
+        Provide the dataset path (values) where the datasets designed by their name (keys) can be found.
+    datasetsfile_path : string
+        Path to the dataset.txt file.
+    dataset_filepaths : list of string
+        List of the paths to all the dataset files
+
+    Methods
+    -------
+    load :
+        Load the content of the dataset.txt file into this database
+    get_noisemod4instmodfullname :
+        Return a dictionary which provides the noise model category for each instrument model designated
+        by their full name
+    """
 
     def __init__(self, object_name, instmodel4dataset=None, lock=None):
         object_stored = "dataset, inst_model and noise model subclass"
@@ -100,14 +128,14 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
             # Extract the dataset name and filename from its path and file the path4name dictionary
             # giving the dataset path associated to its name
             dataset_filename = get_filename_from_file_path(dataset_filepath)
-            dataset_name = dataset_name_from_file_name(dataset_filename)
+            dataset_name = mgr_inst_dst.dataset_name_from_file_name(dataset_filename)
             logger.debug("load info regarding dataset {} at path: {}".format(dataset_name,
                                                                              dataset_filepath))
             self.path4name[dataset_name] = dataset_filepath
 
             # Extract, instrument category, instrument name, ... from the dataset filename
-            dataset_info = interpret_data_filename(dataset_filename)
-            inst_cat = dataset_info["inst_category"]
+            dataset_info = mgr_inst_dst.interpret_data_filename(dataset_filename)
+            inst_fullcat = dataset_info["inst_fullcat"]
             inst_name = dataset_info["inst_name"]
             inst_model = dico_df[dataset_filepath]["inst_mod"]
             noise_model = dico_df[dataset_filepath]["noise_mod"]
@@ -117,8 +145,8 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
 
             # Store the noise model subclass associated to an instrument model into datasetfile_db
             # (self)
-            self[inst_cat][inst_name][inst_model] = (mgr_noisemodel.
-                                                     get_noisemodel_subclass(noise_model))
+            self[inst_fullcat][inst_name][inst_model] = (mgr_noisemodel.
+                                                         get_noisemodel_subclass(noise_model))
 
         # Store the datasetsfile path into the read only datasetsfile_path property
         self.__datasetsfile_path = datasetsfile_path
@@ -126,12 +154,12 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
     def get_noisemod4instmodfullname(self):
         """Return the dictionary giving the noise model name for each instrument model full_name."""
         res = OrderedDict()
-        for inst_cat in self:
-            for inst_name in self[inst_cat]:
-                for inst_model in self[inst_cat][inst_name]:
-                    instmod_fullname = build_instmod_fullname(inst_model=inst_model,
-                                                              inst_name=inst_name)
-                    res[instmod_fullname] = self[inst_cat][inst_name][inst_model].category
+        for inst_fullcat in self:
+            for inst_name in self[inst_fullcat]:
+                for inst_model in self[inst_fullcat][inst_name]:
+                    valid, inst_subclass = mgr_inst_dst.validate_inst_fullcat(inst_fullcat)
+                    instmod_fullname = inst_subclass.build_instmod_fullname(inst_model=inst_model, inst_name=inst_name, inst_fullcat=inst_fullcat)
+                    res[instmod_fullname] = self[inst_fullcat][inst_name][inst_model].category
         return res
 
 

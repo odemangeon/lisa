@@ -27,21 +27,18 @@ from sys import exc_info
 from pandas import read_table
 from numpy import asarray
 
-from ....tools.miscellaneous import interpret_data_filename, get_filename_from_file_path
+from ....tools.miscellaneous import get_filename_from_file_path
+from ....tools.metaclasses import MandatoryReadOnlyAttr
+
 
 ## Logger
 logger = getLogger()
 
 
-def dataset_name_from_file_name(dataset_filename):
-    """Return the dataset_name associated to the filename of a dataset."""
-    filename_info = interpret_data_filename(dataset_filename)
-    return "{}_{}_{}_{}".format(filename_info["inst_category"], filename_info["object"],
-                                filename_info["inst_name"], filename_info["number"])
-
-
-class Dataset(object):
+class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
     """docstring for the Dataset abstract class."""
+
+    __mandatoryattrs__ = ["instrument_subclass", ]
 
     ## Mandatory columns: For this abstract data base there is None
     _mandatory_columns = []
@@ -75,12 +72,12 @@ class Dataset(object):
             NotImplementedError : 1 case,
                 -If you try to instanciate Dataset directly.
         """
-        super(Dataset, self).__init__()
+        super(Core_Dataset, self).__init__()
         # 1.
         self.__filepath = file_path
         # 2.
         self.__filename = get_filename_from_file_path(self.filepath)
-        filename_info = interpret_data_filename(self.filename)
+        filename_info = self.interpret_data_filename(self.filename)
         logger.debug("Interpretation of the datafile name: {}".format(filename_info))
         # 3.
         self.__objectname = filename_info["object"]
@@ -94,8 +91,8 @@ class Dataset(object):
         # 5.
         self._rm_data()
         # Make Dataset an abstract class
-        if type(self) is Dataset:
-            raise NotImplementedError("Dataset should not be instanciated!")
+        if type(self) is Core_Dataset:
+            raise NotImplementedError("Core_Dataset should not be instanciated!")
 
     def __repr__(self):
         return "<{} {}:{}>".format(self.__class__.__name__, self.dataset_name, self.filepath)
@@ -113,7 +110,13 @@ class Dataset(object):
     @property
     def dataset_name(self):
         """Get the name of the data file."""
-        return dataset_name_from_file_name(self.filename)
+        filename_info = self.interpret_data_filename(data_file_name=self.filename)
+        if filename_info["inst_subcat"] is None:
+            return "{}_{}_{}_{}".format(filename_info["inst_cat"], filename_info["object"],
+                                        filename_info["inst_name"], filename_info["number"])
+        else:
+            return "{}-{}_{}_{}_{}".format(filename_info["inst_cat"], filename_info["inst_subcat"],
+                                           filename_info["object"], filename_info["inst_name"], filename_info["number"])
 
     @property
     def instrument(self):
@@ -129,6 +132,88 @@ class Dataset(object):
     def number(self):
         """Return the number of the dataset (if several dataset from the same instrument)."""
         return self.__number
+
+    @classmethod
+    def interpret_data_filename(cls, data_file_name, raise_error=True):
+        """Interpret data file name.
+
+        If the format of the data file name is recognized the function return a dictionnary (see
+        Returns below) otherwise return None.
+
+        Arguments
+        ---------
+        data_file_name : string
+            Data file name. The format depends on wheter or not the instrument class associated to the
+            dataset has sub categories or not.
+        raise_error    : Boolean
+            If True the function will raise an error if the format is not correct
+
+        Returns
+        -------
+        result: dictionnary with the interpration of the filename which contains the following keys:
+            - object : name of the object observed with the data
+            - inst_cat : category of instrument used to take the data. e.g. "LC", "RV", ...
+            - inst_subcat : sub category of instrument used to take the data. e.g. "FWHM", None is this instrument category doesn't have subcategories
+            - inst_fullcat : full category of instrument used to take the data including or not the
+                instrument sub category when needed.
+            - inst_name : Name of the instrument used to take the data.
+            - number : give the number of the data file if there is several data files of the
+                same object observed with the same instrument
+        """
+        if cls.instrument_subclass.has_subcategories:
+            filename_format = "instcat-instsubcat_target_instrument(_number).*"
+        else:
+            filename_format = "instcat_target_instrument(_number).*"
+        cuts = data_file_name.split("_")   # List of fields that were separated by "_"
+        cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
+        cuts_cat = cuts[0].split("-")
+        format_error = False
+        if len(cuts) < 3 or len(cuts) > 4:
+            format_error = True
+        if cls.instrument_subclass.has_subcategories:
+            if len(cuts_cat) != 2:
+                format_error = True
+        else:
+            if len(cuts_cat) != 1:
+                format_error = True
+        if format_error:
+            if raise_error:
+                raise ValueError(f"Data file name not recognized. Should be in the format {filename_format}. Got {data_file_name}")
+            else:
+                return None
+        result = {"object": cuts[1],
+                  "inst_cat": cuts_cat[0],
+                  "inst_name": cuts[2]}
+        if cls.instrument_subclass.has_subcategories:
+            result["inst_subcat"] = cuts_cat[-1]
+            result["inst_fullcat"] = f"{result['inst_cat']}-{result['inst_subcat']}"
+        else:
+            result["inst_subcat"] = None
+            result["inst_fullcat"] = result['inst_cat']
+        if len(cuts) == 3:
+            result["number"] = 0
+        elif len(cuts) == 4:
+            result["number"] = int(cuts[3])
+        return result
+
+    @classmethod
+    def validate_dataset_filename(cls, data_file_name):
+        """Validate the name of a datafile.
+
+        Arguments
+        ---------
+        data_file_name: string
+            Name of the dataset file.
+
+        Returns
+        -------
+        valid : bool
+            If True the dataset file name is valid.
+        """
+        filename_info = cls.interpret_data_filename(data_file_name=data_file_name, raise_error=False)
+        if filename_info is None:
+            return False
+        return cls.instrument_subclass.validate_inst_cat(filename_info["inst_cat"])
 
     def _rm_data(self):
         """Remove data previously loaded or initialse the data attribute."""
