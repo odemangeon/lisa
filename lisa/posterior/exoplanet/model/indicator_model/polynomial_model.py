@@ -14,7 +14,7 @@ from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, 
                                                              time_ref, l_time_ref)
 from ....core.model.datasim_docfunc import DatasimDocFunc
 from .....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                   par_vec_name)  # add_argskwargs_argument, argskwargs
+                                                   par_vec_name, add_argskwargs_argument, argskwargs)
 
 
 ## Logger object
@@ -259,6 +259,10 @@ class PolynomialIndicatorInterface(object):
             returns_whole += ", "
         if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
             returns_whole = returns_whole[:-2]
+
+        # Finalise the text of simulator
+        if argskwargs not in arguments:
+            arguments = add_argskwargs_argument(arguments)
 
         text_def_func[key_whole] = (template_function.
                                     format(object=key_whole,

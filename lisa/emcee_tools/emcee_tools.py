@@ -33,7 +33,8 @@ from scipy.stats import median_absolute_deviation as mad
 from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
-from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
+# from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
+from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
@@ -47,6 +48,9 @@ from ..explore_analyze.plot import hist_lnprob
 
 ## Logger Object
 logger = getLogger(__name__)
+
+mgr_inst_dst = Manager_Inst_Dataset()
+mgr_inst_dst.load_setup()
 
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()
@@ -401,7 +405,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
             ax_resi_i.tick_params(**kwargs_tick_params_final)
     # Initialise the title (necessary here, because below the title will be completed with the planet
     # name if phasefold)
-    filename_info = Core_Dataset.interpret_data_filename(dataset.dataset_name)
+    filename_info = mgr_inst_dst.interpret_data_filename(dataset.dataset_name)
     title = "{}({})".format(filename_info["inst_name"], filename_info["number"])
     # Get the instrument model object and the noise model object
     inst_mod = model_instance.get_instmod(dataset.dataset_name)
