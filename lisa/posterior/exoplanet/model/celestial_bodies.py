@@ -241,7 +241,7 @@ class Star(CelestialBody):
         """True if the stellar model includes an RV drift."""
         try:
             return self.__with_RVdrift
-        except:
+        except AttributeError:
             return False
 
     @property
