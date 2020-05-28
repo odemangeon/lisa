@@ -59,8 +59,8 @@ def read_datasets_file(datasetsfile_path):
 class DatasetsFileDb(DatabaseInstLvlDataset):
     """docstring for DatasetsFile.
 
-    Database with three levels inst_fullcat, inst_name, inst_model which contains the noise model to be
-    used for each instrument model.
+    Database with three levels inst_fullcat, inst_name, inst_model which contains the noise model subclass
+    to be used for each instrument model.
 
     Attributes
     ----------
@@ -161,6 +161,11 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
                     instmod_fullname = inst_subclass.build_instmod_fullname(inst_model=inst_model, inst_name=inst_name, inst_fullcat=inst_fullcat)
                     res[instmod_fullname] = self[inst_fullcat][inst_name][inst_model].category
         return res
+
+    # @property
+    # def noisemodel_categories(self):
+    #     """Return the list of noise model categories used."""
+    #     return [noisemod.category for noisemod in set(self.get_objects())]  # Comes from DatabaseInstLevel
 
 
 class DatasetsFileDbAttr(object):
