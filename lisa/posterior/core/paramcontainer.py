@@ -62,7 +62,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
     def add_parameter(self, parameter):
         """Add a parameter to the Core_ParamContainer."""
         if isinstance(parameter, Parameter):
-            self.parameters[parameter.get_name()] = parameter
+            self.parameters[parameter.store_name] = parameter
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
 
@@ -262,7 +262,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
-        self.paramfile_info.update({key_params_fileinfo: [param.get_name() for param in
+        self.paramfile_info.update({key_params_fileinfo: [param.code_name for param in
                                                           self.get_list_params(main=True)]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
                      "".format(self.get_name(), self.paramfile_info))
@@ -322,7 +322,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             param = getattr(self, param_name)
             if param.code_name in dico_config:
                 param.main = True
-                param.load_config(dico_config=dico_config[param.get_name(code_version=True)],
+                param.load_config(dico_config=dico_config[param.code_name],
                                   model_instance=model_instance,
                                   available_joint_priors=available_joint_priors,
                                   load_setup=load_setup)
