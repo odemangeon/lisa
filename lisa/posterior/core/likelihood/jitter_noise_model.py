@@ -982,3 +982,26 @@ class GaussianNoiseModel_wjitteraddlog(GaussianNoiseModel_wdfmjitter):
         :return array_float res: new variance
         """
         return apply_jitter_addlog(data_err, jitter)
+
+
+class JitterNoiseModelInterface(object):
+    """docstring for JitterNoiseModelInterface."""
+
+    def __init__(self):
+        # Update the applyparametrisation4noisemodel dictionary
+        l_jitternoisemodel_class = [GaussianNoiseModel_wdfmjitter, GaussianNoiseModel_wjittermulti,
+                                    GaussianNoiseModel_wjittermultiBaluev, GaussianNoiseModel_wjittermultilog,
+                                    GaussianNoiseModel_wjittermultiBaluevlog, GaussianNoiseModel_wjitteraddfraclog,
+                                    GaussianNoiseModel_wjitteraddfracBaluevlog, GaussianNoiseModel_wjitteraddfrac,
+                                    GaussianNoiseModel_wjitteraddfracBaluev, GaussianNoiseModel_wjitteradd,
+                                    GaussianNoiseModel_wjitteraddlog]
+        for jitternoisemod_class in l_jitternoisemodel_class:
+            self.applyparametrisation4noisemodel[jitternoisemod_class.category] = self.create_apply_parametrisation_jitternoisemod(jitternoisemod_class)  # applyparametrisation4noisemodel is created in Core_Parametrisation
+
+    def create_apply_parametrisation_jitternoisemod(self, jitter_noisemodel_class):
+
+        def apply_parametrisation_jitternoisemod(self=self):
+            for instmod_fullname in self.get_instmodfullnames_using_noisemod(noisemod_cat=jitter_noisemodel_class.category):
+                jitter_noisemodel_class.apply_parametrisation(model_instance=self, instmod_fullname=instmod_fullname)
+
+        return apply_parametrisation_jitternoisemod

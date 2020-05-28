@@ -17,7 +17,7 @@ from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from numpy import concatenate, sqrt
 import numpy as np
-from collections import defaultdict
+from collections import defaultdict, Counter
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
@@ -26,7 +26,9 @@ from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.parameter import Parameter
 from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
-
+from ....tools.miscellaneous import spacestring_like
+from ....tools.human_machine_interface.QCM import QCM_utilisateur
+from ....tools.name import Name
 # from ....tools.function_w_doc import DocFunction
 
 
@@ -98,41 +100,42 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
     gpsim_function_name = "gp_sim"
 
-    __star_param_GP_names = [amp, tau, gamma, logperiod]
+    _star_param_GP_names = [amp, tau, gamma, logperiod]
 
-    __allowed_inst_cat = [RV_inst_cat, LC_inst_cat, IND_inst_cat]
+    _allowed_inst_cat = [RV_inst_cat, LC_inst_cat, IND_inst_cat]
 
-    @classmethod
-    def apply_parametrisation(cls, model_instance, instmod_fullname):
-        """Add in the model the necessary main parameters for the noise model.
-
-        This function is called by Core_Model.set_noisemodels for each instrument model.
-
-        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
-            noise model which requires parameter of the object studied (like GP and stellar
-            activity)
-        :param string instmod_fullname: Full name of the instrument involved in the noise model and
-            for which you want to apply the parametrisation for the noise modelling.
-        """
-        # Load the star and inst_model object
-        star = model_instance.stars[list(model_instance.stars.keys())[0]]
-        inst_model_obj = model_instance.instruments[instmod_fullname]
-        inst = inst_model_obj.instrument
-        inst_cat = inst.category
-        if inst_cat not in cls.__allowed_inst_cat:
-            raise ValueError(f"Stellar activity noise model can only be used for instrument category "
-                             f"{cls.__allowed_inst_cat}, got {inst_cat}."
-                             )
-        # Set the star parameters (tau, gamma, logperiod, amp)
-        for param_name in cls.__star_param_GP_names:
-            if star.has_parameter(name=param_name):
-                param = star.get_parameter(name=param_name)
-                if not param.main:
-                    param.main = True
-            else:
-                star.add_parameter(Parameter(name=param_name, name_prefix=star.name, main=True))
-        # Set the instrument models parameters (jitter)
-        super(StellarActNoiseModel, cls).apply_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
+    # This is now done in the StellarActivityNoiseModelInterface.apply_parametrisation_stelact_noisemod
+    # @classmethod
+    # def apply_parametrisation(cls, model_instance, instmod_fullname):
+    #     """Add in the model the necessary main parameters for the noise model.
+    #
+    #     This function is called by Core_Model.set_noisemodels for each instrument model.
+    #
+    #     :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+    #         noise model which requires parameter of the object studied (like GP and stellar
+    #         activity)
+    #     :param string instmod_fullname: Full name of the instrument involved in the noise model and
+    #         for which you want to apply the parametrisation for the noise modelling.
+    #     """
+    #     # Load the star and inst_model object
+    #     star = model_instance.stars[list(model_instance.stars.keys())[0]]
+    #     inst_model_obj = model_instance.instruments[instmod_fullname]
+    #     inst = inst_model_obj.instrument
+    #     inst_cat = inst.category
+    #     if inst_cat not in cls._allowed_inst_cat:
+    #         raise ValueError(f"Stellar activity noise model can only be used for instrument category "
+    #                          f"{cls._allowed_inst_cat}, got {inst_cat}."
+    #                          )
+    #     # Set the star parameters (tau, gamma, logperiod, amp)
+    #     for param_name in cls._star_param_GP_names:
+    #         if star.has_parameter(name=param_name):
+    #             param = star.get_parameter(name=param_name)
+    #             if not param.main:
+    #                 param.main = True
+    #         else:
+    #             star.add_parameter(Parameter(name=param_name, name_prefix=star.name, main=True))
+    #     # Set the instrument models parameters (jitter)
+    #     super(StellarActNoiseModel, cls).apply_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
 
     @classmethod
     def check_parametrisation(cls, model_instance, instmod_fullname):
@@ -204,10 +207,10 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         """
         star = cls.get_star(model_instance)
         if free:
-            return [getattr(star, par) for par in cls.__star_param_GP_names
+            return [getattr(star, par) for par in cls._star_param_GP_names
                     if getattr(star, par).free]
         else:
-            return [getattr(star, par) for par in cls.__star_param_GP_names]
+            return [getattr(star, par) for par in cls._star_param_GP_names]
 
     # @classmethod
     # def star_params_GP_isfree(cls, model_instance):
@@ -511,3 +514,345 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     #     for par in self.get_star_param_GP_names(free=True, full_name=True):
     #         l_idx_param.append(l_param_all.index(par))
     #     return l_idx_param
+
+
+class StellarActivityNoiseModelInterface(object):
+    """docstring for StellarActivityNoiseModelInterface."""
+
+    # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
+    __name_modelstelact_4_instmodfullname = "model_4_instmodfullname"
+
+    # String for the default model name for stellar activity noise model
+    __def_stellar_activity_noisemod_name = "SA"
+
+    def __init__(self):
+        self.__modelSAname_4_instmodfullname = {}
+        self.__modelSA_def = {}
+
+        # Update the applyparametrisation4noisemodel dictionary
+        self.applyparametrisation4noisemodel[stelact_GP_noisemodel] = self.apply_parametrisation_stelact_noisemod  # applyparametrisation4noisemodel is created in Core_Parametrisation
+
+    @property
+    def modelstelactname_4_instmodfullname(self):
+        """Dictionary giving the stellar activity for each instrument model full name using the stellar activity model
+
+        key : instrument model full name
+        values : String giving the name of the stellar activity noise model to use.
+        """
+        for inst_mod_obj in self.inst_model_objects:
+            if inst_mod_obj.noise_model == stelact_GP_noisemodel:
+                inst_mod_fullname = inst_mod_obj.get_name(include_prefix=True, recursive=True)
+                if inst_mod_fullname not in self.__modelSAname_4_instmodfullname:
+                    self.__modelSAname_4_instmodfullname[inst_mod_fullname] = self.__def_stellar_activity_noisemod_name
+        return self.__modelSAname_4_instmodfullname
+
+    @property
+    def modelstelact_def(self):
+        """Dictionary giving the definition of the stellar activity noise models
+
+        key : stellar activity noise model name
+        values :  Dictionary giving the parameters of the stellar activity models.
+        """
+        for SA_mod_name in self.model_stelact_names:
+            if SA_mod_name not in self.__modelSA_def:
+                self.__modelSA_def[SA_mod_name] = {}
+        return self.__modelSA_def
+
+    @property
+    def model_stelact_names(self):
+        """List of the stellar activity model names used.
+
+        key : instrument model full name
+        values :  String giving the name of the stellar activity noise model to use.
+        """
+        return list(set(self.modelstelactname_4_instmodfullname.values()))
+
+    @property
+    def isdefined_SANMparamfile(self):
+        """Return True is the attribute param_file has been defined."""
+        return self.isdefined_paramfile_noisemod(stelact_GP_noisemodel)  # isdefined_paramfile_noisemod is defined in Core_Model
+
+    def create_SANM_param_file(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+        """Create the parameter file for the definition of the stellar activity noise model.
+
+        Arguments
+        ---------
+        paramfile_path   : str
+            Path to the stellar activity noise model parameter file (SANM_param_file).
+        answer_overwrite : str
+            If the SANM_param_file already exists, do you want to
+            overwrite it ? "y" or "n". If this is not provided the program will ask you interactively.
+        answer_create    : str
+            If the SANM_param_file doesn't exists already, where do you want
+            to create it ? "absolute", "run_folder" or "error". If this not provide the program will ask you interactively.
+        """
+        # Choose the parameter file path _choose_parameter_file_path is from Core_Model
+        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='SANM_param_file.py', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)
+        if reply == "y":
+            with open(file_path, 'w') as f:
+                # Write the header
+                f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+                # Put modelstelactname_4_instmodfullname dictionary
+                f.write(self.__create_text_modelstelactname_4_instmodfullname())
+                # Put the models definition directories
+                f.write(self.__create_text_modelstelact_def_directories())
+            logger.info("Parameter file for the stellar activity noise model created at path: {}".format(file_path))
+        else:
+            logger.info("Parameter file for the stellar activity noise model already existing and not overwritten: {}".format(file_path))
+        self.paramfile4noisemodcat[stelact_GP_noisemodel] = file_path  # paramfile4noisemodcat is from Core_Model
+
+    def read_SANM_param_file(self):
+        """Read the content of the Stellar activity noise model parameter file."""
+        if self.isdefined_SANMparamfile:
+            with open(self.paramfile4noisemodcat[stelact_GP_noisemodel]) as f:
+                exec(f.read())
+            dico = locals().copy()
+            dico.pop("self")
+            dico.pop("f")
+            logger.debug("SANM parameter file read.\nContent of the parameter file: {}"
+                         "".format(dico.keys()))
+            return dico
+        else:
+            raise IOError("Impossible to read SANM parameter file: {}".format(self.paramfile4instcat[IND_inst_cat]))
+
+    def load_SANM_param_file(self, answer_recreate=None):
+        """Load the parameter file specific to the stellar activity noise model.
+        """
+        assert len(self.model_stelact_names) > 0, "There should be a model used by default."
+        missing_usedmodel_dict_name = self.model_stelact_names
+        unnecessary_model_dict_name = []
+        while (len(missing_usedmodel_dict_name) > 0) or (len(unnecessary_model_dict_name)):
+            dico_config = self.read_SANM_param_file()
+            missing_usedmodel_dict_name, unnecessary_model_dict_name, dict_valid, error_list = self.__check_SANM_param_file(dico_config)
+            if len(error_list) > 0:
+                inconsistency = True
+                logger.warning(f"The following errors have been spotted in the stellar activity parameter file: {error_list}")
+            else:
+                inconsistency = False
+            if dict_valid[self.__name_modelstelact_4_instmodfullname]:
+                self.__load_modelstelactname_4_instmodfullname(dico_config[self.__name_modelstelact_4_instmodfullname])
+                # Remove unused stellar activity model name from self.modelstelact_def
+                used_stelact_mod_name = {mod_name: mod_name in self.model_stelact_names for mod_name in self.modelstelact_def.keys()}
+                for mod_name, used in used_stelact_mod_name.items():
+                    if not used:
+                        self.modelstelact_def.pop(mod_name)
+            dict_valid.pop(self.__name_modelstelact_4_instmodfullname)
+            for model, valid in dict_valid.items():
+                if valid:
+                    self.__load_modelstelact_def(model_stelact_name=model, dict_def_SA_model=dico_config[model])
+            if len(missing_usedmodel_dict_name) > 0:
+                logger.warning(f"The dictionary to parametrize the following stellar activity models are missing in the stellar activity parameter file: {missing_usedmodel_dict_name}")
+                inconsistency = True
+            if len(unnecessary_model_dict_name) > 0:
+                logger.warning(f"There is unnecessary objects defined in the stellar activity parameter file: {unnecessary_model_dict_name}")
+                inconsistency = True
+            if inconsistency:
+                l_answers = ['y', 'n']
+                if answer_recreate is None:
+                    rep = QCM_utilisateur(f"There is some inconsistencies in the stellar activity parameter file (see warnings above). Do you want to recreate it from current valid inputs ? {l_answers}. 'n' would mean triggering an error\n", l_answers)
+                else:
+                    if answer_recreate not in l_answers:
+                        raise ValueError(f"The provided answer_recreate is not valid. Should be in {l_answers}, got {answer_recreate}")
+                    else:
+                        rep = answer_recreate
+            else:
+                rep = "n"
+            if inconsistency and (rep == "n"):
+                raise ValueError(f"The content of the stellar activity parameter file is not valid. Here is the list of detected errors: {error_list}")
+            elif inconsistency and (rep == "y"):
+                self.create_SANM_param_file(paramfile_path=self.paramfile4noisemodcat[stelact_GP_noisemodel], answer_overwrite="y", answer_create=None)
+                input("Modify the SANM specific paramerisation file: {}".format(self.paramfile4noisemodcat[stelact_GP_noisemodel]))
+
+    def __create_text_modelstelactname_4_instmodfullname(self, text_tab="", entete_symb=" = "):
+        """Create the string giving the model_4_instfullcat dictionary for the parameter file.
+
+        Arguments
+        ---------
+        text_tab    : str
+            Space composed only of spaces to be put at the beginning of each new line
+        entete_symb : str
+            Entete symbol to put in between the dictionary name and the dictionary definition (typically either ' = ' or ': ')
+
+        Returns
+        -------
+        text : str
+            String giving the text for the model_4_instfullcat dictionary for the stellar activity noise model parameter file.
+        """
+        text = f"{text_tab}# Define the names of stellar activity model to use for each instrument model.\n# You can use whatever name you want as long as you are not using '_' in the name.\n# The same name implies that a common GP matrix will be used.\n"
+        text_entete = f"{text_tab}{self.__name_modelstelact_4_instmodfullname}{entete_symb}{{"
+        tab = text_tab + spacestring_like(text_entete)
+        text += text_entete
+        first = True
+        for inst_mod_fullname, SA_mod_name in self.modelstelactname_4_instmodfullname.items():
+            if not first:
+                text += f"\n{tab}"
+            else:
+                first = False
+            text += f"'{inst_mod_fullname}': '{SA_mod_name}',"
+        text += f"\n{tab}}}\n"
+        return text
+
+    def __load_modelstelactname_4_instmodfullname(self, modelstelactname_4_instmodfullname):
+        """Load the modelstelactname_4_instmodfullname dictionary of the parameter file.
+
+        Arguments
+        ---------
+        modelstelactname_4_instmodfullname : Dictionary
+            Dictionary modelstelactname_4_instmodfullname as read from the indicator parameter file.
+        """
+        self.__modelSAname_4_instmodfullname = modelstelactname_4_instmodfullname
+
+    def __create_text_modelstelact_def_directories(self, text_tab="", entete_symb=" = ", sep_entries="\n"):
+        """Create the string giving the modelstelact_def dictionaries for the parameter file.
+
+        Arguments
+        ---------
+        text_tab    : str
+            Space composed only of spaces to be put at the beginning of each new line
+        entete_symb : str
+            Entete symbol to put in between the dictionary name and the dictionary definition (typically either ' = ' or ': ')
+
+        Returns
+        -------
+        text : str
+            String giving the text for the dictionaries defining each stellar activity models
+        """
+        text = f"{text_tab}# Define the parameters of the different stellar activity models whose name have been provided in modelstelactname_4_instmodfullname\n# For now there is no parameters for the stellar activity models (there will be later). So the dictionaries should stay empty.\n"
+        for stelact_mod_name, dict_def in self.modelstelact_def.items():
+            text += f"{text_tab}{stelact_mod_name}{entete_symb}{dict_def}\n"
+        return text
+
+    def __load_modelstelact_def(self, model_stelact_name, dict_def_SA_model):
+        """Load the polynomail model
+
+        Arguments
+        ---------
+        model_stelact_name : String
+            Name of the stellar activity model to be loaded
+        dic_def_SA_model   : dictionary
+            Dictionary parametrizing a stellar activity model as read from the indicator parameter file.
+        """
+        self.modelstelact_def[model_stelact_name] = dict_def_SA_model
+
+    def __check_SANM_param_file(self, dico_config):
+        """Check that the content of the param file for stellar activity noise model.
+
+        Check that all the necessary object are here, that they are properly defined and that all is consistent.
+        1. Check that the odelstelactname_4_instmodfullname dictionary is there (if not -> AssertionError)
+        2. Check its content (if content not valid -> AssertionError):
+        3. Check if all used models have there definition dictionary. If not return in missing_usedmodel_dict the list of missing model directories
+        4. Check if there is additional dictionaries or variables that should not be here. If yes return the list in unnecessary_model_dict
+        5. Check that each used models dictionary is correctly defined.
+            a. For now dict should be empty so check that they are.
+
+        Arguments
+        ---------
+        dico_config : dictionary
+            Dictionary providing the content of the stellar activity parameter file.
+
+        Returns
+        -------
+        missing_usedmodel_dict_name : list of strings
+            Name of the missing dictionary definitions
+        unnecessary_model_dict_name : list of strings
+            Name of the unnecessary variables defined
+        dict_valid            : dictionary of boolean
+            keys are model names or self.__name_model_4_indicator_dict and values boolean which indicates is the if the definition is valid.
+        error_list                  : list of string
+            List of errors detected
+        """
+        error_list = []
+        dict_valid = {}
+        # 1.
+        if not(self.__name_modelstelact_4_instmodfullname in dico_config):
+            error_list.append(f"{self.__name_modelstelact_4_instmodfullname} should be defined in the stellar activity parameter file. Defined objects are {list(dico_config.keys())}.")
+        # 2
+        dict_valid[self.__name_modelstelact_4_instmodfullname], errors = self.__check_modelstelact_4_instmodfullname(dico_config[self.__name_modelstelact_4_instmodfullname])
+        error_list.extend(errors)
+        # 3 and 4.
+        missing_usedmodel_dict_name = list(set(dico_config[self.__name_modelstelact_4_instmodfullname].values()))
+        model_dict_names_defined = list(dico_config.keys())
+        model_dict_names_defined.remove(self.__name_modelstelact_4_instmodfullname)
+        unnecessary_model_dict_name = []
+        nessecary_model_dict_name = []
+        for model_dict in model_dict_names_defined:
+            if model_dict in missing_usedmodel_dict_name:
+                missing_usedmodel_dict_name.remove(model_dict)
+                nessecary_model_dict_name.append(model_dict)
+            else:
+                unnecessary_model_dict_name.append(model_dict)
+        # 5.
+        for model_dict_name in nessecary_model_dict_name:
+            dict_valid[model_dict_name], errors = self.__checker_stelact_model_def_dict(dict_model=dico_config[model_dict_name])
+            error_list.extend(errors)
+        return missing_usedmodel_dict_name, unnecessary_model_dict_name, dict_valid, error_list
+
+    def __check_modelstelact_4_instmodfullname(self, modelstelact_4_instmodfullname):
+        """Validate the modelstelact_4_instmodfullname dictionary of the parameter file.
+
+        1. Check that full names of all instrument model using the stellar activity noise model and only these are keys of this dictionary
+        2. Check that the associated values are strings.
+
+        Arguments
+        ---------
+        modelstelact_4_instmodfullname : Dictionary
+            Dictionary modelstelact_4_instmodfullname as read from the indicator parameter file.
+
+        Returns
+        -------
+        valid      : boolean
+            Say if the content of modelstelact_4_instmodfullname is valid
+        error_list : list of string
+            List of error detected
+        """
+        error_list = []
+        # 1.
+        if Counter(list(modelstelact_4_instmodfullname.keys())) != Counter(self.modelstelactname_4_instmodfullname.keys()):
+            error_list.append(f"There is an inconsistency in between the list of instrument models using the stellar activity noise model ({self.modelstelactname_4_instmodfullname.keys()}) and the list of keys in the dictionary {self.__name_modelstelact_4_instmodfullname}.")
+        # 2.
+        for instmod_fullname, model_name in modelstelact_4_instmodfullname.items():
+            if not isinstance(model_name, str):
+                error_list.append(f"Stellar activity model name ({model_name}) provided for instrument model full name {instmod_fullname} should be a string.")
+        return len(error_list) == 0, error_list
+
+    def __checker_stelact_model_def_dict(self, dict_model):
+        """Check the content of a stellar activity model definition dictionary.
+        """
+        error_list = []
+        if len(dict_model) != 0:
+            error_list.append(f"The stellar activity model definition dictionary should be empty, got {dict_model}.")
+        return len(error_list) == 0, error_list
+
+    def apply_parametrisation_stelact_noisemod(self):
+        """Create the parameters required by the stellar activity models.
+        """
+        # Get the star object.
+        star = self.stars[list(self.stars.keys())[0]]
+        # Create a dictionary to make sure that you don't do the parametrisation of a stellar activity model several times.
+        dico_model_SA_done = {SA_mod_name: False for SA_mod_name in self.model_stelact_names}
+        for instmod_fullname in self.get_instmodfullnames_using_noisemod(noisemod_cat=StellarActNoiseModel.category):
+            inst_model_obj = self.instruments[instmod_fullname]
+            inst = inst_model_obj.instrument
+            inst_cat = inst.category
+            # Check that the instrument is from a category allowed for the noise model
+            if inst_cat not in StellarActNoiseModel._allowed_inst_cat:
+                raise ValueError(f"Stellar activity noise model can only be used for instrument category "
+                                 f"{StellarActNoiseModel._allowed_inst_cat}, got {inst_cat}."
+                                 )
+            # Do the jitter noise model parametrisation
+            GaussianNoiseModel_wjitteradd.apply_parametrisation(model_instance=self, instmod_fullname=instmod_fullname)
+            # Get the stellar activity model name for the instruments
+            SA_mod_name = self.modelstelactname_4_instmodfullname[instmod_fullname]
+            # If not already done, do the parametrisation for this stellar activity model.
+            if not(dico_model_SA_done[SA_mod_name]):
+                for param_name in StellarActNoiseModel._star_param_GP_names:
+                    # Commented because I dont' think that it's needed. TBC
+                    # if star.has_parameter(name=param_name):
+                    #     param = star.get_parameter(name=param_name)
+                    #     if not param.main:
+                    #         param.main = True
+                    # else:
+                    name_SA_model = Name(name=SA_mod_name, prefix=star.name)
+                    star.add_parameter(Parameter(name=param_name, name_prefix=name_SA_model, main=True,
+                                                 kwargs_getname_4_storename={"include_prefix": True},
+                                                 kwargs_getname_4_codename={"include_prefix": True}))
