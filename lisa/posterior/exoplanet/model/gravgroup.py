@@ -40,7 +40,9 @@ from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_ke
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
 from ..dataset_and_instrument.indicator import IND_inst_cat
+from ..likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, StellarActivityNoiseModelInterface
 from ...core.model.core_model import Core_Model, create_key, load_key
+from ...core.likelihood.jitter_noise_model import JitterNoiseModelInterface
 # from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.miscellaneous import spacestring_like
 
@@ -57,7 +59,7 @@ mgr_LD = Manager_LD()
 ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
 
-class GravGroup(GravGroup_Parametrisation, IndicatorModelInterface, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
+class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, IndicatorModelInterface, StellarActivityNoiseModelInterface, Core_Model, SuperSampExpTimeAttr):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string
@@ -108,6 +110,10 @@ class GravGroup(GravGroup_Parametrisation, IndicatorModelInterface, Core_Model, 
                                                                          inst_fullcat=RV_inst_cat)[0]
         if IND_inst_cat in self.dataset_db.inst_categories:
             IndicatorModelInterface.__init__(self=self)
+
+        # Init the noise models interfaces
+        JitterNoiseModelInterface.__init__(self=self)
+        StellarActivityNoiseModelInterface.__init__(self=self)
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
         if isinstance(stars, int):
@@ -155,6 +161,10 @@ class GravGroup(GravGroup_Parametrisation, IndicatorModelInterface, Core_Model, 
                                                        load_key: self.load_LC_param_file}
         self.handlers4instcatparamfile[IND_inst_cat] = {create_key: self.create_IND_param_file,
                                                         load_key: self.load_IND_param_file}
+
+        # Fill the handlers4noisecatparamfile dictionary
+        self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
+                                                                  load_key: self.load_SANM_param_file}
         ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
         ## Define sub-gravitational group for example for planets orbiting one componant of a wide
         ## separation binary star. This is kept for later.

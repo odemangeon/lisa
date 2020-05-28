@@ -24,6 +24,13 @@ class Core_Parametrisation(object):
         self.__parametrisation = None
         # Initialise the self.parametrisation_kwargs hidden variable
         self.__parametrisation_kwargs = {}
+        # Initialise the applyparametrisation4noisemodel dictionary
+        # This dictionary should be updated when adding noise models if parameters need to be added
+        self.__applyparametrisation4noisemodel = {}
+
+    @property
+    def applyparametrisation4noisemodel(self):
+        return self.__applyparametrisation4noisemodel
 
     def set_parametrisation(self, parametrisation, **kwargs):
         """Choose the parametrisation to use and apply it.
@@ -32,6 +39,15 @@ class Core_Parametrisation(object):
         keyword arguments associated to the parametrisation chosen
         """
         self.parametrisation = parametrisation
+        # Check that the instrument category of all the datasets is as expected otherwise raise a
+        # warning
+        self._check_dataset_instcat()  # self._check_dataset_instcat is defined in Core_Model
+        # Init and Fill the dictionary parametrisation_kwargs
+        self.save_parametrisation_kwargs(**kwargs)
+        # TODO: I want it to have here the apply_instmodel_parametrisation from parametrisation_gravgroup, but it requires a bit of uniformisation of the instrument category parameterisation methods.
+        # Apply the parametrisation of the noise models
+        self.apply_noisemodel_parameterisation()
+        # Used the Subclass of Core_Model apply_parametrisation method
         self.apply_parametrisation(**kwargs)
 
     @property
@@ -96,6 +112,11 @@ class Core_Parametrisation(object):
     def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation pointed by the parametrisation property."""
         raise NotImplementedError("This function needs to be overloaded in the child Class.")
+
+    def apply_noisemodel_parameterisation(self):
+        """Apply the parametrisation of the noise models"""
+        for noisemod_cat in self.noisemodel_categories:  # noisemodel_categories comes from InstrumentContainerInterface
+            self.applyparametrisation4noisemodel[noisemod_cat]()
 
     def save_parametrisation_kwargs(self, **kwargs):
         """Save the keyword arguments of the parmetrisation function in parametrisation_kwargs."""

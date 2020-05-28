@@ -52,16 +52,11 @@ class GravGroup_Parametrisation(Core_Parametrisation):
         self.__check_nstar()
         self.__check_nplanet()
 
-        # Check that the instrument category of all the datasets is as expected otherwise raise a
-        # warning
-        self._check_dataset_instcat()  # self._check_dataset_instcat is defined in Core_Model
-        # Init and Fill the dictionary parametrisation_kwargs
-        self.save_parametrisation_kwargs(**kwargs)  # save_parametrisation_kwargs is defined in Core_Parametrisation
-
         # Apply the parametrisation to the star and planets parameters
         self.apply_star_planet_parametrisation()
 
         # Apply the parametrisation to the instrument models parameters
+        # TODO: I want it to got to Core_Parametrisation set_parametrisation method, but it requires a bit of uniformisation of the instrument category parameterisation methods.
         self.apply_instmodel_parametrisation()
 
         # If needed apply the limbdarkening coefficient parametrisation

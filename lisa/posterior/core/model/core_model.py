@@ -14,7 +14,7 @@ The objective of this package is to provides the core Core_Model class.
 """
 from logging import getLogger
 from os.path import isfile, join
-# from collections import OrderedDict  # , defaultdict
+from collections import defaultdict  # OrderedDict
 from numpy import array, ones
 # from copy import deepcopy
 
@@ -119,9 +119,18 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Intialise handlers4instcatparamfile which has to be filled in the Model Subclass
         # Define the specific param_file handler for each instrument category (key: inst_cat, value: dict(keys: "create" and "load", value: create and load methods))
         self.__handlers4instcatparamfile = {}
-        # Initialise paramfile4instcat which has to be file by the create_paramfile function specified in handlers4instcatparamfile
+        # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
+        # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
+
+        def __def_dict_noisemodhandlers():
+            return {create_key: None, load_key: None}
+        self.__handlers4noisecatparamfile = defaultdict(__def_dict_noisemodhandlers)
+        # Initialise paramfile4instcat which has to be filled by the create_paramfile function specified in handlers4instcatparamfile
         # Define the path to the parameter file specific to each instrument category if exists (key: inst_cat, value: path of param file)
         self.__paramfile4instcat = {}
+        # Initialise paramfile4noisemodcat which has to be filled by the create_paramfile function specified in handlers4noisecatparamfile
+        # Define the path to the parameter file specific to each noise model category if exists (key: noisemod_cat, value: path of param file)
+        self.__paramfile4noisemodcat = {}
         # Initialise parametrisation related attributes
         self.init_parametrisation_attributes()
         # Initialise parameterisation
@@ -186,6 +195,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         return self.__handlers4instcatparamfile
 
     @property
+    def handlers4noisecatparamfile(self):
+        """Dictionary giving the create/load function of the instrument category specific param files.
+
+        key: instrument category, value: dict(key: "create" and "load", value: create and load methods (None if no method))
+        """
+        return self.__handlers4noisecatparamfile
+
+    @property
     def paramfile4instcat(self):
         """Dictionary giving the path of the param file specific to each instrument category.
 
@@ -193,12 +210,30 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         return self.__paramfile4instcat
 
+    @property
+    def paramfile4noisemodcat(self):
+        """Dictionary giving the path of the param file specific to each noise model category.
+
+        key: instrument category, value: path to param file
+        """
+        return self.__paramfile4noisemodcat
+
     def isdefined_paramfile_instcat(self, inst_cat):
         """Return True if a param_file for the specified instrument category has been defined.
 
         :param str inst_cat: Instrument category for which you want to know if the specific param file is defined.
         """
         return self.paramfile4instcat.get(inst_cat, None) is not None
+
+    def isdefined_paramfile_noisemod(self, noisemod_cat):
+        """Return True if a param_file for the specified instrument category has been defined.
+
+        Arguments
+        ---------
+        noisemod_cat: string
+            Noise model category for which you want to know if the specific param file is defined.
+        """
+        return self.paramfile4noisemodcat.get(noisemod_cat, None) is not None
 
     def init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""
@@ -208,23 +243,21 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
 
     def set_noisemodels(self, noisemod4instmodfullname):
-        """If necessary, add a default instrument model for each instrument used.
-        1. For each instrument used in the dataset database
-            2. Check if there is at least one instrument model associated
-                2a. If no, add one called default
-                2b. If yes, do nothing
-        ----
-        Arguments:
-            noisemod4instmodfullname: dict,
-                Give the noise model name associated to the instrument model full name
+        """Set noise models attributes of the instrument models.
+
+        Arguments
+        ---------
+        noisemod4instmodfullname: dict,
+            Give the noise model name associated to the instrument model full name
         """
         logger.debug("noisemod4instmodfullname: {}".format(noisemod4instmodfullname))
         for instmod_fullname, noise_model in noisemod4instmodfullname.items():
             self.instruments[instmod_fullname].noise_model = noise_model
-            noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(noise_model)
-            noise_model_subclass.apply_parametrisation(model_instance=self,
-                                                       instmod_fullname=instmod_fullname)
+            # noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(noise_model)
+            # noise_model_subclass.apply_parametrisation(model_instance=self,
+            #                                            instmod_fullname=instmod_fullname)
 
+    # TODO: Doesn't seems to be used. what seems to be used is get_noisemod4instmodfullname from datasetfile_db
     def get_noisemodandinstmod4dataset(self):
         """Return the dictionary giving the noise model subclass for each dataset.
 
@@ -660,6 +693,40 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                                                      answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
                                                                      answer_create=dict_answer_create.get(inst_cat, def_answer_create))
 
+    def create_noisemodcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+        """Create the param files specific to each instrument category (if needed).
+
+        :param dict_of_str paramfile_path: Dictionary giving the path of the specific parameter file
+            you want for a noise model category. (key: inst_cat, value: path to the paramter file)
+        :param None/str/dict_of_None/str answer_overwrite: str should be 'y' or 'n. When it's a dictionary
+            keys are instrument categories and values are 'y' or 'n'.
+        :param None/str/dict_of_None/str answer_create: str should be 'y' or 'n. When it's a dictionary
+            keys are instrument categories and values are 'y' or 'n'.
+        """
+        if paramfile_path is None:
+            paramfile_path = {}
+        if (answer_overwrite is None) or isinstance(answer_overwrite, str):
+            def_answer_overwrite = answer_overwrite
+            dict_answer_overwrite = {}
+        elif isinstance(answer_overwrite, dict):
+            dict_answer_overwrite = answer_overwrite
+            def_answer_overwrite = dict_answer_overwrite.get("def", None)
+        else:
+            ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
+        if (answer_create is None) or isinstance(answer_create, str):
+            def_answer_create = answer_create
+            dict_answer_create = {}
+        elif isinstance(answer_create, dict):
+            dict_answer_create = answer_create
+            def_answer_create = dict_answer_create.get("def", None)
+        else:
+            ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
+        for noise_cat in self.noisemodel_categories:
+            if self.handlers4noisecatparamfile[noise_cat][create_key] is not None:
+                self.handlers4noisecatparamfile[noise_cat][create_key](paramfile_path.get(noise_cat, None),
+                                                                       answer_overwrite=dict_answer_overwrite.get(noise_cat, def_answer_overwrite),
+                                                                       answer_create=dict_answer_create.get(noise_cat, def_answer_create))
+
     def load_instcat_paramfile(self):
         """Load the param files specific to each instrument category (if needed).
         """
@@ -667,6 +734,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
             if self.handlers4instcatparamfile[inst_cat][load_key] is not None:
                 self.handlers4instcatparamfile[inst_cat][load_key]()
+
+    def load_noisemodcat_paramfile(self):
+        """Load the param files specific to each noise model category(if needed).
+        """
+        for noisemod_cat in self.noisemodel_categories:
+            if self.handlers4noisecatparamfile[noisemod_cat][load_key] is not None:
+                self.handlers4noisecatparamfile[noisemod_cat][load_key]()
 
     def _choose_parameter_file_path(self, default_paramfile_path, paramfile_path=None, answer_overwrite=None, answer_create=None):
         """Choose the path for any parameter file.

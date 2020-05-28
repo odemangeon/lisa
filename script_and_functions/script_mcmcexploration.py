@@ -89,10 +89,22 @@ else:
 logger.info("6. Load inst_cat specific parameter file")
 post_instance.model.load_instcat_paramfile()
 
-logger.info("7. Set parametrisation of the model")
+logger.info("7. Create noise model specific parameter file")
+if cluster:
+    post_instance.model.create_noisemodcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
+else:
+    post_instance.model.create_noisemodcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
+
+    if len(post_instance.model.paramfile4noisemodcat) > 0:
+        input("Modifiy the noise model specific paramerisation file: {}".format(post_instance.model.paramfile4noisemodcat))
+
+logger.info("8. Load noise model category specific parameter file")
+post_instance.model.load_noisemodcat_paramfile()
+
+logger.info("9. Set parametrisation of the model")
 post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV)
 
-logger.info("8. Create and modify the paramerisation file")
+logger.info("10. Create and modify the paramerisation file")
 if cluster:
     post_instance.model.create_parameter_file("param_file.py", answer_overwrite="n", answer_create=None)
 else:
@@ -100,27 +112,27 @@ else:
 
     input("Modifiy the paramerisation file")
 
-logger.info("9. Load the paramerisation file")
+logger.info("11. Load the paramerisation file")
 post_instance.model.load_parameter_file()
 
-logger.info("10. Create datasimulator functions")
+logger.info("12. Create datasimulator functions")
 test = post_instance.get_datasimulators()
 
-logger.info("11. Create likelihood functions")
+logger.info("13. Create likelihood functions")
 post_instance.get_lnlikelihoods()
 
-logger.info("12. Create prior functions")
+logger.info("14. Create prior functions")
 post_instance.get_individal_lnpriors()
 post_instance.get_lnpriors()
 
-logger.info("13. Create posterior functions")
+logger.info("15. Create posterior functions")
 post_instance.get_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
-logger.info("14. Save posterior instance")
+logger.info("16. Save posterior instance")
 post_instance.save_post_instance(pickle_folder=output_folders["pickles_explore"])
 
-logger.info("15. Create sampler")
+logger.info("17. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
 lnpostfn = post_instance.lnposteriors.dataset_db["all"].function
 arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
@@ -129,7 +141,7 @@ lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
 sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn, kwargs=kwargs_post)
 
-logger.info("16. Create initial value")
+logger.info("18. Create initial value")
 if load_from_pickle:
     if load_from_pickle:
         logger.info("0. Load from pickle")
@@ -144,7 +156,7 @@ p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
                                  init_distrib=init_distrib)
 
 if not load_from_pickle and do_preminimization:
-    logger.info("17. AMOEBA minimization")
+    logger.info("19. AMOEBA minimization")
     p1 = zeros_like(p0)
 
     def lnpostfnminus(p):
@@ -157,7 +169,7 @@ if not load_from_pickle and do_preminimization:
 else:
     p1 = p0
 
-logger.info("18. Perform MCMC exploration")
+logger.info("19. Perform MCMC exploration")
 logger4emceerun = logger if cluster else None
 et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
            filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=output_folders["dats"], l_param_name=l_param_name, logger=logger4emceerun)

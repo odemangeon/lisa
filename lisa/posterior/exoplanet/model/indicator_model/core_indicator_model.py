@@ -294,7 +294,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         self.paramfile4instcat[IND_inst_cat] = file_path  # paramfile4instcat is from Core_Model
 
     def read_IND_param_file(self):
-        """Read the content of the LC parameter file."""
+        """Read the content of the IND parameter file."""
         if self.isdefined_INDparamfile:
             with open(self.paramfile4instcat[IND_inst_cat]) as f:
                 exec(f.read())
@@ -422,11 +422,11 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
     def load_IND_param_file(self, answer_recreate=None):
         """Load the param file for indicators.
         """
-        dico_config = self.read_IND_param_file()
         assert len(self.indicator_models_used) > 0, "There should be a model used by default."
         missing_usedmodel_dict_name = self.indicator_models_used
         unnecessary_model_dict_name = []
         while (len(missing_usedmodel_dict_name) > 0) or (len(unnecessary_model_dict_name)):
+            dico_config = self.read_IND_param_file()
             missing_usedmodel_dict_name, unnecessary_model_dict_name, dict_valid, error_list = self.__check_IND_param_file(dico_config)
             if len(error_list) > 0:
                 inconsistency = True
@@ -459,8 +459,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             if inconsistency and (rep == "n"):
                 raise ValueError(f"The content of the indicator parameter file is not valid. Here is the list of detected errors: {error_list}")
             elif inconsistency and (rep == "y"):
-                self.create_IND_param_file(paramfile_path=self.handlers4instcatparamfile[IND_inst_cat], answer_overwrite="y", answer_create=None)
-                input("Modify the IND specific paramerisation file: {}".format(self.handlers4instcatparamfile[IND_inst_cat]))
+                self.create_IND_param_file(paramfile_path=self.paramfile4instcat[IND_inst_cat], answer_overwrite="y", answer_create=None)
+                input("Modify the IND specific paramerisation file: {}".format(self.paramfile4instcat[IND_inst_cat]))
 
     @property
     def model_4_indicator(self):
