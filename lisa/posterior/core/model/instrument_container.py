@@ -52,9 +52,25 @@ class InstrumentContainerInterface(object):
         return self.paramcontainers[instrument_model_category]
 
     @property
+    def inst_model_objects(self):
+        """Return the list of instruments model object in the instruments container."""
+        return list(set(self.get_instmodel_objs()))
+
+    @property
+    def inst_model_fullnames(self):
+        """Return the list of instruments model full names in the instruments container."""
+        return [instmod_obj.get_name(recursive=True, include_prefix=True) for instmod_obj in self.inst_model_objects]
+
+    @property
     def inst_fullcategories(self):
         """Return the list of instruments categories in this ParamContainerDatabase."""
         return self.instruments.inst_fullcategories
+
+    @property
+    def noisemodel_categories(self):
+        """Return the list of noise model categories used."""
+
+        return list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
 
     def get_inst_fullcat4inst_cat(self, inst_cat):
         """Return the list of unique instrument full category that correspond to a provided instrument category.
@@ -109,6 +125,18 @@ class InstrumentContainerInterface(object):
     def get_inst_names(self, inst_fullcat=None, sortby_instfullcat=False):
         """Return the list of instrument names."""
         return self.instruments.get_instnames(inst_fullcat=inst_fullcat, sortby_instfullcat=sortby_instfullcat)
+
+    def get_instmodobjs_using_noisemod(self, noisemod_cat):
+        """Return the list of instrument model objects using a giving noise model category."""
+        res = []
+        for instmod_objs in self.get_instmodel_objs():
+            if instmod_objs.noise_model == noisemod_cat:
+                res.append(instmod_objs)
+        return res
+
+    def get_instmodfullnames_using_noisemod(self, noisemod_cat):
+        """Return the list of instrument model objects using a giving noise model category."""
+        return [instmod_obj.get_name(include_prefix=True, recursive=True) for instmod_obj in self.get_instmodobjs_using_noisemod(noisemod_cat=noisemod_cat)]
 
     def instrumenthasatleast1model(self, inst_name, inst_fullcat=None):
         """Return True if there is at least one instrument model for the instrument."""
