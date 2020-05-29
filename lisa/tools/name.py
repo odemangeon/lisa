@@ -62,8 +62,12 @@ class Name(object):
     def __init__(self, name, prefix=None):
         """Initialise the Name object
 
-        :param str name: first part of the name (like the first name of a person).
-        :param str/Name prefix: rest of the name (like the family name(s) of a person)
+        Arguments
+        ---------
+        name : String
+            first part of the name (like the first name of a person).
+        prefix : String or Name
+            rest of the name (like the family name(s) of a person)
         """
         # Specify the name
         self.__name = check_name(name)
