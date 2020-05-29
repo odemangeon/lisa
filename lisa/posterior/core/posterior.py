@@ -344,7 +344,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
              update(self.model.
                     create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.
                                                                       dataset_db)
-                                                    )
+                                                    )  # create_lnlikelihoods_perdataset is defined in LikelihoodCreator
                     )
              )
         else:
