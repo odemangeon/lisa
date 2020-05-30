@@ -137,7 +137,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             return param_likelihood[l_idx_param_noisemod]
 
         def f_format_simdata(sim_data):
-            return [sim_data[ii] for ii in l_idx_datasim]
+            return [sim_data[ii] for ii in l_idx_simdata]
 
         dataset_kwargs = []
         for dataset in l_dataset_obj:
@@ -223,13 +223,20 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_idx_param_noisemod_new : List of Integer
             Updated List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
-        if param_obj.free and (param_obj.full_name not in l_params_lnlike):
-            l_params_lnlike_new = l_params_lnlike.copy()
-            l_params_lnlike_new.append(param_obj.get_name(include_prefix=True, recursive=True))
-            l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
-            l_idx_param_noisemod_new.append(l_params_lnlike_new.index(param_obj.get_name(include_prefix=True, recursive=True)))
-            l_params_noisemod_new = l_params_noisemod.copy()
-            l_params_noisemod_new.append(param_obj.get_name(include_prefix=True, recursive=True))
+        if param_obj.free:
+            if (param_obj.full_name not in l_params_lnlike):
+                l_params_lnlike_new = l_params_lnlike.copy()
+                l_params_lnlike_new.append(param_obj.full_name)
+            else:
+                l_params_lnlike_new = l_params_lnlike
+            if param_obj.free and (param_obj.full_name not in l_params_noisemod):
+                l_params_noisemod_new = l_params_noisemod.copy()
+                l_params_noisemod_new.append(param_obj.full_name)
+                l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
+                l_idx_param_noisemod_new.append(l_params_lnlike_new.index(param_obj.full_name))
+            else:
+                l_idx_param_noisemod_new = l_idx_param_noisemod
+                l_params_noisemod_new = l_params_noisemod
         else:
             l_params_lnlike_new = l_params_lnlike
             l_idx_param_noisemod_new = l_idx_param_noisemod
