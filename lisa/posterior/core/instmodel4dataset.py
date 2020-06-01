@@ -247,6 +247,8 @@ class Instmodel4DatasetAttr(object):
     def name_instmodels_used(self, inst_name=None, sortby_instname=False):
         """Return a dict which for each instrument name give the instrument models to use.
 
+        TODO: Add inst_full_cat because it will not work properly right now.
+
         For more details see instmodel4dataset.name_instmodels_used
         """
         return self.instmodel4dataset.name_instmodels_used(inst_name=inst_name,
@@ -266,6 +268,25 @@ class Instmodel4DatasetAttr(object):
         """
         instmodel_fullname = self.get_instmod_fullname(dataset_name=dataset_name)
         return self.instruments[instmodel_fullname]
+
+    def get_ldatasetname4instmodfullname(self, instmod_fullname):
+        """Return list of dataset name using a given instrument model.
+
+        Arguments
+        ---------
+        instmod_fullname : String
+            Name of the instrument model of interest
+
+        Returns
+        -------
+        l_dataset_name : List of String
+            List of dataset names using the instrument model provided
+        """
+        res = []
+        for dataset_name_ii, instmod_fullname_ii in self.instmodel4dataset.items():
+            if instmod_fullname_ii == instmod_fullname:
+                res.append(dataset_name_ii)
+        return res
 
     @property
     def __isdefined_instmodel4dataset(self):

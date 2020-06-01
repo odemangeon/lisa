@@ -30,18 +30,22 @@ from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
+from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
 from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
+from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 
 
 logger = getLogger()
 
 manager_model = Manager_Model()
 manager_model.load_setup()
+manager_noisemodel = Manager_NoiseModel()
+manager_noisemodel.load_setup()
 
 alldtst_key = DatabaseFunc._alldtst_key
 
@@ -349,6 +353,96 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
              )
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
+
+    def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None, supersamp=1, exptime=30 / (24 * 60)):
+        """Function to compute the models of a dataset for display purposes.
+
+        Arguments
+        ---------
+        tsim           : np.array
+        dataset_name   : String
+        param          : np.array
+        l_param_name   : List of String
+        datasim_kwargs :  Dictionary
+        supersamp      :  Integer
+        exptime        : Float
+
+        Returns
+        -------
+        model : np.array
+        model_wGP : np.array
+        GP_pred_var : np.array
+        """
+        # Supersample the time if needed
+        if supersamp > 1:
+            t_model = get_time_supersampled(tsim, supersamp, exptime)
+        else:
+            t_model = tsim
+
+        # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
+        # the datasim function
+        if datasim_kwargs is None:
+            datasim_kwargs = {}
+
+        # Get the datasimulator corresponding to the dataset
+        if key_obj is None:
+            key_obj = self.model.key_whole
+        datasim_docfunc = self.datasimulators.dataset_db[dataset_name][key_obj]
+
+        # Compute the model values for each time
+        idx_param_datasim = []
+        datasim_function = datasim_docfunc.function
+        datasim_paramnames = datasim_docfunc.params_model
+        for par in datasim_paramnames:
+            idx_param_datasim.append(l_param_name.index(par))
+        model = datasim_function(param[idx_param_datasim], t_model, **datasim_kwargs)
+
+        # De-supersamp the model if needed.
+        if supersamp > 1:
+            model = average_supersampled_values(model, supersamp)
+
+        # Get the noise model subclass associated with the dataset
+        inst_mod_fullname = self.model.get_instmod_fullname(dataset_name)
+        inst_mod_obj = self.model.instruments[inst_mod_fullname]
+        noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(inst_mod_obj.noise_model)
+
+        # Compute GP contribution if needed.
+        if noise_model_subclass.has_GP:
+            # Get the list of datasets using the same GP kernel
+            l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
+            # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
+            # For that you need the list of dataset_object
+            # At the same time we will get the corresponding list of instrument objects required by for the gp simulator creation
+            l_dataset_obj = []
+            l_instmod_obj = []
+            for dataset_name_ii in l_dataset_sameGP:
+                l_dataset_obj.append(self.dataset_db[dataset_name_ii])
+                l_instmod_obj.append(self.get_instmod(dataset_name_ii))  # Define in Instmodel4DatasetAttr
+            model_allsameGPkernel = self.create_datasimulator__4_ldataset(l_dataset_obj=l_dataset_obj)
+
+            # Create the gp_simulator function
+            # For that I need the list of the parameter full names for the datasimulator
+            l_datasim_param_fullname = model_allsameGPkernel.params_model
+            gp_simulator, f_format_param, datasets_kwargs, l_params_new = noise_model_subclass.create_gpsimulator_and_formatinputs(model_instance=self.model_instance, l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj, l_datasim_param_fullname=l_datasim_param_fullname)
+
+            # Compute the simulated data
+            # For that I need the list of the indexes of the datasimulator parameter in the provided list pf parameters
+            l_idx_param_datasim = []
+            for param_fullname_ii in l_datasim_param_fullname:
+                l_idx_param_datasim.append(l_param_name.index(param_fullname_ii))
+            sim_data = model_allsameGPkernel(param[l_idx_param_datasim])
+            gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
+                                                param_noisemodel=f_format_param(param),
+                                                datasets_kwargs=datasets_kwargs,
+                                                tsim=tsim)
+            if supersamp > 1:
+                gp_pred = average_supersampled_values(gp_pred, supersamp)
+                gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
+            model_wGP = model + gp_pred
+        else:
+            model_wGP = None
+
+        return model, model_wGP, gp_pred, gp_pred_var
 
     @property
     def lnposteriors(self):

@@ -131,12 +131,38 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Initialise paramfile4noisemodcat which has to be filled by the create_paramfile function specified in handlers4noisecatparamfile
         # Define the path to the parameter file specific to each noise model category if exists (key: noisemod_cat, value: path of param file)
         self.__paramfile4noisemodcat = {}
+        # Initialize the dictionary providing the function to get same GP kernel datasets.
+        self._same_GP_kernel_function = {}
         # Initialise parametrisation related attributes
         self.init_parametrisation_attributes()
         # Initialise parameterisation
         self.parametrisation
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
+
+    def get_same_GP_kernel_datasets(self, dataset_name):
+        """Return the lsit of datasets that are modeled using the same GP kernel than the one provided.
+
+        Arguments
+        ---------
+        dataset_name :  String
+            Name of the dataset of interest.
+
+        Returns
+        -------
+        l_dataset_name : List of String
+            List of dataset names using the same GP kernel than the dataset provided.
+        """
+        # Get the noise_model category associated with the dataset
+        inst_mod_obj = self.get_instmod(dataset_name=dataset_name)  # Comes from Instmodel4DatasetAttr
+        noisemod_cat = inst_mod_obj.noise_model
+        # Use the function pointed by self__same_GP_kernel_function to get the list of instrument model full name using the same GP kernel
+        l_instmod_fullname = self._same_GP_kernel_function[noisemod_cat](inst_mod_fullname=inst_mod_obj.full_name)
+        # Get the list of datasets using these instrument models
+        res = []
+        for instmod_fullname_ii in l_instmod_fullname:
+            res.extend(self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname_ii))  # Defined in Instmodel4DatasetAttr
+        return res
 
     @property
     def object_name(self):

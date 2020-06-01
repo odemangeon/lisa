@@ -39,10 +39,17 @@ class DatasimulatorCreator(object):
     def _create_datasimulator(self, instmod_obj, dataset=None):
         """Return the datasimulator for a given instrument model.
 
-        :param Instrument_Model instmod_obj: Instrument_Model instance.
-        :param Dataset/None dataset: If provided the output datasimulator will simulate the data of
+        Arguments
+        ---------
+        instmod_obj : Instrument_Model
+            Instrument_Model instance.
+        dataset     : Dataset/None
+            If provided the output datasimulator will simulate the data of
             the provided dataset. The function will include the dataset kwargs (like time or t_ref).
-        :return datasim:
+
+        Returns
+        -------
+        datasim_docfunc : DatasimDocFunc
         """
         # Get the instrument category of the instrument model which will allow to get the correct
         # datasimulator creator function.
@@ -105,8 +112,8 @@ class DatasimulatorCreator(object):
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
         return db
 
-    def __datasim_alldatasets_creator(self, l_datasim, l_params_idx, params_model, mand_kwargs, opt_kwargs,
-                                      inst_fullcat, inst_model_fullname=None, dataset=None):
+    def __datasim_multipledatasets_creator(self, l_datasim, l_params_idx, params_model, mand_kwargs, opt_kwargs,
+                                           inst_fullcat, inst_model_fullname=None, dataset=None):
         """Return the datasimulator for all datasets
 
         WARNING/TODO eventually: For now *args, **kwargs of the datasim_alldatasets are passed to all the datasim function.
@@ -133,16 +140,16 @@ class DatasimulatorCreator(object):
 
         Returns
         -------
-        datasim_alldatasets: DatasimDocFunc
+        datasim_multipledatasets: DatasimDocFunc
             Datasimulator for all datasets
         """
-        def datasim_alldatasets(p, *args, **kwargs):
+        def datasim_multipledatasets(p, *args, **kwargs):
             l_res = []
             for datasim, idxs in zip(l_datasim, l_params_idx):
                 l_res.extend(datasim(p[idxs], *args, **kwargs))
             return l_res
 
-        return DatasimDocFunc(function=datasim_alldatasets,
+        return DatasimDocFunc(function=datasim_multipledatasets,
                               params_model=params_model,
                               inst_cat=inst_fullcat,
                               mand_kwargs=mand_kwargs,
@@ -158,6 +165,21 @@ class DatasimulatorCreator(object):
         :return DocFunction docfunc: Function that simulates all the datasets in dataset_db at the
             same time with the datasets included.
         """
+        l_dataset_obj = dataset_db.get_datasets()
+        return self.create_datasimulator__4_ldataset(l_dataset_obj=l_dataset_obj)
+
+    def create_datasimulator__4_ldataset(self, l_dataset_obj):
+        """Return one datasim docfunction that simulates all the datasets provided.
+
+        Arguments
+        ---------
+        l_dataset_obj : List of Dataset
+
+        Returns
+        -------
+        datastim : DocFunction
+            Function that simulates all the datasets provided.
+        """
         # Initialise the dictionary datsimC_inputs:
         #   key = datasimcreator_name,
         #   value = dict :
@@ -168,15 +190,15 @@ class DatasimulatorCreator(object):
         datsimC_inputs = defaultdict(defdictfunc)
 
         # For each dataset, ...
-        for dataset in dataset_db.get_datasets():
+        for dataset_obj_ii in l_dataset_obj:
             # ... get the associated instrument category, instrument model object and datasimcreator
             # name
-            inst_cat = dataset.instrument.category
+            inst_cat = dataset_obj_ii.instrument.category
             datsimC_name = self.get_datasimcreatorname(inst_cat)
-            instmod_obj = self.get_instmod(dataset.dataset_name)
+            instmod_obj_ii = self.get_instmod(dataset_obj_ii.dataset_name)  # Define in Instmodel4DatasetAttr
             # ... store the dataset and instrument model object in datsimC_inputs
-            datsimC_inputs[datsimC_name]["datasets"].append(dataset)
-            datsimC_inputs[datsimC_name]["instmodels"].append(instmod_obj)
+            datsimC_inputs[datsimC_name]["datasets"].append(dataset_obj_ii)
+            datsimC_inputs[datsimC_name]["instmodels"].append(instmod_obj_ii)
 
         # Initialise the list of Datasim list of DatasimDocFunc
         l_datsim = []
@@ -220,21 +242,17 @@ class DatasimulatorCreator(object):
                 idx_par.append(l_allparams.index(par))
             l_params_idx.append(idx_par)
 
-        logger.debug("Creation of datasimulator for all datasets.\nList of parameters names:\n{}\n"
-                     "Input for the creation of the individual datasimulators:\n{}\n"
-                     "List of datasim functions obtained: {}\n"
-                     "List of parameter names for each individual datasimulator:\n{}\n"
-                     "List of param indexes for each individual datasimulator:\n{}\n"
-                     "List of instrument categories: {}\n"
-                     "List of instrument instrument model full names: {}\n"
-                     "List of datasets: {}"
-                     "".format(l_allparams, datsimC_inputs, l_datsim, l_params, l_params_idx, inst_fullcats,
-                               inst_model_fullnames, datasets))
+        logger.debug(f"Creation of datasimulator for the folling list of datasets {[dataset_obj_ii.dataset_name for dataset_obj_ii in l_dataset_obj]}.\nList of parameters names:\n{l_allparams}\n"
+                     f"Input for the creation of the individual datasimulators:\n{datsimC_inputs}\n"
+                     f"List of datasim functions obtained: {l_datsim}\n"
+                     f"List of parameter names for each individual datasimulator:\n{l_params}\n"
+                     f"List of param indexes for each individual datasimulator:\n{l_params_idx}\n"
+                     f"List of instrument categories: {inst_fullcats}\n"
+                     f"List of instrument instrument model full names: {inst_model_fullnames}\n"
+                     f"List of datasets: {datasets}")
 
-        # Create the datasim_alldatasets
-        # This
-        return self.__datasim_alldatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,
-                                                  params_model=l_allparams, mand_kwargs=str(l_allmand_kwargs), opt_kwargs=str(l_allopt_kwargs),
-                                                  inst_fullcat=inst_fullcats,
-                                                  inst_model_fullname=inst_model_fullnames,
-                                                  dataset=datasets)
+        # Create the datasim
+        return self.__datasim_multipledatasets_creator(l_datasim=l_datsim, l_params_idx=l_params_idx,
+                                                       params_model=l_allparams, mand_kwargs=str(l_allmand_kwargs), opt_kwargs=str(l_allopt_kwargs),
+                                                       inst_fullcat=inst_fullcats,
+                                                       inst_model_fullname=inst_model_fullnames, dataset=datasets)

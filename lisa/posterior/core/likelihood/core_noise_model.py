@@ -146,6 +146,48 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         return lnlike_jitter, f_format_param, f_format_simdata, dataset_kwargs, l_params_new
 
     @classmethod
+    def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
+        """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
+
+        This function might not be convenient for your noise model, in wich case you should overload it.
+
+        The these output are then used by emcee_tools.compute_model function
+        to compute the model of the dataset. In this function the gp simulator is used as follow:
+        gp_sim_function(sim_data=sim_data,
+                        param_noisemodel=f_format_param(p),
+                        datasets_kwargs=datasets_kwargs,
+                        tsim=tsim)
+
+        Arguments
+        ---------
+        model_instance            : Core Model subclass
+        l_instmod_obj             : list of Instrument_Model instances
+            List of instrument model objects that are used for the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
+        l_dataset_obj             : list of Dataset instances
+            List of dataset objects that are simulated by the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
+        l_datasim_param_fullname  : list of String
+            Current list of parameter full names for the likelihood.
+
+        Returns
+        -------
+        gpsimulator_function  : function
+            function with the following arguments
+                sim_data         : sim_data using this noise model, and only these, the exact format is defined by f_format_simdata
+                param_noisemodel : param of the current noise model, and only these, the exact format is defined by f_format_param
+                dataset_kwargs   : dataset keyword arguments used by this noise model, and only these, the exact format is defined by this function.
+        f_format_param   : function
+            Function to extract and format the parameter of this noise model from the vector of all the parameters of the likelihood function
+        datasets_kwargs  : ??
+            Dataset keyword arguments of the datasets using this noise model
+        l_datasim_param_fullname_new : list of String
+            New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
+        """
+        if cls.has_GP:
+            raise NotImplementedError("You need to implement create_gpsimulator_and_formatinputs in your Noise model subclass has it involves a GP.")
+        else:
+            raise ValueError("This noise model doesn't include a GP, you should not call this method for this noise model.")
+
+    @classmethod
     def get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
 

@@ -308,7 +308,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         l_idx_param_noisemod  : list of Integer
             List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
-        ldict = locals().copy()  # TODO: Check if an empty dict would be enough
+        ldict = {}  # TODO: Check if an empty dict would be enough
         l_params_new = l_params.copy()
         l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
         l_params_noisemod_new = l_params_noisemod.copy()
@@ -489,8 +489,12 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         ----------
         l_instmod_obj : InstrumentModel/list_of_InstrumentModel
             Instument model or list of instrument model for the ln likelihood to produce.
-        l_params : list_of_string
-            Current list of parameters full names.
+        l_params : List of string
+            Current list of parameters full names for the full function (likelihood or GP simulator)
+        l_params_noisemod : List of String
+            Current list of parameters full names for the noise model only.
+        l_idx_param_noisemod : List of int
+            Lis of the indexes of the parameters provided by l_params_noisemod in l_params.
 
         Returns
         -------
@@ -527,25 +531,86 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         text_l_jitter += "]"
         return text_l_jitter, l_params_new, l_params_noisemod_new, l_idx_param_noisemod_new, l_jitter_paramname
 
-    # TODO: Adapt to the possibility of several stellar activity noise model
+    @classmethod
+    def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname, l_provided_param_fullname):
+        """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
+
+        This function might not be convenient for your noise model, in wich case you should overload it.
+
+        The these output are then used by emcee_tools.compute_model function
+        to compute the model of the dataset. In this function the gp simulator is used as follow:
+        gp_sim_function(sim_data=sim_data,
+                        param_noisemodel=f_format_param(p),
+                        datasets_kwargs=datasets_kwargs,
+                        tsim=tsim)
+
+        Arguments
+        ---------
+        model_instance            : Core Model subclass
+        l_instmod_obj             : list of Instrument_Model instances
+            List of instrument model objects that are used for the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
+        l_dataset_obj             : list of Dataset instances
+            List of dataset objects that are simulated by the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
+        l_datasim_param_fullname  : list of String
+            Current list of parameter full names for the likelihood.
+        l_provided_param_fullname : list of String
+            List of the full name of all provided parameters
+
+        Returns
+        -------
+        gpsimulator_function  : function
+            function with the following arguments
+                sim_data         : sim_data using this noise model, and only these, the exact format is defined by f_format_simdata
+                param_noisemodel : param of the current noise model, and only these, the exact format is defined by f_format_param
+                dataset_kwargs   : dataset keyword arguments used by this noise model, and only these, the exact format is defined by this function.
+        f_format_param   : function
+            Function to extract and format the parameter of this noise model from the vector of all the parameters of the likelihood function
+        datasets_kwargs  : ??
+            Dataset keyword arguments of the datasets using this noise model
+        l_datasim_param_fullname_new : list of String
+            New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
+        """
+        gp_simulator, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_gp_simulator(l_params=l_datasim_param_fullname, model_instance=model_instance, l_instmod_obj=l_instmod_obj)
+
+        l_idx_param_noisemod_in_all_param = [l_provided_param_fullname.index(param_noisemod_name_ii) for param_noisemod_name_ii in params_noisemod]
+
+        def f_format_param(all_param):
+            return all_param[l_idx_param_noisemod_in_all_param]
+
+        dataset_kwargs = []
+        for dataset in l_dataset_obj:
+            dataset_kwargs.append(cls.get_necessary_datakwargs(dataset))
+
+        return gp_simulator, f_format_param, dataset_kwargs, l_params_new
+
+    # TODO: Adapt to the possibility of several stellar activity noise model. I DON'T THINK THAT I NEED TO BECAUSE THIS IS ONLY FOR DISPLAY PRUPOSES AND I CAN ASK NOISE MODEL PAR NOISE MODEL
     @classmethod
     def get_gp_simulator(cls, l_params, model_instance, l_instmod_obj):
         """Return the simulated values with the GP at given simulated times.
 
-        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
+        Arguments
+        ---------
+        l_param_fullnames : List of String
+            Current list of parameters full names.
+        model_instance    : Core_Model subclass
+            Instance of Core_Model or a subclass of it. Mandatory for
             noise model which requires parameter of the object studied (like GP and stellar
             activity).
-        :param list_of_string l_params: Current list of parameters full names.
-        :return function gp_sim: gp simulator function that return the simulated gp contributions.
-            :param list_of_np.array model: Values of the model for each dataset associated which
-                this noise model.
-            :param list_of_float param_noisemod: List of noise model parameter values.
-            :param list_of_dict l_datakwargs:
-            :param np.array tsim: Array of time value at which you want to compute the gp prediction
-            :return np.array gp_sim_values: Array of the gp simulated values for each tsim values.
-        :return list_of_str l_param_noise_mod: List of parameter full name for the noise model.
+        l_instmod_obj     : List of Instrument_Model
+            List of instrument model object corresponding to the datasets simulated with the datasets this gp simulator is associated with
+
+        Returns
+        -------
+        gp_sim : function
+            gp simulator function that return the simulated gp contributions.
+        l_params_new          : list of String
+            Updated list of parameters full names.
+        l_params_noisemod_new : list of String
+            List of the noise model parameters
+        l_idx_param_noisemod  : list of Integer
+            List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
-        ldict = locals().copy()
+        ldict = {}
         l_params_new = l_params.copy()
         (ker, l_params_new,
          l_params_noisemod,
@@ -569,7 +634,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         ldict["sqrt"] = sqrt
         ldict["np"] = np
         exec(func, ldict)
-        return ldict[cls.gpsim_function_name], [l_params_new[idx] for idx in l_idx_param_noisemod]
+        return ldict[cls.gpsim_function_name], l_params_new, l_params_noisemod, l_idx_param_noisemod
 
     # @classmethod
     # def star_param_GP_indexorval(cls, model_instance, l_params):
@@ -705,6 +770,9 @@ class StellarActivityNoiseModelInterface(object):
 
         # Update the applyparametrisation4noisemodel dictionary
         self.applyparametrisation4noisemodel[stelact_GP_noisemodel] = self.apply_parametrisation_stelact_noisemod  # applyparametrisation4noisemodel is created in Core_Parametrisation
+
+        # Update the _same_GP_kernel_function dictionary
+        self._same_GP_kernel_function[stelact_GP_noisemodel] = self._get_same_GP_kernel_instmodel_stelact_noisemodel
 
     @property
     def modelstelactname_4_instmodfullname(self):
@@ -1028,3 +1096,33 @@ class StellarActivityNoiseModelInterface(object):
                     # else:
                     name, prefix, kwargs, named_inst = get_stelact_GP_param_name(param_first_name=param_name, stelact_mod_name=SA_mod_name, star_obj=star)
                     star.add_parameter(Parameter(name=name, name_prefix=prefix, main=True, **kwargs))
+
+    def _get_same_GP_kernel_instmodel_stelact_noisemodel(self, instmod_fullname):
+        """Get the list of the instrument full names modeled by the same GP kernel than the provided one.
+
+        Arguments
+        ---------
+        instmod_fullname : String
+            Full name of the instrument of interest
+        """
+        stelact_noisemodel = self.modelstelactname_4_instmodfullname[instmod_fullname]
+        return self.get_linstmodfullname4stelactname(stelact_noisemod_name=stelact_noisemodel)
+
+    def get_linstmodfullname4stelactname(self, stelact_noisemod_name):
+        """Provide the list instrument model using a given stellar activity model
+
+        Arguments
+        ---------
+        stelact_noisemod_name : String
+            Name of the stellar activity noise model of interest
+
+        Returns
+        -------
+        l_instmod_fullname : List of String
+            List of instrument model full names using the stellar activity noise model provided
+        """
+        res = []
+        for instmod_fullname_ii, stelact_noisemodel_ii in self.modelstelactname_4_instmodfullname.items():
+            if stelact_noisemodel_ii == stelact_noisemod_name:
+                res.append(instmod_fullname_ii)
+        return res

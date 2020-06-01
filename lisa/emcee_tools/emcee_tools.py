@@ -31,7 +31,7 @@ from pandas import read_table
 # from ..tools.stats.loc_scale_estimator import mad
 from scipy.stats import median_absolute_deviation as mad
 from ..tools.tqdm_logger import TqdmToLogger
-from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
+# from ..tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
 # from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -306,7 +306,7 @@ def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burni
     return fig
 
 
-def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwargs={}, model_instance=None,
+def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance, datasim_kwargs={},
                             oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                             phasefold=False, phasefold_kwargs=None, datasim_dbf_instmod=None,
                             zoom=None, show_title=True, show_legend=True,
@@ -320,7 +320,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         provided in param
     :param DatasimDocFunc datasim: Datasimulator for the dataset.
     :param Dataset dataset: Dataset
-    :param Core_Model model_instance: Core_Model instance
+    :param Posterior post_instance: Posterior instance
     :param int oversamp: The model will be computed in oversamp times more points than the data
     :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
                                 of points provided, meaning that we will actually compute the model at
@@ -408,7 +408,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     filename_info = mgr_inst_dst.interpret_data_filename(dataset.dataset_name)
     title = "{}({})".format(filename_info["inst_name"], filename_info["number"])
     # Get the instrument model object and the noise model object
-    inst_mod = model_instance.get_instmod(dataset.dataset_name)
+    inst_mod = post_instance.model.get_instmod(dataset.dataset_name)
     noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
     # Get data point (time, data, data_err) and other kwargs
     kwargs = dataset.get_kwargs()
@@ -457,24 +457,21 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
         tc = phasefold_kwargs["tc"]
         # Add planet name to title
         title += ": pl {}".format(planet_name)
-        # Get the datasim for this planet only
-        datasim_docfunc_pl = datasim_dbf_instmod[planet_name]
-        # Get the datasims for the other planets
-        l_datasim_docfunc_others = []
-        for plnt in model_instance.planets.keys():
-            if plnt == planet_name:
-                continue
-            else:
-                l_datasim_docfunc_others.append(datasim_dbf_instmod[plnt + ext_plonly])
+        # Define the key corresponding to the planet for the compte_model method
+        key_pl = planet_name
         # Compute the data - other planets contributions
         data_pl = data.copy()
-        for datasim_docfunc_other in l_datasim_docfunc_others:
-            model, modelwGP, GP_pred_var, _ = compute_model(t, datasim_docfunc_other, param, l_param_name,
-                                                            datasim_kwargs=kwargs,
-                                                            supersamp=supersamp_model, exptime=exptime,
-                                                            noise_model=noise_mod,
-                                                            model_instance=model_instance)
-            data_pl = data_pl - model
+        for plnt_name in post_instance.model.planets.keys():
+            if plnt_name == planet_name:
+                continue
+            else:
+                model, modelwGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t, dataset_name=dataset.dataset_name,
+                                                                                    param=param,
+                                                                                    l_param_name=l_param_name,
+                                                                                    key_obj=plnt_name + ext_plonly, datasim_kwargs=kwargs,
+                                                                                    supersamp=supersamp_model, exptime=exptime,
+                                                                                    )
+                data_pl = data_pl - model
         # Plot these data phase folded at the ephemeris of the planet.
         # Plot the model
         for zoom_i, ax_data_i, ax_resi_i in zip(zoom, ax_data, ax_resi):
@@ -487,20 +484,18 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
             tmin = tc + P * phasemin
             tmax = tc + P * phasemax
             (lines_model, labels_model
-             ) = plot_model(tmin, tmax, nt * oversamp, datasim_docfunc_pl, param, l_param_name,
+             ) = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
+                            post_instance=post_instance, key_obj=key_pl,
                             supersamp=supersamp_model, exptime=exptime, datasim_kwargs={'tref': tmin},
                             plot_phase=True, Per=P, tref=tc,
-                            noise_model=noise_mod, model_instance=model_instance,
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
             (residual_out, residual_wGP, ebconts_resi, labels_resi
-             ) = plot_residuals(t=t, data=data_pl, datasim_docfunc=datasim_docfunc_pl, param=param,
-                                l_param_name=l_param_name, data_err=data_err_new, jitter=None, jitter_type=None,
+             ) = plot_residuals(t_data=t, data=data_pl, dataset_name=dataset.dataset_name, param=param,
+                                l_param_name=l_param_name, post_instance=post_instance, key_obj=key_pl, data_err=data_err_new, jitter=None, jitter_type=None,
                                 supersamp=supersamp_model, exptime=exptime,
                                 datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
-                                noise_model=noise_mod,
-                                model_instance=model_instance,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
             all_ebconts_lines.append((ebcont_data, lines_model, ebconts_resi))
@@ -524,17 +519,17 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
             tmin = t_i.min()
             tmax = t_i.max()
             (lines_model, labels_model
-             ) = plot_model(tmin, tmax, nt * oversamp, datasim, param, l_param_name,
-                            datasim_kwargs=kwargs, supersamp=supersamp_model,
-                            exptime=exptime, plot_phase=False, noise_model=noise_mod, model_instance=model_instance,
+             ) = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
+                            post_instance=post_instance, key_obj=post_instance.model.key_whole,
+                            exptime=exptime, plot_phase=False,
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
             (residual_out, residual_wGP, lines_resi, labels_resi
-             ) = plot_residuals(t_i, data_i, datasim, param, l_param_name, data_err=data_err_new_i,
+             ) = plot_residuals(t_data=t_i, data=data_i, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name, post_instance=post_instance, key_obj=post_instance.model.key_whole, data_err=data_err_new_i,
                                 jitter=None, jitter_type=None,
                                 datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
-                                plot_phase=False, noise_model=noise_mod, model_instance=model_instance,
+                                plot_phase=False,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
             all_ebconts_lines.append((ebcont_data, lines_model, lines_resi))
@@ -548,8 +543,8 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, datasim_kwarg
     return all_ebconts_lines, all_labels
 
 
-def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets=None, datasim_kwargs={},
-                        model_instance=None, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
+def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_instance, l_datasets=None, datasim_kwargs={},
+                        oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, fig_kwargs=None, gs_kwargs=None,
                         kwargs_gs_from_sps=None, kwargs_add_axeswithsharex=None, kwargs_tick_params=None,
@@ -561,7 +556,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         provided in param
     :param datasim_dbf: Datasimulator database
     :param DatasetDatabase dataset_db: Dataset database
-    :param Core_Model model_instance: Model instance
+    :param Posterior post_instance: Posterior instance
     :param int oversamp: The model will be computed in oversamp times more points than the data
     :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
                                 of points provided, meaning that we will actually compute the model at
@@ -608,14 +603,14 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
         kwargs_tick_params_final.update(kwargs_tick_params)
 
     # Define the suptitle
-    fig.suptitle(model_instance.get_name())
+    fig.suptitle(post_instance.model.get_name())
 
     # For each dataset
     ebconts_lines_4_legend = []
     labels_4_legend = []
     for ii, dataset in enumerate(l_datasets):
         # Get the instrument model name associated to the dataset
-        inst_mod_fullname = model_instance.get_instmod_fullname(dataset.dataset_name)
+        inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
         # Get the datasimulator for the whole system
         # print(inst_mod_fullname)
         # print(datasim_dbf.instrument_db[inst_mod_fullname])
@@ -646,7 +641,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
                                                             axes_data, axes_resi):
                 (all_ebconts_lines, all_labels
                  ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
-                                             dataset=dataset, datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                             dataset=dataset, datasim_kwargs=datasim_kwargs, post_instance=post_instance,
                                              oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                              phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
                                              datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
@@ -659,7 +654,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
             # Produce the plots
             (all_ebconts_lines, all_labels
              ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                         datasim_kwargs=datasim_kwargs, model_instance=model_instance,
+                                         datasim_kwargs=datasim_kwargs, post_instance=post_instance,
                                          oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                          phasefold=phasefold,
                                          datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
@@ -688,8 +683,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, l_datasets
 
 
 def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
-                                       datasim_kwargs={}, model_instance=None,
-                                       oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
+                                       post_instance, datasim_kwargs={}, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
                                        zoom_width=0.25, show_title=True, show_legend=True,
                                        plot_height=2, plot_width=2, kwargs_tl={}):
     """Zoom on the data model overplot for one datasetself.
@@ -702,7 +696,7 @@ def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name
         provided in param
     :param DatasimDocFunc datasim: Datasimulator for the dataset.
     :param Dataset dataset: Dataset
-    :param Core_Model model_instance: Core_Model instance
+    :param Posterior post_instance: Core_Model instance
     :param int oversamp: The model will be computed in oversamp times more points than the data
     :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
                                 of points provided, meaning that we will actually compute the model at
@@ -742,119 +736,150 @@ def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name
     fig, axes = subplots(nrows=2 * nb_pl, ncols=nb_max_zoom, figsize=(plot_width * nb_max_zoom, nb_pl * plot_height))
     for jj in range(nb_pl):
         overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                datasim_kwargs=datasim_kwargs, model_instance=model_instance, oversamp=oversamp,
+                                datasim_kwargs=datasim_kwargs, post_instance=post_instance, oversamp=oversamp,
                                 supersamp_model=supersamp_model, exptime=exptime_Kepler, phasefold=False,
                                 zoom=zoom_planets[jj], show_title=False, show_legend=False, ax_data=axes[jj * 2],
                                 ax_resi=axes[jj * 2 + 1])
     fig.tight_layout(**kwargs_tl)
 
 
-def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
-                  supersamp=1, exptime=exptime_Kepler,
-                  noise_model=None, model_instance=None):
-    """
-    """
-    # Supersample the time if needed
-    if supersamp > 1:
-        t_model = get_time_supersampled(t, supersamp, exptime)
-    else:
-        t_model = t
+# def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
+#                   supersamp=1, exptime=exptime_Kepler,
+#                   noise_model=None, model_instance=None):
+#     """Compute the simulated data at the provided times using the provided datasimulator.
+#
+#     This function is typically used with the data simulator of only one dataset. If not, the noise_model argument doesn't really make sense since there can be multiple noise models associated with multiple datasets
+#
+#     Arguments
+#     ---------
+#     t : np.array
+#         time vector at which you want to compute the simulated data
+#     datasim_docfunc : DatasimDocFunc
+#         Data simulator to be used for the simulation
+#     param : np.array
+#         Vector of parameter values to use for the simulation
+#     l_param_name : List of String
+#         List of parameter full names corresponding with param vector
+#     datasim_kwargs : Dictionary
+#         Keyword arguments to be passed to the data simulator function
+#     supersamp : Integer
+#         Supersampling factor to be used.
+#     exptime : Float
+#         exposure time
+#     noise_model : Core_NoiseModel suclass
+#         Class of noise model associated with the simulated dataset.
+#         TODO: This could be inferred from the datasim_docfunc and the model_instance.
+#     model_instance : Core_Model Subclass instance
+#         model instance used to generate the data simulator
+#     """
+#     # Supersample the time if needed
+#     if supersamp > 1:
+#         t_model = get_time_supersampled(t, supersamp, exptime)
+#     else:
+#         t_model = t
+#
+#     # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
+#     # the datasim function
+#     if datasim_kwargs is None:
+#         datasim_kwargs = {}
+#
+#     # Compute the model values for each time
+#     idx_par = []
+#     datasim_function = datasim_docfunc.function
+#     datasim_paramnames = datasim_docfunc.params_model
+#     for par in datasim_paramnames:
+#         idx_par.append(l_param_name.index(par))
+#     model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
+#     if supersamp > 1:
+#         model = average_supersampled_values(model, supersamp)
+#
+#     # Compute GP contribution if needed.
+#     if noise_model is not None:
+#         if noise_model.has_GP:
+#             # WARNING: Here for GP model. I take all the instruments with the same GP noise
+#             # model to compute the GP contribution. FOr now it works but If at one point I want
+#             # to use the same model for two different type of data (ex: RV and LC). It will not anymore.
+#             # Create the simulated data (model) for all the datasets and get the datasim_all
+#             datasim_all = (model_instance.
+#                            create_datasimulator_alldatasets(dataset_db=model_instance.dataset_db))
+#             idx_param_datasim = []
+#             for param_name in datasim_all.params_model:
+#                 idx_param_datasim.append(l_param_name.index(param_name))
+#             model_all = datasim_all.function(param[idx_param_datasim], **datasim_kwargs)
+#             # Get the simulated data (model) of only the dataset with the current GP noisemodel
+#             # Get the dataset kwargs mandatory for the GP simulation (l_datakwargs_noisemod)
+#             l_datakwargs_noisemod = []
+#             if datasim_all.multi_output:
+#                 # Get the list of instrument models which have the same GP noise model that the Current
+#                 # Dataset you try to model
+#                 # Also get the indexes of the corresponding datasets
+#                 idx_noisemod_GP = []
+#                 l_instmod_noisemod_cat = []
+#                 for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
+#                     inst_mod = model_instance.instruments[instmod_fullname]
+#                     if inst_mod.noise_model == noise_model.category:
+#                         idx_noisemod_GP.append(ii)
+#                         l_instmod_noisemod_cat.append(inst_mod)
+#                 l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
+#                 model_noisemodel_GP = [model_all[ii] for ii in idx_noisemod_GP]
+#                 for dataset_name in l_dataset_noisemod_cat:
+#                     dataset = model_instance.dataset_db[dataset_name]
+#                     l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
+#             else:
+#                 model_noisemodel_GP = [model_all]
+#                 l_instmod_noisemod_cat = [model_instance.instruments[instmod_fullname] for instmod_fullname in datasim_all.instmodel_fullname]
+#                 dataset_name = datasim_all.dataset.iloc[0]
+#                 dataset = model_instance.dataset_db[dataset_name]
+#                 l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
+#
+#             # Get the GP simulator for the current GP noise model
+#             (gpsim_func,
+#              l_param_noisemod) = noise_model.get_gp_simulator(l_params=l_param_name, model_instance=model_instance,
+#                                                               l_instmod_obj=l_instmod_noisemod_cat)
+#             # Get the value of the parameter to provide to the GP simulator.
+#             # WARNING: If one of the gp simulator parmameter is fixed it might not get it with the code
+#             # below
+#             idx_noisemod = []
+#             for param_name in l_param_noisemod:
+#                 idx_noisemod.append(l_param_name.index(param_name))
+#             # Compute the GP model model, param_noisemod, l_datakwargs, tsim
+#             res_model, GP_pred_var = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
+#                                                 l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
+#             if supersamp > 1:
+#                 res_model = average_supersampled_values(res_model, supersamp)
+#                 # res_model = np.mean(res_model.reshape(-1, supersamp), axis=1)
+#             model_wGP = model + res_model
+#         else:
+#             model_wGP = None
+#     else:
+#         model_wGP = None
+#
+#     return model, model_wGP, GP_pred_var, t_model
 
-    # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
-    # the datasim function
-    if datasim_kwargs is None:
-        datasim_kwargs = {}
 
-    # Compute the model values for each time
-    idx_par = []
-    datasim_function = datasim_docfunc.function
-    datasim_paramnames = datasim_docfunc.params_model
-    for par in datasim_paramnames:
-        idx_par.append(l_param_name.index(par))
-    model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
-    if supersamp > 1:
-        model = average_supersampled_values(model, supersamp)
-
-    # Compute GP contribution if needed.
-    if noise_model is not None:
-        if noise_model.has_GP:
-            # WARNING: Here for GP model. I take all the instruments with the same GP noise
-            # model to compute the GP contribution. FOr now it works but If at one point I want
-            # to use the same model for two different type of data (ex: RV and LC). It will not anymore.
-            # Create the simulated data (model) for all the datasets and get the datasim_all
-            datasim_all = (model_instance.
-                           create_datasimulator_alldatasets(dataset_db=model_instance.dataset_db))
-            idx_datasim = []
-            for param_name in datasim_all.params_model:
-                idx_datasim.append(l_param_name.index(param_name))
-            model_all = datasim_all.function(param[idx_datasim], **datasim_kwargs)
-            # Get the simulated data (model) of only the dataset with the current GP noisemodel
-            # Get the dataset kwargs mandatory for the GP simulation (l_datakwargs_noisemod)
-            l_datakwargs_noisemod = []
-            if datasim_all.multi_output:
-                # Get the list of instrument models which have the same GP noise model that the Current
-                # Dataset you try to model
-                # Also get the indexes of the corresponding datasets
-                idx_noisemod_GP = []
-                l_instmod_noisemod_cat = []
-                for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
-                    inst_mod = model_instance.instruments[instmod_fullname]
-                    if inst_mod.noise_model == noise_model.category:
-                        idx_noisemod_GP.append(ii)
-                        l_instmod_noisemod_cat.append(inst_mod)
-                l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
-                model_noisemodel_GP = [mod_ii for ii, mod_ii in enumerate(model_all)
-                                       if ii in idx_noisemod_GP]
-                for dataset_name in l_dataset_noisemod_cat:
-                    dataset = model_instance.dataset_db[dataset_name]
-                    l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
-            else:
-                model_noisemodel_GP = [model_all]
-                l_instmod_noisemod_cat = [model_instance.instruments[instmod_fullname] for instmod_fullname in datasim_all.instmodel_fullname]
-                dataset_name = datasim_all.dataset.iloc[0]
-                dataset = model_instance.dataset_db[dataset_name]
-                l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
-
-            # Get the GP simulator for the current GP noise model
-            (gpsim_func,
-             l_param_noisemod) = noise_model.get_gp_simulator(l_params=l_param_name, model_instance=model_instance,
-                                                              l_instmod_obj=l_instmod_noisemod_cat)
-            # Get the value of the parameter to provide to the GP simulator.
-            # WARNING: If one of the gp simulator parmameter is fixed it might not get it with the code
-            # below
-            idx_noisemod = []
-            for param_name in l_param_noisemod:
-                idx_noisemod.append(l_param_name.index(param_name))
-            # Compute the GP model model, param_noisemod, l_datakwargs, tsim
-            res_model, GP_pred_var = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
-                                                l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
-            if supersamp > 1:
-                res_model = average_supersampled_values(res_model, supersamp)
-                # res_model = np.mean(res_model.reshape(-1, supersamp), axis=1)
-            model_wGP = model + res_model
-        else:
-            model_wGP = None
-    else:
-        model_wGP = None
-
-    return model, model_wGP, GP_pred_var, t_model
-
-
-def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
+def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance, key_obj=None, datasim_kwargs=None,
                supersamp=1, exptime=exptime_Kepler,
                plot_phase=False, Per=None, tref=None,
-               noise_model=None, model_instance=None,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True, force_plot_phase_GP=False,
                ax=None):
     """Plot the model.
 
-    :param float tmin: Min value of the time vector over which the model will be evaluated and plotted
-    :param float tmax: Max value of the time vector over which the model will be evaluated and plotted
-    :param int nt: Number of values of the time vector over which the model will be evaluated and plotted
-    :param DatasimDocFunc datasim_docfunc: Function computing the model
-    :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
-    :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
+    Arguments
+    ---------
+    tmin            : float
+        Min value of the time vector over which the model will be evaluated and plotted
+    tmax            : float
+        Max value of the time vector over which the model will be evaluated and plotted
+    nt              : int
+        Number of values of the time vector over which the model will be evaluated and plotted
+    datasim_docfunc : DatasimDocFunc
+        Function computing the model
+    param           : Iterable_of_float
+        List of parameter values (will be passed on to compute_model)
+    l_param_name    : Iterable_of_string
+        List of parameter names corresponding to the values given
         by param (will be passed on to compute_model)
+    post_instance   : Posterior instance
     :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_docfunc
         (will be passed on to compute_model)
     :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
@@ -862,10 +887,6 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
     :param bool plot_phase: If true, plot the phase folded model.
     :param float Per: Period for the phase folding
     :param float tref: Reference time for the phase folding
-    :param Core_Noise_Model noise_model: Instance of a Subclass of Core_Noise_Model indicating the noise model
-        used for the dataset this model is simulating. It used if the noise model include a GP to also
-        plot the GP.
-    :param Core_Model model_instance: Instance of a Subclass of Core_Model giving the full model used.
     :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
     :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
     :param bool show_modelandGP: Indicate if you want to plot the model+GP.
@@ -887,11 +908,9 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
     tmax_plus = tmax + tsamp  # Add 1 point after tmax
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
-    model, model_wGP, GP_pred_var, t = compute_model(t_plot, datasim_docfunc, param, l_param_name,
-                                                     datasim_kwargs=datasim_kwargs, supersamp=supersamp,
-                                                     exptime=exptime_Kepler,
-                                                     noise_model=noise_model,
-                                                     model_instance=model_instance)
+    model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
+                                                                         param=param, l_param_name=l_param_name,
+                                                                         key_obj=key_obj, datasim_kwargs=datasim_kwargs, supersamp=supersamp, exptime=exptime_Kepler)
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -930,10 +949,9 @@ def plot_model(tmin, tmax, nt, datasim_docfunc, param, l_param_name, datasim_kwa
     return ebconts, labels
 
 
-def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
+def plot_residuals(t_data, data, dataset_name, param, l_param_name, post_instance, key_obj=None,
                    datasim_kwargs=None, data_err=None, jitter=None, jitter_type=None,
-                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, Per=None, tref=None,
-                   noise_model=None, model_instance=None, zoom=None,
+                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, Per=None, tref=None, zoom=None,
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
@@ -944,6 +962,7 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
     :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
     :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
         by param (will be passed on to compute_model)
+    :param Posterior post_instance:
     :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_docfunc
         (will be passed on to compute_model)
     :param array data_err: Data error vector
@@ -954,10 +973,7 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
     :param bool plot_phase: If true, plot the phase folded model.
     :param float Per: Period for the phase folding
     :param float tref: Reference time for the phase folding
-    :param Core_Noise_Model noise_model: Instance of a Subclass of Core_Noise_Model indicating the noise model
-        used for the dataset this model is simulating. It used if the noise model include a GP to also
-        plot the GP.
-    :param Core_Model model_instance: Instance of a Subclass of Core_Model giving the full model used.
+    :param Posterior post_instance: Posterior_instance.
     :param zoom: TBD
     :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
     :param bool show_model: To show the residuals of the model. It is only used when the noise model is
@@ -977,46 +993,40 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Compute residual
-    model, model_wGP, GP_pred_var, _ = compute_model(t, datasim_docfunc, param, l_param_name,
-                                                     datasim_kwargs=datasim_kwargs, supersamp=supersamp,
-                                                     exptime=exptime,
-                                                     noise_model=noise_model,
-                                                     model_instance=model_instance)
+    model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
+                                                                         param=param, l_param_name=l_param_name,
+                                                                         key_obj=key_obj, datasim_kwargs=datasim_kwargs,
+                                                                         supersamp=supersamp, exptime=exptime)
     residual = data - model
     # Apply jitter if needed
     data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
-    # Determine if noise model is GP
-    if noise_model is None:
-        noise_modelGP = False
-    else:
-        noise_modelGP = noise_model.has_GP
     # Perform zoom if needed (I do the zoom after computing the model with all the data because
     # I am not sure that doing the zoom before will not change the result for GP noise model.)
     # I do the zoom only if I don't want to phase fold, because in this case I can do it inside plot_phase_folded_timeserie
     if (zoom is not None) and not(plot_phase):
         extra_arrays_to_zoom = [data, model, residual] if data_err is None else [data, model, residual, data_err_new]
-        if noise_modelGP:
+        if model_wGP is not None:
             extra_arrays_to_zoom.append(model_wGP)
-        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t, arrays=extra_arrays_to_zoom)
+        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t_data, arrays=extra_arrays_to_zoom)
         t_zoom = zoomed_arrays[0]
         data_zoom = zoomed_arrays[1]
         residual_zoom = zoomed_arrays[2]
         if data_err is None:
             data_err_new_zoom = None
-            model_wGP_zoom = None if not(noise_modelGP) else zoomed_arrays[3]
+            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[3]
         else:
             data_err_new_zoom = zoomed_arrays[3]
-            model_wGP_zoom = None if not(noise_modelGP) else zoomed_arrays[4]
+            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[4]
     # Intialise the returns variables:
     ebconts = []   # List of line plotted by the function. Will contain 2 elements if GP, 1 otherwise.
     labels = []   # List of labels. Will contain 2 elements if GP, 1 otherwise.
     # Plot the residuals of model only (even if noise model is GP)
-    if show_model or not(noise_modelGP):
+    if show_model or (model_wGP is None):
         kwarg_model = {"label": "model", "color": "g", "fmt": "."}
         if pl_kwargs_model is not None:
             kwarg_model.update(pl_kwargs_model)
         if plot_phase:
-            ebcont, _, _ = plot_phase_folded_timeserie(t, residual, Per, tref, data_err=data_err_new,
+            ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_new,
                                                        zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
             residual_out = residual
         else:
@@ -1024,24 +1034,24 @@ def plot_residuals(t, data, datasim_docfunc, param, l_param_name,
                 ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model)
                 residual_out = residual_zoom
             else:
-                ebcont = ax.errorbar(t, residual, data_err_new, **kwarg_model)
+                ebcont = ax.errorbar(t_data, residual, data_err_new, **kwarg_model)
                 residual_out = residual
         ebconts.append(ebcont)
         labels.append(kwarg_model["label"])
     # Plot the residuals of model + GP
-    if (noise_model is not None) and noise_modelGP and show_modelandGP:
+    if (model_wGP is not None) and show_modelandGP:
         residual_wGP = data - model_wGP if zoom is None else data_zoom - model_wGP_zoom
         kwarg_GP = {"label": "model+GP", "color": "r", "fmt": ".", "alpha": 0.6}
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
         if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t, residual_wGP, Per, tref, data_err=data_err_new,
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_new,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
         else:
             if zoom is not None:
                 ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP)
             else:
-                ebcont_wGP = ax.errorbar(t, residual_wGP, data_err_new, **kwarg_GP)
+                ebcont_wGP = ax.errorbar(t_data, residual_wGP, data_err_new, **kwarg_GP)
         ebconts.append(ebcont_wGP)
         labels.append(kwarg_GP["label"])
     else:
