@@ -406,7 +406,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     # Initialise the title (necessary here, because below the title will be completed with the planet
     # name if phasefold)
     filename_info = mgr_inst_dst.interpret_data_filename(dataset.dataset_name)
-    title = "{}({})".format(filename_info["inst_name"], filename_info["number"])
+    title = "{}_{}({})".format(filename_info["inst_fullcat"], filename_info["inst_name"], filename_info["number"])
     # Get the instrument model object and the noise model object
     inst_mod = post_instance.model.get_instmod(dataset.dataset_name)
     noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)

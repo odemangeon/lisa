@@ -283,7 +283,8 @@ class Instmodel4DatasetAttr(object):
             List of dataset names using the instrument model provided
         """
         res = []
-        for dataset_name_ii, instmod_fullname_ii in self.instmodel4dataset.items():
+        for dataset_name_ii in self.instmodel4dataset.keys():
+            instmod_fullname_ii = self.get_instmod_fullname(dataset_name=dataset_name_ii)
             if instmod_fullname_ii == instmod_fullname:
                 res.append(dataset_name_ii)
         return res

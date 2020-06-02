@@ -100,8 +100,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         The these output are then used by Core_likelihood.__likelihood_creator
         to finalise the lnlikelihood. In this function the pre-filled lnlikelihood for each noise model is used as follow:
         lnlike_function(sim_data=f_format_simdata(sim_data),
-                        param_noisemodel=f_format_param(p),
-                        datasets_kwargs=datasets_kwargs)
+                        param_noisemod=f_format_param(p),
+                        l_datakwargs=datasets_kwargs)
 
         Arguments
         ---------

@@ -94,7 +94,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     # sim_data : List of arrays containing the simulated dataset for each dataset associated with the stellar activity model corresponding to this function
     # param_noisemod : array of parameter values
     # l_datakwargs :  list of dictionaries giving the dataset kwargs for of each dataset associated with the stellar activity model corresponding to this function. Keys are "data", "data_err", "t" and values are arrays extracted from the datasets.
-    lnlikefunc_text = """def {func_name}(sim_data, param_noisemod, l_datakwargs):
+    lnlikefunc_text = """def {func_name}(sim_data, {param_noisemod_name}, l_datakwargs):
         dict_datakwargs = defaultdict(list)
         for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
@@ -115,7 +115,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
     function_name = "lnlike_{stelact_mod_name}_SA"
 
-    gpsim_func_text = """def {func_name}(sim_data, param_noisemod, l_datakwargs, tsim):
+    gpsim_func_text = """def {func_name}(sim_data, {param_noisemod_name}, l_datakwargs, tsim):
         dict_datakwargs = defaultdict(list)
         for datakwargs, jitter in zip(l_datakwargs, {text_l_jitter}):
             dict_datakwargs["t"].append(datakwargs["t"])
@@ -124,12 +124,12 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
-        #print(f"std(resi):{{np.std((concatenate(dict_datakwargs['data']) - concatenate(model)).reshape((-1)))}}")
-        pred, pred_var = gp.predict((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)), tsim, return_var=True)
+        #print(f"std(resi):{{np.std((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))}}")
+        pred, pred_var = gp.predict((concatenate(dict_datakwargs["data"]) - concatenate(sim_data)).reshape((-1)), tsim, return_var=True)
         #print(f"std(pred): {{np.std(pred)}}")
         #print(f"pred(var): {{pred_var}}")
         return pred, pred_var
-        # return gp.sample_conditional((concatenate(dict_datakwargs["data"]) - concatenate(model)).reshape((-1)),
+        # return gp.sample_conditional((concatenate(dict_datakwargs["data"]) - concatenate(sim_data)).reshape((-1)),
         #                             tsim)
         """
 
@@ -324,7 +324,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
                                                        l_idx_param_noisemod=l_idx_param_noisemod)
-        func = cls.lnlikefunc_text.format(func_name=cls.function_name.format(stelact_mod_name=stelact_mod_name), kernel=ker, text_l_jitter=text_l_jitter)
+        func = cls.lnlikefunc_text.format(func_name=cls.function_name.format(stelact_mod_name=stelact_mod_name), param_noisemod_name=param_noisemod_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
@@ -540,8 +540,8 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         The these output are then used by emcee_tools.compute_model function
         to compute the model of the dataset. In this function the gp simulator is used as follow:
         gp_sim_function(sim_data=sim_data,
-                        param_noisemodel=f_format_param(p),
-                        datasets_kwargs=datasets_kwargs,
+                        param_noisemod=f_format_param(p),
+                        l_datakwargs=datasets_kwargs,
                         tsim=tsim)
 
         Arguments
@@ -590,14 +590,14 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
         Arguments
         ---------
-        l_param_fullnames : List of String
+        l_params : List of String
             Current list of parameters full names.
         model_instance    : Core_Model subclass
             Instance of Core_Model or a subclass of it. Mandatory for
             noise model which requires parameter of the object studied (like GP and stellar
             activity).
         l_instmod_obj     : List of Instrument_Model
-            List of instrument model object corresponding to the datasets simulated with the datasets this gp simulator is associated with
+            List of instrument model object corresponding to the datasets simulated with the data simulator this gp simulator is associated with.
 
         Returns
         -------
@@ -610,12 +610,18 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         l_idx_param_noisemod  : list of Integer
             List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
+        l_stelact_mod_name = []
+        for instmod_obj in l_instmod_obj:
+            l_stelact_mod_name.append(model_instance.modelstelactname_4_instmodfullname[instmod_obj.full_name])
+        assert len(set(l_stelact_mod_name)) == 1, "All instrument model object should have the stellar activity noise model"
+        stelact_noisemodel_name = set(l_stelact_mod_name).pop()
+
         ldict = {}
         l_params_new = l_params.copy()
         (ker, l_params_new,
          l_params_noisemod,
          l_idx_param_noisemod) = cls.__get_text_define_GP(model_instance=model_instance, l_params=l_params_new,
-                                                          l_params_noisemod=[], l_idx_param_noisemod=[])
+                                                          l_params_noisemod=[], l_idx_param_noisemod=[], stelact_mod_name=stelact_noisemodel_name)
         (text_l_jitter,
          l_params_new,
          l_params_noisemod,
@@ -623,7 +629,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
                                                        l_idx_param_noisemod=l_idx_param_noisemod)
-        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, kernel=ker, text_l_jitter=text_l_jitter)
+        func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, param_noisemod_name=param_noisemod_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
         ldict["concatenate"] = concatenate
@@ -1104,6 +1110,11 @@ class StellarActivityNoiseModelInterface(object):
         ---------
         instmod_fullname : String
             Full name of the instrument of interest
+
+        Returns
+        -------
+        l_instmod_fullname : List of String
+            List of instrument model full names using the same stellar activity noise model than instmod_fullname
         """
         stelact_noisemodel = self.modelstelactname_4_instmodfullname[instmod_fullname]
         return self.get_linstmodfullname4stelactname(stelact_noisemod_name=stelact_noisemodel)

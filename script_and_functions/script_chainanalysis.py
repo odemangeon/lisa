@@ -126,6 +126,7 @@ sampling_corner = 10
 do_MComp = True
 do_MComp_Folded = True
 oversamp_MComp = 30
+load_fitted_val_pickle = False
 
 # Do compute secondary parameters
 do_SecParam = True
@@ -429,11 +430,17 @@ if do_corner:
 
 if do_MComp:
     logger.info("8. Do data comparison plots")
+    if load_fitted_val_pickle:
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_outputs,
+                                                                                        folder=output_folders["pickles_analyze"])
+        fitted_val_plot = np.array([df_fittedval.loc[param_name, "value"] for param_name in l_param_chainI])
+    else:
+        fitted_val_plot = fitted_values
     et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
                            datasim_dbf=post_instance.datasimulators,
-                           datasim_kwargs=kwargs_datasim,
                            dataset_db=post_instance.dataset_db,
-                           model_instance=post_instance.model,
+                           post_instance=post_instance,
+                           datasim_kwargs=kwargs_datasim,
                            oversamp=oversamp_MComp)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.pdf"))
@@ -452,9 +459,9 @@ if do_MComp:
 
         et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
                                datasim_dbf=post_instance.datasimulators,
-                               datasim_kwargs=kwargs_datasim,
                                dataset_db=post_instance.dataset_db,
-                               model_instance=post_instance.model,
+                               post_instance=post_instance,
+                               datasim_kwargs=kwargs_datasim,
                                oversamp=oversamp_MComp, phasefold=True,
                                phasefold_kwargs={"planets": list(periods.keys()),
                                                  "P": periods.values(),

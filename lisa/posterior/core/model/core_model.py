@@ -157,7 +157,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         inst_mod_obj = self.get_instmod(dataset_name=dataset_name)  # Comes from Instmodel4DatasetAttr
         noisemod_cat = inst_mod_obj.noise_model
         # Use the function pointed by self__same_GP_kernel_function to get the list of instrument model full name using the same GP kernel
-        l_instmod_fullname = self._same_GP_kernel_function[noisemod_cat](inst_mod_fullname=inst_mod_obj.full_name)
+        l_instmod_fullname = self._same_GP_kernel_function[noisemod_cat](instmod_fullname=inst_mod_obj.full_name)
         # Get the list of datasets using these instrument models
         res = []
         for instmod_fullname_ii in l_instmod_fullname:
@@ -661,10 +661,11 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         dico = {}
         dico["param_file"] = self.param_file
         dico["paramfile4instcat"] = self.paramfile4instcat
+        dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
         dico["kwargs_parametrisation"] = self.parametrisation_kwargs
         return dico
 
-    def automatic_model_initialisation(self, param_file, paramfile4instcat, kwargs_parametrisation):
+    def automatic_model_initialisation(self, param_file, paramfile4instcat, paramfile4noisemodcat, kwargs_parametrisation):
         """load the parameter file."""
         self.param_file = param_file
         for key in paramfile4instcat:
@@ -672,7 +673,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 self.paramfile4instcat[key] = paramfile4instcat[key]
             else:
                 raise AssertionError("File {} doesn't exists".format(paramfile4instcat[key]))
+        for key in paramfile4noisemodcat:
+            if isfile(paramfile4noisemodcat[key]):
+                self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
+            else:
+                raise AssertionError("File {} doesn't exists".format(paramfile4noisemodcat[key]))
         self.load_instcat_paramfile()
+        self.load_noisemodcat_paramfile()
         self.set_parametrisation(**kwargs_parametrisation)
         self.update_paramfile_info()
         self.load_parameter_file()
