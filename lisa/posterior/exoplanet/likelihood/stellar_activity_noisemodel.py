@@ -102,7 +102,8 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             # print((sqrt(datakwargs["data_err"]**2 + jitter**2)).shape)
             dict_datakwargs["data_err"].append(sqrt(datakwargs["data_err"]**2 + jitter**2))
         gp = GP({kernel})
-        #print(concatenate(dict_datakwargs["t"]))
+        # import pdb; pdb.set_trace()
+        # print("t: len(dict_datakwargs['t']):", len(dict_datakwargs['t']), "concatenate(dict_datakwargs['t']):", concatenate(dict_datakwargs['t']))
         gp.compute(concatenate(dict_datakwargs["t"]), concatenate(dict_datakwargs["data_err"]))
         # print(type(dict_datakwargs["data"]), len(dict_datakwargs["data"]), dict_datakwargs["data"][0].shape)
         # print(type(sim_data), len(sim_data), type(sim_data[0]))
@@ -173,7 +174,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     #     super(StellarActNoiseModel, cls).apply_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
 
     @classmethod
-    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj, l_likelihood_param_fullname):
+    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj, l_likelihood_param_fullname, datasim_has_multioutputs):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
         For a detailed docstring look at Core_NoiseModel.create_lnlikelihood_and_formatinputs
@@ -183,8 +184,12 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         def f_format_param(param_likelihood):
             return {stelact_mod_name: param_likelihood[idx_param_stelact_mod] for stelact_mod_name, idx_param_stelact_mod in dico_idx_param_noisemod.items()}
 
-        def f_format_simdata(sim_data):
-            return {stelact_mod_name: [sim_data[ii] for ii in idx_simdata_stelact_mod] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
+        if datasim_has_multioutputs:
+            def f_format_simdata(sim_data):
+                return {stelact_mod_name: [sim_data[ii] for ii in idx_simdata_stelact_mod] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
+        else:
+            def f_format_simdata(sim_data):
+                return {stelact_mod_name: [sim_data, ] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
 
         dataset_kwargs = {stelact_mod_name: [cls.get_necessary_datakwargs(l_dataset_obj[ii]) for ii in idx_simdata_stelact_mod] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
 

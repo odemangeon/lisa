@@ -92,7 +92,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
                                   "noise model.")
 
     @classmethod
-    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj, l_likelihood_param_fullname):
+    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj, l_likelihood_param_fullname, datasim_has_multioutputs):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -105,15 +105,17 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
         Arguments
         ---------
-        model_instance            : Core Model subclass
-        l_idx_simdata            : list of Integers
+        model_instance              : Core Model subclass
+        l_idx_simdata               : list of Integers
             List of indexes in the sim_data list (output of the datasimulator function this likelihood function is associated with) which correspond to dataset that should be modeled with this noise model
-        l_instmod_obj             : list of Instrument_Model instances
+        l_instmod_obj               : list of Instrument_Model instances
             List of instrument model objects that are used for the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
-        l_dataset_obj             : list of Dataset instances
+        l_dataset_obj               : list of Dataset instances
             List of dataset objects that are simulated by the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
-        l_likelihood_param_fullname  : list of String
+        l_likelihood_param_fullname : list of String
             Current list of parameter full names for the likelihood.
+        datasim_has_multioutputs    : bool
+            Indicate if the datasim has multiple outputs: Yes (True) or No (False). This can impact the f_format_simdata function.
 
         Returns
         -------
@@ -136,8 +138,12 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         def f_format_param(param_likelihood):
             return param_likelihood[l_idx_param_noisemod]
 
-        def f_format_simdata(sim_data):
-            return [sim_data[ii] for ii in l_idx_simdata]
+        if datasim_has_multioutputs:
+            def f_format_simdata(sim_data):
+                return [sim_data[ii] for ii in l_idx_simdata]
+        else:
+            def f_format_simdata(sim_data):
+                return [sim_data, ]
 
         dataset_kwargs = []
         for dataset in l_dataset_obj:

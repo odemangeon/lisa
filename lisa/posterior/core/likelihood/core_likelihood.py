@@ -164,7 +164,7 @@ class LikelihoodCreator(object):
             (dico[key_noisemod_likefunc], dico[key_func_format_param],
              dico[key_func_format_simdata], dico[key_dataset_kwargs],
              l_paramsfullname_likelihood
-             ) = noise_model_obj.create_lnlikelihood_and_formatinputs(model_instance=self, l_idx_simdata=dico[key_l_idx_simdata], l_instmod_obj=dico[key_l_instmod_obj], l_dataset_obj=dico[key_l_dataset_obj], l_likelihood_param_fullname=l_paramsfullname_likelihood)
+             ) = noise_model_obj.create_lnlikelihood_and_formatinputs(model_instance=self, l_idx_simdata=dico[key_l_idx_simdata], l_instmod_obj=dico[key_l_instmod_obj], l_dataset_obj=dico[key_l_dataset_obj], l_likelihood_param_fullname=l_paramsfullname_likelihood, datasim_has_multioutputs=datasim.multi_output)
 
         logger.debug("Creation of a likelihood for datasim function:\n {}\nList of the indexes for the datasim"
                      " function:\n{}\nAssociated dictionary of noise models:\n{}\nList of parameters"

@@ -112,7 +112,7 @@ class DatasimulatorCreator(object):
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
         return db
 
-    def __datasim_multipledatasets_creator(self, l_datasim, l_params_idx, params_model, mand_kwargs, opt_kwargs,
+    def __datasim_multipledatasets_creator(self, l_datasim, l_datasim_has_multi_output, l_params_idx, params_model, mand_kwargs, opt_kwargs,
                                            inst_fullcat, inst_model_fullname=None, dataset=None):
         """Return the datasimulator for all datasets
 
@@ -145,8 +145,11 @@ class DatasimulatorCreator(object):
         """
         def datasim_multipledatasets(p, *args, **kwargs):
             l_res = []
-            for datasim, idxs in zip(l_datasim, l_params_idx):
-                l_res.extend(datasim(p[idxs], *args, **kwargs))
+            for datasim, multi_output, idxs in zip(l_datasim, l_datasim_has_multi_output, l_params_idx):
+                if multi_output:
+                    l_res.extend(datasim(p[idxs], *args, **kwargs))
+                else:
+                    l_res.append(datasim(p[idxs], *args, **kwargs))
             return l_res
 
         return DatasimDocFunc(function=datasim_multipledatasets,
@@ -203,6 +206,7 @@ class DatasimulatorCreator(object):
         datsimC_inputs
         # Initialise the list of Datasim list of DatasimDocFunc
         l_datsim = defaultdict(list)
+        l_datsim_has_multi_output = defaultdict(list)
         l_params = defaultdict(list)
         l_allparams = defaultdict(list)
         l_allmand_kwargs = defaultdict(list)
@@ -221,7 +225,8 @@ class DatasimulatorCreator(object):
             dico_datasim_output = self.datasimcreator[datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
                                                                     datsimC_inputs[datsimC_name]["datasets"])
             for key_obj in dico_datasim_output:
-                l_datsim[key_obj].append(dico_datasim_output[self.key_whole])  # self.key_whole is defined in Core_Model
+                l_datsim[key_obj].append(dico_datasim_output[key_obj])
+                l_datsim_has_multi_output[key_obj].append(dico_datasim_output[key_obj].multi_output)
                 # ... get the ordered list of instrument categories for this function
                 inst_fullcats[key_obj] = inst_fullcats[key_obj] + list(l_datsim[key_obj][-1].inst_cat)
                 # ... get the ordered list of instrument model full names for this function
@@ -250,6 +255,7 @@ class DatasimulatorCreator(object):
             logger.debug(f"Creation of datasimulator for the folling list of datasets {[dataset_obj_ii.dataset_name for dataset_obj_ii in l_dataset_obj]} and for object {key_obj}.\nList of parameters names:\n{l_allparams[key_obj]}\n"
                          f"Input for the creation of the individual datasimulators:\n{datsimC_inputs}\n"
                          f"List of datasim functions obtained: {l_datsim[key_obj]}\n"
+                         f"List of datasim has multi_output obtained: {l_datsim_has_multi_output[key_obj]}\n"
                          f"List of parameter names for each individual datasimulator:\n{l_params[key_obj]}\n"
                          f"List of param indexes for each individual datasimulator:\n{l_params_idx[key_obj]}\n"
                          f"List of instrument categories: {inst_fullcats[key_obj]}\n"
@@ -258,6 +264,7 @@ class DatasimulatorCreator(object):
 
         # Create the datasim
             dico_datasim_4_obj[key_obj] = self.__datasim_multipledatasets_creator(l_datasim=l_datsim[key_obj],
+                                                                                  l_datasim_has_multi_output=l_datsim_has_multi_output[key_obj],
                                                                                   l_params_idx=l_params_idx[key_obj],
                                                                                   params_model=l_allparams[key_obj], mand_kwargs=str(l_allmand_kwargs[key_obj]), opt_kwargs=str(l_allopt_kwargs[key_obj]),
                                                                                   inst_fullcat=inst_fullcats[key_obj],
