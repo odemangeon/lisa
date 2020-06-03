@@ -436,12 +436,12 @@ if do_MComp:
         fitted_val_plot = np.array([df_fittedval.loc[param_name, "value"] for param_name in l_param_chainI])
     else:
         fitted_val_plot = fitted_values
-    residuals = et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
-                                       datasim_dbf=post_instance.datasimulators,
-                                       dataset_db=post_instance.dataset_db,
-                                       post_instance=post_instance,
-                                       datasim_kwargs=kwargs_datasim,
-                                       oversamp=oversamp_MComp, return_resi=True)
+    modelsNresiduals = et.overplot_data_model(param=fitted_val_plot, l_param_name=l_param_chainI,
+                                              datasim_dbf=post_instance.datasimulators,
+                                              dataset_db=post_instance.dataset_db,
+                                              post_instance=post_instance,
+                                              datasim_kwargs=kwargs_datasim,
+                                              oversamp=oversamp_MComp, return_modelsNresiduals=True)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.pdf"))
     else:
@@ -457,7 +457,7 @@ if do_MComp:
             periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
             tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
 
-        et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
+        et.overplot_data_model(param=fitted_val_plot, l_param_name=l_param_chainI,
                                datasim_dbf=post_instance.datasimulators,
                                dataset_db=post_instance.dataset_db,
                                post_instance=post_instance,

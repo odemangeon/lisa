@@ -313,7 +313,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                             pl_data_kwargs=None, pl_model_kwargs=None, pl_resi_kwargs=None,
                             kwargs_tick_params=None,
                             ax_data=None, ax_resi=None,
-                            return_resi=False):
+                            full_returns=False):
     """Zoom on the data model overplot for one datasetself.
 
     :param np.array param: Vector of parameter values for the model
@@ -358,16 +358,42 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params if the function as to create
         the data or residuals axes.
-    :param bool return_resi: If true return the residuals
+    :param bool full_returns: If true return the residuals
 
-    :return list_of_list_of_ErrorbarContainer_or_Lines all_ebconts_lines: All ErrorbarContainer and lines
-        plotted by the function
-    :return list_of_list_of_labels: All labels of the plots made by the function
-    :return times: times of the residuals. If phasefold is false it is the time only in the defined zoom is provided.
-        If phasefold is True the zoom is ignored for the residuals and all residuals and times in the dataset
-        are returned for each specified zoom.
-    :return residual_out: Residuals of the model without GP
-    :return residual_wGP: Residuals of the model with GP
+    Returns
+    -------
+    all_ebconts_lines : list_of_list_of_ErrorbarContainer_or_Lines
+        All ErrorbarContainer and lines plotted by the function
+    all_labels        : list_of_list_of_labels
+        All labels of the plots made by the function
+    times             : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        Times of the residuals. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    residual_model      : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        Residuals of the model (without GP). If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    residual_wGP      : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        Residuals of the model with GP. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    model_val         : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        Model values. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    model_wGP_val     : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        Model values with GP. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    GP_pred_val       : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        GP prediction values. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
+    GP_pred_var_val   : list of array of float (only if full_returns is True)
+        It's a list just in case several zoom are provided.
+        GP prediction variance values. If phasefold is false and zoom is provided then
+        the values are only inside the zoom.
     """
     # Ensure that zoom has the good format
     if zoom is None:
@@ -458,9 +484,13 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     pl_resi_kwargs_final["model"]["color"] = pl_model_kwargs_final["model"]["color"]
     pl_resi_kwargs_final["model+GP"]["color"] = pl_model_kwargs_final["model+GP"]["color"]
     # Create residual_out and residual_wGP lists for each zoom
-    residual_out = []
+    residual_model = []
     residual_wGP = []
     times = []
+    model_val = []
+    model_wGP_val = []
+    GP_pred_val = []
+    GP_pred_var_val = []
     # Case of phase folding
     if phasefold:
         # Get the planet name, period and time of inferior conjunction from phasefold_kwargs
@@ -503,18 +533,22 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
-            (residual_out_i, residual_wGP_i, ebconts_resi, labels_resi
+            (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_res_i, labels_res_i
              ) = plot_residuals(t_data=t_data, data=data_pl, dataset_name=dataset.dataset_name, param=param,
                                 l_param_name=l_param_name, post_instance=post_instance, key_obj=key_pl, data_err=data_err_new, jitter=None, jitter_type=None,
                                 supersamp=supersamp_model, exptime=exptime,
                                 datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
-            residual_out.append(residual_out_i)
+            residual_model.append(residual_model_i)
             residual_wGP.append(residual_wGP_i)
             times.append(t_data)
-            all_ebconts_lines.append((ebcont_data, lines_model, ebconts_resi))
-            all_labels.append((label_data, labels_model, labels_resi))
+            model_val.append(model_i)
+            model_wGP_val.append(model_wGP_i)
+            GP_pred_val.append(GP_pred_i)
+            GP_pred_var_val.append(GP_pred_var_i)
+            all_ebconts_lines.append((ebcont_data, lines_model, ebconts_res_i))
+            all_labels.append((label_data, labels_model, labels_res_i))
 
     # Case of NOT phase folding
     else:
@@ -541,16 +575,20 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                             pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                             ax=ax_data_i)
             # Plot the residuals
-            (residual_out, residual_wGP, lines_resi, labels_resi
+            (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, lines_resi, labels_resi
              ) = plot_residuals(t_data=t_i, data=data_i, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name, post_instance=post_instance, key_obj=post_instance.model.key_whole, data_err=data_err_new_i,
                                 jitter=None, jitter_type=None,
                                 datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
                                 plot_phase=False,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
-            residual_out.append(residual_out_i)
+            residual_model.append(residual_model_i)
             residual_wGP.append(residual_wGP_i)
             times.append(t_i)
+            model_val.append(model_i)
+            model_wGP_val.append(model_wGP_i)
+            GP_pred_val.append(GP_pred_i)
+            GP_pred_var_val.append(GP_pred_var_i)
             all_ebconts_lines.append((ebcont_data, lines_model, lines_resi))
             all_labels.append((pl_data_kwargs_final["label"], labels_model, labels_resi))
     # Print the title if required
@@ -559,8 +597,8 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     # Plot the legend
     if show_legend:
         ax_data[0].legend(loc='upper right', shadow=True)
-    if return_resi:
-        return all_ebconts_lines, all_labels, times, residual_out, residual_wGP
+    if full_returns:
+        return all_ebconts_lines, all_labels, times, residual_model, residual_wGP, model_val, model_wGP_val, GP_pred_val, GP_pred_var_val
     else:
         return all_ebconts_lines, all_labels
 
@@ -570,7 +608,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
                         phasefold=False, phasefold_kwargs=None,
                         plot_height=2, plot_width=8, fig_kwargs=None, gs_kwargs=None,
                         kwargs_gs_from_sps=None, kwargs_add_axeswithsharex=None, kwargs_tick_params=None,
-                        kwargs_tl=None, return_resi=False):
+                        kwargs_tl=None, return_modelsNresiduals=False):
     """Overplot datasets and model for each dataset and provide the residuals.
 
     :param np.array param: Vector of parameter values for the model
@@ -598,14 +636,14 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     :param dict kwargs_add_axeswithsharex:
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params
     :param kwargs_tl:
-    :param bool return_resi: If true return the residuals
+    :param bool return_modelsNresiduals: If true return the modelsNresiduals dictionary
 
     Returns
     -------
-    residuals: dictionary
+    modelsNresiduals: dictionary
         keys are dataset names and values are dictionaries whose keys are either 'whole' if phasefold=False, or
-        planet names if phasefold=True and values are dictionaries with two keys 'w GP' and 'wo GP' and values
-        are the residuals with and without GP.
+        planet names if phasefold=True and values are dictionaries with the following keys:
+        time, residuals, residuals w GP, model, model w GP, GP only, GP only var
     """
     # Check that if phasefold is True phasefold_kwargs is not None
     if phasefold and (phasefold_kwargs is None):
@@ -638,9 +676,9 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     # For each dataset
     ebconts_lines_4_legend = []
     labels_4_legend = []
-    residuals = OrderedDict()
+    modelsNresiduals = OrderedDict()
     for ii, dataset in enumerate(l_datasets):
-        residuals[dataset.dataset_name] = OrderedDict()
+        modelsNresiduals[dataset.dataset_name] = OrderedDict()
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
         # Get the datasimulator for the whole system
@@ -671,30 +709,34 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
                                                             phasefold_kwargs["P"],
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
-                residuals[dataset.dataset_name][planet_name] = {}
-                (all_ebconts_lines, all_labels, residuals[dataset.dataset_name][planet_name]["time"],
-                 residuals[dataset.dataset_name][planet_name]["wo GP"], residuals[dataset.dataset_name][planet_name]["w GP"]
+                modelsNresiduals[dataset.dataset_name][planet_name] = {}
+                (all_ebconts_lines, all_labels, modelsNresiduals[dataset.dataset_name][planet_name]["time"],
+                 modelsNresiduals[dataset.dataset_name][planet_name]["residuals"], modelsNresiduals[dataset.dataset_name][planet_name]["residuals w GP"],
+                 modelsNresiduals[dataset.dataset_name][planet_name]["model"], modelsNresiduals[dataset.dataset_name][planet_name]["model w GP"],
+                 modelsNresiduals[dataset.dataset_name][planet_name]["GP only"], modelsNresiduals[dataset.dataset_name][planet_name]["GP only var"]
                  ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
                                              dataset=dataset, datasim_kwargs=datasim_kwargs, post_instance=post_instance,
                                              oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                              phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
                                              datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi, return_resi=True)
+                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi, full_returns=True)
         else:
-            residuals[dataset.dataset_name]["whole"] = {}
+            modelsNresiduals[dataset.dataset_name]["whole"] = {}
             # Create the two axes data+model and residuals
             ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig, gs_from_sps_kw={"height_ratios": (3, 1)})
             ax_data.tick_params(**kwargs_tick_params_final)
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            (all_ebconts_lines, all_labels, residuals[dataset.dataset_name]["whole"]["time"],
-             residuals[dataset.dataset_name]["whole"]["wo GP"], residuals[dataset.dataset_name]["whole"]["w GP"]
+            (all_ebconts_lines, all_labels, modelsNresiduals[dataset.dataset_name]["whole"]["time"],
+             modelsNresiduals[dataset.dataset_name]["whole"]["residuals"], modelsNresiduals[dataset.dataset_name]["whole"]["residuals w GP"],
+             modelsNresiduals[dataset.dataset_name]["whole"]["model"], modelsNresiduals[dataset.dataset_name]["whole"]["model w GP"],
+             modelsNresiduals[dataset.dataset_name]["whole"]["GP only"], modelsNresiduals[dataset.dataset_name]["whole"]["GP only var"]
              ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                          datasim_kwargs=datasim_kwargs, post_instance=post_instance,
                                          oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
                                          phasefold=phasefold,
                                          datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi, return_resi=True)
+                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi, full_returns=True)
         for ebconts_lines, labels in zip(all_ebconts_lines, all_labels):
             for ebcont_line, label in zip(ebconts_lines, labels):
                 if isinstance(label, list):
@@ -716,8 +758,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     if kwargs_tl is None:
         kwargs_tl = {}
     # fig.tight_layout(**kwargs_tl)
-    if return_resi:
-        return residuals
+    if return_modelsNresiduals:
+        return modelsNresiduals
 
 
 def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
@@ -1019,12 +1061,29 @@ def plot_residuals(t_data, data, dataset_name, param, l_param_name, post_instanc
     :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
     :param bool show_modelandGP: Indicate if you want to plot the residuals of the model+GP.
     :param ~matplotlib.axes._axes.Axes ax: Axes instance where the model will be plotted
-    :return array residual_out: Residuals of the model (eventually only the zoomed part)
-    :return array residual_wGP: Residuals of the model+GP (eventually only the zoomed part)
-    :return list_of_ErrorbarContainer ebconts: List of lines plotted. The first element is the lines
+
+    Returns
+    -------
+    t_data       : array of float
+        Times of the sampling of dataset (only the zoomed part if a zoom is provided and plot_phase is false)
+    model        : array of float
+        Model values at t_data (only the zoomed part if a zoom is provided and plot_phase is false)
+    model_wGP    : array of float or None
+        Model values including GP noise model at t_data (only the zoomed part if a zoom is provided and plot_phase is false)
+    GP_pred      : array of float
+        GP noise model values at t_data (only the zoomed part if a zoom is provided and plot_phase is false)
+    GP_pred_var  : array of float
+        Variance of the GP noise model at t_data (only the zoomed part if a zoom is provided and plot_phase is false)
+    residual_model : array of float
+        Residuals of the model (only the zoomed part if a zoom is provided and plot_phase is false)
+    residual_wGP : array of float
+        Residuals of the model+GP (only the zoomed part if a zoom is provided and plot_phase is false)
+    ebconts      : list of ErrorbarContainer
+        List of lines plotted. The first element is the lines
         plotted for the model alone. The second element is the lines plotted for the model+GP (exists
         only if the noise model include a GP).
-    :return list_of_Lines labels: List of labels for the lines. The first element is the label for the
+    labels       : list of str
+        List of labels for the lines. The first element is the label for the
         model alone. The second element is the label for the model+GP (exists only if the noise
         model include a GP).
     """
@@ -1044,17 +1103,22 @@ def plot_residuals(t_data, data, dataset_name, param, l_param_name, post_instanc
     if (zoom is not None) and not(plot_phase):
         extra_arrays_to_zoom = [data, model, residual] if data_err is None else [data, model, residual, data_err_new]
         if model_wGP is not None:
-            extra_arrays_to_zoom.append(model_wGP)
+            extra_arrays_to_zoom.extend([model_wGP, GP_pred, GP_pred_var])
         zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t_data, arrays=extra_arrays_to_zoom)
         t_zoom = zoomed_arrays[0]
         data_zoom = zoomed_arrays[1]
-        residual_zoom = zoomed_arrays[2]
+        model_zoom = zoomed_arrays[2]
+        residual_zoom = zoomed_arrays[3]
         if data_err is None:
             data_err_new_zoom = None
-            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[3]
-        else:
-            data_err_new_zoom = zoomed_arrays[3]
             model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[4]
+            GP_pred_zoom = None if (model_wGP is None) else zoomed_arrays[5]
+            GP_pred_var_zoom = None if (model_wGP is None) else zoomed_arrays[6]
+        else:
+            data_err_new_zoom = zoomed_arrays[4]
+            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[5]
+            GP_pred_zoom = None if (model_wGP is None) else zoomed_arrays[6]
+            GP_pred_var_zoom = None if (model_wGP is None) else zoomed_arrays[7]
     # Intialise the returns variables:
     ebconts = []   # List of line plotted by the function. Will contain 2 elements if GP, 1 otherwise.
     labels = []   # List of labels. Will contain 2 elements if GP, 1 otherwise.
@@ -1098,7 +1162,10 @@ def plot_residuals(t_data, data, dataset_name, param, l_param_name, post_instanc
     xmin, xmax = ax.get_xlim()
     ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
-    return residual_out, residual_wGP, ebconts, labels
+    if zoom is not None and not(plot_phase):
+        return t_zoom, model_zoom, model_wGP_zoom, GP_pred_zoom, GP_pred_var_zoom, residual_out, residual_wGP, ebconts, labels
+    else:
+        return t_data, model, model_wGP, GP_pred, GP_pred_var, residual_out, residual_wGP, ebconts, labels
 
 
 def apply_jitter(data_err, jitter, jitter_type):
