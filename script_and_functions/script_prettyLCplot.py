@@ -284,7 +284,7 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         binval = {}
         binstd = {}
         midbins = {}
-        for datasetname in datasetnames:
+        for ii, datasetname in enumerate(datasetnames):
             binval[datasetname] = {}
             nb_key = len(dico_kwargs[datasetname])
             bins[datasetname] = np.arange(phase_min_data - (ii * bin_size / nb_key),

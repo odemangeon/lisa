@@ -371,7 +371,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         -------
         model : np.array
         model_wGP : np.array
-        GP_pred_var : np.array
+        gp_pred : np.array
+        gp_pred_var : np.array
         """
         # Supersample the time if needed
         if supersamp > 1:
@@ -388,7 +389,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         if key_obj is None:
             key_obj = self.model.key_whole
         instmod_fullname = self.model.get_instmod_fullname(dataset_name=dataset_name)
-        datasim_docfunc = self.datasimulators.instrument_db[instmod_fullname][self.model.key_whole]
+        datasim_docfunc = self.datasimulators.instrument_db[instmod_fullname][key_obj]
 
         # Compute the model values for each time
         idx_param_datasim = []
