@@ -7,7 +7,7 @@ The objective of this module is to provide the ChainInterpret class which is a c
 includes the knowledge of which chain correspond to which parameter name.
 """
 import numpy as np
-from collections import Iterable
+from collections import Iterable, Counter
 
 
 class ChainsInterpret(np.ndarray):
@@ -16,6 +16,15 @@ class ChainsInterpret(np.ndarray):
     __err_dimarrlparam__ = "Last dim of input_array have the same dimension than l_param_names."
 
     def __new__(cls, input_array, param_names):
+        # First, check if the size of the last dimension of input_array match the length of param_names
+        assert input_array.shape[-1] == len(param_names), "The size of the last dimension of input_array should be equal to len(param_names)."
+        # Check if the same param_name appears several, because it would break the class
+        cc = Counter(param_names)
+        duplicated_p_names = {}
+        for p_name, cnt in cc.items():
+            if cnt > 1:
+                duplicated_p_names[p_name] = cnt
+        assert len(duplicated_p_names) == 0, f"There is repeated parameter names in param_names: {duplicated_p_names}"
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
         if len(input_array.shape) > 3:
