@@ -213,7 +213,10 @@ class Manager_Inst_Dataset(object):
                         for inst_subcat in self.__available_inst[inst_cat].keys():
                             res[inst_subcat] = list(self.__available_inst[inst_cat][inst_subcat])
                     else:
-                        res = list(self.__available_inst[inst_cat][inst_subcat])
+                        if inst_subcat in self.__available_inst[inst_cat]:
+                            res = list(self.__available_inst[inst_cat][inst_subcat])
+                        else:
+                            res = []
                 else:
                     if inst_subcat is not None:
                         raise ValueError(f"Instrument category {inst_cat} doesn't have sub categories (got ({inst_subcat}))")
