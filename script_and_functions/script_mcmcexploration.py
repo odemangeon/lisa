@@ -26,12 +26,12 @@ from lisa.explore_analyze.misc import get_def_output_folders
 
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
-extension_exploration = ""  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
+extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
 nb_planet = 1
 rv_model = "radvel"  # None will select the default model being radvel
 transit_model = "batman"  # None will select the default model being batman
-parametrisation = "EXOFAST"  # None will select the default parametrisation which is EXOFAST for this model
+parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
 with_DeltaRV = True
 kwargs_post = {}
 
@@ -41,12 +41,12 @@ output_folders = get_def_output_folders(run_folder=run_folder)
 
 # Pre-minimisation parameters
 do_preminimization = True
-N_maxiter_preminimization = 100
+N_maxiter_preminimization = 1000
 xtol_preminimization = 1e-12
 
 # emcee parameters
 nwalker_fact = 2.5
-nsteps_MCMC = 10000
+nsteps_MCMC = 50000
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
