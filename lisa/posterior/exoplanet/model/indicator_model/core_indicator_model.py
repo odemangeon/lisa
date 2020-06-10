@@ -320,7 +320,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         for ii, inst_subcat in enumerate(self.indicator_subcategories):
             if ii != 0:
                 text += f"\n{tab}"
-            text += f"'{inst_subcat}': '{self.model_4_indicator[inst_subcat]}'"
+            text += f"'{inst_subcat}': '{self.model_4_indicator[inst_subcat]}',"
         text += f"\n{tab}}}\n"
         return text
 
@@ -362,7 +362,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         dict_valid[self.__name_model_4_indicator_dict], errors = self.__check_model_4_indicator_dict(dico_config[self.__name_model_4_indicator_dict])
         error_list.extend(errors)
         # 3 and 4.
-        used_models = list(dico_config[self.__name_model_4_indicator_dict].values())
+        used_models = list(set(dico_config[self.__name_model_4_indicator_dict].values()))
         missing_usedmodel_dict_name = [self.__dictname_4_model_indicator[model] for model in used_models]
         model_name_4_model_dict_name = {self.__dictname_4_model_indicator[model]: model for model in used_models}
         model_dict_names_defined = list(dico_config.keys())
@@ -564,7 +564,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         for ii, inst_subcat in enumerate(self.indicator_subcategories_4_model_used[self._polynomial_method_name]):
             if ii != 0:
                 text += f"\n{tab}"
-            text += f"'{inst_subcat}': {{'{self._polynomial_order_name}': {self.params_indicator_models[self._polynomial_method_name][inst_subcat][self._polynomial_order_name]}}}"
+            text += f"'{inst_subcat}': {{'{self._polynomial_order_name}': {self.params_indicator_models[self._polynomial_method_name][inst_subcat][self._polynomial_order_name]}}},"
         text += f"\n{tab}}}\n"
         return text
 
