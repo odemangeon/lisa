@@ -9,22 +9,24 @@ from os import getcwd
 from os.path import join
 
 import numpy as np
-# import matplotlib.pyplot as pl
+import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
 from matplotlib.gridspec import GridSpec
 from copy import deepcopy
 from collections import OrderedDict, defaultdict
 from PyAstronomy.pyasl import foldAt
-
-from fig_styler import styler
+from matplotlib.ticker import AutoMinorLocator
+from scipy.stats import binned_statistic
+from matplotlib.colors import to_hex
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
 import lisa.tools.mylogger as ml
-from lisa.tools.miscellaneous import interpret_data_filename
 
 from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from lisa.explore_analyze.misc import get_def_output_folders
 
@@ -33,124 +35,194 @@ from lisa.explore_analyze.misc import get_def_output_folders
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()
 
+mgr_inst_dst = Manager_Inst_Dataset()
+mgr_inst_dst.load_setup()
 
-@styler
-def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, dataset_db, model_instance,
-                    fitted_values, l_param_name, star,
-                    remove_GP=False,
-                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, *args, **kwargs):
+
+def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, star_name="A",
+                    datasetnames=None, remove_GP=False, phase_binsize=0., binning_stat="mean", RV_fact=1., sharey=False,
+                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, RV_unit="$km/s$", *args, **kwargs):
     nplanet = len(planets)
     """Produce a clean RV plot.
 
-    :param fig: Figure instance (provided by the styler)
-    :param datasetnames: List providing the datasets to load and use
-    :param list_of_str planets: List of planet names (used to infer the number of planets and create the good number of subplots)
-    :param periods: Orbital periods for each planets (used to phase fold)
-    :param tcs: Time of inferior conjunction for each planet (used to phase fold)
-    :param model_instance: Core_Model subclass instance
-    :param fitted_values: Fitted values
-    :param list_of_str l_param_name: List of parameter names
-    :param star: Star instance
-    :param bool remove_GP: If True the GP model is remove from the data for the plot.
-    :param dict fig_param: Dictionary providing keyword arguments for the figure definition and settings:
-        - 'right', 'left', 'bottom', 'top' keywords can be defined and they will be passed to the GridSpec init function
-        - 'x_ylabel_coord' to shift from the y axis to the label
-        - 'add_axeswithsharex_kw' dictionary of kwargs to pass to add_axeswithsharex which creates the
-           data + residuals axes.
-        - 'gs_from_sps_kw' dictionary of kwargs which will be passed on to add_twoaxeswithsharex_perplanet.
-        - 'pad_data': Iterable of 2 floats which define the bottom and top pad to apply for data axes.
-        - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
-        - 'y_unit': unit of RVs
-    :param dict pl_kwargs: Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") and values
-        a dictionary with 2 possible keys "data" and "model" that will be passed as keyword arguments
-        to the plotting functions
-    :param bool show_legend: If True, show the legend
-    :param legend_param: Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
-    :param bool show_xlabel: If True, show the x label
-    :param bool show_ylabel: If True, show the y labels
+    WARNING/TODO: Because the plots are done independantly for each planet when sharey is True,
+    there is no insurance that the I am not sure that the indicate_y_outliers function behaves correctly.
+
+    Arguments
+    ---------
+    fig:
+        Figure instance (provided by the styler)
+    planets : list of str
+        List of planet names (used to infer the number of planets and create the good number of subplots)
+    periods : list of floats
+        Orbital periods for each planets (used to phase fold)
+    tcs     : list of floats
+        Time of inferior conjunction for each planet (used to phase fold)
+    post_instance : Posterior instance
+    fitted_values : array of float
+        Fitted values
+    l_param_name  : list of str
+        List of parameter names
+    star_name     : String
+    datasetnames  : list of String
+        List providing the datasets to load and use
+    remove_GP     : Boolean
+        If True the GP model is remove from the data for the plot.
+    phase_binsize : float
+        If phase_binsize is superior to 0. The the data will be binned (all dataset included) and display.
+        phase_binsize then gives the size of the bin used
+    binning_stat  : str
+        Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
+        statistic argument of scipy.stats.binned_statistic
+    RV_fact       : float
+        Factor to apply to the RV
+    sharey        : bool
+    fig_param     : dict
+        Dictionary providing keyword arguments for the figure definition and settings. The possible keys are
+            - 'main_gridspec': The content of this entry should be a dictionary which will be passed to
+                GridSpec (GridSpec(..., **fig_param['main_gridspec'])) instance creation with create the main gridspec
+            - 'add_axeswithsharex_kw': The content of this entry should be a dictionary which will be
+                passed to add_twoaxeswithsharex_perplanet (add_twoaxeswithsharex_perplanet(..., add_axeswithsharex_kw=fig_param['add_axeswithsharex_kw'])
+                function creating two axes data and residuals per planet.
+            - 'gs_from_sps_kw': The content of this entry should be a dictionary which will be passed
+                to add_twoaxeswithsharex_perplanet (add_twoaxeswithsharex_perplanet(..., gs_from_sps_kw=fig_param['gs_from_sps_kw'])
+                function creating two axes data and residuals per planet.
+            - 'pad_data': Iterable of 2 floats which define the bottom and top pad to apply for data axes.
+            - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+            - fontsize : Int specifiying the fontsize
+    pl_kwargs    : dict
+        Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "binned_data" and values
+        a dictionary that will be passed as keyword arguments associated the plotting functions.
+        You can also add a 'jitter' key with value a dictionary that will contain the changes that you
+        want to make for the update error bars due to potential jitter.
+    show_legend  : bool
+        If True, show the legend
+    legend_param : dict
+        Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
+    show_xlabel  : bool
+        If True, show the x label
+    show_ylabel  : bool
+        If True, show the y labels
+    RV_unit      : str
+        String giving the unit of the RVs
     """
 
     nplanet = len(planets)
 
+    star = post_instance.model.stars[star_name]
+
     ###########
     # Load Data
     ###########
-
+    # If no dataset name is provided get all the available RV datasets
+    if datasetnames is None:
+        datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat="RV", sortby_instcat=False, sortby_instname=False)
     # Load the defined datasets and check how many dataset there is by instrument.
     dico_dataset = {}
     dico_kwargs = {}
     dico_nb_dstperinst = defaultdict(lambda: 0)
     for datasetname in datasetnames:
-        dico_dataset[datasetname] = dataset_db[datasetname]
+        dico_dataset[datasetname] = post_instance.dataset_db[datasetname]
         dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
-        filename_info = interpret_data_filename(datasetname)
+        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         dico_nb_dstperinst[filename_info["inst_name"]] += 1
+        # apply the RV fact to RV and RV_err
+        dico_kwargs[datasetname]["data"] *= RV_fact
+        dico_kwargs[datasetname]["data_err"] *= RV_fact
     ###################
     # Plots preparation
     ###################
 
-    fontsize = 5
+    fontsize = fig_param.get("fontsize", 5)
 
     # Create the gridspec
     if fig_param is None:
         fig_param = {}
-    left = fig_param.get("left", 0.17)
-    right = fig_param.get("right", 0.98)
-    top = fig_param.get("top", 0.98)
-    bottom = fig_param.get("bottom", 0.1)
-    x_ylabel_coord = fig_param.get("x_ylabel_coord", -0.15)
 
-    gs = GridSpec(nrows=1, ncols=1,
-                  left=left, bottom=bottom, right=right, top=top,
-                  wspace=None, hspace=None)
+    gs = GridSpec(figure=fig, nrows=1, ncols=1, **fig_param.get('main_gridspec', {}))
 
     # Set parameters for the instrument gridspec
     add_axeswithsharex_kw = {"height_ratios": (3, 1)}  # Between the data plot and the resiudals plot
     add_axeswithsharex_kw.update(fig_param.get("add_axeswithsharex_kw", {}))
-    gs_from_sps_kw = {"wspace": 0.2}
+    gs_from_sps_kw = {}
     gs_from_sps_kw.update(fig_param.get("gs_from_sps_kw", {}))
 
     # Set the plots keywords arguments
-    pl_kwarg_data = {"color": None, "fmt": ".", "alpha": 1.}
-    pl_kwarg_model = {"color": "k", "fmt": "", "alpha": 1., "linestyle": "-"}
-
-    # Get the units of the RVs
-    y_unit = fig_param.get("y_unit", r"$\kms$")
+    pl_kwarg_data = {"fmt": "."}
+    pl_kwarg_model = {"fmt": "", "linestyle": "-", "linewidth": 2}
+    pl_kwarg_binned = {"fmt": "o", 'label': f"bin({phase_binsize})"}
 
     if pl_kwargs is None:
         pl_kwargs = {}
     pl_kwarg_final = {}
+    pl_kwarg_jitter = {}
     for datasetname in datasetnames:
-        filename_info = interpret_data_filename(datasetname)
+        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
             label_dst = filename_info["inst_name"]
         else:
             label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
-        pl_kwarg_final[datasetname] = {"model": deepcopy(pl_kwarg_model),
-                                       "data": {"label": label_dst, }}
-        pl_kwarg_final[datasetname]["data"].update(deepcopy(pl_kwarg_data))
+        pl_kwarg_final[datasetname] = {"label": label_dst, }
+        pl_kwarg_final[datasetname].update(deepcopy(pl_kwarg_data))
         # Update with the user's inputs
-        pl_kwarg_final[datasetname]["data"].update(pl_kwargs.get(datasetname, {}).get('data', {}))
-        pl_kwarg_final[datasetname]["model"].update(pl_kwarg_final.get(datasetname, {}).get('model', {}))
+        pl_kwarg_final[datasetname].update(pl_kwargs.get(datasetname, {}))
+        if "jitter" in pl_kwarg_final[datasetname]:
+            dico_jitter = pl_kwarg_final[datasetname].pop("jitter")
+        else:
+            dico_jitter = {}
+        dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
+        pl_kwarg_jitter[datasetname] = deepcopy(pl_kwarg_final[datasetname])
+        pl_kwarg_jitter[datasetname].update(dico_jitter)
+        pl_kwarg_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
+        # default value for alpha jitter
+        if "alpha" not in dico_jitter:
+            if "alpha" in pl_kwarg_jitter[datasetname]:
+                pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
+            else:
+                pl_kwarg_jitter[datasetname] = 0.5
+        # default value for ecolor
+        if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
+            pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
+    pl_kwarg_final["model"] = deepcopy(pl_kwarg_model)
+    pl_kwarg_final["model"].update(pl_kwargs.get("model", {}))
+    pl_kwarg_final["binned"] = deepcopy(pl_kwarg_binned)
+    pl_kwarg_final["binned"].update(pl_kwargs.get("binned", {}))
+    if "jitter" in pl_kwarg_final["binned"]:
+        dico_jitter = pl_kwarg_final["binned"].pop("jitter")
+    else:
+        dico_jitter = {}
+    dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
+    pl_kwarg_final["binned_jitter"] = deepcopy(pl_kwarg_final["binned"])
+    pl_kwarg_final["binned_jitter"].update(dico_jitter)
+    pl_kwarg_final["binned_jitter"].pop("label")
+    # default value for alpha jitter
+    if "alpha" not in dico_jitter:
+        if "alpha" in pl_kwarg_final["binned_jitter"]:
+            pl_kwarg_final["binned_jitter"]["alpha"] = pl_kwarg_final["binned_jitter"]["alpha"] / 2
+        else:
+            pl_kwarg_final["binned_jitter"]["alpha"] = 0.5
+    # default value for ecolor
+    if ("ecolor" not in pl_kwarg_final["binned_jitter"]) and ("color" in pl_kwarg_final["binned_jitter"]):
+        pl_kwarg_final["binned_jitter"]["ecolor"] = pl_kwarg_final["binned_jitter"]["color"]
 
     # Create the axes
-    (ax_data, ax_resi) = et.add_twoaxeswithsharex_perplanet(gs[0], nplanet=nplanet, fig=fig,
+    (ax_data, ax_resi) = et.add_twoaxeswithsharex_perplanet(gs[0], nplanet=nplanet, fig=fig, sharey=sharey,
                                                             gs_from_sps_kw=gs_from_sps_kw,
                                                             add_axeswithsharex_kw=add_axeswithsharex_kw)
     ax_data0 = ax_data[0]
     ax_resi0 = ax_resi[0]
 
     # Set the axis labels
-    ax_data0.set_ylabel(r"RV [{}]".format(y_unit), fontsize=fontsize)
+    ax_data0.set_ylabel(r"RV [{}]".format(RV_unit), fontsize=fontsize)
     # ax_data0.set_ylabel("RV [m.s-1]", fontsize=fontsize)
-    ax_resi0.set_ylabel(r"O - C [{}]".format(y_unit), fontsize=fontsize)
+    ax_resi0.set_ylabel(r"O - C [{}]".format(RV_unit), fontsize=fontsize)
     # ax_resi0.set_ylabel("O - C [m.s-1]", fontsize=fontsize)
     for res_ax in ax_resi:
         res_ax.set_xlabel("Orbital phase", fontsize=fontsize)
 
     # Align y labels
-    ax_data0.yaxis.set_label_coords(x_ylabel_coord, 0.5)
-    ax_resi0.yaxis.set_label_coords(x_ylabel_coord, 0.5)
+    # ax_data0.yaxis.set_label_coords(x_ylabel_coord, 0.5)
+    # ax_resi0.yaxis.set_label_coords(x_ylabel_coord, 0.5)
 
     # Number of point for plotting the model
     npt_model = 1000
@@ -162,6 +234,16 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         ax_data_pl.set_title("{}{}".format(star.name.prefix.get(), planet_name), fontsize=fontsize)
         ax_data_pl.tick_params(axis='both', which='major', labelsize=fontsize)
         ax_resi_pl.tick_params(axis='both', which='major', labelsize=fontsize)
+
+        ax_data_pl.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False)
+        ax_data_pl.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_data_pl.yaxis.set_minor_locator(AutoMinorLocator())
+        ax_data_pl.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        ax_data_pl.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+        ax_resi_pl.yaxis.set_minor_locator(AutoMinorLocator())
+        ax_resi_pl.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
+        ax_resi_pl.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        ax_resi_pl.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
         ##################################################
         # Compute the phases associated to the time values
@@ -186,53 +268,54 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         ########################
         datasim_docfunc = {}
         for datasetname in datasetnames:
-            instmod_fullname_key = datasim_dbf.get_instmod_fullname(datasetname)
-            datasim_docfunc[datasetname] = datasim_dbf.instrument_db[instmod_fullname_key]
+            instmod_fullname_key = post_instance.datasimulators.get_instmod_fullname(datasetname)
+            datasim_docfunc[datasetname] = post_instance.datasimulators.instrument_db[instmod_fullname_key]
 
         ##############################################
         # Apply the jitter to the data error if needed
         ##############################################
-        data_err = OrderedDict()
+        data_err_jitter = OrderedDict()
         dico_jitter = {}
         for datasetname in datasetnames:
             dico_jitter[datasetname] = {}
-            data_err[datasetname] = dico_kwargs[datasetname]["data_err"]
-            inst_mod_fullname = datasim_dbf.get_instmod_fullname(datasetname)
-            inst_mod = model_instance.instruments[inst_mod_fullname]
+            data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+            inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+            inst_mod = post_instance.model.instruments[inst_mod_fullname]
             noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
             if noise_model.has_jitter:
                 dico_jitter[datasetname]["type"] = noise_model.jitter_type
                 if inst_mod.jitter.free:
                     idx_jitter = l_param_name.index(inst_mod.jitter.get_name(include_prefix=True, recursive=True))
-                    dico_jitter[datasetname]["value"] = fitted_values[idx_jitter]
+                    dico_jitter[datasetname]["value"] = fitted_values[idx_jitter] * RV_fact
                 else:
                     dico_jitter[datasetname]["value"] = inst_mod.jitter.value
                 if dico_jitter[datasetname]["type"] == "multi":
-                    data_err[datasetname] = np.sqrt(apply_jitter_multi(data_err[datasetname], dico_jitter[datasetname]["value"]))
+                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
                 elif dico_jitter[datasetname]["type"] == "add":
-                    data_err[datasetname] = np.sqrt(apply_jitter_add(data_err[datasetname], dico_jitter[datasetname]["value"]))
+                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
                 else:
                     raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
             else:
                 dico_jitter[datasetname]["type"] = None
                 dico_jitter[datasetname]["value"] = None
+                data_err_jitter[datasetname] = None
 
         ####################################################
         # Compute the deltaRV to apply to the data and model
         ####################################################
         deltaRV = OrderedDict()
-        RVrefglobal_instname = model_instance.RV_references["global"]
+        RVrefglobal_instname = post_instance.model.RV_references["global"]
         # For each dataset
         for datasetname in datasetnames:
-            filename_info = interpret_data_filename(datasetname)
-            RVref4inst_modname = model_instance.RV_references[filename_info["inst_name"]]
-            instmod_fullname_key = datasim_dbf.get_instmod_fullname(datasetname)
-            instmodobj_key = model_instance.instruments[instmod_fullname_key]
+            filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+            RVref4inst_modname = post_instance.model.RV_references[filename_info["inst_name"]]
+            instmod_fullname_key = post_instance.datasimulators.get_instmod_fullname(datasetname)
+            instmodobj_key = post_instance.model.instruments[instmod_fullname_key]
             deltaRV[datasetname] = 0.0
             # If the current instrument is not the instrument of the global reference:
             # Add to Delta_RV the values of delta RV of the current instrument model reference to the global reference.
             if filename_info['inst_name'] != RVrefglobal_instname:
-                instmod_RVref4inst = model_instance.instruments["RV"][filename_info['inst_name']][RVref4inst_modname]
+                instmod_RVref4inst = post_instance.model.instruments["RV"][filename_info['inst_name']][RVref4inst_modname]
                 if instmod_RVref4inst.DeltaRV.main:
                     if instmod_RVref4inst.DeltaRV.free:
                         idx_deltaRV = l_param_name.index(instmod_RVref4inst.DeltaRV.get_name(include_prefix=True, recursive=True))
@@ -248,10 +331,13 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
                         deltaRV[datasetname] += fitted_values[idx_deltaRV]
                     else:
                         deltaRV[datasetname] += instmodobj_key.DeltaRV.value
+            # Apply RV_fact to deltaRV
+            deltaRV[datasetname] *= RV_fact
 
-        RVrefglobal_modname = model_instance.RV_references[RVrefglobal_instname]
-        datasim_RVrefglobal = (datasim_dbf.instrument_db["RV"][RVrefglobal_instname]
-                               [RVrefglobal_modname][planet_name])
+        RVrefglobal_modname = post_instance.model.RV_references[RVrefglobal_instname]
+        inst_RVclass = mgr_inst_dst.get_inst_subclass("RV")
+        RVrefglobal_instmod_fullname = inst_RVclass.build_instmod_fullname(inst_model=RVrefglobal_modname, inst_name=RVrefglobal_instname, inst_fullcat="RV")
+        l_datasetname_RVrefglobal = post_instance.model.get_ldatasetname4instmodfullname(instmod_fullname=RVrefglobal_instmod_fullname)
 
         ###############
         # Plot the data
@@ -264,12 +350,12 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
             # other planets contribution
 
             # Remove the DeltaRV to the global RV reference
-            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname]
+            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname] - (fitted_values[idx_star_v0] * RV_fact)
 
             # Remove the other planets contributions
             # Get the current instrument model and noise model
-            inst_mod_fullname = datasim_dbf.get_instmod_fullname(datasetname)
-            inst_mod = model_instance.instruments[inst_mod_fullname]
+            inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+            inst_mod = post_instance.model.instruments[inst_mod_fullname]
             noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
 
             # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
@@ -280,84 +366,95 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
 
             # Remove GP model
             if remove_GP:
-                model_dst, model_wGP_dst, GP_pred_var, t_dst = et.compute_model(t_dst,
-                                                                                datasim_dbf.instrument_db[inst_mod_fullname]["whole"],
-                                                                                fitted_values, l_param_name,
-                                                                                datasim_kwargs=kwargs_dataset,
-                                                                                noise_model=noise_model,
-                                                                                model_instance=model_instance)
-                data_pl[datasetname] = data_pl[datasetname] - (model_wGP_dst - model_dst)
+                (model_dst, model_wGP_dst, GP_pred, GP_pred_var
+                 ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=fitted_values,
+                                                 l_param_name=l_param_name, key_obj="whole", datasim_kwargs=kwargs_dataset
+                                                 )
+                # Apply RV_fact to models and GP
+                model_dst *= RV_fact
+                model_wGP_dst *= RV_fact
+                GP_pred *= RV_fact
+                GP_pred_var *= RV_fact**2
+                # Correct data from GP pred
+                data_pl[datasetname] = data_pl[datasetname] - GP_pred
 
-            # Get the datasims for the other planets
-            l_datasim_db_docfunc_others = []
+            # Compute and remove the other planet contribution
             for plnt in planets:
                 if plnt == planet_name:
                     continue
                 else:
-                    l_datasim_db_docfunc_others.append(datasim_dbf.instrument_db[inst_mod_fullname][plnt])
-
-            # Compute and remove the other planet contribution
-            for datasim_db_docfunc_other in l_datasim_db_docfunc_others:
-                model, _, _, _ = et.compute_model(t_dst,
-                                                  datasim_db_docfunc_other,
-                                                  fitted_values, l_param_name,
-                                                  datasim_kwargs=kwargs_dataset,
-                                                  noise_model=noise_model,
-                                                  model_instance=model_instance)
-                data_pl[datasetname] = data_pl[datasetname] - (model - deltaRV[datasetname] - fitted_values[idx_star_v0])
+                    (model_pl_only, _, _, _
+                     ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=fitted_values,
+                                                     l_param_name=l_param_name, key_obj=f"{plnt}_only", datasim_kwargs=kwargs_dataset
+                                                     )
+                    # Apply RV_fact to models
+                    model_pl_only *= RV_fact
+                    data_pl[datasetname] = data_pl[datasetname] - model_pl_only
 
             # Plot the data
-            # print(dico_jitter[datasetname])
-            ebcont, _, _ = et.plot_phase_folded_timeserie(t=dico_kwargs[datasetname]["t"],
+            ebcont, _, _ = et.plot_phase_folded_timeserie(t_data=dico_kwargs[datasetname]["t"],
                                                           data=data_pl[datasetname],
                                                           data_err=dico_kwargs[datasetname]["data_err"],
-                                                          jitter=dico_jitter[datasetname]["value"],
-                                                          jitter_type=dico_jitter[datasetname]["type"],
                                                           Per=Per, tref=tc,
-                                                          ax=ax_data_pl, pl_kwargs=pl_kwarg_final[datasetname]["data"],
+                                                          ax=ax_data_pl, pl_kwargs=pl_kwarg_final[datasetname],
                                                           )
-            if pl_kwarg_final[datasetname]["data"]["color"] is None:
-                pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
+            if not("ecolor" in pl_kwarg_jitter[datasetname]):
+                pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
+            if not("color" in pl_kwarg_final[datasetname]):
+                pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
+            ebcont, _, _ = et.plot_phase_folded_timeserie(t_data=dico_kwargs[datasetname]["t"],
+                                                          data=data_pl[datasetname],
+                                                          data_err=data_err_jitter[datasetname],
+                                                          only_errorbar=True,
+                                                          Per=Per, tref=tc,
+                                                          ax=ax_data_pl,
+                                                          # pl_kwargs={'fmt': 'none', 'alpha': 0.25}
+                                                          pl_kwargs=pl_kwarg_jitter[datasetname],
+                                                          )
+
         # Set the y axis limits
         pad_data = fig_param.get("pad_data", (0.1, 0.1))
         et.auto_y_lims(np.concatenate([y for y in data_pl.values()]), ax_data_pl, pad=pad_data)
         # Indicate values that are off y-axis with anarrows
         for datasetname in datasetnames:
-            et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["data"]["color"],
-                                   alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
+            et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
+                                   alpha=pl_kwarg_final[datasetname]["alpha"])
 
         ################
         # Plot the model
         ################
-        et.plot_model(tmin_model, tmax_model, npt_model, datasim_RVrefglobal, fitted_values,
-                      l_param_name, plot_phase=True, Per=Per, tref=tc,
-                      pl_kwargs_model=pl_kwarg_final[datasetname]["model"],
-                      ax=ax_data_pl)
+        ebconts_lines_labels = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model, dataset_name=l_datasetname_RVrefglobal[0],
+                                             param=fitted_values, l_param_name=l_param_name, post_instance=post_instance,
+                                             key_obj=f"{planet_name}_only", datasim_kwargs=kwargs_dataset,
+                                             multiplication_factor=RV_fact,
+                                             plot_phase=True, Per=Per, tref=tc,
+                                             pl_kwargs_model=pl_kwarg_final["model"], pl_kwargs_modelandGP=None,
+                                             show_modelandGP=True, force_plot_phase_GP=False,
+                                             ax=ax_data_pl)
+        if not("color" in pl_kwarg_final["model"]):
+            pl_kwarg_final["model"]["color"] = ebconts_lines_labels["model+GP"]["ebcont or line"][0].get_color()
 
         ####################
         # Plot the residuals
         ####################
         residual_pl = OrderedDict()
         residual_wGP_pl = OrderedDict()
+        y_residuals_all = []
         for datasetname in datasetnames:
-            (residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts, labels
-             ) = et.plot_residuals(t=dico_kwargs[datasetname]["t"],
-                                   data=data_pl[datasetname] + deltaRV[datasetname],  # dico_kwargs[inst][key]["data"],
-                                   data_err=dico_kwargs[datasetname]["data_err"],
-                                   jitter=dico_jitter[datasetname]["value"],
-                                   jitter_type=dico_jitter[datasetname]["type"],
-                                   datasim_db_docfunc=datasim_docfunc[datasetname][planet_name],
-                                   param=fitted_values, l_param_name=l_param_name,
+            (_, _, _, _, _, residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts_lines_labels
+             ) = et.plot_residuals(dataset_name=datasetname, param=fitted_values, l_param_name=l_param_name,
+                                   post_instance=post_instance, key_obj="whole", datasim_kwargs=kwargs_dataset,
+                                   multiplication_factor=RV_fact,
                                    plot_phase=True, Per=Per, tref=tc,
-                                   pl_kwargs_model=pl_kwarg_final[datasetname]["data"],
+                                   pl_kwargs_model=pl_kwarg_final[datasetname], show_model=not(remove_GP),
+                                   pl_kwargs_modelandGP=pl_kwarg_final[datasetname], show_modelandGP=remove_GP,
                                    ax=ax_resi_pl)
+            if residual_pl[datasetname] is not None:
+                y_residuals_all.append(residual_pl[datasetname])
+            if residual_wGP_pl[datasetname] is not None:
+                y_residuals_all.append(residual_wGP_pl[datasetname])
         # Set the y axis limits
-        y_residuals = np.concatenate([y for y in residual_pl.values()])
-        if any([res is not None for res in residual_wGP_pl.values()]):
-            y_residuals_wGP = np.concatenate([y for y in residual_wGP_pl.values() if y is not None])
-            y_residuals_all = np.concatenate([y_residuals, y_residuals_wGP])
-        else:
-            y_residuals_all = y_residuals
+        y_residuals_all = np.concatenate(y_residuals_all)
         pad_resi = fig_param.get("pad_resi", (0.1, 0.1))
         et.auto_y_lims(y_residuals_all, ax_resi_pl, pad=pad_resi)
         # Indicate values that are off y-axis with anarrows
@@ -366,42 +463,104 @@ def create_RV_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
             rms_resi = []
             rms_resi_label = []
         for datasetname in datasetnames:
-            et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["data"]["color"],
-                                   alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
+            if residual_pl[datasetname] is not None:
+                et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
+                                       alpha=pl_kwarg_final[datasetname]["alpha"])
+            if residual_wGP_pl[datasetname] is not None:
+                et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
+                                       alpha=pl_kwarg_final[datasetname]["alpha"])
             if ii == 0:
-                rms_resi.append("{:.3f}".format(np.std(residual_pl[datasetname])))
-                filename_info = interpret_data_filename(datasetname)
-                if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-                    label_rms_resi_ii = filename_info["inst_name"]
-                else:
-                    label_rms_resi_ii = filename_info["inst_name"] + "({})".format(filename_info["number"])
-                rms_resi_label.append(label_rms_resi_ii)
+                filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+                if residual_pl[datasetname] is not None:
+                    rms_resi.append("{:.3f}".format(np.std(residual_pl[datasetname])))
+                    if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
+                        label_rms_resi_ii = filename_info["inst_name"]
+                    else:
+                        label_rms_resi_ii = filename_info["inst_name"] + "({})".format(filename_info["number"])
+                    rms_resi_label.append(label_rms_resi_ii)
+                if residual_wGP_pl[datasetname] is not None:
+                    rms_resi.append("{:.3f}".format(np.std(residual_wGP_pl[datasetname])))
+                    if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
+                        label_rms_resi_ii = f"{filename_info['inst_name']}(GP)"
+                    else:
+                        label_rms_resi_ii = f"{filename_info['inst_name']}({filename_info['number']},GP)"
+                    rms_resi_label.append(label_rms_resi_ii)
+
         if ii == 0:
-            ax_resi_pl.text(0.0, 1.05, r"rms = {} {} ({})".format(", ".join(rms_resi), y_unit, ", ".join(rms_resi_label)),
-                            fontsize=fontsize, transform=ax_resi_pl.transAxes)
+            fig.suptitle("{} system\nrms of the residuals = {} {} ({})".format(post_instance.full_name, ", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
+                         fontsize=fontsize)
 
-        ###################
-        # Finalise the plot
-        ###################
-        if show_legend:
-            if legend_param is None:
-                legend_param = {"fontsize": fontsize}
+        ##########################################
+        # Bin the data and residuals and plot them
+        ##########################################
+        # Make array gathering all datasets
+        if phase_binsize > 0.:
+            all_phase = np.concatenate([phases[datasetname] for datasetname in datasetnames])
+            idx_sort_alldatasetphase = np.argsort(all_phase)
+            all_phase = all_phase[idx_sort_alldatasetphase]
+            all_data_pl = np.concatenate([data_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
+            all_data_err = np.concatenate([dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
+            all_data_err_jitter = np.concatenate([data_err_jitter[datasetname] if data_err_jitter[datasetname] is not None else dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
+            if remove_GP:
+                all_residuals_pl = np.concatenate([residual_wGP_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
+            else:
+                all_residuals_pl = np.concatenate([residual_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
 
-            ax_data[0].legend(**legend_param)
+            # Define the phase bins for the binned data/resi plot
+            bins = np.arange(-0.5, 0.5 + phase_binsize, phase_binsize)
+            midbins = bins[:-1] + phase_binsize / 2
+            (binval, binedges, binnb
+             ) = binned_statistic(all_phase, all_data_pl, statistic=binning_stat, bins=bins, range=(0, 1))
+            (binval_resi, _, _
+             ) = binned_statistic(all_phase, all_residuals_pl, statistic=binning_stat, bins=bins, range=(0, 1))
+
+            # Compute the error bars on the binned data
+            nbins = len(bins) - 1
+            binstd = np.zeros(nbins)
+            binstd_jitter = np.zeros(nbins)
+            bincount = np.zeros(nbins)
+            for i_bin in range(nbins):
+                bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                if bincount[i_bin] > 0.0:
+                    binstd[i_bin] = np.sqrt(np.sum(np.power(all_data_err[binnb == (i_bin + 1)], 2.)) /
+                                            bincount[i_bin]**2)
+                    binstd_jitter[i_bin] = np.sqrt(np.sum(np.power(all_data_err_jitter[binnb == (i_bin + 1)], 2.)) /
+                                                   bincount[i_bin]**2)
+                else:
+                    binstd[i_bin] = np.nan
+                    binstd_jitter[i_bin] = np.nan
+            ebcont_binned = ax_data_pl.errorbar(midbins, binval, yerr=binstd, **pl_kwarg_final["binned"])
+            # I always print the data_jitter error bar even if they are identical to the normal error bars.
+            if not("ecolor" in pl_kwarg_final["binned_jitter"]):
+                pl_kwarg_final["binned_jitter"]["ecolor"] = ebcont_binned[0].get_color()
+            if not("color" in pl_kwarg_final["binned"]):
+                pl_kwarg_final["binned"]["color"] = ebcont_binned[0].get_color()
+            ax_data_pl.errorbar(midbins, binval, yerr=binstd_jitter, **pl_kwarg_final["binned_jitter"])
+            ax_resi_pl.errorbar(midbins, binval_resi, yerr=binstd_jitter, **pl_kwarg_final["binned_jitter"])
+            ax_resi_pl.errorbar(midbins, binval_resi, yerr=binstd, **pl_kwarg_final["binned"])
+
+    ###################
+    # Finalise the plot
+    ###################
+    if show_legend:
+        if legend_param is None:
+            legend_param = {"fontsize": fontsize}
+
+        ax_data[0].legend(**legend_param)
 
 
 if __name__ == "__main__":
     # Define the object name
-    obj_name = "HD27969"
+    obj_name = "TOI-175"
 
     # Define dataset names to be loaded
-    datasetnames = ["RV_HD27969_SOPHIEp_0", ]
+    datasetnames = ["RV_TOI-175_HARPS_0", "RV_TOI-175_ESPRESSO_0", "RV_TOI-175_ESPRESSO_1"]
 
     run_folder = getcwd()
     output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = False
-    extension_analysis = ""
+    load_from_pickle = True
+    extension_analysis = "_initrun_median"
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -426,30 +585,25 @@ if __name__ == "__main__":
             periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
             tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
 
-    dataset_db = post_instance.dataset_db
-    datasim_dbf = post_instance.datasimulators
-    model_instance = post_instance.model
-    star = post_instance.model.stars[list(post_instance.model.stars)[0]]
+    fig = pl.figure(figsize=(10, 8), constrained_layout=True)
 
-    # fig = pl.figure()
-
-    create_RV_plots(
-                    # fig=fig,
-                    datasetnames=datasetnames, planets=planet_name, periods=periods, tcs=tics,
-                    datasim_dbf=datasim_dbf, dataset_db=dataset_db, model_instance=model_instance,
-                    fitted_values=fitted_values, l_param_name=l_param_name,
-                    star=star,
-                    figsize=(2, 1), tight=True,
-                    # dpi=200,
-                    dpi=300,
-                    fig_param={"top": 0.95, "bottom": 0.08, "left": 0.15, 'x_ylabel_coord': -0.12,
-                               'pad_data': (0.1, 0.35),
-                               'pad_resi': (0.1, 0.1),
-                               "y_unit": r"$\kms$",
-                               # "gs_from_sps_kw": {"wspace": 0.2}
+    create_RV_plots(fig=fig,
+                    planets=planet_name, periods=periods, tcs=tics,
+                    post_instance=post_instance, fitted_values=fitted_values, l_param_name=l_param_name,
+                    datasetnames=datasetnames,
+                    remove_GP=True,
+                    phase_binsize=0.1,
+                    binning_stat="median",
+                    RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
+                    sharey=True,
+                    fig_param={"fontsize": 10,
                                },
-                    pl_kwargs={"RV_HD27969_SOPHIEp_0": {"data": {"alpha": 0.5}},
+                    pl_kwargs={"RV_TOI-175_ESPRESSO_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "ESPRESSO_pre"},
+                               "RV_TOI-175_ESPRESSO_1": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ESPRESSO_post"},
+                               "RV_TOI-175_HARPS_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "HARPS"},
+                               "model": {"color": "C2"},
+                               "binned": {"color": "C3"}
                                },
-                    type="A&A",  # "A&Afw"
-                    save=join(output_folders["plots"], "custom_data_comp_RV.pdf")
+                    RV_unit="$m/s$",
                     )
+    pl.show()
