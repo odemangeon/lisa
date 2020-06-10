@@ -48,11 +48,11 @@ output_folders = get_def_output_folders(run_folder=getcwd())
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
 load_from_pickle = True
-extension_exploration = ""
+extension_exploration = "_initrun"
 
 # Save plots ?
 save_plots = True
-extension_outputs = ""
+extension_outputs = "_initrun_median"
 
 # Histograms Parameters
 hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
@@ -71,8 +71,8 @@ plot_hist_AF = True
 
 # Ln Posterior selection
 do_LPS = True
-sig_fact_LPS = 2
-quantile_LPS = 75
+sig_fact_LPS = 3
+quantile_LPS = 100
 quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
 verbose_LPS = 1
 plot_hist_Post = True
@@ -89,15 +89,15 @@ last_min_GS = 50  # Minimum number of steps to use for the final state of the ch
 intervals_GS = 100  # Number of intervals in which the first percentage of the chain will be split to address convergence
 min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in each interval and the number of steps between to intervals
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
-interval_perc_GS = 50  # Percentage of the chains used in each intervals to address convergence
+interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
 do_geweke_plot = True
-apply_min_burnin = True
+apply_min_burnin = False
 min_burnin = 20000
 
 # Parameter based walker selection
 do_PS = False
-parameters = ["HD80869_b_ecosw", "HD80869_b_esinw"]
+parameters = ["WASP-151_b_ecosw", "WASP-151_b_esinw"]
 
 
 def inferior(array, value):
@@ -484,10 +484,11 @@ if do_SecParam:
 
     if omega_0to360:
         # Change the range of omega from -180 to 180 to 0 to 360, because omega seems to be centered around 180.
-        mask = np.zeros_like(chainIsec).astype(bool)
-        for plnt in list(periods.keys()):
-            mask[:, :, chainIsec.paramname_idx[f"{obj_name}_{plnt}_omega"]] = (chainIsec[:, :, f"{obj_name}_{plnt}_omega"] < 0)
-            chainIsec[mask] = chainIsec[mask] + 360
+        for plnt in post_instance.model.planets.values():
+            mask = np.zeros_like(chainIsec).astype(bool)
+            if plnt.omega.full_name in chainIsec.paramname_idx:
+                mask[:, :, chainIsec.paramname_idx[plnt.omega.full_name]] = (chainIsec[:, :, chainIsec.paramname_idx[plnt.omega.full_name]] < 0)
+                chainIsec[mask] = chainIsec[mask] + 360
 
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
