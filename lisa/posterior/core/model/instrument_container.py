@@ -63,8 +63,13 @@ class InstrumentContainerInterface(object):
 
     @property
     def inst_fullcategories(self):
-        """Return the list of instruments categories in this ParamContainerDatabase."""
+        """Return the list of instruments full categories in this ParamContainerDatabase."""
         return self.instruments.inst_fullcategories
+
+    @property
+    def inst_categories(self):
+        """Return the list of instruments categories in this ParamContainerDatabase."""
+        return list(set([mgr_inst_dst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)[0] for inst_fullcat in self.inst_fullcategories]))
 
     @property
     def noisemodel_categories(self):
