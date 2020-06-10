@@ -719,8 +719,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             def_answer_create = dict_answer_create.get("def", None)
         else:
             ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
-        for inst_fullcat in self.inst_fullcategories:
-            inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
+        for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
             if self.handlers4instcatparamfile[inst_cat][create_key] is not None:
                 self.handlers4instcatparamfile[inst_cat][create_key](paramfile_path.get(inst_cat, None),
                                                                      answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
