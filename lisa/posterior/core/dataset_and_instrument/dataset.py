@@ -365,3 +365,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         """Return the data vector."""
         pandas_df = self.get_datatable()
         return asarray(pandas_df[self._data_err_name])
+
+    def get_nb_data_points(self):
+        """Return the number of data points in the dataset."""
+        return len(self.get_data())
