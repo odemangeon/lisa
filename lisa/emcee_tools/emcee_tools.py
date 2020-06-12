@@ -26,6 +26,8 @@ from dill import dump, load
 from os import makedirs, getcwd
 from os.path import isfile, join
 from pandas import read_table
+from corner import corner as corner_dfm
+
 # import pprint
 
 # from ..tools.miscellaneous import interpret_data_filename
@@ -1633,12 +1635,19 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
                       verbose=1):
     """Return the fitted values from the sampler.
 
-    :param ChainInterpret chainI:
-    :param string method: method used to extract the fitted values ["MAP", "median", "gausfit", "mode"]
-    :param int_iteratable l_walkers: list of valid walkers
-    :param int burnin: index of the first iteration to consider.
-    :param str lnprobability_name: Name of the lnprobability values in chainI
-    :param int verbose: if 1 speaks otherwise not
+    Arguments
+    ---------
+    chainI             : ChainInterpret
+    method             : string
+        method used to extract the fitted values ["MAP", "median", "gausfit", "mode"]
+    l_walkers          : Iterable of Int
+        list of valid walkers
+    l_burnin           : Iterable of Int
+        index of the first iteration to consider.
+    lnprobability_name : str
+        Name of the lnprobability values in chainI
+    verbose            : int
+        if 1 speaks otherwise not
     """
     ndim = chainI.dim
     if method == "median":
@@ -2134,3 +2143,23 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
         ax.annotate('', xy=(x[ii], ylim[1]), xycoords='data',
                     xytext=(0, -10), textcoords='offset points',
                     arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
+
+
+def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, **kwargs_corner):
+    """Make a corner plot with only the parameters specified.
+
+    Arguments
+    ---------
+    chaininterpret : ChainInterpret
+        Chain interpret instance
+    l_param_name   : List of str
+        List of parameter names for which to do the corner plot
+    l_walkers          : Iterable of Int
+        list of valid walkers
+    l_burnin           : Iterable of Int
+        List of indexes of the first iteration to consider for each walker
+    kwargs_corner      : dictionary
+        Dictionary of keyword arguments passed on to the corner function
+    """
+    clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+    corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
