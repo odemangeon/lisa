@@ -640,8 +640,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def read_parameter_file(self):
         """Read the content of the parameter file."""
         if self.isdefined_paramfile:
-            with open(self.param_file) as f:
-                exec(f.read())
+            with open(self.param_file) as file:
+                exec(file.read())
             dico = locals().copy()
             dico.pop("self")
             logger.debug("Parameter file read.\nContent of the parameter file: {}"
