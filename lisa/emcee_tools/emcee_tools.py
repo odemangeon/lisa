@@ -1715,9 +1715,7 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
         # Case where there is several free parameter
         else:
             for dim in range(ndim):
-                res.append([])
-                for walker, burnin in zip(l_walker, l_burnin):
-                    res[dim].extend(chainI[walker, burnin:, dim])
+                res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
         res = array(res).transpose()
     # Remove iteration where one of the parameter is not finite
     if force_finite:
@@ -2163,3 +2161,66 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, **kwargs_
     """
     clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
     corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
+
+
+def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_burnin=None, only_bestfit_bic=False):
+    """Compute the Bayesian Information Criteria.
+
+    Arguments
+    ---------
+    post_instance    : Posterior
+        Posterior instance
+    df_fittedval     : pandas.DataFrame
+        dataframe provided the parameter values. This is created by the script_chainanalysis.
+    chaininterpret   : ChainInterpret
+        chain provided by EmceeSampler.chain and transformed in a ChainInterpret instance. This is
+        provided by the script_chainanalysis.
+    l_walkers        : Iterable of Int
+        list of valid walkers
+    l_burnin         : Iterable of Int
+        List of indexes of the first iteration to consider for each walker
+    only_bestfit_bic : bool
+        If True, doesn't compute the lnlike at all iteration and only uses the best fit values of the parameters
+
+    Returns
+    -------
+    bic         : float
+        BIC value compute with the MAP of the full exploration
+    bic_bestfit : float
+        BIC value compute with the MAP of the full exploration
+    """
+    # import pdb; pdb.set_trace()
+    lnlike = post_instance.lnlikelihoods.dataset_db["all"]
+
+    nb_free_param = len(lnlike.params_model)
+    logger.info(f"Number of free parameters : {nb_free_param}")
+    l_datasetname = post_instance.dataset_db.get_datasetnames()
+    nb_data_points = 0
+    for datasetname in l_datasetname:
+        dataset = post_instance.dataset_db[datasetname]
+        nb_data_points += dataset.get_nb_data_points()
+    logger.info(f"Number of data points : {nb_data_points}")
+
+    if not only_bestfit_bic:
+        clean_flat_chains = get_clean_flatchain(chaininterpret, l_walker=l_walker, l_burnin=l_burnin)
+        lnlikeproba = []
+
+        for i_iter in tqdm(range(clean_flat_chains.shape[0])):
+            lnlikeproba.append(lnlike(clean_flat_chains[i_iter]))
+
+        max_lnlikelihood = np.max(lnlikeproba)
+        logger.info(f"Maximum ln likelihood: {max_lnlikelihood}")
+
+        bic = nb_free_param * np.log(nb_data_points) - 2 * max_lnlikelihood
+        logger.info(f"BIC value : {bic}")
+    else:
+        bic = None
+
+    l_fit_val = get_param_vector(df_fittedval, lnlike.params_model)
+    bestfit_lnlikehood = lnlike(l_fit_val)
+    logger.info(f"Ln likelihood for the best parameter values : {bestfit_lnlikehood}")
+
+    bic_bestfit = nb_free_param * np.log(nb_data_points) - 2 * bestfit_lnlikehood
+    logger.info(f"BIC value using the best fit parameters: {bic_bestfit}")
+
+    return bic, bic_bestfit
