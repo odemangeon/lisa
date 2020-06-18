@@ -331,7 +331,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, IndicatorM
             to create it ? "absolute", "run_folder" or "error". If this not provide the program will
             ask you interactively.
         """
-        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='LC_param_file.txt', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)  # self._choose_parameter_file_path comes from Core_Model
+        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='LC_param_file.py', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)  # self._choose_parameter_file_path comes from Core_Model
         if reply == "y":
             with open(file_path, 'w') as f:
                 # Write the header
