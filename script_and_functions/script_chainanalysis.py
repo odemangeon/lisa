@@ -136,6 +136,12 @@ units_dict = {"K": uu.km / uu.s}
 omega_0to360 = True
 save_results_bestfit_secpar = True
 
+# Do computation of the BIC
+do_compute_BIC = True
+load_fitted_val_pickle_BIC = False
+only_bestfit_bic = True
+
+
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file="{}.log".format(obj_name))
@@ -416,7 +422,6 @@ if do_bestfit:
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table{}.tex".format(obj_name, extension_outputs)),
                              df_fittedval, obj_name)
 
-
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner, :],
@@ -538,3 +543,13 @@ if do_SecParam:
     else:
         pl.show()
     pl.close("all")
+
+if do_compute_BIC:
+    logger.info("10. Compute the BIC of the model")
+    if load_fitted_val_pickle:
+        fitted_values_dic_bic, fitted_values_sec_dic_bic, df_fittedval_bic = et.load_chain_analysis(obj_name, extension_analysis=extension_outputs,
+                                                                                                    folder=output_folders["pickles_analyze"])
+    else:
+        df_fittedval_bic = df_fittedval
+    bic, bic_bestfit = et.compute_bic(post_instance=post_instance, df_fittedval=df_fittedval_bic, chaininterpret=chainI,
+                                      l_walker=l_walker_PS, l_burnin=l_burnin_PS, only_bestfit_bic=only_bestfit_bic)
