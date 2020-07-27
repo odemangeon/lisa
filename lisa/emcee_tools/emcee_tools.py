@@ -584,9 +584,9 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                                                       pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                                                       ax=ax_data_i)
             # Plot the residuals
-            for key, pl_dict in pl_resi_kwargs_final.items():
-                if not("color" in pl_dict):
-                    pl_dict["color"] = ebconts_lines_labels_model_i[key]["ebcont or line"][0].get_color()
+            for key in ebconts_lines_labels_model_i.keys():
+                if not("color" in pl_resi_kwargs_final[key]):
+                    pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model_i[key]["ebcont or line"][0].get_color()
             (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_lines_labels_resi_i
              ) = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
                                 post_instance=post_instance, key_obj=post_instance.model.key_whole,
@@ -1031,9 +1031,10 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
                                                                          supersamp=supersamp, exptime=exptime_Kepler)
     model *= multiplication_factor
-    model_wGP *= multiplication_factor
-    GP_pred *= multiplication_factor
-    GP_pred_var *= multiplication_factor**2
+    if model_wGP is not None:
+        model_wGP *= multiplication_factor
+        GP_pred *= multiplication_factor
+        GP_pred_var *= multiplication_factor**2
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -1075,39 +1076,57 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
 
 def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=None,
                    datasim_kwargs=None, multiplication_factor=1.,
-                   supersamp=1, exptime=exptime_Kepler, plot_phase=False, Per=None, tref=None, zoom=None,
+                   supersamp=1, exptime=exptime_Kepler, bin_size=0.,
+                   plot_phase=False, Per=None, tref=None, zoom=None,
                    pl_kwargs_model=None, show_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True,
                    ax=None):
     """Plot the residuals of the model.
 
-    :param str dataset_name: Name of the dataset
-    :param Iterable_of_float param: List of parameter values (will be passed on to compute_model)
-    :param Iterable_of_string l_param_name: List of parameter names corresponding to the values given
-        by param (will be passed on to compute_model)
-    :param Posterior post_instance:
-    :param str key_obj: Name of the part of the object studied you want to use for the model
-    :param dict datasim_kwargs: Dictionary of keyword arguments for datasim_docfunc
-        (will be passed on to compute_model)
+    Arguments
+    ---------
+    dataset_name  : str
+        Name of the dataset
+    param         : Iterable_of_float
+        List of parameter values (will be passed on to compute_model)
+    l_param_name  : Iterable_of_string
+        List of parameter names corresponding to the values given by param (will be passed on to compute_model)
+    post_instance : Posterior
+    key_obj       : str
+        Name of the part of the object studied you want to use for the model
+    datasim_kwargs : dict
+        Dictionary of keyword arguments for datasim_docfunc (will be passed on to compute_model)
     multiplication_factor : float
         Factor by which you want to multiply the model
-    :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
-    :param float exptime: Exposure time for the model (will be passed on to compute_model)
-    :param bool plot_phase: If true, plot the phase folded model.
-    :param float Per: Period for the phase folding
-    :param float tref: Reference time for the phase folding
-    :param Posterior post_instance: Posterior_instance.
-    :param zoom: TBD
-    :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
+    supersamp             : int
+        supersampling factor for the model (will be passed on to compute_model)
+    exptime               : float
+        Exposure time for the model (will be passed on to compute_model)
+    bin_size              : float
+        If you want to bin the residuals, provide here the size of the bins. If 0., no binning is done
+        the bin size has to be provided in the same unit than the time of the data.
+    plot_phase            : bool
+        If true, plot the phase folded model.
+    Per                   : float
+        Period for the phase folding
+    tref                  : float
+        Reference time for the phase folding
+    zoom                  : TBD
+    pl_kwargs_model       : dict
+        Dictionary of keyword arguments for the plot of the model only
         You can specify some jitter specific kargs by creating an entry "jitter" whose is a dictionary
         with the kwargs specific for the jitter errorbar display
-    :param bool show_model: To show the residuals of the model. It is only used when the noise model is
+    show_model            : bool
+        To show the residuals of the model. It is only used when the noise model is
         includes a GP, because if not the residual of the model are always plotted.
-    :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
+    pl_kwargs_modelandGP  : dict
+        Dictionary of keyword arguments for the plot of the model+GP
         You can specify some jitter specific kargs by creating an entry "jitter" whose is a dictionary
         with the kwargs specific for the jitter errorbar display
-    :param bool show_modelandGP: Indicate if you want to plot the residuals of the model+GP.
-    :param ~matplotlib.axes._axes.Axes ax: Axes instance where the model will be plotted
+    show_modelandGP       : bool
+        Indicate if you want to plot the residuals of the model+GP.
+    ax                    : ~matplotlib.axes._axes.Axes
+        Axes instance where the model will be plotted
 
     Returns
     -------
@@ -1145,9 +1164,10 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
                                                                          supersamp=supersamp, exptime=exptime)
     model *= multiplication_factor
-    model_wGP *= multiplication_factor
-    GP_pred *= multiplication_factor
-    GP_pred_var *= multiplication_factor**2
+    if model_wGP is not None:
+        model_wGP *= multiplication_factor
+        GP_pred *= multiplication_factor
+        GP_pred_var *= multiplication_factor**2
 
     residual = data - model
     # Apply jitter if needed to the data_err and the RV_factor
@@ -1203,8 +1223,11 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         kwarg_model_jitter.update(dico_jitter)
         kwarg_model_jitter["fmt"] = "none"
         if plot_phase:
-            ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err,
-                                                       zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
+            if bin_size > 0.:
+                raise NotImplementedError
+            else:
+                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err,
+                                                           zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
             if noisemod_sublcass.has_jitter:
                 if not("ecolor" in kwarg_model_jitter):
                     kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
