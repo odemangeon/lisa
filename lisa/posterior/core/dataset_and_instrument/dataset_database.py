@@ -13,12 +13,12 @@ from logging import getLogger
 # from re import split
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
-from .dataset import Dataset
+from .dataset import Core_Dataset
 from ....tools.name import Named
 from ....tools.dico_database import Nesteddict_wfixellvlnb, init_result, add_obj_in_result
-from ....tools.database_with_instrument_level import check_instcat
+from ....tools.database_with_instrument_level import check_instfullcat
 from ....tools.default_folders_data_run import RunFolder, DataFolder
-from ....tools.miscellaneous import interpret_data_filename
+# from ....tools.miscellaneous import interpret_data_filename
 
 ## Logger object
 logger = getLogger()
@@ -40,14 +40,14 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
             else:
                 try:
                     if self.lvl == 0:
-                        fileinfo = interpret_data_filename(key)
-                        inst_cat = fileinfo["inst_category"]
+                        fileinfo = manager_inst.interpret_data_filename(key, raise_error=True)
+                        inst_fullcat = fileinfo["inst_fullcat"]
                         inst_name = fileinfo["inst_name"]
                         number = fileinfo["number"]
-                        return self[inst_cat][inst_name][number]
+                        return self[inst_fullcat][inst_name][number]
                     else:
                         raise KeyError
-                except:
+                except (KeyError, ValueError):  # keyError from the self[inst_fullcat][inst_name][number] and ValueError from manager_inst.interpret_data_filename(key, raise_error=True)
                     return super(Nesteddict_defgetitem, self).__getitem__(key)
 
     def __missing__(self, key, cls=None):
@@ -92,19 +92,19 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         """
         if self.locked:
             raise ValueError("The dataset dabase has been locked you can not add a new dataset.")
-        inst_category = dataset.instrument.category
+        inst_fullcat = dataset.instrument.full_category
         inst_name = dataset.instrument.get_name()
         number = dataset.number
-        if str(number) in self[inst_category][inst_name]:
+        if str(number) in self[inst_fullcat][inst_name]:
             if not(force):
                 logger.error("Dataset {} already exist in the database, it will not be added."
-                             "".format(inst_category + '_' + inst_name + '_' + str(number)))
+                             "".format(inst_fullcat + '_' + inst_name + '_' + str(number)))
                 raise ValueError("The number of the dataset is {}. This number correspond to an "
                                  "alredy added dataset".format(number))
             else:
                 logger.error("Dataset {} already exist in the database, it will be replaced."
-                             "".format(inst_category + '_' + inst_name + '_' + str(number)))
-        self[inst_category][inst_name][str(number)] = dataset
+                             "".format(inst_fullcat + '_' + inst_name + '_' + str(number)))
+        self[inst_fullcat][inst_name][str(number)] = dataset
 
     def isavailable_dataset(self, dataset):
         """Return True if dataset corresponds to a dataset that is in the database.
@@ -112,38 +112,38 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         :param str/Dataset dataset: String giving the filename of the dataset or the dataset itself.
         """
         if isinstance(dataset, str):
-            filename_info = interpret_data_filename(interpret_data_filename)
-            inst_category = filename_info["inst_category"]
+            filename_info = Core_Dataset.interpret_data_filename(dataset)
+            inst_fullcat = filename_info["inst_fullcat"]
             inst_name = filename_info["inst_name"]
             number = filename_info["number"]
-        elif isinstance(dataset, Dataset):
-            inst_category = dataset.instrument.category
+        elif isinstance(dataset, Core_Dataset):
+            inst_fullcat = dataset.instrument.full_category
             inst_name = dataset.instrument.get_name()
             number = dataset.number
         else:
             raise ValueError("{} is neither a dataset instance nor a dataset file name."
                              "".format(dataset))
-        if inst_category in self:
-            if inst_name in self[inst_category]:
-                if number in self[inst_category][inst_name]:
+        if inst_fullcat in self:
+            if inst_name in self[inst_fullcat]:
+                if number in self[inst_fullcat][inst_name]:
                     return True
         else:
             return False
 
-    def rm_dataset(self, inst_cat, inst_name, number=0):
+    def rm_dataset(self, inst_fullcat, inst_name, number=0):
         """Remove a dataset from the the dataset database.
 
-        :param str inst_cat: Category of instrument associated to the dataset you want to remove
+        :param str inst_fullcat: Full Category of instrument associated to the dataset you want to remove
         :param str inst_name: Name of the instrument associated to the dataset you want to remove
         :param int number: Number associated to the dataset you want to remove.
         """
         if self.locked:
             raise ValueError("The dataset dabase has been locked you can not remove datasets.")
-        self[inst_cat][inst_name].pop(str(number))
-        if len(self[inst_cat][inst_name]) == 0:
-            self[inst_cat].pop(inst_name)
-            if len(self[inst_cat]) == 0:
-                self.pop(inst_cat)
+        self[inst_fullcat][inst_name].pop(str(number))
+        if len(self[inst_fullcat][inst_name]) == 0:
+            self[inst_fullcat].pop(inst_name)
+            if len(self[inst_fullcat]) == 0:
+                self.pop(inst_fullcat)
 
     # Now I request the addition of dataset to be done with the dataset file because like that I can
     # specify and pass the information about the name of the instrument model and the noise model
@@ -176,13 +176,13 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         for filepath in l_dataset_path:
             self._add_a_dataset_from_path(filepath, force=force)
 
-    def get_datasets(self, inst_name=None, inst_cat=None, sortby_instcat=False,
+    def get_datasets(self, inst_name=None, inst_fullcat=None, sortby_instcat=False,
                      sortby_instname=False, sortby_nb=False):
         """Return datasets from the database.
 
         :param str/None inst_name: Name of the instrument associated to the dataset(s) you want. If None,
             all available instrument names are considered.
-        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) you want. If None,
+        :param str/None inst_fullcat: Full Category of instrument(s) associated to the dataset(s) you want. If None,
             all available instrument categories are considered.
         :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
@@ -193,39 +193,48 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
         :param bool sortby_nb: Specify the format of the output. If true, all dataset numbers
             matching the request will be merged in the same list. If False, all dataset numbers
             will have there own key in a dictionary.
-        :return list/dictionary_of_Datasets res: All the dataset instances matching the request (inst_name, inst_cat).
+        :return list/dictionary_of_Datasets res: All the dataset instances matching the request (inst_name, inst_fullcat).
             The format can be a list or a dictionary depending on the values passed to sortby_instcat,
             sortby_instname, sortby_nb.
         """
-        return self.get_lvl3_values(level1_key=inst_cat, level2_key=inst_name,
+        return self.get_lvl3_values(level1_key=inst_fullcat, level2_key=inst_name,
                                     sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                                     sortby_lvl3key=sortby_nb)
 
     @property
-    def inst_categories(self):
+    def inst_fullcategories(self):
         """Return the list of the categories of instruments associated to the dataset in the database."""
         return list(self.keys())
 
-    def get_instnames(self, inst_cat=None, sortby_instcat=False):
+    @property
+    def inst_categories(self):
+        """Return the list of the categories of instruments associated to the dataset in the database."""
+        res = []
+        for inst_fullcat in self.inst_fullcategories:
+            inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
+            res.append(inst_cat)
+        return res
+
+    def get_instnames(self, inst_fullcat=None, sortby_instcat=False):
         """Return the names of instruments used by the datasets in the database.
 
-        :param str/None inst_cat: Category of instrument(s) associated to the instrument name(s) you want.
+        :param str/None inst_fullcat:  Full Category of instrument(s) associated to the instrument name(s) you want.
             If None, all available instrument categories are considered.
         :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
             matching the request will have there own key in a dictionary.
-        :return list/dict_of_str res: All the instrument names matching the request (inst_cat). The
+        :return list/dict_of_str res: All the instrument names matching the request (inst_fullcat). The
             format can be a list or a dictionary depending on the values passed to sortby_instcat.
         """
-        return self.get_lvl2_keys(level1_key=inst_cat, sortby_lvl1key=sortby_instcat)
+        return self.get_lvl2_keys(level1_key=inst_fullcat, sortby_lvl1key=sortby_instcat)
 
-    def get_instruments(self, inst_name=None, inst_cat=None,
+    def get_instruments(self, inst_name=None, inst_fullcat=None,
                         sortby_instname=False, sortby_instcat=False):
         """Return Core_Instrument subclass instances used by the datasets in the database.
 
         :param str/None inst_name: Name of the instrument you want. If None, all available instrument
             names are considered.
-        :param str/None inst_cat: Category of instrument(s) associated to the instrument(s) you want.
+        :param str/None inst_fullcat: Category of instrument(s) associated to the instrument(s) you want.
             If None, all available instrument categories are considered.
         :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
@@ -234,34 +243,33 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
             matching the request will be merged in the same list. If False, all instrument names
             matching the request will have there own key in a dictionary.
         :return list/dict_of_Core_Instrument: All the available instruments (Core_Instrument subclass
-            instances) matching the request (inst_name, inst_cat). The format can be a list or a dictionary
+            instances) matching the request (inst_name, inst_fullcat). The format can be a list or a dictionary
             depending on the values passed to sortby_instcat and sortby_instname.
         """
-        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
+        inst_fullcat, inst_name = check_instfullcat(self, inst_name=inst_name, inst_fullcat=inst_fullcat)
         result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                              default_value=[])
         if inst_name is None:
-            iter_instnames = self.get_instnames(inst_cat=inst_cat, sortby_instcat=True)
+            iter_instnames = self.get_instnames(inst_fullcat=inst_fullcat, sortby_instcat=True)
         else:
-            iter_instnames = {inst_cat: [inst_name]}
-        # instnames_bycat = self.get_instnames(inst_cat=inst_cat, sortby_instcat)
-        for inst_cat, l_instname in iter_instnames.items():
+            iter_instnames = {inst_fullcat: [inst_name]}
+        for inst_fullcat, l_instname in iter_instnames.items():
             for inst_name in l_instname:
-                instrument = self[inst_cat][inst_name]["1st"].instrument
-                add_obj_in_result(result, instrument, lvl1_key=inst_cat, lvl2_key=inst_name,
+                instrument = self[inst_fullcat][inst_name]["1st"].instrument
+                add_obj_in_result(result, instrument, lvl1_key=inst_fullcat, lvl2_key=inst_name,
                                   type_finallvl=list)
         if not(sortby_instname or sortby_instcat):
             if len(result) == 1:
                 return result[0]
         return result
 
-    def get_datasetnbs(self, inst_name=None, inst_cat=None,
+    def get_datasetnbs(self, inst_name=None, inst_fullcat=None,
                        sortby_instcat=False, sortby_instname=False):
         """Return the number(s) of the datasets int the database.
 
         :param str/None inst_name: Name of the instrument associated to the datasets of which you want
             the numbers. If None, all available instrument names are considered.
-        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) of which you want
+        :param str/None inst_fullcat: Full Category of instrument(s) associated to the dataset(s) of which you want
             the numbers. If None, all available instrument categories are considered.
         :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
@@ -270,20 +278,20 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
             matching the request will be merged in the same list. If False, all instrument names
             matching the request will have there own key in a dictionary.
         :return list/dict_of_int: All the available dataset numbers matching the request (inst_name,
-            inst_cat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
+            inst_fullcat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
             and sortby_instname.
         """
-        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
-        return self.get_lvl3_keys(level1_key=inst_cat, level2_key=inst_name,
+        inst_fullcat, inst_name = check_instfullcat(self, inst_name=inst_name, inst_fullcat=inst_fullcat)
+        return self.get_lvl3_keys(level1_key=inst_fullcat, level2_key=inst_name,
                                   sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
 
-    def get_datasetnames(self, inst_name=None, inst_cat=None,
+    def get_datasetnames(self, inst_name=None, inst_fullcat=None,
                          sortby_instcat=False, sortby_instname=False):
         """Return the name of the datasets in the database.
 
         :param str/None inst_name: Name of the instrument associated to the datasets of which you want
             the names. If None, all available instrument names are considered.
-        :param str/None inst_cat: Category of instrument(s) associated to the dataset(s) of which you want
+        :param str/None inst_fullcat: Full Category of instrument(s) associated to the dataset(s) of which you want
             the names. If None, all available instrument categories are considered.
         :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
@@ -292,13 +300,13 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
             matching the request will be merged in the same list. If False, all instrument names
             matching the request will have there own key in a dictionary.
         :return list/dict_of_int: All the available dataset names matching the request (inst_name,
-            inst_cat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
+            inst_fullcat). The format can be a list or a dictionary depending on the values passed to sortby_instcat
             and sortby_instname.
         """
-        inst_cat, inst_name = check_instcat(self, inst_name=inst_name, inst_cat=inst_cat)
+        inst_fullcat, inst_name = check_instfullcat(self, inst_name=inst_name, inst_fullcat=inst_fullcat)
         result = init_result(sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname,
                              default_value=[])
-        list_dataset = self.get_datasets(inst_name=inst_name, inst_cat=inst_cat,
+        list_dataset = self.get_datasets(inst_name=inst_name, inst_fullcat=inst_fullcat,
                                          sortby_instcat=False, sortby_instname=False,
                                          sortby_nb=False)
         for dataset in list_dataset:

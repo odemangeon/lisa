@@ -14,7 +14,7 @@ creator function.
 from collections import defaultdict, Iterable
 
 from ..dataset_and_instrument.instrument import Instrument_Model
-from ..dataset_and_instrument.dataset import Dataset
+from ..dataset_and_instrument.dataset import Core_Dataset
 
 
 def check_datasets_and_instmodels(datasets, inst_models):
@@ -45,51 +45,67 @@ def check_datasets_and_instmodels(datasets, inst_models):
     instmod_err = False
     if inst_models is None or isinstance(inst_models, Instrument_Model):
         multi_instmodl = False
-        if inst_models is None:
-            instmod_docf = inst_models
-        else:
-            instmod_docf = inst_models.get_name(include_prefix=True, recursive=True)
     elif isinstance(inst_models, Iterable):
-        if isinstance(inst_models[0], Instrument_Model):
-            multi_instmodl = True
-            instmod_docf = []
-            for instmod in inst_models:
-                if instmod is None:
-                    instmod_docf.append(instmod)
-                else:
-                    instmod_docf.append(instmod.get_name(include_prefix=True, recursive=True))
+        l_isInstModel = [isinstance(inst_mod, Instrument_Model) for inst_mod in inst_models]
+        l_isNone = [inst_mod is None for inst_mod in inst_models]
+        if all(l_isInstModel) or all(l_isNone):
+            if len(inst_models) > 1:
+                multi_instmodl = True
+            else:
+                multi_instmodl = False
+                inst_models = inst_models[0]  # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
         else:
             instmod_err = True
     else:
         instmod_err = True
     if instmod_err:
         raise ValueError("inst_models should be None, string or list of strings.")
+    if multi_instmodl:
+        instmod_docf = []
+        for instmod in inst_models:
+            if instmod is None:
+                instmod_docf.append(instmod)
+            else:
+                instmod_docf.append(instmod.get_name(include_prefix=True, recursive=True))
+    else:
+        if inst_models is None:
+            instmod_docf = inst_models
+        else:
+            instmod_docf = inst_models.get_name(include_prefix=True, recursive=True)
 
     # Check the content of datasets argument: Set multi_dataset to True if several datasets
     # are provided, to False otherwise. Finally set the datasets argument for the
     # Datasim_DocFunc (dtsts_docf)
     dataset_err = False
-    if datasets is None or isinstance(datasets, Dataset):
+    if datasets is None or isinstance(datasets, Core_Dataset):
         multi_dataset = False
-        if datasets is None:
-            dtsts_docf = datasets
-        else:
-            dtsts_docf = datasets.dataset_name
     elif isinstance(datasets, Iterable):
-        if isinstance(datasets[0], Dataset):
-            multi_dataset = True
-            dtsts_docf = []
-            for dtst in datasets:
-                if dtst is None:
-                    dtsts_docf.append(dtst)
-                else:
-                    dtsts_docf.append(dtst.dataset_name)
+        l_isDataset = [isinstance(dst, Core_Dataset) for dst in datasets]
+        l_isNone = [dst is None for dst in datasets]
+        if all(l_isDataset) or all(l_isNone):
+            if len(datasets) > 1:
+                multi_dataset = True
+            else:
+                multi_dataset = False
+                datasets = datasets[0]
         else:
             dataset_err = True
     else:
         dataset_err = True
     if dataset_err:
-        raise ValueError("datasets should be None, string or list of strings.")
+        raise ValueError("datasets should be None, string or list of strings or list of None.")
+    if multi_dataset:
+        dtsts_docf = []
+        for dtst in datasets:
+            if dtst is None:
+                dtsts_docf.append(dtst)
+            else:
+                dtsts_docf.append(dtst.dataset_name)
+    else:
+        if datasets is None:
+            dtsts_docf = datasets
+        else:
+            dtsts_docf = datasets.dataset_name
 
     # Produce the list of datasets and list of models (even of 1 element)
     multi = multi_dataset or multi_instmodl
@@ -118,7 +134,7 @@ def check_datasets_and_instmodels(datasets, inst_models):
         if inst_models is None:
             inst_model_full_name = "woinst"
         else:
-            inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True)
+            inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True, code_version=True)
 
     return (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
             dtsts_docf)

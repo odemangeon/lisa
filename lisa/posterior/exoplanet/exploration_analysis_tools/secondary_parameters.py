@@ -23,7 +23,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
     """
     # Create a dictionary with the main parameter values either chain (if free) or one value
     dico_par = {}
-    for param in model.get_list_params(main=True, recursive=True):
+    for param in model.get_list_params(main=True, recursive=True, no_duplicate=True):
         if param.free:
             dico_par[param.get_name(include_prefix=True, recursive=True)] = chaininterpret[..., param.get_name(include_prefix=True, recursive=True)]
         else:
@@ -127,7 +127,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
     else:
         raise ValueError("Unit of K can be 'kms' or 'ms'.")
 
-    if Counter(["LC", "RV"]) == Counter(model.dataset_db.inst_categories):
+    if all([inst_fullcat in model.dataset_db.inst_fullcategories for inst_fullcat in ["LC", "RV"]]):
         # Iterate over planet related secondary
         for planet in model.planets.values():
             # Prepare the list of tuples secondary parameter name, function, parameters
@@ -234,7 +234,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                     l_parname_sec_chain)
         return chainIsec, l_parname_sec_chain
 
-    elif Counter(["RV", ]) == Counter(model.dataset_db.inst_categories):
+    elif all([inst_fullcat in model.dataset_db.inst_fullcategories for inst_fullcat in ["RV"]]):
         # Default value for planet_kwargs and simulate if needed
         dico_def_value = {"inc": rad2deg(arcsin(sqrt(3 / 4)))}
         if planet_kwargs is None:

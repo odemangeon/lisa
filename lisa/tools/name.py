@@ -62,8 +62,12 @@ class Name(object):
     def __init__(self, name, prefix=None):
         """Initialise the Name object
 
-        :param str name: first part of the name (like the first name of a person).
-        :param str/Name prefix: rest of the name (like the family name(s) of a person)
+        Arguments
+        ---------
+        name : String
+            first part of the name (like the first name of a person).
+        prefix : String or Name
+            rest of the name (like the family name(s) of a person)
         """
         # Specify the name
         self.__name = check_name(name)
@@ -194,15 +198,21 @@ class Named(object):
 
     This is meant as an inferface for a class for which you want to have a Name.
     """
-    def __init__(self, name, prefix=None, kwargs_getname_4_storename=None, kwargs_getname_4_codename=None):
+    def __init__(self, name, prefix=None, kwargs_getname_4_storename=None, kwargs_getname_4_codename=None, kwargs_getname_4_fullname=None):
         """docstring for Named.
 
-        :param str name: first part of the name (like the first name of a person).
-        :param str/Name prefix: rest of the name (like the family name(s) of a person)
-        :param dict kwargs_getname_4_storename: Parameters for the Named.get_name method to construct
-            the parameter names for storing in a param container database
-        :param dict kwargs_getname_4_codename: Parameters for the Named.get_name method to construct
-            the parameter names for reference in codes.
+        Arguments
+        ---------
+        name : String
+            first part of the name (like the first name of a person).
+        prefix: str/Name
+            rest of the name (like the family name(s) of a person)
+        kwargs_getname_4_storename : Dictionary
+            Parameters for the Named.get_name method to construct the parameter names for storing in a param container database
+        kwargs_getname_4_codename : Dictionary
+            Parameters for the Named.get_name method to construct the parameter names for reference in codes.
+        kwargs_getname_4_fullname : Dictionary
+            Parameters for the Named.get_name method to construct the parameter full name for finding it.
         """
         self.__name = Name(name=name, prefix=prefix)
         ## Indicate the rules to construct the name for storage
@@ -216,8 +226,12 @@ class Named(object):
         if "code_version" not in kwargs_getname_4_codename:
             kwargs_getname_4_codename["code_version"] = True
         check_getname_kwargs(kwargs_getname_4_codename)
-
         self.__code_name_rules = kwargs_getname_4_codename
+        ## Indicate the rules to construct full name for finding the object
+        if kwargs_getname_4_fullname is None:
+            kwargs_getname_4_fullname = {"include_prefix": True, "recursive": True}
+        check_getname_kwargs(kwargs_getname_4_fullname)
+        self.__full_name_rules = kwargs_getname_4_fullname
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, self.get_name(include_prefix=True, recursive=True))
@@ -234,59 +248,37 @@ class Named(object):
 
     @property
     def store_name(self):
-        """Store name for the paramcontainer.
+        """Store name for the Named Object.
 
-        This name is used to store the paramcontainer in a paramcontainer database.
+        This name is used to store the Named Object in a paramcontainer database.
         """
         return self.get_name(**(self.store_name_rules))
 
     @property
     def code_name_rules(self):
-        """Rules used for the construction of the store name."""
+        """Rules used for the construction of the code name."""
         return self.__code_name_rules
 
     @property
     def code_name(self):
-        """Store name for the paramcontainer.
+        """Code name for the Named Object.
 
-        This name is used to store the paramcontainer in a paramcontainer database.
+        This name is used to in the parameter file.
         """
         return self.get_name(**(self.code_name_rules))
 
-    # @property
-    # def name_prefix(self):
-    #     """Return the name of the instance."""
-    #     return self.name.name_prefix
-    #
-    # @property
-    # def name_prefix_code(self):
-    #     """Return the name of the instance."""
-    #     return self.name.name_prefix_code
-    #
-    # @property
-    # def hasnameprefix(self):
-    #     """Return True is name_prefix has been set already, False otherwise."""
-    #     return self.name.hasnameprefix()
-    #
-    # @name_prefix.setter
-    # def name_prefix(self, name_prefix):
-    #     """Set the prefix of the ame of the instance."""
-    #     self.name.name_prefix = name_prefix
-    #
-    # @property
-    # def full_name(self):
-    #     """Return the full name of the instance."""
-    #     return self.name.full_name
-    #
-    # @property
-    # def name_code(self):
-    #     """Return the name of the instance that can be used in code."""
-    #     return self.name.name_code
-    #
-    # @property
-    # def full_name_code(self):
-    #     """Return the full name of the CelestialBody."""
-    #     return self.name.full_name_code
+    @property
+    def full_name_rules(self):
+        """Rules used for the construction of the full name."""
+        return self.__full_name_rules
+
+    @property
+    def full_name(self):
+        """Full name for the Named Object.
+
+        This name is used to find the Named Object.
+        """
+        return self.get_name(**(self.full_name_rules))
 
     # DO NOT CHANGE THE DEFAULT VALUES !
     def get_name(self, include_prefix=False, code_version=False, recursive=False, prefix_kwargs=None):
@@ -300,4 +292,5 @@ class Named(object):
             name_prefix
         :return str name: String providing the name of the instance
         """
-        return self.name.get(include_prefix=include_prefix, code_version=code_version, recursive=recursive, prefix_kwargs=prefix_kwargs)
+        return self.name.get(include_prefix=include_prefix, code_version=code_version, recursive=recursive,
+                             prefix_kwargs=prefix_kwargs)

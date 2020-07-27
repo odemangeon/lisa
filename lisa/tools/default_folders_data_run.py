@@ -21,12 +21,17 @@ logger = getLogger()
 
 
 class RunFolder(object):
-    """docstring for the RunFolder class."""
+    """docstring for the interface RunFolder class for the Posterior Instance.
+
+    Should be used as a parent class of the Posterior class to give the instances of the posterior instances the attribute run_folder and the methods to use it.
+
+    It could be used as a Parent class of another class as long as this class has the object_name attribute.
+    """
 
     def __init__(self, run_folder=None):
         """Initialise the run_folder property.
 
-        :param string/None run_folder: Folder to use as run folder. For more info check run_folder
+        :param string/None run_folder: Folder to use as run folder. For more info check run_folder property definition
         """
         # 1.
         ## Folder where the program should look for config files by default: Initialise it
@@ -81,7 +86,12 @@ class RunFolder(object):
 
 
 class DataFolder(object):
-    """docstring for DataFolder."""
+    """docstring for the interface DataFolder class for the Posterior Instance.
+
+    Should be used as a parent class of the Posterior class to give the instances of the posterior instances the attribute data_folder and the methods to use it.
+
+    It could be used as a Parent class of another class as long as this class has the object_name attribute.
+    """
 
     def __init__(self, data_folder=None):
         # 1.

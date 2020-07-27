@@ -16,14 +16,12 @@ logger = getLogger()
 def getinstattr(attrname):
     def _getmethod(self):
         return getattr(self, "__{}__".format(attrname))
-
     return _getmethod
 
 
 def getclassattr(attrname):
     def _getmethod(cls):
         return getattr(cls, "__{}__".format(attrname))
-
     return _getmethod
 
 
@@ -63,7 +61,9 @@ class MandatoryMethods(type):
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_meths))
 
 
-def getcategory():
+# TODO: It looks like the piece of code below is not used anywhere
+
+def _getcategory():
     def _getmethod(self):
         return self.__category__
     return _getmethod
@@ -77,7 +77,7 @@ class CategorisedType(type):
         return cls.__category__
 
     def __new__(cls, classname, bases, classdict):
-        classdict["category"] = property(getcategory())
+        classdict["category"] = property(_getcategory())
         return super(CategorisedType, cls).__new__(cls, classname, bases, classdict)
 
     def __init__(cls, name, bases, attrs):

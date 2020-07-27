@@ -62,7 +62,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
     def add_parameter(self, parameter):
         """Add a parameter to the Core_ParamContainer."""
         if isinstance(parameter, Parameter):
-            self.parameters[parameter.get_name()] = parameter
+            self.parameters[parameter.store_name] = parameter
         else:
             raise ValueError("parameter should be an instance of the Parameter class")
 
@@ -74,25 +74,42 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         """Return the list of all parameters."""
         return list(self.parameters.keys())
 
-    def get_list_params(self, main=False, free=False):
+    def get_list_params(self, main=False, free=False, no_duplicate=True):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
-        :return list_of_param result: list of Parameter instances
-        """
-        if main:
-            result = []
-            for param in Core_ParamContainer.__get_list_all_params(self):
-                if free and (param.main) and (param.free):
-                    result.append(param)
-                elif not(free) and param.main:
-                    result.append(param)
-            return result
-        else:
-            return Core_ParamContainer.__get_list_all_params(self)
+        Parameters
+        ----------
+        main : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
 
-    def get_list_paramnames(self, main=False, free=False, **kwargs):
+        Returns
+        -------
+        result : list of Parameter
+            list of Parameter instances
+        """
+        result = []
+        for param in Core_ParamContainer.__get_list_all_params(self):
+            add_param = False
+            if main:
+                if free and param.main and param.free:
+                    add_param = True
+                elif not(free) and param.main:
+                    add_param = True
+            else:
+                add_param = True
+            if add_param:
+                if no_duplicate:
+                    if (param.get_name(include_prefix=True, recursive=True) not in [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]):
+                        result.append(param)
+                else:
+                    result.append(param)
+        return result
+
+    def get_list_paramnames(self, main=False, free=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters.
 
         :param bool main: If true (default false) returns only the main parameter names
@@ -104,7 +121,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         :return list_of_param result: list of Parameter instances
         """
         result = []
-        for param in Core_ParamContainer.get_list_params(self, main=main, free=free):
+        for param in Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate):
             result.append(param.get_name(**kwargs))
         return result
 
@@ -232,29 +249,46 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     @property
     def paramfile_info(self):
-        """Information about the content of the param file"""
+        """Information about the content of the param file.
+
+        Dictionary giving the content of the parameter file for the parameter container.
+        It should have a key whose name is provided by key_params_fileinfo and whose values is the list
+        of the name of the parameters of this parameter container.
+
+        Depending on the parameter container this dictionary can also have other keys specific to this
+        type of containers.
+        """
         return self.__paramfile_info
 
     def update_paramfile_info(self, recursive=False):
         """Update the paramfile info attribute."""
-        self.paramfile_info.update({key_params_fileinfo: [param.get_name() for param in
+        self.paramfile_info.update({key_params_fileinfo: [param.code_name for param in
                                                           self.get_list_params(main=True)]})
         logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
                      "".format(self.get_name(), self.paramfile_info))
 
     def get_paramfile_section(self, text_tab="", texttab_1tline=True,
                               entete_symb=" = ", quote_name=False, **kwargs):
-        """Return the text to include in the parameter_file for this CelestialBody.
+        """Return the text to include in the parameter_file for the parameters in the ParamContainer
 
-        :param str text_tab: text giving the tabulation that needs to be added to this the text to obtain the
-                good alignment in the input file.
-        :param bool texttab_1tline: Wether to use the tab for the first line or not.
-        :param str entete_symb: Symbol to use after the paramcontainers name
-        :param bool quote_name: Wether to put quote around the paramcontainer name or not.
+        Arguments
+        ---------
+        text_tab       : str
+            text giving the tabulation that needs to be added to this the text to obtain the good alignment
+            in the input file.
+        texttab_1tline : bool
+            Wether to use the tab for the first line or not.
+        entete_symb    : str
+            Symbol to use after the paramcontainers name
+        quote_name     : bool
+             Wether to put quote around the paramcontainer name or not.
 
         Keywords arguments are given to self.get_list_params (see docstring for details).
 
-        :return str text: Text for the parameter file.
+        Returns
+        -------
+        text : str
+            Text for the parameter file.
         """
         if quote_name:
             entete = "'{}'{}{{"
@@ -277,7 +311,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         self.update_paramfile_info()
         return text
 
-    def load_config(self, dico_config, available_joint_priors={}, load_setup=False):
+    def load_config(self, dico_config, model_instance, available_joint_priors={}, load_setup=False):
         """load the configuration specified by the dictionnary
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
@@ -288,7 +322,9 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             param = getattr(self, param_name)
             if param.code_name in dico_config:
                 param.main = True
-                param.load_config(dico_config[param.get_name(code_version=True)], available_joint_priors=available_joint_priors,
+                param.load_config(dico_config=dico_config[param.code_name],
+                                  model_instance=model_instance,
+                                  available_joint_priors=available_joint_priors,
                                   load_setup=load_setup)
             else:
                 param.main = False

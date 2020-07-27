@@ -284,7 +284,7 @@ def create_LC_plots(fig, datasetnames, planets, periods, tcs, datasim_dbf, datas
         binval = {}
         binstd = {}
         midbins = {}
-        for datasetname in datasetnames:
+        for ii, datasetname in enumerate(datasetnames):
             binval[datasetname] = {}
             nb_key = len(dico_kwargs[datasetname])
             bins[datasetname] = np.arange(phase_min_data - (ii * bin_size / nb_key),
@@ -501,7 +501,7 @@ if __name__ == "__main__":
 
     ## logger
     logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                            fh_lvl=DEBUG, fh_file="{}.log".format(obj_name))
+                            fh_lvl=INFO, fh_file="{}.log".format(obj_name))
 
     logger.info("1. Load from pickle if necessary")
     if load_from_pickle:

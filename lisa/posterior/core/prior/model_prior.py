@@ -113,7 +113,7 @@ class Model_Prior(object):
         # marginal and joint dependending on wether they have a marginal or joint prior.
         marginal = OrderedDict()
         joint = OrderedDict()
-        for param in self.get_list_params(main=True, free=True, recursive=True):
+        for param in self.get_list_params(main=True, free=True, recursive=True, no_duplicate=True):
             if param.joint:
                 joint[param.get_name(include_prefix=True, recursive=True)] = param
             else:

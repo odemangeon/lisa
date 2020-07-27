@@ -449,26 +449,26 @@ class Transitingprior(Core_JointPrior_Function):
         Adapt the default prior for b to the value of transiting and allow_grazing
         """
         dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
-        if self.multiple_hidden_params[1]:  # 1 is for b
-            nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
-            for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
-                if transiting_ii:
-                    if allow_grazing_ii:
-                        dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
-                else:
-                    if allow_grazing_ii:
-                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                    else:
-                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        # if self.multiple_hidden_params[1]:  # 1 is for b
+        #     nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
+        #     for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+        #         if transiting_ii:
+        #             if allow_grazing_ii:
+        #                 dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+        #         else:
+        #             if allow_grazing_ii:
+        #                 dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+        #             else:
+        #                 dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        # else:
+        if self.transiting:
+            if self.allow_grazing:
+                dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
         else:
-            if self.transiting:
-                if self.allow_grazing:
-                    dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+            if self.allow_grazing:
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
             else:
-                if self.allow_grazing:
-                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                else:
-                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
         return dico
 
     def create_logpdf(self, params):
@@ -643,11 +643,30 @@ class TransitingRhoprior(Transitingprior):
         # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
         # to all planets.
         for arg in [self.transiting, self.allow_grazing]:
-            if isinstance(arg, list) and (len(arg) != self.nb_planet):
-                raise ValueError("If you provided transiting or allow_grazing as a list, it should have "
-                                 "the same length as params['P']. One per planet.")
+            if not(isinstance(arg, list)):
+                raise ValueError("transiting and allow_grazing should be list with the same length as"
+                                 "params['P'], one per planet.")
+            elif (len(arg) != self.nb_planet):
+                raise ValueError("transiting and allow_grazing should be list with the same length as"
+                                 "params['P'], one per planet.")
+
+    def _get_hidden_param_default_dict(self, dico_default_values=None):
+        """Update Core_JointPrior_Function._get_hidden_param_default_dict
+
+        Adapt the default prior for b to the value of transiting and allow_grazing
+        """
+        dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
+        nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
+        for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+            if transiting_ii:
+                if allow_grazing_ii:
+                    dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
             else:
-                arg = [arg for i in range(self.nb_planet)]
+                if allow_grazing_ii:
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                else:
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        return dico
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.

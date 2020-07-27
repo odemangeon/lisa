@@ -9,6 +9,7 @@ from logging import getLogger
 
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ..dataset_and_instrument.rv import RV_inst_cat
+from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.model.core_parametrisation import Core_Parametrisation
 
 
@@ -51,16 +52,11 @@ class GravGroup_Parametrisation(Core_Parametrisation):
         self.__check_nstar()
         self.__check_nplanet()
 
-        # Check that the instrument category of all the datasets is as expected otherwise raise a
-        # warning
-        self._check_dataset_instcat()
-        # Init and Fill the dictionary parametrisation_kwargs
-        self.save_parametrisation_kwargs(**kwargs)
-
         # Apply the parametrisation to the star and planets parameters
         self.apply_star_planet_parametrisation()
 
         # Apply the parametrisation to the instrument models parameters
+        # TODO: I want it to got to Core_Parametrisation set_parametrisation method, but it requires a bit of uniformisation of the instrument category parameterisation methods.
         self.apply_instmodel_parametrisation()
 
         # If needed apply the limbdarkening coefficient parametrisation
@@ -172,7 +168,7 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             DeltaRV_main = self.parametrisation_kwargs.get("with_DeltaRV", False)
             RVrefglobal_instname = self.RV_globalref_instname
             RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
-            list_instmodel = self.get_instmodel_objs(inst_cat="RV")
+            list_instmodel = self.get_instmodel_objs(inst_fullcat=RV_inst_cat)  # self.get_instmodel_objs comes from InstrumentContainerInterface
             for inst_model in list_instmodel:
                 inst_name = inst_model.instrument.get_name()
                 inst_model.DeltaRV.main = DeltaRV_main
@@ -180,14 +176,22 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
         if LC_inst_cat in set(self.dataset_db.inst_categories):
-            list_instmodel = self.get_instmodel_objs(inst_cat="LC")
+            list_instmodel = self.get_instmodel_objs(inst_fullcat=LC_inst_cat)
             for inst_model in list_instmodel:
                 inst_model.init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs.get("with_OOT_var", False),
                                                    OOT_var_order=self.parametrisation_kwargs.get("OOT_var_order", None))
+        if IND_inst_cat in set(self.dataset_db.inst_categories):
+            l_inst_fullcat_IND = self.instruments.get_inst_fullcat4inst_cat(inst_cat=IND_inst_cat)
+            for inst_fullcat_i in l_inst_fullcat_IND:
+                list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
+                for inst_model in list_instmodel:
+                    indicator_model = self.model_4_indicator[inst_model.instrument.indicator_category]
+                    self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
+                                        kwargs_indicator_model=self.params_indicator_models[indicator_model])
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             for LD_parcont in self.get_list_LD_parconts():
-                for param in LD_parcont.get_list_params():
+                for param in LD_parcont.get_list_params(no_duplicate=True):
                     param.main = True

@@ -42,38 +42,49 @@ def get_filename_woext_from_filename(file_name):
     return splitext(file_name)[0]
 
 
-def interpret_data_filename(data_file_name):
-    """
-    Interpret data file name.
+# def interpret_data_filename(data_file_name, raise_error=True):
+#     """Interpret data file name.
+#
+#     If the format of the data file name is recognized the function return a dictionnary (see
+#     Returns below) otherwise return None.
+#
+#     Arguments
+#     ---------
+#     data_file_name : string,
+#         Data file name, should be in the format instcategory_object_instname(_number).*
+#
+#     Returns
+#     -------
+#     result: dictionnary with the interpration of the filename which contains the following keys:
+#         - object : name of the object observed with the data
+#         - inst_category : category of instrument used to take the data. e.g. "LC", "RV", ...
+#         - inst_name : instrument name
+#         - number : give the number of the data file if there is several data files of the
+#             same object observed with the same instrument
+#     """
+#     cuts = data_file_name.split("_")   # List of fields that were separated by "_"
+#     cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
+#     if len(cuts) < 3 or len(cuts) > 4:
+#         if raise_error:
+#             raise ValueError("Data file name not recognized. Should be in the format "
+#                              "category_target_instrument(_number).txt. Got: {}".format(data_file_name))
+#         else:
+#             return None
+#     result = {"object": cuts[1],
+#               "inst_category": cuts[0],
+#               "inst_name": cuts[2]}
+#     if len(cuts) == 3:
+#         result["number"] = 0
+#     elif len(cuts) == 4:
+#         result["number"] = int(cuts[3])
+#     return result
 
-    If the format of the data file name is recognized the function return a dictionnary (see
-    Returns below) otherwise return None.
-    ----
-    Arguments:
-        data_file_name : string,
-            Data file name, should be in the format instcategory_object_instname(_number).*
 
-    Returns:
-        dictionnary with the interpration of the filename which contains the following keys:
-            - object : name of the object observed with the data
-            - inst_category : category of instrument used to take the data. e.g. "LC", "RV" or "SED"
-            - inst_name : instrument name
-            - number : give the number of the data file if there is several data files of the
-                same object observed with the same instrument
-    """
-    cuts = data_file_name.split("_")   # List of fields that were separated by "_"
-    cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
-    if len(cuts) < 3 or len(cuts) > 4:
-        raise ValueError("Data file name not recognized. Should be in the format "
-                         "category_target_instrument(_number).txt. Got: {}".format(data_file_name))
-    result = {"object": cuts[1],
-              "inst_category": cuts[0],
-              "inst_name": cuts[2]}
-    if len(cuts) == 3:
-        result["number"] = 0
-    elif len(cuts) == 4:
-        result["number"] = int(cuts[3])
-    return result
+# def dataset_name_from_file_name(dataset_filename):
+#     """Return the dataset_name associated to the filename of a dataset."""
+#     filename_info = interpret_data_filename(dataset_filename, raise_error=True)
+#     return "{}_{}_{}_{}".format(filename_info["inst_category"], filename_info["object"],
+#                                 filename_info["inst_name"], filename_info["number"])
 
 
 def define_folder_withdefault(main_default_folder, object_name, folder="default"):
@@ -95,7 +106,7 @@ def define_folder_withdefault(main_default_folder, object_name, folder="default"
             path to the folder which contain the data. If provided the main_default_folder and
             objected argument are ignored.
     """
-    # 1. Check if the folder argument has been provided. If yes use this otherwise try use a folder
+    # 1. Check if the folder argument has been provided. If yes use this otherwise try to use a folder
     # with the object name in the folder designated by the main_default_folder provided in argument
     folder_provided = (folder != "default")
     if folder_provided:

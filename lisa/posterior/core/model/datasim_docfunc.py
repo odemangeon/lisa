@@ -101,7 +101,9 @@ class DatasimDocFunc(DocFunction):
         if inst_model_fullname is None or isinstance(inst_model_fullname, str):
             multi_inst_model = False
         elif isinstance(inst_model_fullname, Iterable):
-            if isinstance(inst_model_fullname[0], str):
+            l_isInstModel = [isinstance(inst_mod, str) for inst_mod in inst_model_fullname]
+            l_isNone = [inst_mod is None for inst_mod in inst_model_fullname]
+            if all(l_isInstModel) or all(l_isNone):
                 multi_inst_model = True
             else:
                 instmod_err = True
@@ -118,14 +120,16 @@ class DatasimDocFunc(DocFunction):
         if dataset is None or isinstance(dataset, str):
             multi_dataset = False
         elif isinstance(dataset, Iterable):
-            if isinstance(dataset[0], str):
+            l_isDataset = [isinstance(dst, str) for dst in dataset]
+            l_isNone = [dst is None for dst in dataset]
+            if all(l_isDataset) or all(l_isNone):
                 multi_dataset = True
             else:
                 dataset_err = True
         else:
             dataset_err = True
         if dataset_err:
-            raise ValueError("datasets should be None, string or list of strings.")
+            raise ValueError("dataset should be None, string or list of strings.")
         return multi_dataset
 
     def _check_inst_cat(self, inst_cat):

@@ -12,20 +12,24 @@ The objective of this package is to provides the core Instmodel4Dataset class.
     -
 """
 from logging import getLogger
-from collections import defaultdict
+# from collections import defaultdict
 from copy import copy
 
-from ...tools.miscellaneous import interpret_data_filename
+from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ...tools.dico_database import init_result, add_obj_in_result
-from ...tools.lockable_dict import LockableDict, Lock  # , func_name_getinstance_lock
-# from .database_func import func_name_samelock
+from ...tools.lockable_dict import LockableDict, Lock
 
 ## Logger
 logger = getLogger()
 
+## Instrument and Dataset manager
+mgr_inst_dst = Manager_Inst_Dataset()
+
 
 class Instmodel4Dataset(LockableDict):
     """docstring for Instmodel4Dataset.
+
+    Dictionary with keys being dataset_names and values inst_model extensions
 
     1. To define Instmodel4Dataset, you should provide either instmodel4dataset or
        list_datasetnames not both. If both raise an error
@@ -59,33 +63,55 @@ class Instmodel4Dataset(LockableDict):
     #     """Return True if a instmodel4dataset is defined."""
     #     return hasattr(self, "instmodel4dataset")
 
-    def name_instmodels_used(self, inst_name=None, sortby_instname=False):
-        """Return a dict which for each instrument name give the instrument models to use."""
-        if sortby_instname:
-            result = defaultdict(list)
+    def name_instmodels_used(self, inst_name=None, sortby_instname=False, inst_fullcat=None, sortby_instfullcat=None):
+        """Return the full names instrument models used by the model."""
+        if sortby_instname or sortby_instfullcat:
+            res = {}
         else:
-            result = []
+            res = []
+        # result = init_result(sortby_lvl1key=sortby_instfullcat, sortby_lvl2key=sortby_instname, sortby_lvl3key=False,
+        #                      default_value=None)
         for dataset_name, mod_name in self.items():
-            file_info = interpret_data_filename(dataset_name)
-            if (file_info["inst_name"] == inst_name) or (inst_name is None):
-                if sortby_instname:
-                    add_to_results = True
-                    if file_info["inst_name"] in result:
-                        if mod_name in result[file_info["inst_name"]]:
-                            add_to_results = False
-                    if add_to_results:
-                        result[file_info["inst_name"]].append(mod_name)
-                else:
-                    inst_mod_name = "{}_{}".format(file_info["inst_name"], mod_name)
-                    if not(inst_mod_name in result):
-                        result.append(inst_mod_name)
-        return result
+            file_info = mgr_inst_dst.interpret_data_filename(dataset_name)
+            inst_subclass = mgr_inst_dst.get_inst_subclass(file_info["inst_cat"])
+            if (file_info["inst_fullcat"] == inst_fullcat) or (inst_fullcat is None):
+                if (file_info["inst_name"] == inst_name) or (inst_name is None):
+                    if sortby_instfullcat:
+                        if file_info["inst_fullcat"] not in res:
+                            if sortby_instname:
+                                res[file_info["inst_fullcat"]] = {}
+                                if file_info["inst_name"] not in res[inst_fullcat]:
+                                    res[file_info["inst_fullcat"]][file_info["inst_name"]] = []
+                            else:
+                                res[file_info["inst_fullcat"]] = []
+                    else:
+                        if sortby_instname:
+                            if file_info["inst_name"] not in res:
+                                res[file_info["inst_name"]] = []
+                    if sortby_instfullcat and sortby_instname:
+                        res[file_info["inst_fullcat"]][file_info["inst_name"]].append(inst_subclass.build_instmod_fullname(inst_model=mod_name,
+                                                                                                                           inst_name=file_info["inst_name"],
+                                                                                                                           inst_fullcat=file_info["inst_fullcat"]))
+                    elif not(sortby_instfullcat) and sortby_instname:
+                        res[file_info["inst_name"]].append(inst_subclass.build_instmod_fullname(inst_model=mod_name,
+                                                                                                inst_name=file_info["inst_name"],
+                                                                                                inst_fullcat=file_info["inst_fullcat"]))
+                    elif sortby_instfullcat and not(sortby_instname):
+                        res[file_info["inst_fullcat"]].append(inst_subclass.build_instmod_fullname(inst_model=mod_name,
+                                                                                                   inst_name=file_info["inst_name"],
+                                                                                                   inst_fullcat=file_info["inst_fullcat"]))
+                    else:
+                        res.append(inst_subclass.build_instmod_fullname(inst_model=mod_name,
+                                                                        inst_name=file_info["inst_name"],
+                                                                        inst_fullcat=file_info["inst_fullcat"]))
+        return res
 
     def get_instmod_fullname(self, dataset_name):
         """Return the full name of the instrument model used for the specified dataset."""
-        instmod_name = self[dataset_name]
-        file_info = interpret_data_filename(dataset_name)
-        return "{}_{}".format(file_info["inst_name"], instmod_name)
+        file_info = mgr_inst_dst.interpret_data_filename(dataset_name)
+        inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat=file_info["inst_cat"])
+        return inst_subclass.build_instmod_fullname(inst_fullcat=file_info["inst_fullcat"], inst_name=file_info["inst_name"],
+                                                    inst_model=self[dataset_name])
 
     @property
     def list_datasets(self):
@@ -221,6 +247,8 @@ class Instmodel4DatasetAttr(object):
     def name_instmodels_used(self, inst_name=None, sortby_instname=False):
         """Return a dict which for each instrument name give the instrument models to use.
 
+        TODO: Add inst_full_cat because it will not work properly right now.
+
         For more details see instmodel4dataset.name_instmodels_used
         """
         return self.instmodel4dataset.name_instmodels_used(inst_name=inst_name,
@@ -240,6 +268,26 @@ class Instmodel4DatasetAttr(object):
         """
         instmodel_fullname = self.get_instmod_fullname(dataset_name=dataset_name)
         return self.instruments[instmodel_fullname]
+
+    def get_ldatasetname4instmodfullname(self, instmod_fullname):
+        """Return list of dataset name using a given instrument model.
+
+        Arguments
+        ---------
+        instmod_fullname : String
+            Name of the instrument model of interest
+
+        Returns
+        -------
+        l_dataset_name : List of String
+            List of dataset names using the instrument model provided
+        """
+        res = []
+        for dataset_name_ii in self.instmodel4dataset.keys():
+            instmod_fullname_ii = self.get_instmod_fullname(dataset_name=dataset_name_ii)
+            if instmod_fullname_ii == instmod_fullname:
+                res.append(dataset_name_ii)
+        return res
 
     @property
     def __isdefined_instmodel4dataset(self):

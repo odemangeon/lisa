@@ -48,11 +48,11 @@ output_folders = get_def_output_folders(run_folder=getcwd())
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
 load_from_pickle = True
-extension_exploration = ""
+extension_exploration = "_initrun"
 
 # Save plots ?
 save_plots = True
-extension_outputs = ""
+extension_outputs = "_initrun_median"
 
 # Histograms Parameters
 hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
@@ -71,8 +71,8 @@ plot_hist_AF = True
 
 # Ln Posterior selection
 do_LPS = True
-sig_fact_LPS = 2
-quantile_LPS = 75
+sig_fact_LPS = 3
+quantile_LPS = 100
 quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
 verbose_LPS = 1
 plot_hist_Post = True
@@ -92,12 +92,12 @@ def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_interva
 interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
 do_geweke_plot = True
-apply_min_burnin = True
+apply_min_burnin = False
 min_burnin = 20000
 
 # Parameter based walker selection
 do_PS = False
-parameters = ["HD80869_b_ecosw", "HD80869_b_esinw"]
+parameters = ["WASP-151_b_ecosw", "WASP-151_b_esinw"]
 
 
 def inferior(array, value):
@@ -126,6 +126,7 @@ sampling_corner = 10
 do_MComp = True
 do_MComp_Folded = True
 oversamp_MComp = 30
+load_fitted_val_pickle = False
 
 # Do compute secondary parameters
 do_SecParam = True
@@ -135,9 +136,15 @@ units_dict = {"K": uu.km / uu.s}
 omega_0to360 = False
 save_results_bestfit_secpar = True
 
+# Do computation of the BIC
+do_compute_BIC = True
+load_fitted_val_pickle_BIC = False
+only_bestfit_bic = True
+
+
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=DEBUG, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
 
 logger.info("########\nCHAIN ANALYSIS")
 
@@ -415,7 +422,6 @@ if do_bestfit:
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table{}.tex".format(obj_name, extension_outputs)),
                              df_fittedval, obj_name)
 
-
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner, :],
@@ -429,12 +435,18 @@ if do_corner:
 
 if do_MComp:
     logger.info("8. Do data comparison plots")
-    et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
-                           datasim_dbf=post_instance.datasimulators,
-                           datasim_kwargs=kwargs_datasim,
-                           dataset_db=post_instance.dataset_db,
-                           model_instance=post_instance.model,
-                           oversamp=oversamp_MComp)
+    if load_fitted_val_pickle:
+        fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_outputs,
+                                                                                        folder=output_folders["pickles_analyze"])
+        fitted_val_plot = np.array([df_fittedval.loc[param_name, "value"] for param_name in l_param_chainI])
+    else:
+        fitted_val_plot = fitted_values
+    modelsNresiduals = et.overplot_data_model(param=fitted_val_plot, l_param_name=l_param_chainI,
+                                              datasim_dbf=post_instance.datasimulators,
+                                              dataset_db=post_instance.dataset_db,
+                                              post_instance=post_instance,
+                                              datasim_kwargs=kwargs_datasim,
+                                              oversamp=oversamp_MComp, return_modelsNresiduals=True)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.pdf"))
     else:
@@ -450,11 +462,11 @@ if do_MComp:
             periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
             tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
 
-        et.overplot_data_model(param=fitted_values, l_param_name=l_param_chainI,
+        et.overplot_data_model(param=fitted_val_plot, l_param_name=l_param_chainI,
                                datasim_dbf=post_instance.datasimulators,
-                               datasim_kwargs=kwargs_datasim,
                                dataset_db=post_instance.dataset_db,
-                               model_instance=post_instance.model,
+                               post_instance=post_instance,
+                               datasim_kwargs=kwargs_datasim,
                                oversamp=oversamp_MComp, phasefold=True,
                                phasefold_kwargs={"planets": list(periods.keys()),
                                                  "P": periods.values(),
@@ -477,10 +489,11 @@ if do_SecParam:
 
     if omega_0to360:
         # Change the range of omega from -180 to 180 to 0 to 360, because omega seems to be centered around 180.
-        mask = np.zeros_like(chainIsec).astype(bool)
-        for plnt in list(periods.keys()):
-            mask[:, :, chainIsec.paramname_idx[f"{obj_name}_{plnt}_omega"]] = (chainIsec[:, :, f"{obj_name}_{plnt}_omega"] < 0)
-            chainIsec[mask] = chainIsec[mask] + 360
+        for plnt in post_instance.model.planets.values():
+            mask = np.zeros_like(chainIsec).astype(bool)
+            if plnt.omega.full_name in chainIsec.paramname_idx:
+                mask[:, :, chainIsec.paramname_idx[plnt.omega.full_name]] = (chainIsec[:, :, chainIsec.paramname_idx[plnt.omega.full_name]] < 0)
+                chainIsec[mask] = chainIsec[mask] + 360
 
     logger.info("Plot raw traces for secondary parameters")
     et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
@@ -530,3 +543,13 @@ if do_SecParam:
     else:
         pl.show()
     pl.close("all")
+
+if do_compute_BIC:
+    logger.info("10. Compute the BIC of the model")
+    if load_fitted_val_pickle:
+        fitted_values_dic_bic, fitted_values_sec_dic_bic, df_fittedval_bic = et.load_chain_analysis(obj_name, extension_analysis=extension_outputs,
+                                                                                                    folder=output_folders["pickles_analyze"])
+    else:
+        df_fittedval_bic = df_fittedval
+    bic, bic_bestfit = et.compute_bic(post_instance=post_instance, df_fittedval=df_fittedval_bic, chaininterpret=chainI,
+                                      l_walker=l_walker_PS, l_burnin=l_burnin_PS, only_bestfit_bic=only_bestfit_bic)
