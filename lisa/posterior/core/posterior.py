@@ -443,6 +443,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             model_wGP = model + gp_pred
         else:
             model_wGP = None
+            gp_pred = None
+            gp_pred_var = None
 
         return model, model_wGP, gp_pred, gp_pred_var
 
