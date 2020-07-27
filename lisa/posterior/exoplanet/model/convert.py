@@ -39,7 +39,7 @@ logger = getLogger()
 spyr = 3.155815e7
 g = cst.G.value
 au = cst.au.value
-gm = 1.32712440041e20
+gm = 1.32712440041e20  # G * M_Sun
 msun = gm / g
 mjup = cst.M_jup.value  # msun/msunjup
 msunjup = msun / mjup
@@ -215,10 +215,12 @@ def getD23(P, inc, aR, ecc, omega, Rrat):
 #     return t23
 
 
-def getrhostar(P, aR, rhofact=1):
-    """Return the stellar density from the transit.
+def getrhostar_circular(P, aR, rhofact=1):
+    """Return the stellar density from the transit assuming a circular orbit.
 
-    :param float/np.ndarray P: Planetary orbital period im days
+    From Seager & Mallen-Ornelas 2003, and using rhostar in solar unit.
+
+    :param float/np.ndarray P: Planetary orbital period in days
     :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     :param float rhofact: multiplicative factor for unit purposes
     :return float/np.ndarray rhostar: Density of the star from transit in solar density
@@ -227,8 +229,27 @@ def getrhostar(P, aR, rhofact=1):
     return aR**3. * 4. * np.pi**2. * rsun**3. / (gm * Ps**2.) * rhofact
 
 
-def getaoverr(P, rhostar):
+def getrhostar(P, aR, ecc, omega, rhofact=1):
+    """Return the stellar density from the transit including the effect of eccentricity.
+
+    From Van Eylen & Albrecht 2015, and using rhostar in solar unit (https://arxiv.org/pdf/1505.02814.pdf)
+
+    :param float/np.ndarray P: Planetary orbital period im days
+    :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray ecc: Orbital eccentricity of the planetary orbit
+    :param float/np.ndarray omega: Argument of periastron of the stellar orbit in degrees
+    :param float rhofact: multiplicative factor for unit purposes
+    :return float/np.ndarray rhostar: Density of the star from transit in solar density
+    """
+    Ps = P * 24. * 3600.0  # change P to seconds for SI
+    ecc_impact = (1 - ecc**2)**(3. / 2.) / (1 + ecc * np.sin(np.radians(omega)))**3
+    return aR**3. * 4. * np.pi**2. * rsun**3. / (gm * Ps**2.) * rhofact * ecc_impact
+
+
+def getaoverr_circular(P, rhostar):
     """Return the a over Rstar.
+
+    From Seager & Mallen-Ornelas 2003, and using rhostar in solar unit.
 
     :param float/np.ndarray P: Planetary orbital period in days
     :param float/np.ndarray rhostar: Density of the star from transit in solar density
@@ -236,6 +257,22 @@ def getaoverr(P, rhostar):
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
     return ((rhostar * gm * Ps**2. / (4. * np.pi**2.)))**(1.0 / 3.0) / rsun
+
+
+def getaoverr(P, rhostar, ecc, omega):
+    """Return the a over Rstar.
+
+    From Van Eylen & Albrecht 2015, and using rhostar in solar unit (https://arxiv.org/pdf/1505.02814.pdf)
+
+    :param float/np.ndarray P: Planetary orbital period in days
+    :param float/np.ndarray rhostar: Density of the star from transit in solar density
+    :param float/np.ndarray ecc: Orbital eccentricity of the planetary orbit
+    :param float/np.ndarray omega: Argument of periastron of the stellar orbit in Degrees
+    :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    """
+    Ps = P * 24. * 3600.0  # change P to seconds for SI
+    ecc_impact = (1 + ecc * np.sin(np.radians(omega))) / np.sqrt(1 - ecc**2)
+    return ((rhostar * gm * Ps**2. / (4. * np.pi**2.)))**(1.0 / 3.0) * ecc_impact / rsun
 
 
 def getaoverr_fromRstar(a, Rstar):
@@ -292,14 +329,16 @@ def getplsurfaceg(per, ar, rp, inc, ecc, velocity):
     return surgp
 
 
-def getloggstar(P, aR, Rs):
+def getloggstar(P, aR, ecc, omega, Rs):
     """Return the logg value of the star computed from the transit.
 
     :param float/np.ndarray P: Planetary orbital period im days
     :param float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
+    :param float/np.ndarray ecc: Orbital eccentricity of the planetary orbit
+    :param float/np.ndarray omega: Argument of periastron of the stellar orbit in degrees
     :param float/np.ndarray Rs: Stellar radius in solar radius
     """
-    density = getrhostar(P, aR)  # densun in cgs and rsun in meters
+    density = getrhostar(P, aR, ecc, omega)  # densun in cgs and rsun in meters
     return np.log10(4. * np.pi * grav / 3.) + np.log10(density * densun * Rs * rsun * 100.)
 
 
