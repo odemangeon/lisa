@@ -172,14 +172,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the preambule
     template_preambule_pl = """
         {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
-    if parametrisation == "Multis":
-        template_preambule_pl += """
-        {tab}aR_{planet} = getaoverr({P}, {rhostar})"""
 
     if transit_model == "batman":
         template_preambule_pl += """
         {tab}omega_{planet} = getomega_deg_fast({esinw}, {ecosw})
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
+        if parametrisation == "Multis":
+            template_preambule_pl += """
+        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, omega_{planet})"""
 
         for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
                                                            l_ld_param_list):
@@ -238,6 +238,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         {tab}omega_{planet} = getomega_fast({esinw}, {ecosw})
         {tab}inc_{planet} = acos({cosinc})
         """
+        if parametrisation == "Multis":
+            template_preambule_pl += """
+        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, degrees(omega_{planet}))"""
     template_preambule_pl = dedent(template_preambule_pl)
 
     # Add the initialisation of the TransitModel (to the template_preambule)
@@ -582,13 +585,13 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     for obj_key in dico_docf:
         ldict["sqrt"] = sqrt
         ldict["acos"] = acos
+        ldict["degrees"] = degrees
         if parametrisation == "Multis":
             ldict["getaoverr"] = getaoverr
         if transit_model == "batman":
             if not(has_dataset):
                 ldict["TransitModel"] = TransitModel
             ldict["getomega_deg_fast"] = getomega_deg_fast
-            ldict["degrees"] = degrees
         else:
             ldict["getomega_fast"] = getomega_fast
             ldict["m"] = m_pytransit
