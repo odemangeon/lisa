@@ -344,11 +344,11 @@ class GaussianNoiseModel(Core_Noise_Model):
         :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
             the updated list of parameters (l_params_new).
         """
-        def lnlike(model, param_noisemod, l_datakwargs):
+        def lnlike(sim_data, param_noisemodel, datasets_kwargs):
             res = 0
-            for ii, datakwargs in enumerate(l_datakwargs):
+            for ii, datakwargs in enumerate(datasets_kwargs):
                 inv_sigma2 = 1.0 / (datakwargs["data_err"]**2)
-                res += (-0.5 * (npsum((datakwargs["data"] - model[ii])**2 * inv_sigma2 -
+                res += (-0.5 * (npsum((datakwargs["data"] - sim_data[ii])**2 * inv_sigma2 -
                                 nplog(inv_sigma2))))
             return res
 

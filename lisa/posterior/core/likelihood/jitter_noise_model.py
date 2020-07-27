@@ -197,10 +197,10 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                                                                       instmod_obj)
             l_func.append(lnlike_1instmod)
 
-        def lnlike_jitter(model, param_noisemod, l_datakwargs):
+        def lnlike_jitter(sim_data, param_noisemodel, datasets_kwargs):
             res = 0
-            for ii, func, datakwargs in zip(range(len(l_func)), l_func, l_datakwargs):
-                res += func(model[ii], param_noisemod, **datakwargs)
+            for ii, func, datakwargs in zip(range(len(l_func)), l_func, datasets_kwargs):
+                res += func(sim_data[ii], param_noisemodel, **datakwargs)
             return res
 
         return lnlike_jitter, l_params_new, l_params_noisemod, l_idx_param_noisemod
