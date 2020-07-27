@@ -9,7 +9,7 @@ from numpy import pi, inf, ones, where, any, arange, nan, array, abs  # logical_
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
+from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr_circular
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
@@ -449,26 +449,26 @@ class Transitingprior(Core_JointPrior_Function):
         Adapt the default prior for b to the value of transiting and allow_grazing
         """
         dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
-        if self.multiple_hidden_params[1]:  # 1 is for b
-            nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
-            for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
-                if transiting_ii:
-                    if allow_grazing_ii:
-                        dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
-                else:
-                    if allow_grazing_ii:
-                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                    else:
-                        dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        # if self.multiple_hidden_params[1]:  # 1 is for b
+        #     nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
+        #     for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+        #         if transiting_ii:
+        #             if allow_grazing_ii:
+        #                 dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+        #         else:
+        #             if allow_grazing_ii:
+        #                 dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+        #             else:
+        #                 dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        # else:
+        if self.transiting:
+            if self.allow_grazing:
+                dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
         else:
-            if self.transiting:
-                if self.allow_grazing:
-                    dico["b"] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
+            if self.allow_grazing:
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
             else:
-                if self.allow_grazing:
-                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
-                else:
-                    dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+                dico["b"] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
         return dico
 
     def create_logpdf(self, params):
@@ -643,11 +643,30 @@ class TransitingRhoprior(Transitingprior):
         # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
         # to all planets.
         for arg in [self.transiting, self.allow_grazing]:
-            if isinstance(arg, list) and (len(arg) != self.nb_planet):
-                raise ValueError("If you provided transiting or allow_grazing as a list, it should have "
-                                 "the same length as params['P']. One per planet.")
+            if not(isinstance(arg, list)):
+                raise ValueError("transiting and allow_grazing should be list with the same length as"
+                                 "params['P'], one per planet.")
+            elif (len(arg) != self.nb_planet):
+                raise ValueError("transiting and allow_grazing should be list with the same length as"
+                                 "params['P'], one per planet.")
+
+    def _get_hidden_param_default_dict(self, dico_default_values=None):
+        """Update Core_JointPrior_Function._get_hidden_param_default_dict
+
+        Adapt the default prior for b to the value of transiting and allow_grazing
+        """
+        dico = super(Transitingprior, self)._get_hidden_param_default_dict(dico_default_values=dico_default_values)
+        nb_b = self.infer_hiddenparams_nb(hidden_param_ref="b")
+        for ii, transiting_ii, allow_grazing_ii in zip(range(nb_b), self.transiting, self.allow_grazing):
+            if transiting_ii:
+                if allow_grazing_ii:
+                    dico["b"][ii] = {"category": "uniform", "args": {"vmin": 0., "vmax": 2.}}
             else:
-                arg = [arg for i in range(self.nb_planet)]
+                if allow_grazing_ii:
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 1., "vmax": 1e3}}
+                else:
+                    dico["b"][ii] = {"category": "jeffreys", "args": {"vmin": 0., "vmax": 1e3}}
+        return dico
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -672,7 +691,7 @@ class TransitingRhoprior(Transitingprior):
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
-        ldict["getaoverr"] = getaoverr
+        ldict["getaoverr_circular"] = getaoverr_circular
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
@@ -714,7 +733,7 @@ class TransitingRhoprior(Transitingprior):
         def {function_name}({param_vector_name}):
             P = array([{P}])
             Rrat = array([{Rrat}])
-            b = getaoverr(P, {rhostar}) * array([{cosinc}])
+            b = getaoverr_circular(P, {rhostar}) * array([{cosinc}])
             if any({list_comp}):
                 return -inf
             elif any(abs([{cosinc}]) > 1):
@@ -745,7 +764,7 @@ class TransitingRhoprior(Transitingprior):
         """
         raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
-        aR = getaoverr(P, rhostar)
+        aR = getaoverr_circular(P, rhostar)
         b = aR * cosinc
         if self.transiting:
             if self.allow_grazing:
@@ -851,7 +870,7 @@ class TransitingRhoprior(Transitingprior):
         # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
-            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr_circular(dico_ravs["P"][ii], dico_ravs["rhostar"]))
         # Format the return which should be a tuple of list of arrays or arrays depending on wether a
         # parameter can be multiple or not.
         # It should be ( np.array(rhostar), [np.array(P) for each planet], [np.array(cosinc) for each planet],
