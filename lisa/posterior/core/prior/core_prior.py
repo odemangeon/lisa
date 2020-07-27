@@ -288,7 +288,7 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
         # self.hiddenparam_defs
         self._init_hiddenparam_defs()
         # Set the content of self.hiddenparam_defs
-        self.set_hiddenparam_defs(self.dico_args[self.hiddenparamprior_key])
+        self.set_hiddenparam_defs(self.dico_args[self.hiddenparamprior_key])  # self.dico_args is defined in Core_Prior_Function.__init__
         # Initialise the dictionary of the prior instances of the hidden parameters
         # self.priorinstance_hiddenparams
         self._init_priorinstance_hiddenparams()
