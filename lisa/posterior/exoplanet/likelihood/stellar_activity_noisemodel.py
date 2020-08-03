@@ -84,7 +84,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     __kwargs_needed__ = ["data", "data_err", "t"]
 
     kernel_text = ("{amp}**2 * ExpSquaredKernel(metric={tau}) * "
-                   "ExpSine2Kernel(gamma={gamma}, log_period={log_period})")
+                   "ExpSine2Kernel(gamma=1/(2 * {gamma}**2), log_period={log_period})")
 
     # Comment: There is no need to sort the times because George does it automicatically.
     # Before the version 0.3.1 of george, there was a sort argument (which was True by default) which need to
