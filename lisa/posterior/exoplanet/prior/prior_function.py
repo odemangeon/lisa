@@ -8,6 +8,7 @@ from textwrap import dedent
 from numpy import pi, inf, ones, where, any, arange, nan, array, abs  # logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
+from ...core.prior.prior_function import BetaPrior
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
 from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr_circular
 from ....tools.function_w_doc import DocFunction
@@ -17,6 +18,34 @@ from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_
 ## logger object
 logger = getLogger()
 
+
+#################
+# Marginal priors
+#################
+
+class BetaEccPrior(BetaPrior):
+    """Beta Prior
+
+    See https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.beta.html
+
+    :param float a: first shape parameter of the beta distribution
+    :param float b: second shape parameter of the beta distribution
+    """
+
+    __category__ = "betaecc"
+    __mandatory_args__ = []
+    __extra_args__ = []
+    __default_extra_args__ = {}
+
+    def __init__(self):
+        self.a = 0.867
+        self.b = 3.03
+        super(BetaEccPrior, self).__init__()
+
+
+##############
+# Joint priors
+##############
 
 class HKPPrior(Core_JointPrior_Function):
     """Prior defined for the h, k and P parameters of the Np parametrisation of the GravgroupsDynam model.

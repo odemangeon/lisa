@@ -36,7 +36,7 @@ import math as mt
 
 import numpy as np
 from numpy import pi, inf
-from scipy.stats import reciprocal
+from scipy.stats import reciprocal, beta
 
 from .core_prior import Core_Prior_Function, Core_JointPrior_Function
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
@@ -50,6 +50,10 @@ logger = getLogger()
 # manager = Manager_Prior()
 # manager.load_setup() ## Cannot be done otherwise there is an import loop
 
+
+#################
+# Marginal priors
+#################
 
 class UniformPrior(Core_Prior_Function):
     """Unifor Prior
@@ -360,6 +364,40 @@ class SinePrior(Core_Prior_Function):
         else:
             return val
 
+
+class BetaPrior(Core_Prior_Function):
+    """Beta Prior
+
+    See https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.beta.html
+
+    :param float a: first shape parameter of the beta distribution
+    :param float b: second shape parameter of the beta distribution
+    """
+
+    __category__ = "beta"
+    __mandatory_args__ = ["a", "b"]
+    __extra_args__ = []
+    __default_extra_args__ = {}
+
+    def __init__(self, *args, **kwargs):
+        super(BetaPrior, self).__init__(*args, **kwargs)
+        if (self.a <= 0) or (self.b <= 0):
+            raise ValueError("a and b should be strictly positive")
+        self.rv = beta(self.a, self.b)  # rv stands for random variable
+
+    def create_logpdf(self):
+        return self.rv.logpdf
+
+    def logpdf(self, x):
+        return self.rv.logpdf()
+
+    def ravs(self, nb_values=1):
+        return self.rv.rvs(size=nb_values)
+
+
+##############
+# Joint priors
+##############
 
 class PolarPrior(Core_JointPrior_Function):
     """Polar Prior
