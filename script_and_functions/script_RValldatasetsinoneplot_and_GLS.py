@@ -63,9 +63,12 @@ all_rv_data_err_jitter = np.concatenate([rv_data_err_jitter[dst] for dst in l_RV
 
 # Create the model for the time series
 rv_inst_ref = "RV_ESPRESSO_def"
+dsts_inst_ref = 'RV_HD211403_SOPHIEp_0'
+
 tsim = np.linspace(tmin - extra_dt, tmax + extra_dt, 5000)
-model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name='RV_TOI-175_ESPRESSO_0',
-                                                                     param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
+model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=dsts_inst_ref,
+                                                                     param=df_fittedval["value"].values,
+                                                                     l_param_name=list(df_fittedval.index),
                                                                      key_obj=key_whole)
 model -= df_fittedval["value"]["TOI-175_A_v0"]
 model *= RV_fact
@@ -76,17 +79,21 @@ gp_pred_var *= RV_fact**2
 
 
 # Create the model for the GLS
-model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name='RV_TOI-175_ESPRESSO_0',
+model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=dsts_inst_ref,
                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
                                                                          key_obj=key_whole)
 model_GLS *= RV_fact
-gp_pred_GLS *= RV_fact
-gp_pred_var_GLS *= RV_fact**2
+if gp_pred_GLS is not None:
+    gp_pred_GLS *= RV_fact
+    gp_pred_var_GLS *= RV_fact**2
 
 # Create the residuals arrays
 resi = {}
 for rv_dst in l_RV_datasets:
-    resi[rv_dst] = modelsNresiduals[rv_dst][key_whole]['residuals w GP'][0] * RV_fact
+    if modelsNresiduals[rv_dst][key_whole]['residuals w GP'][0] is None:
+        resi[rv_dst] = modelsNresiduals[rv_dst][key_whole]['residuals'][0] * RV_fact
+    else:
+        resi[rv_dst] = modelsNresiduals[rv_dst][key_whole]['residuals w GP'][0] * RV_fact
 all_resi = np.concatenate([resi[dst] for dst in l_RV_datasets])
 all_resi = all_resi[idx_sort]
 
@@ -124,10 +131,11 @@ xlims = axe_data.get_xlim()
 axe_data.hlines(0, *xlims, colors="k", linestyles="dashed")
 
 axe_data.plot(tsim, model, color=pl_kwargs["model"]["color"], linewidth=pl_kwargs["model"]["linewidth"], label=pl_kwargs["model"]["label"])
-GP_pred_var = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                    color=pl_kwargs["GP"]["color"], alpha=pl_kwargs["GP"]["alpha"],
-                                    label=pl_kwargs["GP"]["label"]  # **kwarg_GP_pred_var
-                                    )
+if model_wGP is not None:
+    GP_pred_var = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+                                        color=pl_kwargs["GP"]["color"], alpha=pl_kwargs["GP"]["alpha"],
+                                        label=pl_kwargs["GP"]["label"]  # **kwarg_GP_pred_var
+                                        )
 axe_data.legend()
 
 for dst in l_RV_datasets:
@@ -140,14 +148,24 @@ axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
 axe_resi.set_xlim(xlims)
 
 # RV GLS
-gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err_jitter, 'label': "data", 'linewidth': "0.8"},
-              "model": {"data": model_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "model", 'linewidth': "0.8"},  # np.sqrt(gp_pred_var_GLS)
-              "GP": {"data": gp_pred_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "GP", 'linewidth': "0.8"},
-              "resi": {"data": all_resi, "err": all_rv_data_err_jitter, 'label': "residuals", 'linewidth': "0.8"},  # all_rv_data_err_jitter, all_rv_data_err
-              }
-l_gls_key = ["data", "model", "GP", "resi"]
+if gp_pred_var_GLS is not None:
+    gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err_jitter, 'label': "data", 'linewidth': "0.8"},
+                  "model": {"data": model_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "model", 'linewidth': "0.8"},  # np.sqrt(gp_pred_var_GLS)
+                  "GP": {"data": gp_pred_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "GP", 'linewidth': "0.8"},
+                  "resi": {"data": all_resi, "err": all_rv_data_err_jitter, 'label': "residuals", 'linewidth': "0.8"},  # all_rv_data_err_jitter, all_rv_data_err
+                  }
+    l_gls_key = ["data", "model", "GP", "resi"]
+else:
+    gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err_jitter, 'label': "data", 'linewidth': "0.8"},
+                  "model": {"data": model_GLS, "err": all_rv_data_err_jitter, 'label': "model", 'linewidth': "0.8"},  # np.sqrt(gp_pred_var_GLS)
+                  "resi": {"data": all_resi, "err": all_rv_data_err_jitter, 'label': "residuals", 'linewidth': "0.8"},  # all_rv_data_err_jitter, all_rv_data_err
+                  }
+    l_gls_key = ["data", "model", "resi"]
 
-nb_axes = 4
+if model_wGP:
+    nb_axes = 4
+else:
+    nb_axes = 3
 ax_gls = add_axeswithsharex(gs_gls, fig, nb_axes=nb_axes, gs_from_sps_kw={"wspace": 0.2})
 for ii in range(nb_axes - 1):
     ax_gls[ii].tick_params(labelbottom=False)

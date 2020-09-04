@@ -6,7 +6,6 @@ Script to produce pretty plots of RV data
 @TODO:
 """
 from os import getcwd
-from os.path import join
 
 import numpy as np
 import matplotlib.pyplot as pl
@@ -18,7 +17,6 @@ from collections import OrderedDict, defaultdict
 from PyAstronomy.pyasl import foldAt
 from matplotlib.ticker import AutoMinorLocator
 from scipy.stats import binned_statistic
-from matplotlib.colors import to_hex
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -26,7 +24,6 @@ import lisa.tools.mylogger as ml
 
 from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from lisa.explore_analyze.misc import get_def_output_folders
 
@@ -42,11 +39,10 @@ mgr_inst_dst.load_setup()
 def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, star_name="A",
                     datasetnames=None, remove_GP=False, phase_binsize=0., binning_stat="mean", RV_fact=1., sharey=False,
                     fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, RV_unit="$km/s$", *args, **kwargs):
-    nplanet = len(planets)
     """Produce a clean RV plot.
 
     WARNING/TODO: Because the plots are done independantly for each planet when sharey is True,
-    there is no insurance that the I am not sure that the indicate_y_outliers function behaves correctly.
+    I am not sure that the indicate_y_outliers function behaves correctly.
 
     Arguments
     ---------
@@ -88,6 +84,8 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                 to add_twoaxeswithsharex_perplanet (add_twoaxeswithsharex_perplanet(..., gs_from_sps_kw=fig_param['gs_from_sps_kw'])
                 function creating two axes data and residuals per planet.
             - 'pad_data': Iterable of 2 floats which define the bottom and top pad to apply for data axes.
+                Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
+                allows to provide different pad_data for different planets.
             - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
             - fontsize : Int specifiying the fontsize
     pl_kwargs    : dict
@@ -99,10 +97,6 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
         If True, show the legend
     legend_param : dict
         Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
-    show_xlabel  : bool
-        If True, show the x label
-    show_ylabel  : bool
-        If True, show the y labels
     RV_unit      : str
         String giving the unit of the RVs
     """
@@ -157,6 +151,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
     pl_kwarg_final = {}
     pl_kwarg_jitter = {}
     for datasetname in datasetnames:
+        # Set the labels
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
             label_dst = filename_info["inst_name"]
@@ -179,7 +174,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             if "alpha" in pl_kwarg_jitter[datasetname]:
                 pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
             else:
-                pl_kwarg_jitter[datasetname] = 0.5
+                pl_kwarg_jitter[datasetname]["alpha"] = 0.5
         # default value for ecolor
         if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
             pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
@@ -372,11 +367,12 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                                                  )
                 # Apply RV_fact to models and GP
                 model_dst *= RV_fact
-                model_wGP_dst *= RV_fact
-                GP_pred *= RV_fact
-                GP_pred_var *= RV_fact**2
-                # Correct data from GP pred
-                data_pl[datasetname] = data_pl[datasetname] - GP_pred
+                if model_wGP_dst is not None:
+                    model_wGP_dst *= RV_fact
+                    GP_pred *= RV_fact
+                    GP_pred_var *= RV_fact**2
+                    # Correct data from GP pred
+                    data_pl[datasetname] = data_pl[datasetname] - GP_pred
 
             # Compute and remove the other planet contribution
             for plnt in planets:
@@ -413,12 +409,20 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                                                           )
 
         # Set the y axis limits
-        pad_data = fig_param.get("pad_data", (0.1, 0.1))
+        pad_data_default = (0.1, 0.1)
+        if planet_name in fig_param.get("pad_data", {}):
+            pad_data = fig_param["pad_data"][planet_name]
+        else:
+            pad_data_content = fig_param.get("pad_data", pad_data_default)
+            if isinstance(pad_data_content, dict):
+                pad_data = pad_data_default
+            else:
+                pad_data = pad_data_content
         et.auto_y_lims(np.concatenate([y for y in data_pl.values()]), ax_data_pl, pad=pad_data)
         # Indicate values that are off y-axis with anarrows
         for datasetname in datasetnames:
             et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
-                                   alpha=pl_kwarg_final[datasetname]["alpha"])
+                                   alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
         ################
         # Plot the model
@@ -465,10 +469,10 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
         for datasetname in datasetnames:
             if residual_pl[datasetname] is not None:
                 et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["alpha"])
+                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
             if residual_wGP_pl[datasetname] is not None:
                 et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["alpha"])
+                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
             if ii == 0:
                 filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
                 if residual_pl[datasetname] is not None:
@@ -501,11 +505,8 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             all_data_pl = np.concatenate([data_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
             all_data_err = np.concatenate([dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
             all_data_err_jitter = np.concatenate([data_err_jitter[datasetname] if data_err_jitter[datasetname] is not None else dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-            if remove_GP:
-                all_residuals_pl = np.concatenate([residual_wGP_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-            else:
-                all_residuals_pl = np.concatenate([residual_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-
+            l_residuals_wGP_pl = [residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname] for datasetname in datasetnames]
+            all_residuals_pl = np.concatenate(l_residuals_wGP_pl)[idx_sort_alldatasetphase]
             # Define the phase bins for the binned data/resi plot
             bins = np.arange(-0.5, 0.5 + phase_binsize, phase_binsize)
             midbins = bins[:-1] + phase_binsize / 2
@@ -596,7 +597,7 @@ if __name__ == "__main__":
                     binning_stat="median",
                     RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                     sharey=True,
-                    fig_param={"fontsize": 10,
+                    fig_param={"fontsize": 10,  # "pad_data": {"b": (0.1, -0.3)}, "pad_resi": (0.2, -0.2),
                                },
                     pl_kwargs={"RV_TOI-175_ESPRESSO_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "ESPRESSO_pre"},
                                "RV_TOI-175_ESPRESSO_1": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ESPRESSO_post"},
