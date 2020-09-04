@@ -85,6 +85,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
     kernel_text = ("{amp}**2 * ExpSquaredKernel(metric={tau}) * "
                    "ExpSine2Kernel(gamma=1/(2 * {gamma}**2), log_period={log_period})")
+    # The parametrisation of the quasi-periodic Kernel is taken from Grunblatt, Howard & Haywood 2015 The Astrophysical Journal. 808:127
 
     # Comment: There is no need to sort the times because George does it automicatically.
     # Before the version 0.3.1 of george, there was a sort argument (which was True by default) which need to
