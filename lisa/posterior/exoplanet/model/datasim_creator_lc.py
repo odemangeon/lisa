@@ -156,7 +156,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
     # the rest of the function. Check if it can be used.
-    (arguments, time_arg_name, time_arg
+    (arguments, time_arg_name, time_arg, time_arg_in_arguments
      ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
                            key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                            ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
@@ -623,8 +623,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_list,
                key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                time_vec_name=time_vec, l_time_vec_name=l_time_vec, l_time_vec_format=None,
-               timeref_name=time_ref, l_timeref_name=l_time_ref,
-               l_timeref_format=None):
+               timeref_name=time_ref, l_timeref_name=l_time_ref, l_timeref_format=None, use_dataset_4_tref=False,
+               time_ref_val=None):
     """Get the out of transit variation contribution to the light-curve
 
     Arguments
@@ -651,6 +651,10 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
     :param str timeref_name: Str used to designate the time vector
     :param str l_timeref_name: Str used to designate the list of time references
     :param str l_timeref_format: Str used to access an element of l_timeref_name
+    use_dataset_4_tref    : bool
+        If True, then the dataset will be used to compute the reference time for the RV drift
+    time_ref_val          :
+        Value of the time reference if not computed from the datasets
 
     Returns
     -------
@@ -697,10 +701,14 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                             def get_time_ref(time):
                                 return time[0]
                             (arguments, timeref_arg_name, timeref_arg
-                             ) = add_timeref_arguments(arguments, multi, arg_list, key_whole,
-                                                       key_mand_kwargs, key_opt_kwargs, ldict,
-                                                       get_time_ref, has_dataset, True, l_dataset,
-                                                       timeref_name, l_timeref_name)
+                             ) = add_timeref_arguments(arguments=arguments, multi=multi, vect_for_multi=True,
+                                                       use_dataset=use_dataset_4_tref,
+                                                       arg_list=arg_list, key_arglist=key_whole,
+                                                       key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                                       ldict=ldict, has_dataset=has_dataset, get_time_ref=get_time_ref,
+                                                       time_ref_val=time_ref_val, l_dataset=l_dataset,
+                                                       timeref_name=timeref_name, l_timeref_name=l_timeref_name,
+                                                       time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name)
                         # ..., add the end of this order's contribution to the text of the out of
                         # transit variation, ...
                         if order == 1:
