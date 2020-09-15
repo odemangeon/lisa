@@ -8,6 +8,7 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import AutoMinorLocator
 
 from lisa.emcee_tools.emcee_tools import add_twoaxeswithsharex, add_axeswithsharex
+from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
 path_pyGLS = "/Users/olivier/Softwares/PyGLS"
 if path_pyGLS not in sys.path:
@@ -15,7 +16,7 @@ if path_pyGLS not in sys.path:
 from gls_mod import Gls
 
 
-l_RV_datasets = ['RV_TOI-175_ESPRESSO_0', 'RV_TOI-175_ESPRESSO_1', 'RV_TOI-175_HARPS_0', ]
+l_RV_datasets = ['RV_HD109286_SOPHIEp_0', ]
 
 RV_fact = 1e3
 
@@ -23,10 +24,9 @@ key_whole = "whole"
 
 extra_dt = 10
 
+kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
-pl_kwargs = {'RV_TOI-175_ESPRESSO_0': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, "alpha_jitter": 0.5, "color_jitter": 'C1', 'label': "ESPRESSO_pre"},  # 'mfc': '',
-             'RV_TOI-175_ESPRESSO_1': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, "alpha_jitter": 0.5, "color_jitter": 'C1', 'label': "ESPRESSO_post"},
-             'RV_TOI-175_HARPS_0': {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, "alpha_jitter": 0.5, "color_jitter": 'C0', 'label': "HARPS"},
+pl_kwargs = {'RV_HD109286_SOPHIEp_0': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, "alpha_jitter": 0.5, "color_jitter": 'C1', 'label': "SOPHIE+"},
              'model': {'color': 'C2', 'alpha': 1, 'linewidth': 0.5, 'label': 'model'},
              'GP': {'color': 'C2', 'alpha': 0.3, 'linewidth': 0.5, 'label': 'GP'},
              }
@@ -48,40 +48,41 @@ rv_data_err = {}
 rv_data_err_jitter = {}
 for rv_dst in l_RV_datasets:
     rv_data_err[rv_dst] = post_instance.dataset_db[rv_dst].get_data_err() * RV_fact
-    if rv_dst == "RV_TOI-175_ESPRESSO_0":
-        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - df_fittedval.loc["TOI-175_A_v0"]["value"]) * RV_fact
-        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_ESPRESSO_def_jitter"]["value"] * RV_fact)**2)
-    elif rv_dst == "RV_TOI-175_ESPRESSO_1":
-        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - (df_fittedval.loc["TOI-175_A_v0"]["value"] + df_fittedval.loc["RV_ESPRESSO_def1_DeltaRV"]["value"])) * RV_fact
-        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_ESPRESSO_def1_jitter"]["value"] * RV_fact)**2)
-    elif rv_dst == "RV_TOI-175_HARPS_0":
-        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - (df_fittedval.loc["TOI-175_A_v0"]["value"] + df_fittedval.loc["RV_HARPS_def_DeltaRV"]["value"])) * RV_fact
-        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_HARPS_def_jitter"]["value"] * RV_fact)**2)
+    if rv_dst == "RV_HD109286_SOPHIEp_0":
+        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - df_fittedval.loc["HD109286_A_v0"]["value"]) * RV_fact
+        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_SOPHIEp_def_jitter"]["value"] * RV_fact)**2)
+    elif rv_dst == "RV_HD109286_SOPHIE_0":
+        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - (df_fittedval.loc["HD109286_A_v0"]["value"] + df_fittedval.loc["RV_SOPHIE_def_DeltaRV"]["value"])) * RV_fact
+        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_SOPHIE_def_jitter"]["value"] * RV_fact)**2)
+    elif rv_dst == "RV_HD109286_ELODIE_0":
+        rv_data[rv_dst] = (post_instance.dataset_db[rv_dst].get_data() - (df_fittedval.loc["HD109286_A_v0"]["value"] + df_fittedval.loc["RV_ELODIE_def_DeltaRV"]["value"])) * RV_fact
+        rv_data_err_jitter[rv_dst] = np.sqrt(rv_data_err[rv_dst]**2 + (df_fittedval.loc["RV_ELODIE_def_jitter"]["value"] * RV_fact)**2)
 all_rv_data = np.concatenate([rv_data[dst] for dst in l_RV_datasets])[idx_sort]
 all_rv_data_err = np.concatenate([rv_data_err[dst] for dst in l_RV_datasets])[idx_sort]
 all_rv_data_err_jitter = np.concatenate([rv_data_err_jitter[dst] for dst in l_RV_datasets])[idx_sort]
 
 # Create the model for the time series
-rv_inst_ref = "RV_ESPRESSO_def"
-dsts_inst_ref = 'RV_HD211403_SOPHIEp_0'
-
+rv_inst_ref = "RV_SOPHIEp_def"
+dsts_inst_ref = 'RV_HD109286_SOPHIEp_0'
 tsim = np.linspace(tmin - extra_dt, tmax + extra_dt, 5000)
 model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=dsts_inst_ref,
                                                                      param=df_fittedval["value"].values,
                                                                      l_param_name=list(df_fittedval.index),
-                                                                     key_obj=key_whole)
-model -= df_fittedval["value"]["TOI-175_A_v0"]
+                                                                     key_obj=key_whole,
+                                                                     datasim_kwargs=kwargs_datasim)
+model -= df_fittedval["value"]["HD109286_A_v0"]
 model *= RV_fact
-model_wGP -= df_fittedval["value"]["TOI-175_A_v0"]
-model_wGP *= RV_fact
-gp_pred *= RV_fact
-gp_pred_var *= RV_fact**2
+if model_wGP is not None:
+    model_wGP -= df_fittedval["value"]["HD109286_A_v0"]
+    model_wGP *= RV_fact
+    gp_pred *= RV_fact
+    gp_pred_var *= RV_fact**2
 
 
 # Create the model for the GLS
 model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=dsts_inst_ref,
                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-                                                                         key_obj=key_whole)
+                                                                         key_obj=key_whole, datasim_kwargs=kwargs_datasim)
 model_GLS *= RV_fact
 if gp_pred_GLS is not None:
     gp_pred_GLS *= RV_fact
@@ -173,14 +174,14 @@ ax_gls[0].set_title("GLS Periodograms")
 ax_gls[-1].set_xscale("log")
 ax_gls[-1].set_xlabel("Period [days]")
 
-act_period = [80., 40.]
+act_period = []
 act_label = [r"$P_{rot}$", r"$\frac{P_{rot}}{2}$"]
 act_align = ['left', 'right']
 act_color = ['C6', 'C6']
 act_shift = [5, 0.0]
 
-pl_period = [2.25, 3.69, 7.45]
-pl_label = [r"$P_{b}$", r"$P_{c}$", r"$P_{d}$"]
+pl_period = [2171.5]
+pl_label = [r"$P_{b}$"]
 pl_align = ['right', 'left', "left"]
 pl_color = ['C3', 'C4', "C5"]
 pl_shift = [-0.1, 0.3, 0.5]
@@ -192,7 +193,7 @@ fap_yshift = [0.01, 0.0, -0.02]
 fap_xshift = -0.01
 
 for ii, key in enumerate(l_gls_key):
-    gls = Gls((all_time, gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=0.4, Pend=150, verbose=False)
+    gls = Gls((all_time, gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=0.1, Pend=3268, verbose=False)
 # gls_data = Gls((all_time, all_rv_data, all_rv_data_err), Pbeg=0.4, Pend=150, verbose=False)
 # gls_model = Gls((all_time, model_GLS, all_rv_data_err), Pbeg=0.4, Pend=150, verbose=False)  # np.sqrt(gp_pred_var_GLS)
 # gls_GP = Gls((all_time, gp_pred_GLS, all_rv_data_err), Pbeg=0.4, Pend=150, verbose=False)  # np.sqrt(gp_pred_var_GLS)

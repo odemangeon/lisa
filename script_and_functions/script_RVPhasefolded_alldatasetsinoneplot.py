@@ -26,6 +26,8 @@ from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseMode
 from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from lisa.explore_analyze.misc import get_def_output_folders
+from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+
 
 # from ipdb import set_trace
 
@@ -35,8 +37,10 @@ mgr_noisemodel.load_setup()
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
+kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
-def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, star_name="A",
+
+def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, datasim_kwargs=None, star_name="A",
                     datasetnames=None, remove_GP=False, phase_binsize=0., binning_stat="mean", RV_fact=1., sharey=False,
                     fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, RV_unit="$km/s$", *args, **kwargs):
     """Produce a clean RV plot.
@@ -46,34 +50,36 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
 
     Arguments
     ---------
-    fig:
+    fig            :
         Figure instance (provided by the styler)
-    planets : list of str
+    planets        : list of str
         List of planet names (used to infer the number of planets and create the good number of subplots)
-    periods : list of floats
+    periods        : list of floats
         Orbital periods for each planets (used to phase fold)
-    tcs     : list of floats
+    tcs            : list of floats
         Time of inferior conjunction for each planet (used to phase fold)
-    post_instance : Posterior instance
-    fitted_values : array of float
+    post_instance  : Posterior instance
+    fitted_values  : array of float
         Fitted values
-    l_param_name  : list of str
+    l_param_name   : list of str
         List of parameter names
-    star_name     : String
-    datasetnames  : list of String
+    datasim_kwargs : dict
+        Dictionary of keyword arguments for the datasimulator.
+    star_name      : String
+    datasetnames   : list of String
         List providing the datasets to load and use
-    remove_GP     : Boolean
+    remove_GP      : Boolean
         If True the GP model is remove from the data for the plot.
-    phase_binsize : float
+    phase_binsize  : float
         If phase_binsize is superior to 0. The the data will be binned (all dataset included) and display.
         phase_binsize then gives the size of the bin used
-    binning_stat  : str
+    binning_stat   : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
-    RV_fact       : float
+    RV_fact        : float
         Factor to apply to the RV
-    sharey        : bool
-    fig_param     : dict
+    sharey         : bool
+    fig_param      : dict
         Dictionary providing keyword arguments for the figure definition and settings. The possible keys are
             - 'main_gridspec': The content of this entry should be a dictionary which will be passed to
                 GridSpec (GridSpec(..., **fig_param['main_gridspec'])) instance creation with create the main gridspec
@@ -344,20 +350,28 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             # the delta RV to the global reference (deltaRV[datasetname]) and then to which you substract the
             # other planets contribution
 
-            # Remove the DeltaRV to the global RV reference
-            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname] - (fitted_values[idx_star_v0] * RV_fact)
-
-            # Remove the other planets contributions
             # Get the current instrument model and noise model
             inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
             inst_mod = post_instance.model.instruments[inst_mod_fullname]
             noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
 
             # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+            # and remove RV_drift
             kwargs_dataset = dico_kwargs[datasetname].copy()
             t_dst = kwargs_dataset.pop("t")
             kwargs_dataset.pop("data")
             kwargs_dataset.pop("data_err")
+            kwargs_dataset.update(datasim_kwargs.copy())
+
+            # Remove the DeltaRV to the global RV reference
+            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname]
+
+            # Remove the systemic velocity (with drift when needed)
+            data_pl[datasetname] -= fitted_values[idx_star_v0] * RV_fact
+            if star.with_RVdrift:
+                for orderm1 in range(star.RVdrift_order):
+                    idx_coeff_RV_drift = l_param_name.index(star.parameters[star.get_RVdrift_param_name(orderm1 + 1)].get_name(include_prefix=True, recursive=True))
+                    data_pl[datasetname] -= fitted_values[idx_coeff_RV_drift] * RV_fact * (t_dst - datasim_kwargs[RVdrift_tref_name])**(orderm1 + 1)
 
             # Remove GP model
             if remove_GP:
@@ -372,7 +386,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                     GP_pred *= RV_fact
                     GP_pred_var *= RV_fact**2
                     # Correct data from GP pred
-                    data_pl[datasetname] = data_pl[datasetname] - GP_pred
+                    data_pl[datasetname] -= GP_pred
 
             # Compute and remove the other planet contribution
             for plnt in planets:
@@ -552,15 +566,15 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
 
 if __name__ == "__main__":
     # Define the object name
-    obj_name = "TOI-175"
+    obj_name = "HD109286"
 
     # Define dataset names to be loaded
-    datasetnames = ["RV_TOI-175_HARPS_0", "RV_TOI-175_ESPRESSO_0", "RV_TOI-175_ESPRESSO_1"]
+    datasetnames = ['RV_HD109286_SOPHIEp_0', ]
 
     run_folder = getcwd()
     output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = True
+    load_from_pickle = False
     extension_analysis = "_initrun_median"
 
     ## logger
@@ -592,16 +606,17 @@ if __name__ == "__main__":
                     planets=planet_name, periods=periods, tcs=tics,
                     post_instance=post_instance, fitted_values=fitted_values, l_param_name=l_param_name,
                     datasetnames=datasetnames,
-                    remove_GP=True,
+                    datasim_kwargs=kwargs_datasim,
+                    remove_GP=False,
                     phase_binsize=0.1,
                     binning_stat="median",
                     RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                     sharey=True,
                     fig_param={"fontsize": 10,  # "pad_data": {"b": (0.1, -0.3)}, "pad_resi": (0.2, -0.2),
                                },
-                    pl_kwargs={"RV_TOI-175_ESPRESSO_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "ESPRESSO_pre"},
-                               "RV_TOI-175_ESPRESSO_1": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ESPRESSO_post"},
-                               "RV_TOI-175_HARPS_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "HARPS"},
+                    pl_kwargs={"RV_HD109286_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "SOPHIE"},
+                               "RV_HD109286_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "SOPHIE+"},
+                               "RV_HD109286_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ELODIE"},
                                "model": {"color": "C2"},
                                "binned": {"color": "C3"}
                                },
