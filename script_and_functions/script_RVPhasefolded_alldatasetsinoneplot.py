@@ -42,7 +42,8 @@ kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
 def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, datasim_kwargs=None, star_name="A",
                     datasetnames=None, remove_GP=False, phase_binsize=0., binning_stat="mean", RV_fact=1., sharey=False,
-                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, RV_unit="$km/s$", *args, **kwargs):
+                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, show_system_name_in_suptitle=True,
+                    RV_unit="$km/s$", *args, **kwargs):
     """Produce a clean RV plot.
 
     WARNING/TODO: Because the plots are done independantly for each planet when sharey is True,
@@ -94,16 +95,18 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                 allows to provide different pad_data for different planets.
             - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
             - fontsize : Int specifiying the fontsize
-    pl_kwargs    : dict
+    pl_kwargs      : dict
         Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "binned_data" and values
         a dictionary that will be passed as keyword arguments associated the plotting functions.
         You can also add a 'jitter' key with value a dictionary that will contain the changes that you
         want to make for the update error bars due to potential jitter.
-    show_legend  : bool
+    show_legend    : bool
         If True, show the legend
-    legend_param : dict
+    legend_param   : dict
         Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
-    RV_unit      : str
+    show_system_name_in_suptitle : bool
+        If True show the system name in the suptitle
+    RV_unit        : str
         String giving the unit of the RVs
     """
 
@@ -232,7 +235,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
         ax_data_pl = ax_data[ii]
         ax_resi_pl = ax_resi[ii]
 
-        ax_data_pl.set_title("{}{}".format(star.name.prefix.get(), planet_name), fontsize=fontsize)
+        ax_data_pl.set_title("{} {}".format(star.name.prefix.get(), planet_name), fontsize=fontsize)
         ax_data_pl.tick_params(axis='both', which='major', labelsize=fontsize)
         ax_resi_pl.tick_params(axis='both', which='major', labelsize=fontsize)
 
@@ -505,8 +508,12 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                     rms_resi_label.append(label_rms_resi_ii)
 
         if ii == 0:
-            fig.suptitle("{} system\nrms of the residuals = {} {} ({})".format(post_instance.full_name, ", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
-                         fontsize=fontsize)
+            if show_system_name_in_suptitle:
+                fig.suptitle("{} system\nrms of the residuals = {} {} ({})".format(post_instance.full_name, ", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
+                             fontsize=fontsize)
+            else:
+                fig.suptitle("rms of the residuals = {} {} ({})".format(", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
+                             fontsize=fontsize)
 
         ##########################################
         # Bin the data and residuals and plot them
