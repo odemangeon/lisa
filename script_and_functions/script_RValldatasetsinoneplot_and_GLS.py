@@ -15,6 +15,7 @@ if path_pyGLS not in sys.path:
     sys.path.append(path_pyGLS)
 from gls_mod import Gls
 
+fontsize = 12
 
 l_RV_datasets = ['RV_HD109286_SOPHIEp_0', ]
 
@@ -107,18 +108,18 @@ gs_gls = gs[1]
 (axe_data, axe_resi) = add_twoaxeswithsharex(gs_time_series, fig, gs_from_sps_kw={"wspace": 0.2})
 
 # RV TIME SERIES
-axe_data.set_title("RV time series")
-axe_resi.set_xlabel("time [BTJD]")
-axe_data.set_ylabel("RV [m/s]")
-axe_resi.set_ylabel("residuals [m/s]")
+axe_data.set_title("RV time series", fontsize=fontsize)
+axe_resi.set_xlabel("time [BTJD]", fontsize=fontsize)
+axe_data.set_ylabel("RV [m/s]", fontsize=fontsize)
+axe_resi.set_ylabel("residuals [m/s]", fontsize=fontsize)
 
-axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False)
+axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
 axe_data.xaxis.set_minor_locator(AutoMinorLocator())
 axe_data.yaxis.set_minor_locator(AutoMinorLocator())
 axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
 axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
-axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
+axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
 axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
 axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
@@ -137,7 +138,7 @@ if model_wGP is not None:
                                         color=pl_kwargs["GP"]["color"], alpha=pl_kwargs["GP"]["alpha"],
                                         label=pl_kwargs["GP"]["label"]  # **kwarg_GP_pred_var
                                         )
-axe_data.legend()
+axe_data.legend(fontsize=fontsize)
 
 for dst in l_RV_datasets:
     axe_resi.errorbar(time[dst], y=resi[dst], yerr=rv_data_err[dst], color=pl_kwargs[dst]['color'], fmt=pl_kwargs[dst]['fmt'],
@@ -169,10 +170,10 @@ else:
     nb_axes = 3
 ax_gls = add_axeswithsharex(gs_gls, fig, nb_axes=nb_axes, gs_from_sps_kw={"wspace": 0.2})
 for ii in range(nb_axes - 1):
-    ax_gls[ii].tick_params(labelbottom=False)
-ax_gls[0].set_title("GLS Periodograms")
+    ax_gls[ii].tick_params(labelbottom=False, labelsize=fontsize)
+ax_gls[0].set_title("GLS Periodograms", fontsize=fontsize)
 ax_gls[-1].set_xscale("log")
-ax_gls[-1].set_xlabel("Period [days]")
+ax_gls[-1].set_xlabel("Period [days]", fontsize=fontsize)
 
 act_period = []
 act_label = [r"$P_{rot}$", r"$\frac{P_{rot}}{2}$"]
@@ -202,11 +203,11 @@ for ii, key in enumerate(l_gls_key):
 # ax_gls[1].plot(1 / gls_model.freq, gls_model.power, 'k-', label="model")
 # ax_gls[2].plot(1 / gls_GP.freq, gls_GP.power, 'k-', label="GP")
 # ax_gls[3].plot(1 / gls_resi.freq, gls_resi.power, 'k-', label="GP")
-    ax_gls[ii].set_ylabel(f"{gls.label['ylabel']}")  # {gls_inputs[key]['label']}
+    ax_gls[ii].set_ylabel(f"{gls.label['ylabel']}", fontsize=fontsize)  # {gls_inputs[key]['label']}
     ax_gls[ii].yaxis.set_label_position("right")
     ax_gls[ii].yaxis.tick_right()
     ax_gls[ii].yaxis.set_minor_locator(AutoMinorLocator())
-    ax_gls[ii].tick_params(axis="both", direction="in", which="both", bottom=True, top=True, left=True, right=True)
+    ax_gls[ii].tick_params(axis="both", direction="in", which="both", bottom=True, top=True, left=True, right=True, labelsize=fontsize)
     ax_gls[ii].tick_params(axis="both", which="major", length=4, width=1)
     ax_gls[ii].tick_params(axis="both", which="minor", length=2, width=0.5)
 
@@ -215,19 +216,19 @@ for ii, key in enumerate(l_gls_key):
     for per, lab, align, shift, color in zip(act_period, act_label, act_align, act_shift, act_color):
         ax_gls[ii].vlines(per, *ylims, colors="k", linestyles="dotted", linewidth=0.5, color=color)
         if key == "data":
-            ax_gls[ii].text(per + shift, ylims[0] + 0.9 * (ylims[1] - ylims[0]), lab, horizontalalignment=align, color=color)
+            ax_gls[ii].text(per + shift, ylims[0] + 0.9 * (ylims[1] - ylims[0]), lab, horizontalalignment=align, color=color, fontsize=fontsize)
     for per, lab, align, shift, color in zip(pl_period, pl_label, pl_align, pl_shift, pl_color):
         ax_gls[ii].vlines(per, *ylims, colors="k", linestyles="dashed", linewidth=0.5, color=color)
         if key == "data":
-            ax_gls[ii].text(per + shift, ylims[0] + 0.9 * (ylims[1] - ylims[0]), lab, horizontalalignment=align, color=color)
+            ax_gls[ii].text(per + shift, ylims[0] + 0.9 * (ylims[1] - ylims[0]), lab, horizontalalignment=align, color=color, fontsize=fontsize)
     ax_gls[ii].set_ylim(ylims)
     for fap_ii, ls_ii, align, yshift in zip(fap, fap_ls, fap_align, fap_yshift):
         pow_ii = gls.powerLevel(fap_ii / 100)
         if pow_ii < ylims[1]:
             ax_gls[ii].hlines(pow_ii, *xlims, colors="k", linestyles=ls_ii, linewidth=0.5)
             ax_gls[ii].text(xlims[0] + fap_xshift, pow_ii + yshift * (ylims[1] - ylims[0]),
-                            f"{fap_ii} %", verticalalignment=align, horizontalalignment="right")
+                            f"{fap_ii} %", verticalalignment=align, horizontalalignment="right", fontsize=fontsize)
     ax_gls[ii].set_xlim(xlims)
-    ax_gls[ii].legend(handletextpad=-.1, handlelength=0)
+    ax_gls[ii].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize)
 
 pl.show()
