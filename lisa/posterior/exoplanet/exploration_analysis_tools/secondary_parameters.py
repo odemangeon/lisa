@@ -2,8 +2,7 @@
 """
 from collections import Counter
 from numbers import Number
-from numpy import ndarray, stack, arcsin, sqrt, rad2deg
-from numpy import random
+from numpy import ndarray, stack, arcsin, sqrt, rad2deg, random, pi
 
 from ..model import convert as cv
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
@@ -236,7 +235,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
 
     elif all([inst_fullcat in model.dataset_db.inst_fullcategories for inst_fullcat in ["RV"]]):
         # Default value for planet_kwargs and simulate if needed
-        dico_def_value = {"inc": rad2deg(arcsin(sqrt(3 / 4)))}
+        dico_def_value = {"inc": rad2deg(arcsin(sqrt(pi / 4)))}
         if planet_kwargs is None:
             planet_kwargs = {}
         for planet in model.planets.values():
