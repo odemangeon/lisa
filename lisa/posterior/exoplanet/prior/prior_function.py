@@ -5,9 +5,10 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs  # logical_or
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, ones, arange  # logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
+from ...core.prior.prior_function import BetaPrior
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
 from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
 from ....tools.function_w_doc import DocFunction
@@ -17,6 +18,34 @@ from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_
 ## logger object
 logger = getLogger()
 
+
+#################
+# Marginal priors
+#################
+
+class BetaEccPrior(BetaPrior):
+    """Beta Prior
+
+    See https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.beta.html
+
+    :param float a: first shape parameter of the beta distribution
+    :param float b: second shape parameter of the beta distribution
+    """
+
+    __category__ = "betaecc"
+    __mandatory_args__ = []
+    __extra_args__ = []
+    __default_extra_args__ = {}
+
+    def __init__(self):
+        self.a = 0.867
+        self.b = 3.03
+        super(BetaEccPrior, self).__init__()
+
+
+##############
+# Joint priors
+##############
 
 class HKPPrior(Core_JointPrior_Function):
     """Prior defined for the h, k and P parameters of the Np parametrisation of the GravgroupsDynam model.
@@ -879,3 +908,98 @@ class TransitingRhoprior(Transitingprior):
         for param_ref, multiple in zip(self.param_refs, self.multiple_params):
             l_res.append(dico_ravs[param_ref])
         return tuple(l_res)
+
+
+class SupInfLogPtauprior(Core_JointPrior_Function):
+    """Joint prior where on variable has to be superior or equal to the other one
+
+    :param float logP_prior: Prior definition on the superior variable
+    :param float tau_prior: Prior definition on the inferior variable
+    """
+
+    __category__ = "supinflogPtau"
+    __mandatory_args__ = []
+    __extra_args__ = ["k"]
+    __default_extra_args__ = {"k": 1}
+    __hidden_param_refs__ = ['logP', 'tau']
+    __multiple_hidden_params__ = [False, False]
+    __default_hidden_priors__ = {"logP": {"category": "uniform", "args": {"vmin": log(1.0), "vmax": log(1e3)}},
+                                 "tau": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
+                                 }
+    __param_refs__ = ['logP', 'tau']
+    __multiple_params__ = [False, False]
+
+    def __init__(self, params, *args, **kwargs):
+        super(SupInfLogPtauprior, self).__init__(params, *args, **kwargs)
+        # Check that P, cosinc and Rrat have the same number of parameters.
+        if self.k <= 0:
+            raise ValueError("k should be strictly positive")
+
+    def create_logpdf(self, params):
+        """Return the logarithmic probability density function for the joint prior.
+
+        :param dict params: Dictionnary which contains the Parameter instances required by the prior.
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
+            as associated in the parameter file.
+        :return function logpdf: log pdf the order in which the parameter should be provided is
+            provided by self.param_refs
+        """
+        (param_nb,
+         arg_list,
+         param_vector_name,
+         ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        ldict["dico_logpdf"] = dico_logpdf
+        ldict["infnt"] = inf
+        ldict["exp"] = exp
+        dico_text_params = {}
+        for param_key in self.param_refs:
+            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)
+        function_name = "logpdf_{}".format(self.category)
+        text_function = """
+        def {function_name}({param_vector_name}):
+            if {tau} / exp({logP}) >= {k}:
+                return dico_logpdf["tau"]({tau}) + dico_logpdf["logP"]({logP}) - 2
+            else:
+                return - infnt
+        """
+        text_function = dedent(text_function)
+        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
+                                             logP=dico_text_params["logP"], tau=dico_text_params["tau"], k=self.k)
+        logger.debug("text of joint prior {category}:\n{text_func}"
+                     "".format(category=self.category, text_func=text_function))
+        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+        exec(text_function, ldict)
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list))
+
+    def logpdf(self, logP, tau):
+        dico_logpdf = self.priorinstance_hiddenparams
+        if tau / exp(logP) >= self.k:
+            return dico_logpdf["logP"](logP) + dico_logpdf["tau"](tau) - 2
+        else:
+            return - inf
+
+    def ravs(self, nb_values=1):
+        """Return values of the parameters drawn from the joint prior.
+
+        :param int nb_values: Number of values to draw for each parameter.
+        :return tuple_of_float/float nb_values: Tuple for which each element contains the value(s) drawn
+            for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
+            The order of the parameters in the tuple is provided by self.param_refs.
+        """
+        dico_ravs = {}  # Dictionary which contains the drawn values
+        # For each hidden parameter, if a value is provided than this value is used and not drwan from the prior
+        for hiddenparam_ref, dico in self.hiddenparam_defs.items():
+            if dico.get("value", None) is not None:
+                dico_ravs[hiddenparam_ref] = ones(nb_values) * dico.get("value", None)
+            else:
+                dico_ravs[hiddenparam_ref] = ones(nb_values) * nan
+        indexes = arange(nb_values)
+        while len(indexes) > 0:
+            for hiddenparam_ref, dico in self.hiddenparam_defs.items():
+                if dico.get("value", None) is None:
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+            indexes = where(dico_ravs["tau"] / exp(dico_ravs["logP"]) < self.k)[0]
+        return dico_ravs["logP"], dico_ravs["tau"],

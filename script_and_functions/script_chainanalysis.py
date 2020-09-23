@@ -29,11 +29,12 @@ import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.plot import hist_lnprob
+from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
 
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
-kwargs_datasim = {}
+kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 star_kwargs = {"M": {"value": 1.077,
                      "error": 0.081},
                "R": {"value": 1.14,
@@ -55,7 +56,10 @@ save_plots = True
 extension_outputs = "_initrun_median"
 
 # Histograms Parameters
-hist_perc = 10  # The histogram of the ln posterior probability will only be done for the last X% of the chains
+hist_perc = 10  # For the histogram after the acceptance fraction and the ln posterior selections
+# the histograms of the ln posterior probability will only be done for the last hist_perc% of the chains
+# After the Geweke selection, 10% of the sample, uniformly spread will be selected.n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
+sigma_clip_hist = None
 n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
 do_hist = True  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
 
@@ -92,8 +96,11 @@ def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_interva
 interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
 do_geweke_plot = True
-apply_min_burnin = False
-min_burnin = 20000
+do_hist_after_geweke = True
+extra_burnin_4_hist_after_geweke = 0
+sigma_clip_hist_after_geweke = 5
+apply_min_burnin = True
+min_burnin = 10000
 
 # Parameter based walker selection
 do_PS = False
@@ -137,7 +144,7 @@ omega_0to360 = False
 save_results_bestfit_secpar = True
 
 # Do computation of the BIC
-do_compute_BIC = True
+do_compute_BIC = False
 load_fitted_val_pickle_BIC = False
 only_bestfit_bic = True
 
@@ -176,7 +183,7 @@ if do_RP:
 
     if do_hist:
         lnprob_val = lnprobability[:, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the RAW lnprobability")
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"lnpost_hist_raw{extension_outputs}.pdf"))
@@ -202,7 +209,7 @@ if do_AFS:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_AFS, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low acceptance chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"lnpost_hist_accefrac_select{extension_outputs}.pdf"))
@@ -232,7 +239,7 @@ if do_LPS:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker_LPS, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"lnpost_hist_lnpost_select{extension_outputs}.pdf"))
@@ -258,7 +265,7 @@ if do_AFSLPSP:
 
     if do_hist:
         lnprob_val = lnprobability[l_walker, int(nstep * (1 - hist_perc / 100)):].flatten()
-        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
+        ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains")
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"lnpost_hist_accfrac&lnpost_select{extension_outputs}.pdf"))
@@ -332,10 +339,14 @@ if do_GS:
         pl.show()
     pl.close("all")
 
-    if do_hist:
+    if do_hist and do_hist_after_geweke:
+        if extra_burnin_4_hist_after_geweke > 0:
+            l_burnin_hist_geweke = [bur + extra_burnin_4_hist_after_geweke for bur in l_burnin]
+        else:
+            l_burnin_hist_geweke = l_burnin
         lnprob_val = et.get_clean_flatchain(chainI[:, :, lnprobability_name], l_walker=l_walker_conv,
-                                            l_burnin=l_burnin)
-        ax, did_log10 = hist_lnprob(lnprob_val, n_bins=n_bins)
+                                            l_burnin=l_burnin_hist_geweke)
+        ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist_after_geweke)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"lnpost_hist_geweke_select{extension_outputs}.pdf"))

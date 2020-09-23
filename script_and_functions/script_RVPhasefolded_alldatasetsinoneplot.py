@@ -6,7 +6,6 @@ Script to produce pretty plots of RV data
 @TODO:
 """
 from os import getcwd
-from os.path import join
 
 import numpy as np
 import matplotlib.pyplot as pl
@@ -18,7 +17,6 @@ from collections import OrderedDict, defaultdict
 from PyAstronomy.pyasl import foldAt
 from matplotlib.ticker import AutoMinorLocator
 from scipy.stats import binned_statistic
-from matplotlib.colors import to_hex
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -26,9 +24,10 @@ import lisa.tools.mylogger as ml
 
 from lisa.posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from lisa.explore_analyze.misc import get_def_output_folders
+from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+
 
 # from ipdb import set_trace
 
@@ -38,46 +37,50 @@ mgr_noisemodel.load_setup()
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
+kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
-def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, star_name="A",
+
+def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_param_name, datasim_kwargs=None, star_name="A",
                     datasetnames=None, remove_GP=False, phase_binsize=0., binning_stat="mean", RV_fact=1., sharey=False,
-                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, RV_unit="$km/s$", *args, **kwargs):
-    nplanet = len(planets)
+                    fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, show_system_name_in_suptitle=True,
+                    RV_unit="$km/s$", *args, **kwargs):
     """Produce a clean RV plot.
 
     WARNING/TODO: Because the plots are done independantly for each planet when sharey is True,
-    there is no insurance that the I am not sure that the indicate_y_outliers function behaves correctly.
+    I am not sure that the indicate_y_outliers function behaves correctly.
 
     Arguments
     ---------
-    fig:
+    fig            :
         Figure instance (provided by the styler)
-    planets : list of str
+    planets        : list of str
         List of planet names (used to infer the number of planets and create the good number of subplots)
-    periods : list of floats
+    periods        : list of floats
         Orbital periods for each planets (used to phase fold)
-    tcs     : list of floats
+    tcs            : list of floats
         Time of inferior conjunction for each planet (used to phase fold)
-    post_instance : Posterior instance
-    fitted_values : array of float
+    post_instance  : Posterior instance
+    fitted_values  : array of float
         Fitted values
-    l_param_name  : list of str
+    l_param_name   : list of str
         List of parameter names
-    star_name     : String
-    datasetnames  : list of String
+    datasim_kwargs : dict
+        Dictionary of keyword arguments for the datasimulator.
+    star_name      : String
+    datasetnames   : list of String
         List providing the datasets to load and use
-    remove_GP     : Boolean
+    remove_GP      : Boolean
         If True the GP model is remove from the data for the plot.
-    phase_binsize : float
+    phase_binsize  : float
         If phase_binsize is superior to 0. The the data will be binned (all dataset included) and display.
         phase_binsize then gives the size of the bin used
-    binning_stat  : str
+    binning_stat   : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
-    RV_fact       : float
+    RV_fact        : float
         Factor to apply to the RV
-    sharey        : bool
-    fig_param     : dict
+    sharey         : bool
+    fig_param      : dict
         Dictionary providing keyword arguments for the figure definition and settings. The possible keys are
             - 'main_gridspec': The content of this entry should be a dictionary which will be passed to
                 GridSpec (GridSpec(..., **fig_param['main_gridspec'])) instance creation with create the main gridspec
@@ -88,22 +91,22 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                 to add_twoaxeswithsharex_perplanet (add_twoaxeswithsharex_perplanet(..., gs_from_sps_kw=fig_param['gs_from_sps_kw'])
                 function creating two axes data and residuals per planet.
             - 'pad_data': Iterable of 2 floats which define the bottom and top pad to apply for data axes.
+                Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
+                allows to provide different pad_data for different planets.
             - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
             - fontsize : Int specifiying the fontsize
-    pl_kwargs    : dict
+    pl_kwargs      : dict
         Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "binned_data" and values
         a dictionary that will be passed as keyword arguments associated the plotting functions.
         You can also add a 'jitter' key with value a dictionary that will contain the changes that you
         want to make for the update error bars due to potential jitter.
-    show_legend  : bool
+    show_legend    : bool
         If True, show the legend
-    legend_param : dict
+    legend_param   : dict
         Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True)
-    show_xlabel  : bool
-        If True, show the x label
-    show_ylabel  : bool
-        If True, show the y labels
-    RV_unit      : str
+    show_system_name_in_suptitle : bool
+        If True show the system name in the suptitle
+    RV_unit        : str
         String giving the unit of the RVs
     """
 
@@ -157,6 +160,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
     pl_kwarg_final = {}
     pl_kwarg_jitter = {}
     for datasetname in datasetnames:
+        # Set the labels
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
             label_dst = filename_info["inst_name"]
@@ -179,7 +183,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             if "alpha" in pl_kwarg_jitter[datasetname]:
                 pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
             else:
-                pl_kwarg_jitter[datasetname] = 0.5
+                pl_kwarg_jitter[datasetname]["alpha"] = 0.5
         # default value for ecolor
         if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
             pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
@@ -231,7 +235,7 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
         ax_data_pl = ax_data[ii]
         ax_resi_pl = ax_resi[ii]
 
-        ax_data_pl.set_title("{}{}".format(star.name.prefix.get(), planet_name), fontsize=fontsize)
+        ax_data_pl.set_title("{} {}".format(star.name.prefix.get(), planet_name), fontsize=fontsize)
         ax_data_pl.tick_params(axis='both', which='major', labelsize=fontsize)
         ax_resi_pl.tick_params(axis='both', which='major', labelsize=fontsize)
 
@@ -349,20 +353,28 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             # the delta RV to the global reference (deltaRV[datasetname]) and then to which you substract the
             # other planets contribution
 
-            # Remove the DeltaRV to the global RV reference
-            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname] - (fitted_values[idx_star_v0] * RV_fact)
-
-            # Remove the other planets contributions
             # Get the current instrument model and noise model
             inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
             inst_mod = post_instance.model.instruments[inst_mod_fullname]
             noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
 
             # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+            # and remove RV_drift
             kwargs_dataset = dico_kwargs[datasetname].copy()
             t_dst = kwargs_dataset.pop("t")
             kwargs_dataset.pop("data")
             kwargs_dataset.pop("data_err")
+            kwargs_dataset.update(datasim_kwargs.copy())
+
+            # Remove the DeltaRV to the global RV reference
+            data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname]
+
+            # Remove the systemic velocity (with drift when needed)
+            data_pl[datasetname] -= fitted_values[idx_star_v0] * RV_fact
+            if star.with_RVdrift:
+                for orderm1 in range(star.RVdrift_order):
+                    idx_coeff_RV_drift = l_param_name.index(star.parameters[star.get_RVdrift_param_name(orderm1 + 1)].get_name(include_prefix=True, recursive=True))
+                    data_pl[datasetname] -= fitted_values[idx_coeff_RV_drift] * RV_fact * (t_dst - datasim_kwargs[RVdrift_tref_name])**(orderm1 + 1)
 
             # Remove GP model
             if remove_GP:
@@ -372,11 +384,12 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                                                  )
                 # Apply RV_fact to models and GP
                 model_dst *= RV_fact
-                model_wGP_dst *= RV_fact
-                GP_pred *= RV_fact
-                GP_pred_var *= RV_fact**2
-                # Correct data from GP pred
-                data_pl[datasetname] = data_pl[datasetname] - GP_pred
+                if model_wGP_dst is not None:
+                    model_wGP_dst *= RV_fact
+                    GP_pred *= RV_fact
+                    GP_pred_var *= RV_fact**2
+                    # Correct data from GP pred
+                    data_pl[datasetname] -= GP_pred
 
             # Compute and remove the other planet contribution
             for plnt in planets:
@@ -413,12 +426,20 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                                                           )
 
         # Set the y axis limits
-        pad_data = fig_param.get("pad_data", (0.1, 0.1))
+        pad_data_default = (0.1, 0.1)
+        if planet_name in fig_param.get("pad_data", {}):
+            pad_data = fig_param["pad_data"][planet_name]
+        else:
+            pad_data_content = fig_param.get("pad_data", pad_data_default)
+            if isinstance(pad_data_content, dict):
+                pad_data = pad_data_default
+            else:
+                pad_data = pad_data_content
         et.auto_y_lims(np.concatenate([y for y in data_pl.values()]), ax_data_pl, pad=pad_data)
         # Indicate values that are off y-axis with anarrows
         for datasetname in datasetnames:
             et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
-                                   alpha=pl_kwarg_final[datasetname]["alpha"])
+                                   alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
         ################
         # Plot the model
@@ -465,10 +486,10 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
         for datasetname in datasetnames:
             if residual_pl[datasetname] is not None:
                 et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["alpha"])
+                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
             if residual_wGP_pl[datasetname] is not None:
                 et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["alpha"])
+                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
             if ii == 0:
                 filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
                 if residual_pl[datasetname] is not None:
@@ -487,8 +508,12 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
                     rms_resi_label.append(label_rms_resi_ii)
 
         if ii == 0:
-            fig.suptitle("{} system\nrms of the residuals = {} {} ({})".format(post_instance.full_name, ", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
-                         fontsize=fontsize)
+            if show_system_name_in_suptitle:
+                fig.suptitle("{} system\nrms of the residuals = {} {} ({})".format(post_instance.full_name, ", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
+                             fontsize=fontsize)
+            else:
+                fig.suptitle("rms of the residuals = {} {} ({})".format(", ".join(rms_resi), RV_unit, ", ".join(rms_resi_label)),
+                             fontsize=fontsize)
 
         ##########################################
         # Bin the data and residuals and plot them
@@ -501,11 +526,8 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
             all_data_pl = np.concatenate([data_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
             all_data_err = np.concatenate([dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
             all_data_err_jitter = np.concatenate([data_err_jitter[datasetname] if data_err_jitter[datasetname] is not None else dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-            if remove_GP:
-                all_residuals_pl = np.concatenate([residual_wGP_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-            else:
-                all_residuals_pl = np.concatenate([residual_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-
+            l_residuals_wGP_pl = [residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname] for datasetname in datasetnames]
+            all_residuals_pl = np.concatenate(l_residuals_wGP_pl)[idx_sort_alldatasetphase]
             # Define the phase bins for the binned data/resi plot
             bins = np.arange(-0.5, 0.5 + phase_binsize, phase_binsize)
             midbins = bins[:-1] + phase_binsize / 2
@@ -551,15 +573,15 @@ def create_RV_plots(fig, planets, periods, tcs, post_instance, fitted_values, l_
 
 if __name__ == "__main__":
     # Define the object name
-    obj_name = "TOI-175"
+    obj_name = "HD109286"
 
     # Define dataset names to be loaded
-    datasetnames = ["RV_TOI-175_HARPS_0", "RV_TOI-175_ESPRESSO_0", "RV_TOI-175_ESPRESSO_1"]
+    datasetnames = ['RV_HD109286_SOPHIEp_0', ]
 
     run_folder = getcwd()
     output_folders = get_def_output_folders(run_folder=run_folder)
 
-    load_from_pickle = True
+    load_from_pickle = False
     extension_analysis = "_initrun_median"
 
     ## logger
@@ -591,16 +613,17 @@ if __name__ == "__main__":
                     planets=planet_name, periods=periods, tcs=tics,
                     post_instance=post_instance, fitted_values=fitted_values, l_param_name=l_param_name,
                     datasetnames=datasetnames,
-                    remove_GP=True,
+                    datasim_kwargs=kwargs_datasim,
+                    remove_GP=False,
                     phase_binsize=0.1,
                     binning_stat="median",
                     RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                     sharey=True,
-                    fig_param={"fontsize": 10,
+                    fig_param={"fontsize": 10,  # "pad_data": {"b": (0.1, -0.3)}, "pad_resi": (0.2, -0.2),
                                },
-                    pl_kwargs={"RV_TOI-175_ESPRESSO_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "ESPRESSO_pre"},
-                               "RV_TOI-175_ESPRESSO_1": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ESPRESSO_post"},
-                               "RV_TOI-175_HARPS_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 0.5, 'label': "HARPS"},
+                    pl_kwargs={"RV_HD109286_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "SOPHIE"},
+                               "RV_HD109286_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "SOPHIE+"},
+                               "RV_HD109286_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'mew': 1, 'alpha': 1., 'label': "ELODIE"},
                                "model": {"color": "C2"},
                                "binned": {"color": "C3"}
                                },

@@ -122,61 +122,92 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
 
 
 def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, key_opt_kwargs, ldict,
-                          key_arglist=None, add_to_ldict=False, backup_add_to_args=True, new_arg_value=None,
-                          def_arg_value=None):
-    """Update the text used as arguments for the datasimulator function simulating time series.
+                          key_arglist=None, new_arg_value=None, def_arg_value=None, disable_add_to_ldict=False):
+    """Update the text used as arguments for a function created from text.
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
     It should also be called after init_arguments since it uses its output.
 
-    :param str arguments: string giving the current text of arguments
-    :param str new_arg_name: Str used to design the new argument
-    :param bool multi: True if the datasimulator simulate multiple outputs
-    :param bool has_dataset: True if the datasimulator should includes datasets values
-    :param dict arg_list: dictionary with key = key_whole, value = dict with
+    There is 3 use cases for this function:
+    1. You want to add a non param argument for which you have the value:
+        You provide the value via new_arg_value and all it will be stored in ldict (dictionary which will
+        be used as local environement for the execution of the text of the function)
+    2. You want to add a non param argument for which you do not have the value at coding time.
+        You don't provide new_arg_value (or you provide None) and the argument name will be added to the
+        arguments string and will be required from user at run time
+    3. You want to add a non param argument for which the value is function of variable that you do not
+        have now but are part of the function.
+        In this case you should provide the text which will be used to compute the value at run time
+        in new_arg_value. You should also have added function required by this text to ldict if there is any.
+        Finally you should set disable_add_to_ldict to True.
+
+    Arguments
+    ---------
+    arguments           : str
+        string giving the current text of arguments
+    new_arg_name        : str
+        Str used to design the new argument
+    arg_list            : dict
+        dictionary with key = key_whole, value = dict with
         key = key_param, value = list of parameter full names
         key = key_mand_kwargs, value = list of mandatory keyword arguments
         key = key_opt_kwargs, value = list of optional keyword arguments
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param string key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
-    :param string key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
-    :param dict ldict: dictionary to be used as local dictionary argument of the exec function.
+    key_mand_kwargs      : string
+        Key used for the mandatory keyword argument entry of arg_list
+    key_opt_kwargs       : string
+        Key used for the optional keyword argument entry of arg_list
+    ldict                : dict
+        dictionary to be used as local dictionary argument of the exec function.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param str/list_of_str key_arglist: key of arg_list to update.
-    :param bool add_to_ldict: If True the new argument and its value will be added to ldict.
-        Otherwise the name of the new argument is added to arguments if backup_add_to_args is True.
-    :param bool backup_add_to_args: If True the new argument and its default value will be added to
-        arguments if add_to_ldict is not True.
-    :param ?? new_arg_value: Value of the new argument.
-    :param ?? def_arg_value: Default argument value. If None, no default value is provided. If you
-        want None as default value, you need to provided "None"
-    :return str arguments: Updated string giving the new text of arguments
-    :return str/None arg: String giving the name of the new argument (and the default value).
+    key_arglist          : str/list_of_str
+        key of arg_list to update.
+    new_arg_value        :
+        Value of the new argument.
+    def_arg_value        :
+        Default argument value. If None, no default value is provided. If you want None as default value,
+        you need to provided "None"
+    disable_add_to_ldict : bool
+        This should be set to True only for use case 3 (see above). This prevents the function from adding
+        the content of new_arg_value to ldict and affect it to arg instead, also adding new arg_name to arguments
+
+    Returns
+    -------
+    arguments         : str
+        Updated string giving the new text of arguments
+    arg               : str/None
+        String giving the name of the new argument (and the default value).
         However if the argument is directly added to ldict and thus is not added to arguments,
         arg is None.
+    arguments_element : str/None
+        Addition to arguments made. If no addition have been made because the param has been added to ldict
+        this returns None
     """
-    if isinstance(key_arglist, str) or (key_arglist is None):
-        l_key_arglist = [key_arglist]
-    elif isinstance(key_arglist, Iterable):
-        l_key_arglist = key_arglist
-    else:
-        if key_arglist is not None:
-            raise ValueError("key_arglist should be a string or in iterable of string")
-    if add_to_ldict:
+    if (new_arg_value is not None) and not(disable_add_to_ldict):
+        # Use case 1.
         ldict[new_arg_name] = new_arg_value
         arg = None
+        arguments_element = None
     else:
-        if def_arg_value is None:
-            arg = new_arg_name
-            key_kwargs = key_mand_kwargs
+        # Use case 2 or 3.
+        if isinstance(key_arglist, str) or (key_arglist is None):
+            l_key_arglist = [key_arglist]
+        elif isinstance(key_arglist, Iterable):
+            l_key_arglist = key_arglist
         else:
-            arg = "{}={}".format(new_arg_name, def_arg_value)
+            if key_arglist is not None:
+                raise ValueError("key_arglist should be a string or in iterable of string")
+        arg = new_arg_name
+        if def_arg_value is None:
+            key_kwargs = key_mand_kwargs
+            arguments_element = f"{arg}"
+        else:
             key_kwargs = key_opt_kwargs
-        if backup_add_to_args:
-            arguments += ", {}".format(arg)
-            for key in l_key_arglist:
-                arg_list[key][key_kwargs].append(arg)
-    return arguments, arg
+            arguments_element = f"{arg}={def_arg_value}"
+        arguments += f", {arguments_element}"
+        for key in l_key_arglist:
+            arg_list[key][key_kwargs].append(arg)
+    return arguments, arg, arguments_element
 
 
 def add_argskwargs_argument(arguments):

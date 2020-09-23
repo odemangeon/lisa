@@ -457,7 +457,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     nt = len(t_data)
     data = kwargs.pop("data")
     data_err = kwargs.pop("data_err")
-    kwargs.update(datasim_kwargs)
+    kwargs.update(datasim_kwargs.copy())
     # Extract the jitter information:
     # jitter which give the value of the jitter (float)
     # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
@@ -529,7 +529,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
             tmax = tc + P * phasemax
             ebconts_lines_labels_model_i = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
                                                       post_instance=post_instance, key_obj=key_pl,
-                                                      supersamp=supersamp_model, exptime=exptime, datasim_kwargs={'tref': tmin},
+                                                      supersamp=supersamp_model, exptime=exptime, datasim_kwargs=datasim_kwargs,
                                                       plot_phase=True, Per=P, tref=tc,
                                                       pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                                                       ax=ax_data_i)
@@ -578,9 +578,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
             # Plot the model
             tmin = t_i.min()
             tmax = t_i.max()
-            ebconts_lines_labels_model_i = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
+            ebconts_lines_labels_model_i = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name,
+                                                      param=param, l_param_name=l_param_name,
                                                       post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                                      exptime=exptime, plot_phase=False,
+                                                      datasim_kwargs=datasim_kwargs, exptime=exptime, plot_phase=False,
                                                       pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
                                                       ax=ax_data_i)
             # Plot the residuals
@@ -1611,7 +1612,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     if plot:
         # Histogram
         fig, ax = subplots(nrows=2)
-        ax[0], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[0])
+        ax[0], did_log10, nb_points_sigma_clip = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[0])
         ylims = ax[0].get_ylim()
         label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
         label_thresh = f"threshold ({sig_fact} sigma) = {threshold:.2f}"
@@ -1628,7 +1629,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
         ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}")
         ax[0].legend()
         # Cumulative histogram
-        ax[1], did_log10 = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
+        ax[1], did_log10, nb_point_sigma_clip = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
         ylims = ax[1].get_ylim()
         xlims = ax[1].get_xlim()
         label_perc = f"{quantile} % percentile value = {percentile_lnposterior:.2f}"
@@ -1705,12 +1706,21 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
 def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
-    :param ChainInterpret chainI:
-    :param int_iteratable l_walkers: list of valid walkers
-    :param int_iteratable l_burnin: list of burnin iterations for each valid walker
-    :param bool force_finite: If True the function will suppress every iteration for which one of the
-        parameter values provided is not finite.
-    :return np.array res: cleaned flat chain
+    Arguments
+    ---------
+    chainI : ChainInterpret
+    l_walkers: int_iteratable
+        list of valid walkers
+    l_burnin: int_iteratable
+        list of burnin iterations for each valid walker
+    force_finite: bool
+        If True the function will suppress every iteration for which one of the parameter values provided
+        is not finite.
+
+    Returns
+    -------
+    res : np.array
+        cleaned flat chain
     """
     res = None
     # If no walker list is provided nor burnin list, the result is the whole flatten chain

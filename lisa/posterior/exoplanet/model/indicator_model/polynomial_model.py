@@ -21,6 +21,9 @@ from .....tools.function_from_text_toolbox import (init_arglist_paramnb_argument
 logger = getLogger()
 
 
+INDpoly_tref_name = f"{time_ref}_RVdrift"
+
+
 class PolynomialIndicatorInterface(object):
     """docstring for PolynomialIndicatorInterface."""
 
@@ -74,7 +77,8 @@ class PolynomialIndicatorInterface(object):
     def _create_datasimulator_IND_Poly(self, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                                        polynomial_order_name,
                                        inst_models=None, datasets=None,
-                                       param_vector_name=par_vec_name, l_time_vec_format=None, l_timeref_format=None):
+                                       param_vector_name=par_vec_name, l_time_vec_format=None,
+                                       ):
         """Create a datasimulator for indicators using the polynomial model
 
         Arguments
@@ -100,6 +104,8 @@ class PolynomialIndicatorInterface(object):
         param_vector_name : String
             string giving the name of the vector of parameters argument of the
             datasimulator function.
+        l_time_vec_format : str
+            format for f_time_vect
 
         Returns
         -------
@@ -151,7 +157,7 @@ class PolynomialIndicatorInterface(object):
                                                        key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
         # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
         # the rest of the function. Check if it can be used.
-        (arguments, time_arg_name, time_arg
+        (arguments, time_arg_name, time_arg, time_arg_in_arguments
          ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
                                key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                                ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
@@ -204,50 +210,37 @@ class PolynomialIndicatorInterface(object):
                     if value_not0 and order > 0:
                         # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
                         # no dataset is provided, ...
-                        if ((time_ref not in arg_list[key_whole][key_mand_kwargs] +
-                             arg_list[key_whole][key_opt_kwargs]) and
-                            (l_time_ref not in arg_list[key_whole][key_mand_kwargs] +
-                             arg_list[key_whole][key_opt_kwargs])):
-                            def get_time_ref(time):
-                                return time[0]
-                            (arguments, timeref_arg_name, timeref_arg
-                             ) = add_timeref_arguments(arguments, multi, arg_list, key_whole,
-                                                       key_mand_kwargs, key_opt_kwargs, ldict,
-                                                       get_time_ref, has_dataset, True, l_dataset,
-                                                       time_ref, l_time_ref)
+                        if INDpoly_tref_name not in arg_list[key_whole][key_mand_kwargs] + arg_list[key_whole][key_opt_kwargs]:
+                            (arguments, timeref_arg_name, timeref_arg, timeref_arg_in_arguments
+                             ) = add_timeref_arguments(arguments=arguments, multi=multi, vect_for_multi=False,
+                                                       use_dataset=False, arg_list=arg_list, key_arglist=key_whole,
+                                                       key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                                       ldict=ldict, has_dataset=has_dataset,
+                                                       l_dataset=l_dataset, timeref_name=INDpoly_tref_name,
+                                                       time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+                            if timeref_arg is None:
+                                # The value has been added to ldict and you nned to use timeref_arg_name in the text of the function
+                                timeref = timeref_arg_name
+                            else:
+                                # The value to use in the text is timeref_arg
+                                timeref = timeref_arg
                         # ..., add the end of this order's contribution to the text of the out of
                         # transit variation, ...
                         if order == 1:
                             if multi:
                                 if l_time_vec_format is None:
-                                    l_time_ii = ("{ltimevec}[{ii}]"
-                                                 "".format(ltimevec=l_time_vec, ii=ii))
+                                    l_time_ii = f"{l_time_vec}[{ii}]"
                                 else:
                                     l_time_ii = l_time_vec_format.format(ii=ii)
-                                if l_timeref_format is None:
-                                    l_timeref_ii = ("{ltimeref}[{ii}]"
-                                                    "".format(ltimeref=l_time_ref, ii=ii))
-                                else:
-                                    l_timeref_ii = l_timeref_format.format(ii=ii)
-                                l_poly_var[ii] += (" * ({l_time_ii} - {l_timeref_ii}) "
-                                                   "".format(ii=ii, l_time_ii=l_time_ii,
-                                                             l_timeref_ii=l_timeref_ii))
+                                l_poly_var[ii] += f" * ({l_time_ii} - {timeref}) "
                             else:
-                                l_poly_var[ii] += (" * ({time} - {timeref}) "
-                                                   "".format(time=time_vec,
-                                                             timeref=time_ref))
+                                l_poly_var[ii] += f" * ({time_vec} - {timeref}) "
                         elif order > 1:
                             if multi:
                                 l_time_ii = l_time_vec_format.format(ii=ii)
-                                l_timeref_ii = l_timeref_format.format(ii=ii)
-                                l_poly_var[ii] += (" * ({l_time_ii} - {l_timeref_ii})"
-                                                   "**{order}".format(order=order, ii=ii,
-                                                                      l_time_ii=l_time_ii,
-                                                                      l_timeref_ii=l_timeref_ii))
+                                l_poly_var[ii] += f" * ({l_time_ii} - {timeref})**{order}"
                             else:
-                                l_poly_var[ii] += (" * ({time} - {timeref})**{order}"
-                                                   "".format(order=order, time=time_vec,
-                                                             timeref=time_ref))
+                                l_poly_var[ii] += f" * ({time_vec} - {timeref})**{order}"
                     # If the is no contribution to the oot of transit variation from this order
                     # add only a space.
                     elif value_not0 and order == 0:
