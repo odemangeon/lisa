@@ -358,6 +358,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Create the templates to conpute the condition to know if the planet passes in the star
     # and of what tho return if condition is True
     # Fill return if condition planet goes in the star is True
+    # The condition is taken from https://iopscience.iop.org/article/10.1086/592381/fulltext/75178.text.html (section 3.1)
     if parametrisation == "Multis":  # aR is not a main parameter
         template_preambule_cond_pl = "condition_{planet} = (aR_{planet} < ((1 + ecc_{planet}) / (1 - ecc_{planet} * ecc_{planet})))\n"
     else:  # aR is a main parameter
