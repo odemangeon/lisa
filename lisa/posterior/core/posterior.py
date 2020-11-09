@@ -354,7 +354,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
-    def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None, supersamp=1, exptime=30 / (24 * 60)):
+    def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None,
+                      supersamp=1, exptime=30 / (24 * 60)):
         """Function to compute the models of a dataset for display purposes.
 
         Arguments
@@ -436,7 +437,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
                                                 param_noisemod=f_format_param(param),
                                                 l_datakwargs=datasets_kwargs,
-                                                tsim=tsim)
+                                                tsim=t_model)
             if supersamp > 1:
                 gp_pred = average_supersampled_values(gp_pred, supersamp)
                 gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)

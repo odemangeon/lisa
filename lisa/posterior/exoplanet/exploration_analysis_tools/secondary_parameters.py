@@ -115,6 +115,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
         dico_par[star.Teff.get_name(include_prefix=True, recursive=True)])
     l_parname_sec_chain.append(star.L.get_name(include_prefix=True, recursive=True))
 
+    # Add incaverage to dico_par
+    for planet in model.planets.values():
+        dico_par[planet.incaverage.get_name(include_prefix=True, recursive=True)] = planet.incaverage.value
+
     # Define units of parameter for which the unit can vary depending on the dataset.
     if units is None:
         units = {}
@@ -173,13 +177,26 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             l_tup_planet.append((planet.M.get_name(include_prefix=True, recursive=True), cv.getMp, [Kfact, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
+            l_tup_planet.append((planet.Mfromincaverage.get_name(include_prefix=True, recursive=True), cv.getMp, [Kfact, ],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.incaverage.get_name(include_prefix=True, recursive=True)]))
             # Mp/(Ms)**(2/3): Planetary mass over Stellar mass power 2/3
             l_tup_planet.append((planet.MoverMs23rd.get_name(include_prefix=True, recursive=True), cv.getMpoverMs23rd, [units_dict, ],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True)]))
+            # Mpsini: Planetary mass sinus inclination
+            l_tup_planet.append((planet.Msini.get_name(include_prefix=True, recursive=True), cv.getMpsininc, [Kfact, ],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True)]))
+            # Mpsini/(Ms)**(2/3): Planetary mass sin(inc) over Stellar mass power 2/3
+            l_tup_planet.append((planet.MsinioverMs23rd.get_name(include_prefix=True, recursive=True), cv.getMpsinincoverMs23rd, [units_dict, ],
+                                 [planet.P.get_name(include_prefix=True, recursive=True), planet.K.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True)]))
             # a: semi major axis
             l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True), planet.M.get_name(include_prefix=True, recursive=True)]))
+            l_tup_planet.append((planet.afromaR.get_name(include_prefix=True, recursive=True), cv.getafromaR, [],
+                                 [planet.aR.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
             # rhostar: Density of the star
             l_tup_planet.append((planet.rhostar.get_name(include_prefix=True, recursive=True), cv.getrhostar, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
@@ -314,7 +331,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             else:
                 l_tup_planet.append((planet.a.get_name(include_prefix=True, recursive=True), cv.geta, [],
                                      [planet.P.get_name(include_prefix=True, recursive=True), star.M.get_name(include_prefix=True, recursive=True),
-                                      planet.Msini.get_name(include_prefix=True, recursive=True)]))
+                                      planet.M.get_name(include_prefix=True, recursive=True)]))
             # aR: semi major axis in stellar radius
             l_tup_planet.append((planet.aR.get_name(include_prefix=True, recursive=True), cv.getaoverr_fromRstar, [],
                                  [planet.a.get_name(include_prefix=True, recursive=True), star.R.get_name(include_prefix=True, recursive=True)]))
