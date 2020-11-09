@@ -849,129 +849,15 @@ def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name
     for jj in range(nb_pl):
         overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
                                 datasim_kwargs=datasim_kwargs, post_instance=post_instance, oversamp=oversamp,
-                                supersamp_model=supersamp_model, exptime=exptime_Kepler, phasefold=False,
+                                supersamp_model=supersamp_model, exptime=exptime, phasefold=False,
                                 zoom=zoom_planets[jj], show_title=False, show_legend=False, ax_data=axes[jj * 2],
                                 ax_resi=axes[jj * 2 + 1])
     fig.tight_layout(**kwargs_tl)
 
 
-# def compute_model(t, datasim_docfunc, param, l_param_name, datasim_kwargs=None,
-#                   supersamp=1, exptime=exptime_Kepler,
-#                   noise_model=None, model_instance=None):
-#     """Compute the simulated data at the provided times using the provided datasimulator.
-#
-#     This function is typically used with the data simulator of only one dataset. If not, the noise_model argument doesn't really make sense since there can be multiple noise models associated with multiple datasets
-#
-#     Arguments
-#     ---------
-#     t : np.array
-#         time vector at which you want to compute the simulated data
-#     datasim_docfunc : DatasimDocFunc
-#         Data simulator to be used for the simulation
-#     param : np.array
-#         Vector of parameter values to use for the simulation
-#     l_param_name : List of String
-#         List of parameter full names corresponding with param vector
-#     datasim_kwargs : Dictionary
-#         Keyword arguments to be passed to the data simulator function
-#     supersamp : Integer
-#         Supersampling factor to be used.
-#     exptime : Float
-#         exposure time
-#     noise_model : Core_NoiseModel suclass
-#         Class of noise model associated with the simulated dataset.
-#         TODO: This could be inferred from the datasim_docfunc and the model_instance.
-#     model_instance : Core_Model Subclass instance
-#         model instance used to generate the data simulator
-#     """
-#     # Supersample the time if needed
-#     if supersamp > 1:
-#         t_model = get_time_supersampled(t, supersamp, exptime)
-#     else:
-#         t_model = t
-#
-#     # If datasim_kwargs is None affect an empty dict and no additional arguments will be passed to
-#     # the datasim function
-#     if datasim_kwargs is None:
-#         datasim_kwargs = {}
-#
-#     # Compute the model values for each time
-#     idx_par = []
-#     datasim_function = datasim_docfunc.function
-#     datasim_paramnames = datasim_docfunc.params_model
-#     for par in datasim_paramnames:
-#         idx_par.append(l_param_name.index(par))
-#     model = datasim_function(param[idx_par], t_model, **datasim_kwargs)
-#     if supersamp > 1:
-#         model = average_supersampled_values(model, supersamp)
-#
-#     # Compute GP contribution if needed.
-#     if noise_model is not None:
-#         if noise_model.has_GP:
-#             # WARNING: Here for GP model. I take all the instruments with the same GP noise
-#             # model to compute the GP contribution. FOr now it works but If at one point I want
-#             # to use the same model for two different type of data (ex: RV and LC). It will not anymore.
-#             # Create the simulated data (model) for all the datasets and get the datasim_all
-#             datasim_all = (model_instance.
-#                            create_datasimulator_alldatasets(dataset_db=model_instance.dataset_db))
-#             idx_param_datasim = []
-#             for param_name in datasim_all.params_model:
-#                 idx_param_datasim.append(l_param_name.index(param_name))
-#             model_all = datasim_all.function(param[idx_param_datasim], **datasim_kwargs)
-#             # Get the simulated data (model) of only the dataset with the current GP noisemodel
-#             # Get the dataset kwargs mandatory for the GP simulation (l_datakwargs_noisemod)
-#             l_datakwargs_noisemod = []
-#             if datasim_all.multi_output:
-#                 # Get the list of instrument models which have the same GP noise model that the Current
-#                 # Dataset you try to model
-#                 # Also get the indexes of the corresponding datasets
-#                 idx_noisemod_GP = []
-#                 l_instmod_noisemod_cat = []
-#                 for ii, instmod_fullname in enumerate(datasim_all.instmodel_fullname):
-#                     inst_mod = model_instance.instruments[instmod_fullname]
-#                     if inst_mod.noise_model == noise_model.category:
-#                         idx_noisemod_GP.append(ii)
-#                         l_instmod_noisemod_cat.append(inst_mod)
-#                 l_dataset_noisemod_cat = datasim_all.dataset.iloc[idx_noisemod_GP]
-#                 model_noisemodel_GP = [model_all[ii] for ii in idx_noisemod_GP]
-#                 for dataset_name in l_dataset_noisemod_cat:
-#                     dataset = model_instance.dataset_db[dataset_name]
-#                     l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
-#             else:
-#                 model_noisemodel_GP = [model_all]
-#                 l_instmod_noisemod_cat = [model_instance.instruments[instmod_fullname] for instmod_fullname in datasim_all.instmodel_fullname]
-#                 dataset_name = datasim_all.dataset.iloc[0]
-#                 dataset = model_instance.dataset_db[dataset_name]
-#                 l_datakwargs_noisemod.append(noise_model.get_necessary_datakwargs(dataset))
-#
-#             # Get the GP simulator for the current GP noise model
-#             (gpsim_func,
-#              l_param_noisemod) = noise_model.get_gp_simulator(l_params=l_param_name, model_instance=model_instance,
-#                                                               l_instmod_obj=l_instmod_noisemod_cat)
-#             # Get the value of the parameter to provide to the GP simulator.
-#             # WARNING: If one of the gp simulator parmameter is fixed it might not get it with the code
-#             # below
-#             idx_noisemod = []
-#             for param_name in l_param_noisemod:
-#                 idx_noisemod.append(l_param_name.index(param_name))
-#             # Compute the GP model model, param_noisemod, l_datakwargs, tsim
-#             res_model, GP_pred_var = gpsim_func(model=model_noisemodel_GP, param_noisemod=param[idx_noisemod],
-#                                                 l_datakwargs=l_datakwargs_noisemod, tsim=t_model)
-#             if supersamp > 1:
-#                 res_model = average_supersampled_values(res_model, supersamp)
-#                 # res_model = np.mean(res_model.reshape(-1, supersamp), axis=1)
-#             model_wGP = model + res_model
-#         else:
-#             model_wGP = None
-#     else:
-#         model_wGP = None
-#
-#     return model, model_wGP, GP_pred_var, t_model
-
-
 def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance, key_obj=None, datasim_kwargs=None,
                multiplication_factor=1., supersamp=1, exptime=exptime_Kepler,
-               plot_phase=False, Per=None, tref=None,
+               plot_phase=False, Per=None, tref=None, show_time_from_tref=False, time_fact=24,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True, force_plot_phase_GP=False,
                ax=None):
     """Plot the model.
@@ -998,18 +884,35 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         Dictionary of keyword arguments for datasim_docfunc (will be passed on to compute_model)
     multiplication_factor : float
         Factor by which you want to multiply the model
-    :param int supersamp: supersampling factor for the model (will be passed on to compute_model)
-    :param float exptime: Exposure time for the model (will be passed on to compute_model)
-    :param bool plot_phase: If true, plot the phase folded model.
-    :param float Per: Period for the phase folding
-    :param float tref: Reference time for the phase folding
-    :param dict pl_kwargs_model: Dictionary of keyword arguments for the plot of the model only
-    :param dict pl_kwargs_modelandGP: Dictionary of keyword arguments for the plot of the model+GP
-    :param bool show_modelandGP: Indicate if you want to plot the model+GP.
-    :param bool force_plot_phase_GP: It usually doesn't make much sens to plot the GP phase-folded. If you
+    supersamp             : int
+        supersampling factor for the model (will be passed on to compute_model)
+    exptime               : float
+        Exposure time for the model (will be passed on to compute_model)
+    plot_phase            : bool
+        If true, plot the phase folded model.
+    Per                   : float
+        Period for the phase folding
+    tref                  : float
+        Reference time for the phase folding
+    show_time_from_tref   : bool
+        If True than the phase folded light curve are show as a function of the time from tref.
+        Only considered if plot_phase is True.
+    time_fact             : float
+        The time from tref is expressed in the same unit than the period by defaults. You can provide
+        a factor here that will be applied to the times.
+        Only considered if plot_phase is True.
+    pl_kwargs_model       : dict
+        Dictionary of keyword arguments for the plot of the model only
+    pl_kwargs_modelandGP  : dict
+        Dictionary of keyword arguments for the plot of the model+GP
+    show_modelandGP       : bool
+        Indicate if you want to plot the model+GP.
+    force_plot_phase_GP   : bool
+        It usually doesn't make much sens to plot the GP phase-folded. If you
         want to do it anyway set force_plot_phase_GP to True. This override show_modelandGP when plot_phase
         is True.
-    :param ~matplotlib.axes._axes.Axes ax: Axes instance where the model will be ploted
+    ax                    : ~matplotlib.axes._axes.Axes
+        Axes instance where the model will be ploted
 
     Returns
     -------
@@ -1030,7 +933,7 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
                                                                          param=param, l_param_name=l_param_name,
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                                         supersamp=supersamp, exptime=exptime_Kepler)
+                                                                         supersamp=supersamp, exptime=exptime)
     model *= multiplication_factor
     if model_wGP is not None:
         model_wGP *= multiplication_factor
@@ -1048,7 +951,9 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         kwarg_model.update(pl_kwargs_model)
     # Plot the model
     if plot_phase:
-        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref, ax=ax, pl_kwargs=kwarg_model)
+        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref,
+                                                   show_time_from_tref=show_time_from_tref, time_fact=time_fact,
+                                                   ax=ax, pl_kwargs=kwarg_model)
     else:
         ebcont = ax.errorbar(t_plot, model, **kwarg_model)
     ebconts_lines_labels["model"] = {}
@@ -1061,7 +966,9 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
         if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref, ax=ax, pl_kwargs=kwarg_GP)
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref,
+                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
+                                                           ax=ax, pl_kwargs=kwarg_GP)
         else:
             kwarg_GP_pred_var = kwarg_GP.copy()
             kwarg_GP_pred_var["alpha"] = 0.4
@@ -1078,9 +985,10 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
 def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=None,
                    datasim_kwargs=None, multiplication_factor=1.,
                    supersamp=1, exptime=exptime_Kepler, bin_size=0.,
-                   plot_phase=False, Per=None, tref=None, zoom=None,
-                   pl_kwargs_model=None, show_model=True,
-                   pl_kwargs_modelandGP=None, show_modelandGP=True,
+                   plot_phase=False, Per=None, tref=None, show_time_from_tref=False, time_fact=24,
+                   zoom=None,
+                   pl_kwargs_model=None, show_model=True, show_error_model=True,
+                   pl_kwargs_modelandGP=None, show_modelandGP=True, show_error_modelandGP=True,
                    ax=None):
     """Plot the residuals of the model.
 
@@ -1112,6 +1020,13 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         Period for the phase folding
     tref                  : float
         Reference time for the phase folding
+    show_time_from_tref   : bool
+        If True than the phase folded light curve are show as a function of the time from tref.
+        Only considered if plot_phase is True.
+    time_fact             : float
+        The time from tref is expressed in the same unit than the period by defaults. You can provide
+        a factor here that will be applied to the times.
+        Only considered if plot_phase is True.
     zoom                  : TBD
     pl_kwargs_model       : dict
         Dictionary of keyword arguments for the plot of the model only
@@ -1120,12 +1035,16 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     show_model            : bool
         To show the residuals of the model. It is only used when the noise model is
         includes a GP, because if not the residual of the model are always plotted.
+    show_error_model      : bool
+        To show the error bars
     pl_kwargs_modelandGP  : dict
         Dictionary of keyword arguments for the plot of the model+GP
         You can specify some jitter specific kargs by creating an entry "jitter" whose is a dictionary
         with the kwargs specific for the jitter errorbar display
     show_modelandGP       : bool
         Indicate if you want to plot the residuals of the model+GP.
+    show_error_modelandGP : bool
+        To show the error bars
     ax                    : ~matplotlib.axes._axes.Axes
         Axes instance where the model will be plotted
 
@@ -1223,32 +1142,52 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
             kwarg_model_jitter["alpha"] = 0.5
         kwarg_model_jitter.update(dico_jitter)
         kwarg_model_jitter["fmt"] = "none"
+        if show_error_model:
+            data_err_model = data_err
+            data_err_new_model = data_err_new
+        else:
+            data_err_model = None
+            data_err_new_model = None
         if plot_phase:
             if bin_size > 0.:
                 raise NotImplementedError
             else:
-                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err,
+                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_model,
+                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
             if noisemod_sublcass.has_jitter:
                 if not("ecolor" in kwarg_model_jitter):
                     kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_new, only_errorbar=True,
+                plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_new_model, only_errorbar=True,
+                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                             zoom=zoom, ax=ax, pl_kwargs=kwarg_model_jitter)
             residual_out = residual
         else:
             if zoom is not None:
-                ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_zoom, **kwarg_model)
+                if show_error_model:
+                    data_err_zoom_model = data_err_zoom
+                    data_err_new_zoom_model = data_err_new_zoom
+                else:
+                    data_err_zoom_model = None
+                    data_err_new_zoom_model = None
+                if show_error_model:
+                    data_err_zoom_model = data_err_zoom
+                    data_err_new_zoom_model = data_err_new_zoom
+                else:
+                    data_err_zoom_model = None
+                    data_err_new_zoom_model = None
+                ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_zoom_model, **kwarg_model)
                 if noisemod_sublcass.has_jitter:
                     if not("ecolor" in kwarg_model_jitter):
                         kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                    ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom, **kwarg_model_jitter)
+                    ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom_model, **kwarg_model_jitter)
                 residual_out = residual_zoom
             else:
-                ebcont = ax.errorbar(t_data, residual, data_err, **kwarg_model)
+                ebcont = ax.errorbar(t_data, residual, data_err_model, **kwarg_model)
                 if noisemod_sublcass.has_jitter:
                     if not("ecolor" in kwarg_model_jitter):
                         kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                    ax.errorbar(t_data, residual, data_err_new, **kwarg_model_jitter)
+                    ax.errorbar(t_data, residual, data_err_new_model, **kwarg_model_jitter)
                 residual_out = residual
         ebconts_lines_labels["model"] = {}
         ebconts_lines_labels["model"]["ebcont or line"] = ebcont
@@ -1273,27 +1212,41 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
             kwarg_GP_jitter["alpha"] = 0.5
         kwarg_GP_jitter.update(dico_jitter)
         kwarg_GP_jitter["fmt"] = "none"
+        if show_error_model:
+            data_err_modelandGP = data_err
+            data_err_new_modelandGP = data_err_new
+        else:
+            data_err_modelandGP = None
+            data_err_new_modelandGP = None
         if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err,
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_modelandGP,
+                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
             if noisemod_sublcass.has_jitter:
                 if not("ecolor" in kwarg_GP_jitter):
                     kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_new, only_errorbar=True,
+                plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_new_modelandGP, only_errorbar=True,
+                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                             zoom=zoom, ax=ax, pl_kwargs=kwarg_GP_jitter)
         else:
             if zoom is not None:
-                ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_zoom, **kwarg_GP)
+                if show_error_model:
+                    data_err_zoom_modelandGP = data_err_zoom
+                    data_err_new_zoom_modelandGP = data_err_new_zoom
+                else:
+                    data_err_zoom_modelandGP = None
+                    data_err_new_zoom_modelandGP = None
+                ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_zoom_modelandGP, **kwarg_GP)
                 if noisemod_sublcass.has_jitter:
                     if not("ecolor" in kwarg_GP_jitter):
                         kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                    ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom, **kwarg_GP_jitter)
+                    ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom_modelandGP, **kwarg_GP_jitter)
             else:
-                ebcont_wGP = ax.errorbar(t_data, residual_wGP, data_err, **kwarg_GP)
+                ebcont_wGP = ax.errorbar(t_data, residual_wGP, data_err_modelandGP, **kwarg_GP)
                 if noisemod_sublcass.has_jitter:
                     if not("ecolor" in kwarg_GP_jitter):
                         kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                    ax.errorbar(t_data, residual_wGP, data_err_new, **kwarg_GP_jitter)
+                    ax.errorbar(t_data, residual_wGP, data_err_new_modelandGP, **kwarg_GP_jitter)
         ebconts_lines_labels["model+GP"] = {}
         ebconts_lines_labels["model+GP"]["ebcont or line"] = ebcont_wGP
         ebconts_lines_labels["model+GP"]["label"] = kwarg_GP["label"]
@@ -1354,6 +1307,7 @@ def apply_zoom(zoom, base_array, arrays=None):
 
 
 def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_errorbar=False,
+                                show_time_from_tref=False, time_fact=24,
                                 zoom=None, ax=None, pl_kwargs=None, auto_ylims=False, auto_ylims_kwargs=None):
     """Plot a phase folded representation of a time series.
 
@@ -1373,10 +1327,16 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_err
         data error array
     only_errorbar : Bool
         If True, only the error bars are plotted
+    show_time_from_tref : bool
+        If True than the phase folded light curve are show as a function of the time from tref.
+    time_fact           : float
+        If show_time_from_tref is True, than the time from tref is expressed in the same unit than the period
+        by defaults. You can provide a factor here that will be applied to the times.
     zoom : None/list_of_float
         If provided the plot will be zoom. Meaning that the model and data
         will only be plotted between two phase values. It should be a list-like object with two elements.
         zoom[0] give the minimum phase for the zoom and zoom[1] give the maximum.
+        It should be provided in phase even if show_time_from_tref.
     ax : ~matplotlib.axes._axes.Axes
         Axes instance where the data and model will be ploted
     pl_kwargs : dict
@@ -1424,13 +1384,15 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_err
         kw["fmt"] = "-"
     if only_errorbar:
         kw["fmt"] = "None"
-    # if "color" not in kw:
-    #     kw["color"] = "r"
     # Plot the phase folded data
-    if data_err is not None:
-        ebcont = ax.errorbar(phase_sort, data_sort, data_err_new_sort, **kw)
+    if show_time_from_tref:
+        x_sort = phase_sort * Per * time_fact
     else:
-        ebcont = ax.errorbar(phase_sort, data_sort, **kw)
+        x_sort = phase_sort
+    if data_err is not None:
+        ebcont = ax.errorbar(x_sort, data_sort, data_err_new_sort, **kw)
+    else:
+        ebcont = ax.errorbar(x_sort, data_sort, **kw)
     if auto_ylims and (zoom is None):
         auto_y_lims(data_sort, ax)
     return ebcont, kw.get("label", None), phases
@@ -1656,7 +1618,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
 
 def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
                       lnprobability_name="lnposterior",
-                      verbose=1):
+                      verbose=1, force_finite=True):
     """Return the fitted values from the sampler.
 
     Arguments
@@ -1672,10 +1634,12 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         Name of the lnprobability values in chainI
     verbose            : int
         if 1 speaks otherwise not
+    force_finite       : Bool
+        Passed on to get_clean_flatchain
     """
     ndim = chainI.dim
     if method == "median":
-        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin),
+        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite),
                            axis=0)
     elif method == "MAP":
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
@@ -1684,14 +1648,14 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
-        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin)
+        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite)
         i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
         logger.debug(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
-        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
+        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
     elif method == "mode":
-        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100)
+        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
@@ -1703,16 +1667,18 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     return res
 
 
-def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, force_finite=True):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
     Arguments
     ---------
-    chainI : ChainInterpret
-    l_walkers: int_iteratable
+    chainI      : ChainInterpret
+    l_walkers   : int_iteratable
         list of valid walkers
-    l_burnin: int_iteratable
+    l_burnin    : int_iteratable
         list of burnin iterations for each valid walker
+    l_param_idx       : int_iteratable
+        list of index of parameters that you want to keep in the output
     force_finite: bool
         If True the function will suppress every iteration for which one of the parameter values provided
         is not finite.
@@ -1748,8 +1714,14 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, force_finite=True)
         # Case where there is several free parameter
         else:
             for dim in range(ndim):
+                if l_param_idx is not None:
+                    if not(dim in l_param_idx):
+                        continue
                 res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
         res = array(res).transpose()
+    else:
+        if l_param_idx is not None:
+            res = res[:, l_param_idx]
     # Remove iteration where one of the parameter is not finite
     if force_finite:
         return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
