@@ -8,6 +8,7 @@ The objective of this module is to define the CelestialBody, Star and Planet cla
 @TODO:
 """
 from logging import getLogger
+from numpy import rad2deg, arcsin, sqrt, pi
 
 from ...core.parameter import Parameter
 from ...core.paramcontainer import Core_ParamContainer
@@ -93,6 +94,7 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the planet
         self.add_parameter(Parameter(name="M", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="Mfromincaverage", name_prefix=self.name, main=False))
         ## Mass of the planet over (Mass of the star)**(2/3)
         self.add_parameter(Parameter(name="MoverMs23rd", name_prefix=self.name, main=False))
         ## Mass sin i of the planet
@@ -113,10 +115,12 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="logP", name_prefix=self.name, main=False))
         ## Semi-major axis
         self.add_parameter(Parameter(name="a", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="afromaR", name_prefix=self.name, main=False))
         ## Excentricity
         self.add_parameter(Parameter(name="ecc", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Inclination
         self.add_parameter(Parameter(name="inc", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="incaverage", name_prefix=self.name, main=False, free=False, value=rad2deg(arcsin(sqrt(pi / 4)))))
         ## Cos Inclination
         self.add_parameter(Parameter(name="cosinc", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Impact parameter
