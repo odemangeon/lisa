@@ -8,6 +8,7 @@ Script template to analysis the chains obtained during the MCMC exploration
 from logging import DEBUG, INFO
 from os import getcwd
 from os.path import join
+import gc
 
 from corner import corner
 import matplotlib.pyplot as pl
@@ -61,7 +62,8 @@ hist_perc = 10  # For the histogram after the acceptance fraction and the ln pos
 # After the Geweke selection, 10% of the sample, uniformly spread will be selected.n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
 sigma_clip_hist = None
 n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
-do_hist = True  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
+do_hist = False  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
+do_traces = False
 
 # Raw chains and hist plots
 do_RP = True  # Do chain plot and histogram plot for raw chains
@@ -134,14 +136,17 @@ do_MComp = True
 do_MComp_Folded = True
 oversamp_MComp = 30
 load_fitted_val_pickle = False
+save_modelsNresiduals = True
 
 # Do compute secondary parameters
 do_SecParam = True
-sampling_corner_sec = 100
+force_finite = False
 units = {"K": "kms"}
 units_dict = {"K": uu.km / uu.s}
 omega_0to360 = True
 save_results_bestfit_secpar = True
+do_corner_sec = False
+sampling_corner_sec = 100
 
 # Do computation of the BIC
 do_compute_BIC = False
@@ -171,10 +176,12 @@ nwalker = chain.shape[0]
 lnprobability_name = "lnposterior"
 l_param_chainI = l_param_name + [lnprobability_name]
 chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
+del chain; gc.collect()
 
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
-    et.plot_chains(chain, lnprobability, l_param_name)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
     else:
@@ -200,7 +207,8 @@ if do_AFS:
     else:
         pl.show()
     pl.close("all")
-    et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_AFS)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_AFS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
     else:
@@ -230,7 +238,8 @@ if do_LPS:
     else:
         pl.show()
     pl.close("all")
-    et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_LPS)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_LPS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
     else:
@@ -256,7 +265,8 @@ if do_AFSLPSP:
                 "histogram")
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
-    et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
     else:
@@ -330,9 +340,9 @@ if do_GS:
         else:
             pl.show()
         pl.close("all")
-
-    et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
-                   l_burnin=l_burnin)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+                       l_burnin=l_burnin)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
     else:
@@ -354,8 +364,9 @@ if do_GS:
             pl.show()
         pl.close("all")
 
-    et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
-                   l_burnin=l_burnin, suppress_burnin=True)
+    if do_traces:
+        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+                       l_burnin=l_burnin, suppress_burnin=True)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
     else:
@@ -369,9 +380,9 @@ else:
         for ii in range(len(l_burnin)):
             if l_burnin[ii] < min_burnin:
                 l_burnin[ii] = min_burnin
-
-        et.plot_chains(chain, lnprobability, l_param_name, l_walker=l_walker_conv,
-                       l_burnin=l_burnin, suppress_burnin=True)
+        if do_traces:
+            et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+                           l_burnin=l_burnin, suppress_burnin=True)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
         else:
@@ -458,6 +469,8 @@ if do_MComp:
                                               post_instance=post_instance,
                                               datasim_kwargs=kwargs_datasim,
                                               oversamp=oversamp_MComp, return_modelsNresiduals=True)
+    if save_modelsNresiduals:
+        et.pickle_stuff(modelsNresiduals, join(output_folders["pickles_analyze"], "{}{}{}.pk".format(obj_name, "_modelsNresiduals", extension_outputs)))
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.pdf"))
     else:
@@ -507,7 +520,8 @@ if do_SecParam:
                 chainIsec[mask] = chainIsec[mask] + 360
 
     logger.info("Plot raw traces for secondary parameters")
-    et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
+    if do_traces:
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
     else:
@@ -515,7 +529,8 @@ if do_SecParam:
     pl.close("all")
 
     logger.info("Plot geweke select traces for secondary parameters")
-    et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
+    if do_traces:
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
     else:
@@ -525,10 +540,10 @@ if do_SecParam:
     logger.info("Determine best fit values and error bars for secondary parameters")
     fitted_values_sec = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
                                              l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                             lnprobability_name=lnprobability_name)
+                                             lnprobability_name=lnprobability_name, force_finite=force_finite)
     sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
                                                                      l_walker=l_walker_PS,
-                                                                     l_burnin=l_burnin_PS),
+                                                                     l_burnin=l_burnin_PS, force_finite=force_finite),
                                               level=1, centre=fitted_values_sec,
                                               l_param_name=l_param_chainIsec)
     df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_chainIsec,
@@ -545,19 +560,37 @@ if do_SecParam:
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary{}.tex".format(obj_name, extension_outputs)),
                              df_fittedval, obj_name)
 
-    logger.info("Do correlation plot for secondary free parameters")
-    # In this case there is nan values in the D14 and D23 chains and it makes corner crash
-    corner(et.get_clean_flatchain(chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner_sec, :],
-           labels=l_param_chainIsec, truths=fitted_values_sec)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.pdf"))
-    else:
-        pl.show()
-    pl.close("all")
+    if do_corner_sec:
+        logger.info("Do correlation plot for secondary free parameters")
+        # Corner doesn't like when there is non finite values or values that doesn't change over the full chain
+        # So Below is to avoid both thing even when force_finite is False.
+        if not(force_finite):
+            sec_flatchain = et.get_clean_flatchain(chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, force_finite=force_finite)
+            notallnotfinite = np.sum(np.isfinite(sec_flatchain), axis=0, dtype=bool)
+            idx_to_plot = np.where(notallnotfinite)[0]
+            sec_flatchain_to_plot = sec_flatchain[:, idx_to_plot]
+            l_param_chainIsec_to_plot = [l_param_chainIsec[ii] for ii in idx_to_plot]
+        else:
+            sec_flatchain_to_plot = et.get_clean_flatchain(chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, force_finite=force_finite)
+            idx_to_plot = list(range(chainIsec.shape[2]))
+            l_param_chainIsec_to_plot = l_param_chainIsec
+        idx_not_identical = np.where(np.logical_not(np.all(sec_flatchain_to_plot == sec_flatchain_to_plot[0], axis=0)))[0]
+        idx_corner_plot = [idx_to_plot[ii] for ii in idx_not_identical]
+        if not(force_finite):
+            sec_flatchain_to_plot = et.get_clean_flatchain(chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, l_param_idx=idx_corner_plot, force_finite=True)
+        else:
+            sec_flatchain_to_plot = sec_flatchain_to_plot[:, idx_corner_plot]
+        corner(sec_flatchain_to_plot[::sampling_corner_sec], labels=[l_param_chainIsec[ii] for ii in idx_corner_plot],
+               truths=fitted_values_sec[idx_corner_plot])
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.pdf"))
+        else:
+            pl.show()
+        pl.close("all")
 
 if do_compute_BIC:
     logger.info("10. Compute the BIC of the model")
-    if load_fitted_val_pickle:
+    if load_fitted_val_pickle_BIC:
         fitted_values_dic_bic, fitted_values_sec_dic_bic, df_fittedval_bic = et.load_chain_analysis(obj_name, extension_analysis=extension_outputs,
                                                                                                     folder=output_folders["pickles_analyze"])
     else:
