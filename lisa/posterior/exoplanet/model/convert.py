@@ -100,6 +100,16 @@ def geta(P, Ms, Mp):
     return ((Ps / (2. * np.pi))**2. * gm * (Ms + Mp / msunjup))**(1. / 3.) / au
 
 
+def getafromaR(aR, Rs):
+    """Return semi-major axis in meters (SI) using kepler equation
+
+    :param float/np.ndarray aR: Planetary orbital semi-major axis in stellar radius unit
+    :param float/np.ndarray Rs: Stellar radius in solar radius
+    :return float/np.ndarray a: Planetary orbital semi-major axis in au
+    """
+    return (aR * Rs * uu.R_sun).to(uu.au).value
+
+
 def getP(a, Ms, Mp):
     """Return planetary orbital period in days using kepler equation
 
@@ -345,6 +355,10 @@ def getloggstar(P, aR, ecc, omega, Rs):
 def getcirctime(P, Ms, Rs, Mp, Rrat):
     """Return circulisation timescale in giga years
 
+    TODO: Provide source for the formula
+    https://watermark.silverchair.com/mnras0376-0682.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAswwggLIBgkqhkiG9w0BBwagggK5MIICtQIBADCCAq4GCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMn_C7AO5zZ-orZiK6AgEQgIICf0wdI5nOWXm-eHUVAh1pgMPLuO7Q8D9issR8YJ1UfLmqv8O3aM4-Mo4fi9Wvoh63Whr12t1H8IvexsexjBfh7S6NM429WyBtMtNmCBHookEOn2mvODqrpslMg_rdSxntKH4pMGC4sc3J2Gu2Y7alvCh3lwLvYi4qwbfSQTFGdTbsl2zV7MJ_QmtPnkQt43ClSUJABFg48bb9Lk_ldUCNa_eUd3XVAtie2_U2ZKEIBwB5BS-83XnBgd9HK2aeLbhRDFysxF2ofFxgqLhBb7TgS0ONVgtrEz5l9OO3tyw5KJ5an4GXxzz9uJwoVYUJNMDvamasm5sWtT1IeFfXqUHWiEsF1F3hNQ8MZcS0vvOvVmnleG1BF2_Qy1A0MzNcriRr_uvkrwXiAb5j87y6_MC84kWAcyAhwd6DyyeYHIOUvQ5mvCpl53i8tTwulZ0H4lMHO_pwfuDu2mj7aEorWqMfYN2LxDlDp7zknEKoAuhkoAAMW91v6R-QQVm547-vuOS00QxlIeSMCANV45a23hKISssDdoxgpuMjzVyMjJqwKd2Z8lRuqVoZHthOHUf8K5QMFotytNhxPYhsCViFymWQpHGhB3zcog4g7TuXkzRzUrx0uqF0pLKTjjnQ-XV0eoEwAtvWRh5BBsEvI0NzVdGU-SeTL7hgwFtKpUm-vyeqATaSpTJb8WM-t6yCZiszadXxdnoiO6vsPEKFefoJyu3mnRrsMDNXuXxikuzaFFLDTflXJmHO8elbsSm7RV2DVX5sdAZyZX_VKicEhVnjL5Q-Jv7dJAtn7kfMGKH2Y0xY3riShv27aBVSmmyhz6QHZ0-GtLqo1xqilKQCPLI7jgQSnw
+    Ivanov & Papaloizou 2007 give a formula (108) which is slightly different
+
     This assumes the tidal factor to be 10^5 if it is 10^6 we need to multiply by 10.
 
     :param float/np.ndarray P: Planetary orbital period in days
@@ -353,6 +367,7 @@ def getcirctime(P, Ms, Rs, Mp, Rrat):
     :param float/np.ndarray Mp: Planetary mass in jupiter radius
     :param float/np.ndarray Rrat: Radius ratio (Planetary radius over stellar radius) without unit
 
+    :return float/np.ndarray time_circ: Circularisation time scale in Myr
     call getcirtime(per, mstar, rstar, mp, rp)
     """
     Rp = getRp(Rrat, Rs, Rsfact=rsun, Rpfact=rjup)
