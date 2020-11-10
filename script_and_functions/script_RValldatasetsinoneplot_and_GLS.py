@@ -320,5 +320,5 @@ for ii, key in enumerate(l_gls_key):
     ax_gls_twin[ii].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize)
 
 pl.show()
-# pl.savefig("RV_timeseries_GLS_plot_initrun_median.pdf")
+# pl.savefig(os.path.join(output_folders["plots"], "RV_timeseries_GLS_plot_initrun_median.pdf"))
 # pl.close("all")
