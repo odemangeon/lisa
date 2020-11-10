@@ -77,6 +77,7 @@ create_RV_phasefolded_plots(fig=fig,
                                        },
                             legend_param={"idx_planet": 0},
                             show_system_name_in_suptitle=True,
+                            show_rms_residuals_in_suptitle=True,
                             RV_unit="$m/s$",
                             )
 pl.show()

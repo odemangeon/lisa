@@ -36,7 +36,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 remove_GP=False, RV_fact=1.,
                                 phase_binsize=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 sharey=False,
-                                fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, show_system_name_in_suptitle=True,
+                                fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None,
+                                show_system_name_in_suptitle=True, show_rms_residuals_in_suptitle=True,
                                 RV_unit="$km/s$", *args, **kwargs):
     """Produce a clean RV plot.
 
@@ -103,6 +104,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         'idx_planet': This contains the idx of the planet plot on which you want to show the legend()
     show_system_name_in_suptitle : bool
         If True show the system name in the suptitle
+    show_rms_residuals_in_suptitle: bool
+        If True the rms of the residuals will be provided in the suptitle.
     RV_unit        : str
         String giving the unit of the RVs
     """
@@ -522,11 +525,14 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         if ii == 0:
             if show_system_name_in_suptitle:
                 system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-                fig.suptitle(f"{system_name} system\nrms of the residuals = {', '.join(rms_resi)} {RV_unit} ({rms_resi_label})",
-                             fontsize=fontsize, **fig_param.get('suptitle_kwargs', {}))
+                text_system_name = f"{system_name} system\n"
             else:
-                fig.suptitle(f"rms of the residuals = {', '.join(rms_resi)} {RV_unit} ({rms_resi_label})",
-                             fontsize=fontsize, **fig_param.get('suptitle_kwargs', {}))
+                text_system_name = ""
+            if show_rms_residuals_in_suptitle:
+                text_rms_resi = f"rms of the residuals = {', '.join(rms_resi)} {RV_unit} ({rms_resi_label})"
+            else:
+                text_rms_resi = ""
+            fig.suptitle(f"{text_system_name}{text_rms_resi}", fontsize=fontsize, **fig_param.get('suptitle_kwargs', {}))
 
         ##########################################
         # Bin the data and residuals and plot them
