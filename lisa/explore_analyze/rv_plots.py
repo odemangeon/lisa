@@ -157,8 +157,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Set the plots keywords arguments
     pl_kwarg_data = {"fmt": "."}
     pl_kwarg_databinned = {"fmt": "o", 'alpha': 1., 'label': f"bin({phase_binsize:.2f})"}
-    pl_kwarg_model = {"fmt": "", "linestyle": "-", "linewidth": 2}
-    pl_kwarg_modelbinned = {"fmt": "", "linestyle": "-", "linewidth": 0.8, 'label': f"model: bin({phase_binsize:.2f})"}
+    pl_kwarg_model = {"fmt": "", "linestyle": "-"}
+    pl_kwarg_modelbinned = {"fmt": "", "linestyle": "-", 'label': f"model: bin({phase_binsize:.2f})"}
     show_error_data = True
     show_error_databinned = True
 
