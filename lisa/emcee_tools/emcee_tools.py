@@ -1892,6 +1892,7 @@ extension_pickle = {"chain": "_chain",
                     "df_fittedval": "_df_fittedval",
                     "fitted_values": "_fitted_values",
                     "fitted_values_sec": "_fitted_values_sec",
+                    "l_walkersNburnin": "_walkers_burnin"
                     }
 
 
@@ -1976,8 +1977,41 @@ def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fit
             dump(fitted_values_sec, ffitvals)
 
 
+def save_walkers_and_burnin(obj_name, extension_analysis="", l_walker=None, l_burnin=None, folder=None):
+    """Save list of selected walkers and associated burnin results.
+
+    Arguments
+    ---------
+    obj_name            : str
+        Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    extension_analysis  : str
+        extension to add at the end of the pickle file to differentiate several analyses
+    l_walker            : list of int
+        list of the indexes of the selected walkers
+    l_burnin            : list of int
+        list of the burnin values for each selected walker
+    """
+    if folder is None:
+        folder = getcwd()
+    else:
+        makedirs(folder, exist_ok=True)
+
+    # Save df_fittedval in a pickle
+    if (l_walker is not None) and (l_burnin is not None):
+        dico = {}
+        if (l_walker is not None):
+            dico["l_walker"] = l_walker
+        if (l_burnin is not None):
+            dico["l_burnin"] = l_burnin
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)), "wb") as fsave:
+            dump(dico, fsave)
+    else:
+        raise ValueError("There is nothing to save you did not provide l_walker or l_burnin")
+
+
 def load_emceesampler(obj_name, extension_exploration="", folder="."):
-    """Save Emcee sampler elements.
+    """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
@@ -2008,7 +2042,7 @@ def load_emceesampler(obj_name, extension_exploration="", folder="."):
 
 
 def load_chain_analysis(obj_name, extension_analysis="", folder=None):
-    """Save Emcee sampler elements.
+    """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
@@ -2047,6 +2081,39 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None):
         fitted_values_sec = None
 
     return fitted_values, fitted_values_sec, df_fittedval
+
+
+def load_walkers_and_burnin(obj_name, extension_analysis="", folder=None):
+    """Save list of selected walkers and associated burnin results.
+
+    Arguments
+    ---------
+    obj_name            : str
+        Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    extension_analysis  : str
+        extension to add at the end of the pickle file to differentiate several analyses
+    folder              : str
+
+    Returns
+    -------
+    l_walker            : list of int
+        list of the indexes of the selected walkers
+    l_burnin            : list of int
+        list of the burnin values for each selected walker
+    """
+    if folder is None:
+        folder = getcwd()
+
+    # load df_fittedval from a pickle
+    file_l_walkersNburnin = "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)
+    if isfile(join(folder, file_l_walkersNburnin)):
+        with open(join(folder, file_l_walkersNburnin), "rb") as fsave:
+            dico = load(fsave)
+    else:
+        dico = {}
+
+    return dico.get("l_walker", None), dico.get("l_burnin", None)
 
 
 def get_param_value_OrderedDict(values, l_param_names):
