@@ -122,6 +122,9 @@ select_arg = [(0.50, ), (0.57, )]
 perc_select = 75
 plot_hist_PS = True
 
+# Save l_walkers and l_burnin
+save_walkersandburnins = True
+
 # Determine best fit values and error bars
 do_bestfit = True
 method_bestfit = "median"
@@ -423,6 +426,10 @@ if do_PS:
 else:
     l_walker_PS = l_walker_conv
     l_burnin_PS = l_burnin
+
+if save_walkersandburnins:
+    et.save_walkers_and_burnin(obj_name=obj_name, extension_analysis=extension_outputs, l_walker=l_walker_PS,
+                               l_burnin=l_burnin_PS, folder=output_folders["pickles_analyze"])
 
 if do_bestfit:
     logger.info("6. Determine best fit values and error bars for main parameters")
