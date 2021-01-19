@@ -145,8 +145,19 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     def {function_name}({{arguments}}):
     {{tab}}{{preambule}}
     {{tab}}{{condition}}
-    {{tab}}return {{returns}}
+    {{tab}}try:
+    {{tab}}    return {{returns}}
+    {{tab}}except RuntimeError:
+    {{tab}}    return {{returns_except}}
     """.format(function_name=function_name)
+    # template_function = """
+    # def {function_name}({{arguments}}):
+    # {{tab}}{{preambule}}
+    # {{tab}}{{condition}}
+    # {{tab}}with open("chain.dat", "a") as file
+    # {{tab}}    print(" ".join([str(p_i) for p_i in p]), file=file)
+    # {{tab}}return {{returns}}
+    # """.format(function_name=function_name)
     tab = "    "
     template_function = dedent(template_function)
 
@@ -184,7 +195,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     if transit_model == "batman":
         template_preambule_pl += """
-        {tab}omega_{planet} = getomega_deg_fast({esinw}, {ecosw})
+        {tab}omega_{planet} = getomega_deg_fast({ecosw}, {esinw})
         {tab}inc_{planet} = degrees(acos({cosinc}))"""
         if parametrisation == "Multis":
             template_preambule_pl += """
@@ -360,9 +371,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Fill return if condition planet goes in the star is True
     # The condition is taken from https://iopscience.iop.org/article/10.1086/592381/fulltext/75178.text.html (section 3.1)
     if parametrisation == "Multis":  # aR is not a main parameter
-        template_preambule_cond_pl = "condition_{planet} = (aR_{planet} < ((1 + ecc_{planet}) / (1 - ecc_{planet} * ecc_{planet})))\n"
+        template_preambule_cond_pl = "condition_{planet} = (aR_{planet} < ((1.5 / (1 - ecc_{planet})) + {Rrat}))\n"
     else:  # aR is a main parameter
-        template_preambule_cond_pl = "condition_{planet} = ({aR} < ((1 + ecc_{planet}) / (1 - ecc_{planet} * ecc_{planet})))\n"
+        template_preambule_cond_pl = "condition_{planet} = ({aR} < ((1 .5 / (1 - ecc_{planet})) + {Rrat}))\n"
     if multi:
         template_returns_condition = "ones_like({ltime_vec}[{ii}]) * (- inf)"
     else:
@@ -510,10 +521,13 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                    rhostar=rhostar,
                                    # ld_param_list=ld_param_list,
                                    tab=tab))
-        preambule_cond_planet = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet["aR"])
-        preambule_cond_planet_only = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet_only["aR"])
+        preambule_cond_planet = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet["aR"],
+                                                                  Rrat=params_planet["Rrat"])
+        preambule_cond_planet_only = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet_only["aR"],
+                                                                       Rrat=params_planet["Rrat"])
         condition_planet_only = condition_planet = "condition_{planet}".format(planet=planet.get_name())
-        preambule_cond_whole += tab + template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_whole["aR"])
+        preambule_cond_whole += tab + template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_whole["aR"],
+                                                                        Rrat=params_whole["Rrat"])
         preambule_cond_whole += "{tab}condition = condition or condition_{planet}\n".format(planet=planet.get_name(), tab=tab)
 
         # planets LC contribution (planet_lc and whole_planets_lc)
@@ -609,12 +623,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(), preambule=preambule_planet,
                                                                      condition=condition_planet,
                                                                      arguments=arguments, returns=returns_pl,
+                                                                     returns_except=condition_return_planet,
                                                                      tab=tab))
         text_def_func[planet.get_name() + ext_plonly] = (template_function.format(object=planet.get_name() + ext_plonly,
                                                                                   preambule=preambule_planet_only,
                                                                                   condition=condition_planet_only,
                                                                                   arguments=arguments,
                                                                                   returns=returns_pl_only,
+                                                                                  returns_except=condition_return_planet_only,
                                                                                   tab=tab))
         # logger.debug("text of {object} LC simulator function :\n{text_func}"
         #              "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
@@ -639,7 +655,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     text_def_func[key_whole] = (template_function.
                                 format(object=key_whole, preambule=preambule_whole, condition=condition_whole,
-                                       arguments=arguments, returns=returns_whole,
+                                       arguments=arguments, returns=returns_whole, returns_except=condition_return_whole,
                                        tab=tab))
 
     # Create and fill the output dictionnary containing the datasimulators functions.
