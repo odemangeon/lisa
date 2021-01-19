@@ -116,6 +116,9 @@ class Planet(CelestialBody):
         ## Semi-major axis
         self.add_parameter(Parameter(name="a", name_prefix=self.name, main=False))
         self.add_parameter(Parameter(name="afromaR", name_prefix=self.name, main=False))
+        ## Periastron distance peridist
+        self.add_parameter(Parameter(name="peridist", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="peridistminusR", name_prefix=self.name, main=False))
         ## Excentricity
         self.add_parameter(Parameter(name="ecc", name_prefix=self.name, main=False, unit="w/o unit"))
         ## Inclination
