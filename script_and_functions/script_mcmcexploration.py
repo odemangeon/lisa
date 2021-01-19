@@ -50,6 +50,11 @@ nsteps_MCMC = 50000
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
+# Distribution for the choice of initial parameter values. For now you can only specify gaussian distributions
+# Format {"<param_name>": {"mu": <mu_value>, "sigma": <sigma_value>}}
+# This superseed the distribution inferred from a previous run (load_from_pickle = True below)
+init_distrib = {}
+
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
 load_from_pickle = False
@@ -149,11 +154,14 @@ if load_from_pickle:
                                                                                         folder=output_folders["pickles_analyze"])
     else:
         pass
-    init_distrib = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
+    init_distrib_frompreviousfit = et.get_init_distrib_from_fitvalues(fitted_values=df_fittedval)
+    init_distrib_final = init_distrib_frompreviousfit.copy()
+    init_distrib_final.update(init_distrib)
 else:
-    init_distrib = None
+    init_distrib_final = init_distrib
+
 p0 = et.generate_random_init_pos(nwalker=nwalkers, post_instance=post_instance,
-                                 init_distrib=init_distrib)
+                                 init_distrib=init_distrib_final)
 
 if not load_from_pickle and do_preminimization:
     logger.info("19. AMOEBA minimization")
