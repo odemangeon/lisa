@@ -110,6 +110,29 @@ def getafromaR(aR, Rs):
     return (aR * Rs * uu.R_sun).to(uu.au).value
 
 
+def getperidist(aR, ecc):
+    """Return periastron distance in stellar radius.
+
+    See for example http://burro.cwru.edu/Academics/Astr221/Gravity/kepler1.htm
+
+    :param float/np.ndarray aR: Planetary orbital semi-major axis in stellar radius unit
+    :param float/np.ndarray ecc: Stellar radius in solar radius
+    :return float/np.ndarray peridist: Star planet distance at periastron in stellar unit
+    """
+    return aR * (1 - ecc)
+
+
+def getperidistminusR(aR, ecc, Rrat):
+    """Return periastron distance in stellar radius.
+
+    :param float/np.ndarray aR: Planetary orbital semi-major axis in stellar radius unit
+    :param float/np.ndarray ecc: Planetary orbital eccentricity
+    :param float/np.ndarray Rrat: Planetary radius in solar radius
+    :return float/np.ndarray peridist: Star planet distance at periastron in stellar unit
+    """
+    return (aR * (1 - ecc)) - Rrat
+
+
 def getP(a, Ms, Mp):
     """Return planetary orbital period in days using kepler equation
 
