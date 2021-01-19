@@ -179,7 +179,8 @@ nwalker = chain.shape[0]
 lnprobability_name = "lnposterior"
 l_param_chainI = l_param_name + [lnprobability_name]
 chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
-del chain; gc.collect()
+del chain
+gc.collect()
 
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
