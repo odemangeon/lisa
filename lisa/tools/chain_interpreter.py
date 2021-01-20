@@ -31,7 +31,9 @@ class ChainsInterpret(np.ndarray):
             raise ValueError(cls.__err_shapeinput__)
         obj = np.asarray(input_array).view(cls)
         # add the new attribute to the created instance
-        obj._paramname_idx = dict((n, i) for i, n in enumerate(param_names))
+        if len(param_names) != len(set(param_names)):
+            raise ValueError(f"param_names list include several time the same parameter name.")
+        obj.__paramname_idx = dict((n, i) for i, n in enumerate(param_names))
         if len(param_names) != obj.shape[-1]:
             raise ValueError(cls.__err_dimarrlparam__)
         # Finally, we must return the newly created object:

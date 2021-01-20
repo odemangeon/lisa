@@ -14,8 +14,10 @@ list_imported_modules.txt
 
 # Olivier's stuff
 setenv_lisa.bash
+*~
 run/
 uml/
+test
 
 # Susana's stuff
 

@@ -371,7 +371,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     :param None/list_of_float zoom: If provided the plot will be zoomed. Meaning that the model and data
         will only be plotted between two abscisse values. It should be a list-like object with two elements.
         zoom[0] give the minimum abscisse value for the zoom and zoom[1] give the maximum. If phasefold
-        is true the abscisse values are interpreted ass orbital phases, if not as times.
+        is true the abscisse values are interpreted as orbital phases, not as times.
         You also have the possibility to produce several zooms. In this case, zoom should be an array
         or list of list  object where zoom[i][0] is the min abscisse value and zoom[i][1] the max.
     :param bool show_title: If True, show the title giving the dataset name.
@@ -1530,7 +1530,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
     :return list_of_int l_selected_walker: list of selected walkers
     :return int nb_rejected: Number of rejected walkers
     """
-    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} \%; sigma_clip at {sigma} sigma"
+    logger.info("Acceptance_fraction selection parameters: reference quantile = {quantile} %; sigma_clip at {sigma} sigma"
                 "".format(quantile=quantile, sigma=sig_fact))
     percentile_acceptance_frac = nanpercentile(acceptance_fraction, quantile)
     mad_acceptance_frac = mad(acceptance_fraction, axis=None, nan_policy="omit")
@@ -1587,8 +1587,8 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     :return list_of_int l_selected_walker: list of selected walker
     :return int nb_rejected:  number of rejected walker
     """
-    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} \%;"
-                "reference quantile across walkers = {quantile} \%; sigma_clip at {sigma} sigma"
+    logger.info("lnposterior selection parameters: reference quantile of walker = {quantile_walker} %;"
+                "reference quantile across walkers = {quantile} %; sigma_clip at {sigma} sigma"
                 "".format(quantile_walker=quantile_walker, quantile=quantile, sigma=sig_fact))
     walkers_percentile_lnposterior = nanpercentile(lnprobability, quantile_walker, axis=1)
     percentile_lnposterior = nanpercentile(walkers_percentile_lnposterior, quantile)

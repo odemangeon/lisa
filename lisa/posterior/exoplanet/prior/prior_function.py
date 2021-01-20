@@ -10,7 +10,7 @@ from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr_circular
+from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
@@ -720,7 +720,7 @@ class TransitingRhoprior(Transitingprior):
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
-        ldict["getaoverr_circular"] = getaoverr_circular
+        ldict["getaoverr"] = getaoverr
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
@@ -799,7 +799,7 @@ class TransitingRhoprior(Transitingprior):
         """
         raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
-        aR = getaoverr_circular(P, rhostar)
+        aR = getaoverr(P, rhostar, 0, 90.)  # WARNING: Quick fix - ecc and omega are not included in the prior
         b = aR * cosinc
         Phi = (tic - self.t_ref) / P
         if self.transiting:
