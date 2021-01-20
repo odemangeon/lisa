@@ -18,8 +18,25 @@ logger = getLogger()
 
 
 class DocFunction(object):
-    """docstring for DocFunction."""
+    """DocFunction is a class to create dynamical function with documentation that can be queried at runtime.
+
+    Attributes
+    ----------
+    arg_list : List of the arguments of the function
+    function : The function itself. Note: DocFunction is callable and calls the function attibutes
+        docfunction(...) is equivalent to docfunction.function(...)
+
+    Methods
+    -------
+    info : Return a string with general info about the DocFunction instance
+    """
     def __init__(self, function, arg_list):
+        """
+        Arguments
+        ---------
+        function : Function object
+        arg_list : Usually OrderedDict describing the arguments of the function.
+        """
         super(DocFunction, self).__init__()
         self.__function = function
         self.__arg_list = arg_list
