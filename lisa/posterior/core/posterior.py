@@ -509,7 +509,13 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         """Create the log likelihood function with the data hardcoded."""
         db = {}
         for dataset_name in lnprior_db_dtset:
+            if lnprior_db_dtset[dataset_name] is None:
+                logger.warning(f"Posterior for dataset {dataset_name} could not be created because lnprior is not available.")
+                continue
             lnprior_func = lnprior_db_dtset[dataset_name].function
+            if lnlike_db_dtset[dataset_name] is None:
+                logger.warning(f"Posterior for dataset {dataset_name} could not be created because lnplikelihood is not available.")
+                continue
             lnlike_func = lnlike_db_dtset[dataset_name].function
             arg_list_new = lnprior_db_dtset[dataset_name].arg_list.copy()
 
