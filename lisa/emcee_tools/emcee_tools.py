@@ -145,20 +145,41 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     :return np.ndarray p0: Ndarray containing the initial positions for all the walkers
     """
     l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
-    p0 = []
-    if init_distrib is None:
-        return post_instance.model.get_initial_values(list_paramnames=l_param_name, nb_values=nwalker).transpose()
+    if init_distrib is not None:
+        l_param_name_in_distrib = list(init_distrib.keys())
     else:
-        for param in l_param_name:
-            if param in init_distrib:
-                p0.append(np.random.normal(loc=init_distrib[param]["mu"],
-                                           scale=init_distrib[param]["sigma"],
-                                           size=nwalker))
-            else:
-                p0.append(np.squeeze(np.asarray([post_instance.model.
-                                                 get_initial_values(list_paramnames=[param])
-                                                 for i in range(nwalker)])))
-        return np.asarray(p0).transpose()
+        l_param_name_in_distrib = []
+    l_param_name_notin_distrib = list(set(l_param_name) - set(l_param_name_in_distrib))
+    if len(l_param_name_notin_distrib) > 0:
+        p0_notin_distrib = post_instance.model.get_initial_values(list_paramnames=l_param_name_notin_distrib, nb_values=nwalker)
+    else:
+        p0_notin_distrib = []
+    p0_in_distrib = []
+    for param_name in l_param_name_in_distrib:
+        p0_in_distrib.append(np.random.normal(loc=init_distrib[param_name]["mu"],
+                                              scale=init_distrib[param_name]["sigma"],
+                                              size=nwalker))
+    p0 = []
+    for param_name in l_param_name:
+        if param_name in l_param_name_in_distrib:
+            p0.append(p0_in_distrib[l_param_name_in_distrib.index(param_name)])
+        else:
+            p0.append(p0_notin_distrib[l_param_name_notin_distrib.index(param_name)])
+    return np.asarray(p0).transpose()
+    # p0 = []
+    # if len(l_param_name_in_distrib) > 0:
+    #     return post_instance.model.get_initial_values(list_paramnames=l_param_name, nb_values=nwalker).transpose()
+    # else:
+    #     for param in l_param_name:
+    #         if param in init_distrib:
+    #             p0.append(np.random.normal(loc=init_distrib[param]["mu"],
+    #                                        scale=init_distrib[param]["sigma"],
+    #                                        size=nwalker))
+    #         else:
+    #             p0.append(np.squeeze(np.asarray([post_instance.model.
+    #                                              get_initial_values(list_paramnames=[param, ])
+    #                                              for i in range(nwalker)])))
+    #     return np.asarray(p0).transpose()
 
 
 def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
@@ -234,7 +255,7 @@ def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposteri
     df = read_table(chaindatfile, sep="\s+", header=0)
 
     nb_walker = df[walker_col].max() - df[walker_col].min() + 1
-    df["iteration"] = np.array(df.index) // 88
+    df["iteration"] = np.array(df.index) // nb_walker
     df.set_index([walker_col, 'iteration'], inplace=True)
     l_param = list(df.columns)
     l_param.remove(lnpost_col)
@@ -258,53 +279,59 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
     return df[df.columns[-1]].values
 
 
-def plot_chains(chains, lnprobability, l_param_name=None, l_walker=None, l_burnin=None,
+def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_burnin=None,
                 suppress_burnin=False, plot_height=2, plot_width=8, **kwargs_tl):
     ndim = chains.shape[-1]
     nwalker = chains.shape[0]
 
-    fig, ax = subplots(nrows=ndim + 1, sharex=True, squeeze=True,
-                       figsize=(plot_width, ndim * plot_height))
+    nrows = ndim + 1 if lnprobability is not None else ndim
+
+    fig, ax = subplots(nrows=nrows, sharex=True, squeeze=True,
+                       figsize=(plot_width, nrows * plot_height))
     l_walker = __get_default_l_walker(l_walker=l_walker, nwalker=nwalker)
     l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
     l_burnin = __get_default_l_burnin(l_burnin=l_burnin, nwalker=nwalker)
-    lnprob_min = lnprobability[l_walker, ...].min()
-    lnprob_max = lnprobability[l_walker, ...].max()
-    for walker, burnin in zip(l_walker, l_burnin):
-        min_log10 = np.sign(lnprobability.min()) * np.log10(abs(lnprobability.min()))
-        max_log10 = np.sign(lnprobability.max()) * np.log10(abs(lnprobability.max()))
-        if np.sign(max_log10) * np.sign(min_log10) < 0:
-            log_scale = False
-        elif (max_log10 - min_log10) > 1.5:
-            log_scale = True
-        else:
-            log_scale = False
-        if log_scale:
-            if np.sign(min_log10) > 0:
-                line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
-                ax[0].set_yscale("log")
-                ax[0].set_title("lnprobability")
+    if lnprobability is not None:
+        lnprob_min = lnprobability[l_walker, ...].min()
+        lnprob_max = lnprobability[l_walker, ...].max()
+        for walker, burnin in zip(l_walker, l_burnin):
+            min_log10 = np.sign(lnprobability.min()) * np.log10(abs(lnprobability.min()))
+            max_log10 = np.sign(lnprobability.max()) * np.log10(abs(lnprobability.max()))
+            if np.sign(max_log10) * np.sign(min_log10) < 0:
+                log_scale = False
+            elif (max_log10 - min_log10) > 1.5:
+                log_scale = True
             else:
-                line = ax[0].plot(np.sign(lnprobability[walker, :]) * np.log10(abs(lnprobability[walker, :])), alpha=0.5)
-                lnprob_min, lnprob_max = (min_log10, max_log10)
-                ax[0].set_title("log10(lnprobability)")
-        else:
-            line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
-            ax[0].set_title("lnprobability")
-        ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
-                     alpha=0.5)
+                log_scale = False
+            if log_scale:
+                if np.sign(min_log10) > 0:
+                    line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                    ax[0].set_yscale("log")
+                    ax[0].set_title("lnprobability")
+                else:
+                    line = ax[0].plot(np.sign(lnprobability[walker, :]) * np.log10(abs(lnprobability[walker, :])), alpha=0.5)
+                    lnprob_min, lnprob_max = (min_log10, max_log10)
+                    ax[0].set_title("log10(lnprobability)")
+            else:
+                line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                ax[0].set_title("lnprobability")
+            ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
+                         alpha=0.5)
+        start_idx_params = 1
+    else:
+        start_idx_params = 0
     for i in range(ndim):
-        ax[i + 1].set_title(l_param_name[i])
+        ax[i + start_idx_params].set_title(l_param_name[i])
         vmin = chains[l_walker, :, i].min()
         vmax = chains[l_walker, :, i].max()
         for walker, burnin in zip(l_walker, l_burnin):
             if suppress_burnin:
-                line = ax[i + 1].plot(chains[walker, burnin:, i], alpha=0.5)
+                line = ax[i + start_idx_params].plot(chains[walker, burnin:, i], alpha=0.5)
             else:
-                line = ax[i + 1].plot(chains[walker, :, i], alpha=0.5)
-                ax[i + 1].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
-                                 alpha=0.5)
-    ax[ndim].set_xlabel("iteration")
+                line = ax[i + start_idx_params].plot(chains[walker, :, i], alpha=0.5)
+                ax[i + start_idx_params].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
+                                                alpha=0.5)
+    ax[ndim - (1 - start_idx_params)].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
     return fig
 
@@ -1588,7 +1615,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
             ax[0].vlines(threshold, *ylims, color="r", label=label_thresh)
         ax[0].set_ylim(ylims)
         ax[0].set_ylabel("Counts")
-        ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}")
+        ax[0].set_title(f"Histogram of the lnposterior\nEach walker is represented by its {quantile_walker} value\nMAD = {(mad_lnposterior):.2f}\nPoints removed for plotting = {nb_points_sigma_clip}")
         ax[0].legend()
         # Cumulative histogram
         ax[1], did_log10, nb_point_sigma_clip = hist_lnprob(walkers_percentile_lnposterior, n_bins=20, ax=ax[1], cumulative=True, density=True)
@@ -1892,6 +1919,7 @@ extension_pickle = {"chain": "_chain",
                     "df_fittedval": "_df_fittedval",
                     "fitted_values": "_fitted_values",
                     "fitted_values_sec": "_fitted_values_sec",
+                    "l_walkersNburnin": "_walkers_burnin"
                     }
 
 
@@ -1976,8 +2004,41 @@ def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fit
             dump(fitted_values_sec, ffitvals)
 
 
+def save_walkers_and_burnin(obj_name, extension_analysis="", l_walker=None, l_burnin=None, folder=None):
+    """Save list of selected walkers and associated burnin results.
+
+    Arguments
+    ---------
+    obj_name            : str
+        Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    extension_analysis  : str
+        extension to add at the end of the pickle file to differentiate several analyses
+    l_walker            : list of int
+        list of the indexes of the selected walkers
+    l_burnin            : list of int
+        list of the burnin values for each selected walker
+    """
+    if folder is None:
+        folder = getcwd()
+    else:
+        makedirs(folder, exist_ok=True)
+
+    # Save df_fittedval in a pickle
+    if (l_walker is not None) and (l_burnin is not None):
+        dico = {}
+        if (l_walker is not None):
+            dico["l_walker"] = l_walker
+        if (l_burnin is not None):
+            dico["l_burnin"] = l_burnin
+        with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)), "wb") as fsave:
+            dump(dico, fsave)
+    else:
+        raise ValueError("There is nothing to save you did not provide l_walker or l_burnin")
+
+
 def load_emceesampler(obj_name, extension_exploration="", folder="."):
-    """Save Emcee sampler elements.
+    """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
@@ -2008,7 +2069,7 @@ def load_emceesampler(obj_name, extension_exploration="", folder="."):
 
 
 def load_chain_analysis(obj_name, extension_analysis="", folder=None):
-    """Save Emcee sampler elements.
+    """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
         This is used to infer the names of the pickle files
@@ -2047,6 +2108,39 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None):
         fitted_values_sec = None
 
     return fitted_values, fitted_values_sec, df_fittedval
+
+
+def load_walkers_and_burnin(obj_name, extension_analysis="", folder=None):
+    """Save list of selected walkers and associated burnin results.
+
+    Arguments
+    ---------
+    obj_name            : str
+        Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    extension_analysis  : str
+        extension to add at the end of the pickle file to differentiate several analyses
+    folder              : str
+
+    Returns
+    -------
+    l_walker            : list of int
+        list of the indexes of the selected walkers
+    l_burnin            : list of int
+        list of the burnin values for each selected walker
+    """
+    if folder is None:
+        folder = getcwd()
+
+    # load df_fittedval from a pickle
+    file_l_walkersNburnin = "{}{}{}.pk".format(obj_name, extension_pickle["l_walkersNburnin"], extension_analysis)
+    if isfile(join(folder, file_l_walkersNburnin)):
+        with open(join(folder, file_l_walkersNburnin), "rb") as fsave:
+            dico = load(fsave)
+    else:
+        dico = {}
+
+    return dico.get("l_walker", None), dico.get("l_burnin", None)
 
 
 def get_param_value_OrderedDict(values, l_param_names):

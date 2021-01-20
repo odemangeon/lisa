@@ -484,8 +484,8 @@ class PolarPrior(Core_JointPrior_Function):
                 dico_ravs[param] = np.ones(nb_values) * value
             if dico_ravs[param].size == 1:
                 dico_ravs[param] = dico_ravs[param][0]
-        x = dico_ravs["r"] * np.cos(dico_ravs["r"])
-        y = dico_ravs["r"] * np.sin(dico_ravs["r"])
+        x = dico_ravs["r"] * np.cos(dico_ravs["theta"])
+        y = dico_ravs["r"] * np.sin(dico_ravs["theta"])
         return x, y
 
 

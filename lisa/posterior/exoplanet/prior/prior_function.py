@@ -5,12 +5,12 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, ones, arange  # logical_or
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp  # logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
+from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr, getaoverr_circular
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
@@ -649,15 +649,16 @@ class TransitingRhoprior(Transitingprior):
     """
 
     __category__ = "transiting_rho"
-    __mandatory_args__ = ['transiting', 'allow_grazing']
+    __mandatory_args__ = ['transiting', 'allow_grazing', 't_ref']
     __extra_args__ = []
     __default_extra_args__ = []
-    __param_refs__ = ['rhostar', 'P', 'cosinc', 'Rrat']
-    __multiple_params__ = [False, True, True, True]
-    __hidden_param_refs__ = ['rhostar', 'P', 'Rrat', 'b']
-    __multiple_hidden_params__ = [False, True, True, True]
+    __param_refs__ = ['rhostar', 'P', 'tic', 'cosinc', 'Rrat']
+    __multiple_params__ = [False, True, True, True, True]
+    __hidden_param_refs__ = ['rhostar', 'P', 'Phi', 'Rrat', 'b']
+    __multiple_hidden_params__ = [False, True, True, True, True]
     __default_hidden_priors__ = {'rhostar': {'category': 'normal', 'args': {'mu': 1, 'sigma': 0.1, 'lims': [0., None]}},
                                  'P': {'category': 'jeffreys', 'args': {'vmin': 0.1, 'vmax': 1e4}},
+                                 'Phi': {'category': 'uniform', 'args': {'vmin': 0, 'vmax': 1}},
                                  'Rrat': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}},
                                  'b': {'category': 'uniform', 'args': {'vmin': 0., 'vmax': 1.}}
                                  }
@@ -665,19 +666,18 @@ class TransitingRhoprior(Transitingprior):
     def __init__(self, params, *args, **kwargs):
         super(Transitingprior, self).__init__(params, *args, **kwargs)
         # Check that P, cosinc and Rrat have the same number of parameters.
-        if not(self.get_params_nb(param_ref="P") == self.get_params_nb(param_ref="cosinc") == self.get_params_nb(param_ref="Rrat")):
+        if not(self.get_params_nb(param_ref="P") == self.get_params_nb(param_ref="tic") == self.get_params_nb(param_ref="cosinc") == self.get_params_nb(param_ref="Rrat")):
             raise ValueError("You should have the same number of P, cosinc and Rrat parameters. One of each per planet !")
         self.nb_planet = self.get_params_nb(param_ref="P")
         # transiting and allow_grazing are also multiples so check the transiting and allow_grazing have
         # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
         # to all planets.
-        for arg in [self.transiting, self.allow_grazing]:
+        err_msg = "transiting, allow_grazing adn t_ref should be list with the same length as params['P'], one per planet."
+        for arg in [self.transiting, self.allow_grazing, self.t_ref]:
             if not(isinstance(arg, list)):
-                raise ValueError("transiting and allow_grazing should be list with the same length as"
-                                 "params['P'], one per planet.")
+                raise ValueError(err_msg)
             elif (len(arg) != self.nb_planet):
-                raise ValueError("transiting and allow_grazing should be list with the same length as"
-                                 "params['P'], one per planet.")
+                raise ValueError(err_msg)
 
     def _get_hidden_param_default_dict(self, dico_default_values=None):
         """Update Core_JointPrior_Function._get_hidden_param_default_dict
@@ -762,7 +762,11 @@ class TransitingRhoprior(Transitingprior):
         def {function_name}({param_vector_name}):
             P = array([{P}])
             Rrat = array([{Rrat}])
-            b = getaoverr(P, {rhostar}, 0., 90.) * array([{cosinc}])  # WARNING: "0., 90.": Quick fix - ecc and omega are not included in the prior
+            b = getaoverr_circular(P, {rhostar}) * array([{cosinc}])
+            P = array([{P}])
+            t_ref = array([{t_ref}])
+            tic = array([{tic}])
+            Phi = (tic - t_ref) / P
             if any({list_comp}):
                 return -inf
             elif any(abs([{cosinc}]) > 1):
@@ -770,7 +774,8 @@ class TransitingRhoprior(Transitingprior):
             else:
                 return (dico_logpdf['rhostar']({rhostar}) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(nb_planet)]) +
                         sum([dico_logpdf['Rrat'][ii](Rrat[ii]) for ii in range(nb_planet)]) +
-                        sum([dico_logpdf['P'][ii](P[ii]) for ii in range(nb_planet)])
+                        sum([dico_logpdf['P'][ii](P[ii]) for ii in range(nb_planet)]) +
+                        sum([dico_logpdf['Phi'][ii](Phi[ii]) for ii in range(nb_planet)])
                         )
         """
         text_function = dedent(text_function)
@@ -778,6 +783,7 @@ class TransitingRhoprior(Transitingprior):
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
                                              P=", ".join(dico_text_params["P"]), cosinc=", ".join(dico_text_params["cosinc"]),
                                              Rrat=", ".join(dico_text_params["Rrat"]), rhostar=dico_text_params["rhostar"],
+                                             tic=", ".join(dico_text_params["tic"]), t_ref=", ".join([str(t_ref_ii) for t_ref_ii in self.t_ref]),
                                              list_comp=list_comp)
 
         logger.debug("text of joint prior {category}:\n{text_func}"
@@ -788,13 +794,14 @@ class TransitingRhoprior(Transitingprior):
         exec(text_function, ldict)
         return DocFunction(ldict[function_name], get_function_arglist(arg_list))
 
-    def logpdf(self, rhostar, P, cosinc, Rrat):
+    def logpdf(self, rhostar, P, tic, cosinc, Rrat):
         """ NOT WORKING because need to take into account the multiple parameter (multiple planetss)
         """
         raise NotImplementedError
         dico_logpdf = self.priorinstance_hiddenparams
         aR = getaoverr(P, rhostar, 0, 90.)  # WARNING: Quick fix - ecc and omega are not included in the prior
         b = aR * cosinc
+        Phi = (tic - self.t_ref) / P
         if self.transiting:
             if self.allow_grazing:
                 comp = (b > (1 + Rrat))
@@ -809,8 +816,9 @@ class TransitingRhoprior(Transitingprior):
             return -inf
         else:
             return (dico_logpdf['rhostar'](rhostar) + sum([dico_logpdf['b'][ii](b[ii]) for ii in range(self.nb_planet)]) +
-                    sum([dico_logpdf['Rrat'][ii]({Rrat}[ii]) for ii in range(self.nb_planet)]) +
-                    sum([dico_logpdf['P'][ii]({P}[ii]) for ii in range(self.nb_planet)])
+                    sum([dico_logpdf['Rrat'][ii](Rrat[ii]) for ii in range(self.nb_planet)]) +
+                    sum([dico_logpdf['P'][ii](P[ii]) for ii in range(self.nb_planet)]) +
+                    sum([dico_logpdf['Phi'][ii](Phi[ii]) for ii in range(self.nb_planet)])
                     )
 
     def ravs(self, nb_values=1):
@@ -899,7 +907,11 @@ class TransitingRhoprior(Transitingprior):
         # Compute the cosinc values from the b, P and rhostar values
         dico_ravs["cosinc"] = []
         for ii in range(self.nb_planet):
-            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr(dico_ravs["P"][ii], dico_ravs["rhostar"], 0., 90.))  # WARNING: Quick fix - ecc and omega are not included in the prior
+            dico_ravs["cosinc"].append(dico_ravs["b"][ii] / getaoverr_circular(dico_ravs["P"][ii], dico_ravs["rhostar"]))
+        # Compute the tic values from the P and Phi values
+        dico_ravs["tic"] = []
+        for ii in range(self.nb_planet):
+            dico_ravs["tic"].append((dico_ravs["Phi"][ii] * dico_ravs["P"][ii]) + self.t_ref[ii])
         # Format the return which should be a tuple of list of arrays or arrays depending on wether a
         # parameter can be multiple or not.
         # It should be ( np.array(rhostar), [np.array(P) for each planet], [np.array(cosinc) for each planet],

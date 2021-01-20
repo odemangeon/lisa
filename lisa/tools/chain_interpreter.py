@@ -43,33 +43,43 @@ class ChainsInterpret(np.ndarray):
         # see InfoArray.__array_finalize__ for comments
         if obj is None:
             return
-        self.__paramname_idx = getattr(obj, 'paramname_idx', None)
+        self._paramname_idx = getattr(obj, 'paramname_idx', None)
 
     def __getitem__(self, indexing):
+        new_param_idx = None
         if isinstance(indexing, str):
             idx = self.paramname_idx[indexing]
             indexing = (..., idx)
+            new_param_idx = {indexing: idx}
         if isinstance(indexing, tuple):
             if isinstance(indexing[-1], str):
                 ll = list(indexing[:-1])
                 ll.append(self.paramname_idx[indexing[-1]])
+                new_param_idx = {indexing[-1]: self.paramname_idx[indexing[-1]]}
                 indexing = tuple(ll)
             elif isinstance(indexing[-1], Iterable):
                 if isinstance(indexing[-1][0], str):
                     ll = list(indexing[:-1])
                     ll.append([self.paramname_idx[parname] for parname in indexing[-1]])
+                    new_param_idx = {parname: self.paramname_idx[parname] for parname in indexing[-1]}
                     indexing = tuple(ll)
-        return super(ChainsInterpret, self).__getitem__(indexing)
+        # return super(ChainsInterpret, self).__getitem__(indexing)
+        if new_param_idx is None:
+            return super(ChainsInterpret, self).__getitem__(indexing)
+        else:
+            res = super(ChainsInterpret, self).__getitem__(indexing).copy()
+            res._paramname_idx = new_param_idx
+            return res
 
     @property
     def paramname_idx(self):
         """Return the list of parameters names."""
-        return self.__paramname_idx
+        return self._paramname_idx
 
     @property
     def param_names(self):
         """Return the list of parameters names."""
-        return list(self.__paramname_idx.keys())
+        return list(self._paramname_idx.keys())
 
     @property
     def flatchain(self):

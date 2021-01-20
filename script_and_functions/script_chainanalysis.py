@@ -122,6 +122,9 @@ select_arg = [(0.50, ), (0.57, )]
 perc_select = 75
 plot_hist_PS = True
 
+# Save l_walkers and l_burnin
+save_walkersandburnins = True
+
 # Determine best fit values and error bars
 do_bestfit = True
 method_bestfit = "median"
@@ -176,12 +179,13 @@ nwalker = chain.shape[0]
 lnprobability_name = "lnposterior"
 l_param_chainI = l_param_name + [lnprobability_name]
 chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
-del chain; gc.collect()
+del chain
+gc.collect()
 
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name)
+        et.plot_chains(chainI, lnprobability, l_param_chainI)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
     else:
@@ -208,7 +212,7 @@ if do_AFS:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_AFS)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
     else:
@@ -239,7 +243,7 @@ if do_LPS:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_LPS)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
     else:
@@ -266,7 +270,7 @@ if do_AFSLPSP:
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
     else:
@@ -341,7 +345,7 @@ if do_GS:
             pl.show()
         pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
@@ -365,7 +369,7 @@ if do_GS:
         pl.close("all")
 
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin, suppress_burnin=True)
     if save_plots:
         pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
@@ -381,7 +385,7 @@ else:
             if l_burnin[ii] < min_burnin:
                 l_burnin[ii] = min_burnin
         if do_traces:
-            et.plot_chains(chainI, lnprobability, l_param_name, l_walker=l_walker_conv,
+            et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                            l_burnin=l_burnin, suppress_burnin=True)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
@@ -423,6 +427,10 @@ if do_PS:
 else:
     l_walker_PS = l_walker_conv
     l_burnin_PS = l_burnin
+
+if save_walkersandburnins:
+    et.save_walkers_and_burnin(obj_name=obj_name, extension_analysis=extension_outputs, l_walker=l_walker_PS,
+                               l_burnin=l_burnin_PS, folder=output_folders["pickles_analyze"])
 
 if do_bestfit:
     logger.info("6. Determine best fit values and error bars for main parameters")
