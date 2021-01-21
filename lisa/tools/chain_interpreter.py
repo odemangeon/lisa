@@ -17,7 +17,7 @@ class ChainsInterpret(np.ndarray):
 
     def __new__(cls, input_array, param_names):
         # First, check if the size of the last dimension of input_array match the length of param_names
-        assert input_array.shape[-1] == len(param_names), "The size of the last dimension of input_array should be equal to len(param_names)."
+        assert input_array.shape[-1] == len(param_names), cls.__err_dimarrlparam__
         # Check if the same param_name appears several, because it would break the class
         cc = Counter(param_names)
         duplicated_p_names = {}
@@ -31,11 +31,7 @@ class ChainsInterpret(np.ndarray):
             raise ValueError(cls.__err_shapeinput__)
         obj = np.asarray(input_array).view(cls)
         # add the new attribute to the created instance
-        if len(param_names) != len(set(param_names)):
-            raise ValueError(f"param_names list include several time the same parameter name.")
-        obj.__paramname_idx = dict((n, i) for i, n in enumerate(param_names))
-        if len(param_names) != obj.shape[-1]:
-            raise ValueError(cls.__err_dimarrlparam__)
+        obj._paramname_idx = dict((n, i) for i, n in enumerate(param_names))
         # Finally, we must return the newly created object:
         return obj
 
