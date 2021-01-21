@@ -5,12 +5,12 @@ from __future__ import division
 from logging import getLogger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, ones, arange  # logical_or
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp  # logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
 from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getecc_plc_4_handk_fast, getomega_plb_4_handk_fast, getomega_plc_4_handk_fast
-from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr
+from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr, getaoverr_circular
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
 
@@ -720,7 +720,7 @@ class TransitingRhoprior(Transitingprior):
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
-        ldict["getaoverr"] = getaoverr
+        ldict["getaoverr_circular"] = getaoverr_circular
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
@@ -763,7 +763,6 @@ class TransitingRhoprior(Transitingprior):
             P = array([{P}])
             Rrat = array([{Rrat}])
             b = getaoverr_circular(P, {rhostar}) * array([{cosinc}])
-            P = array([{P}])
             t_ref = array([{t_ref}])
             tic = array([{tic}])
             Phi = (tic - t_ref) / P
