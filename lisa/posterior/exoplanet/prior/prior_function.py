@@ -720,7 +720,7 @@ class TransitingRhoprior(Transitingprior):
         # Put variables that you want to have available when you execute the text of the joint
         # logpdf function in ldict
         ldict["dico_logpdf"] = dico_logpdf
-        ldict["getaoverr"] = getaoverr
+        ldict["getaoverr_circular"] = getaoverr_circular
         ldict["inf"] = inf
         ldict["array"] = array
         ldict["nb_planet"] = self.nb_planet
@@ -763,7 +763,6 @@ class TransitingRhoprior(Transitingprior):
             P = array([{P}])
             Rrat = array([{Rrat}])
             b = getaoverr_circular(P, {rhostar}) * array([{cosinc}])
-            P = array([{P}])
             t_ref = array([{t_ref}])
             tic = array([{tic}])
             Phi = (tic - t_ref) / P

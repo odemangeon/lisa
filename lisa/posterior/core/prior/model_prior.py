@@ -106,20 +106,31 @@ class Model_Prior(object):
     def create_individual_lnpriors(self):
         """Return a dictionnary providing the individual prior probability density functions.
 
-        :return dict priors: Return the dictionary containing all the elementary priors (marginal and joints)
+        Returns
+        -------
+        priors  : dict
+            Return the dictionary containing all the elementary priors (marginal and joints)
             for all the main and free parameters of the model.
+            The format of this dictionary is:
+            {"marginal" : {"<param_name>": prior_logpdf_function},
+             "joint"    : {"logpdf": {"<joint_prior_ref>": {"function": joint_logprior_function, "nb_param": nb_of_parameter}, ...},
+                           "param_names": {"<param_name>": {"ref": "<joint_prior_ref>", "idx": index_of_param_in_jointprior_argument_list}, ...}}
         """
         # Look for all the main free parameters in the model (self) and put them in two dict
         # marginal and joint dependending on wether they have a marginal or joint prior.
-        marginal = OrderedDict()
-        joint = OrderedDict()
+        marginal = OrderedDict()  # format: {"param_name": param_instance, ...}
+        joint = OrderedDict()  # format: {"param_name": param_instance, ...}
         for param in self.get_list_params(main=True, free=True, recursive=True, no_duplicate=True):
             if param.joint:
                 joint[param.get_name(include_prefix=True, recursive=True)] = param
             else:
                 marginal[param.get_name(include_prefix=True, recursive=True)] = param
         # Create a dict to receive the priors with two keys: marginal and joint
-        priors = {"marginal": {}, "joint": {"logpdf": {}, "param_names": {}}}
+        priors = {"marginal": {},  # format:  {"<param_name>": prior_logpdf_function, ...}
+                  "joint": {"logpdf": {},  # format: {"<joint_prior_ref>": {"function": joint_logprior_function, "nb_param": nb_of_parameter}, ...}
+                            "param_names": {}  # format: {"<param_name>": {"ref": "joint_prior_ref", "idx": index_of_param_in_jointprior_argument_list}, ...}
+                            }
+                  }
         # For each parameter in the list of marginal (step 1): Create an entry in
         # "marginal" (see step 2) which to the full name of the parameter associate the
         # marginal prior function.
@@ -190,16 +201,30 @@ class Model_Prior(object):
     def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
 
-        :param list_of_str list_paramnames: List of parameters full names (include_prefix and recursive)
-        :param dict individual_priors: Dictionary produced by the create_individual_lnpriors method.
-            If None it will created with this method.
-        :return DocFunction docf: DocFunction giving the joint ln prior
+        Argument
+        --------
+        list_paramnames     : list_of_str
+            List of parameters full names (include_prefix and recursive)
+        individual_priors   : dict
+            Dictionary produced by the create_individual_lnpriors method. If None it will created within
+            this method.
+
+        Returns
+        -------
+        docf : DocFunction or None
+            DocFunction giving the joint ln prior. This functions can return None if on of the individual
+            joint prior used doesn't have access to all the parameters that it requires in list_paramnames
         """
+        logger.debug(f"Creating joint prior for the following list of parameters {list_paramnames}.")
+        # Create the individual priors if needed
         if individual_priors is None:
             individual_priors = self.create_individual_lnpriors()
 
-        marginal_lnpriors = []
-        joint_lnpriors = OrderedDict()
+        # Create two structures to receive the marginal priors and the joint priors that needed to be
+        # used for the list of provided parameters and also stores the information of the idx of their
+        # parameters in the provided list of parameters
+        marginal_lnpriors = []  # format: [(marginal_prior_function_of_param_ii, idx_of_param_ii), ...]
+        joint_lnpriors = OrderedDict()  # format: {"joint_prior_ref": (joint_prior_function, [idx_param_ii, idx_param_jj]), ...}
         for ii, param_name in enumerate(list_paramnames):
             if param_name in individual_priors["marginal"]:
                 marginal_lnpriors.append((individual_priors['marginal'][param_name], ii))
@@ -213,15 +238,27 @@ class Model_Prior(object):
             else:
                 raise ValueError("Parameter {} doesn't exist in the individual priors dictionary."
                                  "".format(param_name))
+        logger.debug(f"individual marginal priors and index of the parameters required {marginal_lnpriors}.")
+        logger.debug(f"individual joint priors and index of the parameters required {joint_lnpriors}.")
+        # Check if all parameters required by the joint priors have been found in list_paramnames
+        for joint_prior_ref, (joint_prior_func, l_param_idx) in joint_lnpriors.items():
+            if any([ii is None for ii in l_param_idx]):
+                logger.warning(f"It was not possible to create the joint prior because joint prior {joint_prior_ref}"
+                               " doesn't have access to all his required parameters.")
+                return None
+        # Create the arg_list for the DocFunction
         arg_list = OrderedDict()
         arg_list["param"] = list_paramnames.copy()
         arg_list["kwargs"] = []
+        # Call __joint_lnprior_creator to create the Docfunction of the joint lnprior function from
+        # marginal_lnpriors, joint_lnpriors and arg_list.
         docf = self.__joint_lnprior_creator(marginal_lnpriors + list(joint_lnpriors.values()), arg_list)
         return docf
 
     def create_lnpriors(self, lnlike_db, individual_priors=None, affectinstmodel4dataset=False,
                         lock_db=False):
-        """Create the joint prior function from the list of parameters of the lnlike functions."""
+        """Create the joint prior function from the list of parameters of the lnlike functions.
+        """
         if individual_priors is None:
             individual_priors = self.create_individual_lnpriors()
         if affectinstmodel4dataset:
@@ -237,9 +274,13 @@ class Model_Prior(object):
                     db[inst_cat][inst_name][inst_model] = {}
                     for obj in lnlike_db[inst_cat][inst_name][inst_model]:
                         arg_list = lnlike_db[inst_cat][inst_name][inst_model][obj].arg_list["param"]
-                        (db[inst_cat][inst_name][inst_model][obj]
-                         ) = self.create_joint_lnprior(list_paramnames=arg_list,
-                                                       individual_priors=individual_priors)
+                        joint_prior = self.create_joint_lnprior(list_paramnames=arg_list,
+                                                                individual_priors=individual_priors)
+                        if joint_prior is not None:
+                            db[inst_cat][inst_name][inst_model][obj] = joint_prior
+                        else:
+                            logger.warning(f"Joint log prior of instrument model {inst_cat}_{inst_name}_{inst_model}"
+                                           f" could not be created.")
         if lock_db:
             db.lock()
         return db
@@ -247,14 +288,26 @@ class Model_Prior(object):
     def create_lnpriors_perdataset(self, individual_priors, lnlike_db_dtst):
         """Create the ln prior functions associated to the lnlikelihood of each dataset.
 
-        :param dict individual_priors: Dictionary produced by the create_individual_lnpriors method.
-        :param dict lnlike_db_dtst: Dictionary with key = dataset name, value = LikelihoodDocFunc
-            giving the likelihood doc function for the dataset
-        :return dict db: Dictionary with key = dataset name, value = DocFunction
-            giving the likelihood doc function for the dataset
+        Arguments
+        ---------
+        individual_priors : dict
+            Dictionary produced by the create_individual_lnpriors method.
+        lnlike_db_dtst    : dict
+            Dictionary with key = dataset name, value = LikelihoodDocFunc giving the likelihood doc
+            function for the dataset
+
+        Returns
+        -------
+        db  : dict
+            Dictionary with key = dataset name, value = DocFunction giving the likelihood doc function
+            for the dataset
         """
         db = {}
         for dataset_name, lnlike_docfunc in lnlike_db_dtst.items():
-            db[dataset_name] = self.create_joint_lnprior(lnlike_docfunc.params_model,
-                                                         individual_priors=individual_priors)
+            joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
+                                                    individual_priors=individual_priors)
+            if joint_prior is not None:
+                db[dataset_name] = joint_prior
+            else:
+                logger.warning(f"Joint log prior of dataset {dataset_name} could not be created.")
         return db
