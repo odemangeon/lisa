@@ -35,7 +35,7 @@ from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
 ## Definition of the parameters
 obj_name = "WASP-151"  # Change
-kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
+kwargs_datasim = {}
 star_kwargs = {"M": {"value": 1.077,
                      "error": 0.081},
                "R": {"value": 1.14,

@@ -375,7 +375,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     else:  # aR is a main parameter
         template_preambule_cond_pl = "condition_{planet} = ({aR} < ((1 .5 / (1 - ecc_{planet})) + {Rrat}))\n"
     if multi:
-        template_returns_condition = "ones_like({ltime_vec}[{ii}]) * (- inf)"
+        template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
     else:
         template_returns_condition = "ones_like({time_vec}) * (- inf)"
     # Create the text for template_planet_lc
