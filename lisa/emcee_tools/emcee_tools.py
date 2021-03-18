@@ -10,7 +10,7 @@ from logging import getLogger, INFO
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argsort  # , unravel_index
-from numpy import nanpercentile, newaxis, concatenate, std
+from numpy import nanpercentile, newaxis, concatenate, std, atleast_1d
 from numbers import Number
 from collections import Iterable
 
@@ -1781,6 +1781,7 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
         if ndim == 1:
             for walker, burnin in zip(l_walker, l_burnin):
                 res.extend(chainI[walker, burnin:])
+            res = array(res)[..., newaxis]
         # Case where there is several free parameter
         else:
             for dim in range(ndim):
@@ -1788,7 +1789,7 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
                     if not(dim in l_param_idx):
                         continue
                 res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
-        res = array(res).transpose()
+            res = array(res).transpose()
     else:
         if l_param_idx is not None:
             res = res[:, l_param_idx]
@@ -2285,7 +2286,7 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                     arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
 
 
-def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, **kwargs_corner):
+def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_corner=None):
     """Make a corner plot with only the parameters specified.
 
     Arguments
@@ -2294,14 +2295,21 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, **kwargs_
         Chain interpret instance
     l_param_name   : List of str
         List of parameter names for which to do the corner plot
-    l_walkers          : Iterable of Int
+    l_walkers      : Iterable of Int
         list of valid walkers
-    l_burnin           : Iterable of Int
+    l_burnin       : Iterable of Int
         List of indexes of the first iteration to consider for each walker
-    kwargs_corner      : dictionary
+    kwargs_corner  : dictionary
         Dictionary of keyword arguments passed on to the corner function
     """
-    clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+    kwargs_corner = {} if kwargs_corner is None else kwargs_corner
+    if (l_walker is not None) or (l_burnin is not None):
+        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+    else:
+        if len(chaininterpret.shape) > 2:
+            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+        else:
+            clean_flat_chains = chaininterpret[..., l_param_name]
     corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
 
 
@@ -2366,3 +2374,35 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
     logger.info(f"BIC value using the best fit parameters: {bic_bestfit}")
 
     return bic, bic_bestfit
+
+
+def plot_marginalized_distrib(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_hist=None):
+    """
+    Make a corner plot with only the parameters specified.
+
+    Arguments
+    ---------
+    chaininterpret : ChainInterpret
+        Chain interpret instance
+    l_param_name   : List of str
+        List of parameter names for which to do the corner plot
+    l_walkers      : Iterable of Int
+        list of valid walkers
+    l_burnin       : Iterable of Int
+        List of indexes of the first iteration to consider for each walker
+    kwargs_hist    : dictionary
+        Dictionary of keyword arguments passed on to the hist function
+    """
+    kwargs_hist = {} if kwargs_hist is None else kwargs_hist
+    if (l_walker is not None) or (l_burnin is not None):
+        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+    else:
+        if len(chaininterpret.shape) > 2:
+            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+        else:
+            clean_flat_chains = chaininterpret[..., l_param_name]
+    fig, ax = subplots(ncols=len(l_param_name), constrained_layout=True)
+    ax = atleast_1d(ax)
+    for ii, param in enumerate(l_param_name):
+        ax[ii].hist(clean_flat_chains[:, ii], **kwargs_hist)
+        ax[ii].set_title(param)
