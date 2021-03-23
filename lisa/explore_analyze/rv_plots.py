@@ -88,6 +88,10 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
                 allows to provide different pad_data for different planets.
             - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+            - 'indicate_y_outliers_data': boolean. If True, data outliers (outside of the plot) are indicated
+                by arrows.
+            - 'indicate_y_outliers_resi': boolean. If True, residuals outliers (outside of the plot) are indicated
+                by arrows.
             - fontsize : Int specifiying the fontsize
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
             - 'suptitle_kwargs': to pass kwargs to the suptitle command
@@ -140,11 +144,11 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Plots preparation
     ###################
 
-    fontsize = fig_param.get("fontsize", AandA_fontsize)
-
     # Create the gridspec
     if fig_param is None:
         fig_param = {}
+
+    fontsize = fig_param.get("fontsize", AandA_fontsize)
 
     gs = GridSpec(figure=fig, nrows=1, ncols=1, **fig_param.get('main_gridspec', {}))
 
@@ -374,6 +378,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 for orderm1 in range(star.RVdrift_order):
                     data_pl[datasetname] -= df_fittedval.loc[star.parameters[star.get_RVdrift_param_name(orderm1 + 1)].full_name]["value"] * RV_fact * (t_dst - datasim_kwargs[RVdrift_tref_name])**(orderm1 + 1)
 
+            print(f"RMS of the data of {datasetname} before GP model removal: {np.std(data_pl[datasetname])} {RV_unit}")
             # Remove GP model
             if remove_GP:
                 (model_dst, model_wGP_dst, GP_pred, GP_pred_var
@@ -388,6 +393,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     GP_pred_var *= RV_fact**2
                     # Correct data from GP pred
                     data_pl[datasetname] -= GP_pred
+
+            print(f"RMS of the data of {datasetname} after GP model removal: {np.std(data_pl[datasetname])} {RV_unit}")
 
             # Compute and remove the other planet contribution
             for plnt in all_planets:
@@ -440,9 +447,10 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 pad_data = pad_data_content
         et.auto_y_lims(np.concatenate([y for y in data_pl.values()]), ax_data_pl, pad=pad_data)
         # Indicate values that are off y-axis with anarrows
-        for datasetname in datasetnames:
-            et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
-                                   alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+        if fig_param.get("indicate_y_outliers_data", True):
+            for datasetname in datasetnames:
+                et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
+                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
         ################
         # Plot the model
@@ -499,12 +507,13 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             rms_format = fig_param.get("rms_format", ".1e")
             text_rms = f"{{:{rms_format}}}"
         for datasetname in datasetnames:
-            if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
-                et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-            else:
-                et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-                                       alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+            if fig_param.get("indicate_y_outliers_resi", True):
+                if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
+                    et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
+                                           alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+                else:
+                    et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
+                                           alpha=pl_kwarg_final[datasetname].get("alpha", 1))
             if ii == 0:
                 filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
                 if residual_pl[datasetname] is not None:
@@ -514,6 +523,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     else:
                         label_rms_resi_ii = pl_kwargs.get(datasetname, {}).get("label", filename_info["inst_name"]) + "({})".format(filename_info["number"])
                     rms_resi_label.append(label_rms_resi_ii)
+                    print(f"RMS of the residuals of {datasetname} before GP model removal: {rms_resi[-1]} {RV_unit}")
                 if residual_wGP_pl[datasetname] is not None:
                     rms_resi.append(text_rms.format(np.std(residual_wGP_pl[datasetname])))
                     if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
@@ -521,6 +531,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     else:
                         label_rms_resi_ii = f"{pl_kwargs.get(datasetname, {}).get('label', filename_info['inst_name'])}({filename_info['number']},GP)"
                     rms_resi_label.append(label_rms_resi_ii)
+                    print(f"RMS of the residuals of {datasetname} after GP model removal: {rms_resi[-1]} {RV_unit}")
 
         if ii == 0:
             if show_system_name_in_suptitle:

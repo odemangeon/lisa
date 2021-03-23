@@ -7,6 +7,7 @@ Script to produce pretty plots of RV data
 """
 
 import os
+import matplotlib
 import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
@@ -16,8 +17,8 @@ import lisa.posterior.core.posterior as cpost
 import lisa.tools.mylogger as ml
 
 from lisa.explore_analyze.misc import get_def_output_folders
-from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 from lisa.explore_analyze.rv_plots import create_RV_phasefolded_plots
+from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
 ### for the A&A article class
 AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
@@ -27,6 +28,12 @@ default_figwidth = AandA_width
 default_figheight_factor = 0.75
 
 AandA_fontsize = 8
+
+matplotlib.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    'font.family': 'serif',
+    'text.usetex': True,
+    'pgf.rcfonts': False})
 
 # Define the object name
 obj_name = "HD27969"
@@ -71,14 +78,14 @@ create_RV_phasefolded_plots(fig=fig,
                             fig_param={'rms_format': '.1f',  # "pad_data": {"b": (0.75, 0.1)}, "pad_resi": (0.2, 0.1)
                                        },
                             pl_kwargs={"RV_HD27969_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                       "model": {"color": "C2"},
+                                       "model": {"color": "C2", "linewidth": 0.75},
                                        # "modelbinned": {"color": "C4"},
                                        "databinned": {"color": "C3"}  # 'ms': 14, "elinewidth": 5
                                        },
-                            legend_param={"idx_planet": 0},
+                            # legend_param={"idx_planet": 0, "loc": 1},
                             show_system_name_in_suptitle=True,
                             show_rms_residuals_in_suptitle=True,
-                            RV_unit="$m/s$",
+                            RV_unit="m/s",
                             )
 pl.show()
 # pl.savefig(os.path.join(output_folders["plots"], "RV_phasefolded_plot_initrun_median_paper.pdf"))
