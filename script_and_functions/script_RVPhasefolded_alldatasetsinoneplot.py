@@ -39,7 +39,7 @@ matplotlib.rcParams.update({
 obj_name = "HD27969"
 
 # Define dataset names to be loaded
-datasetnames = ['RV_HD27969_SOPHIEp_0', ]
+datasetnames = [f'RV_{obj_name}_SOPHIEp_0', ]
 
 planets = None
 
@@ -77,7 +77,7 @@ create_RV_phasefolded_plots(fig=fig,
                             sharey=True,
                             fig_param={'rms_format': '.1f',  # "pad_data": {"b": (0.75, 0.1)}, "pad_resi": (0.2, 0.1)
                                        },
-                            pl_kwargs={"RV_HD27969_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                            pl_kwargs={f"RV_{obj_name}_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
                                        "model": {"color": "C2", "linewidth": 0.75},
                                        # "modelbinned": {"color": "C4"},
                                        "databinned": {"color": "C3"}  # 'ms': 14, "elinewidth": 5
@@ -88,5 +88,5 @@ create_RV_phasefolded_plots(fig=fig,
                             RV_unit="m/s",
                             )
 pl.show()
-# pl.savefig(os.path.join(output_folders["plots"], "RV_phasefolded_plot_initrun_median_paper.pdf"))
+# pl.savefig(os.path.join(output_folders["plots"], f"RV_phasefolded_plot_{extension_analysis}_paper.pdf"))
 # pl.close("all")
