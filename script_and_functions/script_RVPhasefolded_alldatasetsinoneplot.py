@@ -88,5 +88,5 @@ create_RV_phasefolded_plots(fig=fig,
                             RV_unit="m/s",
                             )
 pl.show()
-# pl.savefig(os.path.join(output_folders["plots"], f"RV_phasefolded_plot_{extension_analysis}_paper.pdf"))
+# pl.savefig(os.path.join(output_folders["plots"], f"RV_phasefolded_plot{extension_analysis}_paper.pdf"))
 # pl.close("all")
