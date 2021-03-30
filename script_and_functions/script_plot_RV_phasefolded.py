@@ -39,7 +39,7 @@ matplotlib.rcParams.update({
 obj_name = "HD27969"
 
 # Define dataset names to be loaded
-datasetnames = [f'RV_{obj_name}_SOPHIEp_0', ]
+datasetnames = None
 
 planets = None
 
