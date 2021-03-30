@@ -39,7 +39,7 @@ planets = None
 
 kwargs_datasim = {}
 
-load_from_pickle = False
+load_from_pickle = True
 extension_analysis = "_initrun_median"
 
 ## logger
@@ -61,16 +61,9 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
 create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=kwargs_datasim,
                             planets=planets, star_name="A", datasetnames=None,
                             remove_GP=False, remove1=True, LC_fact=1e6,
-                            exptime_bin=5 / 60 / 24, binning_stat="mean", supersamp_bin_model=10, show_binned_model=False,
+                            exptime_bin=5 / 60 / 24, binning_stat="mean", supersamp_bin_model=5, show_binned_model=False,
                             show_time_from_tic=True, time_fact=24, time_unit="h",
                             sharey=True,
-                            fig_param={'system_name_4_suptitle': "L 98-59",
-                                       'x_lims': {"all": (-1.5, 1.5), "b": (-1.5, 1.5), "c": (-1.8, 1.8), "d": (-1.3, 1.3)},
-                                       'rms_format': '.0f',
-                                       },
-                            pl_kwargs={"LC_TOI-175_TESS_0": {"data": {"show_error": False}}
-                                       },
-                            legend_param={'loc': 'upper left', "idx_planet": 0},
                             LC_unit="ppm",
                             )
 
