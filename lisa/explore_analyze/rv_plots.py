@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 """
-Module to create oplot specifically for radial velocity data
+Module to create plots specifically for radial velocity data
 
 @TODO:
 """
