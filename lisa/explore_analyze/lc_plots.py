@@ -161,7 +161,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Create the gridspec
     if fig_param is None:
         fig_param = {}
-        
+
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
     system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
