@@ -51,6 +51,7 @@ output_folders = get_def_output_folders(run_folder=getcwd())
 # load_from_pickle to True
 load_from_pickle = True
 extension_exploration = "_initrun"
+do_create_chainI = False
 
 # Save plots ?
 save_plots = True
@@ -174,13 +175,14 @@ if load_from_pickle:
     print("l_param_name from posterior:\n{}".format(l_param_name_bis))
     print("l_param_name from pickle:\n{}".format(l_param_name))
 
-nstep = chain.shape[1]
-nwalker = chain.shape[0]
-lnprobability_name = "lnposterior"
-l_param_chainI = l_param_name + [lnprobability_name]
-chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
-del chain
-gc.collect()
+if do_create_chainI:
+    nstep = chain.shape[1]
+    nwalker = chain.shape[0]
+    lnprobability_name = "lnposterior"
+    l_param_chainI = l_param_name + [lnprobability_name]
+    chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
+    del chain
+    gc.collect()
 
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
