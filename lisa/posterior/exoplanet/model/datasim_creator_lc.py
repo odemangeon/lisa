@@ -58,12 +58,12 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         extension to the planet name used for planet only model (without star, nor instrument)
     parametrisation         : str
         string refering to the parametrisation to use
-    ldmodel4instmodfname    : dict of string
-        Dictionary giving Limd darkening model to use for each instrument model
-        Format: {"instrument_model_name": "LD model name"}
+    ldmodel4instmodfname    : dict of dict of str
+        Dictionary giving Limd darkening model to use for each instrument model and for each star
+        Format: {"<instrument_model_name>: {"<star_name>": "<LD_model_name>"}
     LDs                     : dict of CoreLD
         Dictionary of subclasses of CoreLD instances providing the different limb-darkening models
-        Format: {"LD model name": CoreLD_subclass instance}
+        Format: {f"<star_name>_<LD model name>"": CoreLD_subclass instance, }
     transit_model           : str
         String refering to the transit model to use (can be 'pytransit' or 'batman')
     SSE4instmodfname        : dict of dict of str int and float
@@ -90,6 +90,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         simulator function for the whole system ("whole") and for the each planet individually
         ("planet_name")
     """
+    ## Check the content of the datasets and inst_models arguments
     # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
     # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
     # Datasim_DocFunc (instmod_docf)
@@ -104,51 +105,62 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
-    # Check if datasets are provided
+    ## Check if datasets are provided and store the answer in the has_dataset variable
     has_dataset = get_has_datasets(l_dataset)
 
+    ## Initialise text_def_func
     # text_def_func is a dictionary which will received the text of the datasimulator functions
     # It has several keys for several datasimulator functions:
     #   - "whole" for the whole system with all the planets
     #   - "b", "c", ... ("planet name") for only the contribution of one planet.
+    # Format: {"System part name": str_text_of_the_datasimulator_for_the_system_part}
     text_def_func = {}
 
-    ## Initialise param_nb and arg_list
-    # param_nb is a dictionary that will keep track of the number of parameter for each
+    ## Initialise param_nb, arg_list, arguments and ldict
+    # - param_nb is a dictionary that will keep track of the number of parameter for each
     # function in text_def_func (so the keys are the same).
-    # arg_list is a dictionary which will receive the argument list of the datasimulator
+    # Format: {"System part name": int_current_nb_of_model_parameters_of_the_datasimulator}
+    # - arg_list is a dictionary which will receive the argument list of the datasimulator
     # function in text_def_func (so the keys are the same).
     # The argument list of a function is itself a dictionary (OrderedDict) that get at least two
     # keys:
     #   - "param": list of the free parameters name in order
-    #   - "kwargs": list of the additional argument taht you need to provide to simulate the
+    #   - "kwargs": list of the additional argument that you need to provide to simulate the
     #               data. For example the time]
+    # Format: {"System part name": {"params": [str_name_of_model_parameter_in_the_parameter_vector, ],
+    #                               "kwargs": [str_name_of_additional_argument_for the datasimulator, ]}
+    # - arguments is ...
     # Create the "arguments" text variable and intial with the parameter vector
-    # Create and intialise the "ldict" dictionary variable which will be used as local dictionary
-    # for the creation of the datasim functions with exec
+    # - ldict is the dictionary which will be used as local dictionary for the creation/co;plilation
+    # of the datasimulator functions with exec
+    # Format: {"variable name": variable, }
     (param_nb,
      arg_list,
      arguments,
      ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
                                                    key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
-    # Add rhostar to arg_list if required by the parametrisation
+    # Add the stellar density the model parameter vectors (in arg_list) if required by the parametrisation
     # (This needs to be done before the creation of arglist and param_nb for planet_only !)
+    # rhostar is the reference to the value of rho star (if rho star is a free parameter it's "p[ii]"
+    # the reference to rho star within the parameter vector of the function simulating the whole system.
+    # Otherwise it's the fixed value of rho star)
     if parametrisation == "Multis":
         rhostar = add_param_argument(param=star.rho, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
                                      key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
     else:
         rhostar = None
 
-    # Get the ld_parcont and ld_param_list
+    ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
     # (This needs to be done before the creation of arglist and param_nb for planet_only !)
+    #
     (l_LD_parcont_name,
      l_LD_parcont,
      l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, param_nb,
                                                  arg_list, key_whole, key_param)
 
-    # Initialise arg_list and param_nb for the current planet only contribution
-    for i, planet in enumerate(planets.values()):
+    # Initialise arg_list and param_nb keys and values for the planet only datasimulators
+    for planet in planets.values():
         arg_list[planet.get_name() + ext_plonly] = deepcopy(arg_list[key_whole])
         param_nb[planet.get_name() + ext_plonly] = param_nb[key_whole]
 
@@ -847,26 +859,48 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, para
                              key_param):
     """Return the list of LD param container name, instance and parameter string list for a given star.
 
-    :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
-    :param dict_of_ ldmodel4instmodfname: Dictionary giving Limd darkening model to use for each
-        instrument model
-    :param Star star: Star object
-    :param LDs: LD object?
-    :param dict_of_int param_nb: dictionary with key = key_whole, value = current number of free
-        parameters in the model
+    Arguments
+    ---------
+    l_inst_model            : list_of_Instrument_Model
+        Checked list of Instrument_Model instance(s).
+    ldmodel4instmodfname    : dict of dict of str
+        Dictionary giving Limd darkening model to use for each instrument model and for each star
+        Format: {"<instrument_model_name>: {"<star_name>": "<LD_model_name>"}
+    star                    : Star
+        Star object
+    LDs                     : dict of CoreLD
+        Dictionary of subclasses of CoreLD instances providing the different limb-darkening models
+        Format: {f"<star_name>_<LD model name>"": CoreLD_subclass instance, }
+    param_nb                : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
+        key = str key designating part of the system or the whole system
+        value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param dict arg_list: dictionary with key = key_whole, value = dict with
-        key = key_param, value = list of parameter full names
+    arg_list                : dict_of_dict_of_list_of_str
+        Dictionary giving the arguments of the functions currently being produced. The keys of this
+        dictionary are string giving the name/ref of the simulated functions and the values are dictionary
+        with at least one key which is the content of the argument key_param and the value associated to
+        this key is the list of parameter full names in the parameter vector of the functions being produced.
+        If the parameter provided by param is free. It's name will be added to one or several of these list.
+        Format: {"name_of_function": {key_param: [str_name_of_model_parameter_in_the_parameter_vector], }, }
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param string key_whole: key to use to identify the whole system in the output dictionary
-        (dico_docf).
-    :param string key_param: Key used for the parameters entry of arg_list
-    :return list_of_string l_LD_parcont_name: List of limb darkening parameter container name
-        associated with the Instrument_Model instances in l_inst_model.
-    :return list_of_LD l_LD_parcont: list of LD parameter container object associated with the
-        Instrument_Model instances in l_inst_model.
-    :return l_LD_param_list: list of string giving the list of limb darkening parameters values
-        associated with the Instrument_Model instances in l_inst_model.
+    key_whole               : str
+        key to use to identify the whole system in param_nb, arg_list.
+    key_param               : str
+        Key used for the parameters entry of arg_list values
+
+    Returns
+    -------
+    l_LD_parcont_name   : list_of_string
+        List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
+        in l_inst_model.
+    l_LD_parcont        : list_of_LD
+        list of limb darkening models (parameter container object) associated with the Instrument_Model instances
+        in l_inst_model.
+    l_LD_param_list     : list_of_str
+        list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
+        in l_inst_model.
     """
     # Get the ld_parcont and ld_param_list
     l_LD_parcont_name = []
