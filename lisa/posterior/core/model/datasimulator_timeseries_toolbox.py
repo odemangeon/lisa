@@ -32,12 +32,12 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
     """Add time to the arguments text and update arg_list and ldict.
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
-    If multi is True l_time_vecwill be added, otherwise time_vec will be.
+    If multi is True l_time_vec will be added, otherwise time_vec will be.
 
     Arguments
     ---------
     arguments: str
-        string giving the current text of arguments
+        string giving the current text of arguments for the functions
     multi: bool
         True if the datasimulator simulate multiple outputs
     has_dataset: bool
