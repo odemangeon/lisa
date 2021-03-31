@@ -153,7 +153,15 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
     # (This needs to be done before the creation of arglist and param_nb for planet_only !)
-    #
+    # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: ["<limb darkening model name>", ]
+    # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: [<limb darkening model>, ]
+    # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: ["[p[1], p[2]]", ]
     (l_LD_parcont_name,
      l_LD_parcont,
      l_ld_param_list) = get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, param_nb,
@@ -164,7 +172,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         arg_list[planet.get_name() + ext_plonly] = deepcopy(arg_list[key_whole])
         param_nb[planet.get_name() + ext_plonly] = param_nb[key_whole]
 
-    # Initialise the template function text
+    # Initialise function_name and template_function the template function name and the template function text
     function_name = ("LCsim_{{object}}_{instmod_fullname}"
                      "".format(instmod_fullname=inst_model_full_name))
     template_function = """
@@ -176,6 +184,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     {{tab}}except RuntimeError:
     {{tab}}    return {{returns_except}}
     """.format(function_name=function_name)
+    # Below this was used for debugging purposes
     # template_function = """
     # def {function_name}({{arguments}}):
     # {{tab}}{{preambule}}
@@ -187,10 +196,10 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     tab = "    "
     template_function = dedent(template_function)
 
-    # Initialise the template for each instmodel
+    # Initialise template_returns_instmod, the template for each instmodel
     template_returns_instmod = "1 {oot_var}{planets_lc}"
 
-    # Initialise the template for planetary contibution only (No instrument nor star) for phase fold plots per planet
+    # Initialise template_returns_pl_only, the template for planetary contibution only (No instrument nor star) for phase fold plots per planet
     template_returns_pl_only = "{planets_lc}"
 
     # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
@@ -207,7 +216,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                       key_param, key_mand_kwargs, key_opt_kwargs,
                                       time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                       timeref_name=time_ref, l_timeref_name=l_time_ref)
-    # Crete the template for the condition (no planet should pass into the star)
+    # Initialise template_condition, the template for the condition (no planet should pass into the star)
     template_condition = """
     {tab}{preambule}
     {tab}if {condition}:
@@ -215,7 +224,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     """
     template_condition = dedent(template_condition)
 
-    # Create the preambule
+    # Initialise template_preambule_pl, the template of the preambule of the function for each planet
     template_preambule_pl = """
         {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
 

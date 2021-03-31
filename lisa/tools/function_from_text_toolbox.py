@@ -150,9 +150,9 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
 
     There is 3 use cases for this function:
     1. You want to add a non param argument for which you have the value:
-        You provide the value via new_arg_value and all it will be stored in ldict (dictionary which will
+        You provide the value via new_arg_value and it will be stored in ldict (dictionary which will
         be used as local environement for the execution of the text of the function)
-    2. You want to add a non param argument for which you do not have the value at coding time.
+    2. You want to add a non param argument for which you do not have the value at coding time:
         You don't provide new_arg_value (or you provide None) and the argument name will be added to the
         arguments string and will be required from user at run time
     3. You want to add a non param argument for which the value is function of variable that you do not
