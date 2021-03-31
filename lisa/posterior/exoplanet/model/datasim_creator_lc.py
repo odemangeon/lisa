@@ -2,6 +2,10 @@
 # -*- coding:  utf-8 -*-
 """
 Datasim creator LC module.
+
+TODO:
+- In the docstring of create_datasimulator_LC for the arguments inst_models, I wrote that it could be
+None, now I am not sure that it's actually possible for it to be None. To Check.
 """
 from logging import getLogger
 from textwrap import dedent
@@ -37,37 +41,47 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
     Arguments
     ---------
-    :param Star star: Star object
-    :param dict_of_Planet planets: dictionary: key: planet name, value: Planet object
-    key_whole       : String
+    star                    : Star object
+        Star instance of the parent star
+    planets                 : dict of Planets
+        Dictionary of Planet instance providing the planets in the system
+        Format: {"planet name": Planet instance}
+    key_whole               : str
         key to use to identify the whole system in the output dictionary (dico_docf).
-    key_param       : String
+    key_param               : str
         Key used for the parameters entry of arg_list
-    key_mand_kwargs : String
+    key_mand_kwargs         : str
         Key used for the mandatory keyword argument entry of arg_list
-    key_opt_kwargs  : String
+    key_opt_kwargs          : str
         Key used for the optional keyword argument entry of arg_list
-    :param str ext_plonly: extension to the planet name used for planet only model (without star, nor instrument)
-    :param string parametrisation: String refering to the parametrisation to use
-    :param dict_of_ ldmodel4instmodfname: Dictionary giving Limd darkening model to use for each
-        instrument model
-    :param LDs: LD object?
-    :param string transit_model: String refering to the transit model to be used.
-    :param dict_of_ SSE4instmodfname: Dictionary giving the supersampling factor and the exposure
-        time to use for each instrument model
-    inst_models : Instrument_Model or List of Inst Instrument_Model or None
-        List of instrument model object which if datasets is provided should correspond to the datasets provided.
-    datasets    : Dataset/list_of_Dataset/None
-        If Dataset, the datasimulator include the kwargs of the dataset, so provided parameters
-            of for the model, it simulates the data in the dataset.
-        If None, the datasimulator function requires the time (and eventually the t_ref) on top
-            of the parameters of the model.
-        If list of Dataset, it has to provide exactly one dataset (no None) for each Instrument
-            model in inst_models and the produced datasimulator will include the kwargs of the
-            datasets.
-    param_vector_name : String
-        string giving the name of the vector of parameters argument of the
-        datasimulator function.
+    ext_plonly              : str
+        extension to the planet name used for planet only model (without star, nor instrument)
+    parametrisation         : str
+        string refering to the parametrisation to use
+    ldmodel4instmodfname    : dict of string
+        Dictionary giving Limd darkening model to use for each instrument model
+        Format: {"instrument_model_name": "LD model name"}
+    LDs                     : dict of CoreLD
+        Dictionary of subclasses of CoreLD instances providing the different limb-darkening models
+        Format: {"LD model name": CoreLD_subclass instance}
+    transit_model           : str
+        String refering to the transit model to use (can be 'pytransit' or 'batman')
+    SSE4instmodfname        : dict of dict of str int and float
+        Dictionary giving the supersampling factor and the exposure time to use for each instrument model
+        Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
+    inst_models             : Instrument_Model or List of Instrument_Model or None
+        List of Instrument_Model instance which, if datasets is provided, should be the instrument models
+        to use for each dataset provided in the datasets arguments.
+    datasets                : Dataset or list_of_Dataset or None
+        List of datasets to be simulated.
+        If no dataset is provided (datasets=None), the datasimulator function produced by this function will
+        have as arguments the times on top of the parameter vector of the model.
+        If at least one dataset is provided (datasets!=None), then the datasimulator function produced
+        by this function will include the times, so it will not be an argument.
+        If provided the number of datasets needs to match the number of instrument models provided by
+        the inst_models arguments
+    param_vector_name       : str
+        string giving the name of the vector of parameters argument of the datasimulator function.
 
     Returns
     -------
