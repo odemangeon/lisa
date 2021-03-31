@@ -72,29 +72,49 @@ def init_arglist_paramnb_arguments_ldict(key_param, keys=None, key_mand_kwargs=N
 
 def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
                        param_vector_name=par_vec_name):
-    """Add a model parameter: Get the text associated to it and update the variables.
+    """Add a model parameter to the functions being produced: Get the text associated to it and update
+    the arg_list and param_nb variables.
 
-    If the parameter is free, the text will be "param_vec[i]" where is the index of this parameter
-    in the parameter vector and param_vec the name of the parameter vector.
-    Otherwise the text will be the fixed value of the parameter.
-    The variables updated will be arg_list and paramnb.
+    If param is a free parameter, the returned text will be f"{param_vector_name}[{ii}]" where ii is the index of
+    param in the parameter vector of the function being produced (designated by key_arglist) and param_vector_name
+    is the name of the parameter vector provided by param_vector_name.
+    If param is a fixed parameter, the returned text will be the fixed value of the parameter.
 
-    :param Parameter param: Parameter instance of the parameter for which you want to get the text
-    :param dict arg_list: dictionary with key = key_arglist, value = dict with
-        key = key_param, value = list of parameter full names. If param is a free parameter, its
-        full name will be added to this list.
+    The variables updated will be arg_list and param_nb.
+
+    Arguments
+    ---------
+    param       : Parameter
+        Parameter instance of the parameter for which you want to get the text
+    arg_list    : dict_of_dict_of_list_of_str
+        Dictionary giving the arguments of the functions currently being produced. The keys of this
+        dictionary are string giving the name/ref of the simulated functions and the values are dictionary
+        with at least one key which is the content of the argument key_param and the value associated to
+        this key is the list of parameter full names in the parameter vector of the functions being produced.
+        If the parameter provided by param is free. It's name will be added to one or several of these list.
+        Format: {"name_of_function": {key_param: [str_name_of_model_parameter_in_the_parameter_vector], }, }
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param str/list_of_str key_arglist: key of arg_list to update.
-    :param dict_of_int param_nb: dictionary giving the current number of parameter in the model.
+    key_arglist : str or list_of_str or None
+        Name/Ref or list of name/ref of the function being produced for which you want to add param as
+        a parameter. These names are keys of the arg_list and param_nb dictionaries
+    param_nb    : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
         key = str key designating part of the system or the whole system
         value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param string key_param: Key used for the parameters entry of arg_list
-    :param str param_vector_name: str giving the name of the vector of parameters argument of the
-        datasimulator function.
-    :return str/dict_of_str param_text: dictionary of str giving the parameter in the full vector of
-        parameters (ex: "p[0]") if parameter is free otherwise str giving the fixed value of this
-        parameter.
+    key_param   : str
+        Key used for the parameters entry of arg_list values
+    param_vector_name   : int_current_nb_of_model_parameters_of_the_datasimulator
+        str giving the name of the vector of parameters argument of the function being produced.
+
+    Returns
+    -------
+    param_text : str/dict_of_str
+        If key_arglist is None than the returned variable is a string else it is a dictionary of strings.
+        If param is a free parameter, the string(s) give the the reference to the parameter within the function
+        being produced (ex: "p[0]" if param_vector_name = "p").
+        If param is a fixed parameter,  the string(s) give the fixed value of this parameter.
     """
     if isinstance(key_arglist, str) or (key_arglist is None):
         l_key_arglist = [key_arglist]
@@ -116,7 +136,7 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
         for key in l_key_arglist:
             param_text[key] = "{}".format(param.value)
     if key_arglist is None:
-        return param_text[key]
+        return param_text[None]
     else:
         return param_text
 
