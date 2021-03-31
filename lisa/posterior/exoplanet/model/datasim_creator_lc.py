@@ -6,6 +6,10 @@ Datasim creator LC module.
 TODO:
 - In the docstring of create_datasimulator_LC for the arguments inst_models, I wrote that it could be
 None, now I am not sure that it's actually possible for it to be None. To Check.
+- time_arg_name is a new return of add_time_argument and is not used in the rest of the create_datasimulator_LC function.
+Check if it can be used.
+- I am not sure that some of the comments are still valid. So I need to check if this comment are still valid or not.
+Search for TODO_CHECK_THIS_COMMENT which I put in front each one of these comments.
 """
 from logging import getLogger
 from textwrap import dedent
@@ -202,15 +206,17 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Initialise template_returns_pl_only, the template for planetary contibution only (No instrument nor star) for phase fold plots per planet
     template_returns_pl_only = "{planets_lc}"
 
-    # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
-    # the rest of the function. Check if it can be used.
+    # Add the time as additional argument for the functions or include it in ldict
     (arguments, time_arg_name, time_arg, time_arg_in_arguments
      ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
                            key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                            ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                            add_to_ldict=True, backup_add_to_args=True)
 
-    # Get the out of transit variation contribution for each couple instrument - dataset
+    ## Get the l_oot_var and add the t_ref(s) to the list of arguments for the functions
+    # l_oot_var is the list of strings giving the string representation of the out of transit variation model
+    # for each couple instrument model - dataset in l_inst_model and l_dataset.
+    # Format: ["oot model", ]
     l_oot_var, arguments = get_ootvar(l_inst_model, l_dataset, multi,
                                       ldict, arguments, param_nb, arg_list, key_whole,
                                       key_param, key_mand_kwargs, key_opt_kwargs,
@@ -238,7 +244,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
         for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont,
                                                            l_ld_param_list):
-            # If the same model is used for several dataset a model will be several times in
+            # TODO_CHECK_THIS_COMMENT: If the same model is used for several dataset a model will be several times in
             # l_inst_model. So to avoid the repetition we check if this instrument has already been
             # done.
             if multi:
@@ -298,11 +304,12 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, degrees(omega_{planet}))"""
     template_preambule_pl = dedent(template_preambule_pl)
 
-    # Add the initialisation of the TransitModel (to the template_preambule)
+    ## Add or not the initialisation of the TransitModel instance or MandelAgol instance (to the template_preambule)
     l_par_bat = []
     for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
                                             l_LD_parcont):
         supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
+        # If you need to supersample the model
         if supersamp > 1:
             exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
             if transit_model == "batman":
@@ -359,6 +366,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             else:
                 m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime,
                                          model=LD_parcont.ld_type)
+        # If you DON'T need to supersample the model
         else:
             if transit_model == "batman":
                 if dst is None:
@@ -401,6 +409,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                         l_par_bat[ii][pl_key].u = LD_parcont.init_LD_values  # LDC init val
             else:
                 m_pytransit = MandelAgol(model=LD_parcont.ld_type)
+
     # Create the templates to conpute the condition to know if the planet passes in the star
     # and of what tho return if condition is True
     # Fill return if condition planet goes in the star is True
@@ -413,6 +422,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
     else:
         template_returns_condition = "ones_like({time_vec}) * (- inf)"
+
     # Create the text for template_planet_lc
     if transit_model == "batman":
         if multi:
@@ -441,7 +451,6 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                       "omega_{planet}) - 1 ")
 
     # Save the param_nb and arg_list for the whole function before iterating over the planets
-    # text_def_func_before = text_def_func[key_whole]
     param_nb_before = param_nb[key_whole]
     arg_list_before = deepcopy(arg_list[key_whole])
 
@@ -744,39 +753,64 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
 
     Arguments
     ---------
-    :param list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
-    :param list_of_Dataset l_dataset: Checked list of Dataset instance(s).
-    :param bool multi: True if the datasim function needs multiple outputs.
-    :param dict ldict: dictionary to be used as local dictionary argument of the exec function.
+    l_inst_model        : list_of_Instrument_Model
+        Checked list of Instrument_Model instance(s).
+    l_dataset           : list_of_Dataset
+        Checked list of Dataset instance(s).
+    multi               : bool
+        True if the datasim function needs to give multiple outputs.
+    ldict               : dict
+        dictionary to be used as local dictionary argument of the exec function.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param str arguments: string giving the current text of arguments
-    :param dict_of_int param_nb: dictionary with key = key_whole, value = current number of free
-        parameters in the model
+    arguments           : str
+        string giving the current text of arguments for the functions
+    param_nb            : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
+        key = str key designating part of the system or the whole system
+        value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param dict arg_list: dictionary with key = key_whole, value = dict with
-        key = key_param, value = list of parameter full names
+    arg_list            : dict_of_dict_of_list_of_str
+        Dictionary giving the arguments of the functions currently being produced. The keys of this
+        dictionary are string giving the name/ref of the simulated functions and the values are dictionary
+        with at least one key which is the content of the argument key_param and the value associated to
+        this key is the list of parameter full names in the parameter vector of the functions being produced.
+        If the parameter provided by param is free. It's name will be added to one or several of these list.
+        Format: {"name_of_function": {key_param: [str_name_of_model_parameter_in_the_parameter_vector], }, }
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    :param string key_whole: Key used for the whole system
-    :param string key_param: Key used for the parameters entry of arg_list
-    :param str key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
-    :param str key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
-    :param str time_vec_name: Str used to designate the time vector
-    :param str l_time_vec_name: Str used to designate the list of time vectors
-    :param str l_time_vec_format: Str used to access an element of l_time_vec_name
-    :param str timeref_name: Str used to designate the time vector
-    :param str l_timeref_name: Str used to designate the list of time references
-    :param str l_timeref_format: Str used to access an element of l_timeref_name
-    use_dataset_4_tref    : bool
-        If True, then the dataset will be used to compute the reference time for the RV drift
-    time_ref_val          :
-        Value of the time reference if not computed from the datasets
+    key_whole           : str
+        Key used for the whole system in arg_list and param_nb
+    key_param           : str
+        Key used for the parameters entry of arg_list values
+    key_mand_kwargs     : str
+        Key used for the mandatory keyword argument entry of arg_list values
+    key_opt_kwargs      : str
+        Key used for the optional keyword argument entry of arg_list values
+    time_vec_name       : str
+        Str used to designate the time vector
+    l_time_vec_name     : str
+        Str used to designate the list of time vectors
+    l_time_vec_format   : str
+        Str used to access an element of l_time_vec_name
+    timeref_name        : str
+        Str used to designate the time reference
+    l_timeref_name      : str
+        Str used to designate the list of time references
+    l_timeref_format    : str
+        Str used to access an element of l_timeref_name
+    use_dataset_4_tref  : bool
+        If True, then the dataset will be used to compute the reference time
+    time_ref_val        :
+        Value of the time reference(s) if not computed from the datasets
 
     Returns
     -------
-    :return list_of_string l_oot_var: list give the string representation of the contributions
-        of the out of transit variation for each couple instrument model - dataset in
-        l_inst_model and l_dataset.
-    :return str arguments: Updated string giving the new text of arguments
+    l_oot_var   : list_of_string
+        list giving the string representation of the out of transit variation model for each couple
+        instrument model - dataset in l_inst_model and l_dataset.
+        Format: ["oot model", ]
+    arguments   : str
+        Updated string giving the new text of arguments
     """
     # Check if datasets are provided
     has_dataset = get_has_datasets(l_dataset)
