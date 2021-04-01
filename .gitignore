@@ -9,6 +9,7 @@ __pycache__/
 # Common stuff
 lisa/software_parameters.py
 examples/WASP-151/outputs/
+examples/K2-19/outputs/
 list_imported_modules.txt
 
 
