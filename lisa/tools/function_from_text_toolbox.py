@@ -189,7 +189,7 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
         you need to provided "None"
     disable_add_to_ldict : bool
         This should be set to True only for use case 3 (see above). This prevents the function from adding
-        the content of new_arg_value to ldict and affect it to arg instead, also adding new arg_name to arguments
+        the content of new_arg_value to ldict and affect it to arg instead, also adding new_arg_name to arguments
 
     Returns
     -------
