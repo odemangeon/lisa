@@ -151,6 +151,9 @@ class HKPPrior(Core_JointPrior_Function):
 
 class HKPtPrior(Core_JointPrior_Function):
     """Prior defined for the h, k, P and t parameters of the Np parametrisation of the GravgroupsDynam model.
+
+    Parameter transformation defined in the supplementary materials of Huber et al. 2013 Science. 342(6156):331
+    Section 5.5 specification of Parameters (https://arxiv.org/pdf/1310.4503.pdf)
     """
 
     __category__ = "hkPt"
@@ -672,7 +675,7 @@ class TransitingRhoprior(Transitingprior):
         # transiting and allow_grazing are also multiples so check the transiting and allow_grazing have
         # the good dimensions. The user can provide only one value and in this case it's assumed that it applies
         # to all planets.
-        err_msg = "transiting, allow_grazing adn t_ref should be list with the same length as params['P'], one per planet."
+        err_msg = "transiting, allow_grazing and t_ref should be list with the same length as params['P'], one per planet."
         for arg in [self.transiting, self.allow_grazing, self.t_ref]:
             if not(isinstance(arg, list)):
                 raise ValueError(err_msg)

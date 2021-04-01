@@ -112,7 +112,7 @@ class NormalPrior(Core_Prior_Function):
 
     :param float mu: Mean of the gaussian
     :param float sigma: standard deviation of the gaussian
-    :param list_of_2_floats lims: Absolute boundaries for a truncated gaussian
+    :param list_of_2_floats lims: Absolute boundaries for a truncated gaussian (example: [0, 1])
     :param list_of_2_floats sigma_lims: Boundaries in number of sigmas for a truncated gaussian. For
         example for +- 2 sigma boundaries, put [2, 2].
     """
