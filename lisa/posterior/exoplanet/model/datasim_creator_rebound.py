@@ -222,7 +222,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         # See if there is multiple couple inst_model/dataset
         multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"]) > 1
         # Add lc time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
-        (arguments, time_arg_name[LC_inst_cat], time_arg_LC
+        (arguments, time_arg_name[LC_inst_cat], time_arg_LC, time_arg_LC_in_arguments
          ) = add_time_argument(arguments=arguments, multi=multi_cat[LC_inst_cat], has_dataset=has_dataset,
                                arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
                                key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[LC_inst_cat]["l_dataset"],
@@ -244,9 +244,8 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         (l_LD_parcont_name,
          dico_inst_cat[LC_inst_cat]["l_LD_parcont"],
          dico_inst_cat[LC_inst_cat]["l_ld_param_list"]
-         ) = get_LD_parcont_and_param(dico_inst_cat[LC_inst_cat]["l_inst_model"],
-                                      ldmodel4instmodfname, star, LDs,
-                                      param_nb, arg_list, key_whole, key_param)
+         ) = get_LD_parcont_and_param(dico_inst_cat[LC_inst_cat]["l_inst_model"], ldmodel4instmodfname,
+                                      star, LDs, param_nb, arg_list, key_whole, key_param)
 
         # Get the supersampling factor and exposure time
         dico_inst_cat[LC_inst_cat]["supersamp"] = []
@@ -263,7 +262,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         # See if there is multiple couple inst_model/dataset
         multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"]) > 1
         # Add rv time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
-        (arguments, time_arg_name[RV_inst_cat], time_arg_RV
+        (arguments, time_arg_name[RV_inst_cat], time_arg_RV, time_arg_RV_in_arguments
          ) = add_time_argument(arguments=arguments, multi=multi_cat[RV_inst_cat], has_dataset=has_dataset,
                                arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
                                key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[RV_inst_cat]["l_dataset"],
@@ -281,8 +280,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
                                                  key_mand_kwargs, key_opt_kwargs,
                                                  time_vec_name=time_vec_rv,
                                                  l_time_vec_name=l_time_vec_rv,
-                                                 timeref_name=time_ref_rv,
-                                                 l_timeref_name=l_time_ref_rv)
+                                                 timeref_name=time_ref_rv)
 
     # Build the LC and RV times vector for the rebound wrapper
     # For RV and LC, add a key "times" to contain the full vector of sorted times
@@ -509,27 +507,27 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
                                                         t_ref=time_ref_dyn, tab=tab)
 
     # Add the reference time for the dynamical simulation as argument
-    (arguments, timeref_arg
+    (arguments, timeref_arg, timeref_arg_in_arguments
      ) = add_nonparam_argument(arguments=arguments, new_arg_name=time_ref_dyn, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
-                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, new_arg_value=None,
                                def_arg_value=None)
 
     # Add the time step for the dynamical simulation as argument
-    (arguments, deltadyn_arg
+    (arguments, deltadyn_arg, deltadyn_arg_in_arguments
      ) = add_nonparam_argument(arguments=arguments, new_arg_name=deltat_dyn, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
-                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, new_arg_value=None,
                                def_arg_value=1e-3)
 
     # Add the integrator for rebound as argument
-    (arguments, integrator_arg
+    (arguments, integrator_arg, integrator_arg_in_arguments
      ) = add_nonparam_argument(arguments=arguments, new_arg_name=integrator_name, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
-                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, new_arg_value=None,
                                def_arg_value="'whfast'")
 
     # Add the exact_finish_time for rebound as argument
-    (arguments, integrator_arg
+    (arguments, exact_finish_time_arg, exact_finish_time_arg_in_arguments
      ) = add_nonparam_argument(arguments=arguments, new_arg_name=exact_finish_time_name, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
-                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, add_to_ldict=False, new_arg_value=None,
+                               key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole, new_arg_value=None,
                                def_arg_value=1)
 
     ## Create the template for the text of the rebound wrapper and add the rebound wrapper function
@@ -635,10 +633,10 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         text_compute_flux = dedent(text_compute_flux).format(tab=tab)
 
         # Add nthreads as argument with def value = 1
-        (arguments, nthreads_arg
+        (arguments, nthreads_arg, nthreads_arg_in_arguments
          ) = add_nonparam_argument(arguments=arguments, new_arg_name=nthreads, arg_list=arg_list, key_mand_kwargs=key_mand_kwargs,
                                    key_opt_kwargs=key_opt_kwargs, ldict=ldict, key_arglist=key_whole,
-                                   add_to_ldict=False, new_arg_value=None, def_arg_value=1)
+                                   new_arg_value=None, def_arg_value=1)
 
     ## Retrieve the RV values for each RV instrument model (and dataset)
     text_retrieve_rv = ""
