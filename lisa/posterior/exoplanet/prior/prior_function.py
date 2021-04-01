@@ -295,7 +295,7 @@ class HKPtPrior(Core_JointPrior_Function):
         for param, dico in self.hiddenparam_defs.items():
             value = dico.get("value", None)
             if value is None:
-                dico_ravs[param] = dico["priorfunc_instance"].ravs(nb_values=nb_values)
+                dico_ravs[param] = self.priorinstance_hiddenparams[param].ravs(nb_values=nb_values)
             else:
                 dico_ravs[param] = ones(nb_values) * value
             if dico_ravs[param].size == 1:
