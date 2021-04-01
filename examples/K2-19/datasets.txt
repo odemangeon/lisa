@@ -1,0 +1,14 @@
+# Datasets file: List below all the files you want to use for this run
+# The first columns is the path to a dataset file
+# The second columns is the name of the instrument model used for this dataset
+# The third column is the noise model.
+RV_K2-19_SOPHIE.txt       def     gaussian_jitter_add
+RV_K2-19_HARPS.rdb        0       gaussian_jitter_add
+RV_K2-19_FIES.txt         def     gaussian_jitter_add
+RV_K2-19_HARPS_1.txt      1       gaussian_jitter_add
+RV_K2-19_HARPSN.txt       def     gaussian_jitter_add
+RV_K2-19_PFS.txt          def     gaussian_jitter_add
+LC_K2-19_Balesta.txt      def     gaussian_jitter_add
+LC_K2-19_C2PU.txt         def     gaussian_jitter_add
+LC_K2-19_K2.txt           def     gaussian_jitter_add
+LC_K2-19_NITES.txt        def     gaussian_jitter_add
