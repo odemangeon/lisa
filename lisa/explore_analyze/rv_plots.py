@@ -41,6 +41,11 @@ mgr_noisemodel.load_setup()
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
+# Formatter for the Ticks major of the period axis
+sf = ScalarFormatter(useOffset=False, useMathText=True)
+sci_not_str = lambda x, pos : f"${sf._formatSciNotation('%1.10e' % x)}$"
+fmt_sci_not = FuncFormatter(sci_not_str)
+
 
 def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                                 datasetnames=None, npt_model=1000,
@@ -1259,7 +1264,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                     per_ticks_minor.append(tick)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
-                    ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
+                    ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticks_major]s)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
 
