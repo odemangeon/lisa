@@ -1264,7 +1264,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                     per_ticks_minor.append(tick)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
-                    ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticks_major]s)
+                    ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticks_major])
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
 
