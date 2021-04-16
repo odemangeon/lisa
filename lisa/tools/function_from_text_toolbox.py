@@ -25,38 +25,51 @@ key_opt_kwargs = "optional_kwargs"
 argskwargs = ", *args, **kwargs"
 
 
-def init_arglist_paramnb_arguments_ldict(key_param, keys=None, key_mand_kwargs=None, key_opt_kwargs=None,
+def init_arglist_paramnb_arguments_ldict(key_param, keys, key_mand_kwargs=None, key_opt_kwargs=None,
                                          param_vector_name=par_vec_name):
     """Initialise the arg_list, param_nb, ldict dictionaries and the argument string.
 
     All this variable are used during the creation of the datasim creator function.
 
-    :param string key_param: Key used for the parameters entry of arg_list
-    :param list_of_str keys: List of string giving the keys to initialise in arg_list and param_nb
-    :param string key_mand_kwargs: Key used for the mandatory keyword argument entry of arg_list
-    :param string key_opt_kwargs: Key used for the optional keyword argument entry of arg_list
-    :param str param_vector_name: str giving the name of the vector of parameters argument of the
-        datasimulator function.
-    :return int/dict_of_int param_nb: If keys is None, it's a int, otherwise it's a dictionary of intself.
-        In both cases it gives the current number of parameter in the model. If dictionary:
-        key = str key designating part of the system or the whole system
-        value = initialise at 0
-    :return dict_of_list/dict_of_dict_of_list arg_list: dictionary with
-        key = str key designating part of the system or the whole system. If keys is None, this level of
-            the dictionary is skipped
-        value = dict with three str keys (defined by key_param, key_mand_kwargs, key_opt_kwargs), whose values are
-            initialised as two empty lists
-    :return str arguments: It is what is provided by param_vector_name, every datasimulator takes at least the vector of parameters as
+    Arguments
+    ---------
+    key_param           : str
+        Key used for the parameters entry of arg_list
+    keys                : str or list_of_str
+        Str or List of string giving the keys to initialise in arg_list and param_nb
+    key_mand_kwargs     : str
+        Key used for the mandatory keyword argument entry of arg_list
+    key_opt_kwargs      : str
+        Key used for the optional keyword argument entry of arg_list
+    param_vector_name   : str
+        str giving the name of the vector of parameters argument of the datasimulator function.
+
+    Returns
+    -------
+    param_nb    : dict_of_int
+        Gives the current number of parameter in the model for all function being built (specified by keys).
+        Format:
+        - key = str key designating part of the system or the whole system
+        - value = initialise at 0
+    arg_list    : dict_of_dict_of_list
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by keys.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+    arguments   : str
+        It is what is provided by param_vector_name, every datasimulator takes at least the vector of parameters as
         argument
-    :return dict ldict: dictionary initialised to be used as local dictionary argument of the exec
-        function.
+    ldict       : dict
+        Empty dictionary initialised to be used as local dictionary argument of the exec functions.
     """
-    if isinstance(keys, str) or (keys is None):
+    if isinstance(keys, str):
         l_keys = [keys]
     elif isinstance(keys, Iterable):
         l_keys = keys
     else:
-        raise ValueError("key_arglist should be None or a string or in iterable of string")
+        raise ValueError("key_arglist should a string or in iterable of string")
     arg_list = {}
     param_nb = {}
     for key in l_keys:
@@ -87,16 +100,19 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
     param       : Parameter
         Parameter instance of the parameter for which you want to get the text
     arg_list    : dict_of_dict_of_list_of_str
-        Dictionary giving the arguments of the functions currently being produced. The keys of this
-        dictionary are string giving the name/ref of the simulated functions and the values are dictionary
-        with at least one key which is the content of the argument key_param and the value associated to
-        this key is the list of parameter full names in the parameter vector of the functions being produced.
-        If the parameter provided by param is free. It's name will be added to one or several of these list.
-        Format: {"name_of_function": {key_param: [str_name_of_model_parameter_in_the_parameter_vector], }, }
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by keys.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If the parameter provided by param is free. It's name will be added the sub-dictionaries specified by key_arglist
+        in the key_param list.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     key_arglist : str or list_of_str or None
         Name/Ref or list of name/ref of the function being produced for which you want to add param as
         a parameter. These names are keys of the arg_list and param_nb dictionaries
+        If key_arglist is None, all available keys in arglist are assumed.
     param_nb    : dict_of_int
         dictionary giving the current number of free parameters in the function being produced.
         key = str key designating part of the system or the whole system
@@ -116,8 +132,10 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
         being produced (ex: "p[0]" if param_vector_name = "p").
         If param is a fixed parameter,  the string(s) give the fixed value of this parameter.
     """
-    if isinstance(key_arglist, str) or (key_arglist is None):
+    if isinstance(key_arglist, str):
         l_key_arglist = [key_arglist]
+    elif key_arglist is None:
+        l_key_arglist = list(arg_list.keys())
     elif isinstance(key_arglist, Iterable):
         l_key_arglist = key_arglist
     else:
@@ -167,11 +185,15 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
         string giving the current text of arguments
     new_arg_name        : str
         Str used to design the new argument
-    arg_list            : dict
-        dictionary with key = key_whole, value = dict with
-        key = key_param, value = list of parameter full names
-        key = key_mand_kwargs, value = list of mandatory keyword arguments
-        key = key_opt_kwargs, value = list of optional keyword arguments
+    arg_list            : dict_of_dict_of_list_of_str
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by keys.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
+        of sub-dictionaries specified by key_arglist.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     key_mand_kwargs      : string
         Key used for the mandatory keyword argument entry of arg_list
@@ -180,8 +202,10 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
     ldict                : dict
         dictionary to be used as local dictionary argument of the exec function.
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    key_arglist          : str/list_of_str
-        key of arg_list to update.
+    key_arglist          : str or list_of_str or None
+        Name/Ref or list of name/ref of the function being produced for which you want to add param as
+        a parameter. These names are keys of the arg_list and param_nb dictionaries
+        If key_arglist is None, all available keys in arglist are assumed.
     new_arg_value        :
         Value of the new argument.
     def_arg_value        :
@@ -210,8 +234,10 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
         arguments_element = None
     else:
         # Use case 2 or 3.
-        if isinstance(key_arglist, str) or (key_arglist is None):
+        if isinstance(key_arglist, str):
             l_key_arglist = [key_arglist]
+        elif key_arglist is None:
+            l_key_arglist = list(arg_list.keys())
         elif isinstance(key_arglist, Iterable):
             l_key_arglist = key_arglist
         else:
@@ -239,12 +265,33 @@ def add_argskwargs_argument(arguments):
     return arguments + argskwargs
 
 
-def get_function_arglist(full_arg_list, key=None):
+def get_function_arglist(arg_list, key_arglist=None):
     """Return the arg_list dictionary for one function from the full arg_list dictionary.
 
     The full arg_list dictionary may contain the arg_list for more than than 1 function.
 
-    :param dict full_arg_list: Full arg_list dictionary
-    :param str key: Key of the full_arg_list for the function you want.
+    Arguments:
+    ----------
+    arg_list         : dict_of_dict_of_list_of_str
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by keys.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If the parameter provided by param is free. It's name will be added the sub-dictionaries specified by key_arglist
+        in the key_param list.
+    key_arglist     : str
+        Name/Ref of the function being produced for which you want to get the arglist
+
+    Returns:
+    --------
+    arg_list_1func  : dict_of_list_of_str
+        dictionary giving the arguments of one of the functions (specified by key_arglist) currently being produced
+        with the following format:
+        dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
     """
-    return full_arg_list[key]
+    return arg_list[arg_list]
