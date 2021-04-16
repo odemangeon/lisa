@@ -153,10 +153,7 @@ def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
     else:
         for key in l_key_arglist:
             param_text[key] = "{}".format(param.value)
-    if key_arglist is None:
-        return param_text[None]
-    else:
-        return param_text
+    return param_text
 
 
 def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, key_opt_kwargs, ldict,
