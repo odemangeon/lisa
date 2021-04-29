@@ -1957,6 +1957,7 @@ def write_latex_table(filename, df_fitval, obj_name=None):
 
 
 extension_pickle = {"chain": "_chain",
+                    "chain_sec_params": "_chain_secparams",
                     "lnpost": "_lnprobability",
                     "acceptfrac": "_acceptance_fraction",
                     "l_param_name": "_l_param_name",
@@ -2081,6 +2082,26 @@ def save_walkers_and_burnin(obj_name, extension_analysis="", l_walker=None, l_bu
         raise ValueError("There is nothing to save you did not provide l_walker or l_burnin")
 
 
+def save_chains_secondary(obj_name, chainIsec, extension_analysis="", folder=None):
+    """Save chain analysis results.
+
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param chainIsec: Secondary parameters chains.
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
+    :param str folder: Path to the folder where to save the data.
+    """
+    if folder is None:
+        folder = getcwd()
+    else:
+        makedirs(folder, exist_ok=True)
+
+    # Save df_fittedval in a pickle
+    with open(join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis)), "wb") as fchainsecpar:
+        dump(chainIsec, fchainsecpar)
+
+
 def load_emceesampler(obj_name, extension_exploration="", folder="."):
     """load Emcee sampler elements.
 
@@ -2185,6 +2206,30 @@ def load_walkers_and_burnin(obj_name, extension_analysis="", folder=None):
         dico = {}
 
     return dico.get("l_walker", None), dico.get("l_burnin", None)
+
+
+def load_chains_secondary(obj_name, extension_analysis="", folder=None):
+    """load Emcee sampler elements.
+
+    :param str obj_name: Name of the object for which you want to load the chain analysis results.
+        This is used to infer the names of the pickle files
+    :param str extension_analysis: extension to add at the end of the pickle file to differentiate
+        several analyses
+    :param str folder: Secondary parameters chains.
+    :return chainIsec: Best fit values end 68% confidence interval for the main and secondary parameters
+    """
+    if folder is None:
+        folder = getcwd()
+
+    # load df_fittedval from a pickle
+    file_chainsecpars = "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis)
+    if isfile(join(folder, file_chainsecpars)):
+        with open(join(folder, file_chainsecpars), "rb") as fchainsecpar:
+            chainIsec = load(fchainsecpar)
+    else:
+        chainIsec = None
+
+    return chainIsec
 
 
 def get_param_value_OrderedDict(values, l_param_names):
