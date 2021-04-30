@@ -105,6 +105,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                 dico_par[param.get_name(include_prefix=True, recursive=True)] = random.normal(loc=param_value,
                                                                                               scale=param_error,
                                                                                               size=chaininterpret.shape[:-1])
+                l_parname_sec_chain.append(param.get_name(include_prefix=True, recursive=True))
 
     # Compute R star from rho if needed
     if Rstar_infered:
