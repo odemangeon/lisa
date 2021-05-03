@@ -14,7 +14,7 @@ from logging import getLogger
 logger = getLogger()
 
 
-def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None, units=None, units_dict=None):
+def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=None, t_ref=0., units=None, units_dict=None):
     """Return ChainInterpret isntance with the computed chain of the secondary parameters.
 
     :param dict units: Dictionary specifying the unit of some of the parameter. Possible parameters:
@@ -38,7 +38,6 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
 
     star = list(model.stars.values())[0]
 
-    #
     if units_dict is None:
         units_dict = {}
 
@@ -172,7 +171,7 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True),
                                   planet.Rrat.get_name(include_prefix=True, recursive=True)]))
-            # D12: ingress/egress duration
+            # D23: ingress/egress duration
             l_tup_planet.append((planet.D23.get_name(include_prefix=True, recursive=True), cv.getD23, [],
                                  [planet.P.get_name(include_prefix=True, recursive=True), planet.inc.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True),
@@ -226,14 +225,16 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
-
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
-
             # H: Scale Height
             l_tup_planet.append((planet.H.get_name(include_prefix=True, recursive=True), cv.getscaleheigh, [],
                                  [planet.M.get_name(include_prefix=True, recursive=True), planet.R.get_name(include_prefix=True, recursive=True), planet.Teq.get_name(include_prefix=True, recursive=True)]))
+            # Mean Anomaly at reference time
+            l_tup_planet.append((planet.Mref.get_name(include_prefix=True, recursive=True), cv.getMref_4_tic_omegadeg, [t_ref],
+                                 [planet.tic.get_name(include_prefix=True, recursive=True), planet.P.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
 
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
@@ -353,6 +354,10 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.a.get_name(include_prefix=True, recursive=True)]))
+            # Mean Anomaly at reference time
+            l_tup_planet.append((planet.Mref.get_name(include_prefix=True, recursive=True), cv.getMref_4_tic_omegadeg, [t_ref],
+                                 [planet.tic.get_name(include_prefix=True, recursive=True), planet.P.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
                 logger.debug("Computing secondary parameter: {}".format(sec_paraname))
@@ -440,10 +445,13 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             # Teq: Equilibrium temperature
             l_tup_planet.append((planet.Teq.get_name(include_prefix=True, recursive=True), cv.getTeqpl, [],
                                  [star.Teff.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True), planet.ecc.get_name(include_prefix=True, recursive=True)]))
-
             # Fi: Planetary insolation flux
             l_tup_planet.append((planet.Fi.get_name(include_prefix=True, recursive=True), cv.getFi, [],
                                  [star.L.get_name(include_prefix=True, recursive=True), planet.afromaR.get_name(include_prefix=True, recursive=True)]))
+            # Mean Anomaly at reference time
+            l_tup_planet.append((planet.Mref.get_name(include_prefix=True, recursive=True), cv.getMref_4_tic_omegadeg, [t_ref],
+                                 [planet.tic.get_name(include_prefix=True, recursive=True), planet.P.get_name(include_prefix=True, recursive=True),
+                                  planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
 
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
