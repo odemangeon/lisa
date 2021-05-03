@@ -174,6 +174,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="Fi", name_prefix=self.name, main=False))
         ## H: scale height
         self.add_parameter(Parameter(name="H", name_prefix=self.name, main=False))
+        ## Mref: Mean Anomaly at reference time
+        self.add_parameter(Parameter(name="Mref", name_prefix=self.name, main=False))
         ## transit times
         self.transit_times = {}
 
