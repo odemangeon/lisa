@@ -178,7 +178,7 @@ def getdurkip(per, inc, ar, ecc, omega):
     call getdurkip (per,  inc, ar, ecc, omega )
     """
     P = per * 24.  # change days to hours
-    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
+    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
     bb = getb(inc, ar, ecc, omega)
     tkip = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
             np.arcsin(np.sqrt(1. - bb**2.) / (corrfactor * ar * np.sin(np.deg2rad(inc)))))
@@ -1025,10 +1025,13 @@ def getE_4_f(f, ecc, positive=True):
     :return float/np.array ee: eccentric anomaly in radians
     """
     ee = 2 * np.arctan2(np.tan(f / 2) * np.sqrt((1 - ecc)), np.sqrt((1 + ecc)))  # eccentric anomaly
-    if ee < 0 and positive:
-        return 2 * np.pi + ee
+    if isinstance(ee, np.ndarray):
+        mask = np.logical_and(ee < 0, positive)
+        ee[mask] = 2 * np.pi + ee[mask]
     else:
-        return ee
+        if ee < 0 and positive:
+            ee += 2 * np.p
+    return ee
 
 
 def getE_4_f_fast(f, ecc):
@@ -1107,6 +1110,20 @@ def getMref_4_tic(tic, P, ecc, omega, t_ref=0.0):
         and between [0, 2pi]
     """
     return (getM_4_f(pi / 2 - omega, ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
+
+
+def getMref_4_tic_omegadeg(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float/np.array tic: Time of inferior conjunction after t_ref
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in degrees
+    :param float/np.array t_ref: refrence time
+    :return float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f(pi / 2 - np.radians(omega), ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
 
 
 def getMref_4_tic_fast(tic, P, ecc, omega, t_ref=0.0):
