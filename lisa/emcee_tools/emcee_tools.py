@@ -1686,7 +1686,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     return l_selected_walker, nb_rejected
 
 
-def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
+def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None, iterations_indexes=None,
                       lnprobability_name="lnposterior",
                       verbose=1, force_finite=True):
     """Return the fitted values from the sampler.
@@ -1700,6 +1700,11 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         list of valid walkers
     l_burnin           : Iterable of Int
         index of the first iteration to consider.
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
     lnprobability_name : str
         Name of the lnprobability values in chainI
     verbose            : int
@@ -1709,7 +1714,8 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     """
     ndim = chainI.dim
     if method == "median":
-        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite),
+        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
+                                               force_finite=force_finite),
                            axis=0)
     elif method == "MAP":
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
@@ -1718,14 +1724,15 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
-        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite)
+        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
+                                                force_finite=force_finite)
         i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
         logger.debug(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
-        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
+        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
     elif method == "mode":
-        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
+        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
@@ -1737,7 +1744,7 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     return res
 
 
-def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, force_finite=True):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, iterations_indexes=None, force_finite=True):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
     Arguments
@@ -1749,6 +1756,11 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
         list of burnin iterations for each valid walker
     l_param_idx       : int_iteratable
         list of index of parameters that you want to keep in the output
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
     force_finite: bool
         If True the function will suppress every iteration for which one of the parameter values provided
         is not finite.
@@ -1758,41 +1770,49 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
     res : np.array
         cleaned flat chain
     """
-    res = None
-    # If no walker list is provided nor burnin list, the result is the whole flatten chain
-    if (l_walker is None) and (l_burnin is None):
-        res = chainI.flatchain
-    # If no burnin then just select the walkers provided by l_walker and return the flat chain
-    elif l_burnin is None:
-        sh = chainI[l_walker, ...].shape
-        res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
-    # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
-    # It is the default one (meaning all walkers). If it's not the case it whoud com
-    elif l_walker is None:
-        l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
-        if len(l_walker) != len(l_burnin):
-            raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
-                             "l_walker is all available walkers, but dimensions do not match.")
-    # If res is None then at this point we have a l_burnin and a l_walker
-    if res is None:
-        ndim = chainI.dim
-        res = []
-        # Case where there is only one free parameter
-        if ndim == 1:
-            for walker, burnin in zip(l_walker, l_burnin):
-                res.extend(chainI[walker, burnin:])
-            res = array(res)[..., newaxis]
-        # Case where there is several free parameter
+    if iterations_indexes is None:
+        res = None
+        # If no walker list is provided nor burnin list, the result is the whole flatten chain
+        if (l_walker is None) and (l_burnin is None):
+            res = chainI.flatchain
+        # If no burnin then just select the walkers provided by l_walker and return the flat chain
+        elif l_burnin is None:
+            sh = chainI[l_walker, ...].shape
+            res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
+        # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
+        # It is the default one (meaning all walkers). If it's not the case it whoud com
+        elif l_walker is None:
+            l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
+            if len(l_walker) != len(l_burnin):
+                raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
+                                 "l_walker is all available walkers, but dimensions do not match.")
+        # If res is None then at this point we have a l_burnin and a l_walker
+        if res is None:
+            ndim = chainI.dim
+            res = []
+            # Case where there is only one free parameter
+            if ndim == 1:
+                for walker, burnin in zip(l_walker, l_burnin):
+                    res.extend(chainI[walker, burnin:])
+                res = array(res)[..., newaxis]
+            # Case where there is several free parameter
+            else:
+                for dim in range(ndim):
+                    if l_param_idx is not None:
+                        if not(dim in l_param_idx):
+                            continue
+                    res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
+                res = array(res).transpose()
         else:
-            for dim in range(ndim):
-                if l_param_idx is not None:
-                    if not(dim in l_param_idx):
-                        continue
-                res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
-            res = array(res).transpose()
+            if l_param_idx is not None:
+                res = res[:, l_param_idx]
     else:
+        res = np.ones((len(iterations_indexes["indexes_walker"]), chainI.shape[-1])) * np.nan
+        for i_iter, (i_walker, i_iter_walker) in enumerate(zip(iterations_indexes["indexes_walker"], iterations_indexes["indexes_iter_walker"])):
+            res[i_iter, :] = chainI[i_walker, i_iter_walker, :]
         if l_param_idx is not None:
             res = res[:, l_param_idx]
+
     # Remove iteration where one of the parameter is not finite
     if force_finite:
         return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
