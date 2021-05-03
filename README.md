@@ -4,14 +4,14 @@
 
 1. Dependancies:
 
-Rely on python3.6. Python package dependencies:
+Rely on python3.7. Python package dependencies:
 - unittest
 - ajplanet*
 - matplotlib
 - astropy
 - scipy
 - rebound
-- PIL
+- PIL*
 - batman
 - numpy
 - dill
@@ -24,7 +24,9 @@ Rely on python3.6. Python package dependencies:
 - emcee=2.2.1
 - tqdm
 - PyAstronomy
-- statsmodel
+- statsmodels
+
+*indicates packages that are not mandatory or not fully supported
 
 2. Clone the repository
 
