@@ -36,10 +36,10 @@ def getconfi(distri, level, centre=None, l_param_name=None):
         s1 = np.nanpercentile(distri, [16, 84], axis=0)
 
     if level == 2:
-        s1 = np.nanpercentile(distri, [5, 95], axis=0)
+        s1 = np.nanpercentile(distri, [2.5, 97.5], axis=0)
 
     if level == 3:
-        s1 = np.nanpercentile(distri, [0.3, 99.7], axis=0)
+        s1 = np.nanpercentile(distri, [0.15, 99.85], axis=0)
 
     # If center is provided, take it as cen, otherwise use the median value of the data.
     if centre is None:
