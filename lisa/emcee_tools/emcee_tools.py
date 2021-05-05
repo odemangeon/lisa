@@ -13,6 +13,8 @@ from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argso
 from numpy import nanpercentile, newaxis, concatenate, std, atleast_1d
 from numbers import Number
 from collections import Iterable
+from statsmodels.stats.weightstats import DescrStatsW
+from copy import copy
 
 # from sys import stdout
 import matplotlib.gridspec as gridspec
@@ -1607,7 +1609,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
         ax[1].set_xlim(xlims)
         ax[1].set_xlabel("Acceptance fraction [%]")
         ax[1].set_ylabel("CDF")
-        ax[1].set_title(f"Cumulative histogram of the acceptance fraction (normalized)")
+        ax[1].set_title("Cumulative histogram of the acceptance fraction (normalized)")
         fig.tight_layout()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
@@ -1677,7 +1679,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
         ax[1].set_ylim(ylims)
         ax[1].set_xlim(xlims)
         ax[1].set_ylabel("CDF")
-        ax[1].set_title(f"Cumulative histogram of the lnposterior fraction (normalized)")
+        ax[1].set_title("Cumulative histogram of the lnposterior fraction (normalized)")
         fig.tight_layout()
     l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
@@ -1687,6 +1689,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
 
 
 def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None, iterations_indexes=None,
+                      weights_name=None,
                       lnprobability_name="lnposterior",
                       verbose=1, force_finite=True):
     """Return the fitted values from the sampler.
@@ -1705,6 +1708,8 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         that needs to be considered. The format of this dictionary is:
         first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
         second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
+    weights_name       : str
+        Name of the weights values in chainI
     lnprobability_name : str
         Name of the lnprobability values in chainI
     verbose            : int
@@ -1712,11 +1717,21 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     force_finite       : Bool
         Passed on to get_clean_flatchain
     """
-    ndim = chainI.dim
+    l_param_name_out = copy(chainI.param_names)
     if method == "median":
-        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
-                                               force_finite=force_finite),
-                           axis=0)
+        # import pdb; pdb.set_trace()
+        clean_flat_chain = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
+                                               force_finite=force_finite)
+        if weights_name is None:
+            res = np.nanmedian(clean_flat_chain, axis=0)
+        else:
+            del_idx = []
+            for i_dim, param_name in enumerate(chainI.param_names):
+                if np.all(np.logical_not(np.isfinite(clean_flat_chain[..., i_dim]))):
+                    del_idx.append(i_dim)
+                    l_param_name_out.remove(param_name)
+            clean_flat_chain = np.delete(clean_flat_chain, del_idx, axis=1)
+            res = DescrStatsW(clean_flat_chain, weights=clean_flat_chain[..., l_param_name_out.index(weights_name)]).quantile(0.5).values[0]
     elif method == "MAP":
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
         logger.debug(f"idx_lnprobability: {idx_lnprobability}")
@@ -1726,7 +1741,12 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
         clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
                                                 force_finite=force_finite)
-        i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
+        if weights_name is None:
+            i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
+        else:
+            idx_weights = chainI.param_names.index(weights_name)
+            logger.debug(f"idx_weights: {idx_weights}")
+            i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability] * clean_flat_chains[..., idx_weights])
         logger.debug(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
@@ -1736,12 +1756,12 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
-        l_param_names = __get_default_l_param_name(l_param_name, ndim)
+        l_param_names = __get_default_l_param_name(l_param_name_out, len(l_param_name_out))
         text = "\n"
-        for i, param_name in enumerate(l_param_names):
+        for i, param_name in enumerate(l_param_name_out):
             text += "{} = {}\n".format(param_name, res[i])
         logger.info(text)
-    return res
+    return res, l_param_name_out
 
 
 def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, iterations_indexes=None, force_finite=True):
@@ -2351,7 +2371,7 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                     arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
 
 
-def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_corner=None):
+def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iterations_indexes=None, kwargs_corner=None):
     """Make a corner plot with only the parameters specified.
 
     Arguments
@@ -2364,15 +2384,20 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_co
         list of valid walkers
     l_burnin       : Iterable of Int
         List of indexes of the first iteration to consider for each walker
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
     kwargs_corner  : dictionary
         Dictionary of keyword arguments passed on to the corner function
     """
     kwargs_corner = {} if kwargs_corner is None else kwargs_corner
     if (l_walker is not None) or (l_burnin is not None):
-        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
     else:
         if len(chaininterpret.shape) > 2:
-            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
         else:
             clean_flat_chains = chaininterpret[..., l_param_name]
     corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
