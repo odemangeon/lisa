@@ -61,8 +61,10 @@ def init_arglist_paramnb_arguments_ldict(key_param, keys, key_mand_kwargs=None, 
     arguments   : str
         It is what is provided by param_vector_name, every datasimulator takes at least the vector of parameters as
         argument
-    ldict       : dict
-        Empty dictionary initialised to be used as local dictionary argument of the exec functions.
+    ldict       : dict_of_dict
+        Dictionary giving the initialised empty dictionary to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = empty dictionary
     """
     if isinstance(keys, str):
         l_keys = [keys]
@@ -72,6 +74,7 @@ def init_arglist_paramnb_arguments_ldict(key_param, keys, key_mand_kwargs=None, 
         raise ValueError("key_arglist should a string or in iterable of string")
     arg_list = {}
     param_nb = {}
+    ldict = {}
     for key in l_keys:
         arg_list[key] = OrderedDict()
         arg_list[key][key_param] = []
@@ -80,7 +83,8 @@ def init_arglist_paramnb_arguments_ldict(key_param, keys, key_mand_kwargs=None, 
         if key_opt_kwargs is not None:
             arg_list[key][key_opt_kwargs] = []
         param_nb[key] = 0
-    return param_nb, arg_list, param_vector_name, {}
+        ldict[key] = {}
+    return param_nb, arg_list, param_vector_name, ldict
 
 
 def add_param_argument(param, arg_list, key_param, param_nb, key_arglist=None,
@@ -196,8 +200,10 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
         Key used for the mandatory keyword argument entry of arg_list
     key_opt_kwargs       : string
         Key used for the optional keyword argument entry of arg_list
-    ldict                : dict
-        dictionary to be used as local dictionary argument of the exec function.
+    ldict       : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     key_arglist          : str or list_of_str or None
         Name/Ref or list of name/ref of the function being produced for which you want to add param as
@@ -224,22 +230,22 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
         Addition to arguments made. If no addition have been made because the param has been added to ldict
         this returns None
     """
+    if isinstance(key_arglist, str):
+        l_key_arglist = [key_arglist]
+    elif key_arglist is None:
+        l_key_arglist = list(arg_list.keys())
+    elif isinstance(key_arglist, Iterable):
+        l_key_arglist = key_arglist
+    else:
+        raise ValueError("key_arglist should be a string or in iterable of string")
     if (new_arg_value is not None) and not(disable_add_to_ldict):
         # Use case 1.
-        ldict[new_arg_name] = new_arg_value
-        arg = None
-        arguments_element = None
+        for key in l_key_arglist:
+            ldict[key][new_arg_name] = new_arg_value
+            arg = None
+            arguments_element = None
     else:
         # Use case 2 or 3.
-        if isinstance(key_arglist, str):
-            l_key_arglist = [key_arglist]
-        elif key_arglist is None:
-            l_key_arglist = list(arg_list.keys())
-        elif isinstance(key_arglist, Iterable):
-            l_key_arglist = key_arglist
-        else:
-            if key_arglist is not None:
-                raise ValueError("key_arglist should be a string or in iterable of string")
         arg = new_arg_name
         if def_arg_value is None:
             key_kwargs = key_mand_kwargs
