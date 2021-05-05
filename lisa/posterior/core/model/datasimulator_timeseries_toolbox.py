@@ -11,6 +11,8 @@ creator function for time series datasets.
 @TODO:
     -
 """
+from collections import Iterable
+
 from ....tools.function_from_text_toolbox import add_nonparam_argument
 
 ## String used for the time vector
@@ -140,8 +142,10 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
         Key used for the mandatory keyword argument entry of arg_list
     key_opt_kwargs  : str
         Key used for the optional keyword argument entry of arg_list
-    ldict           : dict
-        dictionary to be used as local dictionary argument of the exec function.
+    ldict       : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     has_dataset     : bool
         If True, then l_dataset will be used to compute the time references
@@ -177,6 +181,14 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
         Addition to arguments made. If no addition have been made because the param has been added to ldict
         this returns None
     """
+    if isinstance(key_arglist, str):
+        l_key_arglist = [key_arglist]
+    elif key_arglist is None:
+        l_key_arglist = list(arg_list.keys())
+    elif isinstance(key_arglist, Iterable):
+        l_key_arglist = key_arglist
+    else:
+        raise ValueError("key_arglist should be a string or in iterable of string")
     disable_add_to_ldict = False  # Input of add_nonparam_argument that should be False expect if the
     # time reference is computed from the time vector at run time
     # If multi and vect_for_multi, then time ref is a list of time references
@@ -195,7 +207,8 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
             else:
                 # If not produce the text needed to compute it
                 l_tref = f"get_time_ref({l_time_vec_name})"
-                ldict["get_time_ref"] = get_time_ref
+                for key in l_key_arglist:
+                    ldict["get_time_ref"] = get_time_ref
                 disable_add_to_ldict = True
         else:
             l_tref = time_ref_val
@@ -222,7 +235,8 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
                     tref = f"get_time_ref({time_vec_name})"
                 else:
                     tref = f"get_time_ref({l_time_vec_name})"
-                ldict["get_time_ref"] = get_time_ref
+                for key in l_key_arglist:
+                    ldict["get_time_ref"] = get_time_ref
                 disable_add_to_ldict = True
         else:
             # If you don't want to use the datasets than use the provided time references ()
