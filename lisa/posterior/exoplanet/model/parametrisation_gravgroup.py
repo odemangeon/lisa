@@ -133,6 +133,11 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             star_name = list(self.paramcontainers["stars"].keys())[0]
             self.paramcontainers["stars"][star_name].rho.main = True
             self.paramcontainers["stars"][star_name].rho.unit = "Solar density"
+        if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.phasecurve_model['do']):
+            if not(self.phasecurve_model['instrument_variable']):
+                if self.phasecurve_model['all_instruments'][0]['model'] == 'spiderman':
+                    if self.phasecurve_model['all_instruments'][0]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                        self.paramcontainers["stars"][star_name].Teff.main = True
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -151,6 +156,17 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV data]"
             self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies
             self.paramcontainers["planets"][planet_name].esinw.main = True  # Unit already defined in celestial_bodies
+            if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.phasecurve_model['do']):
+                if not(self.phasecurve_model['instrument_variable']):
+                    if self.phasecurve_model['all_instruments'][0]['model'] == 'spiderman':
+                        if self.phasecurve_model['all_instruments'][0]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                            self.paramcontainers["planets"][planet_name].a.main = True
+                            self.paramcontainers["planets"][planet_name].a.unit = "AU"
+                            self.paramcontainers["planets"][planet_name].u1.main = True
+                            self.paramcontainers["planets"][planet_name].u2.main = True
+                            self.paramcontainers["planets"][planet_name].xi.main = True
+                            self.paramcontainers["planets"][planet_name].Tn.main = True
+                            self.paramcontainers["planets"][planet_name].deltaT.main = True
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
