@@ -130,13 +130,18 @@ def check_datasets_and_instmodels(datasets, inst_models):
     # Produce the inst_model_full_name value for the name of the datasimulator function
     if multi:
         inst_model_full_name = "multi"
+        dst_ext = ""
     else:
         if inst_models is None:
             inst_model_full_name = "woinst"
         else:
             inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True, code_version=True)
+        if datasets is None:
+            dst_ext = ""
+        else:
+            dst_ext = f"_dst{datasets.number}"
 
-    return (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
+    return (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
             dtsts_docf)
 
 
