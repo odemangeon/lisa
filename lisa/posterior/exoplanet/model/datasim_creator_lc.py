@@ -4,6 +4,7 @@
 Datasim creator LC module.
 
 TODO:
+- Not clear if the planet (not planet only) function always includes the instruments component, espreciallu for multi instrument functions
 - At the moment, when I am producing a datasimulator for multiple datasets but I am producing a batman TransitParams instance
 for each dataset even if the datasets are using the same instruments. It looks not necessary and I should probably test that I can use the
 same TransitParams instance for multiple TransitModel instances and if yes only create one TransitParams instance per transit model.
@@ -19,13 +20,14 @@ Search for TODO_CHECK_THIS_COMMENT which I put in front each one of these commen
 """
 from logging import getLogger
 from textwrap import dedent
-from copy import deepcopy
+from copy import deepcopy, copy
 from math import acos, degrees, sqrt
 from numpy import ones_like, inf
 from collections import Iterable
 
 from batman import TransitModel, TransitParams
 # from pytransit import MandelAgol  # Temporarily? remove pytransit from the available rv_models
+from spiderman import ModelParams
 
 from ...core.model.datasim_docfunc import DatasimDocFunc
 from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
@@ -122,11 +124,10 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         ("planet_name")
     """
     # Get the transit_implementation to use
-    transit_imp = transit_model['all_instruments']['model']
+    do_transit = transit_model['do']
 
     # Get the phasecurve_implementation to use
     do_phasecurve = phasecurve_model['do']
-    phasecurve_imp = phasecurve_model['all_instruments'][0]['model']
 
     ## Check the content of the datasets and inst_models arguments
     # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
@@ -140,7 +141,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Set multi indicating if multiple outputs are required for the datasimulator
     # Set the inst_model_full_name for the name of the function and the inst_cat input
     # (instcat_docf) for the datasim_docfunc
-    (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
+    (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
     ## Check if datasets are provided and store the answer in the has_dataset variable
@@ -178,6 +179,15 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
      ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
                                                    key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
+    ## Initialise arg_list and param_nb keys and values for the planet and the planet only datasimulators
+    for planet in planets.values():
+        arg_list[planet.get_name() + ext_plonly] = deepcopy(arg_list[key_whole])
+        param_nb[planet.get_name() + ext_plonly] = param_nb[key_whole]
+        ldict[planet.get_name() + ext_plonly] = copy(ldict[key_whole])
+        arg_list[planet.get_name()] = deepcopy(arg_list[key_whole])
+        param_nb[planet.get_name()] = param_nb[key_whole]
+        ldict[planet.get_name()] = copy(ldict[key_whole])
+
     ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
     # (This needs to be done before the creation of arglist and param_nb for planet_only !)
     # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
@@ -195,13 +205,6 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                                  star=star, LDs=LDs, param_nb=param_nb,
                                                  arg_list=arg_list, key_arglist=None, key_param=key_param)
 
-    ## Initialise arg_list and param_nb keys and values for the planet and the planet only datasimulators
-    for planet in planets.values():
-        arg_list[planet.get_name() + ext_plonly] = deepcopy(arg_list[key_whole])
-        param_nb[planet.get_name() + ext_plonly] = param_nb[key_whole]
-        arg_list[planet.get_name()] = deepcopy(arg_list[key_whole])
-        param_nb[planet.get_name()] = param_nb[key_whole]
-
     ## Define the orbital parameters for each planet
     (rhostar, params_whole, params_planet, params_planet_only
      ) = get_orbital_params(param_nb=param_nb, arg_list=arg_list, star=star, planets=planets, parametrisation=parametrisation,
@@ -211,8 +214,8 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Define the template of the function
     #####################################
     # Initialise function_name and template_function the template function name and the template function text
-    function_name = ("LCsim_{{object}}_{instmod_fullname}"
-                     "".format(instmod_fullname=inst_model_full_name))
+    function_name = ("LCsim_{{object}}_{instmod_fullname}{dst_ext}"
+                     "".format(instmod_fullname=inst_model_full_name, dst_ext=dst_ext))
     template_function = """
     def {function_name}({{arguments}}):
     {{tab}}{{preambule_tr}}
@@ -235,11 +238,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     tab = "    "
     template_function = dedent(template_function)
 
+    # Create the text of what to return when condition is met or the RuntimeError is catched
+    error_return = get_catchederror_return(multi=multi, l_inst_model=l_inst_model)
+
     # Initialise template_returns_instmod, the template of the return for each instrument model
-    template_returns_instmod = "1 {oot_var}{tr_planets}{pc_planets}"
+    template_returns = "(1 {oot_var}) * (1 {tr_planets}{pc_planets})"
 
     # Initialise template_returns_pl_only, the template for planetary contibution only (No instrument nor star) (used for the phase folded plot to remove the other planet contributions)
-    template_returns_pl_only = "{tr_planets}{pc_planets}"
+    template_returns_plonly = "{tr_planets}{pc_planets}"
 
     ######################
     # Add Time as argument
@@ -247,7 +253,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Add the time as additional argument for the functions or include it in ldict
     (arguments, time_arg_name, time_arg, time_arg_in_arguments
      ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
-                           key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                           key_arglist=None, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                            ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                            add_to_ldict=True, backup_add_to_args=True)
 
@@ -265,504 +271,119 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
                                      time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                      timeref_name=time_ref, l_timeref_name=l_time_ref)
 
-    ###################################################################################
-    # Produce template for transit model preambule code and define/initialise variables
-    ###################################################################################
-    # Initialise template_preambule_pl, the template of the preambule of the function for each planet
-    template_tr_preambule_pl = """
-        {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
-
-    if transit_imp == "batman":
-        template_tr_preambule_pl += """
-        {tab}omega_{planet} = getomega_deg_fast({ecosw}, {esinw})
-        {tab}inc_{planet} = degrees(acos({cosinc}))"""
-        if parametrisation == "Multis":
-            template_tr_preambule_pl += """
-        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, omega_{planet})"""
-
-        for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont[key_whole],
-                                                           l_LD_param_list[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
-            # TODO_CHECK_THIS_COMMENT: If the same model is used for several dataset a model will be several times in
-            # l_inst_model. So to avoid the repetition we check if this instrument has already been
-            # done.
-            if multi:
-                template_batman_pl = """
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tic}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.per = {{P}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.rp = {{Rrat}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.inc = inc_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.ecc = ecc_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.w = omega_{{planet}}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.u = {ld_param_list}
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.limb_dark = '{ld_mod_name}'"""
-                template_batman_pl = (template_batman_pl.
-                                      format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
-                                             dst_key=dst.number,
-                                             ld_mod_name=LD_parcont.ld_type,
-                                             ld_param_list=ld_param_list))
-            else:
-                template_batman_pl = """
-        {{tab}}params_{{planet}}.t0 = {{tic}}
-        {{tab}}params_{{planet}}.per = {{P}}
-        {{tab}}params_{{planet}}.rp = {{Rrat}}
-        {{tab}}params_{{planet}}.inc = inc_{{planet}}
-        {{tab}}params_{{planet}}.ecc = ecc_{{planet}}
-        {{tab}}params_{{planet}}.w = omega_{{planet}}
-        {{tab}}params_{{planet}}.u = {ld_param_list}
-        {{tab}}params_{{planet}}.limb_dark = '{ld_mod_name}'"""
-                template_batman_pl = template_batman_pl.format(ld_mod_name=LD_parcont.ld_type,
-                                                               ld_param_list=ld_param_list)
-            template_tr_preambule_pl += template_batman_pl
-
-            if parametrisation == "Multis":
-                if multi:
-                    template_tr_preambule_pl += """
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = aR_{{planet}}
-        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
-                else:
-                    template_tr_preambule_pl += """
-        {tab}params_{planet}.a = aR_{planet}
-        """
-            else:
-                if multi:
-                    template_tr_preambule_pl += """
-        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = {{aR}}
-        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
-                else:
-                    template_tr_preambule_pl += """
-        {tab}params_{planet}.a = {aR}
-        """
-    else:  # pytransit
-        template_tr_preambule_pl += """
-        {tab}omega_{planet} = getomega_fast({esinw}, {ecosw})
-        {tab}inc_{planet} = acos({cosinc})
-        """
-        if parametrisation == "Multis":
-            template_tr_preambule_pl += """
-        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, degrees(omega_{planet}))"""
-    template_tr_preambule_pl = dedent(template_tr_preambule_pl)
-
-    ## Add or not the initialisation of the TransitModel instance or MandelAgol instance (to the template_preambule)
-    l_par_bat = []
-    for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
-                                            l_LD_parcont[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
-        supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
-        # If you need to supersample the model
-        if supersamp > 1:
-            exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
-            if transit_imp == "batman":
-                if dst is None:
-                    if multi:
-                        ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
-                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname}_"
-                                                "dataset{dst_key} = TransitModel("
-                                                "params_{{planet}}_{instmod_fullname}, "
-                                                "{{ltime_vec}}[{ii}], "
-                                                "supersample_factor={supersamp},"
-                                                "exp_time={exptime})"
-                                                "\n".format(supersamp=supersamp,
-                                                            exptime=exptime,
-                                                            ii=ii,
-                                                            instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                            dst_key=dst.number))
-                    else:
-                        template_batman_pl_4 = ("{{tab}}m_{{planet}} = TransitModel("
-                                                "params_{{planet}}, {{time_vec}}, "
-                                                "supersample_factor={supersamp},"
-                                                "exp_time={exptime})"
-                                                "\n".format(supersamp=supersamp,
-                                                            exptime=exptime))
-                    template_tr_preambule_pl += template_batman_pl_4
-                    l_par_bat.append({})
-                    for planet in planets.values():
-                        for add_plonlyext in [True, False]:
-                            if add_plonlyext:
-                                pl_key = planet.get_name() + ext_plonly
-                            else:
-                                pl_key = planet.get_name()
-                            l_par_bat[ii][pl_key] = TransitParams()
-                else:
-                    l_par_bat.append({})
-                    for planet in planets.values():
-                        for add_plonlyext in [True, False]:
-                            if add_plonlyext:
-                                pl_key = planet.get_name() + ext_plonly
-                            else:
-                                pl_key = planet.get_name()
-                            l_par_bat[ii][pl_key] = TransitParams()
-                            if multi:  # time of inf. conjunction
-                                l_par_bat[ii][pl_key].t0 = ldict[l_time_vec][ii].mean()
-                            else:
-                                l_par_bat[ii][pl_key].t0 = ldict[time_vec][ii].mean()
-                            l_par_bat[ii][pl_key].per = 1.   # orbital period
-                            l_par_bat[ii][pl_key].rp = 0.1   # planet radius(in stel radii)
-                            l_par_bat[ii][pl_key].a = 15.    # semi-major axis(in stel radii)
-                            l_par_bat[ii][pl_key].inc = 90.  # orbital inclination (in degrees)
-                            l_par_bat[ii][pl_key].ecc = 0.   # eccentricity
-                            l_par_bat[ii][pl_key].w = 90.    # long. of periastron (in deg.)
-                            l_par_bat[ii][pl_key].limb_dark = LD_parcont.ld_type  # LD model
-                            l_par_bat[ii][pl_key].u = LD_parcont.init_LD_values  # LDC init val
-            else:
-                m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime,
-                                         model=LD_parcont.ld_type)
-        # If you DON'T need to supersample the model
-        else:
-            if transit_imp == "batman":
-                if dst is None:
-                    if multi:
-                        ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
-                        template_batman_pl_5 = ("{{tab}}m_{{planet}} = TransitModel("
-                                                "params_{{planet}}}_{instmod_fullname}, {{ltime_vec}}[{ii}])"
-                                                "\n".format(ii=ii))
-                        template_tr_preambule_pl += template_batman_pl_5
-                    else:
-                        template_tr_preambule_pl += ("{tab}m_{planet} = TransitModel("
-                                                     "params_{planet}, {time_vec})\n")
-                    l_par_bat.append({})
-                    for planet in planets.values():
-                        for add_plonlyext in [True, False]:
-                            if add_plonlyext:
-                                pl_key = planet.get_name() + ext_plonly
-                            else:
-                                pl_key = planet.get_name()
-                            l_par_bat[ii][pl_key] = TransitParams()
-                else:
-                    l_par_bat.append({})
-                    for planet in planets.values():
-                        for add_plonlyext in [True, False]:
-                            if add_plonlyext:
-                                pl_key = planet.get_name() + ext_plonly
-                            else:
-                                pl_key = planet.get_name()
-                        l_par_bat[ii][pl_key] = TransitParams()
-                        if multi:  # time of inf. conjunction
-                            l_par_bat[ii][pl_key].t0 = ldict[l_time_vec][ii].mean()
-                        else:
-                            l_par_bat[ii][pl_key].t0 = ldict[time_vec][ii].mean()
-                        l_par_bat[ii][pl_key].per = 1.   # orbital period
-                        l_par_bat[ii][pl_key].rp = 0.1   # planet radius(in stel radii)
-                        l_par_bat[ii][pl_key].a = 15.    # semi-major axis(in stel radii)
-                        l_par_bat[ii][pl_key].inc = 90.  # orbital inclination (in degrees)
-                        l_par_bat[ii][pl_key].ecc = 0.   # eccentricity
-                        l_par_bat[ii][pl_key].w = 90.    # long. of periastron (in deg.)
-                        l_par_bat[ii][pl_key].limb_dark = LD_parcont.ld_type  # LD model
-                        l_par_bat[ii][pl_key].u = LD_parcont.init_LD_values  # LDC init val
-            else:
-                m_pytransit = MandelAgol(model=LD_parcont.ld_type)
-
-    ################################################################
-    # Produce template condition code which return a LC full of infs
-    ################################################################
-    # Initialise template_condition, the template for the condition (no planet should pass into the star)
-    template_condition = """
-    {tab}{preambule}
-    {tab}if {condition}:
-    {tab}    return {returns}
-    """
-    template_condition = dedent(template_condition)
-
-    # Create the templates to conpute the condition to know if the planet passes in the star
-    # and of what tho return if condition is True
-    # Fill return if condition planet goes in the star is True
-    # The condition is taken from https://iopscience.iop.org/article/10.1086/592381/fulltext/75178.text.html (section 3.1)
-    if parametrisation == "Multis":  # aR is not a main parameter
-        template_preambule_cond_pl = "condition_{planet} = (aR_{planet} < ((1.5 / (1 - ecc_{planet})) + {Rrat}))\n"
-    else:  # aR is a main parameter
-        template_preambule_cond_pl = "condition_{planet} = ({aR} < ((1 .5 / (1 - ecc_{planet})) + {Rrat}))\n"
-    if multi:
-        template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
+    ########################
+    # Produce Transit models
+    ########################
+    if do_transit:
+        (preambule_tr_planet, preambule_tr_planet_only, preambule_tr_whole,
+         l_tr_ret_planet, l_tr_ret_planet_only, l_tr_ret_whole_planets,
+         ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, has_dataset=has_dataset, transit_model=transit_model,
+                         l_LD_parcont=l_LD_parcont, l_LD_param_list=l_LD_param_list, parametrisation=parametrisation,
+                         key_whole=key_whole, key_param=key_param, SSE4instmodfname=SSE4instmodfname, planets=planets,
+                         ext_plonly=ext_plonly, arg_list=arg_list, param_nb=param_nb, ldict=ldict, tab=tab,
+                         rhostar=rhostar, params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole)
     else:
-        template_returns_condition = "ones_like({time_vec}) * (- inf)"
+        preambule_tr_planet = preambule_tr_planet_only = preambule_tr_whole = {}
 
-    ###############################################################
-    # Produce template code for the transit component of the return
-    ###############################################################
-    # Create the text for template_tr_planet
-    if transit_imp == "batman":
-        if multi:
-            template_tr_planet = ("m_{planet}_{instmod_fullname}_dataset{dst_key}.light_curve("
-                                  "params_{planet}_{instmod_fullname}_dataset{dst_key}) - 1 ")
-        else:
-            template_tr_planet = ("m_{planet}.light_curve(params_{planet}) - 1 ")
-    else:
-        if parametrisation == "Multis":
-            if multi:
-                template_tr_planet = ("m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tic}, {P}, aR_{planet}, inc_{planet}, "
-                                      "ecc_{planet}, omega_{planet}) - 1 ")
-            else:
-                template_tr_planet = ("m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, {P},"
-                                      " aR_{planet}, inc_{planet}, ecc_{planet}, "
-                                      "omega_{planet}) - 1 ")
-        else:
-            if multi:
-                template_tr_planet = ("m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
-                                      "{tic}, {P}, {aR}, inc_{planet}, "
-                                      "ecc_{planet}, omega_{planet}) - 1 ")
-            else:
-                template_tr_planet = ("m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, "
-                                      "{P}, {aR}, inc_{planet}, ecc_{planet}, "
-                                      "omega_{planet}) - 1 ")
+    ############################
+    # Produce phase curve models
+    ############################
+    if do_phasecurve:
+        (preambule_pc_planet, preambule_pc_planet_only, preambule_pc_whole,
+         l_pc_ret_planet, l_pc_ret_planet_only, l_pc_ret_whole_planets,
+         ) = get_phasecurve(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, phasecurve_model=phasecurve_model,
+                            l_LD_parcont=l_LD_parcont, l_LD_param_list=l_LD_param_list, parametrisation=parametrisation,
+                            key_whole=key_whole, key_param=key_param, SSE4instmodfname=SSE4instmodfname, planets=planets, star=star,
+                            ext_plonly=ext_plonly, arg_list=arg_list, param_nb=param_nb, ldict=ldict, tab=tab, did_transit=do_transit,
+                            rhostar=rhostar, params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole)
 
-    #####
-    # This part is very big: Create the planet parameters strings, Fill the templates and put everything together.
-    #####
-    # Initialise the text for the whole system preambule
-    preambule_tr_whole = ""
-    preambule_cond_whole = "condition = False\n"
-    l_tr_whole_planets = []
-    l_whole_return_condition = []
-    for instmdl in l_inst_model:
-        l_tr_whole_planets.append("")
-        l_whole_return_condition.append(template_returns_condition.format(ltime_vec=l_time_vec, time_vec=time_vec))
+    ########################
+    # Get the condition text
+    ########################
+    (condition_planet, condition_planet_only, condition_whole
+     ) = get_conditions(planets=planets, parametrisation=parametrisation,
+                        params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole,
+                        tab=tab, error_return=error_return)
 
+    #############################################
+    # Fill the functions template for each planet
+    #############################################
     for jj, planet in enumerate(planets.values()):
-        # Only for Batman: Add the TransitParams and TransitModel instances to ldict
-        if transit_imp == "batman":
-            for ii, instmdl, dst, par_bat in zip(range(len(l_inst_model)), l_inst_model,
-                                                 l_dataset, l_par_bat):
-                if dst is not None:
-                    if multi:
-                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                          "".format(planet=planet.get_name(),
-                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                    dst_key=dst.number))
-                        tt = ldict[l_time_vec][ii]
-                    else:
-                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
-                        tt = ldict[time_vec]
-                    ldict[params_pl_inst] = par_bat[planet.get_name()]
-                    supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
-                    if supersamp > 1:
-                        exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
-                        m_batman = TransitModel(ldict[params_pl_inst],
-                                                tt, supersample_factor=supersamp,
-                                                exp_time=exptime)
-                    else:
-                        m_batman = TransitModel(ldict[params_pl_inst], tt)
-                    if multi:
-                        m_pl_inst = ("m_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                     "".format(planet=planet.get_name(),
-                                               instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
-                                               dst_key=dst.number))
-
-                    else:
-                        m_pl_inst = "m_{planet}".format(planet=planet.get_name())
-                    ldict[m_pl_inst] = m_batman
-                else:
-                    if multi:
-                        ## WARNING: This part of the code is untested and there will be a problem because dst_key is not define since there is not dataset.
-                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
-                                          "".format(planet=planet.get_name(),
-                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                    dst_key=dst.number))
-                    else:
-                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
-                    ldict[params_pl_inst] = par_bat[planet.get_name()]
-
-        # Create the radius ratio parameters
-        param_text = add_param_argument(param=planet.Rrat, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
-                                        key_arglist=[key_whole, planet.get_name(), planet.get_name() + ext_plonly],
-                                        param_vector_name=par_vec_name)
-        params_whole[planet.get_name()][planet.Rrat.get_name()] = param_text[key_whole]
-        params_planet[planet.get_name()][planet.Rrat.get_name()] = param_text[planet.get_name()]
-        params_planet_only[planet.get_name()][planet.Rrat.get_name()] = param_text[planet.get_name() + ext_plonly]
-
-        # Fill the template_tr_preambule_pl and create the preambule text for the transit model that compute intermediate variables
-        # No need to make different cases for if batman or not or is dataset is None or not
-        # because if one argument is not in the template, it is not used and this is it.
-        preambule_tr_planet = (template_tr_preambule_pl.
-                               format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
-                                      ecosw=params_planet[planet.get_name()]["ecosw"],
-                                      esinw=params_planet[planet.get_name()]["esinw"],
-                                      tic=params_planet[planet.get_name()]["tic"], rhostar=rhostar[planet.get_name()],
-                                      cosinc=params_planet[planet.get_name()]["cosinc"], P=params_planet[planet.get_name()]["P"],
-                                      Rrat=params_planet[planet.get_name()]["Rrat"], aR=params_planet[planet.get_name()]["aR"],
-                                      # ld_mod_name=LD_parcont.ld_type,
-                                      # ld_param_list=ld_param_list,
-                                      tab=tab))
-        preambule_tr_planet_only = (template_tr_preambule_pl.
-                                    format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
-                                           ecosw=params_planet_only[planet.get_name()]["ecosw"],
-                                           esinw=params_planet_only[planet.get_name()]["esinw"],
-                                           tic=params_planet_only[planet.get_name()]["tic"], rhostar=rhostar[planet.get_name() + ext_plonly],
-                                           cosinc=params_planet_only[planet.get_name()]["cosinc"], P=params_planet_only[planet.get_name()]["P"],
-                                           Rrat=params_planet_only[planet.get_name()]["Rrat"], aR=params_planet_only[planet.get_name()]["aR"],
-                                           # ld_mod_name=LD_parcont.ld_type,
-                                           # ld_param_list=ld_param_list,
-                                           tab=tab))
-        preambule_tr_whole += (template_tr_preambule_pl.
-                               format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
-                                      ecosw=params_whole[planet.get_name()]["ecosw"],
-                                      esinw=params_whole[planet.get_name()]["esinw"], tic=params_whole[planet.get_name()]["tic"],
-                                      cosinc=params_whole[planet.get_name()]["cosinc"], P=params_whole[planet.get_name()]["P"],
-                                      Rrat=params_whole[planet.get_name()]["Rrat"], aR=params_whole[planet.get_name()]["aR"],
-                                      # ld_mod_name=LD_parcont.ld_type,
-                                      rhostar=rhostar[key_whole],
-                                      # ld_param_list=ld_param_list,
-                                      tab=tab))
-
-        # Fill the template_preambule_condition
-        preambule_cond_planet = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet[planet.get_name()]["aR"],
-                                                                  Rrat=params_planet[planet.get_name()]["Rrat"])
-        preambule_cond_planet_only = template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_planet_only[planet.get_name()]["aR"],
-                                                                       Rrat=params_planet[planet.get_name()]["Rrat"])
-        condition_planet_only = condition_planet = "condition_{planet}".format(planet=planet.get_name())
-        preambule_cond_whole += tab + template_preambule_cond_pl.format(planet=planet.get_name(), aR=params_whole[planet.get_name()]["aR"],
-                                                                        Rrat=params_whole[planet.get_name()]["Rrat"])
-        preambule_cond_whole += "{tab}condition = condition or condition_{planet}\n".format(planet=planet.get_name(), tab=tab)
-
-        # Fill the template_tr_planet and the template_returns_condition that define the transit component of the return for each planet and the return if condition is met
-        # planets LC contribution (planet_lc and whole_planets_lc)
-        # No need for case if batman or if dataset is None. Same reason than above
-        l_tr_planet = []
-        l_tr_planet_only = []
-        l_planet_return_condition = []
-        l_planet_only_return_condition = []
-        for ii, instmdl, dst, ld_param_list in zip(range(len(l_inst_model)), l_inst_model,
-                                                   l_dataset, l_LD_param_list[key_whole]):
-            if instmdl is None:
-                instmdl_fname = None
-            else:
-                instmdl_fname = instmdl.get_name(include_prefix=True, code_version=True, recursive=True)
-            if dst is None:
-                dst_nb = None
-            else:
-                dst_nb = dst.number
-            l_tr_planet.append(template_tr_planet.format(planet=planet.get_name(),
-                                                         ltime_vec=l_time_vec,
-                                                         time_vec=time_vec,
-                                                         instmod_fullname=instmdl_fname,
-                                                         dst_key=dst_nb,
-                                                         aR=params_planet[planet.get_name()]["aR"],
-                                                         Rrat=params_planet[planet.get_name()]["Rrat"],
-                                                         tic=params_planet[planet.get_name()]["tic"],
-                                                         P=params_planet[planet.get_name()]["P"],
-                                                         ld_param_list=ld_param_list,
-                                                         ii=ii
-                                                         ))
-            l_planet_return_condition.append(template_returns_condition.format(ltime_vec=l_time_vec, time_vec=time_vec))
-            l_tr_planet_only.append(template_tr_planet.format(planet=planet.get_name(),
-                                                              ltime_vec=l_time_vec,
-                                                              time_vec=time_vec,
-                                                              instmod_fullname=instmdl_fname,
-                                                              dst_key=dst_nb,
-                                                              aR=params_planet_only[planet.get_name()]["aR"],
-                                                              Rrat=params_planet_only[planet.get_name()]["Rrat"],
-                                                              tic=params_planet_only[planet.get_name()]["tic"],
-                                                              P=params_planet_only[planet.get_name()]["P"],
-                                                              ld_param_list=ld_param_list,
-                                                              ii=ii
-                                                              ))
-            l_planet_only_return_condition.append(template_returns_condition.format(ltime_vec=l_time_vec, time_vec=time_vec))
-            l_tr_whole_planets[ii] += "+ " + template_tr_planet.format(planet=planet.get_name(),
-                                                                       ltime_vec=l_time_vec,
-                                                                       time_vec=time_vec,
-                                                                       instmod_fullname=instmdl_fname,
-                                                                       dst_key=dst_nb,
-                                                                       aR=params_planet[planet.get_name()]["aR"],
-                                                                       Rrat=params_whole[planet.get_name()]["Rrat"],
-                                                                       tic=params_whole[planet.get_name()]["tic"],
-                                                                       P=params_whole[planet.get_name()]["P"],
-                                                                       ld_param_list=ld_param_list,
-                                                                       ii=ii
-                                                                       )
-
         # Fill returns text for each planet
         returns_pl = ""
         returns_pl_only = ""
-        for (oot_var_planet, oot_var_planet_only, planet_lc, planet_only_lc
-             ) in zip(oot_vars[planet.get_name()], oot_vars[planet.get_name() + ext_plonly], l_tr_planet,
-                      l_tr_planet_only):
-            returns_pl += template_returns_instmod.format(oot_var=oot_var_planet, tr_planets="+ " + planet_lc, pc_planets="")
-            returns_pl_only += template_returns_pl_only.format(tr_planets=planet_only_lc, pc_planets="")
+        for (oot_var_planet, oot_var_planet_only, planet_tr, planet_only_tr, planet_pc, planet_only_pc
+             ) in zip(oot_vars[planet.get_name()], oot_vars[planet.get_name() + ext_plonly],
+                      l_tr_ret_planet[planet.get_name()], l_tr_ret_planet_only[planet.get_name()],
+                      l_pc_ret_planet[planet.get_name()], l_pc_ret_planet_only[planet.get_name()]):
+            tr_plusornot_pl = "+ " if planet_tr != "" else ""
+            pc_plusornot_pl = "+ " if planet_pc != "" else ""
+            returns_pl += template_returns.format(oot_var=oot_var_planet,
+                                                  tr_planets=tr_plusornot_pl + planet_tr,
+                                                  pc_planets=pc_plusornot_pl + planet_pc)
+            pc_plusornot_plonly = "+ " if ((planet_only_tr != "") and (planet_only_pc != "")) else ""
+            returns_pl_only += template_returns_plonly.format(tr_planets=planet_only_tr, pc_planets=pc_plusornot_plonly + planet_only_pc)
             returns_pl += ", "
             returns_pl_only += ", "
         if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
             returns_pl = returns_pl[:-2]
             returns_pl_only = returns_pl_only[:-2]
 
-        # Fill condition text for each planet
-        # template_condition = """"
-        # {tab}{preambule}
-        # {tab}if {condition}:
-        # {tab}    return {returns}
-        # """
-        condition_return_planet = ""
-        condition_return_planet_only = ""
-        for ret_cond_pl, ret_cond_pl_only in zip(l_planet_return_condition, l_planet_only_return_condition):
-            condition_return_planet += ret_cond_pl
-            condition_return_planet += ", "
-            condition_return_planet_only += ret_cond_pl_only
-            condition_return_planet_only += ", "
-        if not(multi):
-            condition_return_planet = condition_return_planet[:-2]
-            condition_return_planet_only = condition_return_planet_only[:-2]
-        condition_planet = template_condition.format(preambule=preambule_cond_planet, condition=condition_planet, returns=condition_return_planet, tab=tab)
-        condition_planet_only = template_condition.format(preambule=preambule_cond_planet_only, condition=condition_planet_only, returns=condition_return_planet_only, tab=tab)
-
-        # Finalise the  text of planet LC simulator function
+        # Finalise the text of planet LC simulator functions
         if argskwargs not in arguments:
             arguments = add_argskwargs_argument(arguments)
-        text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(), preambule_tr=preambule_tr_planet,
-                                                                     preambule_pc="",
+        text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(),
+                                                                     preambule_tr=preambule_tr_planet[planet.get_name()],
+                                                                     preambule_pc=preambule_pc_planet[planet.get_name()],
                                                                      condition=condition_planet,
                                                                      arguments=arguments, returns=returns_pl,
-                                                                     returns_except=condition_return_planet,
+                                                                     returns_except=error_return,
                                                                      tab=tab))
         text_def_func[planet.get_name() + ext_plonly] = (template_function.format(object=planet.get_name() + ext_plonly,
-                                                                                  preambule_tr=preambule_tr_planet_only,
-                                                                                  preambule_pc="",
+                                                                                  preambule_tr=preambule_tr_planet_only[planet.get_name()],
+                                                                                  preambule_pc=preambule_pc_planet_only[planet.get_name()],
                                                                                   condition=condition_planet_only,
                                                                                   arguments=arguments,
                                                                                   returns=returns_pl_only,
-                                                                                  returns_except=condition_return_planet_only,
+                                                                                  returns_except=error_return,
                                                                                   tab=tab))
         # logger.debug("text of {object} LC simulator function :\n{text_func}"
         #              "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
 
-    # Fill returns text for the whole system
+    ##################################################
+    # Fill the functions template for the whole system
+    ##################################################
     returns_whole = ""
-    for oot_var, whole_tr_planet in zip(oot_vars[key_whole], l_tr_whole_planets):
-        returns_whole += template_returns_instmod.format(oot_var=oot_var, tr_planets=whole_tr_planet, pc_planets="")
+    for oot_var, whole_tr_planet, whole_pc_planet in zip(oot_vars[key_whole], l_tr_ret_whole_planets, l_pc_ret_whole_planets):
+        tr_plusornot_pl = "+ " if whole_tr_planet != "" else ""
+        pc_plusornot_pl = "+ " if whole_pc_planet != "" else ""
+        returns_whole += template_returns.format(oot_var=oot_var,
+                                                 tr_planets=tr_plusornot_pl + whole_tr_planet, pc_planets=pc_plusornot_pl + whole_pc_planet)
         returns_whole += ", "
     if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
         returns_whole = returns_whole[:-2]
 
-    # Finalise the text of whole system LC simulator function
-    condition_return_whole = ""
-    for ret_cond_whole in l_whole_return_condition:
-        condition_return_whole += ret_cond_pl
-        condition_return_whole += ", "
-    if not(multi):
-        condition_return_whole = condition_return_whole[:-2]
-    condition_whole = template_condition.format(preambule=preambule_cond_whole, condition="condition", returns=condition_return_whole, tab=tab)
-
     text_def_func[key_whole] = (template_function.
-                                format(object=key_whole, preambule_tr=preambule_tr_whole, preambule_pc="", condition=condition_whole,
-                                       arguments=arguments, returns=returns_whole, returns_except=condition_return_whole,
+                                format(object=key_whole, preambule_tr=preambule_tr_whole, preambule_pc=preambule_pc_whole, condition=condition_whole,
+                                       arguments=arguments, returns=returns_whole, returns_except=error_return,
                                        tab=tab))
 
+    ###################################
+    # Execute the text of all functions
+    ###################################
     # Create and fill the output dictionnary containing the datasimulators functions.
     dico_docf = dict.fromkeys(text_def_func.keys(), None)
     for obj_key in dico_docf:
-        ldict["ones_like"] = ones_like
-        ldict["inf"] = inf
-        ldict["sqrt"] = sqrt
-        ldict["acos"] = acos
-        ldict["degrees"] = degrees
+        ldict[obj_key]["ones_like"] = ones_like
+        ldict[obj_key]["inf"] = inf
+        ldict[obj_key]["sqrt"] = sqrt
+        ldict[obj_key]["acos"] = acos
+        ldict[obj_key]["degrees"] = degrees
         if parametrisation == "Multis":
-            ldict["getaoverr"] = getaoverr
-        if transit_imp == "batman":
-            if not(has_dataset):
-                ldict["TransitModel"] = TransitModel
-            ldict["getomega_deg_fast"] = getomega_deg_fast
-        else:
-            ldict["getomega_fast"] = getomega_fast
-            ldict["m"] = m_pytransit
+            ldict[obj_key]["getaoverr"] = getaoverr
         logger.debug("text of {object} LC simulator function :\n{text_func}"
                      "".format(object=obj_key, text_func=text_def_func[obj_key]))
-        exec(text_def_func[obj_key], ldict)
+        exec(text_def_func[obj_key], ldict[obj_key])
         params_model = arg_list[obj_key][key_param]
         if len(arg_list[obj_key][key_mand_kwargs]) > 0:
             mand_kwargs = str(arg_list[obj_key][key_mand_kwargs])
@@ -774,7 +395,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
             opt_kwargs = None
         logger.debug("Parameters for {object} LC simulator function :\n{dico_param}"
                      "".format(object=obj_key, dico_param={nb: param for nb, param in enumerate(params_model)}))
-        dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
+        dico_docf[obj_key] = DatasimDocFunc(function=ldict[obj_key][function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
                                             include_dataset_kwarg=has_dataset,
@@ -800,8 +421,10 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
         Checked list of Dataset instance(s).
     multi               : bool
         True if the datasim function needs to give multiple outputs.
-    ldict               : dict
-        dictionary to be used as local dictionary argument of the exec function.
+    ldict       : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     arguments           : str
         string giving the current text of arguments for the functions
@@ -1151,3 +774,743 @@ def get_orbital_params(param_nb, arg_list, star, planets, parametrisation, ext_p
             params_planet[planet.get_name()]["aR"] = None
             params_planet_only[planet.get_name()]["aR"] = None
     return rhostar, params_whole, params_planet, params_planet_only
+
+
+def get_conditions(planets, parametrisation, params_planet, params_planet_only, params_whole,
+                   tab, error_return):
+    """
+    Return the text related to the condition to test if the planet goes into the star
+
+    Arguments
+    ---------
+    planets             :
+    parametrisation     :
+    params_planet       :
+    params_planet_only  :
+    params_whole        :
+    tab                 :
+    error_return        :
+
+    Returns
+    -------
+    condition_planet        : dictionary of str
+        Dictionary containing the text for the condition to put in the function text for the function
+        of each planet (planet+star+inst). The format of the dictionary is:
+        - key: planet name
+        - value: text of the condition
+    condition_planet_only   : dictionary of str
+        Dictionary containing the text for the condition to put in the function text for the function
+        of each planet only. The format of the dictionary is:
+        - key: planet name
+        - value: text of the condition
+    condition_whole         : str
+        text to put in the function text for the function of the whole system (inst+star+all planets)
+    """
+    ################################################################
+    # Produce template condition code which return a LC full of infs
+    ################################################################
+    # Initialise template_condition, the template for the condition (no planet should pass into the star)
+    template_condition = """
+    {tab}{preambule}
+    {tab}if {condition}:
+    {tab}    return {returns}
+    """
+    template_condition = dedent(template_condition)
+
+    # Create the templates to conpute the condition to know if the planet passes in the star
+    # and of what tho return if condition is True
+    # Fill return if condition planet goes in the star is True
+    # The condition is taken from https://iopscience.iop.org/article/10.1086/592381/fulltext/75178.text.html (section 3.1)
+    if parametrisation == "Multis":  # aR is not a main parameter
+        template_preambule_cond_pl_wRrat = "condition_{planet} = (aR_{planet} < ((1.5 / (1 - ecc_{planet})) + {Rrat}))\n"
+        template_preambule_cond_pl_woRrat = "condition_{planet} = (aR_{planet} < (1.5 / (1 - ecc_{planet})))\n"
+    else:  # aR is a main parameter
+        template_preambule_cond_pl_wRrat = "condition_{planet} = ({aR} < ((1.5 / (1 - ecc_{planet})) + {Rrat}))\n"
+        template_preambule_cond_pl_woRrat = "condition_{planet} = ({aR} < (1.5 / (1 - ecc_{planet})))\n"
+
+    preambule_cond_whole = "condition = False\n"
+    for ii, planet in enumerate(planets.values()):
+        # Fill the template_preambule_condition
+        if "Rrat" in params_planet[planet.get_name()]:
+            preambule_cond_planet = template_preambule_cond_pl_wRrat.format(planet=planet.get_name(), aR=params_planet[planet.get_name()]["aR"],
+                                                                            Rrat=params_planet[planet.get_name()]["Rrat"])
+            preambule_cond_planet_only = template_preambule_cond_pl_wRrat.format(planet=planet.get_name(), aR=params_planet_only[planet.get_name()]["aR"],
+                                                                                 Rrat=params_planet[planet.get_name()]["Rrat"])
+            preambule_cond_whole += tab + template_preambule_cond_pl_wRrat.format(planet=planet.get_name(), aR=params_whole[planet.get_name()]["aR"],
+                                                                                  Rrat=params_whole[planet.get_name()]["Rrat"])
+        else:
+            preambule_cond_planet = template_preambule_cond_pl_woRrat.format(planet=planet.get_name(), aR=params_planet[planet.get_name()]["aR"])
+            preambule_cond_planet_only = template_preambule_cond_pl_woRrat.format(planet=planet.get_name(), aR=params_planet_only[planet.get_name()]["aR"])
+            preambule_cond_whole += tab + template_preambule_cond_pl_woRrat.format(planet=planet.get_name(), aR=params_whole[planet.get_name()]["aR"])
+        condition_planet_only = condition_planet = "condition_{planet}".format(planet=planet.get_name())
+        preambule_cond_whole += "{tab}condition = condition or condition_{planet}\n".format(planet=planet.get_name(), tab=tab)
+
+    # Fill condition text for each planet
+    # template_condition = """"
+    # {tab}{preambule}
+    # {tab}if {condition}:
+    # {tab}    return {returns}
+    # """
+    condition_planet = template_condition.format(preambule=preambule_cond_planet, condition=condition_planet, returns=error_return, tab=tab)
+    condition_planet_only = template_condition.format(preambule=preambule_cond_planet_only, condition=condition_planet_only, returns=error_return, tab=tab)
+
+    # Finalise the text of whole system LC simulator function
+    condition_whole = template_condition.format(preambule=preambule_cond_whole, condition="condition", returns=error_return, tab=tab)
+
+    return condition_planet, condition_planet_only, condition_whole
+
+
+def get_catchederror_return(multi, l_inst_model):
+    """Provide the text of what to return when an error is catched.
+
+    Arguments
+    ---------
+    multi           : bool
+    l_inst_model    : list_of_Instrument_Model
+
+    Returns
+    -------
+    error_return : str
+        Text oif what to return if an error is catched
+    """
+    if multi:
+        template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
+    else:
+        template_returns_condition = "ones_like({time_vec}) * (- inf)"
+
+    l_returns = []
+    for ii in range(len(l_inst_model)):
+        l_returns.append(template_returns_condition.format(ltime_vec=l_time_vec, time_vec=time_vec))
+
+    error_return = ""
+    for ret in l_returns:
+        error_return += ret
+        error_return += ", "
+    if not(multi):
+        error_return = error_return[:-2]
+
+    return error_return
+
+
+def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model, l_LD_parcont, l_LD_param_list, parametrisation,
+                key_whole, key_param, SSE4instmodfname, planets, ext_plonly, arg_list, param_nb, ldict,
+                tab,
+                rhostar, params_planet, params_planet_only, params_whole):
+    """Provide the text for the transit part of the LC model text (preambule and return).
+
+    Arguments
+    ---------
+
+    Returns
+    -------
+    preambule_tr_planet
+    preambule_tr_planet_only
+    preambule_tr_whole
+    l_tr_planet
+    l_tr_planet_only
+    l_tr_whole_planets
+    """
+    transit_imp = transit_model['all_instruments']['model']
+
+    ###################################################################################
+    # Produce template for transit model preambule code and define/initialise variables
+    ###################################################################################
+    # Initialise template_preambule_pl, the template of the preambule of the function for each planet
+    template_tr_preambule_pl = """
+        {tab}ecc_{planet} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})"""
+
+    if transit_imp == "batman":
+        template_tr_preambule_pl += """
+        {tab}omega_{planet} = getomega_deg_fast({ecosw}, {esinw})
+        {tab}inc_{planet} = degrees(acos({cosinc}))"""
+        if parametrisation == "Multis":
+            template_tr_preambule_pl += """
+        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, omega_{planet})"""
+
+        for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont[key_whole],
+                                                           l_LD_param_list[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
+            # TODO_CHECK_THIS_COMMENT: If the same model is used for several dataset a model will be several times in
+            # l_inst_model. So to avoid the repetition we check if this instrument has already been
+            # done.
+            if multi:
+                template_batman_pl = """
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.t0 = {{tic}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.per = {{P}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.rp = {{Rrat}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.inc = inc_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.ecc = ecc_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.w = omega_{{planet}}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.u = {ld_param_list}
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.limb_dark = '{ld_mod_name}'"""
+                template_batman_pl = (template_batman_pl.
+                                      format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
+                                             dst_key=dst.number,
+                                             ld_mod_name=LD_parcont.ld_type,
+                                             ld_param_list=ld_param_list))
+            else:
+                template_batman_pl = """
+        {{tab}}params_{{planet}}.t0 = {{tic}}
+        {{tab}}params_{{planet}}.per = {{P}}
+        {{tab}}params_{{planet}}.rp = {{Rrat}}
+        {{tab}}params_{{planet}}.inc = inc_{{planet}}
+        {{tab}}params_{{planet}}.ecc = ecc_{{planet}}
+        {{tab}}params_{{planet}}.w = omega_{{planet}}
+        {{tab}}params_{{planet}}.u = {ld_param_list}
+        {{tab}}params_{{planet}}.limb_dark = '{ld_mod_name}'"""
+                template_batman_pl = template_batman_pl.format(ld_mod_name=LD_parcont.ld_type,
+                                                               ld_param_list=ld_param_list)
+            template_tr_preambule_pl += template_batman_pl
+
+            if parametrisation == "Multis":
+                if multi:
+                    template_tr_preambule_pl += """
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = aR_{{planet}}
+        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
+                else:
+                    template_tr_preambule_pl += """
+        {tab}params_{planet}.a = aR_{planet}
+        """
+            else:
+                if multi:
+                    template_tr_preambule_pl += """
+        {{tab}}params_{{planet}}_{instmod_fullname}_dataset{dst_key}.a = {{aR}}
+        """.format(instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True), dst_key=dst.number)
+                else:
+                    template_tr_preambule_pl += """
+        {tab}params_{planet}.a = {aR}
+        """
+    else:  # pytransit
+        template_tr_preambule_pl += """
+        {tab}omega_{planet} = getomega_fast({esinw}, {ecosw})
+        {tab}inc_{planet} = acos({cosinc})
+        """
+        if parametrisation == "Multis":
+            template_tr_preambule_pl += """
+        {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, degrees(omega_{planet}))"""
+    template_tr_preambule_pl = dedent(template_tr_preambule_pl)
+
+    ## Add or not the initialisation of the TransitModel instance or MandelAgol instance (to the template_preambule)
+    l_par_bat = []
+    for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
+                                            l_LD_parcont[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
+        supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
+        # If you need to supersample the model
+        if supersamp > 1:
+            exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
+            if transit_imp == "batman":
+                if dst is None:
+                    if multi:
+                        ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
+                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname}_"
+                                                "dataset{dst_key} = TransitModel("
+                                                "params_{{planet}}_{instmod_fullname}, "
+                                                "{{ltime_vec}}[{ii}], "
+                                                "supersample_factor={supersamp},"
+                                                "exp_time={exptime})"
+                                                "\n".format(supersamp=supersamp,
+                                                            exptime=exptime,
+                                                            ii=ii,
+                                                            instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
+                                                            dst_key=dst.number))
+                    else:
+                        template_batman_pl_4 = ("{{tab}}m_{{planet}} = TransitModel("
+                                                "params_{{planet}}, {{time_vec}}, "
+                                                "supersample_factor={supersamp},"
+                                                "exp_time={exptime})"
+                                                "\n".format(supersamp=supersamp,
+                                                            exptime=exptime))
+                    template_tr_preambule_pl += template_batman_pl_4
+                    l_par_bat.append({})
+                    for planet in planets.values():
+                        for key in [planet.get_name(), planet.get_name() + ext_plonly, key_whole]:
+                            l_par_bat[ii][key] = TransitParams()
+                else:
+                    l_par_bat.append({})
+                    for planet in planets.values():
+                        for key in [planet.get_name(), planet.get_name() + ext_plonly, key_whole]:
+                            l_par_bat[ii][key] = TransitParams()
+                            if multi:  # time of inf. conjunction
+                                l_par_bat[ii][key].t0 = ldict[planet.get_name()][l_time_vec][ii].mean()
+                            else:
+                                l_par_bat[ii][key].t0 = ldict[planet.get_name()][time_vec].mean()
+                            l_par_bat[ii][key].per = 1.   # orbital period
+                            l_par_bat[ii][key].rp = 0.1   # planet radius(in stel radii)
+                            l_par_bat[ii][key].a = 15.    # semi-major axis(in stel radii)
+                            l_par_bat[ii][key].inc = 90.  # orbital inclination (in degrees)
+                            l_par_bat[ii][key].ecc = 0.   # eccentricity
+                            l_par_bat[ii][key].w = 90.    # long. of periastron (in deg.)
+                            l_par_bat[ii][key].limb_dark = LD_parcont.ld_type  # LD model
+                            l_par_bat[ii][key].u = LD_parcont.init_LD_values  # LDC init val
+            else:
+                m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime,
+                                         model=LD_parcont.ld_type)
+        # If you DON'T need to supersample the model
+        else:
+            if transit_imp == "batman":
+                if dst is None:
+                    if multi:
+                        ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
+                        template_batman_pl_5 = ("{{tab}}m_{{planet}} = TransitModel("
+                                                "params_{{planet}}}_{instmod_fullname}, {{ltime_vec}}[{ii}])"
+                                                "\n".format(ii=ii))
+                        template_tr_preambule_pl += template_batman_pl_5
+                    else:
+                        template_tr_preambule_pl += ("{tab}m_{planet} = TransitModel("
+                                                     "params_{planet}, {time_vec})\n")
+                    l_par_bat.append({})
+                    for planet in planets.values():
+                        for key in [planet.get_name(), planet.get_name() + ext_plonly, key_whole]:
+                            l_par_bat[ii][key] = TransitParams()
+                else:
+                    l_par_bat.append({})
+                    for planet in planets.values():
+                        for key in [planet.get_name(), planet.get_name() + ext_plonly, key_whole]:
+                            l_par_bat[ii][key] = TransitParams()
+                            if multi:  # time of inf. conjunction
+                                l_par_bat[ii][key].t0 = ldict[planet.get_name()][l_time_vec][ii].mean()
+                            else:
+                                l_par_bat[ii][key].t0 = ldict[planet.get_name()][time_vec].mean()
+                            l_par_bat[ii][key].per = 1.   # orbital period
+                            l_par_bat[ii][key].rp = 0.1   # planet radius(in stel radii)
+                            l_par_bat[ii][key].a = 15.    # semi-major axis(in stel radii)
+                            l_par_bat[ii][key].inc = 90.  # orbital inclination (in degrees)
+                            l_par_bat[ii][key].ecc = 0.   # eccentricity
+                            l_par_bat[ii][key].w = 90.    # long. of periastron (in deg.)
+                            l_par_bat[ii][key].limb_dark = LD_parcont.ld_type  # LD model
+                            l_par_bat[ii][key].u = LD_parcont.init_LD_values  # LDC init val
+            else:
+                m_pytransit = MandelAgol(model=LD_parcont.ld_type)
+
+    ###############################################################
+    # Produce template code for the transit component of the return
+    ###############################################################
+    # Create the text for template_tr_planet
+    if transit_imp == "batman":
+        if multi:
+            template_tr_planet = ("m_{planet}_{instmod_fullname}_dataset{dst_key}.light_curve("
+                                  "params_{planet}_{instmod_fullname}_dataset{dst_key}) - 1 ")
+        else:
+            template_tr_planet = ("m_{planet}.light_curve(params_{planet}) - 1 ")
+    else:
+        if parametrisation == "Multis":
+            if multi:
+                template_tr_planet = ("m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
+                                      "{tic}, {P}, aR_{planet}, inc_{planet}, "
+                                      "ecc_{planet}, omega_{planet}) - 1 ")
+            else:
+                template_tr_planet = ("m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, {P},"
+                                      " aR_{planet}, inc_{planet}, ecc_{planet}, "
+                                      "omega_{planet}) - 1 ")
+        else:
+            if multi:
+                template_tr_planet = ("m.evaluate({ltime_vec}[{ii}], {Rrat}, {ld_param_list}, "
+                                      "{tic}, {P}, {aR}, inc_{planet}, "
+                                      "ecc_{planet}, omega_{planet}) - 1 ")
+            else:
+                template_tr_planet = ("m.evaluate({time_vec}, {Rrat}, {ld_param_list}, {tic}, "
+                                      "{P}, {aR}, inc_{planet}, ecc_{planet}, "
+                                      "omega_{planet}) - 1 ")
+
+    # Initialise the text for the whole system preambule
+    l_tr_whole_planets = []
+    for instmdl in l_inst_model:
+        l_tr_whole_planets.append("")
+    preambule_tr_planet = {}
+    preambule_tr_planet_only = {}
+    l_tr_planet = {}
+    l_tr_planet_only = {}
+    preambule_tr_whole = ""
+    for jj, planet in enumerate(planets.values()):
+        # Only for Batman: Add the TransitParams and TransitModel instances to ldict
+        if transit_imp == "batman":
+            for ii, instmdl, dst, par_bat in zip(range(len(l_inst_model)), l_inst_model,
+                                                 l_dataset, l_par_bat):
+                if dst is not None:
+                    if multi:
+                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
+                                          "".format(planet=planet.get_name(),
+                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
+                                                    dst_key=dst.number))
+                        tt = ldict[planet.get_name()][l_time_vec][ii]
+                    else:
+                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
+                        tt = ldict[planet.get_name()][time_vec]
+                    ldict[planet.get_name()][params_pl_inst] = par_bat[planet.get_name()]
+                    ldict[planet.get_name() + ext_plonly][params_pl_inst] = par_bat[planet.get_name() + ext_plonly]
+                    ldict[key_whole][params_pl_inst] = par_bat[key_whole]
+                    supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
+                    m_batman = {}
+                    if supersamp > 1:
+                        exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
+                        m_batman[planet.get_name()] = TransitModel(ldict[planet.get_name()][params_pl_inst],
+                                                                   tt, supersample_factor=supersamp,
+                                                                   exp_time=exptime)
+                        m_batman[planet.get_name() + ext_plonly] = TransitModel(ldict[planet.get_name() + ext_plonly][params_pl_inst],
+                                                                                tt, supersample_factor=supersamp,
+                                                                                exp_time=exptime)
+                        m_batman[key_whole] = TransitModel(ldict[key_whole][params_pl_inst],
+                                                           tt, supersample_factor=supersamp,
+                                                           exp_time=exptime)  # This should not be done here it will be repeated
+                    else:
+                        m_batman[planet.get_name()] = TransitModel(ldict[planet.get_name()][params_pl_inst], tt)
+                        m_batman[planet.get_name() + ext_plonly] = TransitModel(ldict[planet.get_name() + ext_plonly][params_pl_inst], tt)
+                        m_batman[key_whole] = TransitModel(ldict[key_whole][params_pl_inst], tt)  # This should not be done here it will be repeated
+
+                    if multi:
+                        m_pl_inst = ("m_{planet}_{instmod_fullname}_dataset{dst_key}"
+                                     "".format(planet=planet.get_name(),
+                                               instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
+                                               dst_key=dst.number))
+
+                    else:
+                        m_pl_inst = "m_{planet}".format(planet=planet.get_name())
+                    ldict[planet.get_name()][m_pl_inst] = m_batman[planet.get_name()]
+                    ldict[planet.get_name() + ext_plonly][m_pl_inst] = m_batman[planet.get_name() + ext_plonly]
+                    ldict[key_whole][m_pl_inst] = m_batman[key_whole]
+                else:
+                    if multi:
+                        ## WARNING: This part of the code is untested and there will be a problem because dst_key is not define since there is not dataset.
+                        params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
+                                          "".format(planet=planet.get_name(),
+                                                    instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
+                                                    dst_key=dst.number))
+                    else:
+                        params_pl_inst = "params_{planet}".format(planet=planet.get_name())
+                    ldict[planet.get_name()][params_pl_inst] = par_bat[planet.get_name()]
+                    ldict[planet.get_name() + ext_plonly][params_pl_inst] = par_bat[planet.get_name() + ext_plonly]
+                    ldict[key_whole][params_pl_inst] = par_bat[key_whole]
+        # Create the radius ratio parameters
+        param_text = add_param_argument(param=planet.Rrat, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                        key_arglist=[key_whole, planet.get_name(), planet.get_name() + ext_plonly],
+                                        param_vector_name=par_vec_name)
+        params_whole[planet.get_name()][planet.Rrat.get_name()] = param_text[key_whole]
+        params_planet[planet.get_name()][planet.Rrat.get_name()] = param_text[planet.get_name()]
+        params_planet_only[planet.get_name()][planet.Rrat.get_name()] = param_text[planet.get_name() + ext_plonly]
+
+        # Fill the template_tr_preambule_pl and create the preambule text for the transit model that compute intermediate variables
+        # No need to make different cases for if batman or not or is dataset is None or not
+        # because if one argument is not in the template, it is not used and this is it.
+        preambule_tr_planet[planet.get_name()] = (
+            template_tr_preambule_pl.format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
+                                            ecosw=params_planet[planet.get_name()]["ecosw"],
+                                            esinw=params_planet[planet.get_name()]["esinw"],
+                                            tic=params_planet[planet.get_name()]["tic"], rhostar=rhostar[planet.get_name()],
+                                            cosinc=params_planet[planet.get_name()]["cosinc"], P=params_planet[planet.get_name()]["P"],
+                                            Rrat=params_planet[planet.get_name()]["Rrat"], aR=params_planet[planet.get_name()]["aR"],
+                                            tab=tab))
+        preambule_tr_planet_only[planet.get_name()] = (
+            template_tr_preambule_pl.format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
+                                            ecosw=params_planet_only[planet.get_name()]["ecosw"],
+                                            esinw=params_planet_only[planet.get_name()]["esinw"],
+                                            tic=params_planet_only[planet.get_name()]["tic"], rhostar=rhostar[planet.get_name() + ext_plonly],
+                                            cosinc=params_planet_only[planet.get_name()]["cosinc"], P=params_planet_only[planet.get_name()]["P"],
+                                            Rrat=params_planet_only[planet.get_name()]["Rrat"], aR=params_planet_only[planet.get_name()]["aR"],
+                                            tab=tab))
+        preambule_tr_whole += (template_tr_preambule_pl.
+                               format(planet=planet.get_name(), ltime_vec=l_time_vec, time_vec=time_vec,
+                                      ecosw=params_whole[planet.get_name()]["ecosw"],
+                                      esinw=params_whole[planet.get_name()]["esinw"], tic=params_whole[planet.get_name()]["tic"],
+                                      cosinc=params_whole[planet.get_name()]["cosinc"], P=params_whole[planet.get_name()]["P"],
+                                      Rrat=params_whole[planet.get_name()]["Rrat"], aR=params_whole[planet.get_name()]["aR"],
+                                      # ld_mod_name=LD_parcont.ld_type,
+                                      rhostar=rhostar[key_whole],
+                                      # ld_param_list=ld_param_list,
+                                      tab=tab))
+
+        # Fill the template_tr_planet that define the transit component of the return for each planet
+        # planets LC contribution (planet_lc and whole_planets_lc)
+        # No need for case if batman or if dataset is None. Same reason than above
+        l_tr_planet[planet.get_name()] = []
+        l_tr_planet_only[planet.get_name()] = []
+        for ii, instmdl, dst, ld_param_list in zip(range(len(l_inst_model)), l_inst_model,
+                                                   l_dataset, l_LD_param_list[key_whole]):
+            if instmdl is None:
+                instmdl_fname = None
+            else:
+                instmdl_fname = instmdl.get_name(include_prefix=True, code_version=True, recursive=True)
+            if dst is None:
+                dst_nb = None
+            else:
+                dst_nb = dst.number
+            l_tr_planet[planet.get_name()].append(
+                template_tr_planet.format(planet=planet.get_name(),
+                                          ltime_vec=l_time_vec,
+                                          time_vec=time_vec,
+                                          instmod_fullname=instmdl_fname,
+                                          dst_key=dst_nb,
+                                          aR=params_planet[planet.get_name()]["aR"],
+                                          Rrat=params_planet[planet.get_name()]["Rrat"],
+                                          tic=params_planet[planet.get_name()]["tic"],
+                                          P=params_planet[planet.get_name()]["P"],
+                                          ld_param_list=ld_param_list,
+                                          ii=ii
+                                          ))
+            l_tr_planet_only[planet.get_name()].append(
+                template_tr_planet.format(planet=planet.get_name(),
+                                          ltime_vec=l_time_vec,
+                                          time_vec=time_vec,
+                                          instmod_fullname=instmdl_fname,
+                                          dst_key=dst_nb,
+                                          aR=params_planet_only[planet.get_name()]["aR"],
+                                          Rrat=params_planet_only[planet.get_name()]["Rrat"],
+                                          tic=params_planet_only[planet.get_name()]["tic"],
+                                          P=params_planet_only[planet.get_name()]["P"],
+                                          ld_param_list=ld_param_list,
+                                          ii=ii
+                                          ))
+            l_tr_whole_planets[ii] += "+ " + template_tr_planet.format(planet=planet.get_name(),
+                                                                       ltime_vec=l_time_vec,
+                                                                       time_vec=time_vec,
+                                                                       instmod_fullname=instmdl_fname,
+                                                                       dst_key=dst_nb,
+                                                                       aR=params_planet[planet.get_name()]["aR"],
+                                                                       Rrat=params_whole[planet.get_name()]["Rrat"],
+                                                                       tic=params_whole[planet.get_name()]["tic"],
+                                                                       P=params_whole[planet.get_name()]["P"],
+                                                                       ld_param_list=ld_param_list,
+                                                                       ii=ii
+                                                                       )
+            for key in [planet.get_name(), planet.get_name() + ext_plonly]:
+                if transit_imp == "batman":
+                    if not(has_dataset):
+                        ldict[key]["TransitModel"] = TransitModel
+                    ldict[key]["getomega_deg_fast"] = getomega_deg_fast
+                else:
+                    ldict[key]["getomega_fast"] = getomega_fast
+                    ldict[key]["m"] = m_pytransit
+    if transit_imp == "batman":
+        if not(has_dataset):
+            ldict[key_whole]["TransitModel"] = TransitModel
+        ldict[key_whole]["getomega_deg_fast"] = getomega_deg_fast
+    else:
+        ldict[key_whole]["getomega_fast"] = getomega_fast
+        ldict[key_whole]["m"] = m_pytransit
+
+    return (preambule_tr_planet, preambule_tr_planet_only, preambule_tr_whole,
+            l_tr_planet, l_tr_planet_only, l_tr_whole_planets,
+            )
+
+
+def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcont, l_LD_param_list, parametrisation,
+                   key_whole, key_param, SSE4instmodfname, star, planets, ext_plonly, arg_list, param_nb, ldict,
+                   tab, did_transit,
+                   rhostar, params_planet, params_planet_only, params_whole):
+    """Provide the text for the phase curve part of the LC model text (preambule and return).
+
+    Arguments
+    ---------
+
+    Returns
+    -------
+
+    """
+    if phasecurve_model["instrument_variable"]:
+        raise NotImplementedError(f"instrument_variable = True is not currently implemented")
+
+    # dico to store_text for stellar params
+    star_param_text = {}
+
+    preambule_pl = {}
+    preambule_pl_only = {}
+    preambule_whole = ""
+    l_return_pl = {}
+    l_return_pl_only = {}
+    l_return_whole = []
+
+    for jj, planet in enumerate(planets.values()):
+
+        planet_name = planet.get_name()
+
+        preambule_pl[planet_name] = ""
+        preambule_pl_only[planet_name] = ""
+        l_return_pl[planet_name] = []
+        l_return_pl_only[planet_name] = []
+
+        for kk, pc_comp in enumerate(phasecurve_model['all_instruments']):
+            pc_model = pc_comp['model']
+
+            if pc_model == "spiderman":
+
+                brightness_model = pc_comp["args"]["ModelParams_kwargs"]["brightness_model"]
+                if ('lightcurve_kwargs' in pc_comp["args"]) and (len(pc_comp["args"]['lightcurve_kwargs']) > 0):
+                    for key in [planet_name, planet_name + ext_plonly, key_whole]:
+                        ldict[key]['lightcurve_kwargs'] = pc_comp["args"]['lightcurve_kwargs']
+                    lightcurve_kwargs = ", **lightcurve_kwargs"
+                else:
+                    lightcurve_kwargs = ""
+
+                if (brightness_model == "zhang"):
+                    ########################################################################################################
+                    # Produce the text for the model parameters and for the different function planet, planet only and whole
+                    ########################################################################################################
+                    if star.Teff.get_name() not in star_param_text:
+                        star_param_text[star.Teff.get_name()] = add_param_argument(param=star.Teff, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                                                                   key_arglist=None, param_vector_name=par_vec_name)
+
+                    # Create the additional planetary model parameters for the phasecurve model
+                    l_params = [planet.u1, planet.u2, planet.a, planet.xi, planet.deltaT, planet.Tn]
+                    for param in l_params:
+                        param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                                        key_arglist=[key_whole, planet_name, planet_name + ext_plonly],
+                                                        param_vector_name=par_vec_name)
+                        params_whole[planet_name][param.get_name()] = param_text[key_whole]
+                        params_planet[planet_name][param.get_name()] = param_text[planet_name]
+                        params_planet_only[planet_name][param.get_name()] = param_text[planet_name + ext_plonly]
+
+                    ######################################################
+                    # Produce the template for phase curve model preambule
+                    ######################################################
+                    if not(did_transit):
+                        template_preambule_pl = dedent(f"""
+                            {{tab}}ecc_{planet_name} = sqrt({{ecosw}} * {{ecosw}} + {{esinw}} * {{esinw}})
+                            {{tab}}omega_{planet_name} = getomega_deg_fast({{ecosw}}, {{esinw}})
+                            {{tab}}inc_{planet_name} = degrees(acos({{cosinc}}))""")
+                        if parametrisation == "Multis":
+                            template_preambule_pl += dedent(f"""
+                        {{tab}}aR_{planet_name} = getaoverr({{P}}, {{rhostar}}, ecc_{planet_name}, omega_{planet_name})""")
+                    else:
+                        template_preambule_pl = ""
+
+                    done_preambule4instmodel = []
+                    for ii, (instmdl, dst) in enumerate(zip(l_inst_model, l_dataset)):
+                        instmod_name = instmdl.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})
+                        # Define extension for the name of spiderman ModelParams instances
+                        sp_param_ext = get_planet_inst_dst_ext(planet=planet, inst_model=instmdl, multi=multi)
+                        params_pl_inst = f"param_spiderman{sp_param_ext}"
+                        if instmod_name not in done_preambule4instmodel:
+                            for key in [planet_name, planet_name + ext_plonly, key_whole]:
+                                ldict[key][params_pl_inst] = ModelParams(**pc_comp["args"]["ModelParams_kwargs"])
+                            template_preambule_pl += dedent(f"""
+                                {{tab}}{params_pl_inst}.t0 = {{tic}}
+                                {{tab}}{params_pl_inst}.per = {{P}}
+                                {{tab}}{params_pl_inst}.a_abs = {{a}}
+                                {{tab}}{params_pl_inst}.rp = {{Rrat}}
+                                {{tab}}{params_pl_inst}.inc = inc_{planet_name}
+                                {{tab}}{params_pl_inst}.ecc = ecc_{planet_name}
+                                {{tab}}{params_pl_inst}.w = omega_{planet_name}
+                                {{tab}}{params_pl_inst}.p_u1 = {{u1}}
+                                {{tab}}{params_pl_inst}.p_u2 = {{u2}}
+                                {{tab}}{params_pl_inst}.xi = {{xi}}
+                                {{tab}}{params_pl_inst}.T_n = {{Tn}}
+                                {{tab}}{params_pl_inst}.delta_T = {{deltaT}}
+                                {{tab}}{params_pl_inst}.T_s = {{Ts}}""")
+                            if parametrisation == "Multis":
+                                template_preambule_pl += dedent(f"""
+                                    {{tab}}{params_pl_inst}.a = aR_{planet_name}
+                                    """)
+                            else:
+                                template_preambule_pl += dedent(f"""
+                                    {{tab}}{params_pl_inst}.a = {{aR}}
+                                    """)
+                            # Add the non free parameters attribute to params_spiderman
+                            spiderman_dico_attr = copy(pc_comp["args"]["attributes"])
+                            filter = spiderman_dico_attr.pop("filter", None)
+                            n_layers = spiderman_dico_attr.pop("n_layers", 5)
+                            l1 = spiderman_dico_attr.pop("l1")
+                            l2 = spiderman_dico_attr.pop("l2")
+                            if filter is not None:
+                                template_preambule_pl += dedent(f"""
+                                    {{tab}}{params_pl_inst}.filter = '{filter}'
+                                    """)
+                            template_preambule_pl += dedent(f"""
+                                {{tab}}{params_pl_inst}.l1 = {l1}
+                                {{tab}}{params_pl_inst}.l2 = {l2}
+                                {{tab}}{params_pl_inst}.n_layers = {n_layers}
+                                """)
+                            ############################################################################################################
+                            # Fill the template for phase curve model preambule for the different function planet, planet only and whole
+                            ############################################################################################################
+                            preambule_pl[planet.get_name()] += (
+                                template_preambule_pl.format(ecosw=params_planet[planet_name]["ecosw"],
+                                                             esinw=params_planet[planet_name]["esinw"],
+                                                             tic=params_planet[planet_name]["tic"],
+                                                             cosinc=params_planet[planet_name]["cosinc"],
+                                                             P=params_planet[planet_name]["P"],
+                                                             Rrat=params_planet[planet_name]["Rrat"],
+                                                             aR=params_planet[planet_name]["aR"],
+                                                             a=params_planet[planet_name]["a"],
+                                                             u1=params_planet[planet_name]["u1"],
+                                                             u2=params_planet[planet_name]["u2"],
+                                                             xi=params_planet[planet_name]["xi"],
+                                                             deltaT=params_planet[planet_name]["deltaT"],
+                                                             Tn=params_planet[planet_name]["Tn"],
+                                                             rhostar=rhostar[planet_name],
+                                                             Ts=star_param_text[star.Teff.get_name()][planet_name],
+                                                             # ltime_vec=l_time_vec, time_vec=time_vec,
+                                                             tab=tab
+                                                             ))
+                            preambule_pl_only[planet_name] += (
+                                template_preambule_pl.format(ecosw=params_planet_only[planet_name]["ecosw"],
+                                                             esinw=params_planet_only[planet_name]["esinw"],
+                                                             tic=params_planet_only[planet_name]["tic"],
+                                                             cosinc=params_planet_only[planet_name]["cosinc"],
+                                                             P=params_planet_only[planet_name]["P"],
+                                                             Rrat=params_planet_only[planet_name]["Rrat"],
+                                                             aR=params_planet_only[planet_name]["aR"],
+                                                             a=params_planet_only[planet_name]["a"],
+                                                             u1=params_planet_only[planet_name]["u1"],
+                                                             u2=params_planet_only[planet_name]["u2"],
+                                                             xi=params_planet_only[planet_name]["xi"],
+                                                             deltaT=params_planet_only[planet_name]["deltaT"],
+                                                             Tn=params_planet_only[planet_name]["Tn"],
+                                                             rhostar=rhostar[planet_name + ext_plonly],
+                                                             Ts=star_param_text[star.Teff.get_name()][planet_name + ext_plonly],
+                                                             # ltime_vec=l_time_vec, time_vec=time_vec,
+                                                             tab=tab
+                                                             ))
+                            preambule_whole += (template_preambule_pl.
+                                                format(ecosw=params_whole[planet_name]["ecosw"],
+                                                       esinw=params_whole[planet_name]["esinw"],
+                                                       tic=params_whole[planet_name]["tic"],
+                                                       cosinc=params_whole[planet_name]["cosinc"],
+                                                       P=params_whole[planet_name]["P"],
+                                                       Rrat=params_whole[planet_name]["Rrat"],
+                                                       aR=params_whole[planet_name]["aR"],
+                                                       a=params_whole[planet_name]["a"],
+                                                       u1=params_whole[planet_name]["u1"],
+                                                       u2=params_whole[planet_name]["u2"],
+                                                       xi=params_whole[planet_name]["xi"],
+                                                       deltaT=params_whole[planet_name]["deltaT"],
+                                                       Tn=params_whole[planet_name]["Tn"],
+                                                       rhostar=star_param_text[star.Teff.get_name()][key_whole],
+                                                       Ts=star_param_text[star.Teff.get_name()][key_whole],
+                                                       # ltime_vec=l_time_vec, time_vec=time_vec,
+                                                       tab=tab
+                                                       ))
+                            done_preambule4instmodel.append(instmod_name)
+                        ####################################################
+                        # Produce the template for phase curve model returns
+                        ####################################################
+                        if multi:
+                            template_return_pl = (f"{params_pl_inst}.lightcurve({{ltime_vec}}[{ii}]{lightcurve_kwargs}) - 1 ")
+                        else:
+                            template_return_pl = (f"{params_pl_inst}.lightcurve({{time_vec}}{lightcurve_kwargs}) - 1 ")
+                        ##########################################################################################################
+                        # Fill the template for phase curve model returns for the different function planet, planet only and whole
+                        ##########################################################################################################
+                        # No need for case for same reason than above
+                        ret_pl = template_return_pl.format(ltime_vec=l_time_vec, ii=ii, time_vec=time_vec)
+                        if kk == 0:
+                            l_return_pl[planet_name].append(ret_pl)
+                            l_return_pl_only[planet_name].append(ret_pl)
+                            if jj == 0:
+                                l_return_whole.append(ret_pl)
+                        else:
+                            l_return_pl[planet_name] += "+ " + ret_pl
+                            l_return_pl_only[planet_name] += "+ " + ret_pl
+                            l_return_whole[ii] += "+ " + ret_pl
+                else:
+                    raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
+            else:
+                raise NotImplementedError(f"phasecurve model {pc_model} is not implemented.")
+    return (preambule_pl, preambule_pl_only, preambule_whole,
+            l_return_pl, l_return_pl_only, l_return_whole,
+            )
+
+
+def get_planet_inst_dst_ext(planet, inst_model, multi):
+    if multi:
+        sp_param_ext = f"_{planet.get_name()}_{inst_model.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})}"
+    else:
+        sp_param_ext = f"_{planet.get_name()}"
+    return sp_param_ext

@@ -618,7 +618,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, IndicatorM
             if phasecurve_model[self._key_allinst_dict_LC_models][0]['model'] not in self._phasecurve_models:
                 raise ValueError(f"In file {self.paramfile4instcat[LC_inst_cat]}: {phasecurve_model[{self._key_allinst_dict_LC_models}][0]['model']} is not an available phasecurve model.")
             if phasecurve_model[self._key_allinst_dict_LC_models][0]['model'] == "spiderman":
-                l_arg_mand_sp = ["ModelParams_kwargs", "attributes"]
+                l_arg_mand_sp = ["ModelParams_kwargs", "attributes", "lightcurve_kwargs"]
                 if not(set(l_arg_mand_sp) == set(phasecurve_model[self._key_allinst_dict_LC_models][0]['args'].keys())):
                     raise ValueError(f"In file {self.paramfile4instcat[LC_inst_cat]}: the keys of phasecurve_model[{self._key_allinst_dict_LC_models}][0]['args'] should be {l_arg_mand_sp}.")
                 if not("brightness_model" in phasecurve_model[self._key_allinst_dict_LC_models][0]['args']['ModelParams_kwargs']):
