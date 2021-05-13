@@ -1623,7 +1623,7 @@ def acceptancefraction_selection(acceptance_fraction, sig_fact=3., quantile=75, 
         ax[1].set_xlim(xlims)
         ax[1].set_xlabel("Acceptance fraction [%]")
         ax[1].set_ylabel("CDF")
-        ax[1].set_title(f"Cumulative histogram of the acceptance fraction (normalized)")
+        ax[1].set_title("Cumulative histogram of the acceptance fraction (normalized)")
         fig.tight_layout()
     nb_rejected = acceptance_fraction.shape[0] - len(l_selected_walker)
     if verbose == 1:
@@ -1693,7 +1693,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
         ax[1].set_ylim(ylims)
         ax[1].set_xlim(xlims)
         ax[1].set_ylabel("CDF")
-        ax[1].set_title(f"Cumulative histogram of the lnposterior fraction (normalized)")
+        ax[1].set_title("Cumulative histogram of the lnposterior fraction (normalized)")
         fig.tight_layout()
     l_selected_walker = where(walkers_percentile_lnposterior > threshold)[0]
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
@@ -2238,7 +2238,7 @@ def load_chains_secondary(obj_name, extension_analysis="", folder=None):
         folder = getcwd()
 
     # load df_fittedval from a pickle
-    file_chainsecpars = "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)
+    file_chainsecpars = "{}{}{}.pk".format(obj_name, extension_pickle["chain_sec_params"], extension_analysis)
     if isfile(join(folder, file_chainsecpars)):
         with open(join(folder, file_chainsecpars), "rb") as fchainsecpar:
             chainIsec = load(fchainsecpar)
