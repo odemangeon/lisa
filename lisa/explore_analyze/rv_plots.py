@@ -10,7 +10,7 @@ import numpy as np
 from copy import deepcopy, copy
 from collections import OrderedDict, defaultdict
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
-from matplotlib.ticker import AutoMinorLocator
+from matplotlib.ticker import AutoMinorLocator, ScalarFormatter, FuncFormatter
 from PyAstronomy.pyasl import foldAt
 from scipy.stats import binned_statistic
 
@@ -43,7 +43,7 @@ mgr_inst_dst.load_setup()
 
 # Formatter for the Ticks major of the period axis
 sf = ScalarFormatter(useOffset=False, useMathText=True)
-sci_not_str = lambda x, pos : f"${sf._formatSciNotation('%1.10e' % x)}$"
+sci_not_str = lambda x, pos: f"${sf._formatSciNotation('%1.10e' % x)}$"
 fmt_sci_not = FuncFormatter(sci_not_str)
 
 
