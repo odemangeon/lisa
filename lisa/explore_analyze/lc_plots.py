@@ -99,7 +99,14 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
                 allows to provide different pad_data for different planets.
             - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+            - 'indicate_y_outliers_data': boolean. If True, data outliers (outside of the plot) are indicated
+                by arrows.
+            - 'indicate_y_outliers_resi': boolean. If True, residuals outliers (outside of the plot) are indicated
+                by arrows.
             - 'fontsize' : Int specifiying the fontsize
+            - 'phasefold_central_phase': float between 0 and 1 which specify the central phase for the phase folding.
+                For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
+                between 0 and 1.
             - 'x_lims': dictionary with for possible keys "all" or any of the planet names. The values are
                tuples giving the minimum and maximum phases or time from mid-transit (depending on show_time_from_tic)
                for all planets or a specific ones. If show_time_from_tic is True than the provided times
@@ -145,14 +152,14 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         dico_nb_dstperinst[filename_info["inst_name"]] += 1
-        # Remove 1 if needed
-        if remove1:
-            dico_kwargs[datasetname]["data"] -= 1.
-        # apply the RV fact to RV and RV_err
-        if (LC_fact != 1.) and not(remove1):
-            LC_fact = 1.
-        dico_kwargs[datasetname]["data"] *= LC_fact
-        dico_kwargs[datasetname]["data_err"] *= LC_fact
+        # # Remove 1 if needed
+        # if remove1:
+        #     dico_kwargs[datasetname]["data"] -= 1.
+        # # apply the RV fact to LC and LC_err
+        # if (LC_fact != 1.) and not(remove1):
+        #     LC_fact = 1.
+        # dico_kwargs[datasetname]["data"] *= LC_fact
+        # dico_kwargs[datasetname]["data_err"] *= LC_fact
 
     ###################
     # Plots preparation
@@ -164,8 +171,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
-    system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-    fig.suptitle(f"{system_name} system", fontsize=fontsize)
+    if show_system_name_in_suptitle:
+        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
+        fig.suptitle(f"{system_name} system", fontsize=fontsize)
 
     # Create the gridspec
     if fig_param is None:
@@ -292,6 +300,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 anchored_text_inst.set_alpha(0.5)
                 axes_data[datasetname][jj].add_artist(anchored_text_inst)
 
+    phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
+
     # Number of point for plotting the model
     npt_model = 5000
 
@@ -311,7 +321,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         x_min_data = np.inf
         x_max_data = -np.inf
         for datasetname in datasetnames:
-            phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per / 2)) - 0.5)
+            phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
             x_values[datasetname] = phases_dst * Per * time_fact if show_time_from_tic else phases_dst
             if np.min(x_values[datasetname]) < x_min_data:
                 x_min_data = np.min(x_values[datasetname])
@@ -326,34 +336,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         # Define t and phase min and max for plotting the model
         tmin_model = tc + x_min_data if show_time_from_tic else tc + Per * x_min_data
         tmax_model = tc + x_max_data if show_time_from_tic else tc + Per * x_max_data
-
-        ##############################################
-        # Apply the jitter to the data error if needed
-        ##############################################
-        data_err_jitter = OrderedDict()
-        dico_jitter = {}
-        for datasetname in datasetnames:
-            dico_jitter[datasetname] = {}
-            data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
-            inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
-            inst_mod = post_instance.model.instruments[inst_mod_fullname]
-            noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-            if noise_model.has_jitter:
-                dico_jitter[datasetname]["type"] = noise_model.jitter_type
-                if inst_mod.jitter.free:
-                    dico_jitter[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"] * LC_fact
-                else:
-                    dico_jitter[datasetname]["value"] = inst_mod.jitter.value
-                if dico_jitter[datasetname]["type"] == "multi":
-                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-                elif dico_jitter[datasetname]["type"] == "add":
-                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-                else:
-                    raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
-            else:
-                dico_jitter[datasetname]["type"] = None
-                dico_jitter[datasetname]["value"] = None
-                data_err_jitter[datasetname] = None
 
         ###################
         # Load OOT_var info
@@ -375,15 +357,44 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     OOT_var[datasetname] += OOT_var_paramvalue * (dico_kwargs[datasetname]["t"] -
                                                                   dico_kwargs[datasetname]["tref"])**order
                 # Apply RV_fact to deltaRV
-                OOT_var[datasetname] *= LC_fact
+                # OOT_var[datasetname] *= LC_fact
             else:
                 OOT_var[datasetname] = None
+
+        ##############################################
+        # Apply the jitter to the data error if needed
+        ##############################################
+        data_err_jitter = OrderedDict()
+        dico_jitter = {}
+        for datasetname in datasetnames:
+            dico_jitter[datasetname] = {}
+            data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+            inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+            inst_mod = post_instance.model.instruments[inst_mod_fullname]
+            noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+            if noise_model.has_jitter:
+                dico_jitter[datasetname]["type"] = noise_model.jitter_type
+                if inst_mod.jitter.free:
+                    dico_jitter[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]  # * LC_fact
+                else:
+                    dico_jitter[datasetname]["value"] = inst_mod.jitter.value
+                if dico_jitter[datasetname]["type"] == "multi":
+                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
+                elif dico_jitter[datasetname]["type"] == "add":
+                    data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
+                else:
+                    raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+            else:
+                dico_jitter[datasetname]["type"] = None
+                dico_jitter[datasetname]["value"] = None
+                data_err_jitter[datasetname] = None
 
         ###############
         # Plot the data
         ###############
         data_pl = OrderedDict()
         for datasetname in datasetnames:
+            # import pdb; pdb.set_trace()
             # The data to plot for a planet and an instrument are the raw data to which you substract
             # the other planet contributions adn the OOT var
 
@@ -398,21 +409,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             # Init data_pl
             data_pl[datasetname] = dico_kwargs[datasetname]["data"]
 
-            # Remove the OOT_var
-            if OOT_var[datasetname] is not None:
-                data_pl[datasetname] -= OOT_var[datasetname]
-
-            # Remove GP model
-            if remove_GP:
-                (_, _, GP_pred, GP_pred_var
-                 ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
-                                                 l_param_name=list(df_fittedval.index), key_obj="whole", datasim_kwargs=kwargs_dataset
-                                                 )
-                if GP_pred is not None:
-                    GP_pred *= LC_fact
-                    # Correct data from GP pred
-                    data_pl[datasetname] -= GP_pred
-
             # Compute and remove the other planet contribution
             for plnt in all_planets:
                 if plnt == planet_name:
@@ -423,18 +419,45 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                      l_param_name=list(df_fittedval.index), key_obj=f"{plnt}_only", datasim_kwargs=kwargs_dataset
                                                      )
                     # Apply RV_fact to models, model planet only has an out of transit level of 0
-                    model_pl_only *= LC_fact
+                    # model_pl_only *= LC_fact
                     data_pl[datasetname] = data_pl[datasetname] - model_pl_only
+
+            # Remove the OOT_var
+            if OOT_var[datasetname] is not None:
+                data_pl[datasetname] /= (1 + OOT_var[datasetname])
+
+            # Remove GP model
+            if remove_GP:
+                (_, _, GP_pred, GP_pred_var
+                 ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
+                                                 l_param_name=list(df_fittedval.index), key_obj="whole", datasim_kwargs=kwargs_dataset
+                                                 )
+                if GP_pred is not None:
+                    # GP_pred *= LC_fact
+                    # Correct data from GP pred
+                    data_pl[datasetname] -= GP_pred
 
             # Plot the data
             if pl_show_error[datasetname]["data"]:
                 data_err = dico_kwargs[datasetname]["data_err"]
+                data_err *= LC_fact
             else:
                 data_err = None
+
+            # Remove 1 if needed
+            if remove1:
+                # dico_kwargs[datasetname]["data"] -= 1.
+                data_pl[datasetname] -= 1
+            # apply the RV fact to LC and LC_err
+            if (LC_fact != 1.) and not(remove1):
+                LC_fact = 1.
+            data_pl[datasetname] *= LC_fact
+            data_err_jitter[datasetname] *= LC_fact
+
             ebcont, _, _ = et.plot_phase_folded_timeserie(t_data=dico_kwargs[datasetname]["t"],
                                                           data=data_pl[datasetname],
                                                           data_err=data_err,
-                                                          Per=Per, tref=tc,
+                                                          Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                           show_time_from_tref=show_time_from_tic, time_fact=time_fact,
                                                           ax=axes_data[datasetname][jj],
                                                           pl_kwargs=pl_kwarg_final[datasetname]["data"],
@@ -448,7 +471,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                               data=data_pl[datasetname],
                                                               data_err=data_err_jitter[datasetname],
                                                               only_errorbar=True,
-                                                              Per=Per, tref=tc,
+                                                              Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                               show_time_from_tref=show_time_from_tic, time_fact=time_fact,
                                                               ax=axes_data[datasetname][jj],
                                                               pl_kwargs=pl_kwarg_jitter[datasetname]["data"],
@@ -465,9 +488,10 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     pad_data = pad_data_content
             et.auto_y_lims(data_pl[datasetname], axes_data[datasetname][jj], pad=pad_data)
             # Indicate values that are off y-axis with anarrows
-            et.indicate_y_outliers(x=x_values[datasetname], y=data_pl[datasetname], ax=axes_data[datasetname][jj],
-                                   color=pl_kwarg_final[datasetname]["data"]["color"],
-                                   alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
+            if fig_param.get("indicate_y_outliers_data", True):
+                et.indicate_y_outliers(x=x_values[datasetname], y=data_pl[datasetname], ax=axes_data[datasetname][jj],
+                                       color=pl_kwarg_final[datasetname]["data"]["color"],
+                                       alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
 
         ################
         # Plot the model
@@ -476,19 +500,36 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             key_obj = f"{planet_name}_only"
         else:
             key_obj = "whole"  # WARNING: There might be a problem with that if there happens to be a double transit at the times chosen for the model
+
         for datasetname in datasetnames:  # f"{planet_name}_only",  "whole"
             ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
                                                        dataset_name=datasetname, param=df_fittedval["value"],
                                                        l_param_name=list(df_fittedval.index), post_instance=post_instance,
                                                        key_obj=key_obj, datasim_kwargs=kwargs_dataset,
                                                        multiplication_factor=LC_fact,
-                                                       plot_phase=True, Per=Per, tref=tc,
+                                                       plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                        show_time_from_tref=show_time_from_tic, time_fact=time_fact,
                                                        pl_kwargs_model=pl_kwarg_final[datasetname]["model"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["model"],
                                                        show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
                                                        ax=axes_data[datasetname][jj])
             if not("color" in pl_kwarg_final[datasetname]["model"]):
                 pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
+
+            # Plot binned model  f"{planet_name}_only"
+            if show_binned_model:
+                ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
+                                                           dataset_name=datasetname, param=df_fittedval["value"],
+                                                           l_param_name=list(df_fittedval.index), post_instance=post_instance,
+                                                           key_obj=key_obj, datasim_kwargs=kwargs_dataset,
+                                                           multiplication_factor=LC_fact,
+                                                           supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                           plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
+                                                           show_time_from_tref=show_time_from_tic, time_fact=time_fact,
+                                                           pl_kwargs_model=pl_kwarg_final[datasetname]["modelbinned"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["modelbinned"],
+                                                           show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
+                                                           ax=axes_data[datasetname][jj])
+            if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
+                pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
 
         #################################
         # Plot the residuals of the model
@@ -501,7 +542,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
              ) = et.plot_residuals(dataset_name=datasetname, param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
                                    post_instance=post_instance, key_obj="whole", datasim_kwargs=kwargs_dataset,
                                    multiplication_factor=LC_fact,
-                                   plot_phase=True, Per=Per, tref=tc,
+                                   plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                    show_time_from_tref=show_time_from_tic, time_fact=time_fact,
                                    pl_kwargs_model=pl_kwarg_final[datasetname]["data"], show_model=not(remove_GP),
                                    show_error_model=pl_show_error[datasetname]["data"],
@@ -525,14 +566,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     pad_resi = pad_resi_content
             et.auto_y_lims(np.concatenate(y_residuals_all[datasetname]), axes_resi[datasetname][jj], pad=pad_resi)
             # Indicate values that are off y-axis with arrows
-            if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
-                et.indicate_y_outliers(x=x_values[datasetname], y=residual_pl[datasetname], ax=axes_resi[datasetname][jj],
-                                       color=pl_kwarg_final[datasetname]["data"]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
-            else:
-                et.indicate_y_outliers(x=x_values[datasetname], y=residual_wGP_pl[datasetname], ax=axes_resi[datasetname][jj],
-                                       color=pl_kwarg_final[datasetname]["data"]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
+            if fig_param.get("indicate_y_outliers_resi", True):
+                if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
+                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_pl[datasetname], ax=axes_resi[datasetname][jj],
+                                           color=pl_kwarg_final[datasetname]["data"]["color"],
+                                           alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
+                else:
+                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_wGP_pl[datasetname], ax=axes_resi[datasetname][jj],
+                                           color=pl_kwarg_final[datasetname]["data"]["color"],
+                                           alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
             # Compute rms of the residuals and print it on the top of the residuals graphs
             rms_format = fig_param.get("rms_format", ".1e")
             text_rms = f"{{:{rms_format}}}"
@@ -554,8 +596,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 bins[datasetname] = np.arange(x_min_data, x_max_data + bin_size, bin_size)
                 midbins[datasetname] = bins[datasetname][:-1] + bin_size / 2
                 # Bin the data and residuals
-                binval[datasetname] = {}
-                binval_resi[datasetname] = {}
+                # import pdb; pdb.set_trace()
+                # binval[datasetname] = {}
+                # binval_resi[datasetname] = {}
                 (binval[datasetname], binedges, binnb
                  ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
                                       statistic=binning_stat, bins=bins[datasetname],
@@ -590,7 +633,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 # Plot the binned data
                 if pl_show_error[datasetname]["databinned"]:
                     bin_err = binstd[datasetname]
-
+                    bin_err *= LC_fact
                 else:
                     bin_err = None
                 ebcont_binned = axes_data[datasetname][jj].errorbar(midbins[datasetname], binval[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
@@ -615,21 +658,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][jj],
                                        color=pl_kwarg_final[datasetname]["databinned"]["color"],
                                        alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
-                # Plot binned model  f"{planet_name}_only"
-                if show_binned_model:
-                    ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
-                                                               dataset_name=datasetname, param=df_fittedval["value"],
-                                                               l_param_name=list(df_fittedval.index), post_instance=post_instance,
-                                                               key_obj=key_obj, datasim_kwargs=kwargs_dataset,
-                                                               multiplication_factor=LC_fact,
-                                                               supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                                               plot_phase=True, Per=Per, tref=tc,
-                                                               show_time_from_tref=show_time_from_tic, time_fact=time_fact,
-                                                               pl_kwargs_model=pl_kwarg_final[datasetname]["modelbinned"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["modelbinned"],
-                                                               show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
-                                                               ax=axes_data[datasetname][jj])
-                if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
-                    pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
 
         ###########
         # Write rms

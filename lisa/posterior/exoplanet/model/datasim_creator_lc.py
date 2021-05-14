@@ -891,7 +891,7 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                                 l_oot_var[ii] += (" * ({time} - {timeref})**{order}"
                                                   "".format(order=order, time=time_vec_name,
                                                             timeref=timeref_name))
-                    # If the is no contribution to the oot of transit variation from this order
+                    # If the is no contribution to the oot of transit variation from this order or order == 0
                     # add only a space.
                     elif value_not0 and order == 0:
                         l_oot_var[ii] += " "

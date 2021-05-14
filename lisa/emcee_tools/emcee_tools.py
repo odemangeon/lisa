@@ -929,7 +929,7 @@ def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name
 
 def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance, key_obj=None, datasim_kwargs=None,
                multiplication_factor=1., supersamp=1, exptime=exptime_Kepler,
-               plot_phase=False, Per=None, tref=None, show_time_from_tref=False, time_fact=24,
+               plot_phase=False, Per=None, tref=None, phasefold_central_phase=0., show_time_from_tref=False, time_fact=24,
                pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True, force_plot_phase_GP=False,
                ax=None):
     """Plot the model.
@@ -966,6 +966,10 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         Period for the phase folding
     tref                  : float
         Reference time for the phase folding
+    phasefold_central_phase: float
+        Central orbital phase value (between 0 and 1) which specify the center for the phase folding.
+        For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
+        between 0 and 1.
     show_time_from_tref   : bool
         If True than the phase folded light curve are show as a function of the time from tref.
         Only considered if plot_phase is True.
@@ -1023,7 +1027,7 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         kwarg_model.update(pl_kwargs_model)
     # Plot the model
     if plot_phase:
-        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref,
+        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref, phasefold_central_phase=phasefold_central_phase,
                                                    show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                    ax=ax, pl_kwargs=kwarg_model)
     else:
@@ -1038,7 +1042,7 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
         if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref,
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
                                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            ax=ax, pl_kwargs=kwarg_GP)
         else:
@@ -1057,7 +1061,7 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
 def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=None,
                    datasim_kwargs=None, multiplication_factor=1.,
                    supersamp=1, exptime=exptime_Kepler, bin_size=0.,
-                   plot_phase=False, Per=None, tref=None, show_time_from_tref=False, time_fact=24,
+                   plot_phase=False, Per=None, tref=None, phasefold_central_phase=0., show_time_from_tref=False, time_fact=24,
                    zoom=None,
                    pl_kwargs_model=None, show_model=True, show_error_model=True,
                    pl_kwargs_modelandGP=None, show_modelandGP=True, show_error_modelandGP=True,
@@ -1092,6 +1096,10 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         Period for the phase folding
     tref                  : float
         Reference time for the phase folding
+    phasefold_central_phase: float
+        Central orbital phase value (between 0 and 1) which specify the center for the phase folding.
+        For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
+        between 0 and 1.
     show_time_from_tref   : bool
         If True than the phase folded light curve are show as a function of the time from tref.
         Only considered if plot_phase is True.
@@ -1224,13 +1232,15 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
             if bin_size > 0.:
                 raise NotImplementedError
             else:
-                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_model,
+                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, phasefold_central_phase=phasefold_central_phase,
+                                                           data_err=data_err_model,
                                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
             if noisemod_sublcass.has_jitter:
                 if not("ecolor" in kwarg_model_jitter):
                     kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual, Per, tref, data_err=data_err_new_model, only_errorbar=True,
+                plot_phase_folded_timeserie(t_data, residual, Per, tref, phasefold_central_phase=phasefold_central_phase,
+                                            data_err=data_err_new_model, only_errorbar=True,
                                             show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                             zoom=zoom, ax=ax, pl_kwargs=kwarg_model_jitter)
             residual_out = residual
@@ -1291,13 +1301,15 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
             data_err_modelandGP = None
             data_err_new_modelandGP = None
         if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_modelandGP,
+            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
+                                                           data_err=data_err_modelandGP,
                                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
             if noisemod_sublcass.has_jitter:
                 if not("ecolor" in kwarg_GP_jitter):
                     kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, data_err=data_err_new_modelandGP, only_errorbar=True,
+                plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
+                                            data_err=data_err_new_modelandGP, only_errorbar=True,
                                             show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                             zoom=zoom, ax=ax, pl_kwargs=kwarg_GP_jitter)
         else:
@@ -1378,7 +1390,7 @@ def apply_zoom(zoom, base_array, arrays=None):
     return zoomed_arrays, idx_zoom
 
 
-def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_errorbar=False,
+def plot_phase_folded_timeserie(t_data, data, Per, tref, phasefold_central_phase=0., data_err=None, only_errorbar=False,
                                 show_time_from_tref=False, time_fact=24,
                                 zoom=None, ax=None, pl_kwargs=None, auto_ylims=False, auto_ylims_kwargs=None):
     """Plot a phase folded representation of a time series.
@@ -1395,6 +1407,10 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_err
         Period of the planet
     tref: float
         Time of inferior conjuction of the planet
+    phasefold_central_phase: float
+        Central orbital phase value (between 0 and 1) which specify the center for the phase folding.
+        For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
+        between 0 and 1.
     data_err : array_float
         data error array
     only_errorbar : Bool
@@ -1432,7 +1448,7 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, data_err=None, only_err
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t_data, Per, T0=(tref + Per / 2)) - 0.5
+    phases = foldAt(t_data, Per, T0=(tref + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5)
     # Sort with respect to phase
     sortIndi = argsort(phases)
     # If data error provided

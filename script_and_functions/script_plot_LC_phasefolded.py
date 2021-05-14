@@ -59,7 +59,7 @@ if load_from_pickle:
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=True)
 
 create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=kwargs_datasim,
-                            planets=planets, star_name="A", datasetnames=None,
+                            planets=planets, star_name="A", datasetnames=datasetnames,
                             remove_GP=False, remove1=True, LC_fact=1e6,
                             exptime_bin=5 / 60 / 24, binning_stat="mean", supersamp_bin_model=5, show_binned_model=False,
                             show_time_from_tic=True, time_fact=24, time_unit="h",
