@@ -180,7 +180,8 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
         For a detailed docstring look at Core_NoiseModel.create_lnlikelihood_and_formatinputs
         """
-        lnlike_jitter, l_params_new, dico_params_noisemod, dico_idx_param_noisemod, dico_idx_datasim = cls.get_prefilledlnlike(l_params=l_likelihood_param_fullname, model_instance=model_instance, l_instmod_obj=l_instmod_obj, l_idx_simdata=l_idx_simdata)
+        (lnlike_jitter, l_params_new, dico_params_noisemod, dico_idx_param_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj
+         ) = cls.get_prefilledlnlike(l_params=l_likelihood_param_fullname, model_instance=model_instance, l_instmod_obj=l_instmod_obj, l_idx_simdata=l_idx_simdata)
 
         def f_format_param(param_likelihood):
             return {stelact_mod_name: param_likelihood[idx_param_stelact_mod] for stelact_mod_name, idx_param_stelact_mod in dico_idx_param_noisemod.items()}
@@ -192,7 +193,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             def f_format_simdata(sim_data):
                 return {stelact_mod_name: [sim_data, ] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
 
-        dataset_kwargs = {stelact_mod_name: [cls.get_necessary_datakwargs(l_dataset_obj[ii]) for ii in idx_simdata_stelact_mod] for stelact_mod_name, idx_simdata_stelact_mod in dico_idx_datasim.items()}
+        dataset_kwargs = {stelact_mod_name: [cls.get_necessary_datakwargs(l_dataset_obj[jj]) for jj in idexes_l_dataset_obj_stelact_mod] for stelact_mod_name, idexes_l_dataset_obj_stelact_mod in dico_idx_l_dataset_obj.items()}
 
         return lnlike_jitter, f_format_param, f_format_simdata, dataset_kwargs, l_params_new
 
@@ -230,20 +231,27 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         dico_idx_datasim        :  Dictionary of list of Integer
             Dictionary giving the indexes of the simulated data in the full sim_data (output of the datasimulator associated with this likelihood) for stellar activity noise model
             keys : Stellar activity model names (as defined in the stellar activity parameter file)
-            values : List of the indexes of the simulated data in the full sim_data (output of the datasimulator associated with this likelihood) for stellar activity noise model
+            values : List of the indexes of the simulated data in the full sim_data (output of the datasimulator associated with this likelihood) for stellar activity noise model\
+        dico_idx_l_dataset_obj  :  Dictionary of list of Integer
+            Dictionary giving the indexes of the dataset_obj in the list of dataset object (l_dataset_obj) for stellar activity noise model
+            keys : Stellar activity model names (as defined in the stellar activity parameter file)
+            values : List of the indexes of the dataset_obj in the list of dataset object.
         """
         l_params_new = l_params.copy()
         # Go through the instrument models and sort them into stellar activity models
         dico_linstmodobj4stelactmodname = OrderedDict()
         dico_idx_datasim = {}
-        for ii, instmod_obj in zip(l_idx_simdata, l_instmod_obj):
+        dico_idx_l_dataset_obj = {}
+        for jj, (ii, instmod_obj) in enumerate(zip(l_idx_simdata, l_instmod_obj)):
             stelact_mod_name = model_instance.modelstelactname_4_instmodfullname[instmod_obj.full_name]  # modelstelactname_4_instmodfullname is defined in StellarActivityNoiseModelInterface
             if stelact_mod_name in dico_linstmodobj4stelactmodname:
                 dico_linstmodobj4stelactmodname[stelact_mod_name].append(instmod_obj)
                 dico_idx_datasim[stelact_mod_name].append(ii)
+                dico_idx_l_dataset_obj[stelact_mod_name].append(jj)
             else:
                 dico_linstmodobj4stelactmodname[stelact_mod_name] = [instmod_obj, ]
                 dico_idx_datasim[stelact_mod_name] = [ii, ]
+                dico_idx_l_dataset_obj[stelact_mod_name] = [jj, ]
 
         dico_func = {}
         dico_params_noisemod = {}
@@ -281,7 +289,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
                 res += dico_func[stelact_mod_name](sim_data[stelact_mod_name], param_noisemodel[stelact_mod_name], datasets_kwargs[stelact_mod_name])
             return res
 
-        return lnlike_allSANM, l_params_new, dico_params_noisemod, dico_idx_param_noisemod, dico_idx_datasim
+        return lnlike_allSANM, l_params_new, dico_params_noisemod, dico_idx_param_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj
 
     @classmethod
     def get_prefilledlnlike_1SANM(cls, l_params, l_params_noisemod, l_idx_param_noisemod, model_instance, l_instmod_obj, stelact_mod_name):
