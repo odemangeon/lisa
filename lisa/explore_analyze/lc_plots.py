@@ -171,8 +171,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
-    system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-    fig.suptitle(f"{system_name} system", fontsize=fontsize)
+    if show_system_name_in_suptitle:
+        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
+        fig.suptitle(f"{system_name} system", fontsize=fontsize)
 
     # Create the gridspec
     if fig_param is None:
@@ -320,7 +321,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         x_min_data = np.inf
         x_max_data = -np.inf
         for datasetname in datasetnames:
-            phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) - (phasefold_central_phase - 0.5))
+            phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
             x_values[datasetname] = phases_dst * Per * time_fact if show_time_from_tic else phases_dst
             if np.min(x_values[datasetname]) < x_min_data:
                 x_min_data = np.min(x_values[datasetname])
@@ -358,7 +359,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 # Apply RV_fact to deltaRV
                 # OOT_var[datasetname] *= LC_fact
             else:
-                OOT_var[datasetname] = 1
+                OOT_var[datasetname] = None
 
         ##############################################
         # Apply the jitter to the data error if needed
@@ -444,7 +445,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
             # Remove 1 if needed
             if remove1:
-                dico_kwargs[datasetname]["data"] -= 1.
+                # dico_kwargs[datasetname]["data"] -= 1.
+                data_pl[datasetname] -= 1
             # apply the RV fact to LC and LC_err
             if (LC_fact != 1.) and not(remove1):
                 LC_fact = 1.
@@ -593,8 +595,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 bins[datasetname] = np.arange(x_min_data, x_max_data + bin_size, bin_size)
                 midbins[datasetname] = bins[datasetname][:-1] + bin_size / 2
                 # Bin the data and residuals
-                binval[datasetname] = {}
-                binval_resi[datasetname] = {}
+                # binval[datasetname] = {}
+                # binval_resi[datasetname] = {}
                 (binval[datasetname], binedges, binnb
                  ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
                                       statistic=binning_stat, bins=bins[datasetname],

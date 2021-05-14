@@ -1446,7 +1446,7 @@ def plot_phase_folded_timeserie(t_data, data, Per, tref, phasefold_central_phase
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
     # Obtain the phases with respect to some ephemerid P and tc
-    phases = foldAt(t_data, Per, T0=(tref + Per * (phasefold_central_phase - 0.5))) - (phasefold_central_phase - 0.5)
+    phases = foldAt(t_data, Per, T0=(tref + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5)
     # Sort with respect to phase
     sortIndi = argsort(phases)
     # If data error provided
