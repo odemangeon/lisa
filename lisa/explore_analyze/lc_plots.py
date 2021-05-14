@@ -394,7 +394,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         ###############
         data_pl = OrderedDict()
         for datasetname in datasetnames:
-            # import pdb; pdb.set_trace()
             # The data to plot for a planet and an instrument are the raw data to which you substract
             # the other planet contributions adn the OOT var
 
@@ -596,7 +595,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 bins[datasetname] = np.arange(x_min_data, x_max_data + bin_size, bin_size)
                 midbins[datasetname] = bins[datasetname][:-1] + bin_size / 2
                 # Bin the data and residuals
-                # import pdb; pdb.set_trace()
                 # binval[datasetname] = {}
                 # binval_resi[datasetname] = {}
                 (binval[datasetname], binedges, binnb
