@@ -188,10 +188,10 @@ if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -215,10 +215,10 @@ if do_AFS:
     pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -246,10 +246,10 @@ if do_LPS:
     pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -273,10 +273,10 @@ if do_AFSLPSP:
                 "".format((nwalker - len(l_walker)), nwalker))
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -349,10 +349,10 @@ if do_GS:
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist and do_hist_after_geweke:
@@ -373,10 +373,10 @@ if do_GS:
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin, suppress_burnin=True)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 else:
     l_walker_conv = l_walker
@@ -389,10 +389,10 @@ else:
         if do_traces:
             et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                            l_burnin=l_burnin, suppress_burnin=True)
-        if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
-        else:
-            pl.show()
+            if save_plots:
+                pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+            else:
+                pl.show()
 
 # Parameter based walker selection
 if do_PS:
@@ -436,13 +436,13 @@ if save_walkersandburnins:
 
 if do_bestfit:
     logger.info("6. Determine best fit values and error bars for main parameters")
-    fitted_values = et.get_fitted_values(chainI, method=method_bestfit, l_param_name=l_param_chainI,
-                                         l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                         lnprobability_name=lnprobability_name)
+    fitted_values, _ = et.get_fitted_values(chainI, method=method_bestfit, l_param_name=l_param_chainI,
+                                            l_walker=l_walker_PS, l_burnin=l_burnin_PS,
+                                            lnprobability_name=lnprobability_name)
 
-    sigma_p, _, sigma_m = da.getconfi(et.get_clean_flatchain(chainI, l_walker=l_walker_PS,
-                                                             l_burnin=l_burnin_PS),
-                                      level=1, centre=fitted_values, l_param_name=l_param_chainI)
+    sigma_p, _, sigma_m, _ = da.getconfi(et.get_clean_flatchain(chainI, l_walker=l_walker_PS,
+                                                                l_burnin=l_burnin_PS),
+                                         level=1, centre=fitted_values, l_param_name=l_param_chainI)
 
     df_fittedval = pd.DataFrame(index=l_param_chainI, data={'value': fitted_values, 'sigma-': sigma_m,
                                                             'sigma+': sigma_p})
@@ -532,19 +532,19 @@ if do_SecParam:
     logger.info("Plot raw traces for secondary parameters")
     if do_traces:
         et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     logger.info("Plot geweke select traces for secondary parameters")
     if do_traces:
         et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     logger.info("Determine best fit values and error bars for secondary parameters")
