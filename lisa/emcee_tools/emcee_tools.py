@@ -1774,7 +1774,7 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     if verbose == 1:
         l_param_names = __get_default_l_param_name(l_param_name_out, len(l_param_name_out))
         text = "\n"
-        for i, param_name in enumerate(l_param_name_out):
+        for i, param_name in enumerate(l_param_names):
             text += "{} = {}\n".format(param_name, res[i])
         logger.info(text)
     return res, l_param_name_out
