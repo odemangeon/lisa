@@ -548,10 +548,10 @@ if do_SecParam:
     pl.close("all")
 
     logger.info("Determine best fit values and error bars for secondary parameters")
-    fitted_values_sec = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
+    fitted_values_sec, _ = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
                                              l_walker=l_walker_PS, l_burnin=l_burnin_PS,
                                              lnprobability_name=lnprobability_name, force_finite=force_finite)
-    sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
+    sigma_p_sec, _, sigma_m_sec, _ = da.getconfi(et.get_clean_flatchain(chainIsec,
                                                                      l_walker=l_walker_PS,
                                                                      l_burnin=l_burnin_PS, force_finite=force_finite),
                                               level=1, centre=fitted_values_sec,
