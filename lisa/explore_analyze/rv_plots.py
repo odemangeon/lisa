@@ -771,6 +771,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
             - 'freq_lims_zoom': None or Iterable of 2 float (Def: None)
                 If provided a zoom on the right of the main plot will be drawn.
                 This gives the beginning and end time for the zoom
+            - 'scientific_notation_P_axis': boolean (default: True)
+                If True the tick label on the period axis are in scientific notations
             - 'period_no_ticklabels': list of int
                 list of decades to for which you don't want to show the tick label
             - 'period_no_ticklabels_zoom': list of int
@@ -1264,7 +1266,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                     per_ticks_minor.append(tick)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
-                    ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticks_major])
+                    if GLSP_kwargs.get('scientific_notation_P_axis', True):
+                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticklabels_major])
+                    else:
+                        ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
 
