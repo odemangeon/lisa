@@ -144,7 +144,6 @@ arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
 lnpriorfn = post_instance.lnpriors.dataset_db["all"].function
 lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
-sampler = EnsembleSampler(nwalkers=nwalkers, dim=ndim, lnpostfn=lnpostfn, kwargs=kwargs_post)
 
 logger.info("18. Create initial value")
 if load_from_pickle:
@@ -178,9 +177,9 @@ else:
     p1 = p0
 
 logger.info("19. Perform MCMC exploration")
-logger4emceerun = logger if cluster else None
-et.explore(sampler, p1, nsteps=nsteps_MCMC, save_to_file=save_to_file, filename_chain="{}_chain.dat".format(obj_name),
-           filename_acceptfrac="{}_acceptfrac.dat".format(obj_name), dat_folder=output_folders["dats"], l_param_name=l_param_name, logger=logger4emceerun)
+sampler = et.explore(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, p0=p1, nsteps=nsteps_MCMC, kwargs_prob_fn=kwargs_post,
+                     save_to_file=save_to_file, filename=f"{obj_name}_chain.h5", file_folder=output_folders["dats"],
+                     check_convergence_every=1000, ntau=100, tol=0.01, l_param_name=l_param_name)
 et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
 
 chain = sampler.chain

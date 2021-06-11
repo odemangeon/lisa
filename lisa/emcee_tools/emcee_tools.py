@@ -29,6 +29,7 @@ from os import makedirs, getcwd
 from os.path import isfile, join
 from pandas import read_table
 from corner import corner as corner_dfm
+import emcee
 
 # import pprint
 
@@ -184,9 +185,9 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     #     return np.asarray(p0).transpose()
 
 
-def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
-            filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
-            logger=None):
+def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
+               filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
+               logger=None):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -237,6 +238,63 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             pbar.update(i - previous_i)
             previous_i = i
         return result
+
+
+def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
+            save_to_file=False, filename="chain.h5", file_folder=None,
+            check_convergence_every=100, ntau=100, tol=0.01,
+            l_param_name=None):
+    """Perform an emcee exploration.
+
+    :param emcee.EnsembleSampler sampler: EnsembleSampler instance
+    :param array p0: Initial position for each walker and each parameter
+    :param bool save_to_file: If True the status of the chains are stored at each iteration in .dat files
+    :param str filename_chain: File name to use to save the chains (if save_to_file is True)
+    :param str filename_acceptfrac: File name to use to save the acceptance fraction of the chains (if save_to_file is True)
+    :param str dat_folder: Folder where the chain and acceptance fraction dat file will be (if save_to_file is True)
+    :param bool overwrite: If True already existing .dat files with the same names are automatically overwritten
+    :param list_of_str l_param_name: List of the parameter names
+    """
+    if save_to_file:
+        # Set up the backend
+        # Don't forget to clear it in case the file already exists
+        backend = emcee.backends.HDFBackend(join(file_folder, filename))
+        backend.reset(nwalkers, ndim)
+        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
+                                        backend=backend)
+    else:
+        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn)
+
+    if check_convergence_every > 0:
+        # We'll track how the average autocorrelation time estimate changes
+        index = 0
+        autocorr = np.empty(nsteps)
+
+        # This will be useful to testing convergence
+        old_tau = np.inf
+
+        # Now we'll sample for up to max_n steps
+        for sample in sampler.sample(p0, iterations=nsteps, progress=True):
+            # Only check convergence every 100 steps
+            if sampler.iteration % check_convergence_every:
+                continue
+
+            # Compute the autocorrelation time so far
+            # Using tol=0 means that we'll always get an estimate even
+            # if it isn't trustworthy
+            tau = sampler.get_autocorr_time(tol=0)
+            autocorr[index] = np.mean(tau)
+            index += 1
+
+            # Check convergence
+            converged = np.all(tau * ntau < sampler.iteration)
+            converged &= np.all(np.abs(old_tau - tau) / tau < tol)
+            if converged:
+                break
+            old_tau = tau
+    else:
+        sampler.run_mcmc(p0, nsteps, progress=True)
+    return sampler
 
 
 def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposterior"):
