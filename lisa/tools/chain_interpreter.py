@@ -13,7 +13,7 @@ from collections import Iterable, Counter
 class ChainsInterpret(np.ndarray):
 
     __err_shapeinput__ = "Shape of input_array should be <= 3."
-    __err_dimarrlparam__ = "Last dim of input_array have the same dimension than l_param_names."
+    __err_dimarrlparam__ = "Last dim of input_array must have the same dimension than l_param_names."
 
     def __new__(cls, input_array, param_names):
         # First, check if the size of the last dimension of input_array match the length of param_names

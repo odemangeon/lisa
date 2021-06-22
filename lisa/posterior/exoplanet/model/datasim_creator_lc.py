@@ -1304,8 +1304,90 @@ def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcon
     -------
 
     """
-    if phasecurve_model["instrument_variable"]:
-        raise NotImplementedError(f"instrument_variable = True is not currently implemented")
+    # Check if datasets are provided
+    has_dataset = get_has_datasets(l_dataset)
+    # Create the text for oot_var
+    l_oot_var = []
+    # For each instrument model and dataset, ...
+    for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
+        l_oot_var.append("")
+        # ..., if out of transit variation has been asked, ...
+        if instmdl.get_with_OOT_var():
+            # ..., For each order in the required polynomial model, ...
+            for order in range(instmdl.get_OOT_var_order() + 1):
+                # ..., get the name and full name of the parameter for this order
+                OOT_param_name = instmdl.get_OOT_param_name(order)
+                # ..., If this parameter is a main parameter (it should be), ...
+                if instmdl.parameters[OOT_param_name].main:
+                    value_not0 = True
+                    text_OOT_param = add_param_argument(param=instmdl.parameters[OOT_param_name],
+                                                        arg_list=arg_list, key_param=key_param, param_nb=param_nb,
+                                                        key_arglist=key_whole, param_vector_name=par_vec_name)[key_whole]
+                    # ..., if the parameter is free or the fixed value is not zero, ...
+                    if text_OOT_param != str(0.0):
+                        l_oot_var[ii] += "+ {}".format(text_OOT_param)
+                    # ..., else, since the fixed value is zero, this order doesn't have any
+                    # contribution
+                    else:
+                        value_not0 = False
+                    # ..., if the order has a contribution to the out of transit variation and
+                    # the considered order is more than 0 meaning the time plays a role, ...
+                    if value_not0 and order > 0:
+                        # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
+                        # no dataset is provided, ...
+                        if ((timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs]) and
+                            (l_timeref_name not in arg_list[key_whole][key_mand_kwargs] +
+                             arg_list[key_whole][key_opt_kwargs])):
+                            def get_time_ref(time):
+                                return time[0]
+                            (arguments, timeref_arg_name, timeref_arg
+                             ) = add_timeref_arguments(arguments=arguments, multi=multi, vect_for_multi=True,
+                                                       use_dataset=use_dataset_4_tref,
+                                                       arg_list=arg_list, key_arglist=key_whole,
+                                                       key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                                       ldict=ldict, has_dataset=has_dataset, get_time_ref=get_time_ref,
+                                                       time_ref_val=time_ref_val, l_dataset=l_dataset,
+                                                       timeref_name=timeref_name, l_timeref_name=l_timeref_name,
+                                                       time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name)
+                        # ..., add the end of this order's contribution to the text of the out of
+                        # transit variation, ...
+                        if order == 1:
+                            if multi:
+                                if l_time_vec_format is None:
+                                    l_time_ii = ("{ltimevec}[{ii}]"
+                                                 "".format(ltimevec=l_time_vec_name, ii=ii))
+                                else:
+                                    l_time_ii = l_time_vec_format.format(ii=ii)
+                                if l_timeref_format is None:
+                                    l_timeref_ii = ("{ltimeref}[{ii}]"
+                                                    "".format(ltimeref=l_timeref_name, ii=ii))
+                                else:
+                                    l_timeref_ii = l_timeref_format.format(ii=ii)
+                                l_oot_var[ii] += (" * ({l_time_ii} - {l_timeref_ii}) "
+                                                  "".format(ii=ii, l_time_ii=l_time_ii,
+                                                            l_timeref_ii=l_timeref_ii))
+                            else:
+                                l_oot_var[ii] += (" * ({time} - {timeref}) "
+                                                  "".format(time=time_vec_name,
+                                                            timeref=timeref_name))
+                        elif order > 1:
+                            if multi:
+                                l_time_ii = l_time_vec_format.format(ii=ii)
+                                l_timeref_ii = l_timeref_format.format(ii=ii)
+                                l_oot_var[ii] += (" * ({l_time_ii} - {l_timeref_ii})"
+                                                  "**{order}".format(order=order, ii=ii,
+                                                                     l_time_ii=l_time_ii,
+                                                                     l_timeref_ii=l_timeref_ii))
+                            else:
+                                l_oot_var[ii] += (" * ({time} - {timeref})**{order}"
+                                                  "".format(order=order, time=time_vec_name,
+                                                            timeref=timeref_name))
+                    # If the is no contribution to the oot of transit variation from this order or order == 0
+                    # add only a space.
+                    elif value_not0 and order == 0:
+                        l_oot_var[ii] += " "
+    return l_oot_var, arguments
 
     # dico to store_text for stellar params
     star_param_text = {}

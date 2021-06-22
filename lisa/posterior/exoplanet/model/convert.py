@@ -178,7 +178,7 @@ def getdurkip(per, inc, ar, ecc, omega):
     call getdurkip (per,  inc, ar, ecc, omega )
     """
     P = per * 24.  # change days to hours
-    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(omega))
+    corrfactor = (1. - ecc**2.) / (1. + ecc * np.sin(np.deg2rad(omega)))
     bb = getb(inc, ar, ecc, omega)
     tkip = (P * corrfactor**2. / (np.pi * np.sqrt(1. - ecc**2.)) *
             np.arcsin(np.sqrt(1. - bb**2.) / (corrfactor * ar * np.sin(np.deg2rad(inc)))))
@@ -379,7 +379,7 @@ def getcirctime(P, Ms, Rs, Mp, Rrat):
     """Return circulisation timescale in giga years
 
     TODO: Provide source for the formula
-    https://watermark.silverchair.com/mnras0376-0682.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAswwggLIBgkqhkiG9w0BBwagggK5MIICtQIBADCCAq4GCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMn_C7AO5zZ-orZiK6AgEQgIICf0wdI5nOWXm-eHUVAh1pgMPLuO7Q8D9issR8YJ1UfLmqv8O3aM4-Mo4fi9Wvoh63Whr12t1H8IvexsexjBfh7S6NM429WyBtMtNmCBHookEOn2mvODqrpslMg_rdSxntKH4pMGC4sc3J2Gu2Y7alvCh3lwLvYi4qwbfSQTFGdTbsl2zV7MJ_QmtPnkQt43ClSUJABFg48bb9Lk_ldUCNa_eUd3XVAtie2_U2ZKEIBwB5BS-83XnBgd9HK2aeLbhRDFysxF2ofFxgqLhBb7TgS0ONVgtrEz5l9OO3tyw5KJ5an4GXxzz9uJwoVYUJNMDvamasm5sWtT1IeFfXqUHWiEsF1F3hNQ8MZcS0vvOvVmnleG1BF2_Qy1A0MzNcriRr_uvkrwXiAb5j87y6_MC84kWAcyAhwd6DyyeYHIOUvQ5mvCpl53i8tTwulZ0H4lMHO_pwfuDu2mj7aEorWqMfYN2LxDlDp7zknEKoAuhkoAAMW91v6R-QQVm547-vuOS00QxlIeSMCANV45a23hKISssDdoxgpuMjzVyMjJqwKd2Z8lRuqVoZHthOHUf8K5QMFotytNhxPYhsCViFymWQpHGhB3zcog4g7TuXkzRzUrx0uqF0pLKTjjnQ-XV0eoEwAtvWRh5BBsEvI0NzVdGU-SeTL7hgwFtKpUm-vyeqATaSpTJb8WM-t6yCZiszadXxdnoiO6vsPEKFefoJyu3mnRrsMDNXuXxikuzaFFLDTflXJmHO8elbsSm7RV2DVX5sdAZyZX_VKicEhVnjL5Q-Jv7dJAtn7kfMGKH2Y0xY3riShv27aBVSmmyhz6QHZ0-GtLqo1xqilKQCPLI7jgQSnw
+    mnras0376-0682.pdf
     Ivanov & Papaloizou 2007 give a formula (108) which is slightly different
 
     This assumes the tidal factor to be 10^5 if it is 10^6 we need to multiply by 10.
@@ -1025,10 +1025,13 @@ def getE_4_f(f, ecc, positive=True):
     :return float/np.array ee: eccentric anomaly in radians
     """
     ee = 2 * np.arctan2(np.tan(f / 2) * np.sqrt((1 - ecc)), np.sqrt((1 + ecc)))  # eccentric anomaly
-    if ee < 0 and positive:
-        return 2 * np.pi + ee
+    if isinstance(ee, np.ndarray):
+        mask = np.logical_and(ee < 0, positive)
+        ee[mask] = 2 * np.pi + ee[mask]
     else:
-        return ee
+        if ee < 0 and positive:
+            ee += 2 * np.p
+    return ee
 
 
 def getE_4_f_fast(f, ecc):
@@ -1107,6 +1110,20 @@ def getMref_4_tic(tic, P, ecc, omega, t_ref=0.0):
         and between [0, 2pi]
     """
     return (getM_4_f(pi / 2 - omega, ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
+
+
+def getMref_4_tic_omegadeg(tic, P, ecc, omega, t_ref=0.0):
+    """Compute the mean anomaly at a given reference time from a time of inferior conjection.
+
+    :param float/np.array tic: Time of inferior conjunction after t_ref
+    :param float/np.array P: period
+    :param float/np.array ecc: eccentricity
+    :param float/np.array omega: argument of periastron in degrees
+    :param float/np.array t_ref: refrence time
+    :return float/np.array M_ref: Mean anomaly of the planet at the reference time (t_ref) in radians
+        and between [0, 2pi]
+    """
+    return (getM_4_f(pi / 2 - np.radians(omega), ecc, positive=True) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
 
 
 def getMref_4_tic_fast(tic, P, ecc, omega, t_ref=0.0):

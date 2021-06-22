@@ -184,6 +184,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="Tn", name_prefix=self.name, main=False, unit="K"))
         ## DeltaT: Day-night temperature contrast
         self.add_parameter(Parameter(name="deltaT", name_prefix=self.name, main=False, unit="K"))
+        ## Mref: Mean Anomaly at reference time
+        self.add_parameter(Parameter(name="Mref", name_prefix=self.name, main=False))
         ## transit times
         self.transit_times = {}
 

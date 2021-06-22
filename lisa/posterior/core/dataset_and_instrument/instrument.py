@@ -45,6 +45,8 @@ class Instrument_Model(Core_ParamContainer):
 
     __category__ = instrument_model_category
 
+    __instrument = None  # This is needed to be able to pickle the object. UnPickle doesn't call __init__ but call __getattr__ and self._parameters was only defined by __init__
+
     def __init__(self, instrument, name, noise_model=None, **kwargs):
         """Docstring of the Instrument_Model init method.
 
@@ -143,12 +145,14 @@ class Core_Instrument(Named, metaclass=Core_Instrument_metaclass):
         # Do the Named initialization
         super(Core_Instrument, self).__init__(name=name, prefix=name_prefix)
 
-        self.Instrument_Model = Instrument_Model
+        # self.Instrument_Model = Instrument_Model  # To be able to create instrument Models. Probably you can delete this line
+
         # IMPORTANT: THE INSTRUMENT CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
-        # Make Dataset an abstract class
+
+        # Make Core_Instrument an abstract class
         if type(self) is Core_Instrument:
-            raise NotImplementedError("Dataset should not be instanciated!")
+            raise NotImplementedError("Core_Instrument should not be instanciated!")
 
     @classmethod
     def validate_inst_cat(cls, inst_cat):
@@ -376,7 +380,7 @@ class Core_Instrument(Named, metaclass=Core_Instrument_metaclass):
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
         Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
-        return self.Instrument_Model(instrument=self, name=name, **kwargs)
+        return Instrument_Model(instrument=self, name=name, **kwargs)
 
 
 class Default_Instrument(Core_Instrument):

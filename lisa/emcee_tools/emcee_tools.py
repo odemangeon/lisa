@@ -13,6 +13,8 @@ from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argso
 from numpy import nanpercentile, newaxis, concatenate, std, atleast_1d
 from numbers import Number
 from collections import Iterable
+from statsmodels.stats.weightstats import DescrStatsW
+from copy import copy
 
 # from sys import stdout
 import matplotlib.gridspec as gridspec
@@ -27,6 +29,7 @@ from os import makedirs, getcwd
 from os.path import isfile, join
 from pandas import read_table
 from corner import corner as corner_dfm
+import emcee
 
 # import pprint
 
@@ -182,9 +185,9 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
     #     return np.asarray(p0).transpose()
 
 
-def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
-            filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
-            logger=None):
+def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
+               filename_acceptfrac="acceptfrac.dat", dat_folder=None, overwrite=None, l_param_name=None,
+               logger=None):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -235,6 +238,63 @@ def explore(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
             pbar.update(i - previous_i)
             previous_i = i
         return result
+
+
+def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
+            save_to_file=False, filename="chain.h5", file_folder=None,
+            check_convergence_every=100, ntau=100, tol=0.01,
+            l_param_name=None):
+    """Perform an emcee exploration.
+
+    :param emcee.EnsembleSampler sampler: EnsembleSampler instance
+    :param array p0: Initial position for each walker and each parameter
+    :param bool save_to_file: If True the status of the chains are stored at each iteration in .dat files
+    :param str filename_chain: File name to use to save the chains (if save_to_file is True)
+    :param str filename_acceptfrac: File name to use to save the acceptance fraction of the chains (if save_to_file is True)
+    :param str dat_folder: Folder where the chain and acceptance fraction dat file will be (if save_to_file is True)
+    :param bool overwrite: If True already existing .dat files with the same names are automatically overwritten
+    :param list_of_str l_param_name: List of the parameter names
+    """
+    if save_to_file:
+        # Set up the backend
+        # Don't forget to clear it in case the file already exists
+        backend = emcee.backends.HDFBackend(join(file_folder, filename))
+        backend.reset(nwalkers, ndim)
+        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
+                                        backend=backend)
+    else:
+        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn)
+
+    if check_convergence_every > 0:
+        # We'll track how the average autocorrelation time estimate changes
+        index = 0
+        autocorr = np.empty(nsteps)
+
+        # This will be useful to testing convergence
+        old_tau = np.inf
+
+        # Now we'll sample for up to max_n steps
+        for sample in sampler.sample(p0, iterations=nsteps, progress=True):
+            # Only check convergence every 100 steps
+            if sampler.iteration % check_convergence_every:
+                continue
+
+            # Compute the autocorrelation time so far
+            # Using tol=0 means that we'll always get an estimate even
+            # if it isn't trustworthy
+            tau = sampler.get_autocorr_time(tol=0)
+            autocorr[index] = np.mean(tau)
+            index += 1
+
+            # Check convergence
+            converged = np.all(tau * ntau < sampler.iteration)
+            converged &= np.all(np.abs(old_tau - tau) / tau < tol)
+            if converged:
+                break
+            old_tau = tau
+    else:
+        sampler.run_mcmc(p0, nsteps, progress=True)
+    return sampler
 
 
 def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposterior"):
@@ -1702,7 +1762,8 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     return l_selected_walker, nb_rejected
 
 
-def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None,
+def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None, iterations_indexes=None,
+                      weights_name=None,
                       lnprobability_name="lnposterior",
                       verbose=1, force_finite=True):
     """Return the fitted values from the sampler.
@@ -1716,6 +1777,13 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         list of valid walkers
     l_burnin           : Iterable of Int
         index of the first iteration to consider.
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
+    weights_name       : str
+        Name of the weights values in chainI
     lnprobability_name : str
         Name of the lnprobability values in chainI
     verbose            : int
@@ -1723,10 +1791,21 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
     force_finite       : Bool
         Passed on to get_clean_flatchain
     """
-    ndim = chainI.dim
+    l_param_name_out = copy(chainI.param_names)
     if method == "median":
-        res = np.nanmedian(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite),
-                           axis=0)
+        # import pdb; pdb.set_trace()
+        clean_flat_chain = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
+                                               force_finite=force_finite)
+        if weights_name is None:
+            res = np.nanmedian(clean_flat_chain, axis=0)
+        else:
+            del_idx = []
+            for i_dim, param_name in enumerate(chainI.param_names):
+                if np.all(np.logical_not(np.isfinite(clean_flat_chain[..., i_dim]))):
+                    del_idx.append(i_dim)
+                    l_param_name_out.remove(param_name)
+            clean_flat_chain = np.delete(clean_flat_chain, del_idx, axis=1)
+            res = DescrStatsW(clean_flat_chain, weights=clean_flat_chain[..., l_param_name_out.index(weights_name)]).quantile(0.5).values[0]
     elif method == "MAP":
         idx_lnprobability = chainI.param_names.index(lnprobability_name)
         logger.debug(f"idx_lnprobability: {idx_lnprobability}")
@@ -1734,26 +1813,32 @@ def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_
         #     logger.warning("With method MAP the l_walker and l_burnin arguments are ignored.")
         # walker, it = unravel_index(argmax(lnprobability), shape=lnprobability.shape)
         # res = array([chainI[walker, it, dim] for dim in range(ndim)])
-        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, force_finite=force_finite)
-        i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
+        clean_flat_chains = get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes,
+                                                force_finite=force_finite)
+        if weights_name is None:
+            i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability])
+        else:
+            idx_weights = chainI.param_names.index(weights_name)
+            logger.debug(f"idx_weights: {idx_weights}")
+            i_MAP_flatchain = argmax(clean_flat_chains[..., idx_lnprobability] * clean_flat_chains[..., idx_weights])
         logger.debug(f"i_MAP_flatchain: {i_MAP_flatchain}")
         res = clean_flat_chains[i_MAP_flatchain]
     elif method == "gaussfit":
-        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
+        res = gauspeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
     elif method == "mode":
-        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin), nbins=100, force_finite=force_finite)
+        res = modepeak(get_clean_flatchain(chainI, l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes, force_finite=force_finite), nbins=100)
     else:
         raise ValueError("Method {} is not recognised".format(method))
     if verbose == 1:
-        l_param_names = __get_default_l_param_name(l_param_name, ndim)
+        l_param_names = __get_default_l_param_name(l_param_name_out, len(l_param_name_out))
         text = "\n"
         for i, param_name in enumerate(l_param_names):
             text += "{} = {}\n".format(param_name, res[i])
         logger.info(text)
-    return res
+    return res, l_param_name_out
 
 
-def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, force_finite=True):
+def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, iterations_indexes=None, force_finite=True):
     """Return a flatchain with only the selected walkers and iteration after the burnin.
 
     Arguments
@@ -1765,6 +1850,11 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
         list of burnin iterations for each valid walker
     l_param_idx       : int_iteratable
         list of index of parameters that you want to keep in the output
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
     force_finite: bool
         If True the function will suppress every iteration for which one of the parameter values provided
         is not finite.
@@ -1774,41 +1864,49 @@ def get_clean_flatchain(chainI, l_walker=None, l_burnin=None, l_param_idx=None, 
     res : np.array
         cleaned flat chain
     """
-    res = None
-    # If no walker list is provided nor burnin list, the result is the whole flatten chain
-    if (l_walker is None) and (l_burnin is None):
-        res = chainI.flatchain
-    # If no burnin then just select the walkers provided by l_walker and return the flat chain
-    elif l_burnin is None:
-        sh = chainI[l_walker, ...].shape
-        res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
-    # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
-    # It is the default one (meaning all walkers). If it's not the case it whoud com
-    elif l_walker is None:
-        l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
-        if len(l_walker) != len(l_burnin):
-            raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
-                             "l_walker is all available walkers, but dimensions do not match.")
-    # If res is None then at this point we have a l_burnin and a l_walker
-    if res is None:
-        ndim = chainI.dim
-        res = []
-        # Case where there is only one free parameter
-        if ndim == 1:
-            for walker, burnin in zip(l_walker, l_burnin):
-                res.extend(chainI[walker, burnin:])
-            res = array(res)[..., newaxis]
-        # Case where there is several free parameter
+    if iterations_indexes is None:
+        res = None
+        # If no walker list is provided nor burnin list, the result is the whole flatten chain
+        if (l_walker is None) and (l_burnin is None):
+            res = chainI.flatchain
+        # If no burnin then just select the walkers provided by l_walker and return the flat chain
+        elif l_burnin is None:
+            sh = chainI[l_walker, ...].shape
+            res = chainI[l_walker, ...].reshape(sh[0] * sh[1], sh[2])
+        # If no walker list (but the burnin list is provided) is provided. It should not be but assume that
+        # It is the default one (meaning all walkers). If it's not the case it whoud com
+        elif l_walker is None:
+            l_walker = __get_default_l_walker(nwalker=chainI.shape[0])
+            if len(l_walker) != len(l_burnin):
+                raise ValueError("If you provide l_burnin but not l_walker, it is assumed that "
+                                 "l_walker is all available walkers, but dimensions do not match.")
+        # If res is None then at this point we have a l_burnin and a l_walker
+        if res is None:
+            ndim = chainI.dim
+            res = []
+            # Case where there is only one free parameter
+            if ndim == 1:
+                for walker, burnin in zip(l_walker, l_burnin):
+                    res.extend(chainI[walker, burnin:])
+                res = array(res)[..., newaxis]
+            # Case where there is several free parameter
+            else:
+                for dim in range(ndim):
+                    if l_param_idx is not None:
+                        if not(dim in l_param_idx):
+                            continue
+                    res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
+                res = array(res).transpose()
         else:
-            for dim in range(ndim):
-                if l_param_idx is not None:
-                    if not(dim in l_param_idx):
-                        continue
-                res.append(np.concatenate([chainI[walker, burnin:, dim] for walker, burnin in zip(l_walker, l_burnin)]))
-            res = array(res).transpose()
+            if l_param_idx is not None:
+                res = res[:, l_param_idx]
     else:
+        res = np.ones((len(iterations_indexes["indexes_walker"]), chainI.shape[-1])) * np.nan
+        for i_iter, (i_walker, i_iter_walker) in enumerate(zip(iterations_indexes["indexes_walker"], iterations_indexes["indexes_iter_walker"])):
+            res[i_iter, :] = chainI[i_walker, i_iter_walker, :]
         if l_param_idx is not None:
             res = res[:, l_param_idx]
+
     # Remove iteration where one of the parameter is not finite
     if force_finite:
         return np.delete(res, np.where(np.logical_not(np.isfinite(res)))[0], axis=0)
@@ -2347,7 +2445,7 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                     arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
 
 
-def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_corner=None):
+def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iterations_indexes=None, kwargs_corner=None):
     """Make a corner plot with only the parameters specified.
 
     Arguments
@@ -2360,15 +2458,20 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, kwargs_co
         list of valid walkers
     l_burnin       : Iterable of Int
         List of indexes of the first iteration to consider for each walker
+    iterations_indexes : dict
+        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        that needs to be considered. The format of this dictionary is:
+        first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
+        second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
     kwargs_corner  : dictionary
         Dictionary of keyword arguments passed on to the corner function
     """
     kwargs_corner = {} if kwargs_corner is None else kwargs_corner
     if (l_walker is not None) or (l_burnin is not None):
-        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+        clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
     else:
         if len(chaininterpret.shape) > 2:
-            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin)
+            clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
         else:
             clean_flat_chains = chaininterpret[..., l_param_name]
     corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)

@@ -26,6 +26,8 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     __mandatoryattrs__ = ["category"]
 
+    __parameters = None  # This is needed to be able to pickle the object. UnPickle doesn't call __init__ but call __getattr__ and self._parameters was only defined by __init__
+
     def __init__(self, name, name_prefix=None, **kwargs):
         """docstring Core_ParamContainer init method.
 
