@@ -44,7 +44,7 @@ from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import M
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
-from ..posterior.exoplanet.model.gravgroup import ext_plonly
+from ..posterior.exoplanet.model.gravgroup.model import ext_plonly
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
