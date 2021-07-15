@@ -281,7 +281,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                 # Write the header
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
                 # Put model_4_indicator dictionary
-                f.write(f"# Define the model to use for each indicator category. Available models are {self.available_models_4_indicators}\n")
+                f.write(f"# Define the model to use for each indicator category. Available models are {[None, ] + self.available_models_4_indicators}\n")
                 f.write(self.__create_text_model_4_indicator())
                 # Put the model parametrisation directories
                 f.write("\n# Define the parameters of each models used.")
@@ -363,6 +363,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         error_list.extend(errors)
         # 3 and 4.
         used_models = list(set(dico_config[self.__name_model_4_indicator_dict].values()))
+        if None in used_models:
+            used_models.remove(None)
         missing_usedmodel_dict_name = [self.__dictname_4_model_indicator[model] for model in used_models]
         model_name_4_model_dict_name = {self.__dictname_4_model_indicator[model]: model for model in used_models}
         model_dict_names_defined = list(dico_config.keys())
@@ -502,7 +504,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
 
         Arguments
         ---------
-        model : str
+        model : str or None
             String giving the model that you want to validate
 
         Returns
@@ -510,7 +512,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         valid : boolean
             True is model is a valid indicator model, False otherwise
         """
-        return model in self.available_models_4_indicators
+        return (model in self.available_models_4_indicators) or (model is None)
 
     @property
     def available_models_4_indicators(self):
