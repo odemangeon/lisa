@@ -7,10 +7,10 @@ The Objective of this file is to define the different type of parametrisation av
 """
 from logging import getLogger
 
-from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.rv import RV_inst_cat
-from ..dataset_and_instrument.indicator import IND_inst_cat
-from ...core.model.core_parametrisation import Core_Parametrisation
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
+from ...dataset_and_instrument.indicator import IND_inst_cat
+from ....core.model.core_parametrisation import Core_Parametrisation
 
 
 ## Logger Object
@@ -202,8 +202,9 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                 list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
                 for inst_model in list_instmodel:
                     indicator_model = self.model_4_indicator[inst_model.instrument.indicator_category]
-                    self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
-                                        kwargs_indicator_model=self.params_indicator_models[indicator_model])
+                    if indicator_model is not None:
+                        self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
+                                            kwargs_indicator_model=self.params_indicator_models[indicator_model])
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

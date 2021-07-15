@@ -14,16 +14,13 @@ import math as mt
 from radvel.kepler import rv_drive
 
 
-# from ..dataset_and_instrument.rv import RV_inst_cat
-from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
-from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
-                                                            add_timeref_arguments, time_ref)
-# from ...core.dataset_and_instrument.instrument import Instrument_Model
-# from ...core.dataset_and_instrument.dataset import Dataset
-from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                  par_vec_name, add_argskwargs_argument, argskwargs)
-from ....posterior.exoplanet.model.convert import gettp_fast
+from ....core.model.datasim_docfunc import DatasimDocFunc
+from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
+from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
+                                                             add_timeref_arguments, time_ref)
+from .....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                   par_vec_name, add_argskwargs_argument, argskwargs)
+from .....posterior.exoplanet.model.convert import gettp_fast
 
 
 ## Logger object

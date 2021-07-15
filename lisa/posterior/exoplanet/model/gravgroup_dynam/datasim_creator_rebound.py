@@ -16,22 +16,21 @@ from numpy import concatenate, argsort, cumsum, array, append, sign
 from astropy.constants import R_sun, au
 from batman._quadratic_ld import _quadratic_ld
 
-from .datasim_creator_rv import get_starmeanrv_and_deltarv
-from .datasim_creator_lc import get_LD_parcont_and_param, get_ootvar
-from .limb_darkening import (LinearLD, QuadraticLD, SquareRootLD, LogarithmicLD, ExponentialLD,
-                             NonLinearLD)
-from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, get_has_datasets,
-                                                 get_lists_bijection_instcat)
-from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
-                                                            time_ref, l_time_ref)
-from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
-from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
-from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs,
-                                                  add_nonparam_argument)
-from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ....posterior.exoplanet.model.convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ..gravgroup.datasim_creator_rv import get_starmeanrv_and_deltarv
+from ..gravgroup.datasim_creator_lc import get_LD_parcont_and_param, get_ootvar
+from ..gravgroup.limb_darkening import QuadraticLD
+from ..convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
+from ....core.model.datasim_docfunc import DatasimDocFunc
+from ....core.model.datasimulator_toolbox import (check_datasets_and_instmodels, get_has_datasets,
+                                                  get_lists_bijection_instcat)
+from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
+                                                             time_ref, l_time_ref)
+from .....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                   par_vec_name, add_argskwargs_argument,
+                                                   add_nonparam_argument)
+from .....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 
 ## Logger object
 logger = getLogger()

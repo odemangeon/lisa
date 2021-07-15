@@ -30,21 +30,20 @@ from string import ascii_lowercase
 from string import ascii_uppercase
 from textwrap import dedent
 
-from .indicator_model.core_indicator_model import IndicatorModelInterface
-from .celestial_bodies import Star, Planet
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_rv import create_datasimulator_RV
 from .datasim_creator_lc import create_datasimulator_LC
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
-from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.rv import RV_inst_cat
-from ..dataset_and_instrument.indicator import IND_inst_cat
-from ..likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, StellarActivityNoiseModelInterface
-from ...core.model.core_model import Core_Model, create_key, load_key
-from ...core.likelihood.jitter_noise_model import JitterNoiseModelInterface
-# from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.miscellaneous import spacestring_like
+from ..indicator_model.core_indicator_model import IndicatorModelInterface
+from ..celestial_bodies import Star, Planet
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
+from ...dataset_and_instrument.indicator import IND_inst_cat
+from ...likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, StellarActivityNoiseModelInterface
+from ....core.model.core_model import Core_Model, create_key, load_key
+from ....core.likelihood.jitter_noise_model import JitterNoiseModelInterface
+from .....tools.miscellaneous import spacestring_like
 
 
 # from pdb import set_trace
@@ -589,7 +588,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, IndicatorM
             transit_model = dico_config["transit_model"]
             # At the moment the code is not handling different transit model for different instruments
             if transit_model[self._key_inst_variable_LC_models]:
-                raise NotImplementedError(f"The use of different transit models per instrument is not currently implemented.")
+                raise NotImplementedError("The use of different transit models per instrument is not currently implemented.")
             self.transit_model[self._key_inst_variable_LC_models] = False
             # Check and load the model for all instruments
             if "model" not in transit_model[self._key_allinst_dict_LC_models]:
@@ -606,11 +605,11 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, IndicatorM
             phasecurve_model = dico_config["phasecurve_model"]
             # At the moment the code is not handling different phasecurve model for different instruments
             if phasecurve_model[self._key_inst_variable_LC_models]:
-                raise NotImplementedError(f"The use of different phase curve models per instrument is not currently implemented.")
+                raise NotImplementedError("The use of different phase curve models per instrument is not currently implemented.")
             self.phasecurve_model[self._key_inst_variable_LC_models] = False
             # At the moment the code is not handling multiple components for the phasecurve model
             if len(phasecurve_model[self._key_allinst_dict_LC_models]) != 1:
-                raise NotImplementedError(f"The use of multiple phase curve components is not currently implemented there should be one and only one.")
+                raise NotImplementedError("The use of multiple phase curve components is not currently implemented there should be one and only one.")
             # Check and load the model for all instruments
             l_key_mandatory = ["model", "args"]
             if not(set(l_key_mandatory) == set(phasecurve_model[self._key_allinst_dict_LC_models][0].keys())):

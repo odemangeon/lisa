@@ -11,12 +11,12 @@ data.
 """
 from logging import getLogger
 
-from .gravgroup import GravGroup
 from .parametrisation_gravgroupdynam import GravGroupDyn_Parametrisation
-from .limb_darkening import Manager_LD  # , CoreLD
 from .datasim_creator_rebound import create_datasimulator_rebound
-from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.rv import RV_inst_cat
+from ..gravgroup.model import GravGroup
+from ..gravgroup.limb_darkening import Manager_LD  # , CoreLD
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
 
 
 # from pdb import set_trace
