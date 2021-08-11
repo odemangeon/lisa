@@ -68,6 +68,7 @@ do_traces = False
 
 # Raw chains and hist plots
 do_RP = True  # Do chain plot and histogram plot for raw chains
+thin_RP = 10
 
 # Acceptance fraction selection
 do_AFS = True
@@ -75,6 +76,7 @@ sig_fact_AFS = 2
 quantile_AFS = 75
 verbose_AFS = 1
 plot_hist_AF = True
+thin_AFS = 100
 
 # Ln Posterior selection
 do_LPS = True
@@ -83,6 +85,7 @@ quantile_LPS = 100
 quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
 verbose_LPS = 1
 plot_hist_Post = True
+thin_LPS = 10
 
 # Chains and hist plots after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
@@ -104,6 +107,7 @@ extra_burnin_4_hist_after_geweke = 0
 sigma_clip_hist_after_geweke = 5
 apply_min_burnin = True
 min_burnin = 10000
+thin_GS = 10
 
 # Parameter based walker selection
 do_PS = False
@@ -151,6 +155,7 @@ omega_0to360 = False
 save_results_bestfit_secpar = True
 do_corner_sec = False
 sampling_corner_sec = 100
+thin_SecParam = 100
 
 # Do computation of the BIC
 do_compute_BIC = False
@@ -187,7 +192,7 @@ if do_create_chainI:
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, thin=thin_RP)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
         else:
@@ -214,7 +219,7 @@ if do_AFS:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS, thin=thin_AFS)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
         else:
@@ -240,12 +245,12 @@ if do_LPS:
                                                quantile_walker=quantile_walker_LPS, verbose=verbose_LPS,
                                                plot=plot_hist_Post)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select_{quantile_walker_LPS}-{quantile_LPS}{extension_outputs}.pdf"))
     else:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS, thin=thin_LPS)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
         else:
@@ -272,7 +277,7 @@ if do_AFSLPSP:
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker)
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker, thin=thin_AFSLPSP)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
         else:
@@ -348,7 +353,7 @@ if do_GS:
         pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                       l_burnin=l_burnin)
+                       l_burnin=l_burnin, thin=thin_GS)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
         else:
@@ -372,7 +377,7 @@ if do_GS:
 
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                       l_burnin=l_burnin, suppress_burnin=True)
+                       l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
         else:
@@ -388,7 +393,7 @@ else:
                 l_burnin[ii] = min_burnin
         if do_traces:
             et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                           l_burnin=l_burnin, suppress_burnin=True)
+                           l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
             if save_plots:
                 pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
             else:
@@ -531,7 +536,7 @@ if do_SecParam:
 
     logger.info("Plot raw traces for secondary parameters")
     if do_traces:
-        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, thin=thin_SecParam)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
         else:
@@ -540,7 +545,7 @@ if do_SecParam:
 
     logger.info("Plot geweke select traces for secondary parameters")
     if do_traces:
-        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, thin=thin_SecParam)
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
         else:
