@@ -7,6 +7,7 @@ Script to produce pretty plots of LC data
 """
 from os import getcwd
 
+import matplotlib
 import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
@@ -25,6 +26,12 @@ AandA_full_width = 7.2712643025  # in inches = \hsize = 523.53 pt
 
 default_figwidth = AandA_width
 default_figheight_factor = 0.75
+
+matplotlib.rcParams.update({
+    "pgf.texsystem": "pdflatex",
+    'font.family': 'serif',
+    'text.usetex': True,
+    'pgf.rcfonts': False})
 
 # Define the object name
 obj_name = "TOI-175"
