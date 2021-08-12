@@ -286,7 +286,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     axes_resi[datasetname][jj].set_xlabel("Orbital phase", fontsize=fontsize)
             # Set y labels on the first column and align them, also set the Anchor boxes
             if jj == 0:
-                ylabel_data = f"Normalised Flux [{LC_unit}]" if LC_unit is not None else "Normalised Flux"
+                oot_str = "- 1 " if remove1 else ""
+                ylabel_data = f"Normalised Flux {oot_str}[{LC_unit}]" if LC_unit is not None else "Normalised Flux"
                 ylabel_resi = f"O - C [{LC_unit}]" if LC_unit is not None else "O - C"
                 axes_data[datasetname][jj].set_ylabel(ylabel_data, fontsize=fontsize)
                 axes_resi[datasetname][jj].set_ylabel(ylabel_resi, fontsize=fontsize)
