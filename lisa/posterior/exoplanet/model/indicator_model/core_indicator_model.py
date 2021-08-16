@@ -26,16 +26,16 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one
 
     # Define the dictionary providing the default parameters values for each model
-    _default_param_values = {PolynomialIndicatorInterface._polynomial_method_name: PolynomialIndicatorInterface._default_param_values}
+    _default_param_values_4_indicator_model = {PolynomialIndicatorInterface._polynomial_method_name: PolynomialIndicatorInterface._default_param_values}
 
     # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
     __name_model_4_indicator_dict = "model_4_indicator"
 
     def __init__(self):
         # Define the dictionary giving the function to use to create the text of the dictionaries to defined the paremeters of each model for the parameter file
-        self.__create_text_methods = {self._polynomial_method_name: self.__create_text_polynomial_model}
+        self.__create_text_indicator_methods = {self._polynomial_method_name: self.__create_text_polynomial_model}
         # Define the dictionary giving the function to use to load the text of the dictionaries to defined the paremeters of each model for the parameter file
-        self.__load_text_methods = {self._polynomial_method_name: self.__load_text_polynomial_model}
+        self.__load_text_indicator_methods = {self._polynomial_method_name: self.__load_text_polynomial_model}
 
         # Define the dictionary giving the name of the dictionary to use in the parameter file in which the parameters of each model are going to be defined
         self.__dictname_4_model_indicator = {self._polynomial_method_name: self._polynomial_method_name + "_models"}
@@ -55,16 +55,16 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         self.__params_indicator_models = {}
         for model, l_inst_subcat in self.indicator_subcategories_4_model_used.items():
             self.__params_indicator_models[model] = {
-                inst_subcat: self._default_param_values[self.model_4_indicator[inst_subcat]].copy() for inst_subcat in l_inst_subcat}
+                inst_subcat: self._default_param_values_4_indicator_model[self.model_4_indicator[inst_subcat]].copy() for inst_subcat in l_inst_subcat}
 
-        # Check that there is a key for each model in _default_param_values
-        TestCase().assertSequenceEqual(list(self._default_param_values.keys()), self.__available_models_4_indicators__)
+        # Check that there is a key for each model in _default_param_values_4_indicator_model
+        TestCase().assertSequenceEqual(list(self._default_param_values_4_indicator_model.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a create_text_methods for each model
-        TestCase().assertSequenceEqual(list(self.__create_text_methods.keys()), self.__available_models_4_indicators__)
+        TestCase().assertSequenceEqual(list(self.__create_text_indicator_methods.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a load_text_methods for each model
-        TestCase().assertSequenceEqual(list(self.__load_text_methods.keys()), self.__available_models_4_indicators__)
+        TestCase().assertSequenceEqual(list(self.__load_text_indicator_methods.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a dictionary name for each model
         TestCase().assertSequenceEqual(list(self.__dictname_4_model_indicator.keys()), self.__available_models_4_indicators__)
@@ -287,7 +287,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                 f.write("\n# Define the parameters of each models used.")
                 for model in self.indicator_models_used:
                     f.write(f"\n\n# Define the parameters for model {model}.\n")
-                    f.write(self.__create_text_methods[model]())
+                    f.write(self.__create_text_indicator_methods[model]())
             logger.info("Parameter file created at path: {}".format(file_path))
         else:
             logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
@@ -440,7 +440,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             dict_valid.pop(self.__name_model_4_indicator_dict)
             for model, valid in dict_valid.items():
                 if valid:
-                    self.__load_text_methods[model](dico_config[self.__dictname_4_model_indicator[model]])
+                    self.__load_text_indicator_methods[model](dico_config[self.__dictname_4_model_indicator[model]])
             if len(missing_usedmodel_dict_name) > 0:
                 logger.warning(f"The dictionary to parametrize the following indicator models are missing in the indicator parameter file: {missing_usedmodel_dict_name}")
                 inconsistency = True
@@ -554,7 +554,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                 Values: Parameter value
 
         Initialised in __init__ of IndicatorModelInterface
-        Updated in __load_model_4_indicator_dict and all methods in __load_text_methods
+        Updated in __load_model_4_indicator_dict and all methods in __load_text_indicator_methods
         """
         return self.__params_indicator_models
 
@@ -602,8 +602,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         for indicator_subcat in indicators_using_model:
             # Check the presence of all parameters
             dict_indicator = dict_model[indicator_subcat]
-            if Counter(list(dict_indicator.keys())) != Counter(self._default_param_values[self._polynomial_method_name].keys()):
-                error_list.append(f"There is an inconsistency between the parameters provided for the polynomial model of {indicator_subcat} ({list(dict_indicator.keys())}) and the expected list of parameters ({self._default_param_values[self._polynomial_method_name].keys()})")
+            if Counter(list(dict_indicator.keys())) != Counter(self._default_param_values_4_indicator_model[self._polynomial_method_name].keys()):
+                error_list.append(f"There is an inconsistency between the parameters provided for the polynomial model of {indicator_subcat} ({list(dict_indicator.keys())}) and the expected list of parameters ({self._default_param_values_4_indicator_model[self._polynomial_method_name].keys()})")
             # Check values of all parameters
             if not isinstance(dict_indicator[self._polynomial_order_name], int):
                 error_list.append(f"Parameter {dict_indicator[self._polynomial_order_name]} for the polynomial model of {indicator_subcat} should be an int.")
