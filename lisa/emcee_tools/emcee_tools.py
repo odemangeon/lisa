@@ -1400,7 +1400,7 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         residual_wGP = None
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
-    ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
+    ax.hlines(y=0.0, xmin=xmin, xmax=xmax, color="k", linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
     if zoom is not None and not(plot_phase):
         return t_zoom, model_zoom, model_wGP_zoom, GP_pred_zoom, GP_pred_var_zoom, residual_out, residual_wGP, ebconts_lines_labels
