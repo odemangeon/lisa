@@ -75,3 +75,5 @@ create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=d
                             )
 
 pl.show()
+# pl.savefig(os.path.join(output_folders["plots"], f"LC_PhaseFold_plot{extension_analysis}_paper.pdf"))
+# pl.close("all")
