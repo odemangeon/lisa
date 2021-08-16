@@ -721,6 +721,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
             - 'title_kwargs': to pass kwargs to the title command
             - 'show_legend'  : bool
                 If True, show the legend
+            - 'show_title'  : bool
+                If True, show the titles (of the main and the zoom)
             - 'legend_param' : dict
                 Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True).
             - 'show_rms_residuals_in_title': bool
@@ -970,7 +972,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         # Set the arguments for the plotting functions
         ##############################################
         pl_kwarg_data = {"fmt": "."}
-        pl_kwarg_model = {"linestyle": "-"}
+        pl_kwarg_model = {"linestyle": "-", "label": "model"}
 
         pl_kwargs = TS_kwargs.get('pl_kwargs', {})
         pl_kwarg_final = {}
@@ -1015,11 +1017,13 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         #############################################################
         # Make the RV and residuals plots (full and zoomed if needed)
         #############################################################
+        show_title = TS_kwargs.get("show_title", True)
         for ii, (gs_ts_i, t_lims_i) in enumerate(zip(gs_ts, t_lims)):
             # Create the data and red=siduals axes and set properties ans style
             (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
 
-            axe_data.set_title("RV time series", fontsize=fontsize)
+            if show_title:
+                axe_data.set_title("RV time series", fontsize=fontsize)
             axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
             if ii == 0:
                 axe_data.set_ylabel("RV [m/s]", fontsize=fontsize)

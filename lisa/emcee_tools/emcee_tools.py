@@ -340,7 +340,7 @@ def read_acceptfracdatfile(acceptfracdatfile, walker_col="i_walker", lnpost_col=
 
 
 def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_burnin=None,
-                suppress_burnin=False, l_param_2_plot=None, kwargs_subplots=None):
+                suppress_burnin=False, thin=1, l_param_2_plot=None, kwargs_subplots=None):
     """
     Arguments
     ---------
@@ -357,6 +357,8 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
     suppress_burnin : bool
         If True suppress the burnin iterations (as indicated by l_burnin).
         If False plot a vertical lines at the location of the burnin (as indicated by l_burnin)
+    thin            : into
+        Thin the chains plotting only one every nthin iteration (can be used to avoid memory issues)
     l_param_2_plot  : list of str or int, or None
         List of the name and or indexes of the parameters that you want to plot
     kwargs_subplots : dict or None
@@ -398,6 +400,7 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
     if lnprobability is not None:
         lnprob_min = lnprobability[l_walker, ...].min()
         lnprob_max = lnprobability[l_walker, ...].max()
+        x_plot = np.arange(lnprobability.shape[1])
         for walker, burnin in zip(l_walker, l_burnin):
             min_log10 = np.sign(lnprobability.min()) * np.log10(abs(lnprobability.min()))
             max_log10 = np.sign(lnprobability.max()) * np.log10(abs(lnprobability.max()))
@@ -409,30 +412,31 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
                 log_scale = False
             if log_scale:
                 if np.sign(min_log10) > 0:
-                    line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                    line = ax[0].plot(x_plot[::thin], lnprobability[walker, ::thin], alpha=0.5)
                     ax[0].set_yscale("log")
                     ax[0].set_title("lnprobability")
                 else:
-                    line = ax[0].plot(np.sign(lnprobability[walker, :]) * np.log10(abs(lnprobability[walker, :])), alpha=0.5)
+                    line = ax[0].plot(x_plot[::thin], np.sign(lnprobability[walker, ::thin]) * np.log10(abs(lnprobability[walker, ::thin])), alpha=0.5)
                     lnprob_min, lnprob_max = (min_log10, max_log10)
                     ax[0].set_title("log10(lnprobability)")
             else:
-                line = ax[0].plot(lnprobability[walker, :], alpha=0.5)
+                line = ax[0].plot(x_plot[::thin], lnprobability[walker, ::thin], alpha=0.5)
                 ax[0].set_title("lnprobability")
             ax[0].vlines(burnin, lnprob_min, lnprob_max, color=line[0].get_color(), linestyles="dashed",
                          alpha=0.5)
         start_idx_params = 1
     else:
         start_idx_params = 0
+    x_plot = np.arange(chains.shape[1])
     for idx_ax in range(ndim_2_plot):  # l_idx_param_2_plot
         ax[idx_ax + start_idx_params].set_title(l_param_name[l_idx_param_2_plot[idx_ax]])
-        vmin = chains[l_walker, :, l_idx_param_2_plot[idx_ax]].min()
-        vmax = chains[l_walker, :, l_idx_param_2_plot[idx_ax]].max()
+        vmin = chains[l_walker, ::thin, l_idx_param_2_plot[idx_ax]].min()
+        vmax = chains[l_walker, ::thin, l_idx_param_2_plot[idx_ax]].max()
         for walker, burnin in zip(l_walker, l_burnin):
             if suppress_burnin:
-                line = ax[idx_ax + start_idx_params].plot(chains[walker, burnin:, l_idx_param_2_plot[idx_ax]], alpha=0.5)
+                line = ax[idx_ax + start_idx_params].plot(x_plot[burnin::thin], chains[walker, burnin::thin, l_idx_param_2_plot[idx_ax]], alpha=0.5)
             else:
-                line = ax[idx_ax + start_idx_params].plot(chains[walker, :, l_idx_param_2_plot[idx_ax]], alpha=0.5)
+                line = ax[idx_ax + start_idx_params].plot(x_plot[::thin], chains[walker, ::thin, l_idx_param_2_plot[idx_ax]], alpha=0.5)
                 ax[idx_ax + start_idx_params].vlines(burnin, vmin, vmax, color=line[0].get_color(), linestyles="dashed",
                                                      alpha=0.5)
     ax[ndim_2_plot - (1 - start_idx_params)].set_xlabel("iteration")
@@ -1396,7 +1400,7 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         residual_wGP = None
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
-    ax.hlines(y=0.0, xmin=xmin, xmax=xmax, linestyles="dashed", linewidth=1)
+    ax.hlines(y=0.0, xmin=xmin, xmax=xmax, color="k", linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
     if zoom is not None and not(plot_phase):
         return t_zoom, model_zoom, model_wGP_zoom, GP_pred_zoom, GP_pred_var_zoom, residual_out, residual_wGP, ebconts_lines_labels

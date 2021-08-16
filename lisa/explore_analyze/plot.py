@@ -72,13 +72,13 @@ def hist_lnprob(lnprobability, n_bins=None, sigma_clip=5, ax=None, **hist_kwargs
             did_log10 = False
             ax.hist(lnprobability_plot, bins=bins, **hist_kwargs)
             ax.set_xscale("log")
-            ax.set_xlabel("lnprobability_plot")
+            ax.set_xlabel("lnprobability")
         else:
             did_log10 = True
             ax.hist(sign(lnprobability_plot) * log10(abs(lnprobability_plot)), bins=sign(bins) * log10(abs(bins)), **hist_kwargs)
-            ax.set_xlabel("log10(lnprobability_plot)")
+            ax.set_xlabel("log10(lnprobability)")
     else:
         did_log10 = False
         ax.hist(lnprobability_plot, bins=bins, **hist_kwargs)
-        ax.set_xlabel("lnprobability_plot")
+        ax.set_xlabel("lnprobability")
     return ax, did_log10, nb_point_sigma_clip

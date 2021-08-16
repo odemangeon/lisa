@@ -37,8 +37,10 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 sharey=False,
-                                fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None, show_system_name_in_suptitle=True,
-                                LC_unit=None, *args, **kwargs):
+                                fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None,
+                                show_datasetnames=True,
+                                show_system_name_in_suptitle=True,
+                                show_rms=True, LC_unit=None, *args, **kwargs):
     """Produce a clean LC plot.
 
     Arguments
@@ -124,8 +126,12 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         Can also contains another entries that will not be passed to pyplot.legend:
         'idx_planet': index of the planet plot on which you want to show the legend()
         'idx_dataset': index of the dataaset plot on which you want to show the legend()
+    show_datasetnames  : bool
+        If True, show the datasetnames in the corner of the plots
     show_system_name_in_suptitle : bool
         If True show the system name in the suptitle
+    show_rms: bool
+        If True the rms of the residuals will be provided in between the data and residual plot.
     LC_unit        : str or None
         String giving the unit of the LCs
     """
@@ -286,7 +292,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     axes_resi[datasetname][jj].set_xlabel("Orbital phase", fontsize=fontsize)
             # Set y labels on the first column and align them, also set the Anchor boxes
             if jj == 0:
-                ylabel_data = f"Normalised Flux [{LC_unit}]" if LC_unit is not None else "Normalised Flux"
+                oot_str = "- 1 " if remove1 else ""
+                ylabel_data = f"Normalised Flux {oot_str}[{LC_unit}]" if LC_unit is not None else "Normalised Flux"
                 ylabel_resi = f"O - C [{LC_unit}]" if LC_unit is not None else "O - C"
                 axes_data[datasetname][jj].set_ylabel(ylabel_data, fontsize=fontsize)
                 axes_resi[datasetname][jj].set_ylabel(ylabel_resi, fontsize=fontsize)
@@ -294,11 +301,12 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 # axes_data[datasetname][jj].yaxis.set_label_coords(x_ylabel_coord, 0.5)
                 # axes_resi[datasetname][jj].yaxis.set_label_coords(x_ylabel_coord, 0.5)
 
-                filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-                anchored_text_inst = AnchoredText(filename_info["inst_name"] + "({})".format(filename_info["number"]),
-                                                  loc=3, prop={"fontsize": fontsize})  # loc=3 is 'lower left'
-                anchored_text_inst.set_alpha(0.5)
-                axes_data[datasetname][jj].add_artist(anchored_text_inst)
+                if show_datasetnames:
+                    filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+                    anchored_text_inst = AnchoredText(filename_info["inst_name"] + "({})".format(filename_info["number"]),
+                                                      loc=3, prop={"fontsize": fontsize})  # loc=3 is 'lower left'
+                    anchored_text_inst.set_alpha(0.5)
+                    axes_data[datasetname][jj].add_artist(anchored_text_inst)
 
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
 
@@ -536,6 +544,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         residual_pl = OrderedDict()
         residual_wGP_pl = OrderedDict()
         y_residuals_all = OrderedDict()
+        text_rms = OrderedDict()
         for datasetname in datasetnames:
             (_, _, _, _, _, residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts_lines_labels
              ) = et.plot_residuals(dataset_name=datasetname, param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
@@ -576,12 +585,14 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                            alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
             # Compute rms of the residuals and print it on the top of the residuals graphs
             rms_format = fig_param.get("rms_format", ".1e")
-            text_rms = f"{{:{rms_format}}}"
-            text_rms = text_rms.format(np.std(residual_pl[datasetname][np.logical_and(x_values[datasetname] > x_min_data, x_values[datasetname] < x_max_data)]))
+            text_rms_template = f"{{:{rms_format}}}"
+            text_rms[datasetname] = text_rms_template.format(np.std(residual_pl[datasetname][np.logical_and(x_values[datasetname] > x_min_data, x_values[datasetname] < x_max_data)]))
+            print(f"RMS {datasetname} = {text_rms[datasetname]} {LC_unit} (raw cadence)")
 
         ##########################################
         # Bin the data and residuals and plot them
         ##########################################
+        text_rms_binned = OrderedDict()
         if exptime_bin > 0.:
             bin_size = exptime_bin * time_fact if show_time_from_tic else exptime_bin / Per
             bins = {}
@@ -650,8 +661,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
                     ebcont_binned = axes_resi[datasetname][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
                 # Compute rms of the binned residuals
-                text_rms_binned = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
-                text_rms_binned = text_rms_binned.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
+                text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
+                text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
+                print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
                 # Indicate values that are off y-axis with arrows
                 et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][jj],
                                        color=pl_kwarg_final[datasetname]["databinned"]["color"],
@@ -660,13 +672,17 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         ###########
         # Write rms
         ###########
-        for ii, datasetname in enumerate(datasetnames):
-            text_rms_to_plot = f"{text_rms}, {text_rms_binned}" if (exptime_bin > 0.) else f"rms = {text_rms}"
-            if jj == 0:
-                text_rms_to_plot = "rms = " + text_rms_to_plot
-            if LC_unit is not None:
-                text_rms_to_plot += f" {LC_unit}"
-            axes_resi[datasetname][jj].text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axes_resi[datasetname][jj].transAxes)
+        # WARNING, TO BE IMPROVED for more than one dataset
+        if show_rms:
+            text_rms_to_plot = ""
+            for ii, datasetname in enumerate(datasetnames):
+                text_rms_to_plot_dst = f"{text_rms}, {text_rms_binned}" if (exptime_bin > 0.) else f"rms = {text_rms}"
+                if jj == 0:
+                    text_rms_to_plot_dst = "rms = " + text_rms_to_plot
+                if LC_unit is not None:
+                    text_rms_to_plot_dst += f" {LC_unit}"
+                text_rms_to_plot += text_rms_to_plot_dst + ";"
+                axes_resi[datasetname][jj].text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axes_resi[datasetname][jj].transAxes)
 
     ###################
     # Finalise the plot
