@@ -141,7 +141,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # SUBCLASS LEVEL
 
     def get_same_GP_kernel_datasets(self, dataset_name):
-        """Return the lsit of datasets that are modeled using the same GP kernel than the one provided.
+        """Return the list of datasets that are modeled using the same GP kernel than the one provided.
 
         Arguments
         ---------
@@ -203,11 +203,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         return self.__datasimcreatorname4instcat[inst_cat]
 
     def get_datasimcreator(self, inst_cat):
-        """Return the datasimcreator docfunc (without_instrument?) associated with the instrument
-        category.
+        """Return the datasimcreator method associated with the instrument category.
 
-        :param inst_cat string: Instrument category
-        :return datasimcreator_name string: Datasimcreator name
+        This datasimcreator method is the one that creates the datasimulator functions for the given
+        instrument category
+
+        Arguments
+        ---------
+        inst_cat    : str
+            Instrument category for which you want the datasimulator
+
+        Returns
+        -------
+        datasimcreator  : Method/function
+            Function that create the datasimulator function for given instrument category
         """
         datasimcreatorname = self.get_datasimcreatorname(inst_cat)
         return self.datasimcreator[datasimcreatorname]
@@ -568,17 +577,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         return self.param_file is not None
 
     def create_parameter_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
-        """Create the parameter file.
+        """Create the parameter file which will specify the status of all main parameters in the model.
 
         Arguments
         ---------
         paramfile_path   : string
             Path to the param_file.
         answer_overwrite : string
-            If the LC_param_file already exists, do you want to overwrite it ? "y" or "n". If this not
+            If the param_file already exists, do you want to overwrite it ? "y" or "n". If this not
             provide the program will ask you interactively.
         answer_create    : string
-            If the LC_param_file doesn't exists aleardy, where do you want to create it ? "absolute",
+            If the param_file doesn't exists aleardy, where do you want to create it ? "absolute",
             "run_folder" or "error". If this not provide the program will ask you interactively.
         """
         # Check is the file path provided correspond to an exiting file
