@@ -61,6 +61,13 @@ class MandatoryMethods(type):
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_meths))
 
 
+class MandatoryReadOnlyAttrAndMethod(MandatoryReadOnlyAttr, MandatoryMethods):
+
+    def __init__(cls, name, bases, attrs):
+        MandatoryReadOnlyAttr.__init__(cls, name, bases, attrs)
+        MandatoryMethods.__init__(cls, name, bases, attrs)
+
+
 # TODO: It looks like the piece of code below is not used anywhere
 
 def _getcategory():
