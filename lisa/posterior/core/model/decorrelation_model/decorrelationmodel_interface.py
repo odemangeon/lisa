@@ -17,13 +17,11 @@ logger = getLogger()
 
 
 class DecorrelationModelInterface(LinearDecorrelation):
-    """docstring for DecorrelationModelInterface.
+    """docstring for DecorrelationModelInterface, Parent/Interface Class for Core_InstCat_Model.
 
-    This is an interface class for subclasses of the Core_Model class.
+    It provides the attributes and function to handle decorrelation models
     """
-
-    # models available for the indicators
-    __available_decorrelationmodel_class__ = {LinearDecorrelation.category: LinearDecorrelation, }  # The first one is the default one
+#
 
     # Each dec
     # TO BE DELETED
@@ -34,7 +32,7 @@ class DecorrelationModelInterface(LinearDecorrelation):
     # __names_decorrelation_model_dict = {LinearDecorrelationInterface._method_name: LinearDecorrelationInterface._name_model_dict}
 
     # models available for the indicators
-    __available_decorrelation_quantities__ = ["raw", ]  # "residuals", "model", The first one is the default one
+    # __available_decorrelation_quantities__ = ["raw", ]  # "residuals", "model", The first one is the default one
 
     def __init__(self):
         # Define the dictionary giving the function to use to create the text of the dictionaries to defined the paremeters of each model for the parameter file
@@ -42,31 +40,13 @@ class DecorrelationModelInterface(LinearDecorrelation):
         # Define the dictionary giving the function to use to load the text of the dictionaries to defined the paremeters of each model for the parameter file
         self.__load_text_decorrelation_methods = {self._linear: self.__load_text_lineardecorr_model}
 
-    def get_available_decorrelationmodel_4_instcat(inst_cat):
-        """Return the list of available decorrelation model name for a given instrument category
-        """
-        raise NotImplementedError
 
-    def create_general_text_decorrelation():
-        """Return the text to be written in any inst_cat specific param_file for to choose the decorrelation models
-        for each dataset.
-        """
-        raise NotImplementedError
 
-    def load_general_text_decorrelation():
-        """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
-        for each dataset.
-        """
-        raise NotImplementedError
-
-    def create_specific_text_decorrelationmodel(inst_cat, decorrelationmodel, datasets):
+    def create_specific_text_decorrelationmodel(decorrelationmodel, datasets):
         """Return the text to be written in an inst_cat specific param_file for a given decorrelation model
 
         Arguments
         ---------
-        inst_cat            : str
-            Instrument category of the param_file in which you wish to write the decorrelation model text.
-            Necessary to access the right function.
         decorrelationmodel  : str
             Category of decorrelation model of which you wish to write the text.
             Necessary to access the right function.
@@ -77,16 +57,13 @@ class DecorrelationModelInterface(LinearDecorrelation):
         """
         raise NotImplementedError
 
-    def load_specific_text_decorrelationmodel(dico_inputs, inst_cat, decorrelationmodel, datasets):
+    def load_specific_text_decorrelationmodel(dico_inputs, decorrelationmodel, datasets):
         """Load the dictionary from the inst_cat specific param_file for a given decorrelation model
 
         Arguments
         ---------
         dico_inputs         : dict
             Dictionary which contains the content of the inst_cat specific parameter file.
-        inst_cat            : str
-            Instrument category of the param_file in which you wish to write the decorrelation model text.
-            Necessary to access the right function that will load the content
         decorrelationmodel  : str
             Category of decorrelation model of which you wish to write the text.
             Necessary to access the right function and the right dictionary within dico_inputs.
