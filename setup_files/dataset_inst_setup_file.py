@@ -2,14 +2,14 @@
 # -*- coding:  utf-8 -*-
 import lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument as mgr
 from lisa.posterior.core.dataset_and_instrument.instrument import Default_Instrument
+from lisa.posterior.core.dataset_and_instrument.indicator import IND_Instrument, IND_Dataset
+from lisa.posterior.core.dataset_and_instrument.indicator import HARPS_FWHM
+from lisa.posterior.core.dataset_and_instrument.indicator import ESPRESSO_FWHM
 from lisa.posterior.exoplanet.dataset_and_instrument.lc import LC_Instrument, LC_Dataset
 from lisa.posterior.exoplanet.dataset_and_instrument.rv import RV_Instrument, RV_Dataset
-from lisa.posterior.exoplanet.dataset_and_instrument.indicator import IND_Instrument, IND_Dataset
 # from lisa.posterior.exoplanet.dataset_and_instrument.ttv import TTV_Instrument, TTV_Dataset
 from lisa.posterior.exoplanet.dataset_and_instrument.lc import K2, Kepler, CHEOPS, CoRoT
 from lisa.posterior.exoplanet.dataset_and_instrument.rv import HARPS, SOPHIE_HE, SOPHIE_HR
-from lisa.posterior.exoplanet.dataset_and_instrument.indicator import HARPS_FWHM
-from lisa.posterior.exoplanet.dataset_and_instrument.indicator import ESPRESSO_FWHM
 
 manager = mgr.Manager_Inst_Dataset()
 

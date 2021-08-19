@@ -9,8 +9,8 @@ from unittest import TestCase
 
 from .polynomial_model import PolynomialIndicatorInterface
 from ...dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
-from ....core.model.datasim_docfunc import DatasimDocFunc
-from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels
+from ..datasim_docfunc import DatasimDocFunc
+from ..datasimulator_toolbox import check_datasets_and_instmodels
 from .....tools.miscellaneous import spacestring_like
 from .....tools.human_machine_interface.QCM import QCM_utilisateur
 
@@ -19,8 +19,13 @@ from .....tools.human_machine_interface.QCM import QCM_utilisateur
 logger = getLogger()
 
 
-class IndicatorModelInterface(PolynomialIndicatorInterface):
-    """docstring for IndicatorModelInterface."""
+class IND_InstCat_Model(PolynomialIndicatorInterface):
+    """docstring for LC_InstCat_Model, interface class for a subclass of Core_Model."""
+
+    # Mandatory attributes for a sublass of Core_InstCat_Model
+    __inst_cat__ = IND_inst_cat
+    __has_instcat_paramfile__ = True
+    __datasim_creator_name__ = "sim_IND"
 
     # models available for the indicators
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one
@@ -129,7 +134,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                               inst_model_fullname=inst_model_fullname,
                               dataset=dataset)
 
-    def _create_datasimulator_IND(self, inst_models=None, datasets=None):
+    def datasim_creator(self, inst_models=None, datasets=None):
         """Create the data simulator to be used for the indicators.
 
         Arguments
@@ -260,7 +265,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         # If not ind_model match indicator model then raise an error
         raise ValueError(f"Indicator model {indicator_model} is not implemented.")
 
-    def create_IND_param_file(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_instcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
         """Create the param file for definition of the indicators models.
 
         Arguments
@@ -421,7 +426,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         """
         self.__model_4_indicator = model_4_indicator
 
-    def load_IND_param_file(self, answer_recreate=None):
+    def load_instcat_paramfile(self, answer_recreate=None):
         """Load the param file for indicators.
         """
         assert len(self.indicator_models_used) > 0, "There should be a model used by default."

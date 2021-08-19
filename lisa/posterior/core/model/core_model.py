@@ -64,7 +64,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "possible_inst_categories"]
+    __mandatoryattrs__ = ["category", "instcat_models"]
     # category: String which designate the model (for example: "GravitionalGroups"). To choose the
     #   model to be used, the user will use this string.
     # possible_inst_categories: Set of the categories of data that the model can simulate
@@ -110,6 +110,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
         Core_ParamContainer.__init__(self, name)
+
         # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
         # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)
         self.__datasimcreatorname4instcat = {}
@@ -119,6 +120,16 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Intialise handlers4instcatparamfile which has to be filled in the Model Subclass
         # Define the specific param_file handler for each instrument category (key: inst_cat, value: dict(keys: "create" and "load", value: create and load methods))
         self.__handlers4instcatparamfile = {}
+        # Now load the available InstCat_Models
+        for InstCat_Model in self.instcat_models:
+            self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
+            self.__datasimcreator[InstCat_Model.datasim_creator_name] = InstCat_Model.datasim_creator
+            if InstCat_Model.has_instcat_paramfile:
+                self.__handlers4instcatparamfile[InstCat_Model.inst_cat] = {"create": InstCat_Model.create_instcat_paramfile,
+                                                                            "load": InstCat_Model.load_instcat_paramfile}
+            else:
+                self.__handlers4instcatparamfile[InstCat_Model.inst_cat] = {"create": None,
+                                                                            "load": None}
         # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
         # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
 
@@ -137,6 +148,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         self.init_parametrisation_attributes()
         # Initialise parameterisation
         self.parametrisation
+        # Do the __init__ of all InstCat Models in self.instcat_models if needed
+        for InstCat_Model in self.instcat_models:
+            if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
+                InstCat_Model.__init__(self=self)
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -163,6 +178,12 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         for instmod_fullname_ii in l_instmod_fullname:
             res.extend(self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname_ii))  # Defined in Instmodel4DatasetAttr
         return res
+
+    @property
+    def possible_inst_categories(self):
+        """List of instrument categories handled by the model.
+        """
+        return list(set([InstCat_Model.inst_cat for InstCat_Model in self.instcat_models]))
 
     @property
     def object_name(self):

@@ -28,6 +28,7 @@ def getclassattr(attrname):
 class MandatoryReadOnlyAttr(type):
 
     def __new__(cls, classname, bases, classdict):
+        # Transforms attributes named in the of __mandatoryattrs__ into a read only property
         for attr in classdict.get("__mandatoryattrs__", []):
             setattr(cls, attr, property(getclassattr(attr)))
             # print(cls, classname, bases, classdict)
@@ -35,14 +36,15 @@ class MandatoryReadOnlyAttr(type):
         return super(MandatoryReadOnlyAttr, cls).__new__(cls, classname, bases, classdict)
 
     def __init__(cls, name, bases, attrs):
-        # print(cls, name, bases, attrs)
+        # Check that the Core class has defined the __mandatoryattrs__ class attribute
         if name.startswith("Core_"):
             missing_attrs = ["{}".format(attr) for attr in ["__mandatoryattrs__"]
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
+        # Check that the attributes named in the of __mandatoryattrs__ attribute of the Core class
+        # are defined in the child classes
         if not(name.startswith("Core_")) and not(name.startswith("Default_")):
-            # Check for missing attributes
             missing_attrs = ["{}".format(attr) for attr in getattr(cls, "__mandatoryattrs__", [])
                              if not hasattr(cls, attr)]
             if len(missing_attrs) > 0:
@@ -58,7 +60,7 @@ class MandatoryMethods(type):
             missing_meths = ["{}".format(meth) for meth in getattr(cls, "__mandatorymeths__", [])
                              if not hasattr(cls, meth)]
             if len(missing_meths) > 0:
-                raise AttributeError("class '{}' requires attribute {}".format(name, missing_meths))
+                raise AttributeError("class '{}' requires method {}".format(name, missing_meths))
 
 
 class MandatoryReadOnlyAttrAndMethod(MandatoryReadOnlyAttr, MandatoryMethods):

@@ -9,8 +9,8 @@ from logging import getLogger
 
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ...dataset_and_instrument.rv import RV_inst_cat
-from ...dataset_and_instrument.indicator import IND_inst_cat
 from ....core.model.core_parametrisation import Core_Parametrisation
+from ....core.dataset_and_instrument.indicator import IND_inst_cat
 
 
 ## Logger Object

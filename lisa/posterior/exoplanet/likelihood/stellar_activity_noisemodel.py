@@ -23,9 +23,9 @@ from collections import defaultdict, Counter, OrderedDict
 # from ..model.celestial_bodies import Star
 from ..dataset_and_instrument.rv import RV_inst_cat
 from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.parameter import Parameter
 from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
+from ...core.dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.name import Name, Named
