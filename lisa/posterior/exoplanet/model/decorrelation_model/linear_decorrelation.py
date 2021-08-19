@@ -10,9 +10,9 @@ from .core_decorrelation_model import Core_DecorrelationModel
 logger = getLogger()
 
 
-class LinearDecorrelation(Core_DecorrelationModel):
-    """docstring for LinearDecorrelation."""
+class LinearDecorrelation_LC(Core_DecorrelationModel):
+    """docstring for LinearDecorrelation_LC."""
 
     # def __init__(self, arg):
-    #     super(LinearDecorrelation, self).__init__()
+    #     super(LinearDecorrelation_LC, self).__init__()
     #     self.arg = arg

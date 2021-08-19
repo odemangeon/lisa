@@ -67,8 +67,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     __mandatoryattrs__ = ["category", "instcat_models"]
     # category: String which designate the model (for example: "GravitionalGroups"). To choose the
     #   model to be used, the user will use this string.
-    # possible_inst_categories: Set of the categories of data that the model can simulate
-    #   (for example: {"RV", "LC"} for "GravitionalGroups")
+    # instcat_models: List of InstCat_Model Classes implemented for the Model
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
