@@ -205,6 +205,17 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                     if indicator_model is not None:
                         self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
                                             kwargs_indicator_model=self.params_indicator_models[indicator_model])
+        for inst_cat in self.dataset_db.inst_categories:
+            InstCat_Model = self.get_InstCatModel4instcat(inst_cat=inst_cat)
+            if InstCat_Model.decorrelate_available:
+                l_inst_fullcat = self.instruments.get_inst_fullcat4inst_cat(inst_cat=inst_cat)
+                for inst_fullcat_i in l_inst_fullcat:
+                    list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
+                    for inst_model in list_instmodel:
+                        if self.do_decorrelate_instmod(inst_mod_obj=inst_model):
+                            for DecorModel in InstCat_Model.decorrelation_models:
+                                DecorModel.apply_parametrisation(inst_mod_obj=inst_model,
+                                                                 dico_config=self.decorrelation_config[inst_cat][inst_model.full_name][DecorModel.category])
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

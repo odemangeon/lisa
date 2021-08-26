@@ -23,7 +23,7 @@ from .datasim_creator_lc import create_datasimulator_LC
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from .....tools.miscellaneous import spacestring_like
-
+from ..decorrelation_model.linear_decorrelation import LinearDecorrelation_LC
 
 ## Logger object
 logger = getLogger()
@@ -38,6 +38,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __inst_cat__ = LC_inst_cat
     __has_instcat_paramfile__ = True
     __datasim_creator_name__ = "sim_LC"
+    __decorrelation_models__ = [LinearDecorrelation_LC]
 
     ## List of available transit models, the 1st element is used as default
     _transit_models = ["batman", ]  # ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"] Temporarily? remove pytransit from the available transit_models
@@ -212,6 +213,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                      '{key_instspecific_dict_LC_models}': {{{instspec_occmodel_dict}
                 {tab_occmod}}}
                                      }}
+                {text_general_decorrelation}
                 """
                 text_LC_param = dedent(text_LC_param)  # Remove undesired indentation
 
@@ -313,6 +315,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                                      tab_pcmod=tab_pcmod, tab_occmod=tab_occmod,
                                                      instspec_pcmodel_dict=inst_pc_dict,
                                                      instspec_occmodel_dict=inst_occ_dict,
+                                                     text_general_decorrelation=self.create_text_paramfile_decorrelation()  # Comes from Core_InstCat_Model
                                                      )
 
                 # Write the file
@@ -326,6 +329,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         """Load LC_param_file."""
         dico_config = self.read_LC_param_file()
         self.load_LC_config(dico_config)
+        self.load_config_decorrelation(dico_config)
 
     def read_LC_param_file(self):
         """Read the content of the LC parameter file."""

@@ -8,9 +8,10 @@ from collections import OrderedDict, Counter, defaultdict
 from unittest import TestCase
 
 from .polynomial_model import PolynomialIndicatorInterface
-from ...dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
 from ..datasim_docfunc import DatasimDocFunc
 from ..datasimulator_toolbox import check_datasets_and_instmodels
+from ..core_instcat_model import Core_InstCat_Model
+from ...dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
 from .....tools.miscellaneous import spacestring_like
 from .....tools.human_machine_interface.QCM import QCM_utilisateur
 
@@ -19,13 +20,14 @@ from .....tools.human_machine_interface.QCM import QCM_utilisateur
 logger = getLogger()
 
 
-class IND_InstCat_Model(PolynomialIndicatorInterface):
+class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     """docstring for LC_InstCat_Model, interface class for a subclass of Core_Model."""
 
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = IND_inst_cat
     __has_instcat_paramfile__ = True
     __datasim_creator_name__ = "sim_IND"
+    __decorrelation_models__ = []
 
     # models available for the indicators
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one

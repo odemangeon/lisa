@@ -180,9 +180,9 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     @property
     def possible_inst_categories(self):
-        """List of instrument categories handled by the model.
+        """Set of instrument categories handled by the model.
         """
-        return list(set([InstCat_Model.inst_cat for InstCat_Model in self.instcat_models]))
+        return set([InstCat_Model.inst_cat for InstCat_Model in self.instcat_models])
 
     @property
     def object_name(self):
@@ -212,6 +212,25 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         key: datasimcreator name, value: datasimcreator docfunction
         """
         return self.__datasimcreator
+
+    def get_InstCatModel4instcat(self, inst_cat):
+        """Get the Core_InstCat_Model subclass corresponding to the instrument category provided
+
+        Arguments
+        ---------
+        inst_cat    : str
+            String giving the category of instrument for which you want the Model class
+
+        Returns
+        -------
+        InstCat_Model   : Core_InstCat_Model Subclass
+            Model for the instrument category provided
+        """
+        for InstCat_Model in self.instcat_models:
+            if InstCat_Model.inst_cat == inst_cat:
+                return InstCat_Model
+        raise ValueError("There is no Core_InstCat_Model Subclass corresponding to the instrument category"
+                         f" {inst_cat} in this model")
 
     def get_datasimcreatorname(self, inst_cat):
         """Return the name of the datasimcreator (without_instrument?) function associated with
@@ -750,7 +769,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
         for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
             if self.handlers4instcatparamfile[inst_cat][create_key] is not None:
-                self.handlers4instcatparamfile[inst_cat][create_key](paramfile_path.get(inst_cat, None),
+                self.handlers4instcatparamfile[inst_cat][create_key](self=self, paramfile_path=paramfile_path.get(inst_cat, None),
                                                                      answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
                                                                      answer_create=dict_answer_create.get(inst_cat, def_answer_create))
 
@@ -794,7 +813,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         for inst_fullcat in self.inst_fullcategories:
             inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
             if self.handlers4instcatparamfile[inst_cat][load_key] is not None:
-                self.handlers4instcatparamfile[inst_cat][load_key]()
+                self.handlers4instcatparamfile[inst_cat][load_key](self=self)
 
     def load_noisemodcat_paramfile(self):
         """Load the param files specific to each noise model category(if needed).

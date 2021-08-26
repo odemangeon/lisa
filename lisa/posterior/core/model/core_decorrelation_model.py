@@ -24,7 +24,7 @@ class Core_DecorrelationModel(object, metaclass=MandatoryReadOnlyAttrAndMethod):
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "name_dict_paramfile", ]
+    __mandatoryattrs__ = ["category", "name_dict_paramfile", "format_config_dict"]
     # category: String which designate the decorrelation model (for example: "linear"). To choose the
     #   decorrelation model to be used, the user will use this string.
     # name_dict_paramfile: String which gives the str to be used for the dictionary that will be used in the

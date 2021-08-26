@@ -54,7 +54,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
 
     ## Set of possible instrument categories (Used by Core_Model._check_dataset_instcat)
     # __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat, IND_inst_cat}
-    __instcat_models__ = [LC_InstCat_Model]
+    __instcat_models__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 

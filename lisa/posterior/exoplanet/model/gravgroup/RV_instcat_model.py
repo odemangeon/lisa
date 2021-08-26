@@ -31,6 +31,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
     __inst_cat__ = RV_inst_cat
     __has_instcat_paramfile__ = False
     __datasim_creator_name__ = "sim_RV"
+    __decorrelation_models__ = []
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models

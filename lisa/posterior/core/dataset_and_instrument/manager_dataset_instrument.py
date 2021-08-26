@@ -97,7 +97,7 @@ class Manager_Inst_Dataset(object):
             inst_cat = inst_instance.category
             if not(self.validate_inst_cat(inst_cat)):
                 raise ValueError("Provided inst_category ({}) is not amongst the valid instrument "
-                                 "categories: {}".format(self.get_available_inst_cat()))
+                                 "categories: {}".format(inst_cat, self.get_available_inst_cat()))
             if inst_cat not in self.__available_inst.keys():
                 self.__available_inst[inst_cat] = {}
             if inst_instance.has_subcategories:
