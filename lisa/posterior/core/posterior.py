@@ -433,7 +433,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             l_idx_param_datasim = []
             for param_fullname_ii in l_datasim_param_fullname:
                 l_idx_param_datasim.append(l_param_name.index(param_fullname_ii))
-            sim_data = model_allsameGPkernel(param[l_idx_param_datasim])
+            sim_data = model_allsameGPkernel(param[l_idx_param_datasim], **datasim_kwargs)
             gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
                                                 param_noisemod=f_format_param(param),
                                                 l_datakwargs=datasets_kwargs,
