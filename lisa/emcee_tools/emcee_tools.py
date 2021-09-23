@@ -2481,7 +2481,7 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iteration
     corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
 
 
-def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_burnin=None, only_bestfit_bic=False):
+def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_burnin=None, only_bestfit_bic=False, datasim_kwargs={}):
     """Compute the Bayesian Information Criteria.
 
     Arguments
@@ -2499,6 +2499,8 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
         List of indexes of the first iteration to consider for each walker
     only_bestfit_bic : bool
         If True, doesn't compute the lnlike at all iteration and only uses the best fit values of the parameters
+    datasim_kwargs   : dict
+        Dictionary of keyword arguments for datasim_docfunc (will be passed on to the likelihood function)
 
     Returns
     -------
@@ -2524,7 +2526,7 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
         lnlikeproba = []
 
         for i_iter in tqdm(range(clean_flat_chains.shape[0])):
-            lnlikeproba.append(lnlike(clean_flat_chains[i_iter]))
+            lnlikeproba.append(lnlike(clean_flat_chains[i_iter], **datasim_kwargs))
 
         max_lnlikelihood = np.max(lnlikeproba)
         logger.info(f"Maximum ln likelihood: {max_lnlikelihood}")
@@ -2535,7 +2537,7 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
         bic = None
 
     l_fit_val = get_param_vector(df_fittedval, lnlike.params_model)
-    bestfit_lnlikehood = lnlike(l_fit_val)
+    bestfit_lnlikehood = lnlike(l_fit_val, **datasim_kwargs)
     logger.info(f"Ln likelihood for the best parameter values : {bestfit_lnlikehood}")
 
     bic_bestfit = nb_free_param * np.log(nb_data_points) - 2 * bestfit_lnlikehood
