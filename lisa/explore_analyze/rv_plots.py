@@ -1051,10 +1051,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 if not("color" in pl_kwarg_final["GP"]):
                     pl_kwarg_final["GP"]["color"] = pl_kwarg_final["model"]["color"]
                 if not("alpha" in pl_kwarg_final["GP"]):
-                    pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2
+                    pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2 if pl_kwarg_final["model"]["alpha"] is not None else None
                 _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                          color=pl_kwargs["GP"]["color"], alpha=pl_kwargs["GP"]["alpha"],
-                                          label=pl_kwargs["GP"]["label"]  # **kwarg_GP_pred_var
+                                          color=pl_kwarg_final["GP"]["color"], alpha=pl_kwarg_final["GP"]["alpha"],
+                                          label=pl_kwarg_final["GP"].get("label", None)  # **kwarg_GP_pred_var
                                           )
 
             ###############
@@ -1263,7 +1263,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 if fact == 1:
                                     per_ticks_major.append(tick)
                                     if tick in period_no_ticklabels_j:
-                                        per_ticklabels_major.append("")
+                                        per_ticklabels_major.append(None)
                                     else:
                                         per_ticklabels_major.append(tick)
                                 else:
@@ -1271,7 +1271,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
                     if GLSP_kwargs.get('scientific_notation_P_axis', True):
-                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticklabels_major])
+                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) if tick is not None else "" for tick in per_ticklabels_major])
                     else:
                         ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
