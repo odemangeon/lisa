@@ -11,6 +11,7 @@ from os.path import join
 import gc
 
 from corner import corner
+import matplotlib
 import matplotlib.pyplot as pl
 # from numpy import median, zeros, where, sqrt
 import numpy as np
@@ -166,6 +167,9 @@ only_bestfit_bic = True
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+
+# Set matplotlib rcparams to the default value to avoid issues with plots
+matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 logger.info("########\nCHAIN ANALYSIS")
 
