@@ -278,9 +278,10 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             axes_resi[datasetname][jj].tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
             axes_resi[datasetname][jj].tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
             axes_resi[datasetname][jj].grid(axis="y", color="black", alpha=.5, linewidth=.5)
-            if jj != 0:
-                axes_data[datasetname][jj].tick_params(axis="both", labelleft=False)
-                axes_resi[datasetname][jj].tick_params(axis="both", labelleft=False)
+
+            if jj != 0 and sharey:
+                axes_data[datasetname][jj].tick_params(axis="y", labelleft=False)
+                axes_resi[datasetname][jj].tick_params(axis="y", labelleft=False)
             # Set title with planet name on the first row
             if ii == 0:
                 axes_data[datasetname][jj].set_title("{} {}".format("Planet", planet_name), fontsize=fontsize)

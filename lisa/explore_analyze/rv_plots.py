@@ -281,9 +281,9 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         ax_resi_pl.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
         ax_resi_pl.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
         ax_resi_pl.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-        if ii != 0:
-            ax_data_pl.tick_params(axis="both", labelleft=False)
-            ax_resi_pl.tick_params(axis="both", labelleft=False)
+        if ii != 0 and sharey:
+            ax_data_pl.tick_params(axis="y", labelleft=False)
+            ax_resi_pl.tick_params(axis="y", labelleft=False)
 
         ##################################################
         # Compute the phases associated to the time values
