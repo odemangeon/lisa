@@ -24,30 +24,32 @@ import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.mylogger as ml
 from lisa.explore_analyze.misc import get_def_output_folders
 
+###############################
 ## Definition of the parameters
-obj_name = "WASP-151"  # Change
-extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
-model_category = "GravitionalGroups"
-nb_planet = 1
-rv_model = "radvel"  # None will select the default model being radvel
-transit_model = "batman"  # None will select the default model being batman
-parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
-with_DeltaRV = True
-kwargs_post = {}
+###############################
+obj_name = "WASP-151"  # Name of you target star
+extension_exploration = "_initrun"  # extension of your exploration (will be added to the ouput files).
+model_category = "GravitionalGroups"  # Class of model: Can be GravitionalGroups, GravitionalGroupsDynamic
+nb_planet = 1  # Number of planets
+rv_model = "radvel"  # RV model: None will select the default model being radvel. Currently only radvel available
+transit_model = "batman"  # Transit model: None will select the default model being batman. Curretnly only batman available
+parametrisation = "Multis"  # Parametrisation to use. The possible choices depends on the model used. For GravitionalGroups it can be 'EXOFAST' or 'Multis'
+with_DeltaRV = True  # To you want to us an RV offset between RV instruments. More or less always True
+kwargs_post = {}  # Additional argument to pass to the posterior function. For example reference times.
 
-data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
-run_folder = getcwd()
-output_folders = get_def_output_folders(run_folder=run_folder)
+data_folder = join(getcwd(), "data")  # Folder where the data files are.
+run_folder = getcwd()  # Folder for the log and the parametrisation files
+output_folders = get_def_output_folders(run_folder=run_folder)  # Folder for the outputs
 
 # Pre-minimisation parameters
-do_preminimization = True
-N_maxiter_preminimization = 1000
-xtol_preminimization = 1e-12
+do_preminimization = True  # Performs a gradient base optimisation prior to the MCMC exploration
+N_maxiter_preminimization = 1000  # Maximum number of iteration for the gradient base optimisation
+xtol_preminimization = 1e-12  # Convergence criteria for the gradient base optimisation
 
 # emcee parameters
-nwalker_fact = 2.5
-nsteps_MCMC = 50000
-save_to_file = False
+nwalker_fact = 2.5  # nwalkers will be round(nwalker_fact * nb parameters)
+nsteps_MCMC = 50000  # Number of steps for the MCMC exploration
+save_to_file = False  # Save the chains to a file while running.
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # Distribution for the choice of initial parameter values. For now you can only specify gaussian distributions
@@ -57,8 +59,12 @@ init_distrib = {}
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
-load_from_pickle = False
-extension_analysis = ""
+load_from_pickle = False  # If True the MCMC chains will start from the inferred parameter distribution found be the chain analysis specified below
+extension_analysis = ""  # Extension of the chain analysis that was used to derived the parameter values that you want to use as initial position distributions
+
+##########################
+## Execution of the script
+##########################
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
