@@ -21,7 +21,7 @@ Rely on python3.7. Python package dependencies:
 - george
 - celerite
 - radvel
-- emcee=2.2.1
+- emcee=3.x
 - tqdm
 - PyAstronomy
 - statsmodels
