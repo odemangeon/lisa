@@ -15,7 +15,8 @@ from numpy import zeros_like
 from emcee import EnsembleSampler
 
 # If needed, add lisa folder to the python path here
-# lisa_folder = ".."  # Change this if needed
+# import sys
+# lisa_folder = "../.."  # Change this if needed
 # if lisa_folder not in sys.path:
 #     sys.path.append(lisa_folder)
 
@@ -27,7 +28,7 @@ from lisa.explore_analyze.misc import get_def_output_folders
 ###############################
 ## Definition of the parameters
 ###############################
-obj_name = "WASP-151"  # Name of you target star
+obj_name = "WASP-151"  # Name of you target star. Do not use "_"
 extension_exploration = "_initrun"  # extension of your exploration (will be added to the ouput files).
 model_category = "GravitionalGroups"  # Class of model: Can be GravitionalGroups, GravitionalGroupsDynamic
 nb_planet = 1  # Number of planets
