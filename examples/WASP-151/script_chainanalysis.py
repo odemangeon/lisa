@@ -11,6 +11,7 @@ from os.path import join
 import gc
 
 from corner import corner
+import matplotlib
 import matplotlib.pyplot as pl
 # from numpy import median, zeros, where, sqrt
 import numpy as np
@@ -32,11 +33,12 @@ from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.plot import hist_lnprob
 from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
-
+###############################
 ## Definition of the parameters
-obj_name = "WASP-151"  # Change
-kwargs_datasim = {}
-star_kwargs = {"M": {"value": 1.077,
+###############################
+obj_name = "WASP-151"  # Name of you target star
+kwargs_datasim = {}  # Additional argument to pass to the datasimulator function. For example reference times.
+star_kwargs = {"M": {"value": 1.077,  # Stellar parameter value and error bars (1-sigma)
                      "error": 0.081},
                "R": {"value": 1.14,
                      "error": 0.03},
@@ -44,51 +46,70 @@ star_kwargs = {"M": {"value": 1.077,
                         "error": 57}
                }
 
-output_folders = get_def_output_folders(run_folder=getcwd())
+output_folders = get_def_output_folders(run_folder=getcwd())  # Folder for the outputs
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
-load_from_pickle = True
-extension_exploration = "_initrun"
+load_from_pickle = True  # Load the MCMC exploration results from saved files
+extension_exploration = "_initrun"  # extension of your exploration (Needs to be the same than in you script_mcmcexploration)
+do_create_chainI = False  # For convenience, the chains (from the emcee sample) are stored in a different object that you need to create at first.
+                          # The emcee sampler will be deleted to save space. So once you have done it if you try to do it again without loading the emcee sampler, this will crash
 
 # Save plots ?
-save_plots = True
-extension_outputs = "_initrun_median"
+save_plots = True  # Save all the plots.
+extension_outputs = "_initrun_median"  # extension of this chain analysis (will be added to the ouput files).
 
-# Histograms Parameters
+# Common parameters for the plots of histograms of the lnposterior and the trace plots
 hist_perc = 10  # For the histogram after the acceptance fraction and the ln posterior selections
 # the histograms of the ln posterior probability will only be done for the last hist_perc% of the chains
 # After the Geweke selection, 10% of the sample, uniformly spread will be selected.n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
-sigma_clip_hist = None
-n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
-do_hist = False  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
-do_traces = False
+sigma_clip_hist = None  # If not None, a sigma clipping will be done on the histogram of the lnposterior before plotting (can avoid to have to waiting a very long time for your histogram)
+n_bins = 1000  # Define the number of bins in the histograms of the lnposterior. Can also be 'auto' but sometimes auto just takes too much time.
+do_hist = False  # Histograms of the lnposteriors can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time not to do them at first
+do_traces = False  # Trace plots can also be very long to produce. So in some cases, it can save you a lot of time not to do them at first
 
-# Raw chains and hist plots
-do_RP = True  # Do chain plot and histogram plot for raw chains
+# Raw trace plots and hist of the lnposterior
+do_RP = True  # Do chain trace plot and histogram of the lnposterior plot for raw chains
+thin_RP = 10  # thining factor for the traces plots
 
 # Acceptance fraction selection
-do_AFS = True
-sig_fact_AFS = 2
-quantile_AFS = 75
-verbose_AFS = 1
-plot_hist_AF = True
+# The idea for this step is to remove the chains whose acceptance fraction is too low compared to the rest.
+# To use with caution !
+# All chain whose acceptance fraction is < quantile_AFS - sig_fact_AFS * MAD(Acceptance fraction of all chains) will be removed
+do_AFS = True  # Do the acceptance fraction selection
+sig_fact_AFS = 2  # Sigma clipping value.
+quantile_AFS = 75  # Quantile of the acceptance fraction of all chains that you want to use as reference
+verbose_AFS = 1  # More outputs on screen
+plot_hist_AF = True  # Do the diagnostic plot for this step.
+thin_AFS = 100  # Thining factor for the trace plots
 
 # Ln Posterior selection
-do_LPS = True
-sig_fact_LPS = 3
-quantile_LPS = 100
-quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
-verbose_LPS = 1
-plot_hist_Post = True
+# The idea for this step is to remove the chains whose final lnposterior value is too low compared to the rest.
+# So remove unconverged chains or local minima with lower posterior values.
+# To use with caution !
+# The value of the lnposterior obtianed by each chain will be the quantile (quantile_walker_LPS) of the posterior values of the chain.
+# Then all chain whose lnposterior is < quantile_LPS(quantile_walkers_LPS) - sig_fact_LPS * MAD(quantile_walkers_LPS) will be removed
+do_LPS = True  # Do the ln posterior selection
+sig_fact_LPS = 3  # Sigma clipping value.
+quantile_LPS = 100  # Quantile of the quantile_walker_LPS of all chains that you want to use as reference
+quantile_walker_LPS = 100  # Each walker get as representation lnposterior value the quantile_walker_LPS quantile of it lnposterior chain
+verbose_LPS = 1   # More outputs on screen
+plot_hist_Post = True # Do the diagnostic plot for this step.
+thin_LPS = 10  # Thining factor for the trace plots
 
-# Chains and hist plots after AFS and LPS
+# Trace plots and hist of the lnposterior after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
 
 # Convergence and burnin determination
-do_GS = True
-geweke_thres = 2.
+# The idea of this step is to determine the burnin fraction of this chain
+# The chain by chain geweke selection algorithm is not always suited to identify stationarity so you have to use it as a diagnostic not as an automatic black box tool.
+# Do the analysis in two steps.
+# 1. do_GS = True and apply_min_burnin = False
+# 2. Identify the burning thanks to the geweke plot
+# 3. do_GS = False and apply_min_burnin = True with min_burnin = the burnin that you identified
+do_GS = True  # Do the geweke selection diagnostic
+geweke_thres = 2.  # Geweke threshold
 last_perc_GS = 10  # Percentage of the chains used as final state the chains in the geweke selection.
 # The rest of the chains will be used to estimate the moment when convergence is reach,
 last_min_GS = 50  # Minimum number of steps to use for the final state of the chains
@@ -97,14 +118,17 @@ min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in ea
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
 interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
-do_geweke_plot = True
-do_hist_after_geweke = True
-extra_burnin_4_hist_after_geweke = 0
-sigma_clip_hist_after_geweke = 5
-apply_min_burnin = True
-min_burnin = 10000
+do_geweke_plot = True  # Do the diagnostic plot. It's your diagnotic to determine the burnin. Do it !
+do_hist_after_geweke = True  # Do the histogram of the lnposterior
+extra_burnin_4_hist_after_geweke = 0  # apply an an extra burnin to the values identified by the geweke algorithm before doing the lnposterior histogram
+sigma_clip_hist_after_geweke = 5  # Sigma clipping for the histogram of the lnposterior
+apply_min_burnin = False  # Will apply a given burnin to all chains even if you did the geweke selection first
+min_burnin = 10000  # Valeu of the burnin to use
+thin_GS = 10  # Thining factor for the trace plots
 
 # Parameter based walker selection
+# If you have multiple maxima even after all the selection you can use this two separate them
+# USe at yuor own risks
 do_PS = False
 parameters = ["WASP-151_b_ecosw", "WASP-151_b_esinw"]
 
@@ -123,16 +147,16 @@ perc_select = 75
 plot_hist_PS = True
 
 # Save l_walkers and l_burnin
-save_walkersandburnins = True
+save_walkersandburnins = True  # Save the walkers selection and burnin values
 
 # Determine best fit values and error bars
 do_bestfit = True
-method_bestfit = "median"
+method_bestfit = "median"  # Method to use to determine the best values for the parameter. Can be 'median' or 'MAP'
 save_results_bestfit = True
 
 # Do Corner plot
 do_corner = True
-sampling_corner = 10
+sampling_corner = 10  # thining factor for the corner plot
 
 # Do model comparison
 do_MComp = True
@@ -150,16 +174,23 @@ omega_0to360 = False
 save_results_bestfit_secpar = True
 do_corner_sec = False
 sampling_corner_sec = 100
+thin_SecParam = 100
 
 # Do computation of the BIC
 do_compute_BIC = False
 load_fitted_val_pickle_BIC = False
 only_bestfit_bic = True
 
+##########################
+## Execution of the script
+##########################
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+
+# Set matplotlib rcparams to the default value to avoid issues with plots
+matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 logger.info("########\nCHAIN ANALYSIS")
 
@@ -174,22 +205,23 @@ if load_from_pickle:
     print("l_param_name from posterior:\n{}".format(l_param_name_bis))
     print("l_param_name from pickle:\n{}".format(l_param_name))
 
-nstep = chain.shape[1]
-nwalker = chain.shape[0]
-lnprobability_name = "lnposterior"
-l_param_chainI = l_param_name + [lnprobability_name]
-chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
-del chain
-gc.collect()
+if do_create_chainI:
+    nstep = chain.shape[1]
+    nwalker = chain.shape[0]
+    lnprobability_name = "lnposterior"
+    l_param_chainI = l_param_name + [lnprobability_name]
+    chainI = ChainsInterpret(np.dstack((chain, lnprobability)), l_param_chainI)
+    del chain
+    gc.collect()
 
 if do_RP:
     logger.info("1. Plot raw traces and lnpost histogram")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainI, lnprobability, l_param_chainI, thin=thin_RP)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -212,11 +244,11 @@ if do_AFS:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS, thin=thin_AFS)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -238,16 +270,16 @@ if do_LPS:
                                                quantile_walker=quantile_walker_LPS, verbose=verbose_LPS,
                                                plot=plot_hist_Post)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select_{quantile_walker_LPS}-{quantile_LPS}{extension_outputs}.pdf"))
     else:
         pl.show()
     pl.close("all")
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS, thin=thin_LPS)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -270,11 +302,11 @@ if do_AFSLPSP:
     logger.info("Number of walker rejected by acceptance fraction or lnposterior: {}/{}"
                 "".format((nwalker - len(l_walker)), nwalker))
     if do_traces:
-        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker, thin=thin_AFSLPSP)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist:
@@ -346,11 +378,11 @@ if do_GS:
         pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                       l_burnin=l_burnin)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+                       l_burnin=l_burnin, thin=thin_GS)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     if do_hist and do_hist_after_geweke:
@@ -370,11 +402,11 @@ if do_GS:
 
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                       l_burnin=l_burnin, suppress_burnin=True)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
-    else:
-        pl.show()
+                       l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 else:
     l_walker_conv = l_walker
@@ -386,11 +418,11 @@ else:
                 l_burnin[ii] = min_burnin
         if do_traces:
             et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
-                           l_burnin=l_burnin, suppress_burnin=True)
-        if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
-        else:
-            pl.show()
+                           l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
+            if save_plots:
+                pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+            else:
+                pl.show()
 
 # Parameter based walker selection
 if do_PS:
@@ -434,13 +466,13 @@ if save_walkersandburnins:
 
 if do_bestfit:
     logger.info("6. Determine best fit values and error bars for main parameters")
-    fitted_values = et.get_fitted_values(chainI, method=method_bestfit, l_param_name=l_param_chainI,
-                                         l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                         lnprobability_name=lnprobability_name)
+    fitted_values, _ = et.get_fitted_values(chainI, method=method_bestfit, l_param_name=l_param_chainI,
+                                            l_walker=l_walker_PS, l_burnin=l_burnin_PS,
+                                            lnprobability_name=lnprobability_name)
 
-    sigma_p, _, sigma_m = da.getconfi(et.get_clean_flatchain(chainI, l_walker=l_walker_PS,
-                                                             l_burnin=l_burnin_PS),
-                                      level=1, centre=fitted_values, l_param_name=l_param_chainI)
+    sigma_p, _, sigma_m, _ = da.getconfi(et.get_clean_flatchain(chainI, l_walker=l_walker_PS,
+                                                                l_burnin=l_burnin_PS),
+                                         level=1, centre=fitted_values, l_param_name=l_param_chainI)
 
     df_fittedval = pd.DataFrame(index=l_param_chainI, data={'value': fitted_values, 'sigma-': sigma_m,
                                                             'sigma+': sigma_p})
@@ -531,27 +563,27 @@ if do_SecParam:
 
     logger.info("Plot raw traces for secondary parameters")
     if do_traces:
-        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, thin=thin_SecParam)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     logger.info("Plot geweke select traces for secondary parameters")
     if do_traces:
-        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS)
-    if save_plots:
-        pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
-    else:
-        pl.show()
+        et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, thin=thin_SecParam)
+        if save_plots:
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
+        else:
+            pl.show()
     pl.close("all")
 
     logger.info("Determine best fit values and error bars for secondary parameters")
-    fitted_values_sec = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
+    fitted_values_sec, _ = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
                                              l_walker=l_walker_PS, l_burnin=l_burnin_PS,
                                              lnprobability_name=lnprobability_name, force_finite=force_finite)
-    sigma_p_sec, _, sigma_m_sec = da.getconfi(et.get_clean_flatchain(chainIsec,
+    sigma_p_sec, _, sigma_m_sec, _ = da.getconfi(et.get_clean_flatchain(chainIsec,
                                                                      l_walker=l_walker_PS,
                                                                      l_burnin=l_burnin_PS, force_finite=force_finite),
                                               level=1, centre=fitted_values_sec,

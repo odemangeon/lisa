@@ -33,11 +33,12 @@ from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.plot import hist_lnprob
 from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 
-
+###############################
 ## Definition of the parameters
-obj_name = "WASP-151"  # Change
-kwargs_datasim = {}
-star_kwargs = {"M": {"value": 1.077,
+###############################
+obj_name = "WASP-151"  # Name of you target star
+kwargs_datasim = {}  # Additional argument to pass to the datasimulator function. For example reference times.
+star_kwargs = {"M": {"value": 1.077,  # Stellar parameter value and error bars (1-sigma)
                      "error": 0.081},
                "R": {"value": 1.14,
                      "error": 0.03},
@@ -45,55 +46,70 @@ star_kwargs = {"M": {"value": 1.077,
                         "error": 57}
                }
 
-output_folders = get_def_output_folders(run_folder=getcwd())
+output_folders = get_def_output_folders(run_folder=getcwd())  # Folder for the outputs
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
 # in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
 # load_from_pickle to True
-load_from_pickle = True
-extension_exploration = "_initrun"
-do_create_chainI = False
+load_from_pickle = True  # Load the MCMC exploration results from saved files
+extension_exploration = "_initrun"  # extension of your exploration (Needs to be the same than in you script_mcmcexploration)
+do_create_chainI = False  # For convenience, the chains (from the emcee sample) are stored in a different object that you need to create at first.
+                          # The emcee sampler will be deleted to save space. So once you have done it if you try to do it again without loading the emcee sampler, this will crash
 
 # Save plots ?
-save_plots = True
-extension_outputs = "_initrun_median"
+save_plots = True  # Save all the plots.
+extension_outputs = "_initrun_median"  # extension of this chain analysis (will be added to the ouput files).
 
-# Histograms Parameters
+# Common parameters for the plots of histograms of the lnposterior and the trace plots
 hist_perc = 10  # For the histogram after the acceptance fraction and the ln posterior selections
 # the histograms of the ln posterior probability will only be done for the last hist_perc% of the chains
 # After the Geweke selection, 10% of the sample, uniformly spread will be selected.n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
-sigma_clip_hist = None
-n_bins = 1000  # Defin the number of bins in the histograms of the lnposterior is 'auto' cannot be used. (Sometimes auto just takes too much time)
-do_hist = False  # Histograms can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time
-do_traces = False
+sigma_clip_hist = None  # If not None, a sigma clipping will be done on the histogram of the lnposterior before plotting (can avoid to have to waiting a very long time for your histogram)
+n_bins = 1000  # Define the number of bins in the histograms of the lnposterior. Can also be 'auto' but sometimes auto just takes too much time.
+do_hist = False  # Histograms of the lnposteriors can be very long to produce when the values are very widely spread. So in some cases, it can save you a lot of time not to do them at first
+do_traces = False  # Trace plots can also be very long to produce. So in some cases, it can save you a lot of time not to do them at first
 
-# Raw chains and hist plots
-do_RP = True  # Do chain plot and histogram plot for raw chains
-thin_RP = 10
+# Raw trace plots and hist of the lnposterior
+do_RP = True  # Do chain trace plot and histogram of the lnposterior plot for raw chains
+thin_RP = 10  # thining factor for the traces plots
 
 # Acceptance fraction selection
-do_AFS = True
-sig_fact_AFS = 2
-quantile_AFS = 75
-verbose_AFS = 1
-plot_hist_AF = True
-thin_AFS = 100
+# The idea for this step is to remove the chains whose acceptance fraction is too low compared to the rest.
+# To use with caution !
+# All chain whose acceptance fraction is < quantile_AFS - sig_fact_AFS * MAD(Acceptance fraction of all chains) will be removed
+do_AFS = True  # Do the acceptance fraction selection
+sig_fact_AFS = 2  # Sigma clipping value.
+quantile_AFS = 75  # Quantile of the acceptance fraction of all chains that you want to use as reference
+verbose_AFS = 1  # More outputs on screen
+plot_hist_AF = True  # Do the diagnostic plot for this step.
+thin_AFS = 100  # Thining factor for the trace plots
 
 # Ln Posterior selection
-do_LPS = True
-sig_fact_LPS = 3
-quantile_LPS = 100
-quantile_walker_LPS = 100  # For each walker get as representation ln Posterior value its quantile_walker value
-verbose_LPS = 1
-plot_hist_Post = True
-thin_LPS = 10
+# The idea for this step is to remove the chains whose final lnposterior value is too low compared to the rest.
+# So remove unconverged chains or local minima with lower posterior values.
+# To use with caution !
+# The value of the lnposterior obtianed by each chain will be the quantile (quantile_walker_LPS) of the posterior values of the chain.
+# Then all chain whose lnposterior is < quantile_LPS(quantile_walkers_LPS) - sig_fact_LPS * MAD(quantile_walkers_LPS) will be removed
+do_LPS = True  # Do the ln posterior selection
+sig_fact_LPS = 3  # Sigma clipping value.
+quantile_LPS = 100  # Quantile of the quantile_walker_LPS of all chains that you want to use as reference
+quantile_walker_LPS = 100  # Each walker get as representation lnposterior value the quantile_walker_LPS quantile of it lnposterior chain
+verbose_LPS = 1   # More outputs on screen
+plot_hist_Post = True # Do the diagnostic plot for this step.
+thin_LPS = 10  # Thining factor for the trace plots
 
-# Chains and hist plots after AFS and LPS
+# Trace plots and hist of the lnposterior after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
 
 # Convergence and burnin determination
-do_GS = True
-geweke_thres = 2.
+# The idea of this step is to determine the burnin fraction of this chain
+# The chain by chain geweke selection algorithm is not always suited to identify stationarity so you have to use it as a diagnostic not as an automatic black box tool.
+# Do the analysis in two steps.
+# 1. do_GS = True and apply_min_burnin = False
+# 2. Identify the burning thanks to the geweke plot
+# 3. do_GS = False and apply_min_burnin = True with min_burnin = the burnin that you identified
+do_GS = True  # Do the geweke selection diagnostic
+geweke_thres = 2.  # Geweke threshold
 last_perc_GS = 10  # Percentage of the chains used as final state the chains in the geweke selection.
 # The rest of the chains will be used to estimate the moment when convergence is reach,
 last_min_GS = 50  # Minimum number of steps to use for the final state of the chains
@@ -102,15 +118,17 @@ min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in ea
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
 interval_perc_GS = 5  # Percentage of the chains used in each intervals to address convergence
 interval_step_min_GS = 20  # Minimum number of step in each intervals state of the chains
-do_geweke_plot = True
-do_hist_after_geweke = True
-extra_burnin_4_hist_after_geweke = 0
-sigma_clip_hist_after_geweke = 5
-apply_min_burnin = True
-min_burnin = 10000
-thin_GS = 10
+do_geweke_plot = True  # Do the diagnostic plot. It's your diagnotic to determine the burnin. Do it !
+do_hist_after_geweke = True  # Do the histogram of the lnposterior
+extra_burnin_4_hist_after_geweke = 0  # apply an an extra burnin to the values identified by the geweke algorithm before doing the lnposterior histogram
+sigma_clip_hist_after_geweke = 5  # Sigma clipping for the histogram of the lnposterior
+apply_min_burnin = False  # Will apply a given burnin to all chains even if you did the geweke selection first
+min_burnin = 10000  # Valeu of the burnin to use
+thin_GS = 10  # Thining factor for the trace plots
 
 # Parameter based walker selection
+# If you have multiple maxima even after all the selection you can use this two separate them
+# USe at yuor own risks
 do_PS = False
 parameters = ["WASP-151_b_ecosw", "WASP-151_b_esinw"]
 
@@ -129,16 +147,16 @@ perc_select = 75
 plot_hist_PS = True
 
 # Save l_walkers and l_burnin
-save_walkersandburnins = True
+save_walkersandburnins = True  # Save the walkers selection and burnin values
 
 # Determine best fit values and error bars
 do_bestfit = True
-method_bestfit = "median"
+method_bestfit = "median"  # Method to use to determine the best values for the parameter. Can be 'median' or 'MAP'
 save_results_bestfit = True
 
 # Do Corner plot
 do_corner = True
-sampling_corner = 10
+sampling_corner = 10  # thining factor for the corner plot
 
 # Do model comparison
 do_MComp = True
@@ -163,6 +181,9 @@ do_compute_BIC = False
 load_fitted_val_pickle_BIC = False
 only_bestfit_bic = True
 
+##########################
+## Execution of the script
+##########################
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
