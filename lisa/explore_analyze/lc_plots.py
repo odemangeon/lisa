@@ -664,9 +664,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 binstd_jitter_per_row = {}
                 x_values_per_row = {}
                 data_pl_per_row = {}
+                resi_pl_per_row = {}
+                data_err_per_row = {}
+                data_err_jitter_per_row = {}
                 for idx_row, datasetnames_per_row in datasetnames_in_row.items():
                     x_values_per_row[idx_row] = None
                     data_pl_per_row[idx_row] = None
+                    data_err_per_row[idx_row] = None
+                    data_err_jitter_per_row[idx_row] = None
+                    resi_pl_per_row[idx_row] = None
                     for i_dst, datasetname in enumerate(datasetnames_per_row):
                         if x_values_per_row[idx_row] is None:
                             x_values_per_row[idx_row] = x_values[datasetname]
@@ -676,16 +682,28 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                             data_pl_per_row[idx_row] = data_pl[datasetname]
                         else:
                             data_pl_per_row[idx_row] = np.append(data_pl_per_row[idx_row], data_pl[datasetname])
+                        if resi_pl_per_row[idx_row] is None:
+                            resi_pl_per_row[idx_row] = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
+                        else:
+                            resi_pl_per_row[idx_row] = np.append(resi_pl_per_row[idx_row], residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname])
+                        if data_err_per_row[idx_row] is None:
+                            data_err_per_row[idx_row] = dico_kwargs[datasetname]["data_err"]
+                        else:
+                            data_err_per_row[idx_row] = np.append(data_err_per_row[idx_row], dico_kwargs[datasetname]["data_err"])
+                        if data_err_jitter_per_row[idx_row] is None:
+                            data_err_jitter_per_row[idx_row] = data_err_jitter[datasetname]
+                        else:
+                            data_err_jitter_per_row[idx_row] = np.append(data_err_jitter_per_row[idx_row], data_err_jitter[datasetname])
+
                     # Bin the data and residuals
                     # binval[datasetname] = {}
                     # binval_resi[datasetname] = {}
                     (binval_per_row[idx_row], binedges, binnb
-                     ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
+                     ) = binned_statistic(x_values_per_row[idx_row], data_pl_per_row[idx_row],
                                           statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
-                    resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
                     (binval_resi_per_row[idx_row], _, _
-                     ) = binned_statistic(x_values[datasetname], resi_pl_dst,
+                     ) = binned_statistic(x_values_per_row[idx_row], resi_pl_per_row[idx_row],
                                           statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     # Compute the error bars on the binned data (and residuals)
@@ -696,12 +714,12 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     for i_bin in range(nbins):
                         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
-                            binstd_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
+                            binstd_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((data_err_per_row[idx_row]
                                                                                       [binnb == (i_bin + 1)]),
                                                                                      2.)) /
                                                                      bincount[i_bin]**2)
                             if data_err_jitter[datasetname] is not None:
-                                binstd_jitter_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
+                                binstd_jitter_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter_per_row[idx_row]
                                                                                                  [binnb == (i_bin + 1)]),
                                                                                                 2.)) /
                                                                                 bincount[i_bin]**2)
