@@ -32,13 +32,12 @@ AandA_fontsize = 8
 
 
 def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
-                                datasetnames=None,
+                                datasetnames=None, datasets_per_row=None, npt_model=5000,
                                 remove_GP=False, remove1=False, LC_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
-                                exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
+                                exptime_bin=0.0, binning_stat="mean", one_binning_per_row=False, supersamp_bin_model=10,
                                 sharey=False,
                                 fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None,
-                                show_datasetnames=True,
                                 show_system_name_in_suptitle=True,
                                 show_rms=True, LC_unit=None, *args, **kwargs):
     """Produce a clean LC plot.
@@ -57,6 +56,10 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     star_name           : String
     datasetnames        : list of String
         List providing the datasets to load and use
+    datasets_per_row    : dict of int
+        Dictionary saying which dataset to plot on which row
+    npt_model     : int
+        Number of points used to simulated the model
     remove_GP           : Boolean
         If True the GP model is remove from the data for the plot.
     remove1             : bool
@@ -72,19 +75,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         If show_time_from_tic is True, than you can provide here the unit in which the time from mid transit
         is expressed (knowing that time_fact is applied)
     exptime_bin         : float
-        Width of the bins used for the binning in days (default 0.005555555556 days, 8 min)
+        Exposure time for the binning data and model in the same unit that the time of the datasets.
+        If you don't want to bin put 0.
     binning_stat        : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
-    exptime_bin         : float
-        Exposure time for the binning data and model in the same unit that the time of the datasets.
-        If you don't want to bin put 0.
-    binning_stat        : string
-        Binning method to use "mean" or "median"
+    one_binning_per_row : bool
+        If true only one binning per row is performed
     supersamp_bin_model : int
         Supersampling factor for the binned model.
-    show_binned_model   : bool
-        If True the binned model is shown.
     sharey        : bool
     fig_param     : dict
         Dictionary providing keyword arguments for the figure definition and settings. The possible keys are
@@ -114,11 +113,25 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                for all planets or a specific ones. If show_time_from_tic is True than the provided times
                should also include the time_fact
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
-    pl_kwargs    : dict
-        Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "binned_data" and values
-        a dictionary that will be passed as keyword arguments associated the plotting functions.
-        You can also add a 'jitter' key with value a dictionary that will contain the changes that you
-        want to make for the update error bars due to potential jitter.
+    pl_kwargs    : dict of dict
+        Dictionary which define the properties of the curves shown per dataset.
+        Format:
+            - keys: '<dataset_name>' or 'one_binning_per_row' (if "one_binning_per_row" is True)
+            - value when key is a dataset_name : dict
+                - keys: str in ['data', 'databinned', 'model', 'modelbinned']
+                - value: dict,
+                    Most of the content will be passed to the plotting function (errorbar, plot)
+                    but you can also add some keys to tune further:
+                    For 'data' you can add the following keys
+                    'show_datasetname': bool to decide if you want to show the datasetname in an insert
+                    'datasetname to print': str to replace the automatic name of the dataset
+                    For 'data' and 'databinned' you can add the following keys
+                    'jitter': value a dictionary which allow to specify different properties for the jitter error bar
+                    'show_error': bool saying if you want to show the error bar
+                    For the 'model' and 'modelbinned' you can add the following keys
+                    'show': bool to decide to show or not the model and nbinned model
+            - value when key is a dataset_name : dict
+                dictionary whose content's format is the same thab the 'databinned' dictionary above
     show_legend  : bool
         If True, show the legend
     legend_param : dict
@@ -126,8 +139,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         Can also contains another entries that will not be passed to pyplot.legend:
         'idx_planet': index of the planet plot on which you want to show the legend()
         'idx_dataset': index of the dataaset plot on which you want to show the legend()
-    show_datasetnames  : bool
-        If True, show the datasetnames in the corner of the plots
     show_system_name_in_suptitle : bool
         If True show the system name in the suptitle
     show_rms: bool
@@ -158,14 +169,17 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         dico_nb_dstperinst[filename_info["inst_name"]] += 1
-        # # Remove 1 if needed
-        # if remove1:
-        #     dico_kwargs[datasetname]["data"] -= 1.
-        # # apply the RV fact to LC and LC_err
-        # if (LC_fact != 1.) and not(remove1):
-        #     LC_fact = 1.
-        # dico_kwargs[datasetname]["data"] *= LC_fact
-        # dico_kwargs[datasetname]["data_err"] *= LC_fact
+    # Define on which rows the datasets are plots using the datasets_per_row input
+    if datasets_per_row is None:
+        datasets_per_row = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
+    # Check that all datasets are in datasets_per_row
+    if (set(datasets_per_row.keys()) != set(datasetnames)) or (len(list(datasets_per_row.keys())) != len(datasetnames)):
+        raise ValueError("datasets_per_row is not correct !")
+    # Check the row idx values and determine the number of rows to use.
+    set_row_idx = set(datasets_per_row.values())
+    nb_rows = len(set_row_idx)
+    assert min(set_row_idx) == 0
+    assert max(set_row_idx) == (nb_rows - 1)
 
     ###################
     # Plots preparation
@@ -185,7 +199,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     if fig_param is None:
         fig_param = {}
 
-    gs = GridSpec(figure=fig, nrows=1, ncols=1, **fig_param.get('main_gridspec', {}))
+    gs = GridSpec(figure=fig, nrows=nb_rows, ncols=1, **fig_param.get('main_gridspec', {}))
 
     x_lims = fig_param.get("x_lims", {})
     x_lims_all_def = (-0.5, 0.5) if not(show_time_from_tic) else (- 10 / 24 * time_fact, 10 / 24 * time_fact)
@@ -205,13 +219,34 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     pl_kwarg_modelbinned = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "label": f"model: bin={exptime_bin * 24 * 60:.0f} min"}  # , "linestyle": "-"
     show_error_data = False
     show_error_databinned = True
+    show_model = True
+    show_model_binned = False
+    show_datasetname = True
 
     if pl_kwargs is None:
         pl_kwargs = {}
     pl_kwarg_final = {}
     pl_kwarg_jitter = {}
     pl_show_error = {}
+    pl_show_model = {}
+    pl_show_datasetname = {}
+    pl_datasetname_to_show = {}
 
+    # If one_binning_per_row, we specify the kwargs for the plot of these binned data separately
+    if one_binning_per_row:
+        pl_kwarg_final["one_binning_per_row"] = deepcopy(pl_kwarg_databinned)
+        pl_kwarg_final["one_binning_per_row"].update(pl_kwargs.get("one_binning_per_row", {}))
+        # Update with the user's inputs
+        if "jitter" in pl_kwarg_final["one_binning_per_row"]:
+            dico_jitter_pl_kwargs = pl_kwarg_final["one_binning_per_row"].pop("jitter")
+        else:
+            dico_jitter_pl_kwargs = {}
+        dico_jitter_pl_kwargs["fmt"] = "none"  # To ensure that only the error bars are drawn
+        pl_kwarg_jitter["one_binning_per_row"] = {}
+        pl_kwarg_jitter["one_binning_per_row"].update(dico_jitter_pl_kwargs)
+        pl_show_error["one_binning_per_row"] = show_error_databinned
+        if "show_error" in pl_kwarg_final["one_binning_per_row"]:
+            pl_show_error["one_binning_per_row"] = pl_kwarg_final["one_binning_per_row"].pop("show_error")
     for datasetname in datasetnames:
         # Set the labels
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
@@ -225,27 +260,38 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                        "data": {"label": "data", },
                                        "databinned": {"label": "data: bin={:.2f}h".format(exptime_bin * 24), }
                                        }
-        pl_kwarg_final[datasetname]["model"].update(pl_kwarg_final.get(datasetname, {}).get('model', {}))
-        pl_kwarg_final[datasetname]["modelbinned"].update(pl_kwarg_final.get(datasetname, {}).get('modelbinned', {}))
         pl_kwarg_jitter[datasetname] = {}
         pl_show_error[datasetname] = {"data": show_error_data, "databinned": show_error_databinned}
+        pl_show_model[datasetname] = {"model": show_model, "modelbinned": show_model_binned}
+        pl_show_datasetname[datasetname] = show_datasetname
         for dataordatabinned, pl_kwarg_def in zip(["data", "databinned"], [pl_kwarg_data, pl_kwarg_databinned]):
             # Load default values in pl_kwarg_final[datasetname]
             pl_kwarg_final[datasetname][dataordatabinned].update(deepcopy(pl_kwarg_def))
             # Update with the user's inputs
             pl_kwarg_final[datasetname][dataordatabinned].update(pl_kwargs.get(datasetname, {}).get(dataordatabinned, {}))
+            # Update pl_show_error[datasetname] with user input
+            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
+                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
+            # Update pl_show_error[datasetname] with user input
+            if dataordatabinned == "data":
+                if "show_datasetname" in pl_kwarg_final[datasetname][dataordatabinned]:
+                    pl_show_datasetname[datasetname] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_datasetname")
+                if "datasetname to print" in pl_kwarg_final[datasetname][dataordatabinned]:
+                    pl_datasetname_to_show[datasetname] = pl_kwarg_final[datasetname][dataordatabinned].pop("datasetname to print")
+                else:
+                    pl_datasetname_to_show[datasetname] = filename_info["inst_name"] + "({})".format(filename_info["number"])
             # Init pl_kwarg_jitter[datasetname]
             pl_kwarg_jitter[datasetname][dataordatabinned] = deepcopy(pl_kwarg_final[datasetname][dataordatabinned])
             # Update with the user's inputs
             if "jitter" in pl_kwarg_final[datasetname][dataordatabinned]:
-                dico_jitter = pl_kwarg_final[datasetname][dataordatabinned].pop("jitter")
+                dico_jitter_pl_kwargs = pl_kwarg_final[datasetname][dataordatabinned].pop("jitter")
             else:
-                dico_jitter = {}
-            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-            pl_kwarg_jitter[datasetname][dataordatabinned].update(dico_jitter)
+                dico_jitter_pl_kwargs = {}
+            dico_jitter_pl_kwargs["fmt"] = "none"  # To ensure that only the error bars are drawn
+            pl_kwarg_jitter[datasetname][dataordatabinned].update(dico_jitter_pl_kwargs)
             pl_kwarg_jitter[datasetname][dataordatabinned].pop("label")  # To ensure that a second label doesn't appear on the legend
             # default value for alpha jitter
-            if "alpha" not in dico_jitter:
+            if "alpha" not in dico_jitter_pl_kwargs:
                 if "alpha" in pl_kwarg_jitter[datasetname][dataordatabinned]:
                     pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] = pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] / 2
                 else:
@@ -253,68 +299,80 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             # default value for ecolor
             if ("ecolor" not in pl_kwarg_jitter[datasetname][dataordatabinned]) and ("color" in pl_kwarg_jitter[datasetname][dataordatabinned]):
                 pl_kwarg_jitter[datasetname][dataordatabinned]["ecolor"] = pl_kwarg_jitter[datasetname][dataordatabinned]["color"]
-            # Update pl_show_error[datasetname] with user input
-            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
-                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
+        for modelormodelbinned in ["model", "modelbinned"]:
+            # Update with the user's inputs
+            pl_kwarg_final[datasetname][modelormodelbinned].update(pl_kwargs.get(datasetname, {}).get(modelormodelbinned, {}))
+            # Update pl_show_model[datasetname] with user input
+            if "show" in pl_kwarg_final[datasetname][modelormodelbinned]:
+                pl_show_model[datasetname][modelormodelbinned] = pl_kwarg_final[datasetname][modelormodelbinned].pop("show")
     # Create the axes per planet and set the titles and labels and the ArchorBox with the instrument name
     axes_data, axes_resi = {}, {}
+    # Keep track of which datasetnames have been already plotted in each row to be able to know how to
+    # access to data and resi axes. If you want to plot another dataset in the same row.s
+    datasetnames_in_row = defaultdict(list)
     for ii, datasetname in enumerate(datasetnames):
-        # Create the axes
-        (axes_data[datasetname], axes_resi[datasetname]
-         ) = et.add_twoaxeswithsharex_perplanet(gs[ii], nplanet=nplanet, fig=fig, sharey=sharey,
-                                                gs_from_sps_kw=gs_from_sps_kw,
-                                                add_axeswithsharex_kw=add_axeswithsharex_kw)
+        idx_row = datasets_per_row[datasetname]
+        # Create the axes if needed
+        if len(datasetnames_in_row[idx_row]) == 0:  # There not dataset already plotted on this row
+            (axes_data[datasetname], axes_resi[datasetname]
+             ) = et.add_twoaxeswithsharex_perplanet(gs[idx_row], nplanet=nplanet, fig=fig, sharey=sharey,
+                                                    gs_from_sps_kw=gs_from_sps_kw,
+                                                    add_axeswithsharex_kw=add_axeswithsharex_kw)
+        else:
+            axes_data[datasetname] = axes_data[datasetnames_in_row[idx_row][0]]
+            axes_resi[datasetname] = axes_resi[datasetnames_in_row[idx_row][0]]
+        datasetnames_in_row[idx_row].append(datasetname)
         # Format ticks, labels, titles
-        for jj, planet_name in enumerate(planets):
+        for i_plnt, planet_name in enumerate(planets):
             # set ticks
-            axes_data[datasetname][jj].tick_params(axis='both', which='major', labelsize=fontsize)
-            axes_data[datasetname][jj].tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False)
-            axes_data[datasetname][jj].xaxis.set_minor_locator(AutoMinorLocator())
-            axes_data[datasetname][jj].yaxis.set_minor_locator(AutoMinorLocator())
-            axes_data[datasetname][jj].tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axes_data[datasetname][jj].grid(axis="y", color="black", alpha=.5, linewidth=.5)
-            axes_resi[datasetname][jj].tick_params(axis='both', which='major', labelsize=fontsize)
-            axes_resi[datasetname][jj].yaxis.set_minor_locator(AutoMinorLocator())
-            axes_resi[datasetname][jj].tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
-            axes_resi[datasetname][jj].tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axes_resi[datasetname][jj].grid(axis="y", color="black", alpha=.5, linewidth=.5)
+            axes_data[datasetname][i_plnt].tick_params(axis='both', which='major', labelsize=fontsize)
+            axes_data[datasetname][i_plnt].tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False)
+            axes_data[datasetname][i_plnt].xaxis.set_minor_locator(AutoMinorLocator())
+            axes_data[datasetname][i_plnt].yaxis.set_minor_locator(AutoMinorLocator())
+            axes_data[datasetname][i_plnt].tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+            axes_data[datasetname][i_plnt].grid(axis="y", color="black", alpha=.5, linewidth=.5)
+            axes_resi[datasetname][i_plnt].tick_params(axis='both', which='major', labelsize=fontsize)
+            axes_resi[datasetname][i_plnt].yaxis.set_minor_locator(AutoMinorLocator())
+            axes_resi[datasetname][i_plnt].tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True)
+            axes_resi[datasetname][i_plnt].tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+            axes_resi[datasetname][i_plnt].grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
-            if jj != 0 and sharey:
-                axes_data[datasetname][jj].tick_params(axis="y", labelleft=False)
-                axes_resi[datasetname][jj].tick_params(axis="y", labelleft=False)
+            if i_plnt != 0 and sharey:
+                axes_data[datasetname][i_plnt].tick_params(axis="y", labelleft=False)
+                axes_resi[datasetname][i_plnt].tick_params(axis="y", labelleft=False)
             # Set title with planet name on the first row
             if ii == 0:
-                axes_data[datasetname][jj].set_title("{} {}".format("Planet", planet_name), fontsize=fontsize)
+                axes_data[datasetname][i_plnt].set_title("{} {}".format("Planet", planet_name), fontsize=fontsize)
             # Set x label for the last row
             if ii == len(datasetnames) - 1:
                 if show_time_from_tic:
-                    axes_resi[datasetname][jj].set_xlabel(f"Time from mid-transit [{time_unit}]", fontsize=fontsize)
+                    axes_resi[datasetname][i_plnt].set_xlabel(f"Time from mid-transit [{time_unit}]", fontsize=fontsize)
                 else:
-                    axes_resi[datasetname][jj].set_xlabel("Orbital phase", fontsize=fontsize)
+                    axes_resi[datasetname][i_plnt].set_xlabel("Orbital phase", fontsize=fontsize)
             # Set y labels on the first column and align them, also set the Anchor boxes
-            if jj == 0:
+            if i_plnt == 0:
                 oot_str = "- 1 " if remove1 else ""
                 ylabel_data = f"Normalised Flux {oot_str}[{LC_unit}]" if LC_unit is not None else "Normalised Flux"
                 ylabel_resi = f"O - C [{LC_unit}]" if LC_unit is not None else "O - C"
-                axes_data[datasetname][jj].set_ylabel(ylabel_data, fontsize=fontsize)
-                axes_resi[datasetname][jj].set_ylabel(ylabel_resi, fontsize=fontsize)
+                axes_data[datasetname][i_plnt].set_ylabel(ylabel_data, fontsize=fontsize)
+                axes_resi[datasetname][i_plnt].set_ylabel(ylabel_resi, fontsize=fontsize)
                 # Align y labels
-                # axes_data[datasetname][jj].yaxis.set_label_coords(x_ylabel_coord, 0.5)
-                # axes_resi[datasetname][jj].yaxis.set_label_coords(x_ylabel_coord, 0.5)
+                # axes_data[datasetname][i_plnt].yaxis.set_label_coords(x_ylabel_coord, 0.5)
+                # axes_resi[datasetname][i_plnt].yaxis.set_label_coords(x_ylabel_coord, 0.5)
 
-                if show_datasetnames:
+                if pl_show_datasetname[datasetname]:
                     filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-                    anchored_text_inst = AnchoredText(filename_info["inst_name"] + "({})".format(filename_info["number"]),
+                    anchored_text_inst = AnchoredText(pl_datasetname_to_show[datasetname],
                                                       loc=3, prop={"fontsize": fontsize})  # loc=3 is 'lower left'
                     anchored_text_inst.set_alpha(0.5)
-                    axes_data[datasetname][jj].add_artist(anchored_text_inst)
+                    axes_data[datasetname][i_plnt].add_artist(anchored_text_inst)
 
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
 
     # Number of point for plotting the model
-    npt_model = 5000
+    npt_model = npt_model
 
-    for jj, planet_name in enumerate(planets):
+    for i_plnt, planet_name in enumerate(planets):
 
         ##################################################
         # Compute the x_values (time or phase depending on show_time_from_tic) associated to the time values
@@ -467,7 +525,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                           data_err=data_err,
                                                           Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                           show_time_from_tref=show_time_from_tic, time_fact=time_fact,
-                                                          ax=axes_data[datasetname][jj],
+                                                          ax=axes_data[datasetname][i_plnt],
                                                           pl_kwargs=pl_kwarg_final[datasetname]["data"],
                                                           )
             if not("color" in pl_kwarg_final[datasetname]["data"]):
@@ -481,7 +539,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                               only_errorbar=True,
                                                               Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                               show_time_from_tref=show_time_from_tic, time_fact=time_fact,
-                                                              ax=axes_data[datasetname][jj],
+                                                              ax=axes_data[datasetname][i_plnt],
                                                               pl_kwargs=pl_kwarg_jitter[datasetname]["data"],
                                                               )
             # Set the y axis limits
@@ -494,10 +552,10 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     pad_data = pad_data_default
                 else:
                     pad_data = pad_data_content
-            et.auto_y_lims(data_pl[datasetname], axes_data[datasetname][jj], pad=pad_data)
+            et.auto_y_lims(data_pl[datasetname], axes_data[datasetname][i_plnt], pad=pad_data)
             # Indicate values that are off y-axis with anarrows
             if fig_param.get("indicate_y_outliers_data", True):
-                et.indicate_y_outliers(x=x_values[datasetname], y=data_pl[datasetname], ax=axes_data[datasetname][jj],
+                et.indicate_y_outliers(x=x_values[datasetname], y=data_pl[datasetname], ax=axes_data[datasetname][i_plnt],
                                        color=pl_kwarg_final[datasetname]["data"]["color"],
                                        alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
 
@@ -508,23 +566,23 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             key_obj = f"{planet_name}_only"
         else:
             key_obj = "whole"  # WARNING: There might be a problem with that if there happens to be a double transit at the times chosen for the model
-
         for datasetname in datasetnames:  # f"{planet_name}_only",  "whole"
-            ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
-                                                       dataset_name=datasetname, param=df_fittedval["value"],
-                                                       l_param_name=list(df_fittedval.index), post_instance=post_instance,
-                                                       key_obj=key_obj, datasim_kwargs=kwargs_dataset,
-                                                       multiplication_factor=LC_fact,
-                                                       plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
-                                                       show_time_from_tref=show_time_from_tic, time_fact=time_fact,
-                                                       pl_kwargs_model=pl_kwarg_final[datasetname]["model"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["model"],
-                                                       show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
-                                                       ax=axes_data[datasetname][jj])
-            if not("color" in pl_kwarg_final[datasetname]["model"]):
-                pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
+            if pl_show_model[datasetname]["model"]:
+                ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
+                                                           dataset_name=datasetname, param=df_fittedval["value"],
+                                                           l_param_name=list(df_fittedval.index), post_instance=post_instance,
+                                                           key_obj=key_obj, datasim_kwargs=kwargs_dataset,
+                                                           multiplication_factor=LC_fact,
+                                                           plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
+                                                           show_time_from_tref=show_time_from_tic, time_fact=time_fact,
+                                                           pl_kwargs_model=pl_kwarg_final[datasetname]["model"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["model"],
+                                                           show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
+                                                           ax=axes_data[datasetname][i_plnt])
+                if not("color" in pl_kwarg_final[datasetname]["model"]):
+                    pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
 
             # Plot binned model  f"{planet_name}_only"
-            if show_binned_model:
+            if pl_show_model[datasetname]["modelbinned"]:
                 ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
                                                            dataset_name=datasetname, param=df_fittedval["value"],
                                                            l_param_name=list(df_fittedval.index), post_instance=post_instance,
@@ -535,9 +593,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                            show_time_from_tref=show_time_from_tic, time_fact=time_fact,
                                                            pl_kwargs_model=pl_kwarg_final[datasetname]["modelbinned"], pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["modelbinned"],
                                                            show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
-                                                           ax=axes_data[datasetname][jj])
-            if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
-                pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
+                                                           ax=axes_data[datasetname][i_plnt])
+                if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
+                    pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
 
         #################################
         # Plot the residuals of the model
@@ -557,7 +615,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                    show_error_model=pl_show_error[datasetname]["data"],
                                    pl_kwargs_modelandGP=pl_kwarg_final[datasetname]["data"], show_modelandGP=remove_GP,
                                    show_error_modelandGP=pl_show_error[datasetname]["data"],
-                                   ax=axes_resi[datasetname][jj])
+                                   ax=axes_resi[datasetname][i_plnt])
             y_residuals_all[datasetname] = []
             if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
                 y_residuals_all[datasetname].append(residual_pl[datasetname])
@@ -573,15 +631,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     pad_resi = pad_resi_default
                 else:
                     pad_resi = pad_resi_content
-            et.auto_y_lims(np.concatenate(y_residuals_all[datasetname]), axes_resi[datasetname][jj], pad=pad_resi)
+            et.auto_y_lims(np.concatenate(y_residuals_all[datasetname]), axes_resi[datasetname][i_plnt], pad=pad_resi)
             # Indicate values that are off y-axis with arrows
             if fig_param.get("indicate_y_outliers_resi", True):
                 if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
-                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_pl[datasetname], ax=axes_resi[datasetname][jj],
+                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_pl[datasetname], ax=axes_resi[datasetname][i_plnt],
                                            color=pl_kwarg_final[datasetname]["data"]["color"],
                                            alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
                 else:
-                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_wGP_pl[datasetname], ax=axes_resi[datasetname][jj],
+                    et.indicate_y_outliers(x=x_values[datasetname], y=residual_wGP_pl[datasetname], ax=axes_resi[datasetname][i_plnt],
                                            color=pl_kwarg_final[datasetname]["data"]["color"],
                                            alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
             # Compute rms of the residuals and print it on the top of the residuals graphs
@@ -595,104 +653,200 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         ##########################################
         text_rms_binned = OrderedDict()
         if exptime_bin > 0.:
+            # define the bins, it's currently the same for all datasets, but I will want to be able to group datasets in the same plot in the future.
             bin_size = exptime_bin * time_fact if show_time_from_tic else exptime_bin / Per
-            bins = {}
-            binval = {}
-            binval_resi = {}
-            binstd = {}
-            binstd_jitter = {}
-            midbins = {}
-            for ii, datasetname in enumerate(datasetnames):
-                # define the bins, it's currently the same for all datasets, but I will want to be able to group datasets in the same plot in the future.
-                bins[datasetname] = np.arange(x_min_data, x_max_data + bin_size, bin_size)
-                midbins[datasetname] = bins[datasetname][:-1] + bin_size / 2
-                # Bin the data and residuals
-                # binval[datasetname] = {}
-                # binval_resi[datasetname] = {}
-                (binval[datasetname], binedges, binnb
-                 ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
-                                      statistic=binning_stat, bins=bins[datasetname],
-                                      range=(x_min_data, x_max_data))
-                resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
-                (binval_resi[datasetname], _, _
-                 ) = binned_statistic(x_values[datasetname], resi_pl_dst,
-                                      statistic=binning_stat, bins=bins[datasetname],
-                                      range=(x_min_data, x_max_data))
-                # Compute the error bars on the binned data (and residuals)
-                nbins = len(bins[datasetname]) - 1
-                binstd[datasetname] = np.zeros(nbins)
-                binstd_jitter[datasetname] = np.zeros(nbins) if (data_err_jitter[datasetname] is not None) else None
-                bincount = np.zeros(nbins)
-                for i_bin in range(nbins):
-                    bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
-                    if bincount[i_bin] > 0.0:
-                        binstd[datasetname][i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
-                                                                              [binnb == (i_bin + 1)]),
-                                                                             2.)) /
-                                                             bincount[i_bin]**2)
-                        if data_err_jitter[datasetname] is not None:
-                            binstd_jitter[datasetname][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
-                                                                                         [binnb == (i_bin + 1)]),
-                                                                               2.)) /
-                                                                        bincount[i_bin]**2)
+            bins = np.arange(x_min_data, x_max_data + bin_size, bin_size)
+            midbins = bins[:-1] + bin_size / 2
+            if one_binning_per_row:
+                binval_per_row = {}
+                binval_resi_per_row = {}
+                binstd_per_row = {}
+                binstd_jitter_per_row = {}
+                x_values_per_row = {}
+                data_pl_per_row = {}
+                for idx_row, datasetnames_per_row in datasetnames_in_row.items():
+                    x_values_per_row[idx_row] = None
+                    data_pl_per_row[idx_row] = None
+                    for i_dst, datasetname in enumerate(datasetnames_per_row):
+                        if x_values_per_row[idx_row] is None:
+                            x_values_per_row[idx_row] = x_values[datasetname]
+                        else:
+                            x_values_per_row[idx_row] = np.append(x_values_per_row[idx_row], x_values[datasetname])
+                        if data_pl_per_row[idx_row] is None:
+                            data_pl_per_row[idx_row] = data_pl[datasetname]
+                        else:
+                            data_pl_per_row[idx_row] = np.append(data_pl_per_row[idx_row], data_pl[datasetname])
+                    # Bin the data and residuals
+                    # binval[datasetname] = {}
+                    # binval_resi[datasetname] = {}
+                    (binval_per_row[idx_row], binedges, binnb
+                     ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
+                                          statistic=binning_stat, bins=bins,
+                                          range=(x_min_data, x_max_data))
+                    resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
+                    (binval_resi_per_row[idx_row], _, _
+                     ) = binned_statistic(x_values[datasetname], resi_pl_dst,
+                                          statistic=binning_stat, bins=bins,
+                                          range=(x_min_data, x_max_data))
+                    # Compute the error bars on the binned data (and residuals)
+                    nbins = len(bins) - 1
+                    binstd_per_row[idx_row] = np.zeros(nbins)
+                    binstd_jitter_per_row[idx_row] = np.zeros(nbins) if (data_err_jitter[datasetname] is not None) else None
+                    bincount = np.zeros(nbins)
+                    for i_bin in range(nbins):
+                        bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                        if bincount[i_bin] > 0.0:
+                            binstd_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
+                                                                                      [binnb == (i_bin + 1)]),
+                                                                                     2.)) /
+                                                                     bincount[i_bin]**2)
+                            if data_err_jitter[datasetname] is not None:
+                                binstd_jitter_per_row[idx_row][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
+                                                                                                 [binnb == (i_bin + 1)]),
+                                                                                                2.)) /
+                                                                                bincount[i_bin]**2)
 
+                        else:
+                            binstd_per_row[idx_row][i_bin] = np.nan
+                            if data_err_jitter[datasetname] is not None:
+                                binstd_jitter_per_row[idx_row][i_bin] = np.nan
+                    # Plot the binned data
+                    if pl_show_error["one_binning_per_row"]:
+                        bin_err = binstd_per_row[idx_row]
+                        bin_err *= LC_fact
                     else:
-                        binstd[datasetname][i_bin] = np.nan
-                        if data_err_jitter[datasetname] is not None:
-                            binstd_jitter[datasetname][i_bin] = np.nan
-                # Plot the binned data
-                if pl_show_error[datasetname]["databinned"]:
-                    bin_err = binstd[datasetname]
-                    bin_err *= LC_fact
-                else:
-                    bin_err = None
-                ebcont_binned = axes_data[datasetname][jj].errorbar(midbins[datasetname], binval[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
-                if not("color" in pl_kwarg_final[datasetname]["databinned"]):
-                    pl_kwarg_final[datasetname]["databinned"] = ebcont_binned[0].get_color()
-                if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
-                    pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]
-                if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-                    ebcont_binned = axes_data[datasetname][jj].errorbar(midbins[datasetname], binval[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
-                # Indicate values that are off y-axis with arrows
-                et.indicate_y_outliers(x=midbins[datasetname], y=binval[datasetname], ax=axes_data[datasetname][jj],
-                                       color=pl_kwarg_final[datasetname]["databinned"]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
-                # Plot the binned residuals
-                ebcont_binned = axes_resi[datasetname][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
-                if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-                    ebcont_binned = axes_resi[datasetname][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
-                # Compute rms of the binned residuals
-                text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
-                text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
-                print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
-                # Indicate values that are off y-axis with arrows
-                et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][jj],
-                                       color=pl_kwarg_final[datasetname]["databinned"]["color"],
-                                       alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
+                        bin_err = None
+                    ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins, binval_per_row[idx_row], yerr=bin_err, **pl_kwarg_final["one_binning_per_row"])
+                    if not("color" in pl_kwarg_final["one_binning_per_row"]):
+                        pl_kwarg_final["one_binning_per_row"]["color"] = ebcont_binned[0].get_color()
+                    if not("ecolor" in pl_kwarg_jitter["one_binning_per_row"]):
+                        pl_kwarg_jitter["one_binning_per_row"]["ecolor"] = pl_kwarg_final["one_binning_per_row"]["color"]
+                    if (binstd_jitter_per_row[idx_row] is not None) and pl_show_error["one_binning_per_row"]:
+                        ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins, binval_per_row[idx_row], yerr=binstd_jitter_per_row[idx_row], **pl_kwarg_jitter["one_binning_per_row"])
+                    # Indicate values that are off y-axis with arrows
+                    et.indicate_y_outliers(x=midbins, y=binval_per_row[idx_row], ax=axes_data[datasetname][i_plnt],
+                                           color=pl_kwarg_final["one_binning_per_row"]["color"],
+                                           alpha=pl_kwarg_final["one_binning_per_row"]["alpha"])
+                    # Plot the binned residuals
+                    ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins, binval_resi_per_row[idx_row], yerr=bin_err, **pl_kwarg_final["one_binning_per_row"])
+                    if (binstd_jitter_per_row[idx_row] is not None) and pl_show_error[datasetname]["databinned"]:
+                        ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins, binval_resi_per_row[idx_row], yerr=binstd_jitter_per_row[idx_row], **pl_kwarg_jitter["one_binning_per_row"])
+                    # Compute rms of the binned residuals
+                    text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
+                    text_rms_binned[idx_row] = text_rms_binned_template.format(np.std(binval_resi_per_row[idx_row][np.logical_and(midbins > x_min_data, midbins < x_max_data)]))
+                    print(f"RMS row {idx_row} = {text_rms_binned[idx_row]} {LC_unit}")
+                    # Indicate values that are off y-axis with arrows
+                    et.indicate_y_outliers(x=midbins, y=binval_resi_per_row[idx_row], ax=axes_resi[datasetname][i_plnt],
+                                           color=pl_kwarg_final["one_binning_per_row"]["color"],
+                                           alpha=pl_kwarg_final["one_binning_per_row"]["alpha"])
+            else:
+                binval = {}
+                binval_resi = {}
+                binstd = {}
+                binstd_jitter = {}
+                for ii, datasetname in enumerate(datasetnames):
+
+                    # Bin the data and residuals
+                    # binval[datasetname] = {}
+                    # binval_resi[datasetname] = {}
+                    (binval[datasetname], binedges, binnb
+                     ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
+                                          statistic=binning_stat, bins=bins[datasetname],
+                                          range=(x_min_data, x_max_data))
+                    resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
+                    (binval_resi[datasetname], _, _
+                     ) = binned_statistic(x_values[datasetname], resi_pl_dst,
+                                          statistic=binning_stat, bins=bins[datasetname],
+                                          range=(x_min_data, x_max_data))
+                    # Compute the error bars on the binned data (and residuals)
+                    nbins = len(bins[datasetname]) - 1
+                    binstd[datasetname] = np.zeros(nbins)
+                    binstd_jitter[datasetname] = np.zeros(nbins) if (data_err_jitter[datasetname] is not None) else None
+                    bincount = np.zeros(nbins)
+                    for i_bin in range(nbins):
+                        bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                        if bincount[i_bin] > 0.0:
+                            binstd[datasetname][i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
+                                                                                  [binnb == (i_bin + 1)]),
+                                                                                 2.)) /
+                                                                 bincount[i_bin]**2)
+                            if data_err_jitter[datasetname] is not None:
+                                binstd_jitter[datasetname][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
+                                                                                             [binnb == (i_bin + 1)]),
+                                                                                   2.)) /
+                                                                            bincount[i_bin]**2)
+
+                        else:
+                            binstd[datasetname][i_bin] = np.nan
+                            if data_err_jitter[datasetname] is not None:
+                                binstd_jitter[datasetname][i_bin] = np.nan
+                    # Plot the binned data
+                    if pl_show_error[datasetname]["databinned"]:
+                        bin_err = binstd[datasetname]
+                        bin_err *= LC_fact
+                    else:
+                        bin_err = None
+                    ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins[datasetname], binval[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
+                    if not("color" in pl_kwarg_final[datasetname]["databinned"]):
+                        pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
+                    if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
+                        pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]["color"]
+                    if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
+                        ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins[datasetname], binval[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
+                    # Indicate values that are off y-axis with arrows
+                    et.indicate_y_outliers(x=midbins[datasetname], y=binval[datasetname], ax=axes_data[datasetname][i_plnt],
+                                           color=pl_kwarg_final[datasetname]["databinned"]["color"],
+                                           alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
+                    # Plot the binned residuals
+                    ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
+                    if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
+                        ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
+                    # Compute rms of the binned residuals
+                    text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
+                    text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
+                    print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
+                    # Indicate values that are off y-axis with arrows
+                    et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][i_plnt],
+                                           color=pl_kwarg_final[datasetname]["databinned"]["color"],
+                                           alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
 
         ###########
         # Write rms
         ###########
         # WARNING, TO BE IMPROVED for more than one dataset
         if show_rms:
-            text_rms_to_plot = ""
-            for ii, datasetname in enumerate(datasetnames):
-                text_rms_to_plot_dst = f"{text_rms}, {text_rms_binned}" if (exptime_bin > 0.) else f"rms = {text_rms}"
-                if jj == 0:
-                    text_rms_to_plot_dst = "rms = " + text_rms_to_plot
-                if LC_unit is not None:
-                    text_rms_to_plot_dst += f" {LC_unit}"
-                text_rms_to_plot += text_rms_to_plot_dst + ";"
-                axes_resi[datasetname][jj].text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axes_resi[datasetname][jj].transAxes)
+            def return_empty_str():
+                return ""
+            text_rms_to_plot = defaultdict(return_empty_str)
+            for idx_row, datasetnames_per_row in datasetnames_in_row.items():
+                for i_dst, datasetname in enumerate(datasetnames_per_row):
+                    if i_plnt == 0 and ((i_dst == 0) or len(datasetnames_per_row) > 1):
+                        if i_dst > 0:
+                            text_rms_to_plot[idx_row] += "\n"
+                        text_rms_to_plot[idx_row] += "rms = "
+                    text_rms_to_plot[idx_row] += f"{text_rms[datasetname]}"
+                    if (exptime_bin > 0.):
+                        if not(one_binning_per_row):
+                            text_rms_to_plot[idx_row] += f", {text_rms_binned[datasetname]}"
+                    if LC_unit is not None:
+                        text_rms_to_plot[idx_row] += f" {LC_unit}"
+                    if len(datasetnames_per_row) > 1:
+                        text_rms_to_plot[idx_row] += f" - {pl_kwarg_final[datasetname]['data']['label']};"
+                if (exptime_bin > 0.):
+                    if one_binning_per_row:
+                        text_rms_to_plot[idx_row] += f"\nrms = {text_rms_binned[idx_row]}"
+                        if LC_unit is not None:
+                            text_rms_to_plot[idx_row] += f" {LC_unit}"
+                axes_resi[datasetname][i_plnt].text(0.0, 1.05, text_rms_to_plot[idx_row], fontsize=fontsize, transform=axes_resi[datasetname][i_plnt].transAxes)
 
     ###################
     # Finalise the plot
     ###################
     # Set the xlims
-    for jj, planet_name in enumerate(planets):
+    for i_plnt, planet_name in enumerate(planets):
         for datasetname in datasetnames:
-            axes_data[datasetname][jj].set_xlim((x_min_data, x_max_data))
-            # axes_resi[datasetname][jj].set_xlim((x_min_data, x_max_data))
+            axes_data[datasetname][i_plnt].set_xlim((x_min_data, x_max_data))
+            # axes_resi[datasetname][i_plnt].set_xlim((x_min_data, x_max_data))
     # Show legend
     if show_legend:
         legend_kwargs = {"fontsize": fontsize, "idx_planet": 0, "idx_dataset": 0}
