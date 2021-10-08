@@ -751,15 +751,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     # binval_resi[datasetname] = {}
                     (binval[datasetname], binedges, binnb
                      ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
-                                          statistic=binning_stat, bins=bins[datasetname],
+                                          statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
                     (binval_resi[datasetname], _, _
                      ) = binned_statistic(x_values[datasetname], resi_pl_dst,
-                                          statistic=binning_stat, bins=bins[datasetname],
+                                          statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     # Compute the error bars on the binned data (and residuals)
-                    nbins = len(bins[datasetname]) - 1
+                    nbins = len(bins) - 1
                     binstd[datasetname] = np.zeros(nbins)
                     binstd_jitter[datasetname] = np.zeros(nbins) if (data_err_jitter[datasetname] is not None) else None
                     bincount = np.zeros(nbins)
@@ -786,27 +786,27 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         bin_err *= LC_fact
                     else:
                         bin_err = None
-                    ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins[datasetname], binval[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
+                    ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins, binval[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
                     if not("color" in pl_kwarg_final[datasetname]["databinned"]):
                         pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
                     if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
                         pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]["color"]
                     if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-                        ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins[datasetname], binval[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
+                        ebcont_binned = axes_data[datasetname][i_plnt].errorbar(midbins, binval[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
                     # Indicate values that are off y-axis with arrows
-                    et.indicate_y_outliers(x=midbins[datasetname], y=binval[datasetname], ax=axes_data[datasetname][i_plnt],
+                    et.indicate_y_outliers(x=midbins, y=binval[datasetname], ax=axes_data[datasetname][i_plnt],
                                            color=pl_kwarg_final[datasetname]["databinned"]["color"],
                                            alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
                     # Plot the binned residuals
-                    ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
+                    ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins, binval_resi[datasetname], yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
                     if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-                        ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
+                        ebcont_binned = axes_resi[datasetname][i_plnt].errorbar(midbins, binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
                     # Compute rms of the binned residuals
                     text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
-                    text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
+                    text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins > x_min_data, midbins < x_max_data)]))
                     print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
                     # Indicate values that are off y-axis with arrows
-                    et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][i_plnt],
+                    et.indicate_y_outliers(x=midbins, y=binval_resi[datasetname], ax=axes_resi[datasetname][i_plnt],
                                            color=pl_kwarg_final[datasetname]["databinned"]["color"],
                                            alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
 
