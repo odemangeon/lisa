@@ -23,94 +23,71 @@ def check_datasets_and_instmodels(datasets, inst_models):
     Set the inst_model_fullnames argument for the Datasim_DocFunc (instmod_docf).
     Set the dataset_names argument for the Datasim_DocFunc (dtsts_docf).
 
-    :param list_of_Dataset/Dataset/None datasets: instance of Dataset
-        or list of Dataset instances or None
-    :param list_of_Instrument_Model/Instrument_Model/None inst_models: instance of Instrument_Model
-        or list of Instrument_Model instances or None
-    :return list_of_Dataset l_dataset: Checked list of Dataset instance(s).
-    :return list_of_Dataset l_inst_model: Checked list of Instrument_Model instance(s).
-    :return bool multi: True if the datasim function needs multiple outputs.
-    :return string inst_model_full_name: Instrument model full name for the name of the
-        datasimulator function
-    :return list_of_string instcat_docf: List of instrument categories corresponding to the list of
-        instrument model (l_inst_model).
-    :return list_of_string/string/None dtsts_docf: Dataset name, or list of
-        dataset names or None, matching datasets.
-    :return list_of_string/string/None instmod_docf: Instrument Model full name, or list of
-        Instrument Model full names or None, matching inst_models.
+    Arguments
+    ---------
+    datasets    :   list_of_Dataset/Dataset
+        instance of Dataset or list of Dataset instances
+    inst_models : list_of_Instrument_Model/Instrument_Model
+        instance of Instrument_Model or list of Instrument_Model
+
+    Returns
+    -------
+    l_dataset               : list_of_Dataset
+        Checked list of Dataset instance(s).
+    l_inst_model            : list_of_Instrument_Model
+        Checked list of Instrument_Model instance(s).
+    multi                   : bool
+        True if the datasim function needs multiple outputs.
+    inst_model_full_name    : string
+        Instrument model full name for the name of the datasimulator function
+    dst_ext                 : string
+        String giving the dataset number that will be used as an extension for the name of the datasimulator function
+    instcat_docf            : list_of_string
+        List of instrument categories corresponding to the list of instrument model (l_inst_model).
+    dtsts_docf              : list_of_string/string
+        Dataset name, or list of dataset names or None, matching datasets.
+    instmod_docf            : list_of_string/string/None
+        Instrument Model full name, or list of Instrument Model full names or None, matching inst_models.
     """
-    # Check the content of datasets argument for the datasim creator functions.
-    # Set multi_dataset to True if several datasets are provided, to False otherwise.
-    # Finally set the dataset_names argument for the Datasim_DocFunc (dtsts_docf).
-    instmod_err = False
-    if inst_models is None or isinstance(inst_models, Instrument_Model):
-        multi_instmodl = False
-    elif isinstance(inst_models, Iterable):
-        l_isInstModel = [isinstance(inst_mod, Instrument_Model) for inst_mod in inst_models]
-        l_isNone = [inst_mod is None for inst_mod in inst_models]
-        if all(l_isInstModel) or all(l_isNone):
-            if len(inst_models) > 1:
-                multi_instmodl = True
-            else:
-                multi_instmodl = False
-                inst_models = inst_models[0]  # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
-        else:
-            instmod_err = True
-    else:
-        instmod_err = True
-    if instmod_err:
-        raise ValueError("inst_models should be None, string or list of strings.")
-    if multi_instmodl:
-        instmod_docf = []
-        for instmod in inst_models:
-            if instmod is None:
-                instmod_docf.append(instmod)
-            else:
-                instmod_docf.append(instmod.get_name(include_prefix=True, recursive=True))
-    else:
-        if inst_models is None:
-            instmod_docf = inst_models
-        else:
-            instmod_docf = inst_models.get_name(include_prefix=True, recursive=True)
+    # Check the content of inst_models and datasets argument for the datasim creator functions.
+    # Set mulit_input for each of these to True if several instances are provided or to False otherwise.
+    # Finally set the inputsname4docf for each of these two to list the names of the instances
+    # for the Datasim_DocFunc (dtsts_docf).
 
-    # Check the content of datasets argument: Set multi_dataset to True if several datasets
-    # are provided, to False otherwise. Finally set the datasets argument for the
-    # Datasim_DocFunc (dtsts_docf)
-    dataset_err = False
-    if datasets is None or isinstance(datasets, Core_Dataset):
-        multi_dataset = False
-    elif isinstance(datasets, Iterable):
-        l_isDataset = [isinstance(dst, Core_Dataset) for dst in datasets]
-        l_isNone = [dst is None for dst in datasets]
-        if all(l_isDataset) or all(l_isNone):
-            if len(datasets) > 1:
-                multi_dataset = True
-            else:
-                multi_dataset = False
-                datasets = datasets[0]
-        else:
-            dataset_err = True
-    else:
-        dataset_err = True
-    if dataset_err:
-        raise ValueError("datasets should be None, string or list of strings or list of None.")
-    if multi_dataset:
-        dtsts_docf = []
-        for dtst in datasets:
-            if dtst is None:
-                dtsts_docf.append(dtst)
-            else:
-                dtsts_docf.append(dtst.dataset_name)
-    else:
-        if datasets is None:
-            dtsts_docf = datasets
-        else:
-            dtsts_docf = datasets.dataset_name
+    # This dictionnary will be filled with two keys "datasets", "inst_models" and the Value
+    # will be a boolean state is this inputs has multiple instances or just one
+    mulit_input = {}
 
-    # Produce the list of datasets and list of models (even of 1 element)
-    multi = multi_dataset or multi_instmodl
-    if multi and (multi_dataset != multi_instmodl):
-        if multi_dataset:
+    # This dictionnary will be filled with two keys "datasets", "inst_models" and the Value
+    # will be a the name or the list of name of these inputs to be used in the datasimulator docfunc
+    inputsname4docf = {}
+    for inputs, input_class, input_name in zip([datasets, inst_models], [Core_Dataset, Instrument_Model], ["datasets", "inst_models"]):
+        inputs_err = False
+        if isinstance(inputs, Iterable):
+            if all([isinstance(input, input_class) for input in inputs]):
+                if len(inputs) > 1:
+                    mulit_input[input_name] = True
+                else:
+                    mulit_input[input_name] = False
+                    inputs = inputs[0]  # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
+            else:
+                inputs_err = True
+        else:
+            inputs_err = not(isinstance(inputs, input_class))
+        if inputs_err:
+            raise ValueError(f"{input_name} should be an instance of {input_class} or a list of isntances of {input_class}.")
+        if mulit_input[input_name]:
+            inputsname4docf[input_name] = []
+            for instmod in inst_models:
+                inputsname4docf[input_name].append(instmod.full_name)  # instmod.get_name(include_prefix=True, recursive=True)
+        else:
+            inputsname4docf[input_name] = instmod.full_name  # inst_models.get_name(include_prefix=True, recursive=True)
+
+    # Produce l_dataset and l_inst_model the list of datasets and list of instrument models (even of 1 element)
+    multi = mulit_input["datasets"] or mulit_input["inst_models"]
+    both_multi = multi and (mulit_input["datasets"] == mulit_input["inst_models"])
+    if multi and not(both_multi):
+        if (mulit_input["datasets"]:
             l_dataset = [datasets for instmod in inst_models]
             l_inst_model = inst_models
         else:  # multi_instmodl
@@ -132,14 +109,8 @@ def check_datasets_and_instmodels(datasets, inst_models):
         inst_model_full_name = "multi"
         dst_ext = ""
     else:
-        if inst_models is None:
-            inst_model_full_name = "woinst"
-        else:
-            inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True, code_version=True)
-        if datasets is None:
-            dst_ext = ""
-        else:
-            dst_ext = f"_dst{datasets.number}"
+        inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True, code_version=True)
+        dst_ext = f"_dst{datasets.number}"
 
     return (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
             dtsts_docf)
