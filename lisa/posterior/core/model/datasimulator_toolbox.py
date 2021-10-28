@@ -87,7 +87,7 @@ def check_datasets_and_instmodels(datasets, inst_models):
     multi = mulit_input["datasets"] or mulit_input["inst_models"]
     both_multi = multi and (mulit_input["datasets"] == mulit_input["inst_models"])
     if multi and not(both_multi):
-        if (mulit_input["datasets"]:
+        if (mulit_input["datasets"]):
             l_dataset = [datasets for instmod in inst_models]
             l_inst_model = inst_models
         else:  # multi_instmodl
@@ -112,8 +112,8 @@ def check_datasets_and_instmodels(datasets, inst_models):
         inst_model_full_name = inst_models.get_name(include_prefix=True, recursive=True, code_version=True)
         dst_ext = f"_dst{datasets.number}"
 
-    return (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
-            dtsts_docf)
+    return (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, inputsname4docf["inst_models"],
+            inputsname4docf["datasets"])
 
 
 def __dico_instcat_values_creator():
