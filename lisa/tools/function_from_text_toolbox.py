@@ -187,7 +187,7 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
     new_arg_name        : str
         Str used to design the new argument
     arg_list            : dict_of_dict_of_list_of_str
-        dictionary giving the arguments of the functions currently being produced with the following format:
+        dictionary giving the arguments of the functions being produced with the following format:
         - key = str designating the function being built and provided by keys.
         - value = dict with three str keys and values
             - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
