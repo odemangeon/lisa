@@ -234,7 +234,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             manager_model.load_setup()
         # If the name of the object studied by the model is not provided put default
         if "name" not in kwargs:
-            kwargs.update({"name": "default"})
+            kwargs.update({"name": "Target"})
         # Get the CoreModel subclass associated to the provided category
         logger.info("Defining new model of category {}...".format(category))
         model_subclass = manager_model.get_model_subclass(category)
