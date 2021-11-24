@@ -74,8 +74,10 @@ class InstrumentContainerInterface(object):
     @property
     def noisemodel_categories(self):
         """Return the list of noise model categories used."""
-
-        return list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
+        l_noisemodels_used = list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
+        # Remove None in case it is used.
+        l_noisemodels_used.remove(None)
+        return l_noisemodels_used
 
     def get_inst_fullcat4inst_cat(self, inst_cat):
         """Return the list of unique instrument full category that correspond to a provided instrument category.
@@ -251,9 +253,9 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             inst_fullcat_code = inst_subclass.inst_fullcat_to_code(inst_fullcat=inst_fullcat)
             text += f"{text_tab}# {instrument_model_category} {inst_fullcat}\n"
             if quote_name:
-                entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}{{"
+                entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}" + "{"
             else:
-                entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}{{"
+                entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}" + "{"
             text += f"{text_tab}{entete_inst_fullcat}"
             extra_tab = spacestring_like(entete_inst_fullcat)
             first_instrument_name = True
@@ -293,7 +295,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             if hasattr(inst_subclass, "_get_instcat_paramfilesection"):
                 func = getattr(inst_subclass, "_get_instcat_paramfilesection")
                 text += func(text_tab=text_tab + extra_tab, model_instance=model_instance)
-            text += f"\n{text_tab + extra_tab}}}\n\n"
+            text += f"\n{text_tab + extra_tab}" + "}\n\n"
         return text
 
     def update_paramfile_info(self, inst_db_info):
