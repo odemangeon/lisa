@@ -29,8 +29,6 @@ obj_name = "WASP-151"  # Change
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
 nb_planet = 1
-rv_model = "radvel"  # None will select the default model being radvel
-transit_model = "batman"  # None will select the default model being batman
 parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
 with_DeltaRV = True
 kwargs_post = {}
@@ -79,8 +77,7 @@ logger.info("3. Add datasets from a datasets file.")
 post_instance.load_datasetsfile("datasets.txt")  # Change if needed by the name you gave or want to give to your dataset file.
 
 logger.info("4. Add a model")
-post_instance.define_model(category=model_category, name=obj_name, stars=1, planets=nb_planet,
-                           rv_model=rv_model, transit_model=transit_model)
+post_instance.define_model(category=model_category, name=obj_name, stars=1, planets=nb_planet)
 
 logger.info("5. Create inst_cat specific parameter file")
 if cluster:
