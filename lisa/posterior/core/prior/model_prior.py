@@ -304,10 +304,12 @@ class Model_Prior(object):
         """
         db = {}
         for dataset_name, lnlike_docfunc in lnlike_db_dtst.items():
-            joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
-                                                    individual_priors=individual_priors)
-            if joint_prior is not None:
-                db[dataset_name] = joint_prior
-            else:
-                logger.warning(f"Joint log prior of dataset {dataset_name} could not be created.")
+            # For IND dataset you might not want to model them. In this case the lnlike_docfunc should be None
+            if lnlike_docfunc is not None:
+                joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
+                                                        individual_priors=individual_priors)
+                if joint_prior is not None:
+                    db[dataset_name] = joint_prior
+                else:
+                    logger.warning(f"Joint log prior of dataset {dataset_name} could not be created.")
         return db
