@@ -11,8 +11,6 @@ creator function for time series datasets.
 @TODO:
     -
 """
-from collections import Iterable
-
 from ....tools.function_from_text_toolbox import add_nonparam_argument
 
 ## String used for the time vector
@@ -28,7 +26,7 @@ time_ref = "tref"
 l_time_ref = "l_{}".format(time_ref)
 
 
-def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_mand_kwargs,
+def add_time_argument(arguments, multi, get_times_from_datasets, arg_list, key_arglist, key_mand_kwargs,
                       key_opt_kwargs, ldict, l_dataset, time_vec_name=time_vec,
                       l_time_vec_name=l_time_vec, add_to_ldict=True, backup_add_to_args=True):
     """Add time to the arguments text and update arg_list and ldict.
@@ -42,8 +40,8 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
         string giving the current text of arguments for the functions
     multi: bool
         True if the datasimulator simulate multiple outputs
-    has_dataset: bool
-        True if the datasimulator should includes datasets values
+    get_times_from_datasets: bool
+        True the datasets should be used to extract the time vectors
     arg_list: dict
         dictionary with key = key_whole, value = dict with
         key = key_param, value = list of parameter full names
@@ -78,15 +76,14 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
     time_arg_name: str
         String giving the name of the new time argument.
     time_arg: str/None
-        String giving the argument and eventually the default value.
-        However if it is directly added to ldict and thus is not added to arguments,
-        time_arg is None.
+        String giving the argument name (same than time_arg_name).
+        However if it is directly added to ldict and thus is not added to arguments, time_arg is None.
     time_arg_in_arguments : str/None
-        Addition to arguments made. If no addition have been made because the param has been added to ldict
-        this returns None
+        Addition to arguments made. So it includes the argument name and eventually the default value.
+        If no addition have been made because the param has been added to ldict this returns None
     """
     if multi:
-        if has_dataset:
+        if get_times_from_datasets:
             l_t = []
             for dst in l_dataset:
                 l_t.append(dst.get_time())
@@ -98,7 +95,7 @@ def add_time_argument(arguments, multi, has_dataset, arg_list, key_arglist, key_
                                    key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs, ldict=ldict,
                                    key_arglist=key_arglist, new_arg_value=l_t)
     else:
-        if has_dataset:
+        if get_times_from_datasets:
             tt = l_dataset[0].get_time()
         else:
             tt = None
@@ -172,12 +169,11 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
     timeref_arg_name         : str
         String giving the name of the new time reference argument.
     timeref_arg              : str/None
-        String giving the argument and eventually the default value.
-        However if it is directly added to ldict and thus is not added to arguments,
-        timeref_arg is None.
+        String giving the argument (same as timeref_arg_name).
+        However if it is directly added to ldict and thus is not added to arguments, timeref_arg is None.
     timeref_arg_in_arguments : str/None
-        Addition to arguments made. If no addition have been made because the param has been added to ldict
-        this returns None
+        Addition to arguments made. So the argument name and eventually the default value.
+        If no addition have been made because the param has been added to ldict this returns None
     """
     disable_add_to_ldict = False  # Input of add_nonparam_argument that should be False expect if the
     # time reference is computed from the time vector at run time
