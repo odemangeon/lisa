@@ -109,8 +109,7 @@ def add_time_argument(arguments, multi, get_times_from_datasets, arg_list, key_a
 
 def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_list, key_arglist, key_mand_kwargs,
                           key_opt_kwargs, ldict, get_time_ref=None, time_ref_val=None,
-                          l_dataset=None, timeref_name=time_ref, l_timeref_name=l_time_ref, time_vec_name=time_vec,
-                          l_time_vec_name=l_time_vec):
+                          l_dataset=None, timeref_name=time_ref, l_timeref_name=l_time_ref):
     """Add time reference to the arguments text and update arg_list and ldict.
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
@@ -156,10 +155,6 @@ def add_timeref_arguments(arguments, multi, vect_for_multi, use_dataset, arg_lis
     timeref_name    : str
         Str used to design the time vector
     l_timeref_name  : str
-        Str used to design the list of time vector
-    time_vec_name   : str
-        Str used to design the time vector
-    l_time_vec_name : str
         Str used to design the list of time vector
 
     Returns:
