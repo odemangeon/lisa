@@ -61,27 +61,33 @@ def check_datasets_and_instmodels(datasets, inst_models):
     # This dictionnary will be filled with two keys "datasets", "inst_models" and the Value
     # will be a the name or the list of name of these inputs to be used in the datasimulator docfunc
     inputsname4docf = {}
-    for inputs, input_class, input_name in zip([datasets, inst_models], [Core_Dataset, Instrument_Model], ["datasets", "inst_models"]):
+    for inputs, input_class, input_type in zip([datasets, inst_models], [Core_Dataset, Instrument_Model], ["datasets", "inst_models"]):
         inputs_err = False
         if isinstance(inputs, Iterable):
             if all([isinstance(input, input_class) for input in inputs]):
                 if len(inputs) > 1:
-                    mulit_input[input_name] = True
+                    mulit_input[input_type] = True
                 else:
-                    mulit_input[input_name] = False
-                    inputs = inputs[0]  # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
+                    mulit_input[input_type] = False
+                    # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
+                    if input_type == "datasets":
+                        datasets = datasets[0]
+                    else:
+                        inst_models = inst_models[0]
             else:
                 inputs_err = True
         else:
             inputs_err = not(isinstance(inputs, input_class))
+            mulit_input[input_type] = False
         if inputs_err:
-            raise ValueError(f"{input_name} should be an instance of {input_class} or a list of isntances of {input_class}.")
-        if mulit_input[input_name]:
-            inputsname4docf[input_name] = []
-            for instmod in inst_models:
-                inputsname4docf[input_name].append(instmod.full_name)  # instmod.get_name(include_prefix=True, recursive=True)
+            raise ValueError(f"{input_type} should be an instance of {input_class} or a list of isntances of {input_class}.")
+        if mulit_input[input_type]:
+            inputsname4docf[input_type] = []
+            for input in inputs:
+                input_name = input.full_name if input_type == "inst_models" else input.dataset_name
+                inputsname4docf[input_type].append(input_name)  # instmod.get_name(include_prefix=True, recursive=True)
         else:
-            inputsname4docf[input_name] = instmod.full_name  # inst_models.get_name(include_prefix=True, recursive=True)
+            inputsname4docf[input_type] = inst_models.full_name if input_type == "inst_models" else datasets.dataset_name  # inst_models.get_name(include_prefix=True, recursive=True)
 
     # Produce l_dataset and l_inst_model the list of datasets and list of instrument models (even of 1 element)
     multi = mulit_input["datasets"] or mulit_input["inst_models"]
@@ -175,12 +181,12 @@ def get_lists_bijection_instcat(l_dataset, l_inst_model, inst_cat=None):
     return dico_instcat, l_output_retrieve
 
 
-def get_has_datasets(l_dataset):
-    """Return True if datasets provides Dataset(s).
-
-    This function should be called after check_datasets_and_instmodels since it uses its output.
-
-    :param list_of_Dataset l_dataset: Checked list of Dataset instance(s) or None.
-    :return bool res: True if datasets provides Dataset(s).
-    """
-    return l_dataset[0] is not None
+# def get_has_datasets(l_dataset):
+#     """Return True if datasets provides Dataset(s).
+#
+#     This function should be called after check_datasets_and_instmodels since it uses its output.
+#
+#     :param list_of_Dataset l_dataset: Checked list of Dataset instance(s) or None.
+#     :return bool res: True if datasets provides Dataset(s).
+#     """
+#     return l_dataset[0] is not None
