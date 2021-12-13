@@ -113,10 +113,15 @@ class IND_Dataset(Core_Dataset):
 
     def get_kwargs(self):
         pandas_df = self.get_datatable()
-        return {"data": array(pandas_df[self._data_name]),
-                "data_err": array(pandas_df[self._data_err_name]),
-                "t": array(pandas_df["time"]),
-                "tref": array(pandas_df["time"]).min()}
+        if self._data_err_name in pandas_df:
+            return {"data": array(pandas_df[self._data_name]),
+                    "data_err": array(pandas_df[self._data_err_name]),
+                    "t": array(pandas_df["time"]),
+                    "tref": array(pandas_df["time"]).min()}
+        else:
+            return {"data": array(pandas_df[self._data_name]),
+                    "t": array(pandas_df["time"]),
+                    "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
         pandas_df = self.get_datatable()
