@@ -223,12 +223,11 @@ def add_nonparam_argument(arguments, new_arg_name, arg_list, key_mand_kwargs, ke
     arguments         : str
         Updated string giving the new text of arguments
     arg               : str/None
-        String giving the name of the new argument (and the default value).
-        However if the argument is directly added to ldict and thus is not added to arguments,
-        arg is None.
+        String giving the name of the new argument. However if the argument is directly added to ldict
+        and thus is not added to arguments, arg is None.
     arguments_element : str/None
-        Addition to arguments made. If no addition have been made because the param has been added to ldict
-        this returns None
+        Addition to arguments made. So 'arg' or 'arg=<default_value>' if there is a default value.
+        If no addition have been made because the param has been added to ldict this returns None.
     """
     if isinstance(key_arglist, str):
         l_key_arglist = [key_arglist]
