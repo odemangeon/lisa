@@ -30,7 +30,7 @@ from batman import TransitModel, TransitParams
 from spiderman import ModelParams
 
 from ....core.model.datasim_docfunc import DatasimDocFunc
-from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
+from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels  #
 from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
                                                              l_time_vec, add_timeref_arguments,
                                                              time_ref, l_time_ref)
@@ -45,8 +45,8 @@ logger = getLogger()
 
 def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs, ext_plonly,
                             parametrisation, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
-                            phasecurve_model,
-                            inst_models=None, datasets=None,
+                            phasecurve_model, decorrelation_config, dataset_db, LCcat_model,
+                            inst_models, datasets, get_times_from_datasets,
                             param_vector_name=par_vec_name):
     """Return datasimulator functions.
 
@@ -102,10 +102,26 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
          'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
                                  }
          }
-    inst_models             : Instrument_Model or List of Instrument_Model or None
+    decorrelation_config    : dict
+        Dictionary decribing the decorrelation models for the LC instrument models.
+        The format is {'<instrument model name>': {'do': <bool>,
+                                                   'what to decorrelate': {'<model part>': {'<decorrelation model name>': {'<IND isntrument model name>': {<parameters of the decorrelation>},
+                                                                                                                          ...
+                                                                                                                          },
+                                                                                            ...
+                                                                                            },
+                                                                           ...
+                                                                           }
+                                                   }
+    dataset_db              : DatasetDatabase
+        Dataset database, this will be used by the function to access the dataset for the decorrelation,
+        not to access the LC datasets to be simulated.
+    LCcat_model             : LC_InstCat_Model
+        Instance of the LC_InstCat_Model
+    inst_models             : Instrument_Model or List of Instrument_Model
         List of Instrument_Model instance which, if datasets is provided, should be the instrument models
         to use for each dataset provided in the datasets arguments.
-    datasets                : Dataset or list_of_Dataset or None
+    datasets                : Dataset or list_of_Datase
         List of datasets to be simulated.
         If no dataset is provided (datasets=None), the datasimulator function produced by this function will
         have as arguments the times on top of the parameter vector of the model.
@@ -113,6 +129,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         by this function will include the times, so it will not be an argument.
         If provided the number of datasets needs to match the number of instrument models provided by
         the inst_models arguments
+    get_times_from_datasets  : bool
+        If True the times at which the LC model is computed is taken from the datasets.
+        Else it is an input of the datasimulator function produced.
     param_vector_name       : str
         string giving the name of the vector of parameters argument of the datasimulator function.
 
@@ -123,13 +142,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         simulator function for the whole system ("whole") and for the each planet individually
         ("planet_name")
     """
-    # Get the transit_implementation to use
-    do_transit = transit_model['do']
-
-    # Get the phasecurve_implementation to use
-    do_phasecurve = phasecurve_model['do']
-
-    ## Check the content of the datasets and inst_models arguments
+    #############################################################
+    # Check the content of the datasets and inst_models arguments
+    #############################################################
     # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
     # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
     # Datasim_DocFunc (instmod_docf)
@@ -144,10 +159,12 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
-    ## Check if datasets are provided and store the answer in the has_dataset variable
-    has_dataset = get_has_datasets(l_dataset)
+    # ## Check if datasets are provided and store the answer in the has_dataset variable
+    # has_dataset = get_has_datasets(l_dataset)
 
+    ###########################
     ## Initialise text_def_func
+    ###########################
     # text_def_func is a dictionary which will received the text of the datasimulator functions
     # It has several keys for several datasimulator functions:
     #   - "whole" for the whole system with all the planets
@@ -155,7 +172,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Format: {"System part name": str_text_of_the_datasimulator_for_the_system_part}
     text_def_func = {}
 
+    #####################################################
     ## Initialise param_nb, arg_list, arguments and ldict
+    #####################################################
     # - param_nb is a dictionary that will keep track of the number of parameter for each
     # function in text_def_func (so the keys are the same).
     # Format: {"System part name": int_current_nb_of_model_parameters_of_the_datasimulator}
@@ -179,7 +198,9 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
      ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, keys=[key_whole], key_mand_kwargs=key_mand_kwargs,
                                                    key_opt_kwargs=key_opt_kwargs, param_vector_name=par_vec_name)
 
+    #####################################################################################################
     ## Initialise arg_list and param_nb keys and values for the planet and the planet only datasimulators
+    #####################################################################################################
     for planet in planets.values():
         arg_list[planet.get_name() + ext_plonly] = deepcopy(arg_list[key_whole])
         param_nb[planet.get_name() + ext_plonly] = param_nb[key_whole]
@@ -188,30 +209,15 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         param_nb[planet.get_name()] = param_nb[key_whole]
         ldict[planet.get_name()] = copy(ldict[key_whole])
 
-    ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
-    # (This needs to be done before the creation of arglist and param_nb for planet_only !)
-    # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: ["<limb darkening model name>", ]
-    # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: [<limb darkening model>, ]
-    # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: ["[p[1], p[2]]", ]
-    (l_LD_parcont_name,
-     l_LD_parcont,
-     l_LD_param_list) = get_LD_parcont_and_param(l_inst_model=l_inst_model, ldmodel4instmodfname=ldmodel4instmodfname,
-                                                 star=star, LDs=LDs, param_nb=param_nb,
-                                                 arg_list=arg_list, key_arglist=None, key_param=key_param)
-
+    ################################################
     ## Define the orbital parameters for each planet
+    ################################################
     (rhostar, params_whole, params_planet, params_planet_only
      ) = get_orbital_params(param_nb=param_nb, arg_list=arg_list, star=star, planets=planets, parametrisation=parametrisation,
                             ext_plonly=ext_plonly, key_whole=key_whole, key_param=key_param)
 
     #####################################
-    # Define the template of the function
+    # Define the templates of the function
     #####################################
     # Initialise function_name and template_function the template function name and the template function text
     function_name = ("LCsim_{{object}}_{instmod_fullname}{dst_ext}"
@@ -238,21 +244,17 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     tab = "    "
     template_function = dedent(template_function)
 
+    #########################################################################################
     # Create the text of what to return when condition is met or the RuntimeError is catched
+    ########################################################################################
     error_return = get_catchederror_return(multi=multi, l_inst_model=l_inst_model)
-
-    # Initialise template_returns_instmod, the template of the return for each instrument model
-    template_returns = "(1 {oot_var}) * (1 {tr_planets}{pc_planets})"
-
-    # Initialise template_returns_pl_only, the template for planetary contibution only (No instrument nor star) (used for the phase folded plot to remove the other planet contributions)
-    template_returns_plonly = "{tr_planets}{pc_planets}"
 
     ######################
     # Add Time as argument
     ######################
     # Add the time as additional argument for the functions or include it in ldict
     (arguments, time_arg_name, time_arg, time_arg_in_arguments
-     ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
+     ) = add_time_argument(arguments=arguments, multi=multi, get_times_from_datasets=get_times_from_datasets, arg_list=arg_list,
                            key_arglist=None, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                            ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                            add_to_ldict=True, backup_add_to_args=True)
@@ -260,42 +262,77 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     ####################
     # Produce OOT models
     ####################
-    ## Get the l_oot_var and add the t_ref(s) to the list of arguments for the functions
-    # l_oot_var is the list of strings giving the string representation of the out of transit variation model
+    ## Get the d_l_oot_var and add the t_ref(s) to the list of arguments for the functions
+    # d_l_oot_var is the list of strings giving the string representation of the out of transit variation model
     # for each couple instrument model - dataset in l_inst_model and l_dataset.
     # Format: ["oot model", ]
-    oot_vars, arguments = get_ootvar(l_inst_model=l_inst_model, l_dataset=l_dataset, multi=multi,
-                                     ldict=ldict, arguments=arguments, param_nb=param_nb, arg_list=arg_list,
-                                     key_arglist=None, key_param=key_param, key_mand_kwargs=key_mand_kwargs,
-                                     key_opt_kwargs=key_opt_kwargs,
-                                     time_vec_name=time_vec, l_time_vec_name=l_time_vec,
-                                     timeref_name=time_ref, l_timeref_name=l_time_ref)
+    d_l_oot_var, arguments = get_ootvar(l_inst_model=l_inst_model, l_dataset=l_dataset, multi=multi,
+                                        ldict=ldict, arguments=arguments, param_nb=param_nb, arg_list=arg_list,
+                                        key_arglist=None, key_param=key_param, key_mand_kwargs=key_mand_kwargs,
+                                        key_opt_kwargs=key_opt_kwargs,
+                                        time_arg_name=time_arg_name)
 
     ########################
     # Produce Transit models
     ########################
+    do_transit = transit_model['do']
     if do_transit:
+        ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
+        # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
+        # in l_inst_model.
+        # Format: ["<limb darkening model name>", ]
+        # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
+        # in l_inst_model.
+        # Format: [<limb darkening model>, ]
+        # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
+        # in l_inst_model.
+        # Format: ["[p[1], p[2]]", ]
+        (dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
+         ) = get_LD_parcont_and_param(l_inst_model=l_inst_model, ldmodel4instmodfname=ldmodel4instmodfname,
+                                      star=star, LDs=LDs, param_nb=param_nb,
+                                      arg_list=arg_list, key_arglist=None, key_param=key_param)
+
         (preambule_tr_planet, preambule_tr_planet_only, preambule_tr_whole,
-         l_tr_ret_planet, l_tr_ret_planet_only, l_tr_ret_whole_planets,
-         ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, has_dataset=has_dataset, transit_model=transit_model,
-                         l_LD_parcont=l_LD_parcont, l_LD_param_list=l_LD_param_list, parametrisation=parametrisation,
+         d_l_tr_ret_planet, d_l_tr_ret_planet_only, l_tr_ret_whole_planets,
+         ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets, transit_model=transit_model,
+                         dico_l_LD_parcont=dico_l_LD_parcont, dico_l_LD_param_list=dico_l_LD_param_list, parametrisation=parametrisation,
                          key_whole=key_whole, key_param=key_param, SSE4instmodfname=SSE4instmodfname, planets=planets,
                          ext_plonly=ext_plonly, arg_list=arg_list, param_nb=param_nb, ldict=ldict, tab=tab,
                          rhostar=rhostar, params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole)
     else:
-        preambule_tr_planet = preambule_tr_planet_only = preambule_tr_whole = {}
+        preambule_tr_planet = preambule_tr_planet_only = {plnt: "" for plnt in planets}
+        preambule_tr_whole = ""
+        d_l_tr_ret_planet = d_l_tr_ret_planet_only = {plnt: ["" for instmod in l_inst_model] for plnt in planets}
+        l_tr_ret_whole_planets = ["" for instmod in l_inst_model]
 
     ############################
     # Produce phase curve models
     ############################
+    do_phasecurve = phasecurve_model['do']
     if do_phasecurve:
         (preambule_pc_planet, preambule_pc_planet_only, preambule_pc_whole,
-         l_pc_ret_planet, l_pc_ret_planet_only, l_pc_ret_whole_planets,
-         ) = get_phasecurve(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, phasecurve_model=phasecurve_model,
-                            l_LD_parcont=l_LD_parcont, l_LD_param_list=l_LD_param_list, parametrisation=parametrisation,
+         d_l_pc_ret_planet, d_l_pc_ret_planet_only, l_pc_ret_whole_planets,
+         ) = get_phasecurve(multi=multi, l_inst_model=l_inst_model, phasecurve_model=phasecurve_model,
+                            dico_l_LD_parcont=dico_l_LD_parcont, dico_l_LD_param_list=dico_l_LD_param_list, parametrisation=parametrisation,
                             key_whole=key_whole, key_param=key_param, SSE4instmodfname=SSE4instmodfname, planets=planets, star=star,
                             ext_plonly=ext_plonly, arg_list=arg_list, param_nb=param_nb, ldict=ldict, tab=tab, did_transit=do_transit,
                             rhostar=rhostar, params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole)
+    else:
+        preambule_pc_planet = preambule_pc_planet_only = {plnt: "" for plnt in planets}
+        preambule_pc_whole = ""
+        d_l_pc_ret_planet = d_l_pc_ret_planet_only = {plnt: ["" for instmod in l_inst_model] for plnt in planets}
+        l_pc_ret_whole_planets = ["" for instmod in l_inst_model]
+
+    ###########################
+    # Produce the decorrelation
+    ###########################
+    (d_l_decorr_planet, d_l_decorr_planet_only, l_decorr_whole
+     ) = get_decorrelation(multi=multi, planets=planets, l_inst_model=l_inst_model, l_dataset=l_dataset,
+                           arguments=arguments,
+                           decorrelation_config=decorrelation_config, dataset_db=dataset_db, param_nb=param_nb, arg_list=arg_list,
+                           key_param=key_param, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                           key_whole=key_whole, ldict=ldict, ext_plonly=ext_plonly, LCcat_model=LCcat_model,
+                           time_arg_name=time_arg_name)
 
     ########################
     # Get the condition text
@@ -309,22 +346,20 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     # Fill the functions template for each planet
     #############################################
     for jj, planet in enumerate(planets.values()):
-        # Fill returns text for each planet
+        # Get the returns text for each planet
         returns_pl = ""
         returns_pl_only = ""
-        for (oot_var_planet, oot_var_planet_only, planet_tr, planet_only_tr, planet_pc, planet_only_pc
-             ) in zip(oot_vars[planet.get_name()], oot_vars[planet.get_name() + ext_plonly],
-                      l_tr_ret_planet[planet.get_name()], l_tr_ret_planet_only[planet.get_name()],
-                      l_pc_ret_planet[planet.get_name()], l_pc_ret_planet_only[planet.get_name()]):
-            tr_plusornot_pl = "+ " if planet_tr != "" else ""
-            pc_plusornot_pl = "+ " if planet_pc != "" else ""
-            returns_pl += template_returns.format(oot_var=oot_var_planet,
-                                                  tr_planets=tr_plusornot_pl + planet_tr,
-                                                  pc_planets=pc_plusornot_pl + planet_pc)
-            pc_plusornot_plonly = "+ " if ((planet_only_tr != "") and (planet_only_pc != "")) else ""
-            returns_pl_only += template_returns_plonly.format(tr_planets=planet_only_tr, pc_planets=pc_plusornot_plonly + planet_only_pc)
-            returns_pl += ", "
-            returns_pl_only += ", "
+        for (oot_var_planet, oot_var_planet_only, planet_tr, planet_only_tr, planet_pc, planet_only_pc,
+             decorr_planet, decorr_planet_only
+             ) in zip(d_l_oot_var[planet.get_name()], d_l_oot_var[planet.get_name() + ext_plonly],
+                      d_l_tr_ret_planet[planet.get_name()], d_l_tr_ret_planet_only[planet.get_name()],
+                      d_l_pc_ret_planet[planet.get_name()], d_l_pc_ret_planet_only[planet.get_name()],
+                      d_l_decorr_planet[planet.get_name()], d_l_decorr_planet_only[planet.get_name()]):
+
+            returns_pl += combine_return_models(which_model="full", stellar_var=oot_var_planet, transit=planet_tr, phasecurve=planet_pc,
+                                                decorrelation=decorr_planet)
+            returns_pl_only += combine_return_models(which_model="pl_only", stellar_var=oot_var_planet_only, transit=planet_only_tr, phasecurve=planet_only_pc,
+                                                     decorrelation=decorr_planet_only)
         if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
             returns_pl = returns_pl[:-2]
             returns_pl_only = returns_pl_only[:-2]
@@ -353,16 +388,14 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
     ##################################################
     # Fill the functions template for the whole system
     ##################################################
+    # Get the return text for the whole system
     returns_whole = ""
-    for oot_var, whole_tr_planet, whole_pc_planet in zip(oot_vars[key_whole], l_tr_ret_whole_planets, l_pc_ret_whole_planets):
-        tr_plusornot_pl = "+ " if whole_tr_planet != "" else ""
-        pc_plusornot_pl = "+ " if whole_pc_planet != "" else ""
-        returns_whole += template_returns.format(oot_var=oot_var,
-                                                 tr_planets=tr_plusornot_pl + whole_tr_planet, pc_planets=pc_plusornot_pl + whole_pc_planet)
-        returns_whole += ", "
+    for oot_var, whole_transit, whole_phasecurve, whole_decorr in zip(d_l_oot_var[key_whole], l_tr_ret_whole_planets, l_pc_ret_whole_planets, l_decorr_whole):
+        returns_whole += combine_return_models(which_model="full", stellar_var=oot_var, transit=whole_transit, phasecurve=whole_phasecurve,
+                                               decorrelation=whole_decorr)
     if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
         returns_whole = returns_whole[:-2]
-
+    # Finalise the text of whole system LC simulator function
     text_def_func[key_whole] = (template_function.
                                 format(object=key_whole, preambule_tr=preambule_tr_whole, preambule_pc=preambule_pc_whole, condition=condition_whole,
                                        arguments=arguments, returns=returns_whole, returns_except=error_return,
@@ -398,7 +431,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[obj_key][function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
-                                            include_dataset_kwarg=has_dataset,
+                                            include_dataset_kwarg=get_times_from_datasets,
                                             mand_kwargs=mand_kwargs,
                                             opt_kwargs=opt_kwargs,
                                             inst_model_fullname=instmod_docf,
@@ -408,9 +441,7 @@ def create_datasimulator_LC(star, planets, key_whole, key_param, key_mand_kwargs
 
 def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_list,
                key_arglist, key_param, key_mand_kwargs, key_opt_kwargs,
-               time_vec_name=time_vec, l_time_vec_name=l_time_vec, l_time_vec_format=None,
-               timeref_name=time_ref, l_timeref_name=l_time_ref, l_timeref_format=None, use_dataset_4_tref=False,
-               time_ref_val=None):
+               time_arg_name, use_dataset_4_tref=False, time_ref_val=None):
     """Get the out of transit variation contribution to the light-curve
 
     Arguments
@@ -454,18 +485,8 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
         Key used for the mandatory keyword argument entry of arg_list values
     key_opt_kwargs      : str
         Key used for the optional keyword argument entry of arg_list values
-    time_vec_name       : str
-        Str used to designate the time vector
-    l_time_vec_name     : str
-        Str used to designate the list of time vectors
-    l_time_vec_format   : str
-        Str used to access an element of l_time_vec_name
-    timeref_name        : str
-        Str used to designate the time reference
-    l_timeref_name      : str
-        Str used to designate the list of time references
-    l_timeref_format    : str
-        Str used to access an element of l_timeref_name
+    time_arg_name       : str
+        Str used to designate the time vector(s)
     use_dataset_4_tref  : bool
         If True, then the dataset will be used to compute the reference time
     time_ref_val        :
@@ -473,7 +494,7 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
 
     Returns
     -------
-    oot_vars    : dict of list_of_string
+    d_l_oot_var   : dict of list_of_string
         Dictionary providing, for all functions specified by key_arglist, the list of the string representations
         of the out of transit variation model for each couple instrument model - dataset in l_inst_model and l_dataset.
         Format of the dictionary:
@@ -491,16 +512,17 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
     else:
         raise ValueError("key_arglist should be None or a string or in iterable of string")
 
-    # Check if datasets are provided
-    has_dataset = get_has_datasets(l_dataset)
-    # Create the oot_vars dictionary
-    oot_vars = {}
+    # Create the d_l_oot_var dictionary
+    d_l_oot_var = {}
+
+    timeref_name_OOT = time_ref + "_OOT"
+    l_timeref_name_OOT = l_time_ref + "_OOT"
 
     for key_arglist in l_key_arglist:
-        oot_vars[key_arglist] = []
+        d_l_oot_var[key_arglist] = []
         # For each instrument model and dataset, ...
-        for ii, instmdl, dst in zip(range(len(l_inst_model)), l_inst_model, l_dataset):
-            oot_vars[key_arglist].append("")
+        for ii, instmdl in enumerate(l_inst_model):
+            d_l_oot_var[key_arglist].append("")
             # ..., if out of transit variation has been asked, ...
             if instmdl.get_with_OOT_var():
                 # ..., For each order in the required polynomial model, ...
@@ -515,7 +537,7 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                                                             key_arglist=key_arglist, param_vector_name=par_vec_name)[key_arglist]
                         # ..., if the parameter is free or the fixed value is not zero, ...
                         if text_OOT_param != str(0.0):
-                            oot_vars[key_arglist][ii] += "+ {}".format(text_OOT_param)
+                            d_l_oot_var[key_arglist][ii] += "+ {}".format(text_OOT_param)
                         # ..., else, since the fixed value is zero, this order doesn't have any
                         # contribution
                         else:
@@ -525,9 +547,9 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                         if value_not0 and order > 0:
                             # ..., if neither "tref" nor "l_tref" are in the list of kwargs and
                             # no dataset is provided, ...
-                            if ((timeref_name not in arg_list[key_arglist][key_mand_kwargs] +
+                            if ((timeref_name_OOT not in arg_list[key_arglist][key_mand_kwargs] +
                                  arg_list[key_arglist][key_opt_kwargs]) and
-                                (l_timeref_name not in arg_list[key_arglist][key_mand_kwargs] +
+                                (l_timeref_name_OOT not in arg_list[key_arglist][key_mand_kwargs] +
                                  arg_list[key_arglist][key_opt_kwargs])):
                                 def get_time_ref(time):
                                     return time[0]
@@ -536,48 +558,34 @@ def get_ootvar(l_inst_model, l_dataset, multi, ldict, arguments, param_nb, arg_l
                                                            use_dataset=use_dataset_4_tref,
                                                            arg_list=arg_list, key_arglist=key_arglist,
                                                            key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
-                                                           ldict=ldict, has_dataset=has_dataset, get_time_ref=get_time_ref,
+                                                           ldict=ldict, get_time_ref=get_time_ref,
                                                            time_ref_val=time_ref_val, l_dataset=l_dataset,
-                                                           timeref_name=timeref_name, l_timeref_name=l_timeref_name,
-                                                           time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name)
+                                                           timeref_name=timeref_name_OOT, l_timeref_name=l_timeref_name_OOT,
+                                                           )
                             # ..., add the end of this order's contribution to the text of the out of
                             # transit variation, ...
                             if order == 1:
                                 if multi:
-                                    if l_time_vec_format is None:
-                                        l_time_ii = ("{ltimevec}[{ii}]"
-                                                     "".format(ltimevec=l_time_vec_name, ii=ii))
-                                    else:
-                                        l_time_ii = l_time_vec_format.format(ii=ii)
-                                    if l_timeref_format is None:
-                                        l_timeref_ii = ("{ltimeref}[{ii}]"
-                                                        "".format(ltimeref=l_timeref_name, ii=ii))
-                                    else:
-                                        l_timeref_ii = l_timeref_format.format(ii=ii)
-                                    oot_vars[key_arglist][ii] += (" * ({l_time_ii} - {l_timeref_ii}) "
-                                                                  "".format(ii=ii, l_time_ii=l_time_ii,
-                                                                            l_timeref_ii=l_timeref_ii))
+                                    l_time_vect_template = "{ltimevec}[{ii}]"
+                                    l_time_ii = (l_time_vect_template.format(ltimevec=time_arg_name, ii=ii))
+                                    # TODO: Does that means that the multi time ref is not implemented ?
+                                    l_timeref_template = "{ltimeref}[{ii}]"
+                                    l_timeref_ii = (l_timeref_template.format(ltimeref=timeref_arg_name, ii=ii))
+                                    d_l_oot_var[key_arglist][ii] += (f" * ({l_time_ii} - {l_timeref_ii}) ")
                                 else:
-                                    oot_vars[key_arglist][ii] += (" * ({time} - {timeref}) "
-                                                                  "".format(time=time_vec_name,
-                                                                            timeref=timeref_name))
+                                    d_l_oot_var[key_arglist][ii] += (f" * ({time_arg_name} - {timeref_arg_name}) ")
                             elif order > 1:
                                 if multi:
-                                    l_time_ii = l_time_vec_format.format(ii=ii)
-                                    l_timeref_ii = l_timeref_format.format(ii=ii)
-                                    oot_vars[key_arglist][ii] += (" * ({l_time_ii} - {l_timeref_ii})"
-                                                                  "**{order}".format(order=order, ii=ii,
-                                                                                     l_time_ii=l_time_ii,
-                                                                                     l_timeref_ii=l_timeref_ii))
+                                    l_time_ii = l_time_vect_template.format(ii=ii)
+                                    l_timeref_ii = l_timeref_template.format(ii=ii)
+                                    d_l_oot_var[key_arglist][ii] += (f" * ({l_time_ii} - {l_timeref_ii})**{order}")
                                 else:
-                                    oot_vars[key_arglist][ii] += (" * ({time} - {timeref})**{order}"
-                                                                  "".format(order=order, time=time_vec_name,
-                                                                            timeref=timeref_name))
+                                    d_l_oot_var[key_arglist][ii] += (f" * ({time_arg_name} - {timeref_arg_name})**{order}")
                         # If the is no contribution to the oot of transit variation from this order
                         # add only a space.
                         elif value_not0 and order == 0:
-                            oot_vars[key_arglist][ii] += " "
-    return oot_vars, arguments
+                            d_l_oot_var[key_arglist][ii] += " "
+    return d_l_oot_var, arguments
 
 
 def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, param_nb, arg_list, key_arglist,
@@ -621,19 +629,19 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, para
 
     Returns
     -------
-    dico_LD_parcont_name   : dict_of_list_of_string
+    dico_l_LD_parcont_name   : dict_of_list_of_string
         Dictionary providing, for all functions specified by key_arglist, the list of limb darkening models
         name (parameter container name) associated with the Instrument_Model instances in l_inst_model.
         Format of the dictionary:
         - key : key or keys specificied by key_arglist
         - value: List = ["<LD parameter container name for instrument1>", ...]
-    dico_LD_parcont        : dict_of_list_of_LD
+    dico_l_LD_parcont        : dict_of_list_of_LD
         Dictionary providing, for all functions specified by key_arglist, the list of limb darkening models
         (parameter container object) associated with the Instrument_Model instances in l_inst_model.
         Format of the dictionary:
         - key : key or keys specificied by key_arglist
         - value: List = [<LD parameter container for instrument1>, ...]
-    dico_LD_param_list     : dict_of_list_of_str
+    dico_l_LD_param_list     : dict_of_list_of_str
         Dictionary providing, for all functions specified by key_arglist, the list of string which themself
         write the list of limb darkening parameters values associated with the Instrument_Model instances
         in l_inst_model.
@@ -651,24 +659,24 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, LDs, para
         raise ValueError("key_arglist should be None or a string or in iterable of string")
 
     # Get the ld_parcont and ld_param_list
-    l_LD_parcont_name = {}
-    l_LD_parcont = {}
-    l_LD_param_list = {}
+    dico_l_LD_parcont_name = {}
+    dico_l_LD_parcont = {}
+    dico_l_LD_param_list = {}
 
     for key_arglist in l_key_arglist:
-        l_LD_parcont_name[key_arglist] = []
-        l_LD_parcont[key_arglist] = []
-        l_LD_param_list[key_arglist] = []
+        dico_l_LD_parcont_name[key_arglist] = []
+        dico_l_LD_parcont[key_arglist] = []
+        dico_l_LD_param_list[key_arglist] = []
         for ii, instmdl in enumerate(l_inst_model):
-            l_LD_parcont_name[key_arglist].append(ldmodel4instmodfname[instmdl.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name])
-            l_LD_parcont[key_arglist].append(LDs[star.code_name + "_" + l_LD_parcont_name[key_arglist][ii]])
-            l_LD_param_list[key_arglist].append("[")
-            for param in l_LD_parcont[key_arglist][ii].get_list_params(main=True):
-                l_LD_param_list[key_arglist][ii] += (add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
-                                                                        param_nb=param_nb, key_arglist=key_arglist, param_vector_name=par_vec_name)[key_arglist] +
-                                                     ", ")
-            l_LD_param_list[key_arglist][ii] += "]"
-    return l_LD_parcont_name, l_LD_parcont, l_LD_param_list
+            dico_l_LD_parcont_name[key_arglist].append(ldmodel4instmodfname[instmdl.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name])
+            dico_l_LD_parcont[key_arglist].append(LDs[star.code_name + "_" + dico_l_LD_parcont_name[key_arglist][ii]])
+            dico_l_LD_param_list[key_arglist].append("[")
+            for param in dico_l_LD_parcont[key_arglist][ii].get_list_params(main=True):
+                dico_l_LD_param_list[key_arglist][ii] += (add_param_argument(param=param, arg_list=arg_list, key_param=key_param,
+                                                                             param_nb=param_nb, key_arglist=key_arglist, param_vector_name=par_vec_name)[key_arglist] +
+                                                          ", ")
+            dico_l_LD_param_list[key_arglist][ii] += "]"
+    return dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
 
 
 def get_orbital_params(param_nb, arg_list, star, planets, parametrisation, ext_plonly, key_param, key_whole):
@@ -694,10 +702,10 @@ def get_orbital_params(param_nb, arg_list, star, planets, parametrisation, ext_p
         THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     star            : Star
         Star object
-    planets         : planets                 : dict of Planets
+    planets         : dict of Planets
         Dictionary of Planet instance providing the planets in the system
         Format: {"planet name": Planet instance}
-    parametrisation : parametrisation         : str
+    parametrisation : str
         string refering to the parametrisation to use
     ext_plonly      : str
         extension to the planet name used for planet only model (without star, nor instrument)
@@ -783,13 +791,36 @@ def get_conditions(planets, parametrisation, params_planet, params_planet_only, 
 
     Arguments
     ---------
-    planets             :
-    parametrisation     :
-    params_planet       :
-    params_planet_only  :
-    params_whole        :
-    tab                 :
-    error_return        :
+    planets             : dict of Planets
+        Dictionary of Planet instance providing the planets in the system
+        Format: {"planet name": Planet instance}
+    parametrisation     : str
+        string refering to the parametrisation to use
+    params_planet       : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_planet_only  : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_whole        : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    tab                 : str
+        String providing the space to put in front of each new line
+    error_return        : str
+        Text of what to return if an error is catched
 
     Returns
     -------
@@ -860,18 +891,24 @@ def get_conditions(planets, parametrisation, params_planet, params_planet_only, 
     return condition_planet, condition_planet_only, condition_whole
 
 
-def get_catchederror_return(multi, l_inst_model):
+def get_catchederror_return(multi, l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec):
     """Provide the text of what to return when an error is catched.
 
     Arguments
     ---------
     multi           : bool
+        True if the datasim function needs to give multiple outputs.
     l_inst_model    : list_of_Instrument_Model
+        List of the instrument models instances for each output of the datasim function
+    time_vec_name       : str
+        Str used to designate the time vector
+    l_time_vec_name     : str
+        Str used to designate the list of time vectors
 
     Returns
     -------
     error_return : str
-        Text oif what to return if an error is catched
+        Text of what to return if an error is catched
     """
     if multi:
         template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
@@ -880,7 +917,7 @@ def get_catchederror_return(multi, l_inst_model):
 
     l_returns = []
     for ii in range(len(l_inst_model)):
-        l_returns.append(template_returns_condition.format(ltime_vec=l_time_vec, time_vec=time_vec))
+        l_returns.append(template_returns_condition.format(ltime_vec=l_time_vec_name, time_vec=time_vec_name))
 
     error_return = ""
     for ret in l_returns:
@@ -892,27 +929,138 @@ def get_catchederror_return(multi, l_inst_model):
     return error_return
 
 
-def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
-                l_LD_parcont, l_LD_param_list,
+def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets,
+                transit_model,
+                dico_l_LD_parcont, dico_l_LD_param_list,
                 parametrisation,
                 key_whole, key_param,
                 SSE4instmodfname,
                 planets, ext_plonly, arg_list, param_nb, ldict,
                 tab,
-                rhostar, params_planet, params_planet_only, params_whole):
+                rhostar, params_planet, params_planet_only, params_whole,
+                time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                ):
     """Provide the text for the transit part of the LC model text (preambule and return).
 
     Arguments
     ---------
+    multi                   : bool
+        True if the datasim function needs to give multiple outputs.
+    l_inst_model            : list_of_Instrument_Model
+        List of the instrument models instances for each output of the datasim function. Each instrument model
+        in this list is the instrument model which has to be used for the corresponding dataset provided in l_dataset.
+    l_dataset               : list of Datasets
+        List of the Dataset intances for each output of the datasim function. The instrument model to be used for
+        each dataset is provided in l_inst_model.
+    get_times_from_datasets : bool
+        If True the times at which the model should be computed will be taken from the datasets and
+        included into the function. I False the user of the function will have to provide the times.
+    transit_model           : dict
+        Dictionary describing the transit model to use. The format of this disctionary is:
+        {"do": True,  # Should we model the transit
+         'instrument_variable': False,  # Whether or not different instruemnt can have different transit model
+         'all_instruments': {'model': 'batman'  #String refering to the transit model to use (can be 'pytransit' or 'batman')
+                             },
+         'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
+                                 }
+         }
+    dico_l_LD_parcont        : dict_of_list_of_LD
+        Dictionary providing, for all functions specified by key_arglist, the list of limb darkening models
+        (parameter container object) associated with the Instrument_Model instances in l_inst_model.
+        Format of the dictionary:
+        - key : key or keys specificied by key_arglist
+        - value: List = [<LD parameter container for instrument1>, ...]
+    dico_l_LD_param_list     : dict_of_list_of_str
+        Dictionary providing, for all functions specified by key_arglist, the list of string which themself
+        write the list of limb darkening parameters values associated with the Instrument_Model instances
+        in l_inst_model.
+        Format of the dictionary:
+        - key : key or keys specificied by key_arglist
+        - value: List = ["[<value for LD param1 for instrument1> , <value for LD param2 for instrument1>, ...]", ...]
+    parametrisation          : str
+        string refering to the parametrisation to use
+    key_whole                : str
+        Key used in arg_list for the function simulating the whole system (all planets together)
+    key_param                : str
+        Key used for the parameters entry of arg_list values
+    SSE4instmodfname         : dict of dict of str int and float
+        Dictionary giving the supersampling factor and the exposure time to use for each instrument model
+        Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
+    planets                  : dict of Planets
+        Dictionary of Planet instance providing the planets in the system
+        Format: {"planet name": Planet instance}
+    ext_plonly               : str
+        extension to the planet name used for planet only model (without star, nor instrument)
+    arg_list                 : dict_of_dict_of_list_of_str
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by key_arglist.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
+        of sub-dictionaries specified by key_arglist.
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    param_nb                 : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
+        key = str key designating part of the system or the whole system
+        value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    ldict                    : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    tab                      : str
+        String providing the space to put in front of each new line
+    rhostar                  : dict_of_str
+        Dictionary providing the str to use in the function for rhostar for all function available in arg_list
+        Format:
+        - key: str designating the function being built and provided by key_arglist.
+        - value: str to use for rhostar for this function
+    params_planet            : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_planet_only       : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_whole             : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    time_vec_name       : str
+        Str used to designate the time vector
+    l_time_vec_name     : str
+        Str used to designate the list of time vectors
 
     Returns
     -------
-    preambule_tr_planet
-    preambule_tr_planet_only
-    preambule_tr_whole
-    l_tr_planet
-    l_tr_planet_only
-    l_tr_whole_planets
+    preambule_tr_planet         : dict of str
+        For each planet this dictionary give the preambule for the transit model to be added to the datasimulator function
+        of the planet model
+    preambule_tr_planet_only    : dict of str
+        For each planet this dictionary give the preambule for the transit model to be added to the datasimulator function
+        of the planet only model
+    preambule_tr_whole          : str
+        Preambule for the transit model to be added to the datasimulator function of the whole system model
+    d_l_tr_planet                 : dict of list of str
+        For each planet this dictionary give the list of the transit models for each instrument
+    d_l_tr_planet_only            : dict of list of str
+        For each planet this dictionary give the list of the transit models planet only for each instrument
+    l_tr_whole_planets          : list of str
+        List of transit model for all planets combined for each instrument
     """
     transit_imp = transit_model['all_instruments']['model']
 
@@ -931,8 +1079,8 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
             template_tr_preambule_pl += """
         {tab}aR_{planet} = getaoverr({P}, {rhostar}, ecc_{planet}, omega_{planet})"""
 
-        for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, l_LD_parcont[key_whole],
-                                                           l_LD_param_list[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
+        for instmdl, dst, LD_parcont, ld_param_list in zip(l_inst_model, l_dataset, dico_l_LD_parcont[key_whole],
+                                                           dico_l_LD_param_list[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
             # TODO_CHECK_THIS_COMMENT: If the same model is used for several dataset a model will be several times in
             # l_inst_model. So to avoid the repetition we check if this instrument has already been
             # done.
@@ -996,17 +1144,15 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
     ## Add or not the initialisation of the TransitModel instance or MandelAgol instance (to the template_preambule)
     l_par_bat = []
     for ii, instmdl, dst, LD_parcont in zip(range(len(l_inst_model)), l_inst_model, l_dataset,
-                                            l_LD_parcont[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
+                                            dico_l_LD_parcont[key_whole]):  # In principle the LD params are the same for all function because they are made at the beginning and affect all functions
         supersamp = SSE4instmodfname.get_supersamp(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
         # If you need to supersample the model
         if supersamp > 1:
             exptime = SSE4instmodfname.get_exptime(instmdl.get_name(include_prefix=True, code_version=True, recursive=True))
             if transit_imp == "batman":
-                if dst is None:
+                if not(get_times_from_datasets):
                     if multi:
-                        ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
-                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname}_"
-                                                "dataset{dst_key} = TransitModel("
+                        template_batman_pl_4 = ("{{tab}}m_{{planet}}_{instmod_fullname}_dataset{dst_key} = TransitModel("
                                                 "params_{{planet}}_{instmod_fullname}, "
                                                 "{{ltime_vec}}[{ii}], "
                                                 "supersample_factor={supersamp},"
@@ -1051,7 +1197,7 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
         # If you DON'T need to supersample the model
         else:
             if transit_imp == "batman":
-                if dst is None:
+                if not(get_times_from_datasets):
                     if multi:
                         ## WARNING this section of the code is untested and would not work if it was because params_{{planet}}_{instmod_fullname} is not declared
                         template_batman_pl_5 = ("{{tab}}m_{{planet}} = TransitModel("
@@ -1121,15 +1267,15 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
         l_tr_whole_planets.append("")
     preambule_tr_planet = {}
     preambule_tr_planet_only = {}
-    l_tr_planet = {}
-    l_tr_planet_only = {}
+    d_l_tr_planet = {}
+    d_l_tr_planet_only = {}
     preambule_tr_whole = ""
     for jj, planet in enumerate(planets.values()):
         # Only for Batman: Add the TransitParams and TransitModel instances to ldict
         if transit_imp == "batman":
             for ii, instmdl, dst, par_bat in zip(range(len(l_inst_model)), l_inst_model,
                                                  l_dataset, l_par_bat):
-                if dst is not None:
+                if get_times_from_datasets:
                     if multi:
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.get_name(),
@@ -1173,7 +1319,6 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
                     ldict[key_whole][m_pl_inst] = m_batman[key_whole]
                 else:
                     if multi:
-                        ## WARNING: This part of the code is untested and there will be a problem because dst_key is not define since there is not dataset.
                         params_pl_inst = ("params_{planet}_{instmod_fullname}_dataset{dst_key}"
                                           "".format(planet=planet.get_name(),
                                                     instmod_fullname=instmdl.get_name(include_prefix=True, code_version=True, recursive=True),
@@ -1224,19 +1369,13 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
         # Fill the template_tr_planet that define the transit component of the return for each planet
         # planets LC contribution (planet_lc and whole_planets_lc)
         # No need for case if batman or if dataset is None. Same reason than above
-        l_tr_planet[planet.get_name()] = []
-        l_tr_planet_only[planet.get_name()] = []
+        d_l_tr_planet[planet.get_name()] = []
+        d_l_tr_planet_only[planet.get_name()] = []
         for ii, instmdl, dst, ld_param_list in zip(range(len(l_inst_model)), l_inst_model,
-                                                   l_dataset, l_LD_param_list[key_whole]):
-            if instmdl is None:
-                instmdl_fname = None
-            else:
-                instmdl_fname = instmdl.get_name(include_prefix=True, code_version=True, recursive=True)
-            if dst is None:
-                dst_nb = None
-            else:
-                dst_nb = dst.number
-            l_tr_planet[planet.get_name()].append(
+                                                   l_dataset, dico_l_LD_param_list[key_whole]):
+            instmdl_fname = instmdl.get_name(include_prefix=True, code_version=True, recursive=True)
+            dst_nb = dst.number
+            d_l_tr_planet[planet.get_name()].append(
                 template_tr_planet.format(planet=planet.get_name(),
                                           ltime_vec=l_time_vec,
                                           time_vec=time_vec,
@@ -1249,7 +1388,7 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
                                           ld_param_list=ld_param_list,
                                           ii=ii
                                           ))
-            l_tr_planet_only[planet.get_name()].append(
+            d_l_tr_planet_only[planet.get_name()].append(
                 template_tr_planet.format(planet=planet.get_name(),
                                           ltime_vec=l_time_vec,
                                           time_vec=time_vec,
@@ -1276,14 +1415,14 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
                                                                        )
             for key in [planet.get_name(), planet.get_name() + ext_plonly]:
                 if transit_imp == "batman":
-                    if not(has_dataset):
+                    if not(get_times_from_datasets):
                         ldict[key]["TransitModel"] = TransitModel
                     ldict[key]["getomega_deg_fast"] = getomega_deg_fast
                 else:
                     ldict[key]["getomega_fast"] = getomega_fast
                     ldict[key]["m"] = m_pytransit
     if transit_imp == "batman":
-        if not(has_dataset):
+        if not(get_times_from_datasets):
             ldict[key_whole]["TransitModel"] = TransitModel
         ldict[key_whole]["getomega_deg_fast"] = getomega_deg_fast
     else:
@@ -1291,22 +1430,136 @@ def get_transit(multi, l_inst_model, l_dataset, has_dataset, transit_model,
         ldict[key_whole]["m"] = m_pytransit
 
     return (preambule_tr_planet, preambule_tr_planet_only, preambule_tr_whole,
-            l_tr_planet, l_tr_planet_only, l_tr_whole_planets,
+            d_l_tr_planet, d_l_tr_planet_only, l_tr_whole_planets,
             )
 
 
-def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcont, l_LD_param_list, parametrisation,
+def get_phasecurve(multi, l_inst_model, phasecurve_model, dico_l_LD_parcont, dico_l_LD_param_list, parametrisation,
                    key_whole, key_param, SSE4instmodfname, star, planets, ext_plonly, arg_list, param_nb, ldict,
                    tab, did_transit,
-                   rhostar, params_planet, params_planet_only, params_whole):
+                   rhostar, params_planet, params_planet_only, params_whole,
+                   time_vec_name=time_vec, l_time_vec_name=l_time_vec,):
     """Provide the text for the phase curve part of the LC model text (preambule and return).
 
     Arguments
     ---------
+    multi                   : bool
+        True if the datasim function needs to give multiple outputs.
+    l_inst_model            : list_of_Instrument_Model
+        List of the instrument models instances for each output of the datasim function.
+    phasecurve_model        : dict
+        Dictionary describing the phasecurve model to use. The format of this disctionary is:
+        {"do": True,  # Should we model the transit
+         'instrument_variable': False,  # Whether or not different instruemnt can have different transit model
+         'all_instruments': [{'model': "spiderman", #String refering to the transit model to use (can be 'spiderman')
+                              "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
+                                       "attributes": {}
+                              }
+                             ]
+         'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
+                                 }
+         }
+    dico_l_LD_parcont        : dict_of_list_of_LD
+        Dictionary providing, for all functions specified by key_arglist, the list of limb darkening models
+        (parameter container object) associated with the Instrument_Model instances in l_inst_model.
+        Format of the dictionary:
+        - key : key or keys specificied by key_arglist
+        - value: List = [<LD parameter container for instrument1>, ...]
+    dico_l_LD_param_list     : dict_of_list_of_str
+        Dictionary providing, for all functions specified by key_arglist, the list of string which themself
+        write the list of limb darkening parameters values associated with the Instrument_Model instances
+        in l_inst_model.
+        Format of the dictionary:
+        - key : key or keys specificied by key_arglist
+        - value: List = ["[<value for LD param1 for instrument1> , <value for LD param2 for instrument1>, ...]", ...]
+    parametrisation          : str
+        string refering to the parametrisation to use
+    key_whole                : str
+        Key used in arg_list for the function simulating the whole system (all planets together)
+    key_param                : str
+        Key used for the parameters entry of arg_list values
+    SSE4instmodfname         : dict of dict of str int and float
+        Dictionary giving the supersampling factor and the exposure time to use for each instrument model
+        Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
+    star                     : Star object
+        Star instance of the parent star
+    planets                  : dict of Planets
+        Dictionary of Planet instance providing the planets in the system
+        Format: {"planet name": Planet instance}
+    ext_plonly               : str
+        extension to the planet name used for planet only model (without star, nor instrument)
+    arg_list                 : dict_of_dict_of_list_of_str
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by key_arglist.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
+        of sub-dictionaries specified by key_arglist.
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    param_nb                 : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
+        key = str key designating part of the system or the whole system
+        value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    ldict                    : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    tab                      : str
+        String providing the space to put in front of each new line
+    did_transit              : bool
+        If True the transit model (pre) was alredy done
+    rhostar                  : dict_of_str
+        Dictionary providing the str to use in the function for rhostar for all function available in arg_list
+        Format:
+        - key: str designating the function being built and provided by key_arglist.
+        - value: str to use for rhostar for this function
+    params_planet            : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_planet_only       : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    params_whole             : dict_of_dict_of_str
+        Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
+        Format:
+        - key: planet name
+        - value: dict_of_str with the following format
+            - key: Parameter full name
+            - value: str to use for this parameter for this function
+    time_vec_name       : str
+        Str used to designate the time vector
+    l_time_vec_name     : str
+        Str used to designate the list of time vectors
 
     Returns
     -------
-
+    preambule_pc_planet         : dict of str
+        For each planet this dictionary give the preambule for the phasecurve model to be added to the datasimulator function
+        of the planet model
+    preambule_pc_planet_only    : dict of str
+        For each planet this dictionary give the preambule for the phasecurve model to be added to the datasimulator function
+        of the planet only model
+    preambule_pc_whole          : str
+        Preambule for the phase curve model to be added to the datasimulator function of the whole system model
+    d_l_return_pl         : dict of list of str
+        For each planet this dictionary give the list of the phasecurve models for each instrument
+    d_l_return_pl_only    : dict of list of str
+        For each planet this dictionary give the list of the phasecurve models planet only for each instrument
+    l_pc_whole_planets  : list of str
+        List of phasecurve model for all planets combined for each instrument
     """
     # dico to store_text for stellar params
     star_param_text = {}
@@ -1314,8 +1567,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcon
     preambule_pl = {}
     preambule_pl_only = {}
     preambule_whole = ""
-    l_return_pl = {}
-    l_return_pl_only = {}
+    d_l_return_pl = {}
+    d_l_return_pl_only = {}
     l_return_whole = []
 
     for jj, planet in enumerate(planets.values()):
@@ -1324,8 +1577,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcon
 
         preambule_pl[planet_name] = ""
         preambule_pl_only[planet_name] = ""
-        l_return_pl[planet_name] = []
-        l_return_pl_only[planet_name] = []
+        d_l_return_pl[planet_name] = []
+        d_l_return_pl_only[planet_name] = []
 
         for kk, pc_comp in enumerate(phasecurve_model['all_instruments']):
             pc_model = pc_comp['model']
@@ -1373,7 +1626,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcon
                         template_preambule_pl = ""
 
                     done_preambule4instmodel = []
-                    for ii, (instmdl, dst) in enumerate(zip(l_inst_model, l_dataset)):
+                    for ii, instmdl in enumerate(l_inst_model):
                         instmod_name = instmdl.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})
                         # Define extension for the name of spiderman ModelParams instances
                         sp_param_ext = get_planet_inst_dst_ext(planet=planet, inst_model=instmdl, multi=multi)
@@ -1483,35 +1736,215 @@ def get_phasecurve(multi, l_inst_model, l_dataset, phasecurve_model, l_LD_parcon
                         # Produce the template for phase curve model returns
                         ####################################################
                         if multi:
-                            template_return_pl = (f"{params_pl_inst}.lightcurve({{ltime_vec}}[{ii}]{lightcurve_kwargs}) - 1 ")
+                            ret_pl = (f"{params_pl_inst}.lightcurve({l_time_vec_name}[{ii}]{lightcurve_kwargs}) - 1 ")
                         else:
-                            template_return_pl = (f"{params_pl_inst}.lightcurve({{time_vec}}{lightcurve_kwargs}) - 1 ")
+                            ret_pl = (f"{params_pl_inst}.lightcurve({time_vec_name}{lightcurve_kwargs}) - 1 ")
                         ##########################################################################################################
                         # Fill the template for phase curve model returns for the different function planet, planet only and whole
                         ##########################################################################################################
                         # No need for case for same reason than above
-                        ret_pl = template_return_pl.format(ltime_vec=l_time_vec, ii=ii, time_vec=time_vec)
                         if kk == 0:
-                            l_return_pl[planet_name].append(ret_pl)
-                            l_return_pl_only[planet_name].append(ret_pl)
+                            d_l_return_pl[planet_name].append(ret_pl)
+                            d_l_return_pl_only[planet_name].append(ret_pl)
                             if jj == 0:
                                 l_return_whole.append(ret_pl)
                         else:
-                            l_return_pl[planet_name] += "+ " + ret_pl
-                            l_return_pl_only[planet_name] += "+ " + ret_pl
+                            d_l_return_pl[planet_name] += "+ " + ret_pl
+                            d_l_return_pl_only[planet_name] += "+ " + ret_pl
                             l_return_whole[ii] += "+ " + ret_pl
                 else:
                     raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
             else:
                 raise NotImplementedError(f"phasecurve model {pc_model} is not implemented.")
     return (preambule_pl, preambule_pl_only, preambule_whole,
-            l_return_pl, l_return_pl_only, l_return_whole,
+            d_l_return_pl, d_l_return_pl_only, l_return_whole,
             )
 
 
 def get_planet_inst_dst_ext(planet, inst_model, multi):
+    """Return the extension to use for the name of spiderman param instance
+
+    Arguments
+    ---------
+    planet      : Planet
+        Planet instance to which the spiderman param instance will correspond
+    inst_model  : Instrument_Model
+        Instrument model instance to which the spiderman param instance will correspond
+    multi       : bool
+
+    Returns
+    -------
+    sp_param_ext    : string
+        Extension to use for the name of spiderman param instance
+    """
     if multi:
         sp_param_ext = f"_{planet.get_name()}_{inst_model.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})}"
     else:
         sp_param_ext = f"_{planet.get_name()}"
     return sp_param_ext
+
+
+def get_decorrelation(multi, planets, l_inst_model, l_dataset,
+                      arguments, decorrelation_config, dataset_db, param_nb, arg_list,
+                      key_param, key_mand_kwargs, key_opt_kwargs, key_whole, ldict, ext_plonly, LCcat_model,
+                      time_arg_name):
+    """Provide the text for the decorrelation of the LC model text (return).
+
+    It should provide the text for decorrelation model for all functions (planet, planet_only, whole)
+    and separately for each instrument model and each part of the LC model to decorrelate.
+
+    The output of this methods will be used by combine_lc_models when filling the template of the functions
+    in datasim_creator_lc.
+
+    Arguments
+    ---------
+    multi                   : bool
+        True if the datasim function needs to give multiple outputs.
+    planets                  : dict of Planets
+        Dictionary of Planet instance providing the planets in the system
+        Format: {"planet name": Planet instance}
+    l_inst_model            : list_of_Instrument_Model
+        List of the instrument models instances for each output of the datasim function. Each instrument model
+        in this list is the instrument model which has to be used for the corresponding dataset provided in l_dataset.
+    l_dataset               : list of Datasets
+        List of the Dataset intances for each output of the datasim function. The instrument model to be used for
+        use for each dataset is provided in l_inst_model.
+    arguments               :
+    decorrelation_config    :
+    dataset_db              : DatasetDatabase
+        Dataset database to access the dataset for the decorrelation.
+    param_nb                : dict_of_int
+        dictionary giving the current number of free parameters in the function being produced.
+        key = str key designating part of the system or the whole system
+        value = int giving the current number of parameter in the model
+        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    arg_list                 : dict_of_dict_of_list_of_str
+        dictionary giving the arguments of the functions currently being produced with the following format:
+        - key = str designating the function being built and provided by key_arglist.
+        - value = dict with three str keys and values
+            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
+            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
+            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
+        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
+        of sub-dictionaries specified by key_arglist.
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    key_param                : str
+        Key used for the parameters entry of arg_list values
+    key_mand_kwargs          : str
+        Key used for the mandatory keyword argument entry of arg_list
+    key_opt_kwargs           : str
+        Key used for the optional keyword argument entry of arg_list
+    key_whole                : str
+        Key used in arg_list for the function simulating the whole system (all planets together)
+    ldict                    : dict_of_dict
+        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
+        - key = str key designating part of the system or the whole system
+        - value = dictionary
+        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+    ext_plonly               : str
+        extension to the planet name used for planet only model (without star, nor instrument)
+    LCcat_model              : LC_InstCat_Model
+        LC_InstCat_Model instance for the current model
+    time_arg_name            : str
+        Str used to designate the time vector(s)
+
+    Returns
+    -------
+    d_l_decorr_planet         : dict of list of dict
+        dictionary which for each planet give the list which for each instrument gives the dictionary providing the decorrelation model for each part of the LC model
+    d_l_decorr_planet_only    : dict of list of dict
+        dictionary which for each planet give the list which for each instrument gives the dictionary providing the decorrelation model planet only for each part of the LC model
+    l_decorr_whole            : list of dict
+        list which for each instrument gives the dictionary providing the decorrelation model of the whole system for each part of the LC model
+    """
+    # Create the decorrelation models for each planet and planet_only functions
+    d_l_decorr_planet = {}
+    d_l_decorr_planet_only = {}
+    for jj, planet in enumerate(planets.values()):
+        d_l_decorr_planet[planet.get_name()] = []
+        d_l_decorr_planet_only[planet.get_name()] = []
+        for l_decorr, key_func in zip([d_l_decorr_planet[planet.get_name()], d_l_decorr_planet_only[planet.get_name()]],
+                                      [f"{planet.get_name(include_prefix=False)}", f"{planet.get_name(include_prefix=False)}{ext_plonly}"]):
+            for ii, inst_mod_obj in enumerate(l_inst_model):
+                l_decorr.append({})
+                l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == inst_mod_obj]
+                if decorrelation_config[inst_mod_obj.full_name]["do"]:
+                    for model_part, config_decorr_instmod_modelpart in decorrelation_config[inst_mod_obj.full_name]["what to decorrelate"].items():
+                        l_decorr[ii][model_part] = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=ii, l_dataset_name_instmod=l_dataset_name_instmod,
+                                                                                  dataset_db=dataset_db,
+                                                                                  decorrelation_config_instmod=config_decorr_instmod_modelpart,
+                                                                                  param_nb=param_nb, arg_list=arg_list,
+                                                                                  key_param=key_param,
+                                                                                  key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                                                                  key_func=key_func, ldict=ldict, model_part=model_part,
+                                                                                  time_arg_name=time_arg_name)
+    # Create the decorrelation models for the whole system
+    l_decorr_whole = []
+    for ii, inst_mod_obj in enumerate(l_inst_model):
+        l_decorr_whole.append({})
+        if decorrelation_config[inst_mod_obj.full_name]["do"]:
+            l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == inst_mod_obj]
+            for model_part, config_decorr_instmod_modelpart in decorrelation_config[inst_mod_obj.full_name]["what to decorrelate"].items():
+                l_decorr_whole[ii][model_part] = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=ii, l_dataset_name_instmod=l_dataset_name_instmod,
+                                                                                dataset_db=dataset_db,
+                                                                                decorrelation_config_instmod=config_decorr_instmod_modelpart,
+                                                                                param_nb=param_nb, arg_list=arg_list,
+                                                                                key_param=key_param,
+                                                                                key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
+                                                                                key_func=key_whole, ldict=ldict, model_part=model_part,
+                                                                                time_arg_name=time_arg_name)
+    return d_l_decorr_planet, d_l_decorr_planet_only, l_decorr_whole
+
+
+def combine_return_models(which_model, stellar_var, transit, phasecurve, decorrelation):
+    """Combine the different component of the lc model including the decorrelation if necessary.
+
+    This function creates the return for one datasimulator only and one instrument model object only
+
+    Arguments
+    ---------
+    which_model     : str
+        String saying which model you want to create. Possibilities are
+        'full' -> full model including all components
+        'pl_only' -> Only the planetary components (stellar_var and decorrelation are not used)
+        'decorrelation' -> Only the decorrelation components (only decorrelation is used)
+    stellar_var     : str
+        text providing the additive out of transit variations due to the host star (oot_var)
+    transit         : str
+        text providing the transit model component of the planet(s) contribution to the LC model
+    phasecurve      : str
+        text providing the phasecurve model component of the planet(s) contribution to the LC model
+    decorrelation   : dict_of_str
+        Text providing the decorrelation model component. There are different ways to decorrelate the
+        LC model and these ways are designed with strings. For now the ways implemented are
+        ["stellarflux", ]
+        Format:
+        - key : str
+            Giving which part of the model to apply the decorrelation to
+        - value : str
+            Giving the text of the decorrelation for this part of the model.
+            This text should include several decorrelation variables and several decorrelation types
+            (e.g. linear) if there are several.
+
+    Returns
+    -------
+    text_return : str
+        Text of the return for one datasim lc function.
+    """
+    if which_model == 'full':
+        tr_plusornot_pl = "+ " if transit != "" else ""
+        pc_plusornot_pl = "+ " if phasecurve != "" else ""
+        if "stellarflux" in decorrelation:
+            decorrelation_stellar_flux = " + (" + decorrelation["stellarflux"] + ")"
+        else:
+            decorrelation_stellar_flux = ""
+        return_text = f"(1 {stellar_var}) * (1 {decorrelation_stellar_flux} {tr_plusornot_pl + transit}{pc_plusornot_pl + phasecurve}), "
+    elif which_model == 'pl_only':
+        pc_plusornot_plonly = "+ " if ((transit != "") and (phasecurve != "")) else ""
+        return_text = f"{transit}{pc_plusornot_plonly + phasecurve}, "
+    elif which_model == 'decorrelation':
+        return_text = decorrelation + ", "
+    else:
+        raise ValueError(f"which_model should be in ['full', 'pl_only', 'decorrelation'] got {which_model}")
+    return return_text
