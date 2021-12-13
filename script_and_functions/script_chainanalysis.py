@@ -30,7 +30,7 @@ import lisa.tools.mylogger as ml
 from lisa.tools.chain_interpreter import ChainsInterpret
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.plot import hist_lnprob
-from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+from lisa.posterior.exoplanet.model.gravgroup.datasim_creator_rv import RVdrift_tref_name
 
 
 ## Definition of the parameters
@@ -554,13 +554,13 @@ if do_SecParam:
 
     logger.info("Determine best fit values and error bars for secondary parameters")
     fitted_values_sec, _ = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
-                                             l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                             lnprobability_name=lnprobability_name, force_finite=force_finite)
+                                                l_walker=l_walker_PS, l_burnin=l_burnin_PS,
+                                                lnprobability_name=lnprobability_name, force_finite=force_finite)
     sigma_p_sec, _, sigma_m_sec, _ = da.getconfi(et.get_clean_flatchain(chainIsec,
-                                                                     l_walker=l_walker_PS,
-                                                                     l_burnin=l_burnin_PS, force_finite=force_finite),
-                                              level=1, centre=fitted_values_sec,
-                                              l_param_name=l_param_chainIsec)
+                                                                        l_walker=l_walker_PS,
+                                                                        l_burnin=l_burnin_PS, force_finite=force_finite),
+                                                 level=1, centre=fitted_values_sec,
+                                                 l_param_name=l_param_chainIsec)
     df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_chainIsec,
                                                          data={'value': fitted_values_sec,
                                                                'sigma-': sigma_m_sec,
