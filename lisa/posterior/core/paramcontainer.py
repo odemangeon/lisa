@@ -50,8 +50,12 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
     def __getattr__(self, attr=""):
         """Intercept attribute call to look in the parameter list."""
-        if attr in Core_ParamContainer.__get_list_all_paramnames(self):
+        l_param_store_names = [param.store_name for param in Core_ParamContainer.__get_list_all_params(self)]
+        l_param_code_names = [param.code_name for param in Core_ParamContainer.__get_list_all_params(self)]
+        if attr in l_param_store_names:
             return self.parameters[attr]
+        elif attr in l_param_code_names:
+            return self.parameters[l_param_store_names[l_param_code_names.index(attr)]]
         else:
             # Default behaviour
             raise AttributeError("{}".format(attr))
@@ -72,7 +76,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         """Return the list of all parameters."""
         return list(self.parameters.values())
 
-    def __get_list_all_paramnames(self):
+    def __get_list_all_paramnames_storenames(self):
         """Return the list of all parameters."""
         return list(self.parameters.keys())
 
