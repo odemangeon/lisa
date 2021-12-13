@@ -26,6 +26,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = IND_inst_cat
     __has_instcat_paramfile__ = True
+    __default_paramfile_path__ = "IND_param_file.py"
     __datasim_creator_name__ = "sim_IND"
     __decorrelation_models__ = []
 
@@ -38,7 +39,8 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
     __name_model_4_indicator_dict = "model_4_indicator"
 
-    def __init__(self):
+    def __init__(self, model_instance):
+        super(IND_InstCat_Model, self).__init__(model_instance=model_instance)
         # Define the dictionary giving the function to use to create the text of the dictionaries to defined the paremeters of each model for the parameter file
         self.__create_text_indicator_methods = {self._polynomial_method_name: self.__create_text_polynomial_model}
         # Define the dictionary giving the function to use to load the text of the dictionaries to defined the paremeters of each model for the parameter file
@@ -153,7 +155,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         """
         # Check the content of inst_models and datasets argument and convert them into lists if only one instrument model/dataset is provided.
         # The check_datasets_and_instmodels does much more than that but here I just need that
-        (l_dataset, l_inst_model, _, _, _, _, _) = check_datasets_and_instmodels(datasets, inst_models)
+        (l_dataset, l_inst_model, _, _, _, _, _, _) = check_datasets_and_instmodels(datasets, inst_models)
 
         # 1. Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
         def defdictfunc():
@@ -267,43 +269,32 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         # If not ind_model match indicator model then raise an error
         raise ValueError(f"Indicator model {indicator_model} is not implemented.")
 
-    def create_instcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_instcat_paramfile(self, file_path):
         """Create the param file for definition of the indicators models.
 
         Arguments
         ---------
-        paramfile_path   : str
-            Path to the indicator parameter file (IND_param_file).
-        answer_overwrite : str
-            If the IND_param_file already exists, do you want to
-            overwrite it ? "y" or "n". If this is not provided the program will ask you interactively.
-        answer_create    : str
-            If the IND_param_file doesn't exists already, where do you want
-            to create it ? "absolute", "run_folder" or "error". If this not provide the program will ask you interactively.
+        file_path           : string
+            Path to the param_file.
         """
-        # Choose the parameter file path _choose_parameter_file_path is from Core_Model
-        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='IND_param_file.py', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)
-        if reply == "y":
-            with open(file_path, 'w') as f:
-                # Write the header
-                f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
-                # Put model_4_indicator dictionary
-                f.write(f"# Define the model to use for each indicator category. Available models are {[None, ] + self.available_models_4_indicators}\n")
-                f.write(self.__create_text_model_4_indicator())
-                # Put the model parametrisation directories
-                f.write("\n# Define the parameters of each models used.")
-                for model in self.indicator_models_used:
-                    f.write(f"\n\n# Define the parameters for model {model}.\n")
-                    f.write(self.__create_text_indicator_methods[model]())
-            logger.info("Parameter file created at path: {}".format(file_path))
-        else:
-            logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
-        self.paramfile4instcat[IND_inst_cat] = file_path  # paramfile4instcat is from Core_Model
+        with open(file_path, 'w') as f:
+            # Write the header
+            f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+            # Put model_4_indicator dictionary
+            f.write(f"# Define the model to use for each indicator category. Available models are {[None, ] + self.available_models_4_indicators}\n")
+            f.write(self.__create_text_model_4_indicator())
+            # Put the model parametrisation directories
+            f.write("\n# Define the parameters of each models used.")
+            for model in self.indicator_models_used:
+                f.write(f"\n\n# Define the parameters for model {model}.\n")
+                f.write(self.__create_text_indicator_methods[model]())
+        logger.info("Parameter file created at path: {}".format(file_path))
+        self.paramfile_instcat = file_path  # paramfile4instcat is from Core_Model
 
     def read_IND_param_file(self):
         """Read the content of the IND parameter file."""
-        if self.isdefined_INDparamfile:
-            with open(self.paramfile4instcat[IND_inst_cat]) as f:
+        if self.isdefined_paramfile_instcat:
+            with open(self.paramfile_instcat) as f:
                 exec(f.read())
             dico = locals().copy()
             dico.pop("self")
@@ -312,7 +303,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
                          "".format(dico.keys()))
             return dico
         else:
-            raise IOError("Impossible to read IND parameter file: {}".format(self.paramfile4instcat[IND_inst_cat]))
+            raise IOError("Impossible to read IND parameter file: {}".format(self.paramfile_instcat))
 
     def __create_text_model_4_indicator(self):
         """Create the string giving the model_4_indicator dictionary for the parameter file.
@@ -322,13 +313,13 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         text : str
             String giving the text for the model_4_indicator dictionary for the indicator parameter file
         """
-        text = f"{self.__name_model_4_indicator_dict} = {{"
+        text = f"{self.__name_model_4_indicator_dict} =" + " {"
         tab = spacestring_like(text)
         for ii, inst_subcat in enumerate(self.indicator_subcategories):
             if ii != 0:
                 text += f"\n{tab}"
             text += f"'{inst_subcat}': '{self.model_4_indicator[inst_subcat]}',"
-        text += f"\n{tab}}}\n"
+        text += f"\n{tab}" + "}\n"
         return text
 
     def __check_IND_param_file(self, dico_config):
@@ -468,8 +459,8 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
             if inconsistency and (rep == "n"):
                 raise ValueError(f"The content of the indicator parameter file is not valid. Here is the list of detected errors: {error_list}")
             elif inconsistency and (rep == "y"):
-                self.create_IND_param_file(paramfile_path=self.paramfile4instcat[IND_inst_cat], answer_overwrite="y", answer_create=None)
-                input("Modify the IND specific paramerisation file: {}".format(self.paramfile4instcat[IND_inst_cat]))
+                self.create_IND_param_file(paramfile_path=self.paramfile_instcat, answer_overwrite="y", answer_create=None)
+                input("Modify the IND specific paramerisation file: {}".format(self.paramfile_instcat))
 
     @property
     def model_4_indicator(self):
@@ -482,16 +473,11 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         return self.__model_4_indicator
 
     @property
-    def isdefined_INDparamfile(self):
-        """Return True is the attribute param_file has been defined."""
-        return self.isdefined_paramfile_instcat(inst_cat=IND_inst_cat)
-
-    @property
     def indicator_fullcategories(self):
         """Return all indicator full categories in the current model.
         """
         list_indicator_fullcategories = []
-        for inst_fullcat in self.inst_fullcategories:  # self.instfullcategories is from InstrumentContainerInterface Interface class of Core_Model
+        for inst_fullcat in self.model_instance.inst_fullcategories:  # self.instfullcategories is from InstrumentContainerInterface Interface class of Core_Model
             if IND_Instrument.validate_inst_fullcat(inst_fullcat):
                 list_indicator_fullcategories.append(inst_fullcat)
         return list_indicator_fullcategories
