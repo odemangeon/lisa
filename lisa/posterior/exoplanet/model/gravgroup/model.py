@@ -46,7 +46,7 @@ logger = getLogger()
 
 
 class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarActivityNoiseModelInterface,
-                Core_Model, LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model):  # GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
+                Core_Model):  # LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string
@@ -54,7 +54,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
 
     ## Set of possible instrument categories (Used by Core_Model._check_dataset_instcat)
     # __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat, IND_inst_cat}
-    __instcat_models__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
+    __instcat_model_classes__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
@@ -112,10 +112,6 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
         dico = {}
         dico["stars"] = self.nb_star
         dico["planets"] = self.nb_planets
-        if LC_inst_cat in self.dataset_db.inst_categories:
-            dico["transit_model"] = self.transit_model
-        if RV_inst_cat in self.dataset_db.inst_categories:
-            dico["rv_model"] = self.rv_model
         # dico["parametrisation"] = self.parametrisation
         return dico
 
