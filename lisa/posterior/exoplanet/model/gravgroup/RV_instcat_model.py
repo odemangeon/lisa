@@ -30,42 +30,29 @@ class RV_InstCat_Model(Core_InstCat_Model):
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = RV_inst_cat
     __has_instcat_paramfile__ = False
+    __default_paramfile_path__ = None
     __datasim_creator_name__ = "sim_RV"
     __decorrelation_models__ = []
 
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models
 
-    def __init__(self):
+    def __init__(self, model_instance):
+        self.param_file_instcat = None
         self.rv_model = None
         # Initialise the dictionary giving the RV zero point RV_references
-        self.__RV_references = dict.fromkeys(self.get_inst_names(RV_inst_cat), None)
+        self.__RV_references = dict.fromkeys(model_instance.get_inst_names(inst_fullcat=RV_inst_cat), None)
         logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
         self.__RV_references["global"] = list(self.__RV_references.keys())[0]
         for key in self.__RV_references:
             if key != "global":
-                self.__RV_references[key] = self.get_instmodel_names(inst_name=key,
-                                                                     inst_fullcat=RV_inst_cat)[0]
+                self.__RV_references[key] = model_instance.get_instmodel_names(inst_name=key,
+                                                                               inst_fullcat=RV_inst_cat)[0]
 
     @property
-    def isdefined_RVparamfile(self):
+    def isdefined_paramfile_instcat(self):
         """Return True is the attribute param_file has been defined."""
-        return self.isdefined_paramfile_instcat(inst_cat=RV_inst_cat)
-
-    @property
-    def rv_model(self):
-        """Returns the name of the transit model used."""
-        return self.__rv_model
-
-    @rv_model.setter
-    def rv_model(self, model_name):
-        """Returns the name of the transit model used."""
-        if model_name in self._rv_models:
-            self.__rv_model = model_name
-        elif model_name is None:
-            self.__rv_model = self._rv_models[0]
-        else:
-            raise AssertionError("rv_model should be in {}".format(self._rv_models))
+        return self.param_file_instcat is not None
 
     @property
     def RV_references(self):
@@ -89,20 +76,14 @@ class RV_InstCat_Model(Core_InstCat_Model):
                                        rv_model=self.rv_model,
                                        inst_models=inst_models, datasets=datasets)
 
-    def create_instcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_instcat_paramfile(self, file_path, model_instance):
         """Create a parameter file for the light-curve parametrisation.
 
         Arguments
         ---------
-        paramfile_path      : string
-            Path to the LC_param_file.
-        answer_overwrite    : string
-            If the LC_param_file already exists, do you want to
-            overwrite it ? "y" or "n". If this not provide the program will ask you interactively.
-        answer_create       : string
-            If the LC_param_file doesn't exists aleardy, where do you want
-            to create it ? "absolute", "run_folder" or "error". If this not provide the program will
-            ask you interactively.
+        file_path           : string
+            Path to the param_file.
+        model_instance      : Model instance
         """
         raise NotImplementedError()
 
