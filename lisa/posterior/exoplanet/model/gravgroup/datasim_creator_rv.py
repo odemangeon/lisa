@@ -15,7 +15,7 @@ from radvel.kepler import rv_drive
 
 
 from ....core.model.datasim_docfunc import DatasimDocFunc
-from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
+from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels  # get_has_datasets
 from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
                                                              add_timeref_arguments, time_ref)
 from .....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
@@ -31,11 +31,11 @@ RVdrift_tref_name = f"{time_ref}_RVdrift"
 
 
 def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs, key_opt_kwargs, ext_plonly,
-                            RV_globalref_instname=None,
-                            RV_instref_modnames=None,
-                            RV_inst_db=None,
-                            rv_model="radvel",
-                            inst_models=None, datasets=None,
+                            RV_globalref_instname,
+                            RV_instref_modnames,
+                            RV_inst_db,
+                            rv_model,
+                            inst_models, datasets, get_times_from_datasets,
                             param_vector_name=par_vec_name):
     """Return a radial velocity datasimulator functions.
 
@@ -68,6 +68,9 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         If list of Dataset, it has to provide exactly one dataset (no None) for each Instrument
             model in inst_models and the produced datasimulator will include the kwargs of the
             datasets.
+    get_times_from_datasets  : bool
+        If True the times at which the LC model is computed is taken from the datasets.
+        Else it is an input of the datasimulator function produced.
     :param str param_vector_name: str giving the name of the vector of parameters argument of the
         datasimulator function.
 
@@ -87,8 +90,8 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
     (l_dataset, l_inst_model, multi, inst_model_full_name, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
-    # Check if datasets are provided
-    has_dataset = get_has_datasets(l_dataset)
+    # ## Check if datasets are provided and store the answer in the has_dataset variable
+    # has_dataset = get_has_datasets(l_dataset)
 
     # text_def_func is a dictionary which will received the text of the datasimulator functions
     # It has several keys for several datasimulator functions:
@@ -138,7 +141,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
 
     # Add the time as additional argument
     (arguments, time_arg_name, time_arg, time_arg_in_arguments
-     ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
+     ) = add_time_argument(arguments=arguments, multi=multi, get_times_from_datasets=get_times_from_datasets, arg_list=arg_list,
                            key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                            ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                            add_to_ldict=True, backup_add_to_args=True)
@@ -305,7 +308,7 @@ def create_datasimulator_RV(star, planets, key_whole, key_param, key_mand_kwargs
         dico_docf[obj_key] = DatasimDocFunc(function=ldict[function_name.format(object=obj_key)],
                                             params_model=params_model,
                                             inst_cat=instcat_docf,
-                                            include_dataset_kwarg=has_dataset,
+                                            include_dataset_kwarg=get_times_from_datasets,
                                             mand_kwargs=mand_kwargs,
                                             opt_kwargs=opt_kwargs,
                                             inst_model_fullname=instmod_docf,
