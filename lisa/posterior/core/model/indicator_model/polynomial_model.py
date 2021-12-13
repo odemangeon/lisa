@@ -8,7 +8,7 @@ from textwrap import dedent
 from numpy import ones_like
 
 from ....core.parameter import Parameter
-from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_has_datasets
+from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels  # , get_has_datasets
 from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec,
                                                              l_time_vec, add_timeref_arguments,
                                                              time_ref, l_time_ref)
@@ -76,8 +76,10 @@ class PolynomialIndicatorInterface(object):
 
     def _create_datasimulator_IND_Poly(self, key_whole, key_param, key_mand_kwargs, key_opt_kwargs,
                                        polynomial_order_name,
-                                       inst_models=None, datasets=None,
-                                       param_vector_name=par_vec_name, l_time_vec_format=None,
+                                       inst_models, datasets,
+                                       get_times_from_datasets,
+                                       l_time_vec_format=None,
+                                       param_vector_name=par_vec_name,
                                        ):
         """Create a datasimulator for indicators using the polynomial model
 
@@ -101,6 +103,9 @@ class PolynomialIndicatorInterface(object):
             If list of Dataset, it has to provide exactly one dataset (no None) for each Instrument
                 model in inst_models and the produced datasimulator will include the kwargs of the
                 datasets.
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
         param_vector_name : String
             string giving the name of the vector of parameters argument of the
             datasimulator function.
@@ -129,7 +134,7 @@ class PolynomialIndicatorInterface(object):
          dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
         # Check if datasets are provided
-        has_dataset = get_has_datasets(l_dataset)
+        # has_dataset = get_has_datasets(l_dataset)
 
         # text_def_func is a dictionary which will received the text of the datasimulator functions
         # It has several keys for several datasimulator functions:
@@ -158,7 +163,7 @@ class PolynomialIndicatorInterface(object):
         # Add the time as additional argument: TODO: time_arg_name is a new return and is not used in
         # the rest of the function. Check if it can be used.
         (arguments, time_arg_name, time_arg, time_arg_in_arguments
-         ) = add_time_argument(arguments=arguments, multi=multi, has_dataset=has_dataset, arg_list=arg_list,
+         ) = add_time_argument(arguments=arguments, multi=multi, get_times_from_datasets=get_times_from_datasets, arg_list=arg_list,
                                key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
                                ldict=ldict, l_dataset=l_dataset, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                add_to_ldict=True, backup_add_to_args=True)
