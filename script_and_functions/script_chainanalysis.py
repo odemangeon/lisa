@@ -89,6 +89,7 @@ thin_LPS = 10
 
 # Chains and hist plots after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
+thin_AFSLPSP = 100
 
 # Convergence and burnin determination
 do_GS = True
@@ -329,9 +330,9 @@ if do_GS:
     if interval_efficiency < min_intervals_efficiency_GS:
         nstep_between_intervals = interval_step / def_intervals_efficiency_GS
         intervals = int(nstep / nstep_between_intervals)
-        logger.warning("The interval efficiency ({interval_eff}) is below the minimum threshold (interval_eff_min). "
-                       "The number of interval is forced to {intervals} to obtain an efficiency of {def_interval_eff_def}"
-                       "".format(interval_eff=interval_efficiency, interval_eff_min=min_intervals_efficiency_GS, intervals=intervals, def_interval_eff_def=def_intervals_efficiency_GS))
+        logger.warning(f"The interval efficiency ({interval_efficiency}) is below the minimum threshold ({min_intervals_efficiency_GS}). "
+                       f"The number of interval is forced to {intervals} to obtain an efficiency of {def_intervals_efficiency_GS}"
+                       )
     zscores, l_first_i_step = et.geweke_multi(chainI, first=interval_step / nstep, last=last_step / nstep,
                                               intervals=intervals, l_walker=l_walker)
     l_burnin, l_walker_conv = et.geweke_selection(zscores, first_steps=l_first_i_step, geweke_thres=geweke_thres,
