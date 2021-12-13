@@ -64,10 +64,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "instcat_models"]
+    __mandatoryattrs__ = ["category", "instcat_model_classes"]
     # category: String which designate the model (for example: "GravitionalGroups"). To choose the
     #   model to be used, the user will use this string.
-    # instcat_models: List of InstCat_Model Classes implemented for the Model
+    # instcat_model_classes: List of InstCat_Model Classes implemented for the Model
 
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
@@ -106,38 +106,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                                                      get_datasetnames()))
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")
-        # Core_Model is a Core_ParamContainer, so set the model name and init through
-        # Core_ParamContainer init method
-        Core_ParamContainer.__init__(self, name)
 
-        # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
-        # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)
-        self.__datasimcreatorname4instcat = {}
-        # Initialise datasimcreator which has to be filled in the Model Subclass
-        # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
-        self.__datasimcreator = {}
-        # Intialise handlers4instcatparamfile which has to be filled in the Model Subclass
-        # Define the specific param_file handler for each instrument category (key: inst_cat, value: dict(keys: "create" and "load", value: create and load methods))
-        self.__handlers4instcatparamfile = {}
-        # Now load the available InstCat_Models
-        for InstCat_Model in self.instcat_models:
-            self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
-            self.__datasimcreator[InstCat_Model.datasim_creator_name] = InstCat_Model.datasim_creator
-            if InstCat_Model.has_instcat_paramfile:
-                self.__handlers4instcatparamfile[InstCat_Model.inst_cat] = {"create": InstCat_Model.create_instcat_paramfile,
-                                                                            "load": InstCat_Model.load_instcat_paramfile}
-            else:
-                self.__handlers4instcatparamfile[InstCat_Model.inst_cat] = {"create": None,
-                                                                            "load": None}
         # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
         # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
 
         def __def_dict_noisemodhandlers():
             return {create_key: None, load_key: None}
         self.__handlers4noisecatparamfile = defaultdict(__def_dict_noisemodhandlers)
-        # Initialise paramfile4instcat which has to be filled by the create_paramfile function specified in handlers4instcatparamfile
-        # Define the path to the parameter file specific to each instrument category if exists (key: inst_cat, value: path of param file)
-        self.__paramfile4instcat = {}
         # Initialise paramfile4noisemodcat which has to be filled by the create_paramfile function specified in handlers4noisecatparamfile
         # Define the path to the parameter file specific to each noise model category if exists (key: noisemod_cat, value: path of param file)
         self.__paramfile4noisemodcat = {}
@@ -147,10 +122,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         self.init_parametrisation_attributes()
         # Initialise parameterisation
         self.parametrisation
-        # Do the __init__ of all InstCat Models in self.instcat_models if needed
-        for InstCat_Model in self.instcat_models:
+
+        # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
+        # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)
+        self.__datasimcreatorname4instcat = {}
+        # Initialise datasimcreator which has to be filled in the Model Subclass
+        # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
+        self.__datasimcreator = {}
+        # Now load the available InstCat_Models and do the __init__
+        self.__instcat_models = {}
+        for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
-                InstCat_Model.__init__(self=self)
+                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
+                self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
+                self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
 
@@ -182,7 +167,19 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def possible_inst_categories(self):
         """Set of instrument categories handled by the model.
         """
-        return set([InstCat_Model.inst_cat for InstCat_Model in self.instcat_models])
+        return set([InstCat_Model.inst_cat for InstCat_Model in self.instcat_model_classes])
+
+    @property
+    def instcat_models(self):
+        """Dictionary containing the InstCat_Model instances.
+
+        This dictionary is filled in the __init__
+
+        Structure:
+        Key: inst_cat (string giving the instrument category)
+        values: InstCat_Model instance
+        """
+        return self.__instcat_models
 
     @property
     def object_name(self):
@@ -213,8 +210,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         return self.__datasimcreator
 
-    def get_InstCatModel4instcat(self, inst_cat):
-        """Get the Core_InstCat_Model subclass corresponding to the instrument category provided
+    def get_InstCatModelClass(self, inst_cat):
+        """Return the Core_InstCat_Model subclass corresponding to the instrument category provided
 
         Arguments
         ---------
@@ -224,13 +221,28 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         Returns
         -------
         InstCat_Model   : Core_InstCat_Model Subclass
-            Model for the instrument category provided
+            Class of the Model for the instrument category provided
         """
-        for InstCat_Model in self.instcat_models:
+        for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat == inst_cat:
                 return InstCat_Model
         raise ValueError("There is no Core_InstCat_Model Subclass corresponding to the instrument category"
-                         f" {inst_cat} in this model")
+                         f" {inst_cat} in this model.")
+
+    def get_instcat_model(self, inst_cat):
+        """Return the InstCat_Model instance corresponding to the instrument category provided
+
+        Arguments
+        ---------
+        inst_cat    : str
+            String giving the category of instrument for which you want the Model class
+
+        Returns
+        -------
+        instcat_model   : InstCat_Model instance
+            Model for the instrument category provided
+        """
+        return self.__instcat_models[inst_cat]
 
     def get_datasimcreatorname(self, inst_cat):
         """Return the name of the datasimcreator (without_instrument?) function associated with
@@ -261,28 +273,12 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         return self.datasimcreator[datasimcreatorname]
 
     @property
-    def handlers4instcatparamfile(self):
-        """Dictionary giving the create/load function of the instrument category specific param files.
-
-        key: instrument category, value: dict(key: "create" and "load", value: create and load methods (None if no method))
-        """
-        return self.__handlers4instcatparamfile
-
-    @property
     def handlers4noisecatparamfile(self):
         """Dictionary giving the create/load function of the instrument category specific param files.
 
         key: instrument category, value: dict(key: "create" and "load", value: create and load methods (None if no method))
         """
         return self.__handlers4noisecatparamfile
-
-    @property
-    def paramfile4instcat(self):
-        """Dictionary giving the path of the param file specific to each instrument category.
-
-        key: instrument category, value: path to param file
-        """
-        return self.__paramfile4instcat
 
     @property
     def paramfile4noisemodcat(self):
@@ -297,7 +293,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
         :param str inst_cat: Instrument category for which you want to know if the specific param file is defined.
         """
-        return self.paramfile4instcat.get(inst_cat, None) is not None
+        return self.get_instcat_model(inst_cat).isdefined_paramfile_instcat
 
     def isdefined_paramfile_noisemod(self, noisemod_cat):
         """Return True if a param_file for the specified instrument category has been defined.
@@ -327,9 +323,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         logger.debug("noisemod4instmodfullname: {}".format(noisemod4instmodfullname))
         for instmod_fullname, noise_model in noisemod4instmodfullname.items():
             self.instruments[instmod_fullname].noise_model = noise_model
-            # noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(noise_model)
-            # noise_model_subclass.apply_parametrisation(model_instance=self,
-            #                                            instmod_fullname=instmod_fullname)
 
     # TODO: Doesn't seems to be used. what seems to be used is get_noisemod4instmodfullname from datasetfile_db
     def get_noisemodandinstmod4dataset(self):
@@ -566,7 +559,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                      "".format(self.name, self.paramfile_info))
 
     def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary
+        """load the configuration specified by the dictionnary from the parameter_file
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
             read from the parameter file.
@@ -708,7 +701,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
         dico = {}
         dico["param_file"] = self.param_file
-        dico["paramfile4instcat"] = self.paramfile4instcat
+        dico["paramfile4instcat"] = {}
+        for inst_cat, inscat_model in self.instcat_models.items():
+            if inscat_model.has_instcat_paramfile:
+                dico["paramfile4instcat"][inst_cat] = inscat_model.paramfile_instcat
         dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
         dico["kwargs_parametrisation"] = self.parametrisation_kwargs
         return dico
@@ -716,11 +712,12 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def automatic_model_initialisation(self, param_file, paramfile4instcat, paramfile4noisemodcat, kwargs_parametrisation):
         """load the parameter file."""
         self.param_file = param_file
-        for key in paramfile4instcat:
-            if isfile(paramfile4instcat[key]):
-                self.paramfile4instcat[key] = paramfile4instcat[key]
+        for inst_cat in paramfile4instcat:
+            inscat_model = self.instcat_models[inst_cat]
+            if isfile(paramfile4instcat[inst_cat]):
+                inscat_model.paramfile_instcat = paramfile4instcat[inst_cat]
             else:
-                raise AssertionError("File {} doesn't exists".format(paramfile4instcat[key]))
+                raise AssertionError("File {} doesn't exists".format(paramfile4instcat[inst_cat]))
         for key in paramfile4noisemodcat:
             if isfile(paramfile4noisemodcat[key]):
                 self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
@@ -768,10 +765,17 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         else:
             ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
         for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
-            if self.handlers4instcatparamfile[inst_cat][create_key] is not None:
-                self.handlers4instcatparamfile[inst_cat][create_key](self=self, paramfile_path=paramfile_path.get(inst_cat, None),
-                                                                     answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
-                                                                     answer_create=dict_answer_create.get(inst_cat, def_answer_create))
+            instcat_model = self.get_instcat_model(inst_cat)
+            if instcat_model.has_instcat_paramfile:
+                file_path, reply = self._choose_parameter_file_path(default_paramfile_path=instcat_model.default_paramfile_path,
+                                                                    paramfile_path=paramfile_path.get(inst_cat, None),
+                                                                    answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
+                                                                    answer_create=dict_answer_create.get(inst_cat, def_answer_create))
+                if reply == "y":
+                    instcat_model.create_instcat_paramfile(file_path=file_path)
+                else:
+                    instcat_model.paramfile_instcat = file_path
+                    logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
 
     def create_noisemodcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
         """Create the param files specific to each instrument category (if needed).
@@ -812,8 +816,9 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         for inst_fullcat in self.inst_fullcategories:
             inst_cat, inst_subcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat)
-            if self.handlers4instcatparamfile[inst_cat][load_key] is not None:
-                self.handlers4instcatparamfile[inst_cat][load_key](self=self)
+            instcat_model = self.get_instcat_model(inst_cat)
+            if instcat_model.has_instcat_paramfile:
+                instcat_model.load_instcat_paramfile()
 
     def load_noisemodcat_paramfile(self):
         """Load the param files specific to each noise model category(if needed).
