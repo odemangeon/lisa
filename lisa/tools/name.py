@@ -280,6 +280,16 @@ class Named(object):
         """
         return self.get_name(**(self.full_name_rules))
 
+    @property
+    def full_code_name(self):
+        """Code version of the full name for the Named Object.
+
+        This name is used to find the Named Object.
+        """
+        name_rules = self.full_name_rules.copy()
+        name_rules["code_version"] = True
+        return self.get_name(**(name_rules))
+
     # DO NOT CHANGE THE DEFAULT VALUES !
     def get_name(self, include_prefix=False, code_version=False, recursive=False, prefix_kwargs=None):
         """Return the name of the parameter.
