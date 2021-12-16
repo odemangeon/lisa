@@ -28,31 +28,28 @@ class LC_Instrument(Core_Instrument):
 
     __category__ = LC_inst_cat
     __sub_category__ = None
-    # __params_model__ = {"DeltaOOT": {"unit": "wo unit"},
-    #                     "driftOOT": {"unit": "wo unit/s"}}
     __params_model__ = {}
-    __OOT_var_basename__ = "OOT"
+    __inst_var_basename__ = "instvar"
 
     @classmethod
     def init_inst_var_parameters(cls, inst_model, with_inst_var=False, inst_var_order=1):
-        """Initialise/Create the required parameter for the modelling of the out-of transit
-        variations."""
+        """Initialise/Create the required parameter for the modelling of the instrument variations."""
         inst_model.__with_inst_var = with_inst_var
         inst_model.__inst_var_order = inst_var_order
         if with_inst_var:
             if isinstance(inst_var_order, int) and inst_var_order >= 0:
                 for order in range(inst_var_order + 1):
-                    inst_model.add_parameter(Parameter(name=(inst_model.get_OOT_param_name(order)),
+                    inst_model.add_parameter(Parameter(name=(inst_model.get_inst_var_param_name(order)),
                                                        name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
                                                        main=True,
                                                        unit="[time]^(-{})".format(order)))
             else:
-                raise ValueError("If you want to model out-of-transit variations you need to "
+                raise ValueError("If you want to model instrument variations variations you need to "
                                  "provide an inst_var_order that is positive !")
 
     @classmethod
     def get_with_inst_var(cls, inst_model):
-        """True if the instrument model includes out-of-transit variations."""
+        """True if the instrument model includes instrument variations variations."""
         try:
             return inst_model.__with_inst_var
         except AttributeError:
@@ -60,15 +57,15 @@ class LC_Instrument(Core_Instrument):
 
     @classmethod
     def get_inst_var_order(cls, inst_model):
-        """Return the order of the out-of-transit variation model or None, if it's not modeled."""
+        """Return the order of the instrument variations variation model or None, if it's not modeled."""
         if cls.get_with_inst_var(inst_model):
             return inst_model.__inst_var_order
         else:
             return None
 
-    def get_OOT_param_name(self, order, inst_model):  # instrument is necessary don't remove it
-        """Return the parameter name of the coefficient of the out-of-transit model."""
-        return "{}{}".format(self.__OOT_var_basename__, order)
+    def get_inst_var_param_name(self, order, inst_model):  # instrument is necessary don't remove it
+        """Return the parameter name of the coefficient of the instrument variation model."""
+        return "{}{}".format(self.__inst_var_basename__, order)
 
 
 class LC_Dataset(Core_Dataset):
