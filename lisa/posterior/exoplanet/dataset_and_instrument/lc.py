@@ -34,35 +34,35 @@ class LC_Instrument(Core_Instrument):
     __OOT_var_basename__ = "OOT"
 
     @classmethod
-    def init_OOT_var_parameters(cls, inst_model, with_OOT_var=False, OOT_var_order=1):
+    def init_inst_var_parameters(cls, inst_model, with_inst_var=False, inst_var_order=1):
         """Initialise/Create the required parameter for the modelling of the out-of transit
         variations."""
-        inst_model.__with_OOT_var = with_OOT_var
-        inst_model.__OOT_var_order = OOT_var_order
-        if with_OOT_var:
-            if isinstance(OOT_var_order, int) and OOT_var_order >= 0:
-                for order in range(OOT_var_order + 1):
+        inst_model.__with_inst_var = with_inst_var
+        inst_model.__inst_var_order = inst_var_order
+        if with_inst_var:
+            if isinstance(inst_var_order, int) and inst_var_order >= 0:
+                for order in range(inst_var_order + 1):
                     inst_model.add_parameter(Parameter(name=(inst_model.get_OOT_param_name(order)),
                                                        name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
                                                        main=True,
                                                        unit="[time]^(-{})".format(order)))
             else:
                 raise ValueError("If you want to model out-of-transit variations you need to "
-                                 "provide an OOT_var_order that is positive !")
+                                 "provide an inst_var_order that is positive !")
 
     @classmethod
-    def get_with_OOT_var(cls, inst_model):
+    def get_with_inst_var(cls, inst_model):
         """True if the instrument model includes out-of-transit variations."""
         try:
-            return inst_model.__with_OOT_var
+            return inst_model.__with_inst_var
         except AttributeError:
             return False
 
     @classmethod
-    def get_OOT_var_order(cls, inst_model):
+    def get_inst_var_order(cls, inst_model):
         """Return the order of the out-of-transit variation model or None, if it's not modeled."""
-        if cls.get_with_OOT_var(inst_model):
-            return inst_model.__OOT_var_order
+        if cls.get_with_inst_var(inst_model):
+            return inst_model.__inst_var_order
         else:
             return None
 
