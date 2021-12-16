@@ -168,7 +168,7 @@ class FunctionBuilder(object):
             if not(exist_ok):
                 logger.warning(f"Mandatory argument {argument_name} already exists for function {function_shortname}")
 
-    def add_optional_argument(self, argument_name, default_value, function_shortname):
+    def add_optional_argument(self, argument_name, default_value, function_shortname, exist_ok=False):
         """Add an optional argument to a function
 
         Arguments
@@ -179,13 +179,16 @@ class FunctionBuilder(object):
             Default value of the argument
         function_shortname  : str
             Short name of the function
+        exist_ok            : bool
+            If True the function will not produce a warning if the argument already exists in the function
         """
         if argument_name not in self._database[function_shortname]["optional_args"]:
             self._database[function_shortname]["optional_args"][argument_name] = default_value
         else:
             if default_value == self.get_default_value_4_argument(argument_name=argument_name,
                                                                   function_shortname=function_shortname):
-                logger.warning(f"Optional argument {argument_name} already exists for function {function_shortname}")
+                if not(exist_ok):
+                    logger.warning(f"Optional argument {argument_name} already exists for function {function_shortname}")
             else:
                 logger.error(f"Optional argument {argument_name} already exists for function {function_shortname} with a different default value")
 
@@ -281,7 +284,7 @@ class FunctionBuilder(object):
         """
         self._database[shortname]["full_name"] = full_name
 
-    def add_variable_to_ldict(self, variable_name, variable_content, function_shortname):
+    def add_variable_to_ldict(self, variable_name, variable_content, function_shortname, exist_ok=False):
         """Add a variable to the local dictionary of a function
 
         Arguments
@@ -292,21 +295,24 @@ class FunctionBuilder(object):
             Content of the variable
         function_shortname  : str
             Short name of the function
+        exist_ok            : bool
+            If True the function will not produce a warning if the argument already exists in the function
         """
         if variable_name not in self._database[function_shortname]["ldict"]:
             self._database[function_shortname]["ldict"][variable_name] = variable_content
         else:
             if self._database[function_shortname]["ldict"][variable_name] == variable_content:
-                logger.warning(f"Variable {variable_name} already exists in ldict of function {function_shortname}")
+                if not(exist_ok):
+                    logger.warning(f"Variable {variable_name} already exists in ldict of function {function_shortname}")
             else:
-                logger.warning(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
+                logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
 
-    def get_ldict(self, shortname):
+    def get_ldict(self, function_shortname):
         """Get the local dictionary of a function
 
         Arguments
         ---------
-        shortname   : str
+        function_shortname   : str
             Short name of the function
 
         Return
@@ -314,7 +320,7 @@ class FunctionBuilder(object):
         ldict   : dictionary
             local dictionary of the function
         """
-        return copy(self._database[shortname]["ldict"])
+        return copy(self._database[function_shortname]["ldict"])
 
     def get_function_header(self, shortname):
         """Return the string of the function header
