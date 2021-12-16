@@ -35,19 +35,19 @@ def add_time_argument(function_builder, function_shortname, multi, get_times_fro
 
     Arguments
     ---------
-    function_builder    : FunctionBuilder
+    function_builder        : FunctionBuilder
         Function builder instance
-    function_shortname  : str
+    function_shortname      : str
         Short name of the function in function_builder for which you want to add time as argument
     multi: bool
         True if the datasimulator simulate multiple outputs
-    get_times_from_datasets: bool
+    get_times_from_datasets : bool
         True the datasets should be used to extract the time vectors
-    l_dataset : list_of_Dataset
+    l_dataset               : list_of_Dataset
         Checked list of Dataset instance(s) or None.
-    time_vec_name: str
+    time_vec_name           : str
         Str used to design the time vector
-    l_time_vec_name: str
+    l_time_vec_name         : str
         Str used to design the list of time vector
 
     Returns
@@ -66,7 +66,7 @@ def add_time_argument(function_builder, function_shortname, multi, get_times_fro
         if get_times_from_datasets:
             time_content = l_dataset[0].get_time()
     if get_times_from_datasets:
-        function_builder.add_variable_to_ldict(variable_name=time_arg_name, variable_content=time_content, function_shortname=function_shortname)
+        function_builder.add_variable_to_ldict(variable_name=time_arg_name, variable_content=time_content, function_shortname=function_shortname, exist_ok=True)
     else:
         function_builder.add_mandatory_argument(argument_name=time_arg_name, function_shortname=function_shortname, exist_ok=True)
     return time_arg_name
