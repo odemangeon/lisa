@@ -349,10 +349,13 @@ class FunctionBuilder(object):
 
         Return
         ------
-        parameter_in_param_vect : str
+        parameter_in_param_vect : str or float
             Str providing the parameter in the model parameter vector
         """
-        return f"{self.parameter_vector_name}[{self.get_parameter_vector(function_shortname=function_shortname).index(parameter)}]"
+        if parameter.free:
+            return f"{self.parameter_vector_name}[{self.get_parameter_vector(function_shortname=function_shortname).index(parameter)}]"
+        else:
+            return parameter.value
 
     def get_body_text(self, function_shortname):
         """Return the text of the body of the function
