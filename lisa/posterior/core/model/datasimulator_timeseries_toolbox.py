@@ -27,11 +27,11 @@ l_time_ref = "l_{}".format(time_ref)
 
 
 def add_time_argument(function_builder, function_shortname, multi, get_times_from_datasets, l_dataset, time_vec_name=time_vec,
-                      l_time_vec_name=l_time_vec):
-    """Add time to the arguments text and update arg_list and ldict.
+                      l_time_vec_name=l_time_vec, exist_ok=False):
+    """Add time to the argument in the function_builder for a function
 
     This function should be called after check_datasets_and_instmodels since it uses its outputs.
-    If multi is True l_time_vec will be added, otherwise time_vec will be.
+    If multi is True l_time_vec_name will be added, otherwise time_vec_name will be.
 
     Arguments
     ---------
@@ -49,6 +49,8 @@ def add_time_argument(function_builder, function_shortname, multi, get_times_fro
         Str used to design the time vector
     l_time_vec_name         : str
         Str used to design the list of time vector
+    exist_ok                : bool
+        If True the function will not produce a warning if the time argument already exists in the function
 
     Returns
     -------
