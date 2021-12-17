@@ -527,9 +527,9 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         inst_mod_obj : Instrument_Model
             Instrument_Model instance providing the instrument model to be parametrised.
         """
-        # OOT variation parametrisation
-        inst_mod_obj.init_OOT_var_parameters(with_OOT_var=self.model_instance.parametrisation_kwargs.get("with_OOT_var", False),
-                                             OOT_var_order=self.model_instance.parametrisation_kwargs.get("OOT_var_order", None))
+        # instrumental variation parametrisation
+        inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
+                                              inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
 
     def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
