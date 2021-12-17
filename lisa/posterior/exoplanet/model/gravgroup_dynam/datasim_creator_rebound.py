@@ -2,6 +2,10 @@
 # -*- coding:  utf-8 -*-
 """
 Datasim creator rebound module.
+
+TODO:
+- I am change get_ootvar by get_instvar but just the name of the function the inputs/outputs are not
+correct.
 """
 import numpy as np
 
@@ -17,7 +21,7 @@ from astropy.constants import R_sun, au
 from batman._quadratic_ld import _quadratic_ld
 
 from ..gravgroup.datasim_creator_rv import get_starmeanrv_and_deltarv
-from ..gravgroup.datasim_creator_lc import get_LD_parcont_and_param, get_ootvar
+from ..gravgroup.datasim_creator_lc import get_LD_parcont_and_param, get_instvar
 from ..gravgroup.limb_darkening import QuadraticLD
 from ..convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
 from ...dataset_and_instrument.lc import LC_inst_cat
@@ -233,7 +237,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         # Get the out of transit variation contribution for each couple instrument - dataset
         (dico_inst_cat[LC_inst_cat]["l_oot_var"],
          arguments
-         ) = get_ootvar(dico_inst_cat[LC_inst_cat]["l_inst_model"],
+         ) = get_instvar(dico_inst_cat[LC_inst_cat]["l_inst_model"],
                         dico_inst_cat[LC_inst_cat]["l_dataset"], multi_cat[LC_inst_cat],
                         ldict, arguments, param_nb, arg_list, key_whole,
                         key_param, key_mand_kwargs, key_opt_kwargs, time_vec_name=time_vec_lc,
