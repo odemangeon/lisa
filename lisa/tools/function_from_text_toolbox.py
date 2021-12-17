@@ -15,11 +15,8 @@ from collections import Iterable, OrderedDict
 from copy import copy
 from logging import getLogger
 
+from ..posterior.core.model import par_vec_name
 logger = getLogger()
-
-
-## Name of the model parameter vector
-par_vec_name = "p"
 
 ## Keys for the parameter and the keywords arguments in the arg_list dictionary
 key_param = "param"
