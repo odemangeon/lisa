@@ -92,7 +92,7 @@ class FunctionBuilder(object):
                                      "mandatory_args": [],  # List of the str with the name of the other mandatory arguments (besides the parameter vector) of by the function.
                                      "optional_args": OrderedDict(),  # List of tuples with two arguments: a str giving the name of the other optional arguments of by the function and their default value
                                      "full_name": None,  # function full name, if None full name equal short name
-                                     "ldict": [],  # Local dictionary for the function
+                                     "ldict": {},  # Local dictionary for the function
                                      "body_text": ""  # Text of the body of the function
                                      }
         if parameters is not None:
