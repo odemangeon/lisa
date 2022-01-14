@@ -120,11 +120,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         """
         return create_datasimulator_LC(star=list(self.model_instance.stars.values())[0],
                                        planets=self.model_instance.planets,
-                                       key_whole=self.model_instance.key_whole,
-                                       key_param=self.model_instance.key_param,
-                                       key_mand_kwargs=self.model_instance.key_mand_kwargs,
-                                       key_opt_kwargs=self.model_instance.key_opt_kwargs,
-                                       ext_plonly=self.model_instance._ext_plonly,
                                        parametrisation=self.model_instance.parametrisation,
                                        ldmodel4instmodfname=self.ldmodel4instmodfname,
                                        LDs=self.LDs,
@@ -136,7 +131,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                        get_times_from_datasets=get_times_from_datasets,
                                        decorrelation_config=self.decorrelation_config,
                                        dataset_db=self.model_instance.dataset_db,
-                                       LCcat_model=self.model_instance.instcat_models[self.inst_cat])
+                                       LCcat_model=self.model_instance.instcat_models[self.inst_cat]
+                                       )
 
     def create_instcat_paramfile(self, file_path):
         """Create a parameter file for the light-curve parametrisation.
