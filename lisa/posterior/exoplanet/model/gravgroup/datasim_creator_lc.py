@@ -158,7 +158,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     l_function_planet_shortname = [get_function_planet_shortname(planet) for planet in planets.values()]
     for function_shortname in l_function_planet_shortname:
         func_builder.add_new_function(shortname=function_shortname)
-        func_builder.set_function_fullname(full_name=f"LC_sim_{function_shortname}{func_full_name_MultiOrDst_ext}", shortname=function_whole_shortname)
+        func_builder.set_function_fullname(full_name=f"LC_sim_{function_shortname}{func_full_name_MultiOrDst_ext}", shortname=function_shortname)
 
     #####################################
     # Define the templates of the function
@@ -192,7 +192,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # for each couple instrument model - dataset in l_inst_model and l_dataset.
     # Format: ["oot model", ]
     d_l_inst_var = get_instvar(l_inst_model=l_inst_model, l_dataset=l_dataset, multi=multi,
-                               function_builder=func_builder, l_function_shortname=[function_whole_shortname, "inst_var"],
+                               function_builder=func_builder, l_function_shortname=[function_whole_shortname, ], ext_func_fullname=func_full_name_MultiOrDst_ext,
                                get_times_from_datasets=get_times_from_datasets, time_vec_name=time_vec, l_time_vec_name=l_time_vec)
 
     ########################
@@ -220,7 +220,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
          ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                          transit_model=transit_model, ldmodel4instmodfname=ldmodel4instmodfname, LDs=LDs,
                          parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
-                         tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder
+                         tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
+                         ext_func_fullname=func_full_name_MultiOrDst_ext,
                          )
     else:
         preambule_tr_planet = preambule_tr_planet_only = {plnt: "" for plnt in planets}
@@ -362,8 +363,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     return dico_docf
 
 
-def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_shortname, get_times_from_datasets,
-                time_vec_name, l_time_vec_name):
+def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_shortname, ext_func_fullname,
+                get_times_from_datasets, time_vec_name, l_time_vec_name):
     """Get the instrumental variation contribution to the light-curve
 
     Arguments
@@ -378,6 +379,9 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
         Function builder instance
     l_function_shortname    : list of str
         List of the short name of the functions for which you want to add the instrument variation component
+    ext_func_fullname       : str
+        Extension to add and the end of the full name of the function simulating the instrumental variation only
+        which is defined by this function in the function_builder
     get_times_from_datasets : bool
         True the datasets should be used to extract the time vectors
     time_vec_name           : str
@@ -395,6 +399,10 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
         - value: List = ["<inst variation model for instrument1 and dataset1>", ...]
     """
     d_l_inst_var = {}
+
+    inst_var_func_shortname = "inst_var"
+    function_builder.add_new_function(shortname=inst_var_func_shortname)
+    function_builder.set_function_fullname(full_name=f"LC_sim_{inst_var_func_shortname}{ext_func_fullname}", shortname=inst_var_func_shortname)
 
     for function_shortname in l_function_shortname:
         d_l_inst_var[function_shortname] = []
@@ -695,7 +703,7 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name=time_vec, l_time_
 
 def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit_model,
                 ldmodel4instmodfname, LDs, parametrisation, SSE4instmodfname,
-                star, planets, tab, time_vec_name, l_time_vec_name, function_builder,
+                star, planets, tab, time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
                 ):
     """Provide the text for the transit part of the LC model text (preambule and return).
 
@@ -704,18 +712,18 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
 
     Arguments
     ---------
-    multi                   : bool
+    multi                       : bool
         True if the datasim function needs to give multiple outputs.
-    l_inst_model            : list_of_Instrument_Model
+    l_inst_model                : list_of_Instrument_Model
         List of the instrument models instances for each output of the datasim function. Each instrument model
         in this list is the instrument model which has to be used for the corresponding dataset provided in l_dataset.
-    l_dataset               : list of Datasets
+    l_dataset                   : list of Datasets
         List of the Dataset intances for each output of the datasim function. The instrument model to be used for
         each dataset is provided in l_inst_model.
-    get_times_from_datasets : bool
+    get_times_from_datasets     : bool
         If True the times at which the model should be computed will be taken from the datasets and
         included into the function. I False the user of the function will have to provide the times.
-    transit_model           : dict
+    transit_model               : dict
         Dictionary describing the transit model to use. The format of this disctionary is:
         {"do": True,  # Should we model the transit
          'instrument_variable': False,  # Whether or not different instruemnt can have different transit model
@@ -724,30 +732,33 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
          'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
                                  }
          }
-    ldmodel4instmodfname    : dict of dict of str
+    ldmodel4instmodfname        : dict of dict of str
         Dictionary giving Limd darkening model to use for each instrument model and for each star
         Format: {"<instrument_model_name>: {"<star_name>": "<LD_model_name>"}
-    LDs                     : dict of CoreLD
+    LDs                         : dict of CoreLD
         Dictionary of subclasses of CoreLD instances providing the different limb-darkening models
         Format: {f"<star_name>_<LD model name>"": CoreLD_subclass instance, }
-    parametrisation         : str
+    parametrisation             : str
         string refering to the parametrisation to use
-    SSE4instmodfname        : dict of dict of str int and float
+    SSE4instmodfname            : dict of dict of str int and float
         Dictionary giving the supersampling factor and the exposure time to use for each instrument model
         Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
-    star                    : Star
+    star                        : Star
         Star object
-    planets                 : dict of Planets
+    planets                     : dict of Planets
         Dictionary of Planet instance providing the planets in the system
         Format: {"planet name": Planet instance}
-    tab                     : str
+    tab                         : str
         String providing the space to put in front of each new line
-    time_vec_name           : str
+    time_vec_name               : str
         Str used to designate the time vector
-    l_time_vec_name         : str
+    l_time_vec_name             : str
         Str used to designate the list of time vectors
-    function_builder        : FunctionBuilder
+    function_builder            : FunctionBuilder
         FunctionBuilder instance
+    ext_func_fullname           : str
+        Extension to add and the end of the full name of the function simulating the transit only
+        which is defined by this function in the function_builder
 
     Returns
     -------
@@ -767,9 +778,10 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     ########################################################################
     # Define the functions to populate and initialise entries in the outputs
     ########################################################################
-    # Defines the lists of function shortnames
+    # Defines the lists of function shortnames and add the new transit only function into the function builder
+    ext_func_tr_only = "_tr"
     l_whole_function_shortname = [function_whole_shortname, ]
-    l_planet_function_shortname_ext = ["", "_tr"]
+    l_planet_function_shortname_ext = ["", ext_func_tr_only]
     l_planet_function_shortname = []
     d_l_function_shortname_4_planet = {}
     for planet in planets.values():
@@ -782,10 +794,12 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     ##################################################
     # Initialise the new functions in function_builder
     ##################################################
-    l_planet_func_shortname_ext_to_create = ["_tr"]
+    l_planet_func_shortname_ext_to_create = [ext_func_tr_only]
     for planet_func_shortname_ext in l_planet_func_shortname_ext_to_create:
         for planet in planets.values():
-            function_builder.add_new_function(shortname=f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
+            func_shortname_tr_pl_only = f"{get_function_planet_shortname(planet)}{ext_func_tr_only}"
+            function_builder.add_new_function(shortname=func_shortname_tr_pl_only)
+            function_builder.set_function_fullname(full_name=f"LC_sim_{func_shortname_tr_pl_only}{ext_func_fullname}", shortname=func_shortname_tr_pl_only)
 
     ##############
     # Add the time
@@ -811,11 +825,11 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     # Add rhostar if needed
     if parametrisation == "Multis":
         for func_shortname in l_function_shortname:
-            function_builder.add_parameter(parameter=star.rhostar, function_shortname=func_shortname, exist_ok=True)
+            function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
 
     # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
     for planet in planets.values():
-        l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.P, planet.tic]
+        l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
         if parametrisation != "Multis":
             l_param.append(planet.aR)
         for param in l_param:
@@ -836,7 +850,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     if transit_imp == "batman":
         ## Creation of the TransitParams instances and add them to the ldicts
         for planet in planets.values():
-            for i_instmod, instmod in enumerate(l_inst_model):
+            for instmod in l_inst_model:
                 params_bat = TransitParams()
                 params_bat.per = 1.   # orbital period
                 params_bat.rp = 0.1   # planet radius(in stel radii)
@@ -844,13 +858,21 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                 params_bat.inc = 90.  # orbital inclination (in degrees)
                 params_bat.ecc = 0.   # eccentricity
                 params_bat.w = 90.    # long. of periastron (in deg.)
-                time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]  # Time is the same for all function
+                if get_times_from_datasets:
+                    time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]  # Time is the same for all function
+                else:
+                    if multi:
+                        time_arg_value = []
+                        for dst in l_dataset:
+                            time_arg_value.append(dst.get_time())
+                    else:
+                        time_arg_value = l_dataset[0].get_time()
                 if multi:
                     t_mean = mean(time_arg_value[0])
                 else:
                     t_mean = mean(time_arg_value)
                 params_bat.t0 = t_mean
-                LD_mod_name = ldmodel4instmodfname[i_instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
+                LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
                 LD_mod = LDs[star.code_name + "_" + LD_mod_name]
                 params_bat.limb_dark = LD_mod.ld_type  # LD model
                 params_bat.u = LD_mod.init_LD_values  # LDC init val
@@ -874,7 +896,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                 preambules[func_shortname] += f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n"
                 period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
                 if parametrisation == "Multis":
-                    rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
+                    rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
                     function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
                     preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n"
                 ## preambule: Modifing the parameter values in the TransitParams object
