@@ -16,6 +16,7 @@ for the GravGroup class
 from logging import getLogger
 from textwrap import dedent
 from collections import OrderedDict
+from pprint import pformat
 
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from .limb_darkening import Manager_LD, CoreLD
@@ -67,39 +68,42 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __ld_dict_name = "LDs"
     __ldmod_dict_name = "LD_models"
 
-    _key_inst_variable_LC_models = 'instrument_variable'
-    _key_allinst_dict_LC_models = 'all_instruments'
-    _key_instspecific_dict_LC_models = 'instrument_specific'
-
     __supersamp_dict = "SuperSamps"
 
     def __init__(self, model_instance):
         super(LC_InstCat_Model, self).__init__(model_instance=model_instance)
-        self.transit_model = {"do": True,
-                              self._key_inst_variable_LC_models: False,
-                              self._key_allinst_dict_LC_models: {'model': 'batman'},
-                              self._key_instspecific_dict_LC_models: {}}
-        self.phasecurve_model = {"do": False,
-                                 self._key_inst_variable_LC_models: False,
-                                 self._key_allinst_dict_LC_models: [{"model": "spiderman",
-                                                                     "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
-                                                                              "attributes": {}
-                                                                              }
-                                                                     },
-                                                                    ],
-                                 self._key_instspecific_dict_LC_models: {}}
-        self.occultation_model = {"do": False,
-                                  self._key_inst_variable_LC_models: False,
-                                  self._key_allinst_dict_LC_models: [{'model': 'batman'}, ],
-                                  self._key_instspecific_dict_LC_models: {}}
+        self.transit_model = {planet.get_name(): {"do": True,
+                                                  "model_definitions": {"default_model": {"model": "batman"}, },
+                                                  "model4instrument": {instmod_obj.full_name: "default_model"
+                                                                       for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+                                                                       },
+                                                  }
+                              for planet in self.model_instance.planets.values()
+                              }
+
+        self.phasecurve_model = {planet.get_name(): {"do": False,
+                                                     "model_definitions": {"default_model": {"model": "spiderman",
+                                                                                             "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
+                                                                                                      "attributes": {}
+                                                                                                      },
+                                                                                             },
+                                                                           },
+                                                     "model4instrument": {instmod_obj.full_name: "default_model"
+                                                                          for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+                                                                          },
+                                                     }
+                                 for planet in self.model_instance.planets.values()
+                                 }
+        self.occultation_model = {planet.get_name(): {"do": False,
+                                                      "model_definitions": {"default_model": {"model": "batman"}, },
+                                                      "model4instrument": {instmod_obj.full_name: "default_model"
+                                                                           for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+                                                                           }
+                                                      }
+                                  for planet in self.model_instance.planets.values()
+                                  }
         self.__ldmodel4instmodfname = OrderedDict()  # Limb darkening model for each instrument
         SuperSampExpTimeAttr.__init__(self)
-        # self.spiderman_model = {"brightness_model": "zhang"}
-        # instrument
-        # Limb darkening model
-        # self.ld_model = ld_model
-        # TODO: Create the LC_param_file and create a function to load its content and build the
-        # Associated LD param containers.
 
     @property
     def ldmodel4instmodfname(self):
@@ -151,12 +155,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             # Light-curve parametrisation file of {object_name}
 
             # Which model do you want to use for the transit ?
-            transit_model = {{'do': True,
-                             '{key_inst_variable_LC_models}': False,
-                             '{key_allinst_dict_LC_models}': {{'model': 'batman'}},
-                             '{key_instspecific_dict_LC_models}': {{{instspec_trmodel_dict}
-            {tab_trmod}}}
-                             }}
+            transit_model = {transit_model}
 
             # Limb-darkening.
             # Associate LC instrument models with LD param containers.
@@ -170,27 +169,12 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             {tab_ss}}}
 
             # Which model do you want to use for the phase curve ?
-            phasecurve_model = {{'do': False,
-                                '{key_inst_variable_LC_models}': False,
-                                '{key_allinst_dict_LC_models}': [{{"model": "spiderman", "args": {{"ModelParams_kwargs": {{"brightness_model": "zhang", }},
-                                                                                                "attributes": {{}}
-                                                                                                }}
-                                                                 }},
-                                                                ],
-                                '{key_instspecific_dict_LC_models}': {{{instspec_pcmodel_dict}
-            {tab_pcmod}}}
-                                }}
-
+            phasecurve_model = {phasecurve_model}
 
             # Which model do you want to use for the occultation ?
             # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
-            occultation_model = {{'do': False,
-                                 '{key_inst_variable_LC_models}': False,
-                                 '{key_allinst_dict_LC_models}': [{{"model": "batman", "args": {{}}}},
-                                                                ],
-                                 '{key_instspecific_dict_LC_models}': {{{instspec_occmodel_dict}
-            {tab_occmod}}}
-                                 }}
+            occultation_model = {occultation_model}
+
             {text_general_decorrelation}
             """
             text_LC_param = dedent(text_LC_param)  # Remove undesired indentation
@@ -199,9 +183,9 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             available_lds = self._ld_models["batman"]  # For now I am providing the ld models available with batman
             tab_ld = spacestring_like(f"{self.__ld_dict_name} =  ")
             tab_ss = spacestring_like(f"{self.__supersamp_dict} =  ")
-            tab_trmod = spacestring_like(f"transit_model =  '{self._key_instspecific_dict_LC_models}':  ")
-            tab_pcmod = spacestring_like(f"phasecurve_model =  '{self._key_instspecific_dict_LC_models}':  ")
-            tab_occmod = spacestring_like(f"occultation_model =  '{self._key_instspecific_dict_LC_models}':  ")
+            tab_trmod = spacestring_like("transit_model = ")
+            tab_pcmod = spacestring_like("phasecurve_model = ")
+            tab_occmod = spacestring_like("occultation_model = ")
 
             # Create the structure of the star_ld_dict
             star_ld_dict = """
@@ -221,32 +205,17 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             # Create the content related to LC instruments (inst_ld_dict and inst_ss_dict)
             inst_ld_dict = ""
             inst_ss_dict = ""
-            inst_tr_dict = ""
-            inst_pc_dict = ""
-            inst_occ_dict = ""
             ss_dict = "'{instmod_fullname}': {{'{supersamp_key}': {default_supersamp}, '{exptime_key}': {default_exptime}}},"
             ld_dict = "'{instmod_fullname}': '{def_LDparcont}',"
-            tr_dict = "'{instmod_fullname}': '{def_trmodel}'"
-            pc_dict = "'{instmod_fullname}': '{def_pcmodel}'"
-            occ_dict = "'{instmod_fullname}': '{def_occmodel}'"
             default_supersamp = 1
             default_exptime = 0.02043402778  # Kepler long cadence exposure time in days
             first_instmodel = True
-            default_tr_model = self._key_allinst_dict_LC_models
-            default_pc_model = self._key_allinst_dict_LC_models
-            default_occ_model = self._key_allinst_dict_LC_models
             for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
                 ld_tab = ""
                 ss_tab = ""
-                tr_tab = ""
-                pc_tab = ""
-                occ_tab = ""
                 if not(first_instmodel):
                     ld_tab = "\n{tab_star_ld}"
                     ss_tab = "\n{tab_ss}"
-                    tr_tab = "\n{tab_trmod}"
-                    pc_tab = "\n{tab_pcmod}"
-                    occ_tab = "\n{tab_occmod}"
                 else:
                     first_instmodel = False
                 inst_ld_dict += (ld_tab +
@@ -260,18 +229,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                                  default_supersamp=default_supersamp,
                                                  exptime_key=_exptime_key,
                                                  default_exptime=default_exptime)
-                inst_tr_dict += (tr_tab +
-                                 tr_dict).format(tab_trmod=tab_trmod,
-                                                 instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                 def_trmodel=default_tr_model)
-                inst_pc_dict += (pc_tab +
-                                 pc_dict).format(tab_pcmod=tab_pcmod,
-                                                 instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                 def_pcmodel=default_pc_model)
-                inst_occ_dict += (occ_tab +
-                                  occ_dict).format(tab_occmod=tab_occmod,
-                                                   instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                   def_occmodel=default_occ_model)
 
             # Fill the structures of star_ld_dict
             star_ld_dict = star_ld_dict.format(star_name=star.get_name(), inst_ld_dict=inst_ld_dict,
@@ -280,19 +237,14 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
             # Fill the whole text_LC_param string
             text_LC_param = text_LC_param.format(object_name=self.model_instance.get_name(),
-                                                 tab_trmod=tab_trmod,
-                                                 instspec_trmodel_dict=inst_tr_dict,
-                                                 key_inst_variable_LC_models=self._key_inst_variable_LC_models,
-                                                 key_allinst_dict_LC_models=self._key_allinst_dict_LC_models,
-                                                 key_instspecific_dict_LC_models=self._key_instspecific_dict_LC_models,
+                                                 transit_model=pformat(self.transit_model, compact=True).replace("\n", f"\n{tab_trmod}"),
                                                  available_lds=available_lds,
                                                  ld_dict_name=self.__ld_dict_name,
                                                  tab_ld=tab_ld, star_ld_dict=star_ld_dict,
                                                  supersamp_dict=self.__supersamp_dict,
                                                  tab_ss=tab_ss, inst_ss_dict=inst_ss_dict,
-                                                 tab_pcmod=tab_pcmod, tab_occmod=tab_occmod,
-                                                 instspec_pcmodel_dict=inst_pc_dict,
-                                                 instspec_occmodel_dict=inst_occ_dict,
+                                                 phasecurve_model=pformat(self.phasecurve_model, compact=True).replace("\n", f"\n{tab_pcmod}"),
+                                                 occultation_model=pformat(self.occultation_model, compact=True).replace("\n", f"\n{tab_occmod}"),
                                                  text_general_decorrelation=self.create_text_paramfile_decorrelation(model_instance=self.model_instance)  # Comes from Core_InstCat_Model
                                                  )
 
@@ -341,68 +293,73 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             self.SSE4instmodfname.add_instmodel_SSEdict(instmod_name, dico)
         # Check the transit_model, phasecurve_model and occultation_model
         # A big part of structure of these dictionary are the same where are going to check that
-        l_key_modeldicts = ['do', self._key_inst_variable_LC_models, self._key_allinst_dict_LC_models, self._key_instspecific_dict_LC_models]
         l_dico_model_name = ["transit_model", "phasecurve_model", "occultation_model"]
         for dict_name in l_dico_model_name:
             if dict_name not in dico_config:
-                raise ValueError(f"The file {self.paramfile_instcat} is missing the {dict_name} dictionary.")
+                raise ValueError(f"In file {self.paramfile_instcat}: Missing {dict_name} dictionary.")
             dico_model = dico_config[dict_name]
-            if 'do' not in dico_model:
-                raise ValueError(f"The file {self.paramfile_instcat}: The dictionary {dict_name} is missing the 'do' key.")
-            if dico_model['do']:
-                if not(set(l_key_modeldicts) == set(dico_model.keys())):
-                    raise ValueError(f"In file {self.paramfile_instcat}: the keys of the {dict_name} dictionary have to be {l_key_modeldicts}.")
-                if not(isinstance(dico_model[self._key_inst_variable_LC_models], bool)):
-                    raise ValueError(f"In file {self.paramfile_instcat}: {dict_name}[{self._key_inst_variable_LC_models}] has to be a boolean.")
-                if not(isinstance(dico_model[self._key_instspecific_dict_LC_models], dict)):
-                    raise ValueError(f"In file {self.paramfile_instcat}: {dict_name}[{self._key_instspecific_dict_LC_models}] has to be a dict.")
+            for planet in self.model_instance.planets.values():
+                planet_name = planet.get_name()
+                # Check that there is a key for each planet
+                if planet_name not in dico_model:
+                    raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name} is missing a key for planet {planet_name}.")
+                # Check that there is a 'do' key with a boolean value for each planet dictionary
+                if 'do' not in dico_model[planet_name]:
+                    raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the 'do' key.")
+                else:
+                    if not(isinstance(dico_model[planet_name]["do"], bool)):
+                        raise ValueError(f"In file {self.paramfile_instcat}: {dict_name}[{planet_name}]['do'] has to be a boolean.")
+                if dico_model[planet_name]['do']:
+                    # Check that there is a key each planet dictionary
+                    for key in ["model_definitions", "model4instrument"]:
+                        if key not in dico_model[planet_name]:
+                            raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the '{key}' key.")
+                    # Check that the name of all the LC instruments are all there and associated to an existing model
+                    l_model = list(dico_model[planet_name]["model_definitions"].keys())
+                    for inst_mod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.inst_cat):
+                        if inst_mod_obj.full_name not in dico_model[planet_name]["model4instrument"]:
+                            raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}['{planet_name}']['model4instrument'] is missing the '{inst_mod_obj.full_name}' key.")
+                        if dict_name == "transit_model":
+                            if dico_model[planet_name]["model4instrument"][inst_mod_obj.full_name] not in l_model:
+                                raise ValueError(f"In file {self.paramfile_instcat}: In {dict_name} for planet {planet_name}, {inst_mod_obj.full_name} is associated to model {dico_model[planet_name]['model4instrument'][inst_mod_obj.full_name]} which is not defined in {dict_name}['{planet_name}']['model_definitions'].")
+                        elif dict_name in ["phasecurve_model", "occultation_model"]:
+                            for model in dico_model[planet_name]["model4instrument"][inst_mod_obj.full_name]:
+                                if model not in l_model:
+                                    raise ValueError(f"In file {self.paramfile_instcat}: In {dict_name} for planet {planet_name}, {inst_mod_obj.full_name} is associated to model {model} which is not defined in {dict_name}['{planet_name}']['model_definitions'].")
+
         # Check and load the transit_model dictionary
-        self.transit_model["do"] = dico_config["transit_model"]["do"]
-        if dico_config["transit_model"]["do"]:
-            transit_model = dico_config["transit_model"]
-            # At the moment the code is not handling different transit model for different instruments
-            if transit_model[self._key_inst_variable_LC_models]:
-                raise NotImplementedError("The use of different transit models per instrument is not currently implemented.")
-            self.transit_model[self._key_inst_variable_LC_models] = False
-            # Check and load the model for all instruments
-            if "model" not in transit_model[self._key_allinst_dict_LC_models]:
-                raise ValueError(f"In file {self.paramfile_instcat}: the transit_model[{self._key_allinst_dict_LC_models}] dictionary is missing the 'model' key.")
-            if transit_model[self._key_allinst_dict_LC_models]['model'] not in self._transit_models:
-                raise ValueError(f"In file {self.paramfile_instcat}: {transit_model[self._key_allinst_dict_LC_models]['model']} is not an available transit model.")
-            self.transit_model[self._key_allinst_dict_LC_models]['model'] = transit_model[self._key_allinst_dict_LC_models]['model']
-        else:
-            raise NotImplementedError("At the moment you cannot not model the transit.")
+        for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            if dico_config["transit_model"][planet_name]["do"]:
+                # TODO?: Make checks on the content of each model in 'model_definitions'
+                self.transit_model[planet_name] = dico_config["transit_model"][planet_name]
 
         # Check and load the phasecurve_model dictionary
-        self.phasecurve_model["do"] = dico_config["phasecurve_model"]["do"]
-        if dico_config["phasecurve_model"]["do"]:
-            phasecurve_model = dico_config["phasecurve_model"]
-            # At the moment the code is not handling different phasecurve model for different instruments
-            if phasecurve_model[self._key_inst_variable_LC_models]:
-                raise NotImplementedError("The use of different phase curve models per instrument is not currently implemented.")
-            self.phasecurve_model[self._key_inst_variable_LC_models] = False
-            # At the moment the code is not handling multiple components for the phasecurve model
-            if len(phasecurve_model[self._key_allinst_dict_LC_models]) != 1:
-                raise NotImplementedError("The use of multiple phase curve components is not currently implemented there should be one and only one.")
-            # Check and load the model for all instruments
-            l_key_mandatory = ["model", "args"]
-            if not(set(l_key_mandatory) == set(phasecurve_model[self._key_allinst_dict_LC_models][0].keys())):
-                raise ValueError(f"In file {self.paramfile_instcat}: the keys of phasecurve_model[{self._key_allinst_dict_LC_models}][0] should be {l_key_mandatory}.")
-            if phasecurve_model[self._key_allinst_dict_LC_models][0]['model'] not in self._phasecurve_models:
-                raise ValueError(f"In file {self.paramfile_instcat}: {phasecurve_model[{self._key_allinst_dict_LC_models}][0]['model']} is not an available phasecurve model.")
-            if phasecurve_model[self._key_allinst_dict_LC_models][0]['model'] == "spiderman":
-                l_arg_mand_sp = ["ModelParams_kwargs", "attributes", "lightcurve_kwargs"]
-                if not(set(l_arg_mand_sp) == set(phasecurve_model[self._key_allinst_dict_LC_models][0]['args'].keys())):
-                    raise ValueError(f"In file {self.paramfile_instcat}: the keys of phasecurve_model[{self._key_allinst_dict_LC_models}][0]['args'] should be {l_arg_mand_sp}.")
-                if not("brightness_model" in phasecurve_model[self._key_allinst_dict_LC_models][0]['args']['ModelParams_kwargs']):
-                    raise ValueError(f"In file {self.paramfile_instcat}: the keys of phasecurve_model[{self._key_allinst_dict_LC_models}][0]['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
-            else:
-                raise NotImplementedError("Checking the content of the phasecurve dictionary for the phasecurve model {phasecurve_model[self._key_allinst_dict_LC_models][0]['model']} is not Implemented.")
-            self.phasecurve_model[self._key_allinst_dict_LC_models][0] = phasecurve_model[self._key_allinst_dict_LC_models][0]
+        for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            if dico_config["phasecurve_model"][planet_name]["do"]:
+                self.transit_model[planet_name] = dico_config["transit_model"][planet_name]
+                for model_comp_name, model_comp_dict in dico_config["phasecurve_model"][planet_name]["model_definitions"].items():
+                    l_key_mandatory = ["model", "args"]
+                    if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name} should be {l_key_mandatory}.")
+                    if model_comp_dict['model'] not in self._phasecurve_models:
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available phasecurve model.")
+                    if model_comp_dict['model'] == "spiderman":
+                        l_arg_mand_sp = ["ModelParams_kwargs", "attributes", "lightcurve_kwargs"]
+                        if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
+                        if not("brightness_model" in model_comp_dict['args']['ModelParams_kwargs']):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
+                    else:
+                        logger.warning(f"Checking the content of the phasecurve dictionary for the phasecurve model {model_comp_dict['model']} is not implemented.")
+                    self.phasecurve_model[planet_name] = dico_config["phasecurve_model"][planet_name]
 
         # Check and load the occultation_model dictionary
-        if dico_config["occultation_model"]["do"]:
-            raise NotImplementedError("The use of an occultation only model is not curretnly implemented.")
+        for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            if dico_config["occultation_model"][planet_name]["do"]:
+                raise NotImplementedError("The use of an occultation only model is not currently implemented.")
 
     def add_a_LD(self, star, ld_type, name, kwargs_getname_4_storename={"include_prefix": True, "code_version": True},
                  kwargs_getname_4_codename={"include_prefix": True, "code_version": True}):
