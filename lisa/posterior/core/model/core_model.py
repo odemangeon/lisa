@@ -129,15 +129,30 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Initialise datasimcreator which has to be filled in the Model Subclass
         # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
         self.__datasimcreator = {}
-        # Now load the available InstCat_Models and do the __init__
+        # Initialise instcat_models which has to be filled with the InstCat_Model instances available for the model
+        # {<inst cataegory>: InstCat_Model subclass instance}
         self.__instcat_models = {}
+        # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
+        # SUBCLASS LEVEL
+
+    def finish_init(self):
+        """Finish the initialisation of the core components of the model.
+
+        This function is meant to be run in the __init__ method of a Core_Model subclass. It initialises
+        core components of a model which require knowledge of the specificities of the model subclass
+        to be initialised and that is why the comtent of this function cannot simply be put in __init__.
+        __init__ is meant to be run right at the beginning of the subclass __init__ method while
+        finish_init is meant to be run at the end.
+
+        This function initialise instcat_models and the InstCat_Model subclass instances that are in this
+        dictionary.
+        """
+        # Now load the available InstCat_Models and do the __init__
         for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
                 self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
                 self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
                 self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
-        # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
-        # SUBCLASS LEVEL
 
     def get_same_GP_kernel_datasets(self, dataset_name):
         """Return the list of datasets that are modeled using the same GP kernel than the one provided.
