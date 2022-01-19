@@ -198,73 +198,55 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     ########################
     # Produce Transit models
     ########################
-    do_transit = transit_model['do']
-    if do_transit:
-        ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
-        # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
-        # in l_inst_model.
-        # Format: ["<limb darkening model name>", ]
-        # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
-        # in l_inst_model.
-        # Format: [<limb darkening model>, ]
-        # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
-        # in l_inst_model.
-        # Format: ["[p[1], p[2]]", ]
-        # (dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
-        #  ) = get_LD_parcont_and_param(l_inst_model=l_inst_model, ldmodel4instmodfname=ldmodel4instmodfname,
-        #                               star=star, l_planet_name=[planet.get_name() for planet in planets.values()], LDs=LDs,
-        #                               function_builder=func_builder, l_function_shortname=[function_whole_shortname, ] + l_function_planet_shortname
-        #                               )
+    ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
+    # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: ["<limb darkening model name>", ]
+    # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: [<limb darkening model>, ]
+    # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
+    # in l_inst_model.
+    # Format: ["[p[1], p[2]]", ]
+    # (dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
+    #  ) = get_LD_parcont_and_param(l_inst_model=l_inst_model, ldmodel4instmodfname=ldmodel4instmodfname,
+    #                               star=star, l_planet_name=[planet.get_name() for planet in planets.values()], LDs=LDs,
+    #                               function_builder=func_builder, l_function_shortname=[function_whole_shortname, ] + l_function_planet_shortname
+    #                               )
 
-        (preambules, returns
-         ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
-                         transit_model=transit_model, ldmodel4instmodfname=ldmodel4instmodfname, LDs=LDs,
-                         parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
-                         tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
-                         ext_func_fullname=func_full_name_MultiOrDst_ext,
-                         )
-    else:
-        preambule_tr_planet = preambule_tr_planet_only = {plnt: "" for plnt in planets}
-        preambule_tr_whole = ""
-        d_l_tr_ret_planet = d_l_tr_ret_planet_only = {plnt: ["" for instmod in l_inst_model] for plnt in planets}
-        l_tr_ret_whole_planets = ["" for instmod in l_inst_model]
+    (preambules_tr, returns_tr
+     ) = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
+                     transit_model=transit_model, ldmodel4instmodfname=ldmodel4instmodfname, LDs=LDs,
+                     parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
+                     tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
+                     ext_func_fullname=func_full_name_MultiOrDst_ext,
+                     )
 
     ############################
     # Produce phase curve models
     ############################
-    do_phasecurve = phasecurve_model['do']
-    if do_phasecurve:
-        (preambule_pc_planet, preambule_pc_planet_only, preambule_pc_whole,
-         d_l_pc_ret_planet, d_l_pc_ret_planet_only, l_pc_ret_whole_planets,
-         ) = get_phasecurve(multi=multi, l_inst_model=l_inst_model, phasecurve_model=phasecurve_model,
-                            dico_l_LD_parcont=dico_l_LD_parcont, dico_l_LD_param_list=dico_l_LD_param_list, parametrisation=parametrisation,
-                            key_whole=key_whole, key_param=key_param, SSE4instmodfname=SSE4instmodfname, planets=planets, star=star,
-                            ext_plonly=ext_plonly, arg_list=arg_list, param_nb=param_nb, ldict=ldict, tab=tab, did_transit=do_transit,
-                            rhostar=rhostar, params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole)
-    else:
-        preambule_pc_planet = preambule_pc_planet_only = {plnt: "" for plnt in planets}
-        preambule_pc_whole = ""
-        d_l_pc_ret_planet = d_l_pc_ret_planet_only = {plnt: ["" for instmod in l_inst_model] for plnt in planets}
-        l_pc_ret_whole_planets = ["" for instmod in l_inst_model]
+    (preambules_pc, returns_pc,
+     ) = get_phasecurve(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
+                        phasecurve_model=phasecurve_model, parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname,
+                        star=star, planets=planets,
+                        tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
+                        ext_func_fullname=func_full_name_MultiOrDst_ext,
+                        )
 
     ###########################
     # Produce the decorrelation
     ###########################
-    (d_l_decorr_planet, d_l_decorr_planet_only, l_decorr_whole
-     ) = get_decorrelation(multi=multi, planets=planets, l_inst_model=l_inst_model, l_dataset=l_dataset,
-                           arguments=arguments,
-                           decorrelation_config=decorrelation_config, dataset_db=dataset_db, param_nb=param_nb, arg_list=arg_list,
-                           key_param=key_param, key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
-                           key_whole=key_whole, ldict=ldict, ext_plonly=ext_plonly, LCcat_model=LCcat_model,
-                           time_arg_name=time_arg_name)
+    d_l_d_decorr = get_decorrelation(multi=multi, planets=planets, l_inst_model=l_inst_model, l_dataset=l_dataset,
+                                     get_times_from_datasets=get_times_from_datasets, decorrelation_config=decorrelation_config,
+                                     dataset_db=dataset_db, LCcat_model=LCcat_model, time_vec_name=time_vec,
+                                     l_time_vec_name=l_time_vec, function_builder=func_builder, l_function_shortname=[function_whole_shortname, ],
+                                     ext_func_fullname=func_full_name_MultiOrDst_ext)
 
     ########################
     # Get the condition text
     ########################
-    (condition_planet, condition_planet_only, condition_whole
-     ) = get_conditions(planets=planets, parametrisation=parametrisation,
-                        params_planet=params_planet, params_planet_only=params_planet_only, params_whole=params_whole,
-                        tab=tab, error_return=error_return)
+    preambules_conditions = get_conditions(planets=planets, parametrisation=parametrisation, tab=tab,
+                                           error_return=error_return, function_builder=func_builder)
 
     #############################################
     # Fill the functions template for each planet
@@ -363,8 +345,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     return dico_docf
 
 
-def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_shortname, ext_func_fullname,
-                get_times_from_datasets, time_vec_name, l_time_vec_name):
+def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, time_vec_name, l_time_vec_name,
+                function_builder, l_function_shortname, ext_func_fullname):
     """Get the instrumental variation contribution to the light-curve
 
     Arguments
@@ -375,6 +357,12 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
         Checked list of Dataset instance(s).
     multi                   : bool
         True if the datasim function needs to give multiple outputs.
+    get_times_from_datasets : bool
+        True the datasets should be used to extract the time vectors
+    time_vec_name           : str
+        Str used to design the time vector
+    l_time_vec_name         : str
+        Str used to design the list of time vector
     function_builder        : FunctionBuilder
         Function builder instance
     l_function_shortname    : list of str
@@ -382,33 +370,39 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
     ext_func_fullname       : str
         Extension to add and the end of the full name of the function simulating the instrumental variation only
         which is defined by this function in the function_builder
-    get_times_from_datasets : bool
-        True the datasets should be used to extract the time vectors
-    time_vec_name           : str
-        Str used to design the time vector
-    l_time_vec_name         : str
-        Str used to design the list of time vector
 
     Returns
     -------
-    d_l_inst_var   : dict of list_of_string
+    returns : dict of list_of_string
         Dictionary providing, for all functions specified by l_function_shortname, the list of the string representations
         of the instrumental variations model for each couple instrument model - dataset in l_inst_model and l_dataset.
         Format of the dictionary:
         - key : key or keys specificied by l_function_shortname
         - value: List = ["<inst variation model for instrument1 and dataset1>", ...]
     """
-    d_l_inst_var = {}
+    ########################
+    # Initialise the outputs
+    ########################
+    returns = {}
 
+    #################################################
+    # Initialise the new function in function_builder
+    #################################################
+    # Extension for the shortname of the function that do the decorrelation only model
     inst_var_func_shortname = "inst_var"
     function_builder.add_new_function(shortname=inst_var_func_shortname)
     function_builder.set_function_fullname(full_name=f"LC_sim_{inst_var_func_shortname}{ext_func_fullname}", shortname=inst_var_func_shortname)
 
+    ########################################
+    # Update the list of function to address
+    ########################################
+    l_function_shortname += [inst_var_func_shortname, ]
+
     for function_shortname in l_function_shortname:
-        d_l_inst_var[function_shortname] = []
+        returns[function_shortname] = []
         # For each instrument model and dataset, ...
         for ii, instmdl in enumerate(l_inst_model):
-            d_l_inst_var[function_shortname].append("")
+            returns[function_shortname].append("")
             # ..., if instrument variations have been asked, ...
             if instmdl.get_with_inst_var():
                 # ..., For each order in the required polynomial model, ...
@@ -422,7 +416,7 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
                         text_instvar_param = function_builder.get_text_4_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
                         # ..., if the parameter is free or the fixed value is not zero, ...
                         if text_instvar_param != 0.0:
-                            d_l_inst_var[function_shortname][ii] += "+ {}".format(text_instvar_param)
+                            returns[function_shortname][ii] += "+ {}".format(text_instvar_param)
                         # ..., else, since the fixed value is zero, this order doesn't have any
                         # contribution
                         else:
@@ -449,19 +443,19 @@ def get_instvar(l_inst_model, l_dataset, multi, function_builder, l_function_sho
                                                               exist_ok=True)
                             if order == 1:
                                 if multi:
-                                    d_l_inst_var[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod}) "
+                                    returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod}) "
                                 else:
-                                    d_l_inst_var[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod}) "
+                                    returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod}) "
                             elif order > 1:
                                 if multi:
-                                    d_l_inst_var[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
+                                    returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
                                 else:
-                                    d_l_inst_var[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
+                                    returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
                         # If the is no contribution to the oot of transit variation from this order
                         # add only a space.
                         elif value_not0 and order == 0:
-                            d_l_inst_var[function_shortname][ii] += " "
-    return d_l_inst_var
+                            returns[function_shortname][ii] += " "
+    return returns
 
 
 def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, l_planet_name, LDs, function_builder, l_function_shortname):
@@ -529,70 +523,70 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, l_planet_
     return dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
 
 
-def define_orbital_params(star, planets, parametrisation, function_builder):
-    """Define the orbital parameters as model parameters in the function builder
+# def define_orbital_params(star, planets, parametrisation, function_builder):
+#     """Define the orbital parameters as model parameters in the function builder
+#
+#     Arguments
+#     ---------
+#     star                        : Star
+#         Star object
+#     planets                     : dict of Planets
+#         Dictionary of Planet instance providing the planets in the system
+#         Format: {"planet name": Planet instance}
+#     parametrisation             : str
+#         string refering to the parametrisation to use
+#     function_builder            : FunctionBuilder
+#         Object which help building the function
+#
+#     TBR
+#     Returns
+#     -------
+#     rhostar             : dict_of_str
+#         Dictionary providing the str to use in the function for rhostar for all function available in arg_list
+#         Format:
+#         - key: str designating the function being built and provided by key_arglist.
+#         - value: str to use for rhostar for this function
+#     params_whole        : dict_of_dict_of_str
+#         Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
+#         Format:
+#         - key: planet name
+#         - value: dict_of_str with the following format
+#             - key: Parameter full name
+#             - value: str to use for this parameter for this function
+#     params_planet       : dict_of_dict_of_str
+#         Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
+#         Format:
+#         - key: planet name
+#         - value: dict_of_str with the following format
+#             - key: Parameter full name
+#             - value: str to use for this parameter for this function
+#     params_planet_only  : dict_of_dict_of_str
+#         Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
+#         Format:
+#         - key: planet name
+#         - value: dict_of_str with the following format
+#             - key: Parameter full name
+#             - value: str to use for this parameter for this function
+#     """
+#     l_function_shortname_add_rho = [function_whole_shortname, ]
+#     for planet in planets.values():
+#         l_function_shortname_add_rho.extend([planet.get_name(), planet.get_name() + ext_plonly])
+#     # Add the stellar density the model parameter vectors
+#     if parametrisation == "Multis":
+#         for function_shortname in l_function_shortname_add_rho:
+#             function_builder.add_parameter(parameter=star.rho, function_shortname=function_shortname)
+#
+#     # Create the text for each planet parameter for the current planet model (planet and planet_only) and for the whole system.
+#     for planet in planets.values():
+#         l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.tic, planet.P]
+#         if parametrisation != "Multis":
+#             l_param.append(planet.aR)
+#         for function_shortname in [function_whole_shortname, planet.get_name(), planet.get_name() + ext_plonly]:
+#             for param in l_param:
+#                 function_builder.add_parameter(parameter=param, function_shortname=function_shortname)
 
-    Arguments
-    ---------
-    star                        : Star
-        Star object
-    planets                     : dict of Planets
-        Dictionary of Planet instance providing the planets in the system
-        Format: {"planet name": Planet instance}
-    parametrisation             : str
-        string refering to the parametrisation to use
-    function_builder            : FunctionBuilder
-        Object which help building the function
 
-    TBR
-    Returns
-    -------
-    rhostar             : dict_of_str
-        Dictionary providing the str to use in the function for rhostar for all function available in arg_list
-        Format:
-        - key: str designating the function being built and provided by key_arglist.
-        - value: str to use for rhostar for this function
-    params_whole        : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
-    params_planet       : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
-    params_planet_only  : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
-    """
-    l_function_shortname_add_rho = [function_whole_shortname, ]
-    for planet in planets.values():
-        l_function_shortname_add_rho.extend([planet.get_name(), planet.get_name() + ext_plonly])
-    # Add the stellar density the model parameter vectors
-    if parametrisation == "Multis":
-        for function_shortname in l_function_shortname_add_rho:
-            function_builder.add_parameter(parameter=star.rho, function_shortname=function_shortname)
-
-    # Create the text for each planet parameter for the current planet model (planet and planet_only) and for the whole system.
-    for planet in planets.values():
-        l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.tic, planet.P]
-        if parametrisation != "Multis":
-            l_param.append(planet.aR)
-        for function_shortname in [function_whole_shortname, planet.get_name(), planet.get_name() + ext_plonly]:
-            for param in l_param:
-                function_builder.add_parameter(parameter=param, function_shortname=function_shortname)
-
-
-def get_conditions(planets, parametrisation, function_builder, l_function_shortname, tab, error_return):
+def get_conditions(planets, parametrisation, function_builder, tab, error_return):
     """
     Return the text related to the condition to test if the planet goes into the star
 
@@ -605,8 +599,6 @@ def get_conditions(planets, parametrisation, function_builder, l_function_shortn
         string refering to the parametrisation to use
     function_builder            : FunctionBuilder
         Function builder instance
-    l_function_shortname        : List of str
-        List of the short name of the function for which you want to had the condition
     tab                         : str
         String providing the space to put in front of each new line
     error_return                : str
@@ -614,53 +606,57 @@ def get_conditions(planets, parametrisation, function_builder, l_function_shortn
 
     Returns
     -------
-    condition_planet        : dictionary of str
-        Dictionary containing the text for the condition to put in the function text for the function
-        of each planet (planet+star+inst). The format of the dictionary is:
-        - key: planet name
-        - value: text of the condition
-    condition_planet_only   : dictionary of str
-        Dictionary containing the text for the condition to put in the function text for the function
-        of each planet only. The format of the dictionary is:
-        - key: planet name
-        - value: text of the condition
-    condition_whole         : str
-        text to put in the function text for the function of the whole system (inst+star+all planets)
+    preambules  : dict of list_of_string
+        Dictionary of string giving the preambule for the condition model for each function
     """
-    # Initialise template_condition, the template for the condition (no planet should pass into the star)
-    template_condition = """
-    {tab}{preambule}
-    {tab}if {condition}:
-    {tab}    return {returns}
-    """
-    template_condition = dedent(template_condition)
+    ########################
+    # Initialise the outputs
+    ########################
+    preambules = {}
 
-    preambule_cond_whole = "condition = False\n"
-    condition_planet = {}
-    condition_planet_only = {}
-    for ii, planet in enumerate(planets.values()):
+    ##############################
+    # Do the Model for each planet
+    ##############################
+    for planet in planets.values():
         planet_name = planet.get_name()
-        # Fill the template_preambule_condition
-        for function_shortname in [planet_name, planet_name + ext_plonly, function_whole_shortname]:
-            if parametrisation == "Multis":
-                aR_text = f"aR_{planet_name}"
-            else:
-                aR_text = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=function_shortname)
-            if planet.Rrat in function_builder.get_parameter_vector(function_shortname=function_shortname):
-                Rrat_text = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
-                preambule_cond_planet = f"condition_{planet_name} = ({aR_text} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat_text}))\n"
-            else:
-                preambule_cond_planet = f"condition_{planet_name} = ({aR_text} < (1.5 / (1 - ecc_{planet_name})))\n"
-            if function_shortname == function_whole_shortname:
-                preambule_cond_whole += tab + preambule_cond_planet
-            elif function_shortname == planet_name:
-                condition_planet[planet_name] = template_condition.format(preambule=preambule_cond_planet, condition=f"condition_{planet_name}", returns=error_return, tab=tab)
-            else:
-                condition_planet_only[planet_name] = template_condition.format(preambule=preambule_cond_planet, condition=f"condition_{planet_name}", returns=error_return, tab=tab)
-    preambule_cond_whole += f"{tab}condition = condition or condition_{planet_name}\n"
-    condition_whole = template_condition.format(preambule=preambule_cond_whole, condition="condition", returns=error_return, tab=tab)
 
-    return condition_planet, condition_planet_only, condition_whole
+        ########################################################################
+        # Define the functions to populate and initialise entries in the outputs
+        ########################################################################
+        # Defines the lists of function shortnames and add the new transit only function into the function builder
+        l_whole_function_shortname = [function_whole_shortname, ]
+        l_planet_function_shortname_ext = ["", "_tr", "_pc"]
+        l_planet_function_shortname = []
+        for planet_func_shortname_ext in l_planet_function_shortname_ext:
+            l_planet_function_shortname.append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
+        l_function_shortname_4_planet = l_whole_function_shortname + l_planet_function_shortname
+
+        for func_shortname in l_function_shortname_4_planet:
+
+            if function_builder.is_function(shortname=func_shortname):
+                preambules[func_shortname] = ""
+                # In all functions currently considered aR should already exists, but the best would be
+                # to check and only do the condition if it doesn or if there is already the ingredients to
+                # compute it
+                if parametrisation == "Multis":
+                    aR = f"aR_{planet_name}"
+                else:
+                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
+                if function_builder.is_parameter(parameter=planet.Rrat, function_shortname=func_shortname):
+                    Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
+                    preambules[func_shortname] += f"{tab}condition_{planet_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat}))\n"
+                else:
+                    preambules[func_shortname] += f"condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n"
+                if func_shortname in l_whole_function_shortname:
+                    preambules[func_shortname] += f"{tab}condition = condition or condition_{planet_name}\n"
+                else:
+                    preambules[func_shortname] += f"{tab}if condition_{planet_name}:\n"
+                    preambules[func_shortname] += f"{tab}    return {error_return} "
+    for func_shortname in l_whole_function_shortname:
+        preambules[func_shortname] += f"{tab}if condition:\n"
+        preambules[func_shortname] += f"{tab}    return {error_return} "
+
+    return preambules
 
 
 def get_catchederror_return(multi, l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec):
@@ -702,8 +698,8 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name=time_vec, l_time_
 
 
 def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit_model,
-                ldmodel4instmodfname, LDs, parametrisation, SSE4instmodfname,
-                star, planets, tab, time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
+                ldmodel4instmodfname, LDs, parametrisation, SSE4instmodfname, star, planets, tab,
+                time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
                 ):
     """Provide the text for the transit part of the LC model text (preambule and return).
 
@@ -725,12 +721,11 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
         included into the function. I False the user of the function will have to provide the times.
     transit_model               : dict
         Dictionary describing the transit model to use. The format of this disctionary is:
-        {"do": True,  # Should we model the transit
-         'instrument_variable': False,  # Whether or not different instruemnt can have different transit model
-         'all_instruments': {'model': 'batman'  #String refering to the transit model to use (can be 'pytransit' or 'batman')
-                             },
-         'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
-                                 }
+        {"<planet name >": {"do": <bool>  # Should we model the transit
+                            'model_definitions': {"<model name>": {"model": '<name of the model like batman>'}, ...}
+                            'model4instrument': {"<instrument model full name>": "<model name in model_definitions>", ...}
+                            },
+         ...
          }
     ldmodel4instmodfname        : dict of dict of str
         Dictionary giving Limd darkening model to use for each instrument model and for each star
@@ -767,270 +762,291 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     returns     : dict of list of str
         Dictionary of list of str giving the return for transit model for each function and each output
     """
-    transit_imp = transit_model['all_instruments']['model']
-
     ########################
     # Initialise the outputs
     ########################
     preambules = {}
     returns = {}
 
-    ########################################################################
-    # Define the functions to populate and initialise entries in the outputs
-    ########################################################################
-    # Defines the lists of function shortnames and add the new transit only function into the function builder
+    # Extension for the shortname of the function that do the transit only model
     ext_func_tr_only = "_tr"
-    l_whole_function_shortname = [function_whole_shortname, ]
-    l_planet_function_shortname_ext = ["", ext_func_tr_only]
-    l_planet_function_shortname = []
-    d_l_function_shortname_4_planet = {}
+
+    ##############################
+    # Do the Model for each planet
+    ##############################
     for planet in planets.values():
-        d_l_function_shortname_4_planet[planet.get_name()] = []
-        for planet_func_shortname_ext in l_planet_function_shortname_ext:
-            l_planet_function_shortname.append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
-            d_l_function_shortname_4_planet[planet.get_name()].append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
-    l_function_shortname = l_whole_function_shortname + l_planet_function_shortname
+        planet_name = planet.get_name()
+        if transit_model[planet_name]['do']:
+            ########################################################################
+            # Define the functions to populate and initialise entries in the outputs
+            ########################################################################
+            # Defines the lists of function shortnames and add the new transit only function into the function builder
+            l_whole_function_shortname = [function_whole_shortname, ]
+            l_planet_function_shortname_ext = ["", ext_func_tr_only]
+            l_planet_function_shortname = []
+            for planet_func_shortname_ext in l_planet_function_shortname_ext:
+                l_planet_function_shortname.append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
+            l_function_shortname_4_planet = l_whole_function_shortname + l_planet_function_shortname
 
-    ##################################################
-    # Initialise the new functions in function_builder
-    ##################################################
-    l_planet_func_shortname_ext_to_create = [ext_func_tr_only]
-    for planet_func_shortname_ext in l_planet_func_shortname_ext_to_create:
-        for planet in planets.values():
-            func_shortname_tr_pl_only = f"{get_function_planet_shortname(planet)}{ext_func_tr_only}"
-            function_builder.add_new_function(shortname=func_shortname_tr_pl_only)
-            function_builder.set_function_fullname(full_name=f"LC_sim_{func_shortname_tr_pl_only}{ext_func_fullname}", shortname=func_shortname_tr_pl_only)
+            ##################################################
+            # Initialise the new functions in function_builder
+            ##################################################
+            l_func_shortname_ext_to_create = [ext_func_tr_only, ]
+            for func_shortname_ext in l_func_shortname_ext_to_create:
+                func_shortname_tr_pl_only = f"{get_function_planet_shortname(planet)}{ext_func_tr_only}"
+                function_builder.add_new_function(shortname=func_shortname_tr_pl_only)
+                function_builder.set_function_fullname(full_name=f"LC_sim_{func_shortname_tr_pl_only}{ext_func_fullname}", shortname=func_shortname_tr_pl_only)
 
-    ##############
-    # Add the time
-    ##############
-    for func_shortname in l_function_shortname:
-        time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=func_shortname,
-                                          multi=multi, get_times_from_datasets=get_times_from_datasets,
-                                          l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
-                                          exist_ok=True)
+            ##############
+            # Add the time
+            ##############
+            for func_shortname in l_function_shortname_4_planet:
+                time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=func_shortname,
+                                                  multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                                  l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                                  exist_ok=True)
 
-    ############################################################
-    # Initialise the preambule and return text for all functions
-    ############################################################
-    for func_shortname in l_function_shortname:
-        preambules[func_shortname] = ""
-        returns[func_shortname] = []
-        for i_inputoutput in range(len(l_inst_model)):
-            returns[func_shortname].append("")
+            ############################################################
+            # Initialise the preambule and return text for all functions
+            ############################################################
+            for func_shortname in l_function_shortname_4_planet:
+                if func_shortname not in preambules:
+                    preambules[func_shortname] = ""
+                if func_shortname not in returns:
+                    returns[func_shortname] = []
+                    for i_inputoutput in range(len(l_inst_model)):
+                        returns[func_shortname].append("")
 
-    #############################################################
-    # Add the parameters required for the model for all functions
-    #############################################################
-    # Add rhostar if needed
-    if parametrisation == "Multis":
-        for func_shortname in l_function_shortname:
-            function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+            ###############################################################
+            # Add the parameters required for the model for all instruments
+            ###############################################################
+            # Add rhostar if needed
+            if parametrisation == "Multis":
+                for func_shortname in l_function_shortname_4_planet:
+                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
 
-    # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
-    for planet in planets.values():
-        l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-        if parametrisation != "Multis":
-            l_param.append(planet.aR)
-        for param in l_param:
-            for func_shortname in l_whole_function_shortname + d_l_function_shortname_4_planet[planet.get_name()]:
-                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+            # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
+            l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
+            if parametrisation != "Multis":
+                l_param.append(planet.aR)
+            for param in l_param:
+                for func_shortname in l_function_shortname_4_planet:
+                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
 
-    # Add the LD coefficients
-    for instmod in l_inst_model:
-        for func_shortname in l_function_shortname:
-            LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-            LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-            for param in LD_mod.get_list_params(main=True):
-                function_builder.add_parameter(parameter=param, function_shortname=func_shortname)
+            ####################################################################
+            # Do the Model for each planet and each instrument and each function
+            ####################################################################
+            for func_shortname in l_function_shortname_4_planet:
 
-    ##############
-    # Batman model
-    ##############
-    if transit_imp == "batman":
-        ## Creation of the TransitParams instances and add them to the ldicts
-        for planet in planets.values():
-            for instmod in l_inst_model:
-                params_bat = TransitParams()
-                params_bat.per = 1.   # orbital period
-                params_bat.rp = 0.1   # planet radius(in stel radii)
-                params_bat.a = 15.    # semi-major axis(in stel radii)
-                params_bat.inc = 90.  # orbital inclination (in degrees)
-                params_bat.ecc = 0.   # eccentricity
-                params_bat.w = 90.    # long. of periastron (in deg.)
-                if get_times_from_datasets:
-                    time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]  # Time is the same for all function
-                else:
-                    if multi:
-                        time_arg_value = []
-                        for dst in l_dataset:
-                            time_arg_value.append(dst.get_time())
-                    else:
-                        time_arg_value = l_dataset[0].get_time()
-                if multi:
-                    t_mean = mean(time_arg_value[0])
-                else:
-                    t_mean = mean(time_arg_value)
-                params_bat.t0 = t_mean
-                LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                params_bat.limb_dark = LD_mod.ld_type  # LD model
-                params_bat.u = LD_mod.init_LD_values  # LDC init val
-                for func_shortname in l_whole_function_shortname + d_l_function_shortname_4_planet[planet.get_name()]:
-                    function_builder.add_variable_to_ldict(variable_name=f"params_{planet.get_name()}_{instmod.full_code_name}",
-                                                           variable_content=copy(params_bat), function_shortname=func_shortname, exist_ok=True)
-        ## writing the preambule and return (First preambuless after returns)
-        for planet in planets.values():
-            planet_name = planet.get_name()
-            for func_shortname in l_whole_function_shortname + d_l_function_shortname_4_planet[planet.get_name()]:
-                ## preambule: planetary parameter conversions
-                ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n"
-                function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}omega_{planet_name} = getomega_deg_fast({ecosw}, {esinw})\n"
-                cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n"
-                period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                if parametrisation == "Multis":
-                    rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
-                    function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                    preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n"
-                ## preambule: Modifing the parameter values in the TransitParams object
-                tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                if parametrisation == "Multis":
-                    aR = f"aR_{planet_name}\n"
-                else:
-                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
                 for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
                     instmod_fullname = instmod.full_code_name
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}\n"
-                    LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                    LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                    ld_param_list = "["
-                    for param in LD_mod.get_list_params(main=True):
-                        ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
-                    ld_param_list += "]"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.u = {ld_param_list}\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.limb_dark = '{LD_mod_name}'\n"
-                    preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n"""
-                    # preambule: Create the TransitModel object
-                    if get_times_from_datasets:
-                        time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]
-                        if multi:
-                            time_vect_value = time_arg_value[i_inputoutput]
+
+                    ####################################################################################
+                    # Get the transit model impletmentation definition for the planet and the instrument
+                    ####################################################################################
+                    model_definition_name = transit_model[planet_name]['model4instrument'][instmod.full_name]
+                    transit_model_pl_inst = transit_model[planet_name]['model_definitions'][model_definition_name]
+
+                    ##############
+                    # Batman model
+                    ##############
+                    if transit_model_pl_inst["model"] == "batman":
+                        ## Add the limb darkening parameters
+                        LD_mod_name = ldmodel4instmodfname[instmod_fullname][star.code_name]
+                        LD_mod = LDs[star.code_name + "_" + LD_mod_name]
+                        for param in LD_mod.get_list_params(main=True):
+                            if not(function_builder.is_parameter(parameter=param, function_shortname=func_shortname)):
+                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+                        ## Creation of the TransitParams instances and add them to the ldicts
+                        if not(function_builder.is_in_ldict(variable_name=f"params_{planet.get_name()}_{instmod.full_code_name}", function_shortname=func_shortname)):
+                            params_bat = TransitParams()
+                            params_bat.per = 1.   # orbital period
+                            params_bat.rp = 0.1   # planet radius(in stel radii)
+                            params_bat.a = 15.    # semi-major axis(in stel radii)
+                            params_bat.inc = 90.  # orbital inclination (in degrees)
+                            params_bat.ecc = 0.   # eccentricity
+                            params_bat.w = 90.    # long. of periastron (in deg.)
+                            if get_times_from_datasets:
+                                time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]  # Time is the same for all function
+                            else:
+                                if multi:
+                                    time_arg_value = []
+                                    for dst in l_dataset:
+                                        time_arg_value.append(dst.get_time())
+                                else:
+                                    time_arg_value = l_dataset[0].get_time()
+                            if multi:
+                                t_mean = mean(time_arg_value[0])
+                            else:
+                                t_mean = mean(time_arg_value)
+                            params_bat.t0 = t_mean
+                            LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
+                            LD_mod = LDs[star.code_name + "_" + LD_mod_name]
+                            params_bat.limb_dark = LD_mod.ld_type  # LD model
+                            params_bat.u = LD_mod.init_LD_values  # LDC init val
+                            function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
+                                                                   variable_content=params_bat, function_shortname=func_shortname, exist_ok=False)
+                        ## writing the preambule and return (First preambules after returns)
+                        ## preambule: Update the parameter values in the TransitParams object
+                        if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                            period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                            ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
+                            esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
+                            cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
+                                preambules[func_shortname] += f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n"
+                                function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
+                                preambules[func_shortname] += f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n"
+                                function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
+                                preambules[func_shortname] += f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n"
+                                function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
+                            if parametrisation == "Multis":
+                                if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
+                                    rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
+                                    function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
+                                    preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n"
+                                    function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
+                            tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                            Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
+                            if parametrisation == "Multis":
+                                aR = f"aR_{planet_name}\n"
+                            else:
+                                aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n"
+                            LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
+                            LD_mod = LDs[star.code_name + "_" + LD_mod_name]
+                            ld_param_list = "["
+                            for param in LD_mod.get_list_params(main=True):
+                                ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
+                            ld_param_list += "]"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.u = {ld_param_list}\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.limb_dark = '{LD_mod_name}'\n"
+                            preambules[func_shortname] += f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n"""
+                            function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
+                        ## preambule: Create the TransitModel object
+                        if get_times_from_datasets:
+                            if not(function_builder.is_in_ldict(variable_name=f"m_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                time_arg_value = function_builder.get_ldict(function_shortname=function_whole_shortname)[time_arg_name]
+                                if multi:
+                                    time_vect_value = time_arg_value[i_inputoutput]
+                                else:
+                                    time_vect_value = time_arg_value
+                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                if supersamp > 1:
+                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
+                                else:
+                                    kwargs_TransitModel = {}
+                                params_bat = function_builder.get_ldict(function_shortname=function_whole_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+                                m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
+                                function_builder.add_variable_to_ldict(variable_name=f"m_{planet_name}_{instmod_fullname}_dst{dst.number}",
+                                                                       variable_content=m_bat, function_shortname=func_shortname, exist_ok=False)
                         else:
-                            time_vect_value = time_arg_value
+                            if not(function_builder.is_done_in_text(name=f"m_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                if supersamp > 1:
+                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
+                                else:
+                                    supersamp_text = ""
+                                function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
+                                preambules[func_shortname] += f"{tab}m_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n"
+                                function_builder.add_to_done_in_text(name=f"m_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                        ## writing the returns
+                        if returns[func_shortname][i_inputoutput] == "":
+                            pre_text = ""
+                        else:
+                            pre_text = " + "
+                        returns[func_shortname][i_inputoutput] += f"{pre_text}m_{planet_name}_{instmod_fullname}_dst{dst.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1 "
+
+                    #################
+                    # Pytransit model
+                    #################
+                    elif transit_model_pl_inst["model"] == "pytransit":
+                        ## Add the limb darkening parameters
+                        LD_mod_name = ldmodel4instmodfname[instmod_fullname][star.code_name]
+                        LD_mod = LDs[star.code_name + "_" + LD_mod_name]
+                        for param in LD_mod.get_list_params(main=True):
+                            if not(function_builder.is_parameter(parameter=param, function_shortname=func_shortname)):
+                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=False)
+                        ## writing the preambule and return (First preambuless after returns)
+                        ## preambule: planetary parameter conversions
+                        ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
+                        esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
+                        function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
+                        preambules[func_shortname] += f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n"
+                        function_builder.add_variable_to_ldict(variable_name="getomega_fast", variable_content=getomega_fast, function_shortname=func_shortname, exist_ok=True)
+                        preambules[func_shortname] += f"{tab}omega_{planet_name} = getomega_fast({esinw}, {ecosw})\n"
+                        cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
+                        function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
+                        preambules[func_shortname] += f"{tab}inc_{planet_name} = acos({cosinc})\n"
+                        period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                        if parametrisation == "Multis":
+                            rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
+                            function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
+                            preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, degrees(omega_{planet_name}))\n"
+                        # Get the text for the remaining planet parameters
+                        if parametrisation == "Multis":
+                            aR = f"aR_{planet_name}\n"
+                        else:
+                            aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
+                        tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                        Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
+                        # Create the Model and add it the the ldict
+                        LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
+                        LD_mod = LDs[star.code_name + "_" + LD_mod_name]
                         supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
                         if supersamp > 1:
                             exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                            kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
+                            m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime, model=LD_mod.ld_type)
                         else:
-                            kwargs_TransitModel = {}
-                        params_bat = function_builder.get_ldict(function_shortname=function_whole_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                        m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
-                        function_builder.add_variable_to_ldict(variable_name=f"m_{planet_name}_{instmod_fullname}_dst{dst.number}",
-                                                               variable_content=m_bat, function_shortname=func_shortname, exist_ok=False)
-                    else:
+                            m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime, model=LD_mod.ld_type)
+                        function_builder.add_variable_to_ldict(variable_name=f"m_{instmod_fullname}",
+                                                               variable_content=m_pytransit, function_shortname=func_shortname, exist_ok=False)
+                        ## Writing the returns
+                        if returns[func_shortname][i_inputoutput] == "":
+                            pre_text = ""
+                        else:
+                            pre_text = " + "
                         if multi:
                             time_vect = f"{time_arg_name}[{i_inputoutput}]"
                         else:
                             time_vect = f"{time_arg_name}"
-                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                        if supersamp > 1:
-                            exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                            supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
-                        else:
-                            supersamp_text = ""
-                        function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
-                        preambules[func_shortname] += f"{tab}m_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n"
+                        ld_param_list = "["
+                        for param in LD_mod.get_list_params(main=True):
+                            ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
+                        ld_param_list += "]"
+                        returns[func_shortname][i_inputoutput] += f"m_{instmod_fullname}.evaluate({time_vect}, {Rrat}, {ld_param_list}, {tic}, {period}, {aR}, inc_{planet_name}, ecc_{planet_name}, omega_{planet_name}) - 1 "
 
-                    ## writing the returns
-                    if returns[func_shortname][i_inputoutput] == "":
-                        pre_text = ""
+                    ########################
+                    # No other model for now
+                    ########################
                     else:
-                        pre_text = " + "
-                    returns[func_shortname][i_inputoutput] += f"{pre_text}m_{planet_name}_{instmod_fullname}_dst{dst.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1 "
-    #################
-    # Pytransit model
-    #################
-    elif transit_imp == "pytransit":
-        ## writing the preambule and return (First preambuless after returns)
-        for planet in planets.values():
-            planet_name = planet.get_name()
-            for func_shortname in l_whole_function_shortname + d_l_function_shortname_4_planet[planet.get_name()]:
-                ## preambule: planetary parameter conversions
-                ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n"
-                function_builder.add_variable_to_ldict(variable_name="getomega_fast", variable_content=getomega_fast, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}omega_{planet_name} = getomega_fast({esinw}, {ecosw})\n"
-                cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                preambules[func_shortname] += f"{tab}inc_{planet_name} = acos({cosinc})\n"
-                period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                if parametrisation == "Multis":
-                    rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
-                    function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                    function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                    preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, degrees(omega_{planet_name}))\n"
-                # Get the text for the remaining planet parameters
-                if parametrisation == "Multis":
-                    aR = f"aR_{planet_name}\n"
-                else:
-                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-                tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
-                    # Create the Model and add it the the ldict
-                    LD_mod_name = ldmodel4instmodfname[i_instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                    LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                    if supersamp > 1:
-                        exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                        m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime, model=LD_mod.ld_type)
-                    else:
-                        m_pytransit = MandelAgol(supersampling=supersamp, exptime=exptime, model=LD_mod.ld_type)
-                    function_builder.add_variable_to_ldict(variable_name=f"m_{instmod_fullname}",
-                                                           variable_content=m_pytransit, function_shortname=func_shortname, exist_ok=False)
-                    ## Writing the returns
-                    if returns[func_shortname][i_inputoutput] == "":
-                        pre_text = ""
-                    else:
-                        pre_text = " + "
-                    if multi:
-                        time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                    else:
-                        time_vect = f"{time_arg_name}"
-                    ld_param_list = "["
-                    for param in LD_mod.get_list_params(main=True):
-                        ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
-                    ld_param_list += "]"
-                    returns[func_shortname][i_inputoutput] += f"m_{instmod_fullname}.evaluate({time_vect}, {Rrat}, {ld_param_list}, {tic}, {period}, {aR}, inc_{planet_name}, ecc_{planet_name}, omega_{planet_name}) - 1 "
-    ########################
-    # No other model for now
-    ########################
-    else:
-        raise ValueError(f"Transit model {transit_imp} is not recognized.")
+                        raise ValueError(f"Transit model {transit_model_pl_inst['model']} is not recognized.")
 
     return preambules, returns
 
 
-def get_phasecurve(multi, l_inst_model, phasecurve_model, dico_l_LD_parcont, dico_l_LD_param_list, parametrisation,
-                   key_whole, key_param, SSE4instmodfname, star, planets, ext_plonly, arg_list, param_nb, ldict,
-                   tab, did_transit,
-                   rhostar, params_planet, params_planet_only, params_whole,
-                   time_vec_name=time_vec, l_time_vec_name=l_time_vec,):
+def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phasecurve_model,
+                   parametrisation, SSE4instmodfname, star, planets, tab,
+                   time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
+                   ):
     """Provide the text for the phase curve part of the LC model text (preambule and return).
 
     Arguments
@@ -1039,347 +1055,262 @@ def get_phasecurve(multi, l_inst_model, phasecurve_model, dico_l_LD_parcont, dic
         True if the datasim function needs to give multiple outputs.
     l_inst_model            : list_of_Instrument_Model
         List of the instrument models instances for each output of the datasim function.
+    l_dataset               : list of Datasets
+        List of the Dataset intances for each output of the datasim function. The instrument model to be used for
+        each dataset is provided in l_inst_model.
+    get_times_from_datasets : bool
+        If True the times at which the model should be computed will be taken from the datasets and
+        included into the function. I False the user of the function will have to provide the times.
     phasecurve_model        : dict
         Dictionary describing the phasecurve model to use. The format of this disctionary is:
-        {"do": True,  # Should we model the transit
-         'instrument_variable': False,  # Whether or not different instruemnt can have different transit model
-         'all_instruments': [{'model': "spiderman", #String refering to the transit model to use (can be 'spiderman')
-                              "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
-                                       "attributes": {}
-                              }
-                             ]
-         'instrument_specific': {'<instrument_full_name>': 'all_instruments' # all instrument or dictionary like the 'all_instruments' one
-                                 }
+        {"<planet name >": {"do": <bool>  # Should we model the transit
+                            'model_definitions': {"<model name>": {"model": '<name of the model like spiderman>', "args": {<arguments of the model specific to each model>, ...}}, ...}
+                            'model4instrument': {"<instrument model full name>": ["<model name in model_definitions>", ...],  # List of all the components
+                                                 ...}
+                            },
+         ...
          }
-    dico_l_LD_parcont        : dict_of_list_of_LD
-        Dictionary providing, for all functions specified by key_arglist, the list of limb darkening models
-        (parameter container object) associated with the Instrument_Model instances in l_inst_model.
-        Format of the dictionary:
-        - key : key or keys specificied by key_arglist
-        - value: List = [<LD parameter container for instrument1>, ...]
-    dico_l_LD_param_list     : dict_of_list_of_str
-        Dictionary providing, for all functions specified by key_arglist, the list of string which themself
-        write the list of limb darkening parameters values associated with the Instrument_Model instances
-        in l_inst_model.
-        Format of the dictionary:
-        - key : key or keys specificied by key_arglist
-        - value: List = ["[<value for LD param1 for instrument1> , <value for LD param2 for instrument1>, ...]", ...]
     parametrisation          : str
         string refering to the parametrisation to use
-    key_whole                : str
-        Key used in arg_list for the function simulating the whole system (all planets together)
-    key_param                : str
-        Key used for the parameters entry of arg_list values
     SSE4instmodfname         : dict of dict of str int and float
         Dictionary giving the supersampling factor and the exposure time to use for each instrument model
         Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
+        WARNING: CURRENTLY NOT USED
     star                     : Star object
         Star instance of the parent star
     planets                  : dict of Planets
         Dictionary of Planet instance providing the planets in the system
         Format: {"planet name": Planet instance}
-    ext_plonly               : str
-        extension to the planet name used for planet only model (without star, nor instrument)
-    arg_list                 : dict_of_dict_of_list_of_str
-        dictionary giving the arguments of the functions currently being produced with the following format:
-        - key = str designating the function being built and provided by key_arglist.
-        - value = dict with three str keys and values
-            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
-            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
-            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
-        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
-        of sub-dictionaries specified by key_arglist.
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    param_nb                 : dict_of_int
-        dictionary giving the current number of free parameters in the function being produced.
-        key = str key designating part of the system or the whole system
-        value = int giving the current number of parameter in the model
-        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    ldict                    : dict_of_dict
-        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
-        - key = str key designating part of the system or the whole system
-        - value = dictionary
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
     tab                      : str
         String providing the space to put in front of each new line
-    did_transit              : bool
-        If True the transit model (pre) was alredy done
-    rhostar                  : dict_of_str
-        Dictionary providing the str to use in the function for rhostar for all function available in arg_list
-        Format:
-        - key: str designating the function being built and provided by key_arglist.
-        - value: str to use for rhostar for this function
-    params_planet            : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
-    params_planet_only       : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
-    params_whole             : dict_of_dict_of_str
-        Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
-        Format:
-        - key: planet name
-        - value: dict_of_str with the following format
-            - key: Parameter full name
-            - value: str to use for this parameter for this function
     time_vec_name       : str
         Str used to designate the time vector
     l_time_vec_name     : str
         Str used to designate the list of time vectors
+    function_builder            : FunctionBuilder
+        FunctionBuilder instance
+    ext_func_fullname           : str
+        Extension to add and the end of the full name of the function simulating the transit only
+        which is defined by this function in the function_builder
 
     Returns
     -------
-    preambule_pc_planet         : dict of str
-        For each planet this dictionary give the preambule for the phasecurve model to be added to the datasimulator function
-        of the planet model
-    preambule_pc_planet_only    : dict of str
-        For each planet this dictionary give the preambule for the phasecurve model to be added to the datasimulator function
-        of the planet only model
-    preambule_pc_whole          : str
-        Preambule for the phase curve model to be added to the datasimulator function of the whole system model
-    d_l_return_pl         : dict of list of str
-        For each planet this dictionary give the list of the phasecurve models for each instrument
-    d_l_return_pl_only    : dict of list of str
-        For each planet this dictionary give the list of the phasecurve models planet only for each instrument
-    l_pc_whole_planets  : list of str
-        List of phasecurve model for all planets combined for each instrument
+    preambules  : dict of str
+        Dictionary of string giving the preambule for the transit model for each function
+    returns     : dict of list of str
+        Dictionary of list of str giving the return for transit model for each function and each output
     """
-    # dico to store_text for stellar params
-    star_param_text = {}
+    ########################
+    # Initialise the outputs
+    ########################
+    preambules = {}
+    returns = {}
 
-    preambule_pl = {}
-    preambule_pl_only = {}
-    preambule_whole = ""
-    d_l_return_pl = {}
-    d_l_return_pl_only = {}
-    l_return_whole = []
+    # Extension for the shortname of the function that do the transit only model
+    ext_func_pc_only = "_tr"
 
-    for jj, planet in enumerate(planets.values()):
-
+    ##############################
+    # Do the Model for each planet
+    ##############################
+    for planet in planets.values():
         planet_name = planet.get_name()
+        if phasecurve_model[planet_name]['do']:
+            ########################################################################
+            # Define the functions to populate and initialise entries in the outputs
+            ########################################################################
+            # Defines the lists of function shortnames and add the new transit only function into the function builder
+            l_whole_function_shortname = [function_whole_shortname, ]
+            l_planet_function_shortname_ext = ["", ext_func_pc_only]
+            l_planet_function_shortname = []
+            for planet_func_shortname_ext in l_planet_function_shortname_ext:
+                l_planet_function_shortname.append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
+            l_function_shortname_4_planet = l_whole_function_shortname + l_planet_function_shortname
 
-        preambule_pl[planet_name] = ""
-        preambule_pl_only[planet_name] = ""
-        d_l_return_pl[planet_name] = []
-        d_l_return_pl_only[planet_name] = []
+            ##################################################
+            # Initialise the new functions in function_builder
+            ##################################################
+            l_func_shortname_ext_to_create = [ext_func_pc_only, ]
+            for func_shortname_ext in l_func_shortname_ext_to_create:
+                func_shortname_pc_pl_only = f"{get_function_planet_shortname(planet)}{ext_func_pc_only}"
+                function_builder.add_new_function(shortname=func_shortname_pc_pl_only)
+                function_builder.set_function_fullname(full_name=f"LC_sim_{func_shortname_pc_pl_only}{ext_func_fullname}", shortname=func_shortname_pc_pl_only)
 
-        for kk, pc_comp in enumerate(phasecurve_model['all_instruments']):
-            pc_model = pc_comp['model']
+            ##############
+            # Add the time
+            ##############
+            for func_shortname in l_function_shortname_4_planet:
+                time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=func_shortname,
+                                                  multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                                  l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                                  exist_ok=True)
 
-            if pc_model == "spiderman":
+            ############################################################
+            # Initialise the preambule and return text for all functions
+            ############################################################
+            for func_shortname in l_function_shortname_4_planet:
+                if func_shortname not in preambules:
+                    preambules[func_shortname] = ""
+                if func_shortname not in returns:
+                    returns[func_shortname] = []
+                    for i_inputoutput in range(len(l_inst_model)):
+                        returns[func_shortname].append("")
 
-                brightness_model = pc_comp["args"]["ModelParams_kwargs"]["brightness_model"]
-                if ('lightcurve_kwargs' in pc_comp["args"]) and (len(pc_comp["args"]['lightcurve_kwargs']) > 0):
-                    for key in [planet_name, planet_name + ext_plonly, key_whole]:
-                        ldict[key]['lightcurve_kwargs'] = pc_comp["args"]['lightcurve_kwargs']
-                    lightcurve_kwargs = ", **lightcurve_kwargs"
-                else:
-                    lightcurve_kwargs = ""
+            ####################################################################
+            # Do the Model for each planet and each instrument and each function
+            ####################################################################
+            for func_shortname in l_function_shortname_4_planet:
+                for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
+                    instmod_fullname = instmod.full_code_name
 
-                if (brightness_model == "zhang"):
-                    ########################################################################################################
-                    # Produce the text for the model parameters and for the different function planet, planet only and whole
-                    ########################################################################################################
-                    if star.Teff.get_name() not in star_param_text:
-                        star_param_text[star.Teff.get_name()] = add_param_argument(param=star.Teff, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
-                                                                                   key_arglist=None, param_vector_name=par_vec_name)
+                    ########################################################################################
+                    # Get the phase curve model impletmentation definition for the planet and the instrument
+                    ########################################################################################
+                    l_pc_model_comp_pl_inst = phasecurve_model[planet_name]['model4instrument'][instmod.full_name]
 
-                    # Create the additional planetary model parameters for the phasecurve model
-                    l_params = [planet.u1, planet.u2, planet.a, planet.xi, planet.deltaT, planet.Tn]
-                    for param in l_params:
-                        param_text = add_param_argument(param=param, arg_list=arg_list, key_param=key_param, param_nb=param_nb,
-                                                        key_arglist=[key_whole, planet_name, planet_name + ext_plonly],
-                                                        param_vector_name=par_vec_name)
-                        params_whole[planet_name][param.get_name()] = param_text[key_whole]
-                        params_planet[planet_name][param.get_name()] = param_text[planet_name]
-                        params_planet_only[planet_name][param.get_name()] = param_text[planet_name + ext_plonly]
+                    # For each component of the phasec curve model
+                    for component_name in l_pc_model_comp_pl_inst:
+                        pc_component_model = phasecurve_model[planet_name]['model_definitions'][component_name]
 
-                    ######################################################
-                    # Produce the template for phase curve model preambule
-                    ######################################################
-                    if not(did_transit):
-                        template_preambule_pl = dedent(f"""
-                            {{tab}}ecc_{planet_name} = sqrt({{ecosw}} * {{ecosw}} + {{esinw}} * {{esinw}})
-                            {{tab}}omega_{planet_name} = getomega_deg_fast({{ecosw}}, {{esinw}})
-                            {{tab}}inc_{planet_name} = degrees(acos({{cosinc}}))""")
-                        if parametrisation == "Multis":
-                            template_preambule_pl += dedent(f"""
-                        {{tab}}aR_{planet_name} = getaoverr({{P}}, {{rhostar}}, ecc_{planet_name}, omega_{planet_name})""")
-                    else:
-                        template_preambule_pl = ""
-
-                    done_preambule4instmodel = []
-                    for ii, instmdl in enumerate(l_inst_model):
-                        instmod_name = instmdl.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})
-                        # Define extension for the name of spiderman ModelParams instances
-                        sp_param_ext = get_planet_inst_dst_ext(planet=planet, inst_model=instmdl, multi=multi)
-                        params_pl_inst = f"param_spiderman{sp_param_ext}"
-                        if instmod_name not in done_preambule4instmodel:
-                            for key in [planet_name, planet_name + ext_plonly, key_whole]:
-                                ldict[key][params_pl_inst] = ModelParams(**pc_comp["args"]["ModelParams_kwargs"])
-                            template_preambule_pl += dedent(f"""
-                                {{tab}}{params_pl_inst}.t0 = {{tic}}
-                                {{tab}}{params_pl_inst}.per = {{P}}
-                                {{tab}}{params_pl_inst}.a_abs = {{a}}
-                                {{tab}}{params_pl_inst}.rp = {{Rrat}}
-                                {{tab}}{params_pl_inst}.inc = inc_{planet_name}
-                                {{tab}}{params_pl_inst}.ecc = ecc_{planet_name}
-                                {{tab}}{params_pl_inst}.w = omega_{planet_name}
-                                {{tab}}{params_pl_inst}.p_u1 = {{u1}}
-                                {{tab}}{params_pl_inst}.p_u2 = {{u2}}
-                                {{tab}}{params_pl_inst}.xi = {{xi}}
-                                {{tab}}{params_pl_inst}.T_n = {{Tn}}
-                                {{tab}}{params_pl_inst}.delta_T = {{deltaT}}
-                                {{tab}}{params_pl_inst}.T_s = {{Ts}}""")
-                            if parametrisation == "Multis":
-                                template_preambule_pl += dedent(f"""
-                                    {{tab}}{params_pl_inst}.a = aR_{planet_name}
-                                    """)
+                        ##################
+                        # Spiderman models
+                        ##################
+                        if pc_component_model["model"] == "spiderman":
+                            brightness_model = pc_component_model["args"]["ModelParams_kwargs"]["brightness_model"]
+                            # Add the lightcurve_kwargs to ldict
+                            if ('lightcurve_kwargs' in pc_component_model["args"]) and (len(pc_component_model["args"]['lightcurve_kwargs']) > 0):
+                                if not(function_builder.is_in_ldict(variable_name=f"{component_name}_lightcurve_kwargs", function_shortname=func_shortname)):
+                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model["args"]['lightcurve_kwargs'],
+                                                                           function_shortname=func_shortname, exist_ok=True)
+                                lightcurve_kwargs = f", **{component_name}_lightcurve_kwargs"
                             else:
-                                template_preambule_pl += dedent(f"""
-                                    {{tab}}{params_pl_inst}.a = {{aR}}
-                                    """)
-                            # Add the non free parameters attribute to params_spiderman
-                            spiderman_dico_attr = copy(pc_comp["args"]["attributes"])
-                            filter = spiderman_dico_attr.pop("filter", None)
-                            n_layers = spiderman_dico_attr.pop("n_layers", 5)
-                            l1 = spiderman_dico_attr.pop("l1")
-                            l2 = spiderman_dico_attr.pop("l2")
-                            if filter is not None:
-                                template_preambule_pl += dedent(f"""
-                                    {{tab}}{params_pl_inst}.filter = '{filter}'
-                                    """)
-                            template_preambule_pl += dedent(f"""
-                                {{tab}}{params_pl_inst}.l1 = {l1}
-                                {{tab}}{params_pl_inst}.l2 = {l2}
-                                {{tab}}{params_pl_inst}.n_layers = {n_layers}
-                                """)
-                            ############################################################################################################
-                            # Fill the template for phase curve model preambule for the different function planet, planet only and whole
-                            ############################################################################################################
-                            preambule_pl[planet.get_name()] += (
-                                template_preambule_pl.format(ecosw=params_planet[planet_name]["ecosw"],
-                                                             esinw=params_planet[planet_name]["esinw"],
-                                                             tic=params_planet[planet_name]["tic"],
-                                                             cosinc=params_planet[planet_name]["cosinc"],
-                                                             P=params_planet[planet_name]["P"],
-                                                             Rrat=params_planet[planet_name]["Rrat"],
-                                                             aR=params_planet[planet_name]["aR"],
-                                                             a=params_planet[planet_name]["a"],
-                                                             u1=params_planet[planet_name]["u1"],
-                                                             u2=params_planet[planet_name]["u2"],
-                                                             xi=params_planet[planet_name]["xi"],
-                                                             deltaT=params_planet[planet_name]["deltaT"],
-                                                             Tn=params_planet[planet_name]["Tn"],
-                                                             rhostar=rhostar[planet_name],
-                                                             Ts=star_param_text[star.Teff.get_name()][planet_name],
-                                                             # ltime_vec=l_time_vec, time_vec=time_vec,
-                                                             tab=tab
-                                                             ))
-                            preambule_pl_only[planet_name] += (
-                                template_preambule_pl.format(ecosw=params_planet_only[planet_name]["ecosw"],
-                                                             esinw=params_planet_only[planet_name]["esinw"],
-                                                             tic=params_planet_only[planet_name]["tic"],
-                                                             cosinc=params_planet_only[planet_name]["cosinc"],
-                                                             P=params_planet_only[planet_name]["P"],
-                                                             Rrat=params_planet_only[planet_name]["Rrat"],
-                                                             aR=params_planet_only[planet_name]["aR"],
-                                                             a=params_planet_only[planet_name]["a"],
-                                                             u1=params_planet_only[planet_name]["u1"],
-                                                             u2=params_planet_only[planet_name]["u2"],
-                                                             xi=params_planet_only[planet_name]["xi"],
-                                                             deltaT=params_planet_only[planet_name]["deltaT"],
-                                                             Tn=params_planet_only[planet_name]["Tn"],
-                                                             rhostar=rhostar[planet_name + ext_plonly],
-                                                             Ts=star_param_text[star.Teff.get_name()][planet_name + ext_plonly],
-                                                             # ltime_vec=l_time_vec, time_vec=time_vec,
-                                                             tab=tab
-                                                             ))
-                            preambule_whole += (template_preambule_pl.
-                                                format(ecosw=params_whole[planet_name]["ecosw"],
-                                                       esinw=params_whole[planet_name]["esinw"],
-                                                       tic=params_whole[planet_name]["tic"],
-                                                       cosinc=params_whole[planet_name]["cosinc"],
-                                                       P=params_whole[planet_name]["P"],
-                                                       Rrat=params_whole[planet_name]["Rrat"],
-                                                       aR=params_whole[planet_name]["aR"],
-                                                       a=params_whole[planet_name]["a"],
-                                                       u1=params_whole[planet_name]["u1"],
-                                                       u2=params_whole[planet_name]["u2"],
-                                                       xi=params_whole[planet_name]["xi"],
-                                                       deltaT=params_whole[planet_name]["deltaT"],
-                                                       Tn=params_whole[planet_name]["Tn"],
-                                                       rhostar=star_param_text[star.Teff.get_name()][key_whole],
-                                                       Ts=star_param_text[star.Teff.get_name()][key_whole],
-                                                       # ltime_vec=l_time_vec, time_vec=time_vec,
-                                                       tab=tab
-                                                       ))
-                            done_preambule4instmodel.append(instmod_name)
-                        ####################################################
-                        # Produce the template for phase curve model returns
-                        ####################################################
-                        if multi:
-                            ret_pl = (f"{params_pl_inst}.lightcurve({l_time_vec_name}[{ii}]{lightcurve_kwargs}) - 1 ")
+                                lightcurve_kwargs = ""
+
+                            ####################################
+                            # Brightness model Zhang Thermal map
+                            ####################################
+                            if (brightness_model == "zhang"):
+                                ###########################################
+                                # Add the parameters required for the model
+                                ###########################################
+                                # Stellar parameters: Teff and rhostar if needed
+                                function_builder.add_parameter(parameter=star.Teff, function_shortname=func_shortname, exist_ok=True)
+                                if parametrisation == "Multis":
+                                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+                                # Create the planetary model parameters that are model independent
+                                l_param = [planet.a, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
+                                if parametrisation != "Multis":
+                                    l_param.append(planet.aR)
+                                for param in l_param:
+                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+                                # Create the planetary model parameters that are model dependent
+                                # TODO: Actually have different parameters for different model components.
+                                l_param = [planet.u1, planet.u2, planet.xi, planet.deltaT, planet.Tn, planet.Rrat]
+                                for param in l_param:
+                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+
+                                ####################################################################
+                                # Writing the preambule and return (First preambules, after returns)
+                                ####################################################################
+                                ## Creation of the TransitParams instances and add them to the ldicts
+                                if not(function_builder.is_in_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                    params_spider = ModelParams(**pc_component_model["args"]["ModelParams_kwargs"])
+                                    function_builder.add_variable_to_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}",
+                                                                           variable_content=params_spider, function_shortname=func_shortname, exist_ok=False)
+                                ## preambule: define ecc, omega, inc, aR if needed in the preambule and get text for orbital parameters
+                                if not(function_builder.is_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                                    ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
+                                    esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
+                                    cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
+                                    if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
+                                        function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
+                                        preambules[func_shortname] += f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n"
+                                        function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
+                                    if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
+                                        function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
+                                        preambules[func_shortname] += f"{tab}omega_{planet_name} = getomega_deg_fast({ecosw}, {esinw})\n"
+                                        function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
+                                    if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
+                                        function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
+                                        function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
+                                        preambules[func_shortname] += f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n"
+                                        function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
+                                    if parametrisation == "Multis":
+                                        if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
+                                            rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
+                                            function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
+                                            preambules[func_shortname] += f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n"
+                                            function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
+                                    ## preambule: Update the parameter values in the TransitParams object
+                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                                    Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
+                                    a_au = function_builder.get_text_4_parameter(parameter=planet.a, function_shortname=func_shortname)
+                                    u1 = function_builder.get_text_4_parameter(parameter=planet.u1, function_shortname=func_shortname)
+                                    u2 = function_builder.get_text_4_parameter(parameter=planet.u2, function_shortname=func_shortname)
+                                    xi = function_builder.get_text_4_parameter(parameter=planet.xi, function_shortname=func_shortname)
+                                    Tn = function_builder.get_text_4_parameter(parameter=planet.Tn, function_shortname=func_shortname)
+                                    deltaT = function_builder.get_text_4_parameter(parameter=planet.deltaT, function_shortname=func_shortname)
+                                    Teff = function_builder.get_text_4_parameter(parameter=star.Teff, function_shortname=func_shortname)
+                                    if parametrisation == "Multis":
+                                        aR = f"aR_{planet_name}\n"
+                                    else:
+                                        aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.t0 = {tic}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.per = {period}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a_abs = {a_au}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.rp = {Rrat}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u1 = {u1}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u1 = {u2}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.xi = {xi}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_n = {Tn}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.delta_T = {deltaT}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_s = {Teff}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a = {aR}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l1  = {pc_component_model['args']['attributes']['l1']}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l2 = {pc_component_model['args']['attributes']['l2']}"
+                                    preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.n_layers = {pc_component_model['args']['attributes'].get('n_layers', 5)}"
+                                    if "filter" in pc_component_model["args"]["attributes"]:
+                                        preambules[func_shortname] += f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.filter = {pc_component_model['args']['attributes']['filter']}"
+                                    function_builder.add_to_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
+
+                                ####################################################
+                                # Produce the template for phase curve model returns
+                                ####################################################
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                if get_times_from_datasets:
+                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    if supersamp > 1:
+                                        logger.warning("Currently the spiderman model doesn't include supersampling !")
+                                if returns[func_shortname][i_inputoutput] == "":
+                                    pre_text = ""
+                                else:
+                                    pre_text = " + "
+                                returns[func_shortname][i_inputoutput] = f"{pre_text}param_spiderman_{planet_name}_{instmod_fullname}.lightcurve({time_vect}{lightcurve_kwargs}) - 1 "
+
+                            ##################################
+                            # No other brightnee model for now
+                            ##################################
+                            else:
+                                raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
+
+                        ########################
+                        # No other model for now
+                        ########################
                         else:
-                            ret_pl = (f"{params_pl_inst}.lightcurve({time_vec_name}{lightcurve_kwargs}) - 1 ")
-                        ##########################################################################################################
-                        # Fill the template for phase curve model returns for the different function planet, planet only and whole
-                        ##########################################################################################################
-                        # No need for case for same reason than above
-                        if kk == 0:
-                            d_l_return_pl[planet_name].append(ret_pl)
-                            d_l_return_pl_only[planet_name].append(ret_pl)
-                            if jj == 0:
-                                l_return_whole.append(ret_pl)
-                        else:
-                            d_l_return_pl[planet_name] += "+ " + ret_pl
-                            d_l_return_pl_only[planet_name] += "+ " + ret_pl
-                            l_return_whole[ii] += "+ " + ret_pl
-                else:
-                    raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
-            else:
-                raise NotImplementedError(f"phasecurve model {pc_model} is not implemented.")
-    return (preambule_pl, preambule_pl_only, preambule_whole,
-            d_l_return_pl, d_l_return_pl_only, l_return_whole,
-            )
+                            raise NotImplementedError(f"phasecurve model {pc_component_model['model']} is not implemented.")
+
+    return preambules, returns
 
 
-def get_planet_inst_dst_ext(planet, inst_model, multi):
-    """Return the extension to use for the name of spiderman param instance
-
-    Arguments
-    ---------
-    planet      : Planet
-        Planet instance to which the spiderman param instance will correspond
-    inst_model  : Instrument_Model
-        Instrument model instance to which the spiderman param instance will correspond
-    multi       : bool
-
-    Returns
-    -------
-    sp_param_ext    : string
-        Extension to use for the name of spiderman param instance
-    """
-    if multi:
-        sp_param_ext = f"_{planet.get_name()}_{inst_model.get_name(include_prefix=True, code_version=True, prefix_kwargs={'include_prefix': False, 'code_version': True})}"
-    else:
-        sp_param_ext = f"_{planet.get_name()}"
-    return sp_param_ext
-
-
-def get_decorrelation(multi, planets, l_inst_model, l_dataset,
-                      arguments, decorrelation_config, dataset_db, param_nb, arg_list,
-                      key_param, key_mand_kwargs, key_opt_kwargs, key_whole, ldict, ext_plonly, LCcat_model,
-                      time_arg_name):
+def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets, decorrelation_config,
+                      dataset_db, LCcat_model, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
+                      ext_func_fullname):
     """Provide the text for the decorrelation of the LC model text (return).
 
     It should provide the text for decorrelation model for all functions (planet, planet_only, whole)
@@ -1401,110 +1332,94 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset,
     l_dataset               : list of Datasets
         List of the Dataset intances for each output of the datasim function. The instrument model to be used for
         use for each dataset is provided in l_inst_model.
-    arguments               :
-    decorrelation_config    :
+    get_times_from_datasets : bool
+        If True the times at which the model should be computed will be taken from the datasets and
+        included into the function. I False the user of the function will have to provide the times.
+    decorrelation_config    : dict
+        Dictionary describing the decorrelation model to use. The format of this disctionary is:
+        {}
     dataset_db              : DatasetDatabase
         Dataset database to access the dataset for the decorrelation.
-    param_nb                : dict_of_int
-        dictionary giving the current number of free parameters in the function being produced.
-        key = str key designating part of the system or the whole system
-        value = int giving the current number of parameter in the model
-        Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    arg_list                 : dict_of_dict_of_list_of_str
-        dictionary giving the arguments of the functions currently being produced with the following format:
-        - key = str designating the function being built and provided by key_arglist.
-        - value = dict with three str keys and values
-            - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
-            - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
-            - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
-        If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
-        of sub-dictionaries specified by key_arglist.
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    key_param                : str
-        Key used for the parameters entry of arg_list values
-    key_mand_kwargs          : str
-        Key used for the mandatory keyword argument entry of arg_list
-    key_opt_kwargs           : str
-        Key used for the optional keyword argument entry of arg_list
-    key_whole                : str
-        Key used in arg_list for the function simulating the whole system (all planets together)
-    ldict                    : dict_of_dict
-        Dictionary giving the dictionaries to be used as local dictionary argument of the exec functions.
-        - key = str key designating part of the system or the whole system
-        - value = dictionary
-        THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-    ext_plonly               : str
-        extension to the planet name used for planet only model (without star, nor instrument)
     LCcat_model              : LC_InstCat_Model
         LC_InstCat_Model instance for the current model
-    time_arg_name            : str
-        Str used to designate the time vector(s)
+    time_vec_name       : str
+        Str used to designate the time vector
+    l_time_vec_name     : str
+        Str used to designate the list of time vectors
+    function_builder            : FunctionBuilder
+        FunctionBuilder instance
+    ext_func_fullname           : str
+        Extension to add and the end of the full name of the function simulating the transit only
+        which is defined by this function in the function_builder
 
     Returns
     -------
-    d_l_decorr_planet         : dict of list of dict
-        dictionary which for each planet give the list which for each instrument gives the dictionary providing the decorrelation model for each part of the LC model
-    d_l_decorr_planet_only    : dict of list of dict
-        dictionary which for each planet give the list which for each instrument gives the dictionary providing the decorrelation model planet only for each part of the LC model
-    l_decorr_whole            : list of dict
-        list which for each instrument gives the dictionary providing the decorrelation model of the whole system for each part of the LC model
+    returns     : dict of list of str
+        Dictionary of list of str giving the return for transit model for each function and each output
     """
-    # Create the decorrelation models for each planet and planet_only functions
-    d_l_decorr_planet = {}
-    d_l_decorr_planet_only = {}
-    for jj, planet in enumerate(planets.values()):
-        d_l_decorr_planet[planet.get_name()] = []
-        d_l_decorr_planet_only[planet.get_name()] = []
-        for l_decorr, key_func in zip([d_l_decorr_planet[planet.get_name()], d_l_decorr_planet_only[planet.get_name()]],
-                                      [f"{planet.get_name(include_prefix=False)}", f"{planet.get_name(include_prefix=False)}{ext_plonly}"]):
-            for ii, inst_mod_obj in enumerate(l_inst_model):
-                l_decorr.append({})
-                l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == inst_mod_obj]
-                if decorrelation_config[inst_mod_obj.full_name]["do"]:
-                    for model_part, config_decorr_instmod_modelpart in decorrelation_config[inst_mod_obj.full_name]["what to decorrelate"].items():
-                        l_decorr[ii][model_part] = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=ii, l_dataset_name_instmod=l_dataset_name_instmod,
-                                                                                  dataset_db=dataset_db,
-                                                                                  decorrelation_config_instmod=config_decorr_instmod_modelpart,
-                                                                                  param_nb=param_nb, arg_list=arg_list,
-                                                                                  key_param=key_param,
-                                                                                  key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
-                                                                                  key_func=key_func, ldict=ldict, model_part=model_part,
-                                                                                  time_arg_name=time_arg_name)
-    # Create the decorrelation models for the whole system
-    l_decorr_whole = []
-    for ii, inst_mod_obj in enumerate(l_inst_model):
-        l_decorr_whole.append({})
-        if decorrelation_config[inst_mod_obj.full_name]["do"]:
-            l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == inst_mod_obj]
-            for model_part, config_decorr_instmod_modelpart in decorrelation_config[inst_mod_obj.full_name]["what to decorrelate"].items():
-                l_decorr_whole[ii][model_part] = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=ii, l_dataset_name_instmod=l_dataset_name_instmod,
-                                                                                dataset_db=dataset_db,
-                                                                                decorrelation_config_instmod=config_decorr_instmod_modelpart,
-                                                                                param_nb=param_nb, arg_list=arg_list,
-                                                                                key_param=key_param,
-                                                                                key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
-                                                                                key_func=key_whole, ldict=ldict, model_part=model_part,
-                                                                                time_arg_name=time_arg_name)
-    # # Create the decorrelation models for the whole system
-    # l_decorr_only_whole = []
-    # for ii, inst_mod_obj in enumerate(l_inst_model):
-    #     l_decorr_only_whole.append({})
-    #     if decorrelation_config[inst_mod_obj.full_name]["do"]:
-    #         l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == inst_mod_obj]
-    #         for model_part, config_decorr_instmod_modelpart in decorrelation_config[inst_mod_obj.full_name]["what to decorrelate"].items():
-    #             key_func_dec_only = f"dec_{model_part}"
-    #             param_nb[key_func_dec_only] = 0
-    #             arg_list[]
-    #             l_decorr_only_whole[ii][model_part] = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=ii, l_dataset_name_instmod=l_dataset_name_instmod,
-    #                                                                                  dataset_db=dataset_db,
-    #                                                                                  decorrelation_config_instmod=config_decorr_instmod_modelpart,
-    #                                                                                  param_nb=param_nb, arg_list=arg_list,
-    #                                                                                  key_param=key_param,
-    #                                                                                  key_mand_kwargs=key_mand_kwargs, key_opt_kwargs=key_opt_kwargs,
-    #                                                                                  key_func=f"dec_{model_part}", ldict=ldict, model_part=model_part,
-    #                                                                                  time_arg_name=time_arg_name)
-    return d_l_decorr_planet, d_l_decorr_planet_only, l_decorr_whole  # , l_decorr_only_whole
+    ########################
+    # Initialise the outputs
+    ########################
+    returns = {}
+
+    #################################################
+    # Initialise the new function in function_builder
+    #################################################
+    # Extension for the shortname of the function that do the decorrelation only model
+    decorr_func_shortname = "decorr"
+    function_builder.add_new_function(shortname=decorr_func_shortname)
+    function_builder.set_function_fullname(full_name=f"LC_sim_{decorr_func_shortname}{ext_func_fullname}", shortname=decorr_func_shortname)
+
+    ########################################
+    # Update the list of function to address
+    ########################################
+    l_function_shortname += [decorr_func_shortname, ]
+
+    #############################################################################
+    # Check if any of the instrument model is associated to a decorrelation model
+    #############################################################################
+    requires_decorr = False
+    for instmod in l_inst_model:
+        if decorrelation_config[instmod.full_name]["do"]:
+            requires_decorr = True
+            break
+
+    if requires_decorr:
+        ################################
+        # Do the Model for each function
+        ################################
+        for func_shortname in l_function_shortname:
+
+            ##############
+            # Add the time
+            ##############
+            time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=func_shortname,
+                                              multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                              l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                              exist_ok=True)
+
+            #############################################
+            # Initialise the return text for the function
+            #############################################
+            returns[func_shortname] = []
+
+            ####################################################
+            # Do the Model for each function and each instrument
+            ####################################################
+            for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
+                returns[func_shortname].append({})
+                if decorrelation_config[instmod.full_name]["do"]:
+                    # List of the datasets associated with the instrument model
+                    l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == instmod]
+                    for model_part, config_decorr_instmod_modelpart in decorrelation_config[instmod.full_name]["what to decorrelate"].items():
+                        (returns[func_shortname][i_inputoutput][model_part]
+                         ) = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
+                                                            l_dataset_name_instmod=l_dataset_name_instmod,
+                                                            dataset_db=dataset_db, decorrelation_config_instmod=config_decorr_instmod_modelpart,
+                                                            model_part=model_part, time_arg_name=time_arg_name,
+                                                            function_builder=function_builder, function_shortname=func_shortname)
+
+    return returns
 
 
 def combine_return_models(which_model, stellar_var, transit, phasecurve, decorrelation):
