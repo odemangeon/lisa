@@ -9,7 +9,6 @@ from scipy.interpolate import interp1d
 
 from ....core.model.core_decorrelation_model import Core_DecorrelationModel
 from ....core.parameter import Parameter
-from .....tools.function_from_text_toolbox import add_param_argument, par_vec_name, add_nonparam_argument
 from .....tools.name import check_name
 
 
@@ -124,11 +123,11 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
 
     @classmethod
     def get_text_decorrelation(cls, multi, inst_mod_obj, idx_inst_mod_obj, l_dataset_name_inst_mod, dataset_db, time_arg_name,
-                               decorrelation_config, param_nb, arg_list, key_param, key_mand_kwargs,
-                               key_opt_kwargs, key_func, ldict, model_part=""):
+                               decorrelation_config, function_builder, function_shortname, model_part=""):
         """Produce the text for the decorrelation model of this category
 
-        This function creates the text for the decorrelation model of this category.
+        This function has to produce the decorrelation_model text for this category and for a given part
+        of the model with one intrument model.
 
         Arguments
         ---------
@@ -154,54 +153,26 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
             Structure:
                Keyn: Indicator instrument model name
                valuen: dict providing the parameters for the current decorrelation model
-        param_nb        : dict_of_int
-            dictionary giving the current number of free parameters in the function being produced.
-            key = str key designating the function being built and provided by key_func
-            value = int giving the current number of parameter in the model
-            Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-        arg_list        : dict_of_dict_of_list_of_str
-            dictionary giving the arguments of the functions currently being produced with the following format:
-            - key = str designating the function being built and provided by key_func.
-            - value = dict with three str keys and values
-                - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
-                - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
-                - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
-            If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
-            of sub-dictionaries specified by key_func.
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-        key_param       : str
-            Key used for the parameters entry of arg_list values
-        key_mand_kwargs         : str
-            Key used for the mandatory keyword argument entry of arg_list
-        key_opt_kwargs          : str
-            Key used for the optional keyword argument entry of arg_list
-        key_func       : str
-            Key used in arg_list and param for the function simulating the whole system (all planets together)
-        ldict           : dict of dict
-            Local dictionary for the later execution (exec) of the text of the functions. All variables
-            that will not be passed explicitly to the function by the user need to be defined there.
-            Format:
-            - key = str designating the function being built and provided by key_func
-            - value = dictionary
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
+        function_builder        : FunctionBuilder
+            Function builder instance
+        function_shortname      : str
+            Short name of the function for which you want to add the decorrelation model
         model_part                          : str
             String giving the model part concerned
 
         Returns
         -------
         text_decor   : str
-            Text providing the decorrelation component for the linear decorrelation model for the whole
-            system model
+            Text providing the decorrelation component for the linear decorrelation model for a given part
+            of the model with one intrument model.
         """
         text_decor = ""
         for inst_mod_obj_decorr_var_name, decorrelation_config_decorr_var in decorrelation_config.items():
             # Get the coefficient parameter inside the inst_mod_obj
             param_cor_coeff = inst_mod_obj.parameters[check_name(f"{cls.root_name_coeffcorr}{model_part}{inst_mod_obj_decorr_var_name}")]
             # Add this parameters to the parameters of the function
-            cor_coeff = add_param_argument(param=param_cor_coeff, arg_list=arg_list, key_param=key_param,
-                                           param_nb=param_nb, key_arglist=key_func, param_vector_name=par_vec_name
-                                           )[key_func]
+            function_builder.add_parameter(parameter=param_cor_coeff, function_shortname=function_shortname, exist_ok=False)
+            cor_coeff = function_builder.get_text_4_parameter(parameter=param_cor_coeff, function_shortname=function_shortname)
             if len(text_decor) > 0:
                 text_decor += " + "
             if decorrelation_config_decorr_var["quantity"] == "raw":
@@ -215,7 +186,10 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
                     time = l_dataset_decor_var[0].get_time()
                     data = l_dataset_decor_var[0].get_data()
                 idx_sort = np.argsort(time)
-                ldict[key_func][inst_mod_obj_decorr_var_name.replace("-", "")] = scale_and_interpolate(t=time[idx_sort], x=data[idx_sort], scale='range')
+                function_builder.add_variable_to_ldict(variable_name=inst_mod_obj_decorr_var_name.replace("-", ""),
+                                                       variable_content=scale_and_interpolate(t=time[idx_sort], x=data[idx_sort], scale='range'),
+                                                       function_shortname=function_shortname, exist_ok=True
+                                                       )
                 if multi:
                     text_decor += f"{cor_coeff} * {inst_mod_obj_decorr_var_name.replace('-','')}({time_arg_name}[{idx_inst_mod_obj}])"
                 else:
