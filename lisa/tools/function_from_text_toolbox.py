@@ -93,7 +93,8 @@ class FunctionBuilder(object):
                                      "optional_args": OrderedDict(),  # List of tuples with two arguments: a str giving the name of the other optional arguments of by the function and their default value
                                      "full_name": None,  # function full name, if None full name equal short name
                                      "ldict": {},  # Local dictionary for the function
-                                     "body_text": ""  # Text of the body of the function
+                                     "body_text": "",  # Text of the body of the function
+                                     "done_in_text": []
                                      }
         if parameters is not None:
             for parameter in parameters:
@@ -110,6 +111,21 @@ class FunctionBuilder(object):
         if ldict is not None:
             for key, value in ldict.items():
                 self.add_variable_to_ldict(variable_name=key, variable_content=value, shortname=shortname)
+
+    def is_function(self, shortname):
+        """Return true if the function short name provided is the short name of an exisiting function
+
+        Arguments
+        ---------
+        shortname           : str / None
+            Short name of the function
+
+        Return
+        ------
+        is  : bool
+            True if the function exists in the function builder
+        """
+        return shortname in self._database
 
     def copy_function(self, shortname_src, shortname_copy, full_function_name_copy=None):
         """Copy a function
@@ -141,11 +157,23 @@ class FunctionBuilder(object):
         exist_ok            : bool
             If True the function will not produce a warning if the parameter already exists in the function
         """
-        if parameter not in self._database[function_shortname]["parameters"]:
+        if not(self.is_parameter(parameter, function_shortname)):
             self._database[function_shortname]["parameters"].append(parameter)
         else:
             if not(exist_ok):
                 logger.warning(f"Parameter {parameter} already exists for function {function_shortname}")
+
+    def is_parameter(self, parameter, function_shortname):
+        """Return True if the parameter is already in the parameter vector of a function
+
+        Arguments
+        ---------
+        parameter           : Parameter
+            Parameter of the model
+        function_shortname  : str
+            Short name of the function.
+        """
+        return parameter in self._database[function_shortname]["parameters"]
 
     def add_mandatory_argument(self, argument_name, function_shortname, exist_ok=False):
         """Add a mandatory argument to a function
@@ -304,6 +332,31 @@ class FunctionBuilder(object):
             else:
                 logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
 
+    def is_in_ldict(self, variable_name, function_shortname, variable_content=None, check_content=False):
+        """Add a variable to the local dictionary of a function
+
+        Arguments
+        ---------
+        variable_name       : str
+            Variable name
+        function_shortname  : str
+            Short name of the function
+        variable_content    : ?
+            Content of the variable
+        check_content       : bool
+            If True the function will only return True if the content is the same tested with ==
+        """
+        if variable_name not in self._database[function_shortname]["ldict"]:
+            return False
+        else:
+            if check_content:
+                if self._database[function_shortname]["ldict"][variable_name] == variable_content:
+                    return True
+                else:
+                    return False
+            else:
+                return True
+
     def get_ldict(self, function_shortname):
         """Get the local dictionary of a function
 
@@ -386,6 +439,30 @@ class FunctionBuilder(object):
             Short name of the function
         """
         self._database[function_shortname]["body_text"] += text
+
+    def add_to_done_in_text(self, name, function_shortname):
+        """Add the name of a piece of code to list of pieces of code already written in the text of the body of the function
+
+        Arguments
+        ---------
+        name                : str
+            Name of the piece of code that is now done in the text of the function
+        function_shortname  : str
+            Short name of the function
+        """
+        self._database[function_shortname]["done_in_text"].append(name)
+
+    def is_done_in_text(self, name, function_shortname):
+        """Return True if a given piece of code designated by a name is already done in the text of the body of the function
+
+        Arguments
+        ---------
+        name                : str
+            Name of the piece of code that is now done in the text of the function
+        function_shortname  : str
+            Short name of the function
+        """
+        return name in self._database[function_shortname]["done_in_text"]
 
 
 def init_arglist_paramnb_arguments_ldict(key_param, keys, key_mand_kwargs=None, key_opt_kwargs=None,
