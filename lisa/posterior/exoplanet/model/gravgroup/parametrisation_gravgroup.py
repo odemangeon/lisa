@@ -125,19 +125,29 @@ class GravGroup_Parametrisation(Core_Parametrisation):
         See Eastman, J., et al., 2013, Publications of the Astronomical Society of the Pacific,
         Volume 125,Number 923.
         """
+        ##################################################
         # Apply the parametrisation to the star parameters
+        ##################################################
+        # Systemic velocity (RVs)
         if RV_inst_cat in set(self.dataset_db.inst_categories):
             self.apply_star_SystemicRV_parametrisation()
 
+        # Stellar density (orbit Multis parametrisation)
         if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.parametrisation == "Multis"):
             star_name = list(self.paramcontainers["stars"].keys())[0]
             self.paramcontainers["stars"][star_name].rho.main = True
             self.paramcontainers["stars"][star_name].rho.unit = "Solar density"
-        if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.instcat_models[LC_inst_cat].phasecurve_model['do']):
-            if not(self.instcat_models[LC_inst_cat].phasecurve_model['instrument_variable']):
-                if self.instcat_models[LC_inst_cat].phasecurve_model['all_instruments'][0]['model'] == 'spiderman':
-                    if self.instcat_models[LC_inst_cat].phasecurve_model['all_instruments'][0]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
-                        self.paramcontainers["stars"][star_name].Teff.main = True
+
+        # Stellar effective temperature (Phase curve if spiderman and zhang brightness model)
+        if LC_inst_cat in set(self.dataset_db.inst_categories):
+            for planet in self.planets.values():
+                planet_name = planet.get_name()
+                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['do']:
+                    for l_mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
+                        for mod_comp_name in l_mod_comp_name:
+                            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                    self.paramcontainers["stars"][star_name].Teff.main = True
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -156,17 +166,18 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV data]"
             self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies
             self.paramcontainers["planets"][planet_name].esinw.main = True  # Unit already defined in celestial_bodies
-            if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.instcat_models[LC_inst_cat].phasecurve_model['do']):
-                if not(self.instcat_models[LC_inst_cat].phasecurve_model['instrument_variable']):
-                    if self.instcat_models[LC_inst_cat].phasecurve_model['all_instruments'][0]['model'] == 'spiderman':
-                        if self.instcat_models[LC_inst_cat].phasecurve_model['all_instruments'][0]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
-                            self.paramcontainers["planets"][planet_name].a.main = True
-                            self.paramcontainers["planets"][planet_name].a.unit = "AU"
-                            self.paramcontainers["planets"][planet_name].u1.main = True
-                            self.paramcontainers["planets"][planet_name].u2.main = True
-                            self.paramcontainers["planets"][planet_name].xi.main = True
-                            self.paramcontainers["planets"][planet_name].Tn.main = True
-                            self.paramcontainers["planets"][planet_name].deltaT.main = True
+            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['do']:
+                for l_mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
+                    for mod_comp_name in l_mod_comp_name:
+                        if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                self.paramcontainers["planets"][planet_name].a.main = True
+                                self.paramcontainers["planets"][planet_name].a.unit = "AU"
+                                self.paramcontainers["planets"][planet_name].u1.main = True
+                                self.paramcontainers["planets"][planet_name].u2.main = True
+                                self.paramcontainers["planets"][planet_name].xi.main = True
+                                self.paramcontainers["planets"][planet_name].Tn.main = True
+                                self.paramcontainers["planets"][planet_name].deltaT.main = True
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
@@ -204,8 +215,8 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                 for inst_model in list_instmodel:
                     indicator_model = self.instcat_models["IND"].model_4_indicator[inst_model.instrument.indicator_category]
                     if indicator_model is not None:
-                        self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
-                                            kwargs_indicator_model=self.instcat_models["IND"].params_indicator_models[indicator_model])
+                        self.instcat_models[IND_inst_cat]._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
+                                                                         kwargs_indicator_model=self.instcat_models["IND"].params_indicator_models[indicator_model])
         # Decorrelation
         for inst_cat in self.dataset_db.inst_categories:
             # if inst_cat.startswith("IND"):
