@@ -260,8 +260,9 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                       allowed_what2decorrelate_strs=self.allowed_what2decorrelate_strs
                                                       )
 
-    def create_text_decorr(self, multi, inst_mod_obj, idx_inst_mod_obj, l_dataset_name_instmod, dataset_db, decorrelation_config_instmod, param_nb,
-                           arg_list, key_param, key_mand_kwargs, key_opt_kwargs, key_func, ldict, time_arg_name, model_part=""):
+    def create_text_decorr(self, multi, inst_mod_obj, idx_inst_mod_obj, l_dataset_name_instmod, dataset_db,
+                           decorrelation_config_instmod, time_arg_name, function_builder, function_shortname,
+                           model_part=""):
         """Create the text for the decorrelation to be used for the creation of the datasimulators
 
         To be used in the datasimulator functions for the decorrelation.
@@ -294,39 +295,12 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
             and a model part
             Format:
                 - keyn: dict providing the parameters for the decorrelation model
-        param_nb                        : dict_of_int
-            dictionary giving the current number of free parameters in the function being produced.
-            key = str key designating the function being built and provided by key_func
-            value = int giving the current number of parameter in the model
-            Format: {"name_of_function": int_current_nb_of_model_parameters_of_the_datasimulator}
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-        arg_list                        : dict_of_dict_of_list_of_str
-            dictionary giving the arguments of the functions currently being produced with the following format:
-            - key = str designating the function being built and provided by key_func.
-            - value = dict with three str keys and values
-                - <key_param>: empty list that will receive the full names of the parameters of the function (content of the param_vector)
-                - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
-                - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
-            If it's not added to ldict instead the arguments provided by arguments are going to be added to the key_mand_kwargs or key_opt_kwargs
-            of sub-dictionaries specified by key_func.
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
-        key_param                       : str
-            Key used for the parameters entry of arg_list values
-        key_mand_kwargs         : str
-            Key used for the mandatory keyword argument entry of arg_list
-        key_opt_kwargs          : str
-            Key used for the optional keyword argument entry of arg_list
-        key_func                        : str
-            Key used in arg_list and param for the function simulating the whole system (all planets together)
-        ldict                           : dict of dict
-            Local dictionary for the later execution (exec) of the text of the functions. All variables
-            that will not be passed explicitly to the function by the user need to be defined there.
-            Format:
-            - key = str designating the function being built and provided by key_func
-            - value = dictionary
-            THIS DICTIONARY IS MODIFIED EVEN IF NOT RETURNED
         time_arg_name                   : str
             Str used to designate the time vector(s)
+        function_builder        : FunctionBuilder
+            Function builder instance
+        function_shortname      : str
+            Short name of the function for which you want to add the decorrelation model
         model_part                      : str
             String giving the model part concerned
 
@@ -340,10 +314,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
             DecorModel = self.get_DecorrModel(decorrmodel_cat=decorrmodel_cat)
             text_decorr += DecorModel.get_text_decorrelation(multi=multi, inst_mod_obj=inst_mod_obj, idx_inst_mod_obj=idx_inst_mod_obj,
                                                              l_dataset_name_inst_mod=l_dataset_name_instmod,
-                                                             dataset_db=dataset_db,
-                                                             decorrelation_config=decorrelation_config_instmod[decorrmodel_cat],
-                                                             param_nb=param_nb, arg_list=arg_list,
-                                                             key_param=key_param, key_mand_kwargs=key_mand_kwargs,
-                                                             key_opt_kwargs=key_opt_kwargs, key_func=key_func,
-                                                             ldict=ldict, time_arg_name=time_arg_name, model_part=model_part)
+                                                             dataset_db=dataset_db, decorrelation_config=decorrelation_config_instmod[decorrmodel_cat],
+                                                             time_arg_name=time_arg_name, function_builder=function_builder,
+                                                             function_shortname=function_shortname, model_part=model_part)
         return text_decorr
