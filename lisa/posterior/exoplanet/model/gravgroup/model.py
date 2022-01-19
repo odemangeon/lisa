@@ -101,10 +101,8 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
         # Fill the handlers4noisecatparamfile dictionary
         self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
                                                                   load_key: self.load_SANM_param_file}
-        ## List of Dict: [{"stars": [key in self.stars,], "planets":[key in self.planets]}]
-        ## Define sub-gravitational group for example for planets orbiting one componant of a wide
-        ## separation binary star. This is kept for later.
-        # self.subgravgroups = []
+        # Finish the initialisation
+        Core_Model.finish_init(self)
 
     @property
     def init_kwargs(self):
