@@ -45,7 +45,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __datasim_creator_name__ = "sim_LC"
     __decorrelation_models__ = [LinearDecorrelation_LC]
 
-    allowed_what2decorrelate_strs = ['stellarflux', ]
+    allowed_what2decorrelate_strs = ['multiply_2_totalflux', 'add_2_totalflux', ]
 
     ## List of available transit models, the 1st element is used as default
     _transit_models = ["batman", ]  # ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"] Temporarily? remove pytransit from the available transit_models
