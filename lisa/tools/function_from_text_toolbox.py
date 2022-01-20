@@ -428,6 +428,21 @@ class FunctionBuilder(object):
         """
         return copy(self._database[function_shortname]["body_text"])
 
+    def get_full_function_text(self, shortname):
+        """Return the text of the body of the function
+
+        Arguments
+        ---------
+        shortname  : str
+            Short name of the function
+
+        Return
+        ------
+        full_func_text   : str
+            Text of the body of the function
+        """
+        return f"{self.get_function_header(shortname=shortname)}\n{self.get_body_text(shortname=shortname)}"
+
     def add_to_body_text(self, text, function_shortname):
         """Return the text of the body of the function
 
