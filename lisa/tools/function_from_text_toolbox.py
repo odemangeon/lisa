@@ -372,6 +372,21 @@ class FunctionBuilder(object):
         """
         return copy(self._database[function_shortname]["ldict"])
 
+    def _get_ldict(self, function_shortname):
+        """Get the local dictionary of a function not a copy like get_ldict
+
+        Arguments
+        ---------
+        function_shortname   : str
+            Short name of the function
+
+        Return
+        ------
+        ldict   : dictionary
+            local dictionary of the function
+        """
+        return self._database[function_shortname]["ldict"]
+
     def get_function_header(self, shortname):
         """Return the string of the function header
 
@@ -441,7 +456,7 @@ class FunctionBuilder(object):
         full_func_text   : str
             Text of the body of the function
         """
-        return f"{self.get_function_header(shortname=shortname)}\n{self.get_body_text(shortname=shortname)}"
+        return f"{self.get_function_header(shortname=shortname)}\n{self.get_body_text(function_shortname=shortname)}"
 
     def add_to_body_text(self, text, function_shortname):
         """Return the text of the body of the function
