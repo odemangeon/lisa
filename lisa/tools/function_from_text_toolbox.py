@@ -89,6 +89,7 @@ class FunctionBuilder(object):
             Local dictionary of the function
         """
         self._database[shortname] = {"parameters": [],  # List of the model (jumping) parameter instances for which the value should be provided to the in the parameter vector that is provided to the model
+                                     "free_parameters": [],  # List of the model (jumping) parameter instances for which the value should be provided to the in the parameter vector that is provided to the model
                                      "mandatory_args": [],  # List of the str with the name of the other mandatory arguments (besides the parameter vector) of by the function.
                                      "optional_args": OrderedDict(),  # List of tuples with two arguments: a str giving the name of the other optional arguments of by the function and their default value
                                      "full_name": None,  # function full name, if None full name equal short name
@@ -159,6 +160,10 @@ class FunctionBuilder(object):
         """
         if not(self.is_parameter(parameter, function_shortname)):
             self._database[function_shortname]["parameters"].append(parameter)
+            if not(parameter.main):
+                raise ValueError(f"Parameter {parameter.full_name} is not a main parameter.")
+            if parameter.free:
+                self._database[function_shortname]["free_parameters"].append(parameter)
         else:
             if not(exist_ok):
                 logger.warning(f"Parameter {parameter} already exists for function {function_shortname}")
@@ -231,6 +236,21 @@ class FunctionBuilder(object):
             List of Model parameter
         """
         return copy(self._database[function_shortname]["parameters"])
+
+    def get_free_parameter_vector(self, function_shortname):
+        """Return the list of parameters in the parameter vector of a function
+
+        Arguments
+        ---------
+        function_shortname  : str
+            Short name of the function
+
+        Return
+        ------
+        l_parameter : List of Parameter
+            List of Model parameter
+        """
+        return copy(self._database[function_shortname]["free_parameters"])
 
     def get_l_mandatory_argument(self, function_shortname):
         """Return the list of mandatory arguments of a function
@@ -326,7 +346,7 @@ class FunctionBuilder(object):
         if variable_name not in self._database[function_shortname]["ldict"]:
             self._database[function_shortname]["ldict"][variable_name] = variable_content
         else:
-            if self._database[function_shortname]["ldict"][variable_name] == variable_content:
+            if self._database[function_shortname]["ldict"][variable_name] is variable_content:
                 if not(exist_ok):
                     logger.warning(f"Variable {variable_name} already exists in ldict of function {function_shortname}")
             else:
@@ -423,10 +443,13 @@ class FunctionBuilder(object):
         parameter_in_param_vect : str or float
             Str providing the parameter in the model parameter vector
         """
-        if parameter.free:
-            return f"{self.parameter_vector_name}[{self.get_parameter_vector(function_shortname=function_shortname).index(parameter)}]"
+        if self.is_parameter(parameter=parameter, function_shortname=function_shortname):
+            if parameter.free:
+                return f"{self.parameter_vector_name}[{self.get_free_parameter_vector(function_shortname=function_shortname).index(parameter)}]"
+            else:
+                return parameter.value
         else:
-            return parameter.value
+            raise ValueError(f"{parameter.full_name} is not a parameter of the model, you need to add this parameter first with add_parameter")
 
     def get_body_text(self, function_shortname):
         """Return the text of the body of the function
