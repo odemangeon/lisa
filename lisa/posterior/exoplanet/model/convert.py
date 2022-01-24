@@ -292,7 +292,7 @@ def getaoverr_circular(P, rhostar):
     return ((rhostar * gm * Ps**2. / (4. * np.pi**2.)))**(1.0 / 3.0) / rsun
 
 
-def getaoverr(P, rhostar, ecc, omega):
+def getaoverr(P, rhostar, ecc, omega_deg):
     """Return the a over Rstar.
 
     From Van Eylen & Albrecht 2015, and using rhostar in solar unit (https://arxiv.org/pdf/1505.02814.pdf)
@@ -304,7 +304,7 @@ def getaoverr(P, rhostar, ecc, omega):
     :return float/np.ndarray aR: Planetary orbital semi-major axis over stellar radius without unit
     """
     Ps = P * 24. * 3600.0  # change P to seconds for SI
-    ecc_impact = (1 + ecc * np.sin(np.radians(omega))) / np.sqrt(1 - ecc**2)
+    ecc_impact = (1 + ecc * np.sin(np.radians(omega_deg))) / np.sqrt(1 - ecc**2)
     return ((rhostar * gm * Ps**2. / (4. * np.pi**2.)))**(1.0 / 3.0) * ecc_impact / rsun
 
 
