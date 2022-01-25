@@ -17,7 +17,7 @@ from logging import getLogger
 from textwrap import dedent
 # from copy import deepcopy, copy
 from math import acos, degrees, sqrt
-from numpy import ones_like, inf, mean
+from numpy import ones_like, inf, mean, pi, sin, cos
 # from collections import Iterable
 
 from batman import TransitModel, TransitParams
@@ -1372,7 +1372,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     function_builder.add_to_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
 
                                 ####################################################
-                                # Produce the template for phase curve model returns
+                                # Produce the text for the phase curve model returns
                                 ####################################################
                                 if multi:
                                     time_vect = f"{time_arg_name}[{i_inputoutput}]"
@@ -1394,6 +1394,79 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             else:
                                 raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
 
+                        #######################
+                        # Sine and Cosine model
+                        #######################
+                        if (pc_component_model["model"] == "sincos") or (pc_component_model["model"] == "ellipsoidal") or (pc_component_model["model"] == "doppler"):
+                            if pc_component_model["model"] in ["ellipsoidal", "beaming"]:
+                                if pc_component_model["model"] == "beaming":
+                                    sincos_components = {"": {"sincos": "sin", "factor_period": 1, "average": 'zero', 'phase_offset': 0.}}
+                                else:  # pc_component_model["model"] == "ellipsoidal"
+                                    sincos_components = {"": {"sincos": "cos", "factor_period": 1. / 2., "average": 'zero', 'phase_offset': pi}}
+                            else:
+                                sincos_components = pc_component_model["args"]
+                            for sincos_comp_name, sincos_comp_dict in sincos_components:
+                                if sincos_comp_dict["sincos"] is None:
+                                    ################
+                                    # Add parameters
+                                    ################
+                                    constant_param = planet.get_parameter(f"C{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                    function_builder.add_parameter(parameter=constant_param, function_shortname=func_shortname, exist_ok=True)
+                                    constant = function_builder.get_text_4_parameter(parameter=constant_param, function_shortname=func_shortname)
+                                    if returns[func_shortname][i_inputoutput] == "":
+                                        pre_text = ""
+                                    else:
+                                        pre_text = " + "
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{constant}"
+                                else:
+                                    ################
+                                    # Add parameters
+                                    ################
+                                    # Orbital Period
+                                    function_builder.add_parameter(parameter=planet.P, function_shortname=func_shortname, exist_ok=True)
+                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                                    # Time of inferior conjunction
+                                    function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
+                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                                    # Amplitude
+                                    amp_param = planet.get_parameter(f"A{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                    function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
+                                    amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
+                                    # Phase Offset
+                                    if sincos_comp_dict.get("phase_offset", 0) == "param":
+                                        phi_param = planet.get_parameter(f"Phi{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                        function_builder.add_parameter(parameter=phi_param, function_shortname=func_shortname, exist_ok=True)
+                                        phi = function_builder.get_text_4_parameter(parameter=phi_param, function_shortname=func_shortname)
+                                    else:
+                                        phi = f"{sincos_comp_dict.get('phase_offset', 0)}"
+                                    # Add sin or cos and pi to ldict
+                                    function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
+                                                                           function_shortname=func_shortname, exist_ok=True)
+                                    if sincos_comp_dict["sincos"] == 'sin':
+                                        function_builder.add_variable_to_ldict(variable_name="sin", variable_content=sin,
+                                                                               function_shortname=func_shortname, exist_ok=True)
+                                    else:  # It has to be cos
+                                        function_builder.add_variable_to_ldict(variable_name="cos", variable_content=cos,
+                                                                               function_shortname=func_shortname, exist_ok=True)
+                                    ####################################################
+                                    # Produce the text for the phase curve model returns
+                                    ####################################################
+                                    if multi:
+                                        time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                    else:
+                                        time_vect = f"{time_arg_name}"
+                                    if get_times_from_datasets:
+                                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                        if supersamp > 1:
+                                            logger.warning("Currently the spiderman model doesn't include supersampling !")
+                                    if returns[func_shortname][i_inputoutput] == "":
+                                        pre_text = ""
+                                    else:
+                                        pre_text = " + "
+                                    if sincos_comp_dict["average"] == "zero":
+                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})"
+                                    else:  # it has to be semi-amplitude
+                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi}))"
                         ########################
                         # No other model for now
                         ########################
