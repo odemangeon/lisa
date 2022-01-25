@@ -17,7 +17,7 @@ from logging import getLogger
 from textwrap import dedent
 # from copy import deepcopy, copy
 from math import acos, degrees, sqrt
-from numpy import ones_like, inf, mean, pi, sin, cos
+from numpy import ones_like, inf, mean, pi, sin, cos, abs
 # from collections import Iterable
 
 from batman import TransitModel, TransitParams
@@ -1394,6 +1394,61 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             else:
                                 raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
 
+                        #########################
+                        # Lambertian sphere model
+                        #########################
+                        elif (pc_component_model["model"] == "lambertian"):
+                            ################
+                            # Add parameters
+                            ################
+                            # Orbital Period
+                            function_builder.add_parameter(parameter=planet.P, function_shortname=func_shortname, exist_ok=True)
+                            period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                            # Time of inferior conjunction
+                            function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
+                            tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                            # Amplitude
+                            amp_param = planet.get_parameter("Alamb", return_error=False, main=True)
+                            function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
+                            amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
+                            ###################################
+                            # Add sin, cos, pi and abs to ldict
+                            ###################################
+                            function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
+                                                                   function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_variable_to_ldict(variable_name="sin", variable_content=sin,
+                                                                   function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_variable_to_ldict(variable_name="cos", variable_content=cos,
+                                                                   function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_variable_to_ldict(variable_name="abs", variable_content=abs,
+                                                                   function_shortname=func_shortname, exist_ok=True)
+                            ###########################
+                            # Add orb_phase computation
+                            ###########################
+                            if not(function_builder.is_done_in_text(name="orb_phase", function_shortname=func_shortname)):
+                                function_builder.add_to_body_text(text=f"{tab}orb_phase = ({time_arg_name} - {tic}) / {period}\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name="orb_phase", function_shortname=func_shortname)
+                            ###################
+                            # Compute the model
+                            ###################
+                            # Reference: Sara Seager, 2010, Book: Exoplanet atmosphere, page 45, equation 3.58
+                            # Warning: The absolute value of the orbital phase and of the phase function
+                            # are not written in Seager but they are necessary for the equation to be valid
+                            # outside of the range [0, pi] in orbital phase.
+                            if multi:
+                                orb_phase_vect = f"orb_phase[{i_inputoutput}]"  # WARNING: Does take into account the orbital eccentricity
+                            else:
+                                orb_phase_vect = "orb_phase"
+                            if get_times_from_datasets:
+                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                if supersamp > 1:
+                                    logger.warning("Currently the lambertian sphere model doesn't include supersampling !")
+                            if returns[func_shortname][i_inputoutput] == "":
+                                pre_text = ""
+                            else:
+                                pre_text = " + "
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / pi * abs(sin(abs({orb_phase_vect})) + (pi - abs({orb_phase_vect})) * cos(abs({orb_phase_vect})))"
+
                         #######################
                         # Sine and Cosine model
                         #######################
@@ -1458,7 +1513,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     if get_times_from_datasets:
                                         supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
                                         if supersamp > 1:
-                                            logger.warning("Currently the spiderman model doesn't include supersampling !")
+                                            logger.warning("Currently the sincos model doesn't include supersampling !")
                                     if returns[func_shortname][i_inputoutput] == "":
                                         pre_text = ""
                                     else:
