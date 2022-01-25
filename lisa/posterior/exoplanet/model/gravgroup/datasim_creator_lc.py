@@ -38,6 +38,16 @@ from .....posterior.exoplanet.model.convert import getaoverr, getomega_fast, get
 logger = getLogger()
 
 
+template_return = """
+{tab}try:
+{tab}    return {returns}
+{tab}except RuntimeError:
+{tab}    return {returns_except}
+"""
+tab = "    "
+template_return = dedent(template_return)
+
+
 def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
                             phasecurve_model, decorrelation_config, dataset_db, LCcat_model,
                             inst_models, datasets, get_times_from_datasets,
@@ -164,20 +174,16 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # Define the templates of the function
     #####################################
     # Initialise function_name and template_function the template function name and the template function text
-    function_name = ("LCsim_{{object}}_{instmod_fullname}{dst_ext}"
-                     "".format(instmod_fullname=inst_model_full_name, dst_ext=dst_ext))
-    template_function = """
-    def {function_name}({{arguments}}):
-    {{tab}}{{preambule_tr}}
-    {{tab}}{{preambule_pc}}
-    {{tab}}{{condition}}
-    {{tab}}try:
-    {{tab}}    return {{returns}}
-    {{tab}}except RuntimeError:
-    {{tab}}    return {{returns_except}}
-    """.format(function_name=function_name)
-    tab = "    "
-    template_function = dedent(template_function)
+    # function_name = ("LCsim_{{object}}_{instmod_fullname}{dst_ext}"
+    #                  "".format(instmod_fullname=inst_model_full_name, dst_ext=dst_ext))
+    # template_return = """
+    # {{tab}}try:
+    # {{tab}}    return {{returns}}
+    # {{tab}}except RuntimeError:
+    # {{tab}}    return {{returns_except}}
+    # """
+    # tab = "    "
+    # template_return = dedent(template_return)
 
     #########################################################################################
     # Create the text of what to return when condition is met or the RuntimeError is catched
@@ -260,13 +266,15 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     #######################################################################
     # Function of the whole system
     for func_shortname in [function_whole_shortname, ]:
-        combine_return_models(l_inst_model=l_inst_model, reference_flux_level=1, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
+        combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                              reference_flux_level=1, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
                               inst_var=d_l_inst_var.get(func_shortname, None), transit=returns_tr.get(func_shortname, None),
                               phasecurve=returns_pc.get(func_shortname, None), decorrelation=d_l_d_decorr.get(func_shortname, None))
 
     # Function of the planets only
     for func_shortname in l_function_planet_shortname:
-        combine_return_models(l_inst_model=l_inst_model, reference_flux_level=0, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
+        combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                              reference_flux_level=0, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
                               inst_var=d_l_inst_var.get(func_shortname, None), transit=returns_tr.get(func_shortname, None),
                               phasecurve=returns_pc.get(func_shortname, None), decorrelation=d_l_d_decorr.get(func_shortname, None))
 
@@ -480,7 +488,7 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
     # Finalize the inst_var only function
     #####################################
     for func_shortname in [inst_var_func_shortname, ]:
-        function_builder.add_to_body_text(text=f"{tab}return {returns.pop(func_shortname)}", function_shortname=func_shortname)
+        function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
 
     return returns
 
@@ -760,21 +768,19 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name, l_time_vec_name,
     """
     function_builder.add_variable_to_ldict(variable_name="ones_like", variable_content=ones_like, function_shortname=function_shortname, exist_ok=False)
     function_builder.add_variable_to_ldict(variable_name="inf", variable_content=inf, function_shortname=function_shortname, exist_ok=False)
-    if multi:
-        template_returns_condition = "ones_like({ltime_vec}) * (- inf)"  # "ones_like({ltime_vec}[{ii}]) * (- inf)"
-    else:
-        template_returns_condition = "ones_like({time_vec}) * (- inf)"
 
     l_returns = []
-    for ii in range(len(l_inst_model)):
-        l_returns.append(template_returns_condition.format(ltime_vec=l_time_vec_name, time_vec=time_vec_name))
+    for i_instmodel in range(len(l_inst_model)):
+        if multi:
+            l_returns.append(f"ones_like({l_time_vec_name}[{i_instmodel}]) * (- inf)")
+        else:
+            l_returns.append(f"ones_like({time_vec_name}) * (- inf)")
 
     error_return = ""
-    for ret in l_returns:
+    for i_ret, ret in enumerate(l_returns):
         error_return += ret
-        error_return += ", "
-    if not(multi):
-        error_return = error_return[:-2]
+        if i_ret < (len(l_returns) - 1):
+            error_return += ", "
 
     return error_return
 
@@ -1125,7 +1131,14 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
                           function_shortname=func_shortname)
-            function_builder.add_to_body_text(text=f"{tab}return {returns.pop(func_shortname)}", function_shortname=func_shortname)
+            function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=f"{str(returns.pop(func_shortname)).strip('[]')}",
+                                                                          returns_except=get_catchederror_return(multi=multi,
+                                                                                                                 l_inst_model=l_inst_model,
+                                                                                                                 time_vec_name=time_vec_name,
+                                                                                                                 l_time_vec_name=l_time_vec_name,
+                                                                                                                 function_builder=function_builder,
+                                                                                                                 function_shortname=func_shortname)),
+                                              function_shortname=func_shortname)
 
     return returns
 
@@ -1395,7 +1408,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
                           function_shortname=func_shortname)
-            function_builder.add_to_body_text(text=f"{tab}return {returns.pop(func_shortname)}", function_shortname=func_shortname)
+            function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
 
     return returns
 
@@ -1517,7 +1530,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
         # Finalize the decorrelation only function
         ##########################################
         for func_shortname in [decorr_func_shortname, ]:
-            function_builder.add_to_body_text(text=f"{tab}return {returns.pop(func_shortname)}", function_shortname=func_shortname)
+            function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
 
     return returns
 
@@ -1575,7 +1588,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
 #     return return_text
 
 
-def combine_return_models(l_inst_model, reference_flux_level, tab, function_builder, function_shortname, transit=None, phasecurve=None,
+def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, reference_flux_level, tab, function_builder, function_shortname, transit=None, phasecurve=None,
                           inst_var=None, stellar_var=None, decorrelation=None):
     """Combine the different component of the lc model including the decorrelation if necessary.
 
@@ -1583,6 +1596,15 @@ def combine_return_models(l_inst_model, reference_flux_level, tab, function_buil
 
     Arguments
     ---------
+    multi                   : bool
+        True if the datasim function needs to give multiple outputs.
+    l_inst_model            : list_of_Instrument_Model
+        List of the instrument models instances for each output of the datasim function. Each instrument model
+        in this list is the instrument model which has to be used for the corresponding dataset provided in l_dataset.
+    time_vec_name           : str
+        Str used to designate the time vector
+    l_time_vec_name         : str
+        Str used to designate the list of time vectors
     reference_flux_level    : float
         Reference_flux_level for the photometry (in principle 1 or 0)
     tab                     : str
@@ -1614,7 +1636,7 @@ def combine_return_models(l_inst_model, reference_flux_level, tab, function_buil
     text_return : str
         Text of the return for one datasim lc function.
     """
-    return_text = "["
+    return_text = ""
     for i_inputoutput, instmod in enumerate(l_inst_model):
         if (stellar_var is not None) or (reference_flux_level != 0) or (inst_var is not None):
             if (stellar_var is None) and (inst_var is None):
@@ -1649,8 +1671,14 @@ def combine_return_models(l_inst_model, reference_flux_level, tab, function_buil
             if "add_2_totalflux" in decorrelation[i_inputoutput]:
                 return_text += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
 
-        return_text += ", "
+        if i_inputoutput < (len(l_inst_model) - 1):
+            return_text += ", "
 
-    return_text += "]"
-
-    function_builder.add_to_body_text(text=f"{tab}return {return_text}", function_shortname=function_shortname)
+    function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=return_text,
+                                                                  returns_except=get_catchederror_return(multi=multi,
+                                                                                                         l_inst_model=l_inst_model,
+                                                                                                         time_vec_name=time_vec_name,
+                                                                                                         l_time_vec_name=l_time_vec_name,
+                                                                                                         function_builder=function_builder,
+                                                                                                         function_shortname=function_shortname)),
+                                      function_shortname=function_shortname)
