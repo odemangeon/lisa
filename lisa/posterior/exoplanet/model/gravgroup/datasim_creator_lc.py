@@ -1724,11 +1724,11 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                         return_text += f"({inst_var[i_inputoutput]}) * "
                 else:
                     if (stellar_var is not None) and (inst_var is not None):
-                        return_text += f"{reference_flux_level} * ({stellar_var} + {inst_var[i_inputoutput]}) * "
+                        return_text += f"{reference_flux_level} + ({stellar_var} + {inst_var[i_inputoutput]}) * "
                     if stellar_var is not None:
-                        return_text += f"{reference_flux_level} * ({stellar_var}) * "
+                        return_text += f"{reference_flux_level} + ({stellar_var}) * "
                     if inst_var is not None:
-                        return_text += f"{reference_flux_level} * ({inst_var[i_inputoutput]}) * "
+                        return_text += f"{reference_flux_level} + ({inst_var[i_inputoutput]}) * "
 
         if (transit is not None) or (phasecurve is not None):
             if (transit is not None) and (phasecurve is not None):
