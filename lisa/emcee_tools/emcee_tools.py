@@ -649,7 +649,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                 model, modelwGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
                                                                                     param=param,
                                                                                     l_param_name=l_param_name,
-                                                                                    key_obj=plnt_name + ext_plonly, datasim_kwargs=kwargs,
+                                                                                    key_obj=plnt_name + ext_plonly, datasim_kwargs=datasim_kwargs,
                                                                                     supersamp=supersamp_model, exptime=exptime,
                                                                                     )
                 data_pl = data_pl - model
@@ -678,7 +678,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
              ) = plot_residuals(dataset_name=dataset.dataset_name, param=param,
                                 l_param_name=l_param_name, post_instance=post_instance, key_obj=key_pl,
                                 supersamp=supersamp_model, exptime=exptime,
-                                datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
+                                datasim_kwargs=datasim_kwargs, plot_phase=True, Per=P, tref=tc,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
             residual_model.append(residual_model_i)
@@ -727,7 +727,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
             (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_lines_labels_resi_i
              ) = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
                                 post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                                datasim_kwargs=datasim_kwargs, supersamp=supersamp_model, exptime=exptime,
                                 plot_phase=False,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
