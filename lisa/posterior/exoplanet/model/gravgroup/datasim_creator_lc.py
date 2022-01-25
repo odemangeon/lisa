@@ -1423,22 +1423,23 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             function_builder.add_variable_to_ldict(variable_name="abs", variable_content=abs,
                                                                    function_shortname=func_shortname, exist_ok=True)
                             ###########################
-                            # Add orb_phase computation
+                            # Add phase_angle computation
                             ###########################
-                            if not(function_builder.is_done_in_text(name="orb_phase", function_shortname=func_shortname)):
-                                function_builder.add_to_body_text(text=f"{tab}orb_phase = ({time_arg_name} - {tic}) / {period}\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name="orb_phase", function_shortname=func_shortname)
+                            # Be careful the orbital phase is define to be 0 during superior conjunction here
+                            if not(function_builder.is_done_in_text(name="phase_angle", function_shortname=func_shortname)):
+                                function_builder.add_to_body_text(text=f"{tab}phase_angle = (({time_arg_name} - {tic}) / {period} + pi) % (2 * pi)\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name="phase_angle", function_shortname=func_shortname)
                             ###################
                             # Compute the model
                             ###################
                             # Reference: Sara Seager, 2010, Book: Exoplanet atmosphere, page 45, equation 3.58
-                            # Warning: The absolute value of the orbital phase and of the phase function
-                            # are not written in Seager but they are necessary for the equation to be valid
-                            # outside of the range [0, pi] in orbital phase.
+                            # Warning: The absolute value of the phase function is not written in Seager
+                            # but it's are necessary for the equation to be valid
+                            # outside of the range [0, pi] in phase angle.
                             if multi:
-                                orb_phase_vect = f"orb_phase[{i_inputoutput}]"  # WARNING: Does take into account the orbital eccentricity
+                                phase_angle_vect = f"phase_angle[{i_inputoutput}]"  # WARNING: Does take into account the orbital eccentricity
                             else:
-                                orb_phase_vect = "orb_phase"
+                                phase_angle_vect = "phase_angle"
                             if get_times_from_datasets:
                                 supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
                                 if supersamp > 1:
@@ -1447,7 +1448,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / pi * abs(sin(abs({orb_phase_vect})) + (pi - abs({orb_phase_vect})) * cos(abs({orb_phase_vect})))"
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / pi * abs(sin({phase_angle_vect}) + (pi - {phase_angle_vect}) * cos({phase_angle_vect}))"
 
                         #######################
                         # Sine and Cosine model
