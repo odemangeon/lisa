@@ -776,13 +776,7 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name, l_time_vec_name,
         else:
             l_returns.append(f"ones_like({time_vec_name}) * (- inf)")
 
-    error_return = ""
-    for i_ret, ret in enumerate(l_returns):
-        error_return += ret
-        if i_ret < (len(l_returns) - 1):
-            error_return += ", "
-
-    return error_return
+    return ", ".join(l_returns)
 
 
 def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit_model,
@@ -1765,45 +1759,45 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
     text_return : str
         Text of the return for one datasim lc function.
     """
-    return_text = ""
+    return_text = []
     for i_inputoutput, instmod in enumerate(l_inst_model):
+        return_text.append("")
         if (stellar_var is not None) or (reference_flux_level != 0) or (inst_var is not None):
             if (stellar_var is None) and (inst_var is None):
-                return_text += f"{reference_flux_level} * "
+                return_text[i_inputoutput] += f"{reference_flux_level} * "
             else:
                 if reference_flux_level == 0:
                     if (stellar_var is not None) and (inst_var is not None):
-                        return_text += f"({stellar_var} + {inst_var[i_inputoutput]}) * "
+                        return_text[i_inputoutput] += f"({stellar_var} + {inst_var[i_inputoutput]}) + "
                     if stellar_var is not None:
-                        return_text += f"({stellar_var}) * "
+                        return_text[i_inputoutput] += f"({stellar_var}) + "
                     if inst_var is not None:
-                        return_text += f"({inst_var[i_inputoutput]}) * "
+                        return_text[i_inputoutput] += f"({inst_var[i_inputoutput]})  "
                 else:
                     if (stellar_var is not None) and (inst_var is not None):
-                        return_text += f"{reference_flux_level} + ({stellar_var} + {inst_var[i_inputoutput]}) * "
+                        return_text[i_inputoutput] += f"{reference_flux_level} + ({stellar_var} + {inst_var[i_inputoutput]}) + "
                     if stellar_var is not None:
-                        return_text += f"{reference_flux_level} + ({stellar_var}) * "
+                        return_text[i_inputoutput] += f"{reference_flux_level} + ({stellar_var}) + "
                     if inst_var is not None:
-                        return_text += f"{reference_flux_level} + ({inst_var[i_inputoutput]}) * "
+                        return_text[i_inputoutput] += f"{reference_flux_level} + ({inst_var[i_inputoutput]}) + "
 
         if (transit is not None) or (phasecurve is not None):
             if (transit is not None) and (phasecurve is not None):
-                return_text += f"(1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]})"
+                return_text[i_inputoutput] += f"(1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]})"
             elif transit is not None:
-                return_text += f"(1 + {transit[i_inputoutput]})"
+                return_text[i_inputoutput] += f"(1 + {transit[i_inputoutput]})"
             elif phasecurve is not None:
-                return_text += f"(1 + {phasecurve[i_inputoutput]})"
+                return_text[i_inputoutput] += f"(1 + {phasecurve[i_inputoutput]})"
 
         if decorrelation is not None:
             if "multiply_2_totalflux" in decorrelation[i_inputoutput]:
-                return_text += f" * ({decorrelation[i_inputoutput]['multiply_2_totalflux']})"
+                return_text[i_inputoutput] = "(" + return_text[i_inputoutput] + ")"
+                return_text[i_inputoutput] += f" * ({decorrelation[i_inputoutput]['multiply_2_totalflux']})"
             if "add_2_totalflux" in decorrelation[i_inputoutput]:
-                return_text += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
+                return_text[i_inputoutput] += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
 
-        if i_inputoutput < (len(l_inst_model) - 1):
-            return_text += ", "
 
-    function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=return_text,
+    function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=", ".join(return_text),
                                                                   returns_except=get_catchederror_return(multi=multi,
                                                                                                          l_inst_model=l_inst_model,
                                                                                                          time_vec_name=time_vec_name,
