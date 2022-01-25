@@ -1397,7 +1397,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                         #######################
                         # Sine and Cosine model
                         #######################
-                        if (pc_component_model["model"] == "sincos") or (pc_component_model["model"] == "ellipsoidal") or (pc_component_model["model"] == "doppler"):
+                        elif (pc_component_model["model"] == "sincos") or (pc_component_model["model"] == "ellipsoidal") or (pc_component_model["model"] == "doppler"):
                             if pc_component_model["model"] in ["ellipsoidal", "beaming"]:
                                 if pc_component_model["model"] == "beaming":
                                     sincos_components = {"": {"sincos": "sin", "factor_period": 1, "average": 'zero', 'phase_offset': 0.}}
