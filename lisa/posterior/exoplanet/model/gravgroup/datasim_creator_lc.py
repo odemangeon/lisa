@@ -488,7 +488,7 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
     # Finalize the inst_var only function
     #####################################
     for func_shortname in [inst_var_func_shortname, ]:
-        function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
+        function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
 
     return returns
 
@@ -1125,7 +1125,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
                           function_shortname=func_shortname)
-            function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=f"{str(returns.pop(func_shortname)).strip('[]')}",
+            function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=f"{', '.join(returns.pop(func_shortname))}",
                                                                           returns_except=get_catchederror_return(multi=multi,
                                                                                                                  l_inst_model=l_inst_model,
                                                                                                                  time_vec_name=time_vec_name,
@@ -1531,7 +1531,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
                           function_shortname=func_shortname)
-            function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
+            function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
 
     return returns
 
@@ -1653,7 +1653,15 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
         # Finalize the decorrelation only function
         ##########################################
         for func_shortname in [decorr_func_shortname, ]:
-            function_builder.add_to_body_text(text=f"{tab}return {str(returns.pop(func_shortname)).strip('[]')}", function_shortname=func_shortname)
+            return_text = ""
+            for dico_config_return_instmodel in returns.pop(func_shortname):
+                return_text += '{'
+                for model_part, text in dico_config_return_instmodel.items():
+                    return_text += f"'{model_part}': {text}, "
+                return_text += '}, '
+            return_text = return_text[:-2]
+
+            function_builder.add_to_body_text(text=f"{tab}return {return_text}", function_shortname=func_shortname)
 
     return returns
 
@@ -1762,32 +1770,51 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
     return_text = []
     for i_inputoutput, instmod in enumerate(l_inst_model):
         return_text.append("")
-        if (stellar_var is not None) or (reference_flux_level != 0) or (inst_var is not None):
-            if (stellar_var is None) and (inst_var is None):
-                return_text[i_inputoutput] += f"{reference_flux_level} * "
-            else:
-                if reference_flux_level == 0:
-                    if (stellar_var is not None) and (inst_var is not None):
-                        return_text[i_inputoutput] += f"({stellar_var} + {inst_var[i_inputoutput]}) + "
-                    if stellar_var is not None:
-                        return_text[i_inputoutput] += f"({stellar_var}) + "
-                    if inst_var is not None:
-                        return_text[i_inputoutput] += f"({inst_var[i_inputoutput]})  "
-                else:
-                    if (stellar_var is not None) and (inst_var is not None):
-                        return_text[i_inputoutput] += f"{reference_flux_level} + ({stellar_var} + {inst_var[i_inputoutput]}) + "
-                    if stellar_var is not None:
-                        return_text[i_inputoutput] += f"{reference_flux_level} + ({stellar_var}) + "
-                    if inst_var is not None:
-                        return_text[i_inputoutput] += f"{reference_flux_level} + ({inst_var[i_inputoutput]}) + "
+        if (inst_var is not None):
+            return_text[i_inputoutput] += inst_var[i_inputoutput]
 
-        if (transit is not None) or (phasecurve is not None):
-            if (transit is not None) and (phasecurve is not None):
-                return_text[i_inputoutput] += f"(1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]})"
-            elif transit is not None:
-                return_text[i_inputoutput] += f"(1 + {transit[i_inputoutput]})"
-            elif phasecurve is not None:
-                return_text[i_inputoutput] += f"(1 + {phasecurve[i_inputoutput]})"
+        if reference_flux_level == 0:
+            if stellar_var is None or stellar_var[i_inputoutput] == "":
+                if return_text[i_inputoutput] != "":
+                    return_text[i_inputoutput] += " + "
+                if (transit is not None) or (phasecurve is not None):
+                    if (transit is not None) and (phasecurve is not None):
+                        return_text[i_inputoutput] += f"{transit[i_inputoutput]} + {phasecurve[i_inputoutput]}"
+                    elif transit is not None:
+                        return_text[i_inputoutput] += f"{transit[i_inputoutput]})"
+                    elif phasecurve is not None:
+                        return_text[i_inputoutput] += f"{phasecurve[i_inputoutput]}"
+            else:
+                if return_text[i_inputoutput] != "":
+                    return_text[i_inputoutput] += " + "
+                if (transit is not None) or (phasecurve is not None):
+                    if (transit is not None) and (phasecurve is not None):
+                        return_text[i_inputoutput] += f"(1 + {stellar_var}) * (1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]}) - 1"
+                    elif transit is not None:
+                        return_text[i_inputoutput] += f"(1 + {stellar_var}) * (1 + {transit[i_inputoutput]}) - 1"
+                    elif phasecurve is not None:
+                        return_text[i_inputoutput] += f"(1 + {stellar_var}) * (1 + {phasecurve[i_inputoutput]})- 1"
+        else:
+            if stellar_var is None or stellar_var[i_inputoutput] == "":
+                if return_text[i_inputoutput] != "":
+                    return_text[i_inputoutput] += " + "
+                if (transit is not None) or (phasecurve is not None):
+                    if (transit is not None) and (phasecurve is not None):
+                        return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]})"
+                    elif transit is not None:
+                        return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {transit[i_inputoutput]})"
+                    elif phasecurve is not None:
+                        return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {phasecurve[i_inputoutput]})"
+            else:
+                if return_text[i_inputoutput] != "":
+                    return_text[i_inputoutput] += " + "
+                if (transit is not None) or (phasecurve is not None):
+                    if (transit is not None) and (phasecurve is not None):
+                        return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {transit[i_inputoutput]} + {phasecurve[i_inputoutput]})"
+                    elif transit is not None:
+                        return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {transit[i_inputoutput]})"
+                    elif phasecurve is not None:
+                        return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {phasecurve[i_inputoutput]})"
 
         if decorrelation is not None:
             if "multiply_2_totalflux" in decorrelation[i_inputoutput]:
@@ -1795,7 +1822,6 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                 return_text[i_inputoutput] += f" * ({decorrelation[i_inputoutput]['multiply_2_totalflux']})"
             if "add_2_totalflux" in decorrelation[i_inputoutput]:
                 return_text[i_inputoutput] += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
-
 
     function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=", ".join(return_text),
                                                                   returns_except=get_catchederror_return(multi=multi,
