@@ -95,11 +95,12 @@ sig_fact_LPS = 3  # Sigma clipping value.
 quantile_LPS = 100  # Quantile of the quantile_walker_LPS of all chains that you want to use as reference
 quantile_walker_LPS = 100  # Each walker get as representation lnposterior value the quantile_walker_LPS quantile of it lnposterior chain
 verbose_LPS = 1   # More outputs on screen
-plot_hist_Post = True # Do the diagnostic plot for this step.
+plot_hist_Post = True  # Do the diagnostic plot for this step.
 thin_LPS = 10  # Thining factor for the trace plots
 
 # Trace plots and hist of the lnposterior after AFS and LPS
 do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
+thin_AFSLPSP = 10
 
 # Convergence and burnin determination
 # The idea of this step is to determine the burnin fraction of this chain
