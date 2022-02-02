@@ -43,7 +43,13 @@ mgr_inst_dst.load_setup()
 
 # Formatter for the Ticks major of the period axis
 sf = ScalarFormatter(useOffset=False, useMathText=True)
-sci_not_str = lambda x, pos: f"${sf._formatSciNotation('%1.10e' % x)}$"
+sf.set_scientific(True)
+
+
+def sci_not_str(x, pos):
+    return f"${sf.format_data(x)}$"  # f"${sf._formatSciNotation('%1.10e' % x)}$"
+
+
 fmt_sci_not = FuncFormatter(sci_not_str)
 
 
