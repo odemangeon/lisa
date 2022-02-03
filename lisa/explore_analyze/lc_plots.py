@@ -6,6 +6,7 @@ Module to create plot specifically for light curve data
 @TODO:
 """
 import numpy as np
+from logging import getLogger
 
 from copy import deepcopy, copy
 from collections import OrderedDict, defaultdict
@@ -29,6 +30,8 @@ mgr_noisemodel.load_setup()
 
 ### for the A&A article class
 AandA_fontsize = 8
+
+logger = getLogger()
 
 
 def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
@@ -115,7 +118,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                should also include the time_fact
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
     pl_kwargs    : dict
-        Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "binned_data" and values
+        Dictionary with keys a dataset name (ex: "LC_HD209458_CHEOPS_0") or "model" or "binned_data" and values
         a dictionary that will be passed as keyword arguments associated the plotting functions.
         You can also add a 'jitter' key with value a dictionary that will contain the changes that you
         want to make for the update error bars due to potential jitter.
@@ -346,28 +349,64 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         tmax_model = tc + x_max_data if show_time_from_tic else tc + Per * x_max_data
 
         ###################
-        # Load OOT_var info
+        # Load inst_var info
         ###################
-        OOT_var = OrderedDict()
+        inst_var = OrderedDict()
         # For each dataset
         for datasetname in datasetnames:
             instmod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
             instmodobj = post_instance.model.instruments[instmod_fullname]
-            if instmodobj.get_with_OOT_var():
-                OOT_var[datasetname] = np.zeros_like(dico_kwargs[datasetname]["t"])
-                for order in range(instmodobj.get_OOT_var_order() + 1):
-                    OOT_var_name = instmodobj.get_OOT_param_name(order)
-                    OOT_var_param = instmodobj.parameters[OOT_var_name]
-                    if OOT_var_param.free:
-                        OOT_var_paramvalue = df_fittedval.loc[OOT_var_param.full_name]["value"]
-                    else:
-                        OOT_var_paramvalue = OOT_var_param.value
-                    OOT_var[datasetname] += OOT_var_paramvalue * (dico_kwargs[datasetname]["t"] -
-                                                                  dico_kwargs[datasetname]["tref"])**order
+
+            # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+            # and remove RV_drift
+            kwargs_dataset = dico_kwargs[datasetname].copy()
+            t_dst = kwargs_dataset.pop("t")
+
+            if instmodobj.get_with_inst_var():
+                (model_inst_var, _, _, _
+                 ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
+                                                 l_param_name=list(df_fittedval.index), key_obj="inst_var", datasim_kwargs=datasim_kwargs
+                                                 )
+                inst_var[datasetname] = model_inst_var
+                # inst_var[datasetname] = np.zeros_like(dico_kwargs[datasetname]["t"])
+                # for order in range(instmodobj.get_inst_var_order() + 1):
+                #     inst_var_name = instmodobj.get_inst_var_param_name(order)
+                #     inst_var_param = instmodobj.parameters[inst_var_name]
+                #     if inst_var_param.free:
+                #         inst_var_paramvalue = df_fittedval.loc[inst_var_param.full_name]["value"]
+                #     else:
+                #         inst_var_paramvalue = inst_var_param.value
+                #     inst_var[datasetname] += inst_var_paramvalue * (dico_kwargs[datasetname]["t"] -
+                #                                                     dico_kwargs[datasetname]["tref"])**order
                 # Apply RV_fact to deltaRV
                 # OOT_var[datasetname] *= LC_fact
-            else:
-                OOT_var[datasetname] = None
+
+        ##########################
+        # Load decorrelation model
+        ##########################
+        decorrelation_add2totalflux = OrderedDict()
+        # For each dataset
+        for datasetname in datasetnames:
+            instmod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+
+            if post_instance.model.instcat_models["LC"].decorrelation_config[instmod_fullname]["do"]:
+                # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+                # and remove RV_drift
+                kwargs_dataset = dico_kwargs[datasetname].copy()
+                t_dst = kwargs_dataset.pop("t")
+
+                for model_part in post_instance.model.instcat_models["LC"].decorrelation_config[instmod_fullname]['what to decorrelate']:
+                    if model_part == "add_2_totalflux":
+                        datasim_docfunc_decorr = post_instance.datasimulators.instrument_db[instmod_fullname]['decorr']
+                        datasim_function = datasim_docfunc_decorr.function
+                        datasim_paramnames = datasim_docfunc_decorr.params_model
+                        idx_param_datasim = []
+                        for par in datasim_paramnames:
+                            idx_param_datasim.append(list(df_fittedval.index).index(par))
+                        model_decorr = datasim_function(df_fittedval["value"][idx_param_datasim], t_dst, **datasim_kwargs)
+                        decorrelation_add2totalflux[datasetname] = model_decorr['add_2_totalflux']
+                    else:
+                        logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         ##############################################
         # Apply the jitter to the data error if needed
@@ -409,9 +448,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             # and remove RV_drift
             kwargs_dataset = dico_kwargs[datasetname].copy()
             t_dst = kwargs_dataset.pop("t")
-            kwargs_dataset.pop("data")
-            kwargs_dataset.pop("data_err")
-            kwargs_dataset.update(datasim_kwargs.copy())
 
             # Init data_pl
             data_pl[datasetname] = dico_kwargs[datasetname]["data"]
@@ -423,21 +459,25 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 else:
                     (model_pl_only, _, _, _
                      ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
-                                                     l_param_name=list(df_fittedval.index), key_obj=f"{plnt}_only", datasim_kwargs=kwargs_dataset
+                                                     l_param_name=list(df_fittedval.index), key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs
                                                      )
                     # Apply RV_fact to models, model planet only has an out of transit level of 0
                     # model_pl_only *= LC_fact
                     data_pl[datasetname] = data_pl[datasetname] - model_pl_only
 
-            # Remove the OOT_var
-            if OOT_var[datasetname] is not None:
-                data_pl[datasetname] /= (1 + OOT_var[datasetname])
+            # Remove the inst_var
+            if inst_var.get(datasetname, None) is not None:
+                data_pl[datasetname] -= inst_var[datasetname]
+
+            # Decorrelate
+            if decorrelation_add2totalflux.get(datasetname, None) is not None:
+                data_pl[datasetname] -= decorrelation_add2totalflux[datasetname]
 
             # Remove GP model
             if remove_GP:
                 (_, _, GP_pred, GP_pred_var
                  ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
-                                                 l_param_name=list(df_fittedval.index), key_obj="whole", datasim_kwargs=kwargs_dataset
+                                                 l_param_name=list(df_fittedval.index), key_obj="whole", datasim_kwargs=datasim_kwargs
                                                  )
                 if GP_pred is not None:
                     # GP_pred *= LC_fact
@@ -503,8 +543,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         ################
         # Plot the model
         ################
-        if remove1:  # The model planet only has an out of transit at 0 and cannot be used which plot_model if remove1 is False
-            key_obj = f"{planet_name}_only"
+        if remove1:  # The model planet only has an out of transit at 0 and cannot be used with plot_model if remove1 is False
+            key_obj = f"{planet_name}"
         else:
             key_obj = "whole"  # WARNING: There might be a problem with that if there happens to be a double transit at the times chosen for the model
 
@@ -512,7 +552,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
                                                        dataset_name=datasetname, param=df_fittedval["value"],
                                                        l_param_name=list(df_fittedval.index), post_instance=post_instance,
-                                                       key_obj=key_obj, datasim_kwargs=kwargs_dataset,
+                                                       key_obj=key_obj, datasim_kwargs=datasim_kwargs,
                                                        multiplication_factor=LC_fact,
                                                        plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                                        show_time_from_tref=show_time_from_tic, time_fact=time_fact,
@@ -527,7 +567,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
                                                            dataset_name=datasetname, param=df_fittedval["value"],
                                                            l_param_name=list(df_fittedval.index), post_instance=post_instance,
-                                                           key_obj=key_obj, datasim_kwargs=kwargs_dataset,
+                                                           key_obj=key_obj, datasim_kwargs=datasim_kwargs,
                                                            multiplication_factor=LC_fact,
                                                            supersamp=supersamp_bin_model, exptime=exptime_bin,
                                                            plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
@@ -548,7 +588,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         for datasetname in datasetnames:
             (_, _, _, _, _, residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts_lines_labels
              ) = et.plot_residuals(dataset_name=datasetname, param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                   post_instance=post_instance, key_obj="whole", datasim_kwargs=kwargs_dataset,
+                                   post_instance=post_instance, key_obj="whole", datasim_kwargs=datasim_kwargs,
                                    multiplication_factor=LC_fact,
                                    plot_phase=True, Per=Per, tref=tc, phasefold_central_phase=phasefold_central_phase,
                                    show_time_from_tref=show_time_from_tic, time_fact=time_fact,
@@ -662,7 +702,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     ebcont_binned = axes_resi[datasetname][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
                 # Compute rms of the binned residuals
                 text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
-                text_rms_binned[datasetname] = text_rms_binned_template.format(np.std(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
+                text_rms_binned[datasetname] = text_rms_binned_template.format(np.nanstd(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
                 print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
                 # Indicate values that are off y-axis with arrows
                 et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[datasetname][jj],
