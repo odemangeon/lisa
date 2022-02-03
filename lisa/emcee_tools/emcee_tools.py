@@ -593,7 +593,6 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     nt = len(t_data)
     data = kwargs.pop("data")
     data_err = kwargs.pop("data_err")
-    kwargs.update(datasim_kwargs.copy())
     # Extract the jitter information:
     # jitter which give the value of the jitter (float)
     # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
