@@ -30,6 +30,7 @@ from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
+from .model.datasimulator_timeseries_toolbox import time_vec
 from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
@@ -356,7 +357,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None,
                       supersamp=1, exptime=30 / (24 * 60)):
-        """Function to compute the models of a dataset for display purposes.
+        """Function to compute the models of one dataset for display purposes.
 
         Arguments
         ---------
@@ -398,7 +399,11 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         datasim_paramnames = datasim_docfunc.params_model
         for par in datasim_paramnames:
             idx_param_datasim.append(l_param_name.index(par))
-        model = datasim_function(param[idx_param_datasim], t_model, **datasim_kwargs)
+        if f"'{time_vec}'" in datasim_docfunc.mand_kwargs_list:
+            mand_kwargs = {"t": t_model}
+        else:
+            mand_kwargs = {}
+        model = datasim_function(param[idx_param_datasim], **mand_kwargs, **datasim_kwargs)
 
         # De-supersamp the model if needed.
         if supersamp > 1:
