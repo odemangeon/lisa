@@ -19,7 +19,7 @@ from ..emcee_tools import emcee_tools as et
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
-from ..posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+from ..posterior.exoplanet.model.gravgroup.datasim_creator_rv import RVdrift_tref_name
 from ..posterior.core.model.core_model import Core_Model
 
 import sys
@@ -43,7 +43,13 @@ mgr_inst_dst.load_setup()
 
 # Formatter for the Ticks major of the period axis
 sf = ScalarFormatter(useOffset=False, useMathText=True)
-sci_not_str = lambda x, pos: f"${sf._formatSciNotation('%1.10e' % x)}$"
+sf.set_scientific(True)
+
+
+def sci_not_str(x, pos):
+    return f"${sf.format_data(x)}$"  # f"${sf._formatSciNotation('%1.10e' % x)}$"
+
+
 fmt_sci_not = FuncFormatter(sci_not_str)
 
 
@@ -654,6 +660,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
 def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                             datasetnames=None,
+                            remove_sysvel=True,
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
                             RV_fact=1.,
@@ -687,10 +694,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 function creating two axes data and residuals per planet.
             - 'fontsize' : Int specifiying the fontsize
             - 'suptitle_kwargs': to pass kwargs to the suptitle command
+    remove_sysvel   : bool (Def: True)
+        If True remove the systemic velocity (if model includes a slope, remove velocity at tref)
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
-            - 'remove_sysvel': bool (Def: True)
-                If True remove the systemic velocity (if model includes a slope, remove velocity at tref)
             - 'npt_model': int (Def: 1000) giving the number of points to use for the model
             - 'extra_dt_model': float (Def: 0)
                 Specify the extra time that for which you want to compute the model before and after the
@@ -909,7 +916,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         # Remove the systemic velocity, delta_RV and apply RV_fact when and where needed
         ################################################################################
         # Remove the systemic velocity
-        if TS_kwargs.get("remove_sysvel", True):
+        if remove_sysvel:
             dico_kwargs[datasetname]["data"] -= df_fittedval.loc[star.v0.full_name]["value"]
         # Remove the deltaRV
         dico_kwargs[datasetname]["data"] -= deltaRV[datasetname]
@@ -942,18 +949,20 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         ###################
         # Compute the model
         ###################
+        npt_model = TS_kwargs.get("npt_model", 1000)
         tsim = np.linspace(tmin - TS_kwargs.get("extra_dt_model", 0.), tmax + TS_kwargs.get("extra_dt_model", 0.),
-                           TS_kwargs.get("extra_dt_model", 1000))
+                           npt_model)
         model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=l_datasetname_RVrefglobal[0],
                                                                              param=df_fittedval["value"].values,
                                                                              l_param_name=list(df_fittedval.index),
                                                                              key_obj=key_whole,
                                                                              datasim_kwargs=datasim_kwargs)
-        if TS_kwargs.get("remove_sysvel", True):
+        if remove_sysvel:
             model -= df_fittedval.loc[star.v0.full_name]["value"]
         model *= RV_fact
         if model_wGP is not None:
-            model_wGP -= df_fittedval.loc[star.v0.full_name]["value"]
+            if remove_sysvel:
+                model_wGP -= df_fittedval.loc[star.v0.full_name]["value"]
             model_wGP *= RV_fact
             gp_pred *= RV_fact
             gp_pred_var *= RV_fact**2
@@ -1076,7 +1085,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
             # ylims = axe_data.get_ylim()
             xlims = axe_data.get_xlim()
-            if TS_kwargs.get("remove_sysvel", True):
+            if remove_sysvel:
                 v0 = 0.
             else:
                 v0 = df_fittedval.loc[star.v0.full_name]["value"]
