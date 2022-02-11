@@ -21,7 +21,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from logging import getLogger
-from numpy import inf, isfinite
+from numpy import inf, isfinite, ones_like
 from dill import dump, load
 from os.path import join
 from textwrap import dedent
@@ -404,6 +404,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         else:
             mand_kwargs = {}
         model = datasim_function(param[idx_param_datasim], **mand_kwargs, **datasim_kwargs)
+        if f"'{time_vec}'" not in datasim_docfunc.mand_kwargs_list:
+            model = model * ones_like(t_model)
 
         # De-supersamp the model if needed.
         if supersamp > 1:
