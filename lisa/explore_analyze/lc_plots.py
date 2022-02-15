@@ -737,9 +737,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         if show_rms:
             text_rms_to_plot = ""
             for ii, datasetname in enumerate(datasetnames):
-                text_rms_to_plot_dst = f"{text_rms}, {text_rms_binned}" if (exptime_bin > 0.) else f"rms = {text_rms}"
+                text_rms_to_plot_dst = f"{text_rms[datasetname]}, {text_rms_binned[datasetname]}" if (exptime_bin > 0.) else f"rms = {text_rms[datasetname]}"
                 if jj == 0:
-                    text_rms_to_plot_dst = "rms = " + text_rms_to_plot
+                    text_rms_to_plot_dst = "rms = " + text_rms_to_plot_dst
                 if LC_unit is not None:
                     text_rms_to_plot_dst += f" {LC_unit}"
                 text_rms_to_plot += text_rms_to_plot_dst + ";"
