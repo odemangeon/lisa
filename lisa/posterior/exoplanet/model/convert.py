@@ -28,6 +28,7 @@ import math
 import astropy.constants as cst
 import astropy.units as uu
 from logging import getLogger
+from scipy.optimize import fsolve
 
 # from IPython import get_ipython
 from numpy import pi
@@ -1139,6 +1140,113 @@ def getMref_4_tic_fast(tic, P, ecc, omega, t_ref=0.0):
     """
     return (getM_4_f_fast_positive(pi / 2 - omega, ecc) - 2 * pi / P * (tic - t_ref)) % (2 * pi)
 
+
+def gethotspotoffset(xi):
+    """Compute the longitude of the hot spot in the Zhang & Showan 2017 model
+
+    This function is the approximation provided in appendix B.2. that is suitable for small xi.
+
+    Arguments
+    ---------
+    xi  : float
+        Ratio of the radiative and advective timescales
+
+    Return
+    ------
+    long_max    : float
+        Longitude of the hot spot offset in the model of Zhang & Showan 2017 in degrees
+    """
+    long_s = np.arctan(xi)
+    return np.rad2deg(long_s)
+
+
+def gethotspotoffset_v2(xi, deltaT, Tn):
+    """Compute the longitude of the hot spot in the Zhang & Showan 2017 model
+
+    This function will implement equation 46 of Zhang & Showan 2017 and get the maximum
+    (https://ui.adsabs.harvard.edu/abs/2017ApJ...836...73Z/abstract , be careful that this equation
+    number refers to the ApJ formating of the paper. The numbering in the arxiv version is different)
+
+    Arguments
+    ---------
+    xi      : float
+        Ratio of the radiative and advective timescales
+    deltaT  : float
+        Temperature difference between the hotspot and the anti-hotspot point in K
+    Tn      : float
+        Night side temperature in Kelvin
+
+    Return
+    ------
+    long_max    : float
+        Longitude of the hot spot offset in the model of Zhang & Showan 2017 in degrees
+    """
+    # first get a 1 degree temperature vector and find the max
+    long_vect = np.linspace(-np.pi, np.pi, 360)
+    temp = get_temp_vect(long_vect, np.zeros_like(long_vect), np.ones_like(long_vect) * xi, np.ones_like(long_vect) * deltaT, np.ones_like(long_vect) * Tn)
+    # f = np.vectorize(lambda long: get_temp(long, lat=0, xi=xi, deltaT=deltaT, Tn=Tn))
+    # temp = f(long_vect)
+    idx_max = np.argmax(temp)
+    # do a 0.01 deg temp
+    long_vect = np.linspace(long_vect[idx_max] - (0.5 * math.pi / 360), long_vect[idx_max] + (0.5 * math.pi / 360), 100)
+    # temp = f(long_vect)
+    temp = get_temp_vect(long_vect, np.zeros_like(long_vect), np.ones_like(long_vect) * xi, np.ones_like(long_vect) * deltaT, np.ones_like(long_vect) * Tn)
+    return np.rad2deg(long_vect[np.argmax(temp)])
+
+
+def get_temp(long, lat, xi, deltaT, Tn):
+    lambda_s = np.arctan(xi)
+    if abs(xi) < 0.01:
+        if ((-math.pi / 2.0 <= long) and (long <= math.pi / 2.0)):
+            temp = Tn + deltaT * np.cos(lat) * np.cos(lambda_s) * np.cos(long - lambda_s)
+        else:  # ((-math.pi <= long) and (long <= -math.pi / 2.0)) or ((math.pi / 2 <= long) and (long <= math.pi)):
+            temp = Tn
+    else:
+        eta = (xi / (1 + xi**2)) * (np.exp(math.pi / (2 * xi)) + np.exp(3 * math.pi / (2 * xi))) / (np.exp(2 * math.pi / xi) - 1.0)
+        if ((-math.pi / 2.0 <= long) and (long <= math.pi / 2.0)):
+            temp = Tn + deltaT * np.cos(lat) * np.cos(lambda_s) * np.cos(long - lambda_s) + eta * deltaT * np.cos(lat) * np.exp(-long / xi)
+        elif ((-math.pi <= long) and (long <= -math.pi / 2.0)):
+            temp = Tn + eta * deltaT * np.cos(lat) * np.exp(-(math.pi + long) / xi)
+        else:  # ((math.pi / 2 <= long) and (long <= math.pi)):
+            temp = Tn + eta * deltaT * np.cos(lat) * np.exp((math.pi - long) / xi)
+    return temp
+
+
+get_temp_vect = np.vectorize(get_temp)
+
+
+def gethotspotoffset_vect_v2(xi, deltaT, Tn):
+    """Compute the longitude of the hot spot in the Zhang & Showan 2017 model
+
+    This function will implement equation 46 of Zhang & Showan 2017 and get the maximum
+    (https://ui.adsabs.harvard.edu/abs/2017ApJ...836...73Z/abstract , be careful that this equation
+    number refers to the ApJ formating of the paper. The numbering in the arxiv version is different)
+
+    Arguments
+    ---------
+    xi      : np.array
+        Ratio of the radiative and advective timescales
+    deltaT  : np.array
+        Temperature difference between the hotspot and the anti-hotspot point in K
+    Tn      : np.array
+        Night side temperature in Kelvin
+
+    Return
+    ------
+    long_max    : np.array
+        Longitude of the hot spot offset in the model of Zhang & Showan 2017 in degrees
+    """
+    n_samp = 360
+    shape = xi.shape
+    long = np.linspace(-np.pi, np.pi, n_samp)
+    long_res = []
+    for xi_i, deltaT_i, Tn_i in zip(xi.flatten(), deltaT.flatten(), Tn.flatten()):
+        temp = get_temp_vect(long, lat=np.zeros_like(long), xi=np.ones_like(long) * xi_i, deltaT=np.ones_like(long) * deltaT_i, Tn=np.ones_like(long) * Tn_i)
+        long_max = long[np.argmax(temp)]
+        long_bis = np.linspace(long_max - (0.5 * np.pi / 180), long_max - (0.5 * np.pi / 180), 100)
+        temp = get_temp_vect(long_bis, lat=np.zeros_like(long_bis), xi=np.ones_like(long_bis) * xi_i, deltaT=np.ones_like(long_bis) * deltaT_i, Tn=np.ones_like(long_bis) * Tn_i)
+        long_res.append(np.rad2deg(long_bis[np.argmax(temp)]))
+    return np.array(long_res).reshape(shape)
 
 # if __name__ == "__main__":
 #     ipython = get_ipython()
