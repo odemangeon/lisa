@@ -404,22 +404,22 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         dictmodelpart_content = ""
         for modelpart2decor in self.allowed_what2decorrelate_strs:
             if len(dictmodelpart_content) > 0:
-                dictmodelpart_content += f"\n'{tab + tab_what2decorrdict}"
+                dictmodelpart_content += f"\n{tab + tab_what2decorrdict}"
             modelpart_1stline = f"'{modelpart2decor}': " + "{"
             tab_modelpart = spacestring_like(modelpart_1stline)
             dictmodelpart_content += modelpart_1stline
             dictdecorrcat_content = ""
             for decorr_model_name in self.available_decorrelationmodel_names:
                 if len(dictdecorrcat_content) > 0:
-                    dictdecorrcat_content += f"\n'{tab + tab_what2decorrdict + tab_modelpart}"
+                    dictdecorrcat_content += f"\n{tab + tab_what2decorrdict + tab_modelpart}"
                 decorr_model = self.get_DecorrModel(decorrmodel_cat=decorr_model_name)
                 decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
                 dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                                                    decorrelation_config_inst=decorr_model_current_config_dict,
                                                                                    tab=tab + tab_what2decorrdict + tab_modelpart)
-            dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "}"
+            dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "},"
 
-        return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "}"
+        return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
 
     def load_config_decorrelation(self, dico_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models

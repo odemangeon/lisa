@@ -184,7 +184,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         text_decorr_dict = ""
         for instmod_obj in l_LC_instmod:
             instmodel_name = instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True)
-            template_instmodel_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_models}\n{tab_decorr_dict}{tab_instmodel_name}}}\n"
+            template_instmodel_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_models}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
             tab_pre_instmodel_name = "" if len(text_decorr_dict) == 0 else tab_decorr_dict
             tab_instmodel_name = spacestring_like(f"'{instmodel_name}':  ")
             text_instmod_decorr_models_content = self.create_text4paramfile_decorrmodels(instmod_obj=instmod_obj, tab=tab_decorr_dict + tab_instmodel_name)
