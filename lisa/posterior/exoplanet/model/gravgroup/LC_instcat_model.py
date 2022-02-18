@@ -88,7 +88,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                                                                                       },
                                                                                              },
                                                                            },
-                                                     "model4instrument": {instmod_obj.full_name: "default_model"
+                                                     "model4instrument": {instmod_obj.full_name: ["default_model", ]
                                                                           for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
                                                                           },
                                                      }
@@ -96,7 +96,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                  }
         self.occultation_model = {planet.get_name(): {"do": False,
                                                       "model_definitions": {"default_model": {"model": "batman"}, },
-                                                      "model4instrument": {instmod_obj.full_name: "default_model"
+                                                      "model4instrument": {instmod_obj.full_name: ["default_model", ]
                                                                            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
                                                                            }
                                                       }
