@@ -1446,15 +1446,15 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                     binstd_jitter[i_bin] = np.nan
                         # Plot the binned data
                         bin_err = binstd if pl_show_binned_error[datasetname] else None
-                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_binned[datasetname])
+                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=30)
                         if not("color" in pl_kwarg_binned[datasetname]):
                             pl_kwarg_binned[datasetname]["color"] = ebcont_binned[0].get_color()
                         if not("ecolor" in pl_kwarg_binned_jitter[datasetname]):
                             pl_kwarg_binned_jitter[datasetname]["ecolor"] = pl_kwarg_binned[datasetname]["color"]
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_binned[datasetname])
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=30)
                         if has_jitter[datasetname] and pl_show_binned_error[datasetname]:
-                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname])
-                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname])
+                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=20)
+                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=20)
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
@@ -1590,18 +1590,18 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         if len(all_inst_var) > 0:
             all_inst_var = all_inst_var[idx_sort]
         all_decorrs = {}
-        for dst in datasetnames:
-            for model_part in decorrs[dst]:
-                if model_part in ["add_2_totalflux", ]:
-                    if model_part not in all_decorrs:
-                        all_decorrs[model_part] = []
-                    all_decorrs[model_part].append(decorrs[dst][model_part])
-                else:
-                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-        for model_part in all_decorrs:
-            all_decorrs[model_part] = np.concatenate(all_decorrs[model_part])
-        if len(all_inst_var) > 0:
-            all_inst_var = all_inst_var[idx_sort]
+        if len(decorrs) > 0:
+            for dst in datasetnames:
+                for model_part in decorrs[dst]:
+                    if model_part in ["add_2_totalflux", ]:
+                        if model_part not in all_decorrs:
+                            all_decorrs[model_part] = []
+                        all_decorrs[model_part].append(decorrs[dst][model_part])
+                    else:
+                        logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+            for model_part in all_decorrs:
+                all_decorrs[model_part] = np.concatenate(all_decorrs[model_part])
+                all_decorrs[model_part] = all_decorrs[model_part][idx_sort]
 
         gls_inputs = {}
         l_gls_key = []
