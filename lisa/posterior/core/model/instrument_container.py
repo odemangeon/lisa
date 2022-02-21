@@ -261,7 +261,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             extra_tab = spacestring_like(entete_inst_fullcat)
             first_instrument_name = True
             for inst_name in self[inst_fullcat]:
-                entete_inst_name = f"'{inst_name}': {{"
+                entete_inst_name = f"'{inst_name}': " + "{"
                 if first_instrument_name:
                     text += entete_inst_name
                     first_instrument_name = False
@@ -278,7 +278,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                     text += ",\n"
                 model_name_def = list(self[inst_fullcat][inst_name].keys())[0]
                 text_instmod4dataset = ""
-                for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
+                for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
                     number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
                     model_name = model_instance.instmodel4dataset[datasetname]
                     text_instmod4dataset += "{}: '{}', ".format(number, model_name)
