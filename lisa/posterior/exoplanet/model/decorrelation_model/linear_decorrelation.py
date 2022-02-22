@@ -175,8 +175,9 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
             cor_coeff = function_builder.get_text_4_parameter(parameter=param_cor_coeff, function_shortname=function_shortname)
             if len(text_decor) > 0:
                 text_decor += " + "
+            # Add text cor_coeff * decorr_variable to the text of the decorrelation model
             if decorrelation_config_decorr_var["quantity"] == "raw":
-                # Get the list of decorrelation variable datasets.
+                # Get the list of decorrelation variable datasets for this variable.
                 l_dataset_name_decor_var = [decorrelation_config_decorr_var['match datasets'][dataset_name] for dataset_name in l_dataset_name_inst_mod]
                 l_dataset_decor_var = [dataset_db[dataset_name] for dataset_name in l_dataset_name_decor_var]
                 if len(l_dataset_decor_var) > 1:
@@ -186,14 +187,15 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
                     time = l_dataset_decor_var[0].get_time()
                     data = l_dataset_decor_var[0].get_data()
                 idx_sort = np.argsort(time)
-                function_builder.add_variable_to_ldict(variable_name=inst_mod_obj_decorr_var_name.replace("-", ""),
+                name_decorrelation_variable_function = f"{inst_mod_obj.full_code_name}{inst_mod_obj_decorr_var_name.replace('-', '')}"
+                function_builder.add_variable_to_ldict(variable_name=name_decorrelation_variable_function,
                                                        variable_content=scale_and_interpolate(t=time[idx_sort], x=data[idx_sort], scale='range'),
                                                        function_shortname=function_shortname, exist_ok=True
                                                        )
                 if multi:
-                    text_decor += f"{cor_coeff} * {inst_mod_obj_decorr_var_name.replace('-','')}({time_arg_name}[{idx_inst_mod_obj}])"
+                    text_decor += f"{cor_coeff} * {name_decorrelation_variable_function}({time_arg_name}[{idx_inst_mod_obj}])"
                 else:
-                    text_decor += f"{cor_coeff} * {inst_mod_obj_decorr_var_name.replace('-','')}({time_arg_name})"
+                    text_decor += f"{cor_coeff} * {name_decorrelation_variable_function}({time_arg_name})"
             else:
                 raise NotImplementedError(f"Quantity {decorrelation_config_decorr_var['quantity']} is not yet implemented for decorrelation method {cls.category}")
         return text_decor
