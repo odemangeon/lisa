@@ -134,7 +134,8 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         """
         inst_model_obj = model_instance.instruments[instmod_fullname]
         if inst_model_obj.has_parameter(name=jitter_name):
-            jitter_param = inst_model_obj.get_parameter(name=jitter_name)
+            jitter_param = inst_model_obj.get_parameter(name=jitter_name, kwargs_get_list_params={'recursive': False},
+                                                        kwargs_get_name={'recursive': False, 'include_prefix': False, 'force_no_duplicate': False})
             if not jitter_param.main:
                 jitter_param.main = True
         else:
