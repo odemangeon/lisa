@@ -179,9 +179,10 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             if no_duplicate:
                 result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
                 for param in result_mod:
-                    if param.get_name(include_prefix=True, recursive=True) in result_param_name:
-                        result_mod.remove(param)
-            result.extend(result_mod)
+                    if param.get_name(include_prefix=True, recursive=True) not in result_param_name:
+                        result.append(param)
+            else:
+                result.extend(result_mod)
         return result
 
     def get_inst_fullcat4inst_cat(self, inst_cat):
