@@ -378,11 +378,12 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         if recursive:
             result_in_paramcont_db = ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, no_duplicate=no_duplicate, **kwargs)
             if no_duplicate:
-                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_in_paramcont_db:
-                    if param.get_name(include_prefix=True, recursive=True) in result_param_name:
-                        result_in_paramcont_db.remove(param)
-            result.extend(result_in_paramcont_db)
+                    if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
+                        result.append(param)
+            else:
+                result.extend(result_in_paramcont_db)
         return result
 
     def get_list_paramnames(self, main=False, free=False, recursive=False, no_duplicate=True, **kwargs):
@@ -424,12 +425,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """
         # Get the list of parameter instances (and parameter name if needed)
         if list_paramnames is None:
-            list_params = self.get_list_params(main=True, free=True, recursive=True)
-            list_paramnames = [param.get_name(include_prefix=True, recursive=True) for param in list_params]
+            list_params = self.get_list_params(main=True, free=True, recursive=True, no_duplicate=True)
+            list_paramnames = [param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param in list_params]
         else:
             list_params = []
             for param_name in list_paramnames:
-                param = self.get_parameter(param_name, main=True, free=True, recursive=True)
+                param = self.get_parameter(param_name, kwargs_get_list_params={'main': True, 'free': True, 'recursive': True},
+                                           kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
                 if param is None:
                     raise ValueError("Parameter {} not found in model.".format(param_name))
                 else:
