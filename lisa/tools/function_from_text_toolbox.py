@@ -11,6 +11,7 @@ from text.
 @TODO:
     -
 """
+from numpy import array
 from collections import Iterable, OrderedDict
 from copy import copy
 from logging import getLogger
@@ -350,7 +351,17 @@ class FunctionBuilder(object):
                 if not(exist_ok):
                     logger.warning(f"Variable {variable_name} already exists in ldict of function {function_shortname}")
             else:
-                logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
+                error = True
+                # This is for the case where variable is an array or a list
+                if isinstance(variable_content, Iterable):
+                    l_equals = [var_content_i == stored_var_content_i for var_content_i, stored_var_content_i in zip(variable_content, self._database[function_shortname]["ldict"][variable_name])]
+                    if isinstance(l_equals[0], Iterable):
+                        l_equals = [all(eq) for eq in l_equals]
+                    if all(l_equals):
+                        error = False
+                if error:
+                    import pdb; pdb.set_trace()
+                    logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
 
     def is_in_ldict(self, variable_name, function_shortname, variable_content=None, check_content=False):
         """Add a variable to the local dictionary of a function
