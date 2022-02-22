@@ -145,20 +145,22 @@ class ParamContainerDatabase(object):
                                                                                         no_duplicate=no_duplicate,
                                                                                         **selectedkwargs)
                 if no_duplicate:
-                    result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
+                    result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                     for param in result_param_cont:
-                        if param.get_name(include_prefix=True, recursive=True) in result_param_name:
-                            result_param_cont.remove(param)
-                result.extend(result_param_cont)
+                        if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
+                            result.append(param)
+                else:
+                    result.extend(result_param_cont)
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
                     result_param_cont = param_cont.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
                     if no_duplicate:
                         result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
                         for param in result_param_cont:
-                            if param.get_name(include_prefix=True, recursive=True) in result_param_name:
-                                result_param_cont.remove(param)
-                    result.extend(result_param_cont)
+                            if param.get_name(include_prefix=True, recursive=True) not in result_param_name:
+                                result.append(param)
+                    else:
+                        result.extend(result_param_cont)
         return result
 
     def get_list_paramnames(self, model_instance=None, main=False, free=False, no_duplicate=True, **kwargs):
