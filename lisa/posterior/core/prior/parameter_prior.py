@@ -85,7 +85,7 @@ class Parameter_Prior(object):
         if self.duplicate is None:
             return self.prior_info["args"]
         else:
-            self.duplicate.prior_args
+            return self.duplicate.prior_args
 
     @property
     def joint(self):
