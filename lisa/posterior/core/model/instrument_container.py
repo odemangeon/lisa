@@ -180,11 +180,12 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             mod = self[inst_mod_name]
             result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
             if no_duplicate:
-                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_mod:
-                    if param.get_name(include_prefix=True, recursive=True) in result_param_name:
-                        result_mod.remove(param)
-            result.extend(result_mod)
+                    if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
+                        result.append(param)
+            else:
+                result.extend(result_mod)
         return result
 
     def get_inst_fullcat4inst_cat(self, inst_cat):
@@ -392,7 +393,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                                                                           model_instance=model_instance,
                                                                           available_joint_priors=available_joint_priors)
                 # Load which instrument model to use for which dataset
-                for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
+                for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
                     number = mgr_inst_dst.interpret_data_filename(dataset)["number"]
                     inst_model = dico_config[inst_fullcat_code][inst_name][string4datasetdico][number]
                     if model_instance.instmodel4dataset[dataset] != inst_model:
