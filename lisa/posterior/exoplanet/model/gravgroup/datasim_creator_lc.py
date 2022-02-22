@@ -1417,7 +1417,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
                             tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
                             # Amplitude
-                            amp_param = planet.get_parameter("Alamb", return_error=False, main=True)
+                            amp_param = planet.get_parameter("Alamb", return_error=False, kwargs_get_list_params={'main': True},
+                                                             kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
                             function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
                             amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
                             ###################################
@@ -1475,7 +1476,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     ################
                                     # Add parameters
                                     ################
-                                    constant_param = planet.get_parameter(f"C{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                    constant_param = planet.get_parameter(f"C{component_name}{sincos_comp_name}",
+                                                                          return_error=False, kwargs_get_list_params={'main': True},
+                                                                          kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
                                     function_builder.add_parameter(parameter=constant_param, function_shortname=func_shortname, exist_ok=True)
                                     constant = function_builder.get_text_4_parameter(parameter=constant_param, function_shortname=func_shortname)
                                     if returns[func_shortname][i_inputoutput] == "":
@@ -1494,12 +1497,16 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
                                     tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
                                     # Amplitude
-                                    amp_param = planet.get_parameter(f"A{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                    amp_param = planet.get_parameter(f"A{component_name}{sincos_comp_name}",
+                                                                     return_error=False, kwargs_get_list_params={'main': True},
+                                                                     kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
                                     function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
                                     amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
                                     # Phase Offset
                                     if sincos_comp_dict.get("phase_offset", 0) == "param":
-                                        phi_param = planet.get_parameter(f"Phi{component_name}{sincos_comp_name}", return_error=False, main=True)
+                                        phi_param = planet.get_parameter(f"Phi{component_name}{sincos_comp_name}",
+                                                                         return_error=False, kwargs_get_list_params={'main': True},
+                                                                         kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
                                         function_builder.add_parameter(parameter=phi_param, function_shortname=func_shortname, exist_ok=True)
                                         phi = function_builder.get_text_4_parameter(parameter=phi_param, function_shortname=func_shortname)
                                     else:
