@@ -12,7 +12,7 @@ from copy import deepcopy, copy
 from collections import OrderedDict, defaultdict
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from matplotlib.ticker import AutoMinorLocator, ScalarFormatter, FuncFormatter
-from matplotlib.offsetbox import AnchoredText
+# from matplotlib.offsetbox import AnchoredText
 from scipy.stats import binned_statistic
 from PyAstronomy.pyasl import foldAt
 
@@ -200,21 +200,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat="LC", sortby_instcat=False, sortby_instname=False)
 
     # Define on which rows the datasets are plots using the row4datasetname input
-    if row4datasetname is None:
-        row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
-    # Check that all datasets are in row4datasetname
-    if (set(row4datasetname.keys()) != set(datasetnames)) or (len(list(row4datasetname.keys())) != len(datasetnames)):
-        raise ValueError("row4datasetname is not correct !")
-    # Check the row idx values and determine the number of rows to use.
-    set_row_idx = set(row4datasetname.values())
-    nb_rows = len(set_row_idx)
-    assert min(set_row_idx) == 0
-    assert max(set_row_idx) == (nb_rows - 1)
-    # Create datasetnames_per_row from row4datasetname
-    datasetnames4rowidx = [[] for i_row in range(nb_rows)]
-    for datasetname in datasetnames:
-        datasetnames4rowidx[row4datasetname[datasetname]].append(datasetname)
-
+    row4datasetname, datasetnames4rowidx = check_row4datasetname(row4datasetname=row4datasetname, datasetnames=datasetnames)
+    nb_rows = len(datasetnames4rowidx)
     # Define which datasetname to use to compute the oversampled model to plot for each row
     if datasetnameformodel4row is None:
         datasetnameformodel4row = [None for i_row in range(nb_rows)]
@@ -237,11 +224,11 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     # Load the defined datasets and check how many dataset there is by instrument.
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, has_jitters,
-     dico_jitters, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
      ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                   df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_GP_data=remove_GP_data, remove_GP_residual=remove_GP_residual)
+                                  remove_decorrelation=remove_decorrelation, remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
@@ -265,94 +252,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     # Set the plots keywords arguments for each dataset
     # Define the default values
-    pl_kwarg_data = {"color": "k", "fmt": ".", "alpha": 0.05}
-    pl_kwarg_databinned = {"color": "r", "fmt": ".", "alpha": 1.0}
-    pl_kwarg_modelraw = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model"}
-    pl_kwarg_modelbinned = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "label": f"model: bin={exptime_bin * 24 * 60:.0f} min"}  # , "linestyle": "-"
-    show_error_data = False
-    show_error_databinned = True
-
-    if pl_kwargs is None:
-        pl_kwargs = {}
-    pl_kwarg_final = {}
-    pl_kwarg_jitter = {}
-    pl_show_error = {}
-
-    for datasetname in datasetnames:
-        # Set the labels
-        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-        if dico_nb_dstperinsts[filename_info["inst_name"]] == 1:
-            label_dst = filename_info["inst_name"]
-        else:
-            label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
-        pl_kwarg_final[datasetname] = {"model": deepcopy(pl_kwarg_modelraw),
-                                       "modelbinned": deepcopy(pl_kwarg_modelbinned),
-                                       "data": {"label": label_dst, },
-                                       "databinned": {"label": f"{label_dst}: bin={exptime_bin * 24 * 60:.0f} min", }
-                                       }
-        pl_kwarg_final[datasetname]["model"].update(pl_kwarg_final.get(datasetname, {}).get('model', {}))
-        pl_kwarg_final[datasetname]["modelbinned"].update(pl_kwarg_final.get(datasetname, {}).get('modelbinned', {}))
-        pl_kwarg_jitter[datasetname] = {}
-        pl_show_error[datasetname] = {"data": show_error_data, "databinned": show_error_databinned}
-        for dataordatabinned, pl_kwarg_def in zip(["data", "databinned"], [pl_kwarg_data, pl_kwarg_databinned]):
-            # Load default values in pl_kwarg_final[datasetname]
-            pl_kwarg_final[datasetname][dataordatabinned].update(deepcopy(pl_kwarg_def))
-            # Update with the user's inputs
-            pl_kwarg_final[datasetname][dataordatabinned].update(pl_kwargs.get(datasetname, {}).get(dataordatabinned, {}))
-            # Init pl_kwarg_jitter[datasetname]
-            pl_kwarg_jitter[datasetname][dataordatabinned] = deepcopy(pl_kwarg_final[datasetname][dataordatabinned])
-            # Update with the user's inputs
-            if "jitter" in pl_kwarg_final[datasetname][dataordatabinned]:
-                dico_jitter = pl_kwarg_final[datasetname][dataordatabinned].pop("jitter")
-            else:
-                dico_jitter = {}
-            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-            pl_kwarg_jitter[datasetname][dataordatabinned].update(dico_jitter)
-            pl_kwarg_jitter[datasetname][dataordatabinned].pop("label")  # To ensure that a second label doesn't appear on the legend
-            # default value for alpha jitter
-            if "alpha" not in dico_jitter:
-                if "alpha" in pl_kwarg_jitter[datasetname][dataordatabinned]:
-                    pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] = pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] / 2
-                else:
-                    pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] = 0.5
-            # default value for ecolor
-            if ("ecolor" not in pl_kwarg_jitter[datasetname][dataordatabinned]) and ("color" in pl_kwarg_jitter[datasetname][dataordatabinned]):
-                pl_kwarg_jitter[datasetname][dataordatabinned]["ecolor"] = pl_kwarg_jitter[datasetname][dataordatabinned]["color"]
-            # Update pl_show_error[datasetname] with user input
-            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
-                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
-    # Fill pl_kwargs_final and pl_kwarg_jitter the databinned of each row if needed
-    if (exptime_bin > 0.) and one_binning_per_row:
-        for i_row in range(nb_rows):
-            pl_kwarg_final[f"row{i_row}"] = {"label": f"{label_dst}: bin={exptime_bin * 24 * 60:.0f} min", }
-            # Load default values
-            pl_kwarg_final[f"row{i_row}"].update(deepcopy(pl_kwarg_databinned))
-            # Update with the user's inputs
-            pl_kwarg_final[f"row{i_row}"].update(pl_kwargs.get(f"row{i_row}", {}))
-            # Init pl_kwarg_jitter
-            pl_kwarg_jitter[f"row{i_row}"] = deepcopy(pl_kwarg_final[f"row{i_row}"])
-            # Update with the user's inputs
-            if "jitter" in pl_kwarg_final[f"row{i_row}"]:
-                dico_jitter = pl_kwarg_final[f"row{i_row}"].pop("jitter")
-            else:
-                dico_jitter = {}
-            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-            pl_kwarg_jitter[f"row{i_row}"].update(dico_jitter)
-            pl_kwarg_jitter[f"row{i_row}"].pop("label")  # To ensure that a second label doesn't appear on the legend
-            # default value for alpha jitter
-            if "alpha" not in dico_jitter:
-                if "alpha" in pl_kwarg_jitter[f"row{i_row}"]:
-                    pl_kwarg_jitter[f"row{i_row}"]["alpha"] = pl_kwarg_jitter[f"row{i_row}"]["alpha"] / 2
-                else:
-                    pl_kwarg_jitter[f"row{i_row}"]["alpha"] = 0.5
-            # default value for ecolor
-            if ("ecolor" not in pl_kwarg_jitter[f"row{i_row}"]) and ("color" in pl_kwarg_jitter[f"row{i_row}"]):
-                pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_jitter[f"row{i_row}"]["color"]
-            # Initialise pl_show_error
-            pl_show_error[f"row{i_row}"] = True
-            # Update with user input
-            if "show_error" in pl_kwarg_final[f"row{i_row}"]:
-                pl_show_error[f"row{i_row}"] = pl_kwarg_final[f"row{i_row}"].pop("show_error")
+    (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
+     ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts, datasetnames=datasetnames,
+                       exptime_bin=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
 
     #################################
     # Main row loop: For each row ...
@@ -1075,11 +977,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat="LC", sortby_instcat=False, sortby_instname=False)
 
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_dataset, dico_kwargs, dico_nb_dstperinst, data_err_jitter, has_jitter, dico_jitter,
-     gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
      ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                   df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_GP_data=False, remove_GP_residual=False)
+                                  remove_decorrelation=remove_decorrelation, remove_GP_dataNmodel=False, remove_GP_residual=False)
 
     ################
     # LC TIME SERIES
@@ -1090,22 +992,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         # Create additional axe if zoom and several rows
         ################################################
         # Define on which rows the datasets are plots using the row4datasetname input
-        if TS_kwargs.get("row4datasetname", None) is None:
-            row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
-        else:
-            row4datasetname = TS_kwargs["row4datasetname"]
-        # Check that all datasets are in row4datasetname
-        if (set(row4datasetname.keys()) != set(datasetnames)) or (len(list(row4datasetname.keys())) != len(datasetnames)):
-            raise ValueError("row4datasetname is not correct !")
-        # Check the row idx values and determine the number of rows to use.
-        set_row_idx = set(row4datasetname.values())
-        nb_rows = len(set_row_idx)
-        assert min(set_row_idx) == 0
-        assert max(set_row_idx) == (nb_rows - 1)
-        # Create datasetnames_per_row from row4datasetname
-        datasetnames4rowidx = [[] for i_row in range(nb_rows)]
-        for datasetname in datasetnames:
-            datasetnames4rowidx[row4datasetname[datasetname]].append(datasetname)
+        row4datasetname, datasetnames4rowidx = check_row4datasetname(row4datasetname=TS_kwargs.get("row4datasetname", None), datasetnames=datasetnames)
+        nb_rows = len(datasetnames4rowidx)
         # Create the updated grid space according to the number of rows
         gs_ts = GridSpecFromSubplotSpec(nb_rows, 1, subplot_spec=gs_ts, **TS_kwargs.get('gridspec_kwargs', {}))
         # Determine which rows require a zoom.
@@ -1143,84 +1031,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         ##############################################
         # Set the arguments for the plotting functions
         ##############################################
-        pl_kwarg_data = {"fmt": "."}
-        pl_kwarg_binned_data = {"fmt": ".", "alpha": 1, "color": "r"}
-        pl_kwarg_model = {"linestyle": "-", "label": "model"}
-        pl_kwarg_instvar = {"linestyle": "-", "label": "inst."}
-        pl_kwarg_decorr = {"linestyle": "-", "label": "decorr."}
-
         pl_kwargs = TS_kwargs.get('pl_kwargs', {})
-        pl_kwarg_final = {}
-        pl_kwarg_binned = {}
-        pl_kwarg_jitter = {}
-        pl_kwarg_binned_jitter = {}
-        pl_show_error = {}
-        pl_show_binned_error = {}
-
-        pl_kwarg_final["model"] = deepcopy(pl_kwarg_model)
-        pl_kwarg_final["model"].update(pl_kwargs.get("model", {}))
-        pl_kwarg_final["GP"] = {}
-        pl_kwarg_final["GP"].update(pl_kwargs.get("GP", {}))
-        pl_kwarg_final["inst_var"] = deepcopy(pl_kwarg_instvar)
-        pl_kwarg_final["inst_var"].update(pl_kwargs.get("inst_var", {}))
-        pl_kwarg_final["decorr"] = deepcopy(pl_kwarg_decorr)
-        pl_kwarg_final["decorr"].update(pl_kwargs.get("decorr", {}))
-
-        for datasetname in datasetnames:
-            # Set the labels for the data
-            filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-            if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-                label_dst = filename_info["inst_name"]
-            else:
-                label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
-            pl_kwarg_final[datasetname] = {"label": label_dst, }
-            pl_kwarg_final[datasetname].update(deepcopy(pl_kwarg_data))
-            # Update with the user's inputs
-            pl_kwarg_final[datasetname].update(pl_kwargs.get(datasetname, {}))
-            # Get the user's jitter input
-            if "jitter" in pl_kwarg_final[datasetname]:
-                pl_kwarg_final_dst_jitter = pl_kwarg_final[datasetname].pop("jitter")
-            else:
-                pl_kwarg_final_dst_jitter = {}
-            pl_kwarg_final_dst_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-            # Get the user's show_error input
-            pl_show_error[datasetname] = pl_kwarg_final[datasetname].pop("show_error") if "show_error" in pl_kwarg_final[datasetname] else True
-            # Get the user's show_binned_error input
-            pl_show_binned_error[datasetname] = pl_kwarg_final[datasetname].pop("show_binned_error") if "show_binned_error" in pl_kwarg_final[datasetname] else True
-            # Get the user's binned input
-            update4binned = pl_kwarg_final[datasetname].pop("binned") if "binned" in pl_kwarg_final[datasetname] else pl_kwarg_binned_data
-            # Set the pl_kwarg_jitter for plotting the jitter error bars
-            pl_kwarg_jitter[datasetname] = deepcopy(pl_kwarg_final[datasetname])
-            pl_kwarg_jitter[datasetname].update(pl_kwarg_final_dst_jitter)
-            pl_kwarg_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
-            # default value for alpha jitter
-            if "alpha" not in pl_kwarg_final_dst_jitter:
-                if "alpha" in pl_kwarg_jitter[datasetname]:
-                    pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
-                    pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
-                else:
-                    pl_kwarg_jitter[datasetname]["alpha"] = 0.5
-            # default value for ecolor
-            if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
-                pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
-            # Set the pl_kwarg_binned for the plotting the binned data and residuals
-            pl_kwarg_binned[datasetname] = deepcopy(pl_kwarg_final[datasetname])
-            pl_kwarg_binned[datasetname].update(update4binned)
-            pl_kwarg_binned[datasetname]["label"] += f" bin({exptime_bin * 24 * 60:.0f} min)"
-            # Set the pl_kwarg_binned_jitter for plotting the jitter error bars of the binned data and residuals
-            pl_kwarg_binned_jitter[datasetname] = deepcopy(pl_kwarg_binned[datasetname])
-            pl_kwarg_binned_jitter[datasetname].update(pl_kwarg_final_dst_jitter)
-            pl_kwarg_binned_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
-            # default value for alpha jitter
-            if "alpha" not in pl_kwarg_final_dst_jitter:
-                if "alpha" in pl_kwarg_binned_jitter[datasetname]:
-                    pl_kwarg_binned_jitter[datasetname]["alpha"] = pl_kwarg_binned_jitter[datasetname]["alpha"] / 2
-                    pl_kwarg_binned_jitter[datasetname]["alpha"] = pl_kwarg_binned_jitter[datasetname]["alpha"] / 2
-                else:
-                    pl_kwarg_binned_jitter[datasetname]["alpha"] = 0.5
-            # default value for ecolor
-            if ("ecolor" not in pl_kwarg_binned_jitter[datasetname]) and ("color" in pl_kwarg_binned_jitter[datasetname]):
-                pl_kwarg_binned_jitter[datasetname]["ecolor"] = pl_kwarg_binned_jitter[datasetname]["color"]
+        (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
+         ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts,
+                           datasetnames=datasetnames, exptime_bin=exptime_bin, one_binning_per_row=one_binning_per_row,
+                           nb_rows=nb_rows)
 
         #############################################################
         # Make the LC and residuals plots (full and zoomed if needed)
@@ -1287,7 +1102,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         model -= model_instvar
                     # Remove the decorrelation:
                     if (datasetname in decorrs) and remove_decorrelation:
-                        for model_part in decorrs[datasetname]:
+                        for model_part in model_decorr:
                             if model_part == "add_2_totalflux":
                                 model -= model_decorr['add_2_totalflux']
                             else:
@@ -1295,10 +1110,24 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # remove 1 if required
                     if remove1:
                         model -= 1
-                    model *= LC_fact
-                    if model_wGP is not None:
-                        if remove1:
+                        if model_wGP is not None:
                             model_wGP -= 1
+                    else:
+                        model_instvar += 1
+                        if (datasetname in decorrs):
+                            for model_part in model_decorr:
+                                if model_part == "add_2_totalflux":
+                                    model_decorr["add_2_totalflux"] += 1
+                            # Else is already addressed above
+                    # Multiply by LC fact
+                    model *= LC_fact
+                    model_instvar *= LC_fact
+                    if (datasetname in decorrs):
+                        for model_part in model_decorr:
+                            if model_part == "add_2_totalflux":
+                                model_decorr["add_2_totalflux"] *= LC_fact
+                        # Else is already addressed above
+                    if model_wGP is not None:
                         model_wGP *= LC_fact
                         gp_pred *= LC_fact
                         gp_pred_var *= LC_fact**2
@@ -1306,19 +1135,19 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     #####################################
                     # Plot the model and the GP if needed
                     #####################################
-                    line_model = axe_data.plot(tsim, model, **pl_kwarg_final["model"], zorder=20)
-                    if not("color" in pl_kwarg_final["model"]):
-                        pl_kwarg_final["model"]["color"] = line_model[0].get_color()
-                    if not("alpha" in pl_kwarg_final["model"]):
-                        pl_kwarg_final["model"]["alpha"] = line_model[0].get_alpha()
+                    line_model = axe_data.errorbar(tsim, model, **pl_kwarg_final[datasetname]["model"], zorder=20)
+                    if not("color" in pl_kwarg_final[datasetname]["model"]):
+                        pl_kwarg_final[datasetname]["model"]["color"] = line_model[0].get_color()
+                    if not("alpha" in pl_kwarg_final[datasetname]["model"]):
+                        pl_kwarg_final[datasetname]["model"]["alpha"] = line_model[0].get_alpha()
                     if model_wGP is not None:
-                        if not("color" in pl_kwarg_final["GP"]):
-                            pl_kwarg_final["GP"]["color"] = pl_kwarg_final["model"]["color"]
-                        if not("alpha" in pl_kwarg_final["GP"]):
-                            pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2
+                        if not("color" in pl_kwarg_final[datasetname]["GP"]):
+                            pl_kwarg_final[datasetname]["GP"]["color"] = pl_kwarg_final[datasetname]["model"]["color"]
+                        if not("alpha" in pl_kwarg_final[datasetname]["GP"]):
+                            pl_kwarg_final[datasetname]["GP"]["alpha"] = pl_kwarg_final[datasetname]["model"]["alpha"] / 2
                         _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                                  color=pl_kwargs["GP"]["color"], alpha=pl_kwargs["GP"]["alpha"],
-                                                  label=pl_kwargs["GP"]["label"],  # **kwarg_GP_pred_var
+                                                  color=pl_kwarg_final[datasetname]["GP"]["color"], alpha=pl_kwarg_final[datasetname]["GP"]["alpha"],
+                                                  label=pl_kwarg_final[datasetname]["GP"]["label"],  # **kwarg_GP_pred_var
                                                   zorder=0
                                                   )
 
@@ -1326,52 +1155,45 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Plot the inst_var if needed
                     #############################
                     if (datasetname in inst_vars) and not(remove_inst_var):
-                        if not(remove1):
-                            model_instvar += 1
-                        model_instvar *= LC_fact
-                        _ = axe_data.plot(tsim, model_instvar, **pl_kwarg_final["inst_var"])
+                        _ = axe_data.plot(tsim, model_instvar, **pl_kwarg_final[datasetname]["inst_var"])
 
                     ########################################
                     # Plot the decorrelation model if needed
                     ########################################
                     if (datasetname in decorrs) and not(remove_decorrelation):
-                        for model_part in model_decorr:
+                        for model_part in decorrs:
                             if model_part == "add_2_totalflux":
-                                if not(remove1):
-                                    model_decorr["add_2_totalflux"] += 1
-                                model_decorr["add_2_totalflux"] *= LC_fact
-                                pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final["decorr"])
+                                pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
                                 pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
-                                _ = axe_data.plot(tsim, model_decorr["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
-                            else:
-                                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                                _ = axe_data.plot(tsim, decorrs["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
+                            # Else is already addressed above
 
                     ###############
                     # Plot the data
                     ###############
                     if pl_show_error[datasetname]:
-                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-                                                   yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname], zorder=10)  # Plot the data point and error bars without jitter
+                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname],
+                                                   yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
                         if not("ecolor" in pl_kwarg_jitter[datasetname]):
-                            pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
+                            pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                         if not("color" in pl_kwarg_final[datasetname]):
-                            pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
-                        if has_jitter[datasetname]:
-                            axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-                                              yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname], zorder=1)  # Plot the error bars with jitter
+                            pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
+                        if has_jitters[datasetname]:
+                            axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname],
+                                              yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
 
                     else:
-                        axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"], **pl_kwarg_final[datasetname], zorder=10)  # Plot the data point and error bars without jitter
+                        axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
 
                     ####################
                     # Plot the residuals
                     ####################
                     if pl_show_error[datasetname]:
-                        if has_jitter[datasetname]:
-                            axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname])  # Plot the error bars with jitter
-                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname])
+                        if has_jitters[datasetname]:
+                            axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
                     else:
-                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname])
+                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -1383,7 +1205,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         nbins = len(bins) - 1
                         # Compute the binned values
                         (bindata, binedges, binnb
-                         ) = binned_statistic(dico_kwargs[datasetname]["t"], dico_kwargs[datasetname]["data"],
+                         ) = binned_statistic(dico_kwargs[datasetname]["t"], datas[datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(t_min_data, t_max_data))
                         (binresi, binedges, binnb
@@ -1392,36 +1214,36 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                               range=(t_min_data, t_max_data))
                         # Compute the err on the binned values
                         binstd = np.zeros(nbins)
-                        if has_jitter[datasetname]:
+                        if has_jitters[datasetname]:
                             binstd_jitter = np.zeros(nbins)
                         bincount = np.zeros(nbins)
                         for i_bin in range(nbins):
                             bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                             if bincount[i_bin] > 0.0:
-                                binstd[i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
+                                binstd[i_bin] = np.sqrt(np.sum(np.power((data_errs[datasetname]
                                                                          [binnb == (i_bin + 1)]),
                                                                         2.)) /
                                                         bincount[i_bin]**2)
-                                if has_jitter[datasetname]:
-                                    binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
+                                if has_jitters[datasetname]:
+                                    binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitters[datasetname]
                                                                                     [binnb == (i_bin + 1)]),
                                                                                    2.)) /
                                                                    bincount[i_bin]**2)
                             else:
                                 binstd[i_bin] = np.nan
-                                if has_jitter[datasetname]:
+                                if has_jitters[datasetname]:
                                     binstd_jitter[i_bin] = np.nan
                         # Plot the binned data
-                        bin_err = binstd if pl_show_binned_error[datasetname] else None
-                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=40)
-                        if not("color" in pl_kwarg_binned[datasetname]):
-                            pl_kwarg_binned[datasetname]["color"] = ebcont_binned[0].get_color()
-                        if not("ecolor" in pl_kwarg_binned_jitter[datasetname]):
-                            pl_kwarg_binned_jitter[datasetname]["ecolor"] = pl_kwarg_binned[datasetname]["color"]
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=40)
-                        if has_jitter[datasetname] and pl_show_binned_error[datasetname]:
-                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=30)
-                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=30)
+                        bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
+                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                        if not("color" in pl_kwarg_final[datasetname]["databinned"]):
+                            pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
+                        if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
+                            pl_kwarg_jitter[datasetname]["databinned"] = pl_kwarg_final[datasetname]["databinned"]["color"]
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                        if has_jitters[datasetname] and pl_show_error[datasetname]["databinned"]:
+                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
@@ -1434,7 +1256,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     nbins = len(bins) - 1
                     # Compute the binned values
                     (bindata, binedges, binnb
-                     ) = binned_statistic(t_row, np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames4rowidx[i_row]]),
+                     ) = binned_statistic(t_row, np.concatenate([datas[dst] for dst in datasetnames4rowidx[i_row]]),
                                           statistic=binning_stat, bins=bins,
                                           range=(t_min_data, t_max_data))
                     (binresi, binedges, binnb
@@ -1443,11 +1265,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                           range=(t_min_data, t_max_data))
                     # Compute the err on the binned values
                     binstd = np.zeros(nbins)
-                    if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                    if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                         binstd_jitter = np.zeros(nbins)
                     bincount = np.zeros(nbins)
                     data_err_row = np.concatenate([dico_kwargs[dst]["data_err"] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = np.concatenate([data_err_jitter[dst] if has_jitter[dst] else np.ones_like(dico_kwargs[dst]["data_err"]) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]["data_err"]) * np.nan for dst in datasetnames4rowidx[i_row]])
                     for i_bin in range(nbins):
                         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
@@ -1455,26 +1277,26 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                                                      [binnb == (i_bin + 1)]),
                                                                     2.)) /
                                                     bincount[i_bin]**2)
-                            if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                            if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                                 binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitter_row
                                                                                 [binnb == (i_bin + 1)]),
                                                                                2.)) /
                                                                bincount[i_bin]**2)
                         else:
                             binstd[i_bin] = np.nan
-                            if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                            if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                                 binstd_jitter[i_bin] = np.nan
                     # Plot the binned data
-                    bin_err = binstd if pl_show_binned_error[datasetname] else None
-                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=40)
-                    if not("color" in pl_kwarg_binned[datasetname]):
-                        pl_kwarg_binned[datasetname]["color"] = ebcont_binned[0].get_color()
-                    if not("ecolor" in pl_kwarg_binned_jitter[datasetname]):
-                        pl_kwarg_binned_jitter[datasetname]["ecolor"] = pl_kwarg_binned[datasetname]["color"]
-                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_binned[datasetname], zorder=40)
-                    if any([has_jitter[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_binned_error[datasetname]:
-                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=30)
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_binned_jitter[datasetname], zorder=30)
+                    bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
+                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                    if not("color" in pl_kwarg_final[datasetname]["databinned"]):
+                        pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
+                    if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
+                        pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]["color"]
+                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                    if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[datasetname]["databinned"]:
+                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
 
                 # Draw a horizontal line at the level of reference stellar flux level
                 xlims = axe_data.get_xlim()
@@ -1485,7 +1307,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 ylims_data = TS_kwargs.get("ylims_data", None)
                 if ylims_data is None:
                     pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
-                    et.auto_y_lims(np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames]), axe_data,
+                    et.auto_y_lims(np.concatenate([datas[dst] for dst in datasetnames]), axe_data,
                                    pad=pad_data)
                 else:
                     axe_data.set_ylim(ylims_data)
@@ -1495,7 +1317,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # y_lims can change after each dataset
                 if TS_kwargs.get("indicate_y_outliers_data", True):
                     for datasetname in datasetnames4rowidx[i_row]:
-                        et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
+                        et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=datas[datasetname],
                                                ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
                                                alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
@@ -1543,55 +1365,75 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         all_time = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames])
         idx_sort = np.argsort(all_time)
         all_time = all_time[idx_sort]
-        all_data = np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames])[idx_sort]
+        all_data = np.concatenate([datas[dst] for dst in datasetnames])[idx_sort]
         all_resi = np.concatenate([residuals[dst] for dst in datasetnames])[idx_sort]
         if GLSP_kwargs.get("use_jitter", True):
-            all_data_err = np.concatenate([data_err_jitter[dst] for dst in datasetnames])[idx_sort]
+            all_data_err = np.concatenate([data_err_worwojitters[dst] for dst in datasetnames])[idx_sort]
         else:
-            all_data_err = np.concatenate([dico_kwargs[dst]["data_err"] for dst in datasetnames])[idx_sort]
+            all_data_err = np.concatenate([data_errs[dst] for dst in datasetnames])[idx_sort]
         all_model = np.concatenate([models[dst] for dst in datasetnames])[idx_sort]
-        all_gp_pred = np.concatenate([gp_preds.get(dst, []) for dst in datasetnames])
-        all_gp_pred_var = np.concatenate([gp_pred_vars.get(dst, []) for dst in datasetnames])
-        if len(all_gp_pred) > 0:
-            all_gp_pred = all_gp_pred[idx_sort]
-            all_gp_pred_var = all_gp_pred_var[idx_sort]
-        all_inst_var = np.concatenate([inst_vars.get(dst, []) for dst in datasetnames])
-        if len(all_inst_var) > 0:
-            all_inst_var = all_inst_var[idx_sort]
+        all_time_gp = []
+        all_gp_pred = []
+        all_gp_pred_var = []
+        for dst in datasetnames:
+            if dst in gp_preds:
+                all_time_gp.append(dico_kwargs[dst]["t"])
+                all_gp_pred.append(gp_preds[dst])
+                all_gp_pred_var.append(gp_pred_vars[dst])
+        if len(all_time_gp) > 0:
+            all_time_gp = np.concatenate(all_time_gp)
+            idx_sort_gp = np.argsort(all_time_gp)
+            all_time_gp = all_time_gp[idx_sort_gp]
+            all_gp_pred = np.concatenate(all_gp_pred)[idx_sort_gp]
+            all_gp_pred_var = np.concatenate(all_gp_pred_var)[idx_sort_gp]
+        all_time_inst_var = []
+        all_inst_var = []
+        for dst in datasetnames:
+            if dst in inst_vars:
+                all_time_inst_var.append(dico_kwargs[dst]["t"])
+                all_inst_var.append(inst_vars[dst])
+        if len(all_time_inst_var) > 0:
+            all_time_inst_var = np.concatenate(all_time_inst_var)
+            idx_sort_inst_var = np.argsort(all_time_inst_var)
+            all_time_inst_var = all_time_inst_var[idx_sort_inst_var]
+            all_inst_var = np.concatenate(all_inst_var)[idx_sort_inst_var]
+        all_time_decorrs = {}
         all_decorrs = {}
         if len(decorrs) > 0:
             for dst in datasetnames:
                 for model_part in decorrs[dst]:
                     if model_part in ["add_2_totalflux", ]:
-                        if model_part not in all_decorrs:
+                        if model_part not in all_time_decorrs:
                             all_decorrs[model_part] = []
+                            all_time_decorrs[model_part] = []
                         all_decorrs[model_part].append(decorrs[dst][model_part])
+                        all_time_decorrs[model_part].append(dico_kwargs[dst]["t"])
                     else:
                         logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
             for model_part in all_decorrs:
+                all_time_decorrs[model_part] = np.concatenate(all_time_decorrs[model_part])
+                idx_sort_decorrs_model_part = np.argsort(all_time_decorrs[model_part])
+                all_time_decorrs[model_part] = all_time_decorrs[model_part][idx_sort_decorrs_model_part]
                 all_decorrs[model_part] = np.concatenate(all_decorrs[model_part])
-                all_decorrs[model_part] = all_decorrs[model_part][idx_sort]
+                all_decorrs[model_part] = all_decorrs[model_part][idx_sort_decorrs_model_part]
 
         gls_inputs = {}
         l_gls_key = []
-        gls_inputs["data"] = {"data": all_data, "err": all_data_err, 'label': "data"}
+        gls_inputs["data"] = {"time": all_time, "data": all_data, "err": all_data_err, 'label': "data"}
         l_gls_key.append("data")
+        gls_inputs["model"] = {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"}
+        l_gls_key.append("model")
         if len(all_gp_pred_var) > 0:
-            gls_inputs["model"] = {"data": all_model, "err": np.sqrt(all_gp_pred_var), 'label': "model"}
-            l_gls_key.append("model")
-            gls_inputs["GP"] = {"data": all_gp_pred, "err": np.sqrt(all_gp_pred_var), 'label': "GP"}
+            gls_inputs["GP"] = {"time": all_time_gp, "data": all_gp_pred, "err": np.sqrt(all_gp_pred_var), 'label': "GP"}
             l_gls_key.append("GP")
-        else:
-            gls_inputs["model"] = {"data": all_model, "err": all_data_err, 'label': "model"}
-            l_gls_key.append("model")
         if len(all_inst_var) > 0 and GLSP_kwargs.get("show_inst_var", True):
-            gls_inputs["inst"] = {"data": all_inst_var, "err": all_data_err, 'label': "inst"}
+            gls_inputs["inst"] = {"time": all_time_inst_var, "data": all_inst_var, "err": all_data_err, 'label': "inst"}
             l_gls_key.append("inst")
         for model_part in all_decorrs:
             if GLSP_kwargs.get("show_decorrelation", True):
-                gls_inputs[f"decorr_{model_part}"] = {"data": all_decorrs[model_part], "err": all_data_err, 'label': f"decorr: {model_part.replace('_', ' ')}"}
+                gls_inputs[f"decorr_{model_part}"] = {"time": all_time_decorrs[model_part], "data": all_decorrs[model_part], "err": all_data_err, 'label': f"decorr: {model_part.replace('_', ' ')}"}
                 l_gls_key.append(f"decorr_{model_part}")
-        gls_inputs["resi"] = {"data": all_resi, "err": all_data_err, 'label': "residuals"}
+        gls_inputs["resi"] = {"time": all_time, "data": all_resi, "err": all_data_err, 'label': "residuals"}
         l_gls_key.append("resi")
 
         ###############################
@@ -1601,7 +1443,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
         glsps = {}
         for ii, key in enumerate(l_gls_key):
-            glsps[key] = Gls((all_time, gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
+            glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
 
         ###############################
         # Create additional axe if zoom
@@ -1789,7 +1631,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
-                             remove_inst_var, remove_decorrelation, remove_GP_data, remove_GP_residual):
+                             remove_inst_var, remove_decorrelation, remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
     """
     dico_datasets = {}
@@ -1798,8 +1640,10 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     datas = {}
     data_errs = {}
     data_err_jitters = {}
+    data_err_worwojitters = {}
     has_jitters = {}
     dico_jitters = {}
+    models = {}
     gp_preds = {}
     gp_pred_vars = {}
     inst_vars = {}
@@ -1837,6 +1681,9 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                 data_err_jitters[datasetname] = np.sqrt(apply_jitter_add(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
             else:
                 raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+            data_err_worwojitters[datasetname] = data_err_jitters[datasetname].copy()
+        else:
+            data_err_worwojitters[datasetname] = data_errs[datasetname].copy()
 
         ###############################################################################
         # Compute the instrumental variations (inst_vars) to later remove from the data
@@ -1881,6 +1728,11 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             gp_preds[datasetname] = gp_pred
             gp_pred_vars[datasetname] = gp_pred_var
 
+        if (model_wGP is not None) and not(remove_GP_dataNmodel):
+            models[datasetname] = model_wGP
+        else:
+            models[datasetname] = model
+
         #######################
         # Compute the residuals
         #######################
@@ -1892,7 +1744,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         ################################################################################
         # Remove GP (if needed)
         ################################################################################
-        if (model_wGP is not None) and remove_GP_data:
+        if (model_wGP is not None) and remove_GP_dataNmodel:
             datas[datasetname] -= gp_pred
 
         ################################################################################
@@ -1900,6 +1752,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         ################################################################################
         if (datasetname in inst_vars) and remove_inst_var:
             datas[datasetname] -= inst_vars[datasetname]
+            models[datasetname] -= inst_vars[datasetname]
 
         ################################################################################
         # Remove decorrelation (if needed)
@@ -1908,6 +1761,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             for model_part in decorrs[datasetname]:
                 if model_part == "add_2_totalflux":
                     datas[datasetname] -= decorrs[datasetname]['add_2_totalflux']
+                    models[datasetname] -= decorrs[datasetname]['add_2_totalflux']
                 else:
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
@@ -1916,13 +1770,16 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         ################################################################################
         if remove1:
             datas[datasetname] -= 1
+            models[datasetname] -= 1
 
         ################################################################################
         # Apply LC_fact
         ################################################################################
         datas[datasetname] *= LC_fact
         data_errs[datasetname] *= LC_fact
+        data_err_worwojitters[datasetname] *= LC_fact
         residuals[datasetname] *= LC_fact
+        models[datasetname] *= LC_fact
         if model_wGP is not None:
             gp_preds[datasetname] *= LC_fact
             gp_pred_vars[datasetname] *= LC_fact**2
@@ -1930,4 +1787,122 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             dico_jitters[datasetname]["value"] *= LC_fact
             data_err_jitters[datasetname] *= LC_fact
 
-    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, has_jitters, dico_jitters, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters, has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+
+
+def check_row4datasetname(row4datasetname, datasetnames):
+    """Check the row4datasetname and return the checked row4datasetname and datasetnames4rowidx
+    """
+    if row4datasetname is None:
+        row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
+    # Check that all datasets are in row4datasetname
+    if (set(row4datasetname.keys()) != set(datasetnames)) or (len(list(row4datasetname.keys())) != len(datasetnames)):
+        raise ValueError("row4datasetname is not correct !")
+    # Check the row idx values and determine the number of rows to use.
+    set_row_idx = set(row4datasetname.values())
+    nb_rows = len(set_row_idx)
+    assert min(set_row_idx) == 0
+    assert max(set_row_idx) == (nb_rows - 1)
+    # Create datasetnames_per_row from row4datasetname
+    datasetnames4rowidx = [[] for i_row in range(nb_rows)]
+    for datasetname in datasetnames:
+        datasetnames4rowidx[row4datasetname[datasetname]].append(datasetname)
+    return row4datasetname, datasetnames4rowidx
+
+
+def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one_binning_per_row, nb_rows):
+    """
+    """
+    pl_kwarg_data_def = {"color": "k", "fmt": ".", "alpha": 0.1}
+    pl_kwarg_databinned_def = {"color": "r", "fmt": ".", "alpha": 1.0}
+    pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model"}
+    pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "label": f"model: bin={exptime_bin * 24 * 60:.0f} min"}  # , "linestyle": "-"
+    pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP"}
+    pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst."}
+    pl_kwarg_decorr_def = {"color": "C2", "linestyle": "-", "label": "decorr."}
+    show_error_data = False
+    show_error_databinned = True
+
+    if pl_kwargs is None:
+        pl_kwargs = {}
+    pl_kwarg_final = {}
+    pl_kwarg_jitter = {}
+    pl_show_error = {}
+
+    for datasetname in datasetnames:
+        # Set the labels
+        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+        if dico_nb_dstperinsts[filename_info["inst_name"]] == 1:
+            label_dst = filename_info["inst_name"]
+        else:
+            label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
+        pl_kwarg_final[datasetname] = {"model": deepcopy(pl_kwarg_modelraw_def),
+                                       "modelbinned": deepcopy(pl_kwarg_modelbinned_def),
+                                       "data": {"label": label_dst, },
+                                       "databinned": {"label": f"{label_dst}: bin={exptime_bin * 24 * 60:.0f} min", },
+                                       "GP": deepcopy(pl_kwarg_GP_def),
+                                       "inst_var": deepcopy(pl_kwarg_instvar_def),
+                                       "decorr": deepcopy(pl_kwarg_decorr_def),
+                                       }
+        pl_kwarg_jitter[datasetname] = {}
+        pl_show_error[datasetname] = {"data": show_error_data, "databinned": show_error_databinned}
+        for dataordatabinned, pl_kwarg_def in zip(["data", "databinned"], [pl_kwarg_data_def, pl_kwarg_databinned_def]):
+            # Load default values in pl_kwarg_final[datasetname]
+            pl_kwarg_final[datasetname][dataordatabinned].update(deepcopy(pl_kwarg_def))
+            # Update with the user's inputs
+            pl_kwarg_final[datasetname][dataordatabinned].update(pl_kwargs.get(datasetname, {}).get(dataordatabinned, {}))
+            # Init pl_kwarg_jitter[datasetname]
+            pl_kwarg_jitter[datasetname][dataordatabinned] = deepcopy(pl_kwarg_final[datasetname][dataordatabinned])
+            # Update with the user's inputs
+            if "jitter" in pl_kwarg_final[datasetname][dataordatabinned]:
+                dico_jitter = pl_kwarg_final[datasetname][dataordatabinned].pop("jitter")
+            else:
+                dico_jitter = {}
+            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
+            pl_kwarg_jitter[datasetname][dataordatabinned].update(dico_jitter)
+            pl_kwarg_jitter[datasetname][dataordatabinned].pop("label")  # To ensure that a second label doesn't appear on the legend
+            # default value for alpha jitter
+            if "alpha" not in dico_jitter:
+                if "alpha" in pl_kwarg_jitter[datasetname][dataordatabinned]:
+                    pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] = pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] / 2
+                else:
+                    pl_kwarg_jitter[datasetname][dataordatabinned]["alpha"] = 0.5
+            # default value for ecolor
+            if ("ecolor" not in pl_kwarg_jitter[datasetname][dataordatabinned]) and ("color" in pl_kwarg_jitter[datasetname][dataordatabinned]):
+                pl_kwarg_jitter[datasetname][dataordatabinned]["ecolor"] = pl_kwarg_jitter[datasetname][dataordatabinned]["color"]
+            # Update pl_show_error[datasetname] with user input
+            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
+                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
+    # Fill pl_kwargs_final and pl_kwarg_jitter the databinned of each row if needed
+    if (exptime_bin > 0.) and one_binning_per_row:
+        for i_row in range(nb_rows):
+            pl_kwarg_final[f"row{i_row}"] = {"label": f"bin={exptime_bin * 24 * 60:.0f} min", }
+            # Load default values
+            pl_kwarg_final[f"row{i_row}"].update(deepcopy(pl_kwarg_databinned_def))
+            # Update with the user's inputs
+            pl_kwarg_final[f"row{i_row}"].update(pl_kwargs.get(f"row{i_row}", {}))
+            # Init pl_kwarg_jitter
+            pl_kwarg_jitter[f"row{i_row}"] = deepcopy(pl_kwarg_final[f"row{i_row}"])
+            # Update with the user's inputs
+            if "jitter" in pl_kwarg_final[f"row{i_row}"]:
+                dico_jitter = pl_kwarg_final[f"row{i_row}"].pop("jitter")
+            else:
+                dico_jitter = {}
+            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
+            pl_kwarg_jitter[f"row{i_row}"].update(dico_jitter)
+            pl_kwarg_jitter[f"row{i_row}"].pop("label")  # To ensure that a second label doesn't appear on the legend
+            # default value for alpha jitter
+            if "alpha" not in dico_jitter:
+                if "alpha" in pl_kwarg_jitter[f"row{i_row}"]:
+                    pl_kwarg_jitter[f"row{i_row}"]["alpha"] = pl_kwarg_jitter[f"row{i_row}"]["alpha"] / 2
+                else:
+                    pl_kwarg_jitter[f"row{i_row}"]["alpha"] = 0.5
+            # default value for ecolor
+            if ("ecolor" not in pl_kwarg_jitter[f"row{i_row}"]) and ("color" in pl_kwarg_jitter[f"row{i_row}"]):
+                pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_jitter[f"row{i_row}"]["color"]
+            # Initialise pl_show_error
+            pl_show_error[f"row{i_row}"] = True
+            # Update with user input
+            if "show_error" in pl_kwarg_final[f"row{i_row}"]:
+                pl_show_error[f"row{i_row}"] = pl_kwarg_final[f"row{i_row}"].pop("show_error")
+    return pl_kwarg_final, pl_kwarg_jitter, pl_show_error
