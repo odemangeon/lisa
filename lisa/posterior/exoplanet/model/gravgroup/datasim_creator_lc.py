@@ -153,12 +153,12 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
-    # Create the FunctionBuilder
-    func_builder = FunctionBuilder(parameter_vector_name=par_vec_name)
-
     #####################################################################################################
     ## Initialise the function in the function builder for the whole system and the planet and planet only functions
     #####################################################################################################
+    # Create the FunctionBuilder
+    func_builder = FunctionBuilder(parameter_vector_name=par_vec_name)
+
     func_builder.add_new_function(shortname=function_whole_shortname)
     if multi:
         func_full_name_MultiOrDst_ext = "_multi"
@@ -170,21 +170,6 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
         func_builder.add_new_function(shortname=function_shortname)
         func_builder.set_function_fullname(full_name=f"LC_sim_{function_shortname}_{func_full_name_MultiOrDst_ext}", shortname=function_shortname)
 
-    #####################################
-    # Define the templates of the function
-    #####################################
-    # Initialise function_name and template_function the template function name and the template function text
-    # function_name = ("LCsim_{{object}}_{instmod_fullname}{dst_ext}"
-    #                  "".format(instmod_fullname=inst_model_full_name, dst_ext=dst_ext))
-    # template_return = """
-    # {{tab}}try:
-    # {{tab}}    return {{returns}}
-    # {{tab}}except RuntimeError:
-    # {{tab}}    return {{returns_except}}
-    # """
-    # tab = "    "
-    # template_return = dedent(template_return)
-
     #########################################################################################
     # Create the text of what to return when condition is met or the RuntimeError is catched
     ########################################################################################
@@ -192,22 +177,6 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     ########################
     # Produce Transit models
     ########################
-    ## Get the ld_parcont_name, ld_parcont and ld_param_list variable
-    # - l_LD_parcont_name is the List of limb darkening models name (parameter container name) associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: ["<limb darkening model name>", ]
-    # - l_LD_parcont is the list of limb darkening models (parameter container object) associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: [<limb darkening model>, ]
-    # - l_LD_param_list is the list of string which themself write the list of limb darkening parameters values associated with the Instrument_Model instances
-    # in l_inst_model.
-    # Format: ["[p[1], p[2]]", ]
-    # (dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
-    #  ) = get_LD_parcont_and_param(l_inst_model=l_inst_model, ldmodel4instmodfname=ldmodel4instmodfname,
-    #                               star=star, l_planet_name=[planet.get_name() for planet in planets.values()], LDs=LDs,
-    #                               function_builder=func_builder, l_function_shortname=[function_whole_shortname, ] + l_function_planet_shortname
-    #                               )
-
     returns_tr = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                              transit_model=transit_model, ldmodel4instmodfname=ldmodel4instmodfname, LDs=LDs,
                              parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
@@ -224,6 +193,12 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
                                 tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
                                 ext_func_fullname=func_full_name_MultiOrDst_ext,
                                 )
+
+    ##############################
+    # Produce contamination models
+    ##############################
+    returns_contam = get_contamination(l_inst_model=l_inst_model, l_dataset=l_dataset, tab=tab, function_builder=func_builder,
+                                       l_function_shortname=[function_whole_shortname, ], ext_func_fullname=func_full_name_MultiOrDst_ext)
 
     #####################################################################
     # Get the condition text for the whole system function and the planet
@@ -269,73 +244,16 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
         combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                               reference_flux_level=1, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
                               inst_var=d_l_inst_var.get(func_shortname, None), transit=returns_tr.get(func_shortname, None),
-                              phasecurve=returns_pc.get(func_shortname, None), decorrelation=d_l_d_decorr.get(func_shortname, None))
+                              phasecurve=returns_pc.get(func_shortname, None), contamination=returns_contam.get(func_shortname, None),
+                              decorrelation=d_l_d_decorr.get(func_shortname, None))
 
     # Function of the planets only
     for func_shortname in l_function_planet_shortname:
         combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                               reference_flux_level=0, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
-                              inst_var=d_l_inst_var.get(func_shortname, None), transit=returns_tr.get(func_shortname, None),
-                              phasecurve=returns_pc.get(func_shortname, None), decorrelation=d_l_d_decorr.get(func_shortname, None))
-
-    # #############################################
-    # # Fill the functions template for each planet
-    # #############################################
-    # for jj, planet in enumerate(planets.values()):
-    #     # Get the returns text for each planet
-    #     returns_pl = ""
-    #     returns_pl_only = ""
-    #     for (oot_var_planet, oot_var_planet_only, planet_tr, planet_only_tr, planet_pc, planet_only_pc,
-    #          decorr_planet, decorr_planet_only
-    #          ) in zip(d_l_inst_var[planet.get_name()], d_l_inst_var[planet.get_name() + ext_plonly],
-    #                   d_l_tr_ret_planet[planet.get_name()], d_l_tr_ret_planet_only[planet.get_name()],
-    #                   d_l_pc_ret_planet[planet.get_name()], d_l_pc_ret_planet_only[planet.get_name()],
-    #                   d_l_decorr_planet[planet.get_name()], d_l_decorr_planet_only[planet.get_name()]):
-    #
-    #         returns_pl += combine_return_models(which_model="full", stellar_var=oot_var_planet, transit=planet_tr, phasecurve=planet_pc,
-    #                                             decorrelation=decorr_planet)
-    #         returns_pl_only += combine_return_models(which_model="pl_only", stellar_var=oot_var_planet_only, transit=planet_only_tr, phasecurve=planet_only_pc,
-    #                                                  decorrelation=decorr_planet_only)
-    #     if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
-    #         returns_pl = returns_pl[:-2]
-    #         returns_pl_only = returns_pl_only[:-2]
-    #
-    #     # Finalise the text of planet LC simulator functions
-    #     if argskwargs not in arguments:
-    #         arguments = add_argskwargs_argument(arguments)
-    #     text_def_func[planet.get_name()] = (template_function.format(object=planet.get_name(),
-    #                                                                  preambule_tr=preambule_tr_planet[planet.get_name()],
-    #                                                                  preambule_pc=preambule_pc_planet[planet.get_name()],
-    #                                                                  condition=condition_planet,
-    #                                                                  arguments=arguments, returns=returns_pl,
-    #                                                                  returns_except=error_return,
-    #                                                                  tab=tab))
-    #     text_def_func[planet.get_name() + ext_plonly] = (template_function.format(object=planet.get_name() + ext_plonly,
-    #                                                                               preambule_tr=preambule_tr_planet_only[planet.get_name()],
-    #                                                                               preambule_pc=preambule_pc_planet_only[planet.get_name()],
-    #                                                                               condition=condition_planet_only,
-    #                                                                               arguments=arguments,
-    #                                                                               returns=returns_pl_only,
-    #                                                                               returns_except=error_return,
-    #                                                                               tab=tab))
-    #     # logger.debug("text of {object} LC simulator function :\n{text_func}"
-    #     #              "".format(object=planet.get_name(), text_func=text_def_func[planet.get_name()]))
-
-    # ##################################################
-    # # Fill the functions template for the whole system
-    # ##################################################
-    # # Get the return text for the whole system
-    # returns_whole = ""
-    # for oot_var, whole_transit, whole_phasecurve, whole_decorr in zip(d_l_inst_var[key_whole], l_tr_ret_whole_planets, l_pc_ret_whole_planets, l_decorr_whole):
-    #     returns_whole += combine_return_models(which_model="full", stellar_var=oot_var, transit=whole_transit, phasecurve=whole_phasecurve,
-    #                                            decorrelation=whole_decorr)
-    # if not(multi):  # If multi, the coma in the end ensure that the output is always a tuple (even there is actually just one dataset). This is very important for output of datasim_all_datasets.
-    #     returns_whole = returns_whole[:-2]
-    # # Finalise the text of whole system LC simulator function
-    # text_def_func[key_whole] = (template_function.
-    #                             format(object=key_whole, preambule_tr=preambule_tr_whole, preambule_pc=preambule_pc_whole, condition=condition_whole,
-    #                                    arguments=arguments, returns=returns_whole, returns_except=error_return,
-    #                                    tab=tab))
+                              inst_var=None, transit=returns_tr.get(func_shortname, None),
+                              phasecurve=returns_pc.get(func_shortname, None), contamination=None,
+                              decorrelation=None)
 
     ###################################
     # Execute the text of all functions
@@ -366,6 +284,73 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
                                                    inst_model_fullname=instmod_docf,
                                                    dataset=dtsts_docf)
     return dico_docf
+
+
+def get_contamination(l_inst_model, l_dataset, tab, function_builder, l_function_shortname, ext_func_fullname):
+    """Get the contamination contribution to the light-curve model
+
+    Arguments
+    ---------
+    l_inst_model            : list_of_Instrument_Model
+        Checked list of Instrument_Model instance(s).
+    l_dataset               : list_of_Dataset
+        Checked list of Dataset instance(s).
+    function_builder        : FunctionBuilder
+        Function builder instance
+    l_function_shortname    : list of str
+        List of the short name of the functions for which you want to add the instrument variation component
+    ext_func_fullname       : str
+        Extension to add and the end of the full name of the function simulating the instrumental variation only
+        which is defined by this function in the function_builder
+
+    Returns
+    -------
+    returns : dict of list_of_string
+        Dictionary providing, for all functions specified by l_function_shortname, the list of the string representations
+        of the contamination model for each couple instrument model - dataset in l_inst_model and l_dataset.
+        Format of the dictionary:
+        - key : key or keys specificied by l_function_shortname
+        - value: List = ["<inst variation model for instrument1 and dataset1>", ...]
+    """
+    ########################
+    # Initialise the outputs
+    ########################
+    returns = {}
+
+    #################################################
+    # Initialise the new function in function_builder
+    #################################################
+    # Extension for the shortname of the function that do the decorrelation only model
+    contam_func_shortname = "contam"
+    function_builder.add_new_function(shortname=contam_func_shortname)
+    function_builder.set_function_fullname(full_name=f"LC_sim_{contam_func_shortname}{ext_func_fullname}", shortname=contam_func_shortname)
+
+    ########################################
+    # Update the list of function to address
+    ########################################
+    l_function_shortname += [contam_func_shortname, ]
+
+    ################################
+    # Do the Model for each function
+    ################################
+    for function_shortname in l_function_shortname:
+        returns[function_shortname] = []
+        # For each instrument model and dataset, ...
+        for ii, instmdl in enumerate(l_inst_model):
+            returns[function_shortname].append("")
+            # Add the contam parameter
+            function_builder.add_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
+            text_contam_param = function_builder.get_text_4_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
+            if text_contam_param != 0.0:
+                returns[function_shortname][ii] += f"(1 - {text_contam_param})"
+
+    #####################################
+    # Finalize the inst_var only function
+    #####################################
+    for func_shortname in [contam_func_shortname, ]:
+        function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
+
+    return returns
 
 
 def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, time_vec_name, l_time_vec_name,
@@ -571,137 +556,6 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, l_planet_
                 dico_l_LD_param_list[function_shortname][ii] += LD_coeff_text + ", "
             dico_l_LD_param_list[function_shortname][ii] += "]"
     return dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
-
-
-# def define_orbital_params(star, planets, parametrisation, function_builder):
-#     """Define the orbital parameters as model parameters in the function builder
-#
-#     Arguments
-#     ---------
-#     star                        : Star
-#         Star object
-#     planets                     : dict of Planets
-#         Dictionary of Planet instance providing the planets in the system
-#         Format: {"planet name": Planet instance}
-#     parametrisation             : str
-#         string refering to the parametrisation to use
-#     function_builder            : FunctionBuilder
-#         Object which help building the function
-#
-#     TBR
-#     Returns
-#     -------
-#     rhostar             : dict_of_str
-#         Dictionary providing the str to use in the function for rhostar for all function available in arg_list
-#         Format:
-#         - key: str designating the function being built and provided by key_arglist.
-#         - value: str to use for rhostar for this function
-#     params_whole        : dict_of_dict_of_str
-#         Dictionary providing the strs to use for the other orbital parameters and for the key_whole function ("whole system with all the planets")
-#         Format:
-#         - key: planet name
-#         - value: dict_of_str with the following format
-#             - key: Parameter full name
-#             - value: str to use for this parameter for this function
-#     params_planet       : dict_of_dict_of_str
-#         Dictionary providing the strs to use for the other orbital parameters and for the planet function (1planet+star+instrument)
-#         Format:
-#         - key: planet name
-#         - value: dict_of_str with the following format
-#             - key: Parameter full name
-#             - value: str to use for this parameter for this function
-#     params_planet_only  : dict_of_dict_of_str
-#         Dictionary providing the strs to use for the other orbital parameters and for the planet only function (1planet and nothing else)
-#         Format:
-#         - key: planet name
-#         - value: dict_of_str with the following format
-#             - key: Parameter full name
-#             - value: str to use for this parameter for this function
-#     """
-#     l_function_shortname_add_rho = [function_whole_shortname, ]
-#     for planet in planets.values():
-#         l_function_shortname_add_rho.extend([planet.get_name(), planet.get_name() + ext_plonly])
-#     # Add the stellar density the model parameter vectors
-#     if parametrisation == "Multis":
-#         for function_shortname in l_function_shortname_add_rho:
-#             function_builder.add_parameter(parameter=star.rho, function_shortname=function_shortname)
-#
-#     # Create the text for each planet parameter for the current planet model (planet and planet_only) and for the whole system.
-#     for planet in planets.values():
-#         l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.tic, planet.P]
-#         if parametrisation != "Multis":
-#             l_param.append(planet.aR)
-#         for function_shortname in [function_whole_shortname, planet.get_name(), planet.get_name() + ext_plonly]:
-#             for param in l_param:
-#                 function_builder.add_parameter(parameter=param, function_shortname=function_shortname)
-
-# def get_conditions(multi, l_inst_model, planets, parametrisation, tab, time_vec_name, l_time_vec_name, function_builder):
-#     """
-#     Return the text related to the condition to test if the planet goes into the star
-#
-#     Arguments
-#     ---------
-#     multi                   : bool
-#         True if the datasim function needs to give multiple outputs.
-#     l_inst_model            : list_of_Instrument_Model
-#         Checked list of Instrument_Model instance(s).
-#     planets                 : dict of Planets
-#         Dictionary of Planet instance providing the planets in the system
-#         Format: {"planet name": Planet instance}
-#     parametrisation         : str
-#         string refering to the parametrisation to use
-#     tab                     : str
-#         String providing the space to put in front of each new line
-#     time_vec_name           : str
-#         Str used to design the time vector
-#     l_time_vec_name         : str
-#         Str used to design the list of time vector
-#     function_builder        : FunctionBuilder
-#         Function builder instance
-#     """
-#     ##############################
-#     # Do the Model for each planet
-#     ##############################
-#     for planet in planets.values():
-#         planet_name = planet.get_name()
-#
-#         ########################################################################
-#         # Define the functions to populate and initialise entries in the outputs
-#         ########################################################################
-#         # Defines the lists of function shortnames and add the new transit only function into the function builder
-#         l_whole_function_shortname = [function_whole_shortname, ]
-#         l_planet_function_shortname_ext = ["", "_tr", "_pc"]
-#         l_planet_function_shortname = []
-#         for planet_func_shortname_ext in l_planet_function_shortname_ext:
-#             l_planet_function_shortname.append(f"{get_function_planet_shortname(planet)}{planet_func_shortname_ext}")
-#         l_function_shortname_4_planet = l_whole_function_shortname + l_planet_function_shortname
-#
-#         for func_shortname in l_function_shortname_4_planet:
-#
-#             if function_builder.is_function(shortname=func_shortname):
-#                 error_return = get_catchederror_return(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec_name,
-#                                                        l_time_vec_name=l_time_vec_name, function_builder=function_builder,
-#                                                        function_shortname=func_shortname)
-#                 # In all functions currently considered aR should already exists, but the best would be
-#                 # to check and only do the condition if it doesn or if there is already the ingredients to
-#                 # compute it
-#                 if parametrisation == "Multis":
-#                     aR = f"aR_{planet_name}"
-#                 else:
-#                     aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-#                 if function_builder.is_parameter(parameter=planet.Rrat, function_shortname=func_shortname):
-#                     Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-#                     function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat}))\n", function_shortname=func_shortname)
-#                 else:
-#                     function_builder.add_to_body_text(text=f"condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=func_shortname)
-#                 if func_shortname in l_whole_function_shortname:
-#                     function_builder.add_to_body_text(text=f"{tab}condition = condition or condition_{planet_name}\n", function_shortname=func_shortname)
-#                 else:
-#                     function_builder.add_to_body_text(text=f"{tab}if condition_{planet_name}:\n", function_shortname=func_shortname)
-#                     function_builder.add_to_body_text(text=f"{tab}    return {error_return}\n", function_shortname=func_shortname)
-#     for func_shortname in l_whole_function_shortname:
-#         function_builder.add_to_body_text(text=f"{tab}if condition:\n", function_shortname=func_shortname)
-#         function_builder.add_to_body_text(text=f"{tab}    return {error_return}\n", function_shortname=func_shortname)
 
 
 def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_name, l_time_vec_name,
@@ -932,7 +786,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                     instmod_fullname = instmod.full_code_name
 
                     ####################################################################################
-                    # Get the transit model impletmentation definition for the planet and the instrument
+                    # Get the transit model implementation definition for the planet and the instrument
                     ####################################################################################
                     model_definition_name = transit_model[planet_name]['model4instrument'][instmod.full_name]
                     transit_model_pl_inst = transit_model[planet_name]['model_definitions'][model_definition_name]
@@ -1744,7 +1598,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
 
 
 def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, reference_flux_level, tab, function_builder, function_shortname, transit=None, phasecurve=None,
-                          inst_var=None, stellar_var=None, decorrelation=None):
+                          inst_var=None, stellar_var=None, decorrelation=None, contamination=None):
     """Combine the different component of the lc model including the decorrelation if necessary.
 
     This function creates the return for one datasimulator only and one instrument model object only
@@ -1773,7 +1627,9 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
     phasecurve              : list of str
         text providing the phasecurve model component of the planet(s) contribution to the LC model
     inst_var                : list of str
-        text providing the additive out of transit variations due to the host star (oot_var)
+        text providing the additive out of transit variations due to the instrument (inst_var)
+    stellar_var             : list of str
+        text providing the additive out of transit variations due to the star (stellar_var)
     decorrelation           : list of dict_of_str
         Text providing the decorrelation model component. There are different ways to decorrelate the
         LC model and these ways are designed with strings. For now the ways implemented are
@@ -1785,6 +1641,8 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
             Giving the text of the decorrelation for this part of the model.
             This text should include several decorrelation variables and several decorrelation types
             (e.g. linear) if there are several.
+    contamination           : list of str
+        Text providing the multiplication factor to account for contamination by third light (contam)
 
     Returns
     -------
@@ -1794,9 +1652,8 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
     return_text = []
     for i_inputoutput, instmod in enumerate(l_inst_model):
         return_text.append("")
-        if (inst_var is not None):
-            return_text[i_inputoutput] += inst_var[i_inputoutput]
 
+        # Combine the planetary and stellar contribution
         if reference_flux_level == 0:
             if stellar_var is None or stellar_var[i_inputoutput] == "":
                 if return_text[i_inputoutput] != "":
@@ -1839,6 +1696,13 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                         return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {transit[i_inputoutput]})"
                     elif phasecurve is not None:
                         return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {phasecurve[i_inputoutput]})"
+
+        # Apply the contamination correction
+        if (contamination is not None) and (contamination[i_inputoutput] != ""):
+            return_text[i_inputoutput] = "(" + return_text[i_inputoutput] + f") * {contamination[i_inputoutput]}"
+
+        if (inst_var is not None) and (inst_var[i_inputoutput] != ""):
+            return_text[i_inputoutput] += " + " + inst_var[i_inputoutput]
 
         if decorrelation is not None:
             if "multiply_2_totalflux" in decorrelation[i_inputoutput]:
