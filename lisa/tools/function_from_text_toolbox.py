@@ -771,7 +771,7 @@ def add_argskwargs_argument(arguments):
     return arguments + argskwargs
 
 
-def get_function_arglist(arg_list, key_arglist=None):
+def get_function_arglist(arg_list, key_arglist):
     """Return the arg_list dictionary for one function from the full arg_list dictionary.
 
     The full arg_list dictionary may contain the arg_list for more than than 1 function.
@@ -800,4 +800,4 @@ def get_function_arglist(arg_list, key_arglist=None):
             - <key_mand_kwargs>: empty list that will receive the mandatory keyword arguments (beside the param_vector)
             - <key_opt_kwargs>: empty list that will receive the optional keyword arguments
     """
-    return arg_list[arg_list]
+    return arg_list[key_arglist]
