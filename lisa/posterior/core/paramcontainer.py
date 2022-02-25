@@ -167,40 +167,6 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         else:
             return result, error_msg
 
-    # def _get_parameter_4_naming_kwargs(self, name, return_l_param_name=False, kwargs_get_name=None, **kwargs):
-    #     """Return parameter instance designated by it's name.
-    #
-    #     :param str name: Name of the Parameter looked for.
-    #     :param bool return_l_param_name: if True, return the list of existing parameter names
-    #     :param dict kwargs_get_name: Keyword arguments dictionary for the Paremeter.get_name method.
-    #
-    #     Keyword arguments are passed directly to the self.get_list_params method (see docstring of
-    #     for exhaustive information).
-    #
-    #     :return Parameter/None result: Parameter instance if uniquely found, None otherwise.
-    #     :return str error_msg: If the parameter has been found "". If not, "unknown" if no parameter
-    #         with this name exists or "duplicates" if several parameters with this name exists
-    #     :return list_of_str l_paramnames: If return_l_param_name is True, the list of existing parameter
-    #         names is returned.
-    #     """
-    #     l_param = self.get_list_params(**kwargs)
-    #     if kwargs_get_name is None:
-    #         kwargs_get_name = {}
-    #     l_param_names = [param.get_name(**kwargs_get_name) for param in l_param]
-    #     if l_param_names.count(name) == 0:
-    #         result = None
-    #         error_msg = "unknown"
-    #     elif l_param_names.count(name) == 1:
-    #         result = l_param[l_param_names.index(name)]
-    #         error_msg = ""
-    #     else:
-    #         result = None
-    #         error_msg = "duplicates"
-    #     if return_l_param_name:
-    #         return result, error_msg, l_param_names
-    #     else:
-    #         return result, error_msg
-
     def get_parameter(self, name, notexist_ok=False, return_error=False, kwargs_get_list_params=None, kwargs_get_name=None):
         """Return the parameter instance designated by the name provided if possible.
 
@@ -232,75 +198,6 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
                     return result, error_msg
                 else:
                     return result
-
-    # def get_parameter(self, name, return_error=False, **kwargs):
-    #     """Return the parameter instance designated by the name provided if possible.
-    #
-    #     :param str name: Name of the Parameter looked for.
-    #     :param bool return_error: If true return also the error message (error_msg)
-    #
-    #     Keyword arguments are passed to the self.get_list_params method (see docstring of
-    #     for exhaustive information).
-    #
-    #     :return Parameter/None result: Parameter instance if found, None otherwise.
-    #     :return str error_msg: If the parameter has been found "". If not, "unknown" if no parameter
-    #         with this name exists or "duplicates" if several parameters with this name exists. Returned
-    #         only if return_error is True
-    #     """
-    #     result_found = False
-    #     for code_version in [True, False]:
-    #         result, error_msg, l_paramnames = self._get_parameter_4_naming_kwargs(name, return_l_param_name=True,
-    #                                                                               kwargs_get_name={"include_prefix": False,
-    #                                                                                                "code_version": code_version,
-    #                                                                                                "recursive": False},
-    #                                                                               **kwargs)
-    #         if error_msg == "" or error_msg == "duplicates":
-    #             result_found = True
-    #             break
-    #     if not(result_found):
-    #         set_paramnames_normal = set(l_paramnames)
-    #         error_msg = "unknown"
-    #         full_prefix_kwargs = {}
-    #         prefix_kwargs = full_prefix_kwargs
-    #         while not(result_found):
-    #             for code_version in [True, False]:
-    #                 result, error_msg, l_paramnames = self._get_parameter_4_naming_kwargs(name, return_l_param_name=True,
-    #                                                                                       kwargs_get_name={"include_prefix": True,
-    #                                                                                                        "code_version": code_version,
-    #                                                                                                        "recursive": False,
-    #                                                                                                        "prefix_kwargs": full_prefix_kwargs},
-    #                                                                                       **kwargs)
-    #                 if error_msg == "" or error_msg == "duplicates":
-    #                     result_found = True
-    #                     break
-    #             new_set_paramnames_normal = set(l_paramnames)
-    #             if new_set_paramnames_normal == set_paramnames_normal:
-    #                 result_found = True
-    #             else:
-    #                 set_paramnames_normal = new_set_paramnames_normal
-    #                 prefix_kwargs["include_prefix"] = True
-    #                 prefix_kwargs["recursive"] = False
-    #                 prefix_kwargs["prefix_kwargs"] = {}
-    #                 prefix_kwargs = prefix_kwargs["prefix_kwargs"]
-    #     if return_error:
-    #         return result, error_msg
-    #     else:
-    #         return result
-
-    # def _has_parameter_4_naming_kwargs(self, name, kwargs_get_name=None, **kwargs):
-    #     """Return True in the parameter designated by the name provided exists.
-    #
-    #     :param str name: Name of the Parameter looked for.
-    #     :param dict kwargs_get_name: Keyword arguments dictionary for the Paremeter.get_name method.
-    #
-    #     Keyword arguments are passed directly to the self.get_list_params method (see docstring of
-    #     for exhaustive information).
-    #
-    #     :return bool has: True if the parameter as specified exists, False otherwise.
-    #     """
-    #     result, error_msg = self._get_param_4_naming_kwargs(name=name, return_l_param_name=False, kwargs_get_name=kwargs_get_name, **kwargs)
-    #     has = (result is not None)
-    #     return has, error_msg
 
     def has_parameter(self, name, return_error=False, kwargs_get_list_params=None, kwargs_get_name=None):
         """Return True in the parameter designated by the name provided exists.
