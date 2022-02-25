@@ -337,7 +337,8 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
             else:
                 l_param_name = [params[param_name], ]
             for ref_param_mdl_name in l_param_name:
-                found = model_instance.has_parameter(ref_param_mdl_name, recursive=True)
+                found = model_instance.has_parameter(ref_param_mdl_name, return_error=False, kwargs_get_list_params={'recursive': True},
+                                                     kwargs_get_name={'include_prefix': True, 'recursive': True})
                 dico_params_found[ref_param_mdl_name] = found
         if not(all(list(dico_params_found.values()))):
             raise ValueError("Parameter names {} doesn't exist in the model.".format([param_name for param_name, found in dico_params_found.items() if not(found)]))
