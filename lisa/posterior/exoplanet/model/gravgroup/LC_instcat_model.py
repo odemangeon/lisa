@@ -483,6 +483,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         # instrumental variation parametrisation
         inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
                                               inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
+        # The initialisation of the instrumental contamination is already made in the instrument model
+        # See exoplanet.dataset_and_instrument.lc.LC_Instrument.__params_model__
 
     def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
