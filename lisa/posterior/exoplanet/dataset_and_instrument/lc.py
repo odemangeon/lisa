@@ -28,7 +28,7 @@ class LC_Instrument(Core_Instrument):
 
     __category__ = LC_inst_cat
     __sub_category__ = None
-    __params_model__ = {}
+    __params_model__ = {'contam': {'main': True, 'free': False, 'value': 0, 'unit': 'wo unit'}, }
     __inst_var_basename__ = "instvar"
 
     @classmethod
