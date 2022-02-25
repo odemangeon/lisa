@@ -700,7 +700,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
             # Set the x axis limits
             axes_data[i_row][i_pl].set_xlim((x_min_data, x_max_data))
-            print((x_min_data, x_max_data))
 
             # # for binned points
             # if exptime_bin > 0.:
@@ -754,11 +753,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         idx_planet = legend_kwargs.pop("idx_planet")
         for i_row in range(nb_rows):
             axes_data[i_row][idx_planet].legend(**legend_kwargs)
-        # if legend_param is not None:
-        #     legend_kwargs.update(legend_param)
-        # idx_planet = legend_kwargs.pop("idx_planet")
-        # idx_dataset = legend_kwargs.pop("idx_dataset")
-        # axes_data[datasetnames[idx_dataset]][idx_planet].legend(**legend_kwargs)
 
 
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
