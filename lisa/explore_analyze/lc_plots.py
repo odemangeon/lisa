@@ -389,15 +389,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 # Plot the data
                 ###############
                 if pl_show_error[datasetname]["data"]:
-                    ebcont = axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=datas[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
+                    ebcont = axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
                     if not("ecolor" in pl_kwarg_jitter[datasetname]["data"]):
                         pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                     if not("color" in pl_kwarg_final[datasetname]["data"]):
                         pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
                     if has_jitters[datasetname]:
-                        axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=datas[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)
+                        axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)
                 else:
-                    axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=datas[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
+                    axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
 
                 ####################
                 # Plot the residuals
@@ -451,7 +451,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 if not(one_binning_per_row) and (exptime_bin > 0.):
                     # Compute the binned values
                     (bindata, binedges, binnb
-                     ) = binned_statistic(x_values[datasetname], datas[datasetname],
+                     ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
                                           statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     (binresi, binedges, binnb
@@ -502,7 +502,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 x_values_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                 # Compute the binned values
                 (bindata, binedges, binnb
-                 ) = binned_statistic(x_values_row, np.concatenate([datas[dst] for dst in datasetnames4rowidx[i_row]]),
+                 ) = binned_statistic(x_values_row, np.concatenate([data_pl[dst] for dst in datasetnames4rowidx[i_row]]),
                                       statistic=binning_stat, bins=bins,
                                       range=(x_min_data, x_max_data))
                 (binresi, binedges, binnb
