@@ -323,6 +323,14 @@ class HKPtPrior(Core_JointPrior_Function):
 
 class Ptphiprior(Core_JointPrior_Function):
     """Prior defined for the Period and reference time of the orbit.
+
+    How to use it in the param_file:
+    {'category': 'Ptphi', 'args': {'Phi_lims': (-0.5, 0.5),
+                                   'P_prior': {'category': 'jeffreys', 'args': {'vmin': 0.01, 'vmax': 1000.}},
+                                   'Phi_prior': {'category': 'uniform', 'args': {'vmin': -0.5, 'vmax': 0.5}},
+                                   },
+     'params': {'P': 'b_P', 't': 'b_tic'}
+     }
     """
 
     __category__ = "Ptphi"
