@@ -160,9 +160,11 @@ class FunctionBuilder(object):
             If True the function will not produce a warning if the parameter already exists in the function
         """
         if not(self.is_parameter(parameter, function_shortname)):
-            self._database[function_shortname]["parameters"].append(parameter)
+            if parameter.duplicate is not None:
+                parameter = parameter.duplicate
             if not(parameter.main):
                 raise ValueError(f"Parameter {parameter.full_name} is not a main parameter.")
+            self._database[function_shortname]["parameters"].append(parameter)
             if parameter.free:
                 self._database[function_shortname]["free_parameters"].append(parameter)
         else:
@@ -179,6 +181,8 @@ class FunctionBuilder(object):
         function_shortname  : str
             Short name of the function.
         """
+        if parameter.duplicate is not None:
+            parameter = parameter.duplicate
         return parameter in self._database[function_shortname]["parameters"]
 
     def add_mandatory_argument(self, argument_name, function_shortname, exist_ok=False):
@@ -360,7 +364,6 @@ class FunctionBuilder(object):
                     if all(l_equals):
                         error = False
                 if error:
-                    import pdb; pdb.set_trace()
                     logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
 
     def is_in_ldict(self, variable_name, function_shortname, variable_content=None, check_content=False):
@@ -454,6 +457,8 @@ class FunctionBuilder(object):
         parameter_in_param_vect : str or float
             Str providing the parameter in the model parameter vector
         """
+        if parameter.duplicate is not None:
+            parameter = parameter.duplicate
         if self.is_parameter(parameter=parameter, function_shortname=function_shortname):
             if parameter.free:
                 return f"{self.parameter_vector_name}[{self.get_free_parameter_vector(function_shortname=function_shortname).index(parameter)}]"
