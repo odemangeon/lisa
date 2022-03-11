@@ -283,7 +283,8 @@ def getrhostar(P, aR, ecc, omega, rhofact=1):
 def getaoverr_circular(P, rhostar):
     """Return the a over Rstar.
 
-    From Seager & Mallen-Ornelas 2003, and using rhostar in solar unit.
+    From Seager & Mallen-Ornelas 2003, and using rhostar in solar unit. https://iopscience.iop.org/article/10.1086/346105/pdf
+    Eq 12
 
     :param float/np.ndarray P: Planetary orbital period in days
     :param float/np.ndarray rhostar: Density of the star from transit in solar density
@@ -297,6 +298,7 @@ def getaoverr(P, rhostar, ecc, omega_deg):
     """Return the a over Rstar.
 
     From Van Eylen & Albrecht 2015, and using rhostar in solar unit (https://arxiv.org/pdf/1505.02814.pdf)
+    Eq 1 and 2
 
     :param float/np.ndarray P: Planetary orbital period in days
     :param float/np.ndarray rhostar: Density of the star from transit in solar density
