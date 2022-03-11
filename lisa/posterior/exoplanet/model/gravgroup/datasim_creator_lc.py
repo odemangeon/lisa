@@ -1701,6 +1701,7 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
         if (contamination is not None) and (contamination[i_inputoutput] != ""):
             return_text[i_inputoutput] = "(" + return_text[i_inputoutput] + f") * {contamination[i_inputoutput]}"
 
+        # Add the instrumental variation
         if (inst_var is not None) and (inst_var[i_inputoutput] != ""):
             return_text[i_inputoutput] += " + " + inst_var[i_inputoutput]
 
