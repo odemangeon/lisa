@@ -85,8 +85,9 @@ if cluster:
 else:
     post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
-    if len(post_instance.model.paramfile4instcat) > 0:
-        input("Modifiy the inst_cat specific paramerisation file: {}".format(post_instance.model.paramfile4instcat))
+    input("If there are any inst_cat specific paramerisation file please check them")
+
+print(post_instance.model.inst_categories)
 
 logger.info("6. Load inst_cat specific parameter file")
 post_instance.model.load_instcat_paramfile()
