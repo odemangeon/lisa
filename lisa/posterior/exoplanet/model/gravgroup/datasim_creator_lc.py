@@ -221,9 +221,9 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
                                      l_time_vec_name=l_time_vec, function_builder=func_builder, l_function_shortname=[function_whole_shortname, ],
                                      ext_func_fullname=func_full_name_MultiOrDst_ext)
 
-    #####################################
+    ########################################
     # Produce instrumental variations models
-    #####################################
+    ########################################
     ## Get the d_l_inst_var and add the t_ref(s) to the list of arguments for the functions
     # d_l_inst_var is the list of strings giving the string representation of the out of transit variation model
     # for each couple instrument model - dataset in l_inst_model and l_dataset.
