@@ -61,8 +61,8 @@ fmt_sci_not = FuncFormatter(sci_not_str)
 def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                                 datasetnames=None, row4datasetname=None,
                                 plot_model_for_all_datasets=False, datasetnameformodel4row=None, npt_model=1000,
-                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_GP_data=True,
-                                remove_GP_residual=True, LC_fact=1.,
+                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_contamination=False,
+                                remove_GP_data=True, remove_GP_residual=True, LC_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 one_binning_per_row=True,
@@ -101,6 +101,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         If True remove the instrumental variations
     remove_decorrelation    : bool
         It True remove the decorrelation model
+    remove_contamination    : bool
+        It True the contamination of the light curve is removed
     remove_GP_data           : Boolean
         If True the GP model is remove from the data for the plot.
     remove_GP_residual       : Boolean
@@ -225,10 +227,11 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Load the defined datasets and check how many dataset there is by instrument.
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                   df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
+                                  remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination,
+                                  remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
@@ -757,7 +760,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                             datasetnames=None,
-                            remove1=True, remove_inst_var=True, remove_decorrelation=True,
+                            remove1=True, remove_inst_var=False, remove_decorrelation=True, remove_contamination=False,
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
                             LC_fact=1e6, LC_unit="ppm",
@@ -795,7 +798,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     remove_inst_var  : bool (Def: True)
         If True remove the instrumental variations
     remove_decorrelation    : bool
-        It True remove the decorrelation model
+        If True remove the decorrelation model
+    remove_contamination    : bool
+        If True remove the contamination model
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
             - 'row4datasetname'   : dict of int
@@ -972,10 +977,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                   df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_GP_dataNmodel=False, remove_GP_residual=False)
+                                  remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
 
     ################
     # LC TIME SERIES
@@ -1091,9 +1096,13 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                                                             l_param_name=list(df_fittedval.index),
                                                                             key_obj="decorr",
                                                                             datasim_kwargs=datasim_kwargs)
-                    # Remove the inst_var if required
-                    if (datasetname in inst_vars) and remove_inst_var:
-                        model -= model_instvar
+                    # contam
+                    if (datasetname in contams):
+                        model_contam, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="contam",
+                                                                            datasim_kwargs=datasim_kwargs)
                     # Remove the decorrelation:
                     if (datasetname in decorrs) and remove_decorrelation:
                         for model_part in model_decorr:
@@ -1101,6 +1110,12 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 model -= model_decorr['add_2_totalflux']
                             else:
                                 logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    # Remove the inst_var if required
+                    if (datasetname in inst_vars) and remove_inst_var:
+                        model -= model_instvar
+                    # Remove the contamination
+                    if (datasetname in contams) and remove_contamination:
+                        model /= model_contam
                     # remove 1 if required
                     if remove1:
                         model -= 1
@@ -1625,7 +1640,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
-                             remove_inst_var, remove_decorrelation, remove_GP_dataNmodel, remove_GP_residual):
+                             remove_inst_var, remove_decorrelation, remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
     """
     dico_datasets = {}
@@ -1642,6 +1657,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     gp_pred_vars = {}
     inst_vars = {}
     decorrs = {}
+    contams = {}
     residuals = {}
     for datasetname in datasetnames:
         ##########################################
@@ -1711,6 +1727,15 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                 else:
                     logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
+        #########################################################################
+        # Compute the contamination models (contam) to later remove from the data
+        #########################################################################
+        (model_contam, _, _, _
+         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+                                         l_param_name=list(df_fittedval.index), key_obj="contam", datasim_kwargs=datasim_kwargs
+                                         )
+        contams[datasetname] = model_contam
+
         #######################################
         # Compute the models and GP predictions
         #######################################
@@ -1760,6 +1785,13 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         ################################################################################
+        # Remove contamination (if needed)
+        ################################################################################
+        if remove_contamination:
+            datas[datasetname] /= contams[datasetname]
+            models[datasetname] /= contams[datasetname]
+
+        ################################################################################
         # Remove 1 (if needed)
         ################################################################################
         if remove1:
@@ -1781,7 +1813,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             dico_jitters[datasetname]["value"] *= LC_fact
             data_err_jitters[datasetname] *= LC_fact
 
-    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters, has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, residuals
+    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters, has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
 
 
 def check_row4datasetname(row4datasetname, datasetnames):
