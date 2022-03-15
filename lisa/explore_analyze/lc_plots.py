@@ -307,8 +307,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     axes_resi[i_row][i_pl].set_xlabel("Orbital phase", fontsize=fontsize)
             # Set y labels on the first column and align them, also set the Anchor boxes
             if i_pl == 0:
-                oot_str = "- 1 " if remove1 else ""
-                ylabel_data = f"Normalised Flux {oot_str}[{LC_unit}]" if LC_unit is not None else "Normalised Flux"
+                y_str = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
+                ylabel_data = f"{y_str} [{LC_unit}]" if LC_unit is not None else f"{y_str}"
                 ylabel_resi = f"O - C [{LC_unit}]" if LC_unit is not None else "O - C"
                 axes_data[i_row][i_pl].set_ylabel(ylabel_data, fontsize=fontsize)
                 axes_resi[i_row][i_pl].set_ylabel(ylabel_resi, fontsize=fontsize)
@@ -943,7 +943,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
         suptitle_text = f"{system_name} system"
     removed_text = ""
-    for compo, removed in zip(["Inst var", "Decorrelation"], [remove_inst_var, remove_decorrelation]):
+    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"], [remove_inst_var, remove_decorrelation, remove_contamination]):
         if removed:
             if removed_text != "":
                 removed_text += ", "
@@ -1055,8 +1055,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     axe_data.set_title("LC time series", fontsize=fontsize)
                 axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
                 if i_col == 0:
-                    axe_data.set_ylabel(f"Fp/Fs [{LC_unit}]", fontsize=fontsize)
-                    axe_resi.set_ylabel(f"residuals [{LC_unit}]", fontsize=fontsize)
+                    y_str = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
+                    ylabel_data = f"{y_str} [{LC_unit}]" if LC_unit is not None else f"{y_str}"
+                    ylabel_resi = f"O - C [{LC_unit}]" if LC_unit is not None else "O - C"
+                    axe_data.set_ylabel(ylabel_data, fontsize=fontsize)
+                    axe_resi.set_ylabel(ylabel_resi, fontsize=fontsize)
 
                 axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
                 axe_data.xaxis.set_minor_locator(AutoMinorLocator())
