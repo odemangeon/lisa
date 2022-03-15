@@ -170,10 +170,6 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
         func_builder.add_new_function(shortname=function_shortname)
         func_builder.set_function_fullname(full_name=f"LC_sim_{function_shortname}_{func_full_name_MultiOrDst_ext}", shortname=function_shortname)
 
-    #########################################################################################
-    # Create the text of what to return when condition is met or the RuntimeError is catched
-    ########################################################################################
-
     ########################
     # Produce Transit models
     ########################
