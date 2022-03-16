@@ -204,6 +204,7 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                 if not(DeltaRV_main) or ((inst_name == RVrefglobal_instname) and (inst_model.get_name() == RVrefglobal_modname)):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
+                RV_instcat_model.apply_instmod_parametrisation(inst_mod_obj=inst_model)
         if LC_inst_cat in set(self.dataset_db.inst_categories):
             LC_instcat_model = self.instcat_models[LC_inst_cat]
             list_instmodel = self.get_instmodel_objs(inst_fullcat=LC_inst_cat)
