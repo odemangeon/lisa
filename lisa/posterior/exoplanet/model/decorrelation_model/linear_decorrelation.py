@@ -32,8 +32,8 @@ def scale_and_interpolate(t, x, scale=None):
     return interp1d(t, z, bounds_error=False, fill_value=(z[0], z[-1]))
 
 
-class LinearDecorrelation_LC(Core_DecorrelationModel):
-    """docstring for LinearDecorrelation_LC."""
+class LinearDecorrelation(Core_DecorrelationModel):
+    """docstring for LinearDecorrelation."""
 
     # Mandatory attributes from Core_DecorrelationModel
     __category__ = "linear"
@@ -73,10 +73,10 @@ class LinearDecorrelation_LC(Core_DecorrelationModel):
         allowed_what2decorrelate_strs               : list of str
             List of strings allowed for the part of the model to decorrelate
         """
-        super(LinearDecorrelation_LC, cls).load_text_decorr_paramfile(inst_mod_obj=inst_mod_obj,
-                                                                      decorrelation_config_inst_decorr_paramfile=decorrelation_config_inst_decorr_paramfile,
-                                                                      decorrelation_config_inst_decorr=decorrelation_config_inst_decorr,
-                                                                      skip_load=True)
+        super(LinearDecorrelation, cls).load_text_decorr_paramfile(inst_mod_obj=inst_mod_obj,
+                                                                   decorrelation_config_inst_decorr_paramfile=decorrelation_config_inst_decorr_paramfile,
+                                                                   decorrelation_config_inst_decorr=decorrelation_config_inst_decorr,
+                                                                   skip_load=True)
         for inst_mod_obj_decorr_var_name in decorrelation_config_inst_decorr_paramfile.keys():
             # Check that the "quantity" is in the dictionary
             if "quantity" not in decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]:
