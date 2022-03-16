@@ -38,6 +38,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
     _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models
 
     def __init__(self, model_instance):
+        super(RV_InstCat_Model, self).__init__(model_instance=model_instance)
         self.param_file_instcat = None
         self.rv_model = None
         # Initialise the dictionary giving the RV zero point RV_references
@@ -73,6 +74,9 @@ class RV_InstCat_Model(Core_InstCat_Model):
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,
                                        RV_inst_db=self.instruments[RV_inst_cat],
+                                       decorrelation_config=self.decorrelation_config,
+                                       dataset_db=self.model_instance.dataset_db,
+                                       RVcat_model=self.model_instance.instcat_models[self.inst_cat],
                                        rv_model=self.rv_model,
                                        inst_models=inst_models, datasets=datasets)
 
