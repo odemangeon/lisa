@@ -20,7 +20,7 @@ from numpy import concatenate, argsort, cumsum, array, append, sign
 from astropy.constants import R_sun, au
 from batman._quadratic_ld import _quadratic_ld
 
-from ..gravgroup.datasim_creator_rv import get_starmeanrv_and_deltarv
+from ..gravgroup.datasim_creator_rv import get_instvar, get_stellarvar
 from ..gravgroup.datasim_creator_lc import get_LD_parcont_and_param, get_instvar
 from ..gravgroup.limb_darkening import QuadraticLD
 from ..convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
