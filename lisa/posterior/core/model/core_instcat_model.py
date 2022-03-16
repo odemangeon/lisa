@@ -17,6 +17,7 @@ methods and attributes to model a data of a given insttument category.
     - The load_config_decorrelation
 """
 from textwrap import dedent
+from collections import Iterable
 
 from ..dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
@@ -318,3 +319,42 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                              time_arg_name=time_arg_name, function_builder=function_builder,
                                                              function_shortname=function_shortname, model_part=model_part)
         return text_decorr
+
+    def get_l_instmod(self, inst_model=None, inst_name=None, sortby_instname=False, sortby_instmodel=False):
+        """Return the list of instrument model object for the instrument category
+        """
+        return self.model_instance.get_instmodel_objs(inst_model=None, inst_name=None, inst_fullcat=self.inst_cat,
+                                                      sortby_instfullcat=False, sortby_instname=False, sortby_instmodel=False,
+                                                      )
+
+    def get_l_instmod_full_name(self, inst_model=None, inst_name=None, sortby_instname=False, sortby_instmodel=False):
+        """Return the list of instrument model full name for the instrument category
+        """
+        return [inst_mod.full_name for inst_mod in self.get_l_instmod(inst_model=inst_model, inst_name=inst_name,
+                                                                      sortby_instname=sortby_instname,
+                                                                      sortby_instmodel=sortby_instmodel
+                                                                      )
+                ]
+
+    def get_l_datasetname(self, instmod_fullnames=None):
+        """Return the list of dataset names for a given instrument model
+        """
+        format_not_recognised = False
+        if instmod_fullnames is None:
+            instmod_fullnames = self.get_l_instmod_full_name()
+        elif isinstance(instmod_fullnames, str):
+            instmod_fullnames = [instmod_fullnames, ]
+        elif isinstance(instmod_fullnames, Iterable):
+            if not(all([isinstance(instmod_fullname, str) for instmod_fullname in instmod_fullnames])):
+                format_not_recognised = True
+        else:
+            format_not_recognised = True
+        if format_not_recognised:
+            raise ValueError("instmod_fullnames should be a str, an interable of str or None")
+        res = []
+        for instmod_fullname in instmod_fullnames:
+            if instmod_fullname not in self.get_l_instmod_full_name():
+                raise ValueError(f"{instmod_fullname} is not the full name of an existing instrument model of category {self.inst_cat}")
+            else:
+                res.extend(self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname))
+        return res
