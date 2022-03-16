@@ -138,7 +138,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
                               inst_model_fullname=inst_model_fullname,
                               dataset=dataset)
 
-    def datasim_creator(self, inst_models=None, datasets=None):
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
         """Create the data simulator to be used for the indicators.
 
         Arguments
@@ -147,6 +147,9 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
             List of intrument models corresponding to each datasets in datasets
         datasets    : List of IND_Dataset instances
             List of datasets
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
 
         Returns
         -------
