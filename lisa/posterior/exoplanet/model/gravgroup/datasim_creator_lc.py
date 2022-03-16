@@ -230,7 +230,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # Format: ["oot model", ]
     d_l_inst_var = get_instvar(l_inst_model=l_inst_model, l_dataset=l_dataset, multi=multi,
                                function_builder=func_builder, l_function_shortname=[function_whole_shortname, ], ext_func_fullname=func_full_name_MultiOrDst_ext,
-                               get_times_from_datasets=get_times_from_datasets, tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec)
+                               get_times_from_datasets=get_times_from_datasets, tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
+                               LCcat_model=LCcat_model, dataset_db=dataset_db)
 
     #######################################################################
     # Finalise the functions combining different outputs (whole and planet)
@@ -350,7 +351,7 @@ def get_contamination(l_inst_model, l_dataset, tab, function_builder, l_function
 
 
 def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, time_vec_name, l_time_vec_name,
-                function_builder, l_function_shortname, ext_func_fullname):
+                LCcat_model, dataset_db, function_builder, l_function_shortname, ext_func_fullname):
     """Get the instrumental variation contribution to the light-curve
 
     Arguments
@@ -369,6 +370,11 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
         Str used to design the time vector
     l_time_vec_name         : str
         Str used to design the list of time vector
+    LCcat_model                 : LC_InstCat_Model
+        Instance of the LC_InstCat_Model
+    dataset_db                  : DatasetDatabase
+        Dataset database, this will be used by the function to access the all the dataset of a given instrument model,
+        not only the datasets to be simulated.
     function_builder        : FunctionBuilder
         Function builder instance
     l_function_shortname    : list of str
@@ -454,8 +460,8 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                 # if this time_reference is not already in the ldict of the function ...
                                 if timeref_instmod not in function_builder.get_ldict(function_shortname=function_shortname):
                                     # we have to compute its value and add it to the ldict
-                                    l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == instmdl]
-                                    timeref_instmod_value = min([min(dst.get_time()) for dst in l_dataset_name_instmod])
+                                    l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmdl.full_name)
+                                    timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_instmod])
                                     function_builder.add_variable_to_ldict(variable_name=timeref_instmod, variable_content=timeref_instmod_value, function_shortname=function_shortname)
                                 # ..., add the end of this order's contribution to the text of the instruments variations, ...
                                 # add the time argument
@@ -473,10 +479,6 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                         returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
                                     else:
                                         returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
-                            # # If the is no contribution to the oot of transit variation from this order
-                            # # add only a space.
-                            # elif value_not0 and order == 0:
-                            #     returns[function_shortname][ii] += " "
 
         #####################################
         # Finalize the inst_var only function
@@ -1415,7 +1417,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
                       ext_func_fullname):
     """Provide the text for the decorrelation of the LC model text (return).
 
-    It should provide the text for decorrelation model for all functions (planet, planet_only, whole)
+    It should provide the text for decorrelation model for all functions requested (l_function_shortname)
     and separately for each instrument model and each part of the LC model to decorrelate.
 
     The output of this methods will be used by combine_lc_models when filling the template of the functions
@@ -1514,7 +1516,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
                 returns[func_shortname].append({})
                 if decorrelation_config[instmod.full_name]["do"]:
                     # List of the datasets associated with the instrument model
-                    l_dataset_name_instmod = [dst.dataset_name for i_dst, dst in enumerate(l_dataset) if l_inst_model[i_dst] == instmod]
+                    l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmod.full_name)
                     for model_part, config_decorr_instmod_modelpart in decorrelation_config[instmod.full_name]["what to decorrelate"].items():
                         (returns[func_shortname][i_inputoutput][model_part]
                          ) = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
