@@ -930,19 +930,27 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                         ## preambule: planetary parameter conversions
                         ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
                         esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                        function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                        function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
-                        function_builder.add_variable_to_ldict(variable_name="getomega_fast", variable_content=getomega_fast, function_shortname=func_shortname, exist_ok=True)
-                        function_builder.add_to_body_text(text=f"{tab}omega_{planet_name} = getomega_fast({esinw}, {ecosw})\n", function_shortname=func_shortname)
+                        if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
+                            function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
+                            function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
+                        if not(function_builder.is_done_in_text(name=f"omega_{planet_name}", function_shortname=func_shortname)):
+                            function_builder.add_variable_to_ldict(variable_name="getomega_fast", variable_content=getomega_fast, function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_to_body_text(text=f"{tab}omega_{planet_name} = getomega_fast({esinw}, {ecosw})\n", function_shortname=func_shortname)
+                            function_builder.add_to_done_in_text(name=f"omega_{planet_name}", function_shortname=func_shortname)
                         cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                        function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                        function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = acos({cosinc})\n", function_shortname=func_shortname)
+                        if not(function_builder.is_done_in_text(name=f"inc_{planet_name}", function_shortname=func_shortname)):
+                            function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
+                            function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = acos({cosinc})\n", function_shortname=func_shortname)
+                            function_builder.add_to_done_in_text(name=f"inc_{planet_name}", function_shortname=func_shortname)
                         period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
                         if parametrisation == "Multis":
-                            rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
-                            function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                            function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                            function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, degrees(omega_{planet_name}))\n", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
+                                rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
+                                function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, degrees(omega_{planet_name}))\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
                         # Get the text for the remaining planet parameters
                         if parametrisation == "Multis":
                             aR = f"aR_{planet_name}\n"
