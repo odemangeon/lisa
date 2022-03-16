@@ -25,7 +25,7 @@ from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from .....tools.miscellaneous import spacestring_like
-from ..decorrelation_model.linear_decorrelation import LinearDecorrelation_LC
+from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
 
 ## Logger object
 logger = getLogger()
@@ -43,7 +43,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __has_instcat_paramfile__ = True
     __default_paramfile_path__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
-    __decorrelation_models__ = [LinearDecorrelation_LC]
+    __decorrelation_models__ = [LinearDecorrelation]
 
     allowed_what2decorrelate_strs = ['multiply_2_totalflux', 'add_2_totalflux', ]
 
@@ -80,7 +80,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                                   }
                               for planet in self.model_instance.planets.values()
                               }
-
         self.phasecurve_model = {planet.get_name(): {"do": False,
                                                      "model_definitions": {"default_model": {"model": "spiderman",
                                                                                              "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
@@ -118,6 +117,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         """
         Arguments
         ---------
+        inst_models : List of Instrument_Model instances
+            List of intrument models corresponding to each datasets in datasets
+        datasets    : List of IND_Dataset instances
+            List of datasets
         get_times_from_datasets  : bool
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
