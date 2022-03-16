@@ -63,22 +63,26 @@ class RV_InstCat_Model(Core_InstCat_Model):
     def RV_globalref_instname(self):
         return self.__RV_references["global"]
 
-    def datasim_creator(self, inst_models=None, datasets=None):
-        return create_datasimulator_RV(star=list(self.stars.values())[0],
-                                       planets=self.planets,
-                                       key_whole=self.key_whole,  # self.key_whole comes from Core_Model
-                                       key_param=self.key_param,  # self.key_param comes from DatasimulatorCreator
-                                       key_mand_kwargs=self.key_mand_kwargs,  # self.key_mand_kwargs comes from DatasimulatorCreator
-                                       key_opt_kwargs=self.key_opt_kwargs,  # self.key_opt_kwargs comes from DatasimulatorCreator
-                                       ext_plonly=self._ext_plonly,
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+        """
+        Arguments
+        ---------
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
+        """
+        return create_datasimulator_RV(star=list(self.model_instance.stars.values())[0],
+                                       planets=self.model_instance.planets,
                                        RV_globalref_instname=self.RV_globalref_instname,
                                        RV_instref_modnames=self.RV_references,
-                                       RV_inst_db=self.instruments[RV_inst_cat],
+                                       RV_inst_db=self.model_instance.instruments[RV_inst_cat],
+                                       rv_model=self.rv_model,
                                        decorrelation_config=self.decorrelation_config,
                                        dataset_db=self.model_instance.dataset_db,
                                        RVcat_model=self.model_instance.instcat_models[self.inst_cat],
-                                       rv_model=self.rv_model,
-                                       inst_models=inst_models, datasets=datasets)
+                                       inst_models=inst_models, datasets=datasets,
+                                       get_times_from_datasets=get_times_from_datasets
+                                       )
 
     def create_instcat_paramfile(self, file_path, model_instance):
         """Create a parameter file for the light-curve parametrisation.
