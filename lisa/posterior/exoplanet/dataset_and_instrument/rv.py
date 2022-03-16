@@ -41,7 +41,7 @@ class RV_Instrument(Core_Instrument):
 
     @classmethod
     def _get_instcat_paramfilesection(cls, text_tab, model_instance, entete_symb=": "):
-        RVrefglobale_instname = model_instance.RV_globalref_instname
+        RVrefglobale_instname = model_instance.instcat_models[RV_inst_cat].RV_globalref_instname
         return "{}'{}'{}'{}'\n".format(text_tab, cls.__name_RV_ref_global_var__, entete_symb, RVrefglobale_instname)
 
     @classmethod
@@ -58,11 +58,11 @@ class RV_Instrument(Core_Instrument):
 
     @classmethod
     def _load_config_specifickeys_inst(cls, dico_config_inst, inst_name, model_instance):
-        model_instance.set_RVref4inst_modname(inst_name, dico_config_inst[cls.__name_RV_ref_var__])
+        model_instance.instcat_models[RV_inst_cat].set_RVref4inst_modname(inst_name, dico_config_inst[cls.__name_RV_ref_var__])
 
     @classmethod
     def _load_config_instcat(cls, dico_config_fullcat, model_instance):
-        model_instance.set_RV_globalref_instname(dico_config_fullcat[cls.__name_RV_ref_global_var__])
+        model_instance.instcat_models[RV_inst_cat].set_RV_globalref_instname(dico_config_fullcat[cls.__name_RV_ref_global_var__])
 
 
 class RV_Dataset(Core_Dataset):
