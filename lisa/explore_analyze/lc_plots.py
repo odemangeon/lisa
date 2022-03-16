@@ -98,11 +98,16 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     remove1             : bool
         If True remove one to get an out of transit level of 0 instead of 1.
     remove_inst_var  : bool (Def: True)
-        If True remove the instrumental variations
+        If True remove the instrumental variations. If there is contamination, you should always have
+        remove_inst_var and remove contamination to True, inst_var depends strongly in contamination, so any other
+        thing would not make sense.
     remove_decorrelation    : bool
         It True remove the decorrelation model
     remove_contamination    : bool
-        It True the contamination of the light curve is removed
+        It True the contamination of the light curve is removed. If there is contamination, you should always have
+        remove_inst_var and remove contamination to True, inst_var depends strongly in contamination, so any other
+        thing would not make sense.
+
     remove_GP_data           : Boolean
         If True the GP model is remove from the data for the plot.
     remove_GP_residual       : Boolean
@@ -429,6 +434,39 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                       l_param_name=list(df_fittedval.index),
                                                                       key_obj=f"{planet_name}",
                                                                       datasim_kwargs=datasim_kwargs)
+                    # Add 1 if needed
+                    if not(remove1):
+                        model2plot += 1
+                    # Add contamination if needed
+                    if not(remove_contamination) and (datasetname in contams):
+                        model_contam, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="contam",
+                                                                            datasim_kwargs=datasim_kwargs)
+                        model2plot *= model_contam
+                    # Add inst_var if needed
+                    if not(remove_inst_var) and (datasetname in inst_vars):
+                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
+                                                                             dataset_name=datasetname,
+                                                                             param=df_fittedval["value"].values,
+                                                                             l_param_name=list(df_fittedval.index),
+                                                                             key_obj="inst_var",
+                                                                             datasim_kwargs=datasim_kwargs)
+                        model2plot += model_instvar
+                    # Add decorrelation if needed
+                    if not(remove_decorrelation) and (datasetname in decorrs):
+                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="decorr",
+                                                                            datasim_kwargs=datasim_kwargs)
+                        for model_part in model_decorr:
+                            if model_part == "add_2_totalflux":
+                                model2plot += model_decorr['add_2_totalflux']
+                            else:
+                                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    # Multiply by LC fact
                     model2plot *= LC_fact
                     # Plot the oversampled model to plot for the raw cadence
                     ebconts_lines_labels_model = axes_data[i_row][i_pl].errorbar(xsim, model2plot, **pl_kwarg_final[datasetname]["model"])
@@ -442,6 +480,42 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                       key_obj=f"{planet_name}",
                                                                       supersamp=supersamp_bin_model, exptime=exptime_bin,
                                                                       datasim_kwargs=datasim_kwargs)
+                    # Add 1 if needed
+                    if not(remove1):
+                        model2plot += 1
+                    # Add contamination if needed
+                    if not(remove_contamination) and (datasetname in contams):
+                        model_contam, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="contam",
+                                                                            supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                            datasim_kwargs=datasim_kwargs)
+                        model2plot *= model_contam
+                    # Add inst_var if needed
+                    if not(remove_inst_var) and (datasetname in inst_vars):
+                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
+                                                                             dataset_name=datasetname,
+                                                                             param=df_fittedval["value"].values,
+                                                                             l_param_name=list(df_fittedval.index),
+                                                                             key_obj="inst_var",
+                                                                             supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                             datasim_kwargs=datasim_kwargs)
+                        model2plot += model_instvar
+                    # Add decorrelation if needed
+                    if not(remove_decorrelation) and (datasetname in decorrs):
+                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="decorr",
+                                                                            supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                            datasim_kwargs=datasim_kwargs)
+                        for model_part in model_decorr:
+                            if model_part == "add_2_totalflux":
+                                model2plot += model_decorr['add_2_totalflux']
+                            else:
+                                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    # Multiply by LC fact
                     model2plot *= LC_fact
                     # Plot the oversampled model to plot for the raw cadence
                     ebconts_lines_labels_model = axes_data[i_row][i_pl].errorbar(xsim, model2plot, **pl_kwarg_final[datasetname]["modelbinned"])
