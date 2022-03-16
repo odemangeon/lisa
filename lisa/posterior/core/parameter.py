@@ -281,7 +281,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
                             else:
                                 param_duplicated = model_instance.get_parameter(dico_config[carac],
                                                                                 kwargs_get_list_params={'recursive': True, 'main': True, 'no_duplicate': False},
-                                                                                kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True, 'code_version': True})
+                                                                                kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True, 'code_version': False})
                                 setattr(self, carac, param_duplicated)
                         else:
                             setattr(self, carac, dico_config[carac])
