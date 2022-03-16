@@ -193,9 +193,10 @@ class GravGroup_Parametrisation(Core_Parametrisation):
     def apply_instmodel_parametrisation(self):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""
         if RV_inst_cat in set(self.dataset_db.inst_categories):
+            RV_instcat_model = self.instcat_models[RV_inst_cat]
             DeltaRV_main = self.parametrisation_kwargs.get("with_DeltaRV", False)
-            RVrefglobal_instname = self.RV_globalref_instname
-            RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
+            RVrefglobal_instname = RV_instcat_model.RV_globalref_instname
+            RVrefglobal_modname = RV_instcat_model.get_RVref4inst_modname(RVrefglobal_instname)
             list_instmodel = self.get_instmodel_objs(inst_fullcat=RV_inst_cat)  # self.get_instmodel_objs comes from InstrumentContainerInterface
             for inst_model in list_instmodel:
                 inst_name = inst_model.instrument.get_name()
