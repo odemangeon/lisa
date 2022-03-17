@@ -750,7 +750,7 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
             for func_shortname_ext in l_func_shortname_ext_to_create:
                 func_shortname_tr_pl_only = f"{get_function_planet_shortname(planet)}{ext_func_keprv_only}"
                 function_builder.add_new_function(shortname=func_shortname_tr_pl_only)
-                function_builder.set_function_fullname(full_name=f"LC_sim_{func_shortname_tr_pl_only}_{ext_func_fullname}", shortname=func_shortname_tr_pl_only)
+                function_builder.set_function_fullname(full_name=f"RV_sim_{func_shortname_tr_pl_only}_{ext_func_fullname}", shortname=func_shortname_tr_pl_only)
 
             ##############
             # Add the time
@@ -846,7 +846,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
     """Provide the text for the decorrelation of the RV model text (return).
 
     It should provide the text for decorrelation model for all functions requested (l_function_shortname)
-    ands separately for each instrument model and each part of the LC model to decorrelate.
+    ands separately for each instrument model and each part of the RV model to decorrelate.
 
     The output of this methods will be used by combine_return_models when filling the template of the functions
     in datasim_creator_rv.
