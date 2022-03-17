@@ -57,7 +57,9 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
 
         # Define the dictionary datasimcreator4indmodel
         self.__datasimcreator4indmodel = {self._polynomial_method_name: self._create_datasimulator_IND_Poly}
-        self.__kwargs_datasimcreator4indmodel = {self._polynomial_method_name: {"polynomial_order_name": self._polynomial_order_name}}  # For each indicator method the dictionary will be passed to the datasim creator function pointed by self.__datasimcreator4indmodel
+        self.__kwargs_datasimcreator4indmodel = {self._polynomial_method_name: {"polynomial_order_name": self._polynomial_order_name,
+                                                                                }
+                                                 }  # For each indicator method the dictionary will be passed to the datasim creator function pointed by self.__datasimcreator4indmodel
         self.__init_indmodel4indmodel = {self._polynomial_method_name: self._init_polynomialind_model}
 
         # Initialise the params_indicator_models
@@ -156,11 +158,21 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         datasimulator : DatasimDocFunc
             Datasimulator simulating the list of datasets provided.
         """
-        # Check the content of inst_models and datasets argument and convert them into lists if only one instrument model/dataset is provided.
-        # The check_datasets_and_instmodels does much more than that but here I just need that
-        (l_dataset, l_inst_model, _, _, _, _, _, _) = check_datasets_and_instmodels(datasets, inst_models)
+        #############################################################
+        # Check the content of the datasets and inst_models arguments
+        #############################################################
+        # - Check the content of inst_models and datasets argument and transform them into two list l_inst_model
+        # and l_dataset which provide the couple (inst_model_obj, dataset) for each output of the datasimulator
+        # - Set multi True if the datasimulator has several outputs (several datasets to be simulated)
+        # - Set the inst_model_fullnames argument for the Datasim_DocFunc (instmod_docf)
+        # - Set the dst_ext extension to be used for the name of the datasimulator function
+        # - Set the instcat_docf, instmod_docf, dtsts_docf to be used as arguments inst_cat, inst_model_fullname,
+        # datasets in the Datasim_DocFunc.
+        l_dataset, l_inst_model, _, _, _, _, _, _ = check_datasets_and_instmodels(datasets, inst_models)
 
-        # 1. Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
+        ################################################################################################################################
+        # Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
+        ################################################################################################################################
         def defdictfunc():
             return {"datasets": [], "instmodels": []}
         datsimC_inputs = defaultdict(defdictfunc)
@@ -172,7 +184,10 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
             # ... store the dataset and instrument model object in datsimC_inputs
             datsimC_inputs[ind_mod]["datasets"].append(dst)
             datsimC_inputs[ind_mod]["instmodels"].append(inst_mod_obj)
-        # 2. Compute a datasimulator for each indicator model (just one even if there is different indicators subcategories). Going to the right function
+
+        ##############################################################################################################################################
+        # Compute a datasimulator for each indicator model (just one even if there is different indicators subcategories). Going to the right function
+        ##############################################################################################################################################
         datsimC = OrderedDict()
         l_indmod = []
         # For each indicator model, ...
@@ -180,13 +195,13 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
             # ... add the name of the indicator model to l_ind_mod
             l_indmod.append(ind_mod)
             # ... create the datasim function with all the datasets using this indicator model
-            datsimC[ind_mod] = self.datasimcreator4indmodel[ind_mod](key_whole=self.key_whole,   # self.key_whole comes from Core_Model
-                                                                     key_param=self.key_param,  # self.key_param comes from DatasimulatorCreator
-                                                                     key_mand_kwargs=self.key_mand_kwargs,  # self.key_param comes from DatasimulatorCreator
-                                                                     key_opt_kwargs=self.key_opt_kwargs,   # self.key_param comes from DatasimulatorCreator
-                                                                     **self.__kwargs_datasimcreator4indmodel[ind_mod],
-                                                                     inst_models=datsimC_inputs[ind_mod]["instmodels"], datasets=datsimC_inputs[ind_mod]["datasets"]
-                                                                     )  # self.key_whole is defined in Core_Model
+            datsimC[ind_mod] = self.datasimcreator4indmodel[ind_mod](**self.__kwargs_datasimcreator4indmodel[ind_mod],
+                                                                     INDcat_model=self.model_instance.instcat_models[self.inst_cat],
+                                                                     dataset_db=self.model_instance.dataset_db,
+                                                                     inst_models=datsimC_inputs[ind_mod]["instmodels"],
+                                                                     datasets=datsimC_inputs[ind_mod]["datasets"],
+                                                                     get_times_from_datasets=get_times_from_datasets
+                                                                     )
             dico_inputs_allind = {}
             for obj_key in datsimC[ind_mod].keys():
                 dico_inputs_allind[obj_key] = {"l_params": [],
