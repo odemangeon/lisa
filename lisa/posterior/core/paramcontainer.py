@@ -85,12 +85,14 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
 
         Parameters
         ----------
-        main : bool
+        main            : bool
             If true (default false) returns only the main parameters. If False all parameters are returned.
-        free : bool
+        free            : bool
             If true (default false) returns only the free parameters. If False, wether or the parameter
             is not free is not used to return it or not. the free argument only makes sense for main parameters,
             so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
 
         Returns
         -------
