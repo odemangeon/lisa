@@ -995,7 +995,7 @@ def combine_return_models(l_inst_model, tab, function_builder, function_shortnam
             if "add_2_totalflux" in decorrelation[i_inputoutput]:
                 return_text[i_inputoutput] += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
 
-    function_builder.add_to_body_text(text=f"{tab}{', '.join(return_text)}", function_shortname=function_shortname)
+    function_builder.add_to_body_text(text=f"{tab}return {', '.join(return_text)}", function_shortname=function_shortname)
 
 # def get_starmeanrv_and_deltarv(l_inst_model, l_dataset, star, multi, RV_globalref_instname, RV_instref_modnames,
 #                                RV_inst_db, ldict, arguments, param_nb, arg_list, key_whole, key_param,
