@@ -484,9 +484,9 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                         returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})"
                                 elif order > 1:
                                     if multi:
-                                        returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
+                                        returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}"
                                     else:
-                                        returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
+                                        returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})**{order}"
 
         #####################################
         # Finalize the inst_var only function
