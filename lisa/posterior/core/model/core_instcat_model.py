@@ -323,8 +323,8 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
     def get_l_instmod(self, inst_model=None, inst_name=None, sortby_instname=False, sortby_instmodel=False):
         """Return the list of instrument model object for the instrument category
         """
-        return self.model_instance.get_instmodel_objs(inst_model=None, inst_name=None, inst_fullcat=self.inst_cat,
-                                                      sortby_instfullcat=False, sortby_instname=False, sortby_instmodel=False,
+        return self.model_instance.get_instmodel_objs(inst_model=inst_model, inst_name=inst_name, inst_fullcat=self.inst_cat,
+                                                      sortby_instfullcat=False, sortby_instname=sortby_instname, sortby_instmodel=sortby_instmodel,
                                                       )
 
     def get_l_instmod_full_name(self, inst_model=None, inst_name=None, sortby_instname=False, sortby_instmodel=False):
