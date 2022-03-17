@@ -4,7 +4,7 @@
 Indicator model module.
 """
 from logging import getLogger
-from collections import OrderedDict, Counter, defaultdict
+from collections import OrderedDict, Counter, defaultdict, Iterable
 from unittest import TestCase
 
 from .polynomial_model import PolynomialIndicatorInterface
@@ -265,6 +265,39 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         else:
             ind_mod, = list(datsimC.keys())
             return datsimC[ind_mod]
+
+    def get_l_instmod(self, inst_model=None, inst_name=None, inst_fullcat=None):
+        """Return the list of instrument model object for the instrument category
+        """
+        format_not_recognised = False
+        if inst_fullcat is None:
+            l_inst_fullcat = self.model_instance.get_inst_fullcat4inst_cat(inst_cat=self.inst_cat)
+        elif isinstance(inst_fullcat, str):
+            l_inst_fullcat = [inst_fullcat, ]
+        elif isinstance(inst_fullcat, Iterable):
+            if not(all([isinstance(inst_fullcat_i, str) for inst_fullcat_i in inst_fullcat])):
+                format_not_recognised = True
+            else:
+                l_inst_fullcat = inst_fullcat
+        else:
+            format_not_recognised = True
+        if format_not_recognised:
+            raise ValueError("inst_fullcat should be a str, an interable of str or None")
+        res = []
+        for inst_fullcat_i in l_inst_fullcat:
+            res.extend(self.model_instance.get_instmodel_objs(inst_model=None, inst_name=None, inst_fullcat=inst_fullcat_i,
+                                                              sortby_instfullcat=False, sortby_instname=False, sortby_instmodel=False,
+                                                              )
+                       )
+        return res
+
+    def get_l_instmod_full_name(self, inst_model=None, inst_name=None, inst_fullcat=None):
+        """Return the list of instrument model full name for the instrument category
+        """
+        return [inst_mod.full_name for inst_mod in self.get_l_instmod(inst_model=inst_model, inst_name=inst_name,
+                                                                      inst_fullcat=inst_fullcat
+                                                                      )
+                ]
 
     def _init_indmodel(self, inst_model_obj, indicator_model, kwargs_indicator_model):
         """Initialise the indicator model for a given instrument model
