@@ -470,17 +470,22 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
                 ## RVref4inst_modname: name of the instrument model chosen as reference for the
                 ## current instrument (eg: default)
                 RVref4inst_modname = RV_instref_modnames[inst_name]
-                # Add the Delta_RV of the global RV reference instrument model if needed
+                # Get the Delta_RV of the global RV reference instrument model if needed
                 if inst_name != RV_globalref_instname:
                     instmod_RVref4inst = RV_inst_db[inst_name][RVref4inst_modname]
                     if instmod_RVref4inst.DeltaRV.main:
                         function_builder.add_parameter(parameter=instmod_RVref4inst.DeltaRV, function_shortname=function_shortname)
                         DeltaRV_instmod_RVref4inst = function_builder.get_text_4_parameter(parameter=instmod_RVref4inst.DeltaRV, function_shortname=function_shortname)
-                # Add the Delta_RV of the model used as RV reference for the current instrument
+                else:
+                    DeltaRV_instmod_RVref4inst = 0.
+                # Get the Delta_RV of the model used as RV reference for the current instrument
                 if instmdl.get_name() != RVref4inst_modname:
                     if instmdl.DeltaRV.main:
                         function_builder.add_parameter(parameter=instmdl.DeltaRV, function_shortname=function_shortname)
                         DeltaRV_instmod = function_builder.get_text_4_parameter(parameter=instmdl.DeltaRV, function_shortname=function_shortname)
+                else:
+                    DeltaRV_instmod = 0.
+                # Write the RV offset contribution (from global RV reference and/or the the model used as RV reference for the current instrument)
                 DeltaRV = ""
                 if (DeltaRV_instmod_RVref4inst != 0.0) and (DeltaRV_instmod != 0.0):
                     DeltaRV = f"({DeltaRV_instmod_RVref4inst} + {DeltaRV_instmod})"
@@ -542,6 +547,10 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
                                         returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
                                     else:
                                         returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
+                # If there no constribution for a given instrument_model you need to put something (None)
+                # otherwise there will be one output missing
+                if returns[function_shortname][ii] == "":
+                    returns[function_shortname][ii] = 'None'
 
         #####################################
         # Finalize the inst_var only function
@@ -688,7 +697,10 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
                                     returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_stellarvar})**{order}")
                                 else:
                                     returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_stellarvar})**{order}")
-
+            # If there no constribution for a given instrument_model you need to put something (None)
+            # otherwise there will be one output missing
+            if returns[function_shortname][ii] == "":
+                returns[function_shortname][ii] = 'None'
     #####################################
     # Finalize the inst_var only function
     #####################################
