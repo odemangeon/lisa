@@ -431,8 +431,13 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         star = cls.get_star(model_instance)
         res = []
         for param_firstname in cls._star_param_GP_names:
-            name, prefix, kwargs, named_inst = get_stelact_GP_param_name(param_first_name=param_firstname, stelact_mod_name=stelact_mod_name, star_obj=star)
-            param_obj = getattr(star, named_inst.store_name)
+            name, prefix, kwargs, named_inst = get_stelact_GP_param_name(param_first_name=param_firstname,
+                                                                         stelact_mod_name=stelact_mod_name,
+                                                                         star_obj=star)
+            param_obj = star.get_parameter(name=named_inst.get_name(recursive=False, include_prefix=True), notexist_ok=False, return_error=False,
+                                           kwargs_get_list_params={"no_duplicate": False},
+                                           kwargs_get_name={'recursive': False, 'include_prefix': True, 'force_no_duplicate': True}
+                                           )
             if free:
                 if param_obj.free:
                     res.append(param_obj)
