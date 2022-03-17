@@ -989,11 +989,11 @@ def combine_return_models(l_inst_model, tab, function_builder, function_shortnam
                 pretext = ""
             else:
                 pretext = " + "
-            if "multiply_2_totalflux" in decorrelation[i_inputoutput]:
+            if "multiply_2_totalrv" in decorrelation[i_inputoutput]:
                 return_text[i_inputoutput] = "(" + return_text[i_inputoutput] + ")"
-                return_text[i_inputoutput] += f" * ({decorrelation[i_inputoutput]['multiply_2_totalflux']})"
-            if "add_2_totalflux" in decorrelation[i_inputoutput]:
-                return_text[i_inputoutput] += f" + ({decorrelation[i_inputoutput]['add_2_totalflux']})"
+                return_text[i_inputoutput] += f" * ({decorrelation[i_inputoutput]['multiply_2_totalrv']})"
+            if "add_2_totalrv" in decorrelation[i_inputoutput]:
+                return_text[i_inputoutput] += f" + ({decorrelation[i_inputoutput]['add_2_totalrv']})"
 
     function_builder.add_to_body_text(text=f"{tab}return {', '.join(return_text)}", function_shortname=function_shortname)
 
