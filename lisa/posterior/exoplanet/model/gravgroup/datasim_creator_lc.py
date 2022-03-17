@@ -491,6 +491,10 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                         returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}"
                                     else:
                                         returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})**{order}"
+                # If there no constribution for a given instrument_model you need to put something (None)
+                # otherwise there will be one output missing
+                if returns[function_shortname][ii] == "":
+                    returns[function_shortname][ii] = 'None'
 
         #####################################
         # Finalize the inst_var only function
