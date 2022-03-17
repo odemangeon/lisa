@@ -5,6 +5,7 @@ Datasim creator RV module.
 """
 from logging import getLogger
 from math import sqrt
+from numpy import ones_like
 
 from radvel.kepler import rv_drive
 
@@ -489,6 +490,9 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
                     DeltaRV = f"{DeltaRV_instmod}"
                 if DeltaRV != "":
                     if not(instmdl.get_with_inst_var()) or (instmdl.get_inst_var_order() == 0):
+                        function_builder.add_variable_to_ldict(variable_name="ones_like", variable_content=ones_like,
+                                                               function_shortname=function_shortname,
+                                                               exist_ok=True)
                         if multi:
                             returns[function_shortname][ii] += f"{DeltaRV} * ones_like({time_arg_name}[{ii}])"
                         else:
@@ -635,6 +639,9 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
                 star_v0 = function_builder.get_text_4_parameter(parameter=star.v0, function_shortname=function_shortname)
                 if star_v0 != 0.0:
                     if not(star.with_RVdrift) or (star.RVdrift_order == 0):
+                        function_builder.add_variable_to_ldict(variable_name="ones_like", variable_content=ones_like,
+                                                               function_shortname=function_shortname,
+                                                               exist_ok=True)
                         if multi:
                             returns[function_shortname][ii] += f"{star_v0} * ones_like({time_arg_name}[{ii}])"
                         else:

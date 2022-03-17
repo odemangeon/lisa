@@ -448,6 +448,10 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                             # ..., if the parameter is free or the fixed value is not zero, ...
                             if text_instvar_param != 0.0:
                                 if (order == 0) and (instmdl.get_inst_var_order() == 0):
+                                    function_builder.add_variable_to_ldict(variable_name="ones_like",
+                                                                           variable_content=ones_like,
+                                                                           function_shortname=function_shortname,
+                                                                           exist_ok=True)
                                     if multi:
                                         returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name}[{ii}])"
                                     else:
@@ -639,8 +643,8 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name, l_time_vec_name,
     error_return : str
         Text of what to return if an error is catched
     """
-    function_builder.add_variable_to_ldict(variable_name="ones_like", variable_content=ones_like, function_shortname=function_shortname, exist_ok=False)
-    function_builder.add_variable_to_ldict(variable_name="inf", variable_content=inf, function_shortname=function_shortname, exist_ok=False)
+    function_builder.add_variable_to_ldict(variable_name="ones_like", variable_content=ones_like, function_shortname=function_shortname, exist_ok=True)
+    function_builder.add_variable_to_ldict(variable_name="inf", variable_content=inf, function_shortname=function_shortname, exist_ok=True)
 
     l_returns = []
     for i_instmodel in range(len(l_inst_model)):
