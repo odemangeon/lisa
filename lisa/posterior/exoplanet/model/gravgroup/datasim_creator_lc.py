@@ -139,17 +139,13 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     #############################################################
     # Check the content of the datasets and inst_models arguments
     #############################################################
-    # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
-    # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
-    # Datasim_DocFunc (instmod_docf)
-    # Check the content of datasets argument: Set multi_dataset to True if several datasets
-    # are provided, to False otherwise. Finally set the datasets argument for the
-    # Datasim_DocFunc (dtsts_docf)
-    # Set the list of instrument categories for the Datasim_DocFunc (instcat_docf)
-    # Produce the list of datasets and list of models (even of 1 element)
-    # Set multi indicating if multiple outputs are required for the datasimulator
-    # Set the inst_model_full_name for the name of the function and the inst_cat input
-    # (instcat_docf) for the datasim_docfunc
+    # - Check the content of inst_models and datasets argument and transform them into two list l_inst_model
+    # and l_dataset which provide the couple (inst_model_obj, dataset) for each output of the datasimulator
+    # - Set multi True if the datasimulator has several outputs (several datasets to be simulated)
+    # - Set the inst_model_fullnames argument for the Datasim_DocFunc (instmod_docf)
+    # - Set the dst_ext extension to be used for the name of the datasimulator function
+    # - Set the instcat_docf, instmod_docf, dtsts_docf to be used as arguments inst_cat, inst_model_fullname,
+    # datasets in the Datasim_DocFunc.
     (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
@@ -158,13 +154,14 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     #####################################################################################################
     # Create the FunctionBuilder
     func_builder = FunctionBuilder(parameter_vector_name=par_vec_name)
-
+    # Initialise the whole function
     func_builder.add_new_function(shortname=function_whole_shortname)
     if multi:
         func_full_name_MultiOrDst_ext = "_multi"
     else:
         func_full_name_MultiOrDst_ext = f"{l_dataset[0].dataset_code_name}"
     func_builder.set_function_fullname(full_name=f"LC_sim_{function_whole_shortname}_{func_full_name_MultiOrDst_ext}", shortname=function_whole_shortname)
+    # Initialise the planet function
     l_function_planet_shortname = [get_function_planet_shortname(planet) for planet in planets.values()]
     for function_shortname in l_function_planet_shortname:
         func_builder.add_new_function(shortname=function_shortname)
@@ -425,6 +422,15 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
         ################################
         for function_shortname in l_function_shortname:
             returns[function_shortname] = []
+
+            # Add the time argument
+            # Even if the model is a constant you want to generate a vector of constant values that can
+            # compared with the data (for the likelihood computation) or plotted without issue
+            time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
+                                              multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                              l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                              exist_ok=True)
+
             # For each instrument model and dataset, ...
             for ii, instmdl in enumerate(l_inst_model):
                 returns[function_shortname].append("")
@@ -441,10 +447,17 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                             text_instvar_param = function_builder.get_text_4_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
                             # ..., if the parameter is free or the fixed value is not zero, ...
                             if text_instvar_param != 0.0:
-                                if returns[function_shortname][ii] == "":
-                                    returns[function_shortname][ii] += f"{text_instvar_param}"
+                                if (order == 0) and (instmdl.get_inst_var_order() == 0):
+                                    if multi:
+                                        returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name}[{ii}])"
+                                    else:
+                                        returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name})"
                                 else:
-                                    returns[function_shortname][ii] += f" + {text_instvar_param}"
+                                    if returns[function_shortname][ii] == "":
+                                        pretext = ""
+                                    else:
+                                        pretext = " + "
+                                    returns[function_shortname][ii] += f"{pretext}{text_instvar_param}"
                             # ..., else, since the fixed value is zero, this order doesn't have any
                             # contribution
                             else:
@@ -464,11 +477,6 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                     timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_instmod])
                                     function_builder.add_variable_to_ldict(variable_name=timeref_instmod, variable_content=timeref_instmod_value, function_shortname=function_shortname)
                                 # ..., add the end of this order's contribution to the text of the instruments variations, ...
-                                # add the time argument
-                                time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
-                                                                  multi=multi, get_times_from_datasets=get_times_from_datasets,
-                                                                  l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
-                                                                  exist_ok=True)
                                 if order == 1:
                                     if multi:
                                         returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})"
