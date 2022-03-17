@@ -86,17 +86,13 @@ def create_datasimulator_RV(star, planets, RV_globalref_instname, RV_instref_mod
     #############################################################
     # Check the content of the datasets and inst_models arguments
     #############################################################
-    # Check the content of inst_models argument. Set multi_inst_model to True if several inst models
-    # are provided, to False otherwise. Finally set the inst_model_fullnames argument for the
-    # Datasim_DocFunc (instmod_docf)
-    # Check the content of datasets argument: Set multi_dataset to True if several datasets
-    # are provided, to False otherwise. Finally set the datasets argument for the
-    # Datasim_DocFunc (dtsts_docf)
-    # Set the list of instrument categories for the Datasim_DocFunc (instcat_docf)
-    # Produce the list of datasets and list of models (even of 1 element)
-    # Set multi indicating if multiple outputs are required for the datasimulator
-    # Set the inst_model_full_name for the name of the function and the inst_cat input
-    # (instcat_docf) for the datasim_docfunc
+    # - Check the content of inst_models and datasets argument and transform them into two list l_inst_model
+    # and l_dataset which provide the couple (inst_model_obj, dataset) for each output of the datasimulator
+    # - Set multi True if the datasimulator has several outputs (several datasets to be simulated)
+    # - Set the inst_model_fullnames argument for the Datasim_DocFunc (instmod_docf)
+    # - Set the dst_ext extension to be used for the name of the datasimulator function
+    # - Set the instcat_docf, instmod_docf, dtsts_docf to be used as arguments inst_cat, inst_model_fullname,
+    # datasets in the Datasim_DocFunc.
     (l_dataset, l_inst_model, multi, inst_model_full_name, dst_ext, instcat_docf, instmod_docf,
      dtsts_docf) = check_datasets_and_instmodels(datasets, inst_models)
 
@@ -436,11 +432,7 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
     #############################################################################
     # Check if any of the instrument model needs an inst var model
     #############################################################################
-    requires_instvar = False
-    for instmod in l_inst_model:
-        if instmod.get_with_inst_var():
-            requires_instvar = True
-            break
+    requires_instvar = (len(RVcat_model.get_l_instmod()) > 1) or any([instmod.get_with_inst_var() for instmod in l_inst_model])
 
     if requires_instvar:
         #################################################
@@ -461,6 +453,15 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
         ################################
         for function_shortname in l_function_shortname:
             returns[function_shortname] = []
+
+            # Add the time argument
+            # Even if the model is a constant you want to generate a vector of constant values that can
+            # compared with the data (for the likelihood computation) or plotted without issue
+            time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
+                                              multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                              l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                              exist_ok=True)
+
             # For each instrument model and dataset, ...
             for ii, instmdl in enumerate(l_inst_model):
                 returns[function_shortname].append("")
@@ -474,18 +475,69 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
                     if instmod_RVref4inst.DeltaRV.main:
                         function_builder.add_parameter(parameter=instmod_RVref4inst.DeltaRV, function_shortname=function_shortname)
                         DeltaRV_instmod_RVref4inst = function_builder.get_text_4_parameter(parameter=instmod_RVref4inst.DeltaRV, function_shortname=function_shortname)
-                        if DeltaRV_instmod_RVref4inst != 0.0:
-                            returns[function_shortname][ii] += f"{DeltaRV_instmod_RVref4inst}"
                 # Add the Delta_RV of the model used as RV reference for the current instrument
                 if instmdl.get_name() != RVref4inst_modname:
                     if instmdl.DeltaRV.main:
                         function_builder.add_parameter(parameter=instmdl.DeltaRV, function_shortname=function_shortname)
                         DeltaRV_instmod = function_builder.get_text_4_parameter(parameter=instmdl.DeltaRV, function_shortname=function_shortname)
-                        if DeltaRV_instmod != 0.0:
-                            if returns[function_shortname][ii] == "":
-                                returns[function_shortname][ii] += f"{DeltaRV_instmod}"
-                            else:
-                                returns[function_shortname][ii] += f" + {DeltaRV_instmod}"
+                DeltaRV = ""
+                if (DeltaRV_instmod_RVref4inst != 0.0) and (DeltaRV_instmod != 0.0):
+                    DeltaRV = f"({DeltaRV_instmod_RVref4inst} + {DeltaRV_instmod})"
+                elif DeltaRV_instmod_RVref4inst != 0.0:
+                    DeltaRV = f"{DeltaRV_instmod_RVref4inst}"
+                elif DeltaRV_instmod != 0.0:
+                    DeltaRV = f"{DeltaRV_instmod}"
+                if DeltaRV != "":
+                    if not(instmdl.get_with_inst_var()) or (instmdl.get_inst_var_order() == 0):
+                        if multi:
+                            returns[function_shortname][ii] += f"{DeltaRV} * ones_like({time_arg_name}[{ii}])"
+                        else:
+                            returns[function_shortname][ii] += f"{DeltaRV} * ones_like({time_arg_name})"
+                    else:
+                        if returns[function_shortname][ii] == "":
+                            pretext = ""
+                        else:
+                            pretext = " + "
+                        returns[function_shortname][ii] += f"{pretext}{DeltaRV_instmod}"
+                # ..., if instrument variations have been asked, ...
+                if instmdl.get_with_inst_var() and (instmdl.get_inst_var_order() > 0):
+                    # ..., For each order in the required polynomial model, ...
+                    for order in range(1, instmdl.get_inst_var_order() + 1):
+                        # ..., get the name and full name of the parameter for this order
+                        instvar_param_name = instmdl.get_inst_var_param_name(order)
+                        # ..., If this parameter is a main parameter (it should be), ...
+                        if instmdl.parameters[instvar_param_name].main:
+                            function_builder.add_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
+                            text_instvar_param = function_builder.get_text_4_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
+                            # ..., if the parameter is free or the fixed value is not zero, ...
+                            if text_instvar_param != 0.0:
+                                if returns[function_shortname][ii] == "":
+                                    pretext = ""
+                                else:
+                                    pretext = " + "
+                                returns[function_shortname][ii] += f"{pretext}{text_instvar_param}"
+                                # ..., and you need a time reference. There is one time reference per instrument
+                                # model, which is automatically set to the time of the first measurement
+                                # among the datasets associated with this instrument model.
+                                # So start be creating the name of the instrument model
+                                timeref_instmod = f"timeref_instvar_{instmdl.full_code_name}"
+                                # if this time_reference is not already in the ldict of the function ...
+                                if timeref_instmod not in function_builder.get_ldict(function_shortname=function_shortname):
+                                    # we have to compute its value and add it to the ldict
+                                    l_dataset_name_instmod = RVcat_model.get_l_datasetname(instmod_fullnames=instmdl.full_name)
+                                    timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_instmod])
+                                    function_builder.add_variable_to_ldict(variable_name=timeref_instmod, variable_content=timeref_instmod_value, function_shortname=function_shortname)
+                                # ..., add the end of this order's contribution to the text of the instruments variations, ...
+                                if order == 1:
+                                    if multi:
+                                        returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})"
+                                    else:
+                                        returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})"
+                                elif order > 1:
+                                    if multi:
+                                        returns[function_shortname][ii] += (f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}")
+                                    else:
+                                        returns[function_shortname][ii] += (f" * ({time_arg_name} - {timeref_instmod})**{order}")
 
         #####################################
         # Finalize the inst_var only function
@@ -565,6 +617,15 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
     ################################
     for function_shortname in l_function_shortname:
         returns[function_shortname] = []
+
+        # Add the time argument
+        # Even if the model is a constant you want to generate a vector of constant values that can
+        # compared with the data (for the likelihood computation) or plotted without issue
+        time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
+                                          multi=multi, get_times_from_datasets=get_times_from_datasets,
+                                          l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+                                          exist_ok=True)
+
         # For each instrument model and dataset, ...
         for ii, instmdl in enumerate(l_inst_model):
             returns[function_shortname].append("")
@@ -573,7 +634,17 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
                 function_builder.add_parameter(parameter=star.v0, function_shortname=function_shortname)
                 star_v0 = function_builder.get_text_4_parameter(parameter=star.v0, function_shortname=function_shortname)
                 if star_v0 != 0.0:
-                    returns[function_shortname][ii] += f"{star_v0}"
+                    if not(star.with_RVdrift) or (star.RVdrift_order == 0):
+                        if multi:
+                            returns[function_shortname][ii] += f"{star_v0} * ones_like({time_arg_name}[{ii}])"
+                        else:
+                            returns[function_shortname][ii] += f"{star_v0} * ones_like({time_arg_name})"
+                    else:
+                        if returns[function_shortname][ii] == "":
+                            pretext = ""
+                        else:
+                            pretext = " + "
+                        returns[function_shortname][ii] += f"{pretext}{star_v0}"
             # Add the drift components
             if star.with_RVdrift:
                 # ..., For each order in the required polynomial model, ...
@@ -582,23 +653,17 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
                     RVdrift_param_name = star.get_RVdrift_param_name(order)
                     # ..., If this parameter is a main parameter (it should be), ...
                     if star.parameters[RVdrift_param_name].main:
-                        value_not0 = True
                         function_builder.add_parameter(parameter=star.parameters[RVdrift_param_name], function_shortname=function_shortname)
                         text_stellarvar_param = function_builder.get_text_4_parameter(parameter=star.parameters[RVdrift_param_name], function_shortname=function_shortname)
                         # ..., if the parameter is free or the fixed value is not zero, ...
                         if text_stellarvar_param != 0.0:
                             if returns[function_shortname][ii] == "":
-                                returns[function_shortname][ii] += f"{text_stellarvar_param}"
+                                pretext = ""
                             else:
-                                returns[function_shortname][ii] += f" + {text_stellarvar_param}"
-                        # ..., else, since the fixed value is zero, this order doesn't have any
-                        # contribution
-                        else:
-                            value_not0 = False
-                        # ..., if the order has a contribution to the stellar variations
-                        if value_not0:
+                                pretext = " + "
+                            returns[function_shortname][ii] += f"{pretext}{text_stellarvar_param}"
                             # ..., and you need a time reference. There is one time reference
-                            # which is automatically set to the time of the first measurement
+                            # which is automatically set to the time of the first RV measurement
                             timeref_stellarvar = "timeref_stellarvar"
                             # if this time_reference is not already in the ldict of the function ...
                             if timeref_stellarvar not in function_builder.get_ldict(function_shortname=function_shortname):
@@ -606,12 +671,6 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
                                 l_dataset_name_RV = RVcat_model.get_l_datasetname()
                                 timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_RV])
                                 function_builder.add_variable_to_ldict(variable_name=timeref_stellarvar, variable_content=timeref_instmod_value, function_shortname=function_shortname)
-                            # ..., add the end of this order's contribution to the text of the instruments variations, ...
-                            # add the time argument
-                            time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
-                                                              multi=multi, get_times_from_datasets=get_times_from_datasets,
-                                                              l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
-                                                              exist_ok=True)
                             if order == 1:
                                 if multi:
                                     returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_stellarvar})"
