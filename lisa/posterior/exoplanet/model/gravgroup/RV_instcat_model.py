@@ -21,11 +21,15 @@ from .datasim_creator_rv import create_datasimulator_RV
 from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
 from ...dataset_and_instrument.rv import RV_inst_cat
 from ....core.model.core_instcat_model import Core_InstCat_Model
+from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .....tools.miscellaneous import spacestring_like
 
 
 ## Logger object
 logger = getLogger()
+
+mgr_inst_dst = Manager_Inst_Dataset()
+mgr_inst_dst.load_setup()
 
 
 class RV_InstCat_Model(Core_InstCat_Model):
@@ -184,6 +188,92 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
     def set_RVref4inst_modname(self, inst_name, inst_model_name):
         self.__RV_references[inst_name] = inst_model_name
+
+    def create_text4paramfile_decorrmodels(self, instmod_obj, tab):
+        """This function creates the text for the decorrelation of an instrument model object.
+
+        Arguments
+        ---------
+        instmod_obj : Instrument_Model instance
+            Instrument model object for which you want to create the text to configure the decorrelation
+        tab         : str
+            White spaces giving the tabulation to use
+
+        Returns
+        -------
+        text_instmod_decorr_models_content  : str
+            Text to configure the decorrelation for instmod_obj
+        """
+        tab_what2decorrdict = spacestring_like("'what to decorrelate':  ")
+        # template_decorrmethoddict = "{decorr_category}: " + "{" + "{dictdecorrcat_content}\n{tab}" + "}"
+        dictmodelpart_content = ""
+        for modelpart2decor in self.allowed_what2decorrelate_strs:
+            if len(dictmodelpart_content) > 0:
+                dictmodelpart_content += f"\n{tab + tab_what2decorrdict}"
+            modelpart_1stline = f"'{modelpart2decor}': " + "{"
+            tab_modelpart = spacestring_like(modelpart_1stline)
+            dictmodelpart_content += modelpart_1stline
+            dictdecorrcat_content = ""
+            for decorr_model_name in self.available_decorrelationmodel_names:
+                if len(dictdecorrcat_content) > 0:
+                    dictdecorrcat_content += f"\n{tab + tab_what2decorrdict + tab_modelpart}"
+                decorr_model = self.get_DecorrModel(decorrmodel_cat=decorr_model_name)
+                decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
+                dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
+                                                                                   decorrelation_config_inst=decorr_model_current_config_dict,
+                                                                                   tab=tab + tab_what2decorrdict + tab_modelpart)
+            dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "},"
+
+        return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
+
+    def load_config_decorrelation(self, dico_config):
+        """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
+        for each dataset.
+
+        This function should be used in load_instcat_paramfile to load the configuration of the decorrelation
+        models.
+
+        Arguments
+        ---------
+        dico_config : dict
+            Dictionary which contain the content of the inst_cat specific param_file
+        """
+        # TODO: Check that the decorrelation dictionary has on entry per instrument model object of
+        # the current instrument category
+        for instmod_obj_name, decorr_dict_instmod in dico_config.get(self._decorr_dict_name, {}).items():
+            instmod_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=instmod_obj_name, raise_error=True)
+            instmod_obj = self.model_instance.get_instmodel_objs(inst_fullcat=instmod_name_info["inst_fullcategory"],
+                                                                 inst_model=instmod_name_info["inst_model"],
+                                                                 inst_name=instmod_name_info["inst_name"])[0]
+            # Check that the dictionary of each instrument model object has a "do" key
+            assert "do" in decorr_dict_instmod.keys()
+            if instmod_obj_name not in self.decorrelation_config:
+                self.decorrelation_config[instmod_obj_name] = {}
+            self.decorrelation_config[instmod_obj_name]["do"] = decorr_dict_instmod["do"]
+            # Check that the "what to decorrelate" is in the dictionary
+            if "what to decorrelate" not in decorr_dict_instmod:
+                raise ValueError(f"The dictionary for the configuration of the linear decorrelation of {instmod_obj_name}"
+                                 f" must include the key 'what to decorrelate'.")
+            if 'what to decorrelate' not in self.decorrelation_config[instmod_obj_name]:
+                self.decorrelation_config[instmod_obj_name]['what to decorrelate'] = {}
+            for model_part, decorr_dict_instmod_modpart in decorr_dict_instmod['what to decorrelate'].items():
+                # Check that the "what to decorrelate" value is valid
+                if model_part not in self.allowed_what2decorrelate_strs:
+                    raise ValueError(f"Keys of 'what to decorrelate' for the configuration of the {instmod_obj_name}"
+                                     f" must be in {self.allowed_what2decorrelate_strs}.")
+                if model_part not in self.decorrelation_config[instmod_obj_name]['what to decorrelate']:
+                    self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part] = {}
+                for decorr_mod in self.decorrelation_models:
+                    # Check that the dictionary of each instrument model object has a key for each decorrelation models
+                    assert decorr_mod.category in decorr_dict_instmod_modpart.keys()
+                    decorr_dict_instmod_modpart_decorrmod = decorr_dict_instmod_modpart[decorr_mod.category]
+                    if decorr_mod.category not in self.decorrelation_config[instmod_obj_name]['what to decorrelate']:
+                        self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category] = {}
+                    decorr_mod.load_text_decorr_paramfile(inst_mod_obj=instmod_obj,
+                                                          decorrelation_config_inst_decorr_paramfile=decorr_dict_instmod_modpart_decorrmod,
+                                                          decorrelation_config_inst_decorr=self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category],
+                                                          allowed_what2decorrelate_strs=self.allowed_what2decorrelate_strs
+                                                          )
 
     def apply_instmod_parametrisation(self, inst_mod_obj):
         """Apply the parametrisation to an instrument model object.
