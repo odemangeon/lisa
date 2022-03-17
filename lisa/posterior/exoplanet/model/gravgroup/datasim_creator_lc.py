@@ -491,16 +491,13 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
                                         returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}"
                                     else:
                                         returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})**{order}"
-                # If there no constribution for a given instrument_model you need to put something (None)
-                # otherwise there will be one output missing
-                if returns[function_shortname][ii] == "":
-                    returns[function_shortname][ii] = 'None'
 
         #####################################
         # Finalize the inst_var only function
         #####################################
         for func_shortname in [inst_var_func_shortname, ]:
-            function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
+            l_return = [output_i if output_i != "" else 'None' for output_i in returns.pop(func_shortname)]
+            function_builder.add_to_body_text(text=f"{tab}return {', '.join(l_return)}", function_shortname=func_shortname)
 
     return returns
 
@@ -1724,7 +1721,7 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
             return_text[i_inputoutput] = "(" + return_text[i_inputoutput] + f") * {contamination[i_inputoutput]}"
 
         # Add the instrumental variation
-        if (inst_var is not None) and (inst_var[i_inputoutput] != ""):
+        if (inst_var is not None) and (inst_var[i_inputoutput] != "") and (inst_var[i_inputoutput] != "None"):
             return_text[i_inputoutput] += " + " + inst_var[i_inputoutput]
 
         if decorrelation is not None:
