@@ -176,7 +176,7 @@ sampling_corner_sec = 500
 thin_SecParam = 100
 
 # Do computation of the BIC
-do_compute_BIC = True
+do_compute_BIC = False
 load_fitted_val_pickle_BIC = False
 only_bestfit_bic = True
 
