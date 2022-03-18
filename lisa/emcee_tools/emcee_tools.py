@@ -44,7 +44,6 @@ from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import M
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
-from ..posterior.exoplanet.model.gravgroup.model import GravGroup
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
@@ -60,8 +59,6 @@ mgr_inst_dst.load_setup()
 
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()
-
-ext_plonly = GravGroup._ext_plonly
 
 
 exptime_Kepler = 0.02043402778  # days
@@ -648,7 +645,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                 model, modelwGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
                                                                                     param=param,
                                                                                     l_param_name=l_param_name,
-                                                                                    key_obj=plnt_name + ext_plonly, datasim_kwargs=datasim_kwargs,
+                                                                                    key_obj=plnt_name, datasim_kwargs=datasim_kwargs,
                                                                                     supersamp=supersamp_model, exptime=exptime,
                                                                                     )
                 data_pl = data_pl - model
