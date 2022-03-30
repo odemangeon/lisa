@@ -123,15 +123,13 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         If show_time_from_tic is True, than you can provide here the unit in which the time from mid transit
         is expressed (knowing that time_fact is applied)
     exptime_bin         : float
-        Width of the bins used for the binning in days (default 0.005555555556 days, 8 min)
+        Width of the bins used for the binning the unit of this depends on the value of show_time_from_tic.
+        If show_time_from_tic is True, it's a time unit otherwise the unit is orbital phase.
+        If it's a time unit than the unit depend on the unit of the data after time_fact is applied.
+        For example if the time unit of the data is days and time_fact=24, the unit of exptime_bin is hours.
     binning_stat        : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
-    exptime_bin         : float
-        Exposure time for the binning data and model in the same unit that the time of the datasets.
-        If you don't want to bin put 0.
-    binning_stat        : string
-        Binning method to use "mean" or "median"
     supersamp_bin_model : int
         Supersampling factor for the binned model.
     show_binned_model   : bool
@@ -479,12 +477,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
                     # Compute the oversampled model to plot for the binned cadence
                     if show_binned_model:
+                        # Compute the exposure time for the binned model in the same unit than the data
+                        # Since exptime_bin unit depends on show_time_from_tic and time_fact
+                        exptime = exptime_bin / time_fact if show_time_from_tic else exptime_bin * Per
                         model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
                                                                           dataset_name=datasetname,
                                                                           param=df_fittedval["value"].values,
                                                                           l_param_name=list(df_fittedval.index),
                                                                           key_obj=f"{planet_name}",
-                                                                          supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                          supersamp=supersamp_bin_model, exptime=exptime,
                                                                           datasim_kwargs=datasim_kwargs)
                         # Add 1 if needed
                         if not(remove1):
@@ -495,7 +496,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                 param=df_fittedval["value"].values,
                                                                                 l_param_name=list(df_fittedval.index),
                                                                                 key_obj="contam",
-                                                                                supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                supersamp=supersamp_bin_model, exptime=exptime,
                                                                                 datasim_kwargs=datasim_kwargs)
                             model2plot *= model_contam
                         # Add inst_var if needed
@@ -505,7 +506,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                  param=df_fittedval["value"].values,
                                                                                  l_param_name=list(df_fittedval.index),
                                                                                  key_obj="inst_var",
-                                                                                 supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                 supersamp=supersamp_bin_model, exptime=exptime,
                                                                                  datasim_kwargs=datasim_kwargs)
                             model2plot += model_instvar
                         # Add decorrelation if needed
@@ -514,7 +515,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                 param=df_fittedval["value"].values,
                                                                                 l_param_name=list(df_fittedval.index),
                                                                                 key_obj="decorr",
-                                                                                supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                supersamp=supersamp_bin_model, exptime=exptime,
                                                                                 datasim_kwargs=datasim_kwargs)
                             for model_part in model_decorr:
                                 if model_part == "add_2_totalflux":
