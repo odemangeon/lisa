@@ -186,8 +186,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     LC_unit        : str or None
         String giving the unit of the LCs
     """
-    # star = post_instance.model.stars[star_name]
-
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
@@ -229,14 +227,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         planets = copy(all_planets)
     nplanet = len(planets)
 
-    # Load the defined datasets and check how many dataset there is by instrument.
+    # star = post_instance.model.stars[star_name]
+
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
-     ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-                                  df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination,
-                                  remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
+     ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                     df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
+                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination,
+                                     remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
@@ -262,7 +261,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Define the default values
     (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
      ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts, datasetnames=datasetnames,
-                       exptime_bin=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
+                       bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
+                       nb_rows=nb_rows, alpha_def_data=0.1, color_def_data="k", show_error_data_def=False)
 
     #################################
     # Main row loop: For each row ...
@@ -359,13 +359,18 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
             # Define the bins
             if exptime_bin > 0.:
-                bins = np.arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
-                midbins = bins[:-1] + exptime_bin / 2
+                bin_size = exptime_bin if show_time_from_tic else exptime_bin / Per / time_fact
+                bin_size_unit = f" {time_unit}" if show_time_from_tic else ""
+                update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=bin_size,
+                                    bin_size_unit=bin_size_unit, one_binning_per_row=one_binning_per_row,
+                                    nb_rows=nb_rows)
+                bins = np.arange(x_min_data, x_max_data + bin_size, bin_size)
+                midbins = bins[:-1] + bin_size / 2
                 nbins = len(bins) - 1
 
             # Define time for evaluating the plotting the model
-            tmin_model = tc + x_min_data if show_time_from_tic else tc + Per * x_min_data
-            tmax_model = tc + x_max_data if show_time_from_tic else tc + Per * x_max_data
+            tmin_model = tc + x_min_data / time_fact if show_time_from_tic else tc + Per * x_min_data
+            tmax_model = tc + x_max_data / time_fact if show_time_from_tic else tc + Per * x_max_data
 
             #####################################################
             # Main dataset loop for the row: For each dataset ...
@@ -473,54 +478,55 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     if not("color" in pl_kwarg_final[datasetname]["model"]):
                         pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
                     # Compute the oversampled model to plot for the binned cadence
-                    model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                      dataset_name=datasetname,
-                                                                      param=df_fittedval["value"].values,
-                                                                      l_param_name=list(df_fittedval.index),
-                                                                      key_obj=f"{planet_name}",
-                                                                      supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                                                      datasim_kwargs=datasim_kwargs)
-                    # Add 1 if needed
-                    if not(remove1):
-                        model2plot += 1
-                    # Add contamination if needed
-                    if not(remove_contamination) and (datasetname in contams):
-                        model_contam, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                            param=df_fittedval["value"].values,
-                                                                            l_param_name=list(df_fittedval.index),
-                                                                            key_obj="contam",
-                                                                            supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                                                            datasim_kwargs=datasim_kwargs)
-                        model2plot *= model_contam
-                    # Add inst_var if needed
-                    if not(remove_inst_var) and (datasetname in inst_vars):
-                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                             dataset_name=datasetname,
-                                                                             param=df_fittedval["value"].values,
-                                                                             l_param_name=list(df_fittedval.index),
-                                                                             key_obj="inst_var",
-                                                                             supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                                                             datasim_kwargs=datasim_kwargs)
-                        model2plot += model_instvar
-                    # Add decorrelation if needed
-                    if not(remove_decorrelation) and (datasetname in decorrs):
-                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                            param=df_fittedval["value"].values,
-                                                                            l_param_name=list(df_fittedval.index),
-                                                                            key_obj="decorr",
-                                                                            supersamp=supersamp_bin_model, exptime=exptime_bin,
-                                                                            datasim_kwargs=datasim_kwargs)
-                        for model_part in model_decorr:
-                            if model_part == "add_2_totalflux":
-                                model2plot += model_decorr['add_2_totalflux']
-                            else:
-                                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-                    # Multiply by LC fact
-                    model2plot *= LC_fact
-                    # Plot the oversampled model to plot for the raw cadence
-                    ebconts_lines_labels_model = axes_data[i_row][i_pl].errorbar(xsim, model2plot, **pl_kwarg_final[datasetname]["modelbinned"])
-                    if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
-                        pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
+                    if show_binned_model:
+                        model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
+                                                                          dataset_name=datasetname,
+                                                                          param=df_fittedval["value"].values,
+                                                                          l_param_name=list(df_fittedval.index),
+                                                                          key_obj=f"{planet_name}",
+                                                                          supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                          datasim_kwargs=datasim_kwargs)
+                        # Add 1 if needed
+                        if not(remove1):
+                            model2plot += 1
+                        # Add contamination if needed
+                        if not(remove_contamination) and (datasetname in contams):
+                            model_contam, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                                param=df_fittedval["value"].values,
+                                                                                l_param_name=list(df_fittedval.index),
+                                                                                key_obj="contam",
+                                                                                supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                datasim_kwargs=datasim_kwargs)
+                            model2plot *= model_contam
+                        # Add inst_var if needed
+                        if not(remove_inst_var) and (datasetname in inst_vars):
+                            model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
+                                                                                 dataset_name=datasetname,
+                                                                                 param=df_fittedval["value"].values,
+                                                                                 l_param_name=list(df_fittedval.index),
+                                                                                 key_obj="inst_var",
+                                                                                 supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                 datasim_kwargs=datasim_kwargs)
+                            model2plot += model_instvar
+                        # Add decorrelation if needed
+                        if not(remove_decorrelation) and (datasetname in decorrs):
+                            model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                                param=df_fittedval["value"].values,
+                                                                                l_param_name=list(df_fittedval.index),
+                                                                                key_obj="decorr",
+                                                                                supersamp=supersamp_bin_model, exptime=exptime_bin,
+                                                                                datasim_kwargs=datasim_kwargs)
+                            for model_part in model_decorr:
+                                if model_part == "add_2_totalflux":
+                                    model2plot += model_decorr['add_2_totalflux']
+                                else:
+                                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                        # Multiply by LC fact
+                        model2plot *= LC_fact
+                        # Plot the oversampled model to plot for the raw cadence
+                        ebconts_lines_labels_model = axes_data[i_row][i_pl].errorbar(xsim, model2plot, **pl_kwarg_final[datasetname]["modelbinned"])
+                        if not("color" in pl_kwarg_final[datasetname]["modelbinned"]):
+                            pl_kwarg_final[datasetnames]["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -1052,9 +1058,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
-     ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-                                  df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                  remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
+     ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                     df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
+                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
 
     ################
     # LC TIME SERIES
@@ -1100,6 +1106,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         one_binning_per_row = TS_kwargs.get("one_binning_per_row", False)
         exptime_bin = TS_kwargs.get("exptime_bin", 0.)
         binning_stat = TS_kwargs.get("binning_stat", "mean")
+        time_unit = TS_kwargs.get('t_unit', 'days')
 
         ##############################################
         # Set the arguments for the plotting functions
@@ -1107,8 +1114,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         pl_kwargs = TS_kwargs.get('pl_kwargs', {})
         (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
          ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts,
-                           datasetnames=datasetnames, exptime_bin=exptime_bin, one_binning_per_row=one_binning_per_row,
-                           nb_rows=nb_rows)
+                           datasetnames=datasetnames, bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
+                           nb_rows=nb_rows, alpha_def_data=0.1, color_def_data="k", show_error_data_def=False)
+        update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
+                            bin_size_unit=f" {time_unit}", one_binning_per_row=one_binning_per_row,
+                            nb_rows=nb_rows)
 
         #############################################################
         # Make the LC and residuals plots (full and zoomed if needed)
@@ -1127,7 +1137,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
                 if show_title:
                     axe_data.set_title("LC time series", fontsize=fontsize)
-                axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
+                axe_resi.set_xlabel(f"time [{time_unit}]", fontsize=fontsize)
                 if i_col == 0:
                     y_str = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
                     ylabel_data = f"{y_str} [{LC_unit}]" if LC_unit is not None else f"{y_str}"
@@ -1373,16 +1383,16 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                                 binstd_jitter[i_bin] = np.nan
                     # Plot the binned data
-                    bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
-                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
-                    if not("color" in pl_kwarg_final[datasetname]["databinned"]):
-                        pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
-                    if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
-                        pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]["color"]
-                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
-                    if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[datasetname]["databinned"]:
-                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                    bin_err = binstd if pl_show_error[f"row{i_row}"] else None
+                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"], zorder=40)
+                    if not("color" in pl_kwarg_final[f"row{i_row}"]):
+                        pl_kwarg_final[f"row{i_row}"]["color"] = ebcont_binned[0].get_color()
+                    if not("ecolor" in pl_kwarg_jitter[f"row{i_row}"]):
+                        pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_final[f"row{i_row}"]["color"]
+                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"], zorder=40)
+                    if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
+                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
 
                 # Draw a horizontal line at the level of reference stellar flux level
                 xlims = axe_data.get_xlim()
@@ -1716,8 +1726,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # ax_gls_twin[-1].tick_params(axis="x", which="both", top=False, direction="in")
 
 
-def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
-                             remove_inst_var, remove_decorrelation, remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
+def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
+                                remove_inst_var, remove_decorrelation, remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
     """
     dico_datasets = {}
@@ -1913,17 +1923,20 @@ def check_row4datasetname(row4datasetname, datasetnames):
     return row4datasetname, datasetnames4rowidx
 
 
-def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one_binning_per_row, nb_rows):
+def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_binning_per_row,
+                  nb_rows, alpha_def_data=1., color_def_data=None, show_error_data_def=True):
     """
     """
-    pl_kwarg_data_def = {"color": "k", "fmt": ".", "alpha": 0.1}
+    pl_kwarg_data_def = {"fmt": ".", "alpha": alpha_def_data}
+    if color_def_data is not None:
+        pl_kwarg_data_def["color"] = color_def_data
     pl_kwarg_databinned_def = {"color": "r", "fmt": ".", "alpha": 1.0}
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model"}
-    pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "label": f"model: bin={exptime_bin * 24 * 60:.0f} min"}  # , "linestyle": "-"
+    pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1.}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP"}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst."}
     pl_kwarg_decorr_def = {"color": "C2", "linestyle": "-", "label": "decorr."}
-    show_error_data = False
+    show_error_data = show_error_data_def
     show_error_databinned = True
 
     if pl_kwargs is None:
@@ -1942,7 +1955,7 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one
         pl_kwarg_final[datasetname] = {"model": deepcopy(pl_kwarg_modelraw_def),
                                        "modelbinned": deepcopy(pl_kwarg_modelbinned_def),
                                        "data": {"label": label_dst, },
-                                       "databinned": {"label": f"{label_dst}: bin={exptime_bin * 24 * 60:.0f} min", },
+                                       "databinned": {},  # "label": f"{label_dst}: bin={bin_size}{bin_size_unit}",
                                        "GP": deepcopy(pl_kwarg_GP_def),
                                        "inst_var": deepcopy(pl_kwarg_instvar_def),
                                        "decorr": deepcopy(pl_kwarg_decorr_def),
@@ -1963,7 +1976,8 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one
                 dico_jitter = {}
             dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
             pl_kwarg_jitter[datasetname][dataordatabinned].update(dico_jitter)
-            pl_kwarg_jitter[datasetname][dataordatabinned].pop("label")  # To ensure that a second label doesn't appear on the legend
+            if "label" in pl_kwarg_jitter[datasetname][dataordatabinned]:
+                pl_kwarg_jitter[datasetname][dataordatabinned].pop("label")  # To ensure that a second label doesn't appear on the legend
             # default value for alpha jitter
             if "alpha" not in dico_jitter:
                 if "alpha" in pl_kwarg_jitter[datasetname][dataordatabinned]:
@@ -1977,11 +1991,11 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one
             if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
                 pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
     # Fill pl_kwargs_final and pl_kwarg_jitter the databinned of each row if needed
-    if (exptime_bin > 0.) and one_binning_per_row:
+    if (bin_size > 0.) and one_binning_per_row:
         for i_row in range(nb_rows):
-            pl_kwarg_final[f"row{i_row}"] = {"label": f"bin={exptime_bin * 24 * 60:.0f} min", }
+            # pl_kwarg_final[f"row{i_row}"] = {"label": f"bin={bin_size}{bin_size_unit}", }
             # Load default values
-            pl_kwarg_final[f"row{i_row}"].update(deepcopy(pl_kwarg_databinned_def))
+            pl_kwarg_final[f"row{i_row}"] = deepcopy(pl_kwarg_databinned_def)
             # Update with the user's inputs
             pl_kwarg_final[f"row{i_row}"].update(pl_kwargs.get(f"row{i_row}", {}))
             # Init pl_kwarg_jitter
@@ -1993,7 +2007,7 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one
                 dico_jitter = {}
             dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
             pl_kwarg_jitter[f"row{i_row}"].update(dico_jitter)
-            pl_kwarg_jitter[f"row{i_row}"].pop("label")  # To ensure that a second label doesn't appear on the legend
+            # pl_kwarg_jitter[f"row{i_row}"].pop("label")  # To  ensure that a second label doesn't appear on the legend
             # default value for alpha jitter
             if "alpha" not in dico_jitter:
                 if "alpha" in pl_kwarg_jitter[f"row{i_row}"]:
@@ -2009,3 +2023,20 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, exptime_bin, one
             if "show_error" in pl_kwarg_final[f"row{i_row}"]:
                 pl_show_error[f"row{i_row}"] = pl_kwarg_final[f"row{i_row}"].pop("show_error")
     return pl_kwarg_final, pl_kwarg_jitter, pl_show_error
+
+
+def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, one_binning_per_row,
+                        nb_rows):
+    """
+    """
+    if bin_size > 0.:
+        for datasetname in datasetnames:
+            # Set label for binned model
+            pl_kwarg_final[datasetname]["modelbinned"]["label"] = f"model: bin={bin_size:.2g}{bin_size_unit}"
+            # Set label for binned data per dataset
+            if not(one_binning_per_row):
+                pl_kwarg_final[datasetname]["databinned"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
+        # Set label for binned data per row
+        if one_binning_per_row:
+            for i_row in range(nb_rows):
+                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
