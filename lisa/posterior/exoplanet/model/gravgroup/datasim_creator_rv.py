@@ -433,7 +433,23 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
     #############################################################################
     # Check if any of the instrument model needs an inst var model
     #############################################################################
-    requires_instvar = (len(RVcat_model.get_l_instmod()) > 1) or any([instmod.get_with_inst_var() for instmod in l_inst_model])
+    # If there there is more than one instrument models there will be a detlaRV in between them, so inst_var is required
+    if len(set(l_inst_model)) > 1:
+        requires_instvar = True
+    else:
+        instmdl = l_inst_model[0]
+        if instmdl.get_with_inst_var():
+            requires_instvar = True
+        else:
+            inst_name = instmdl.instrument.get_name()
+            instmdl_name = instmdl.get_name()
+            ## RVref4inst_modname: name of the instrument model chosen as reference for the
+            ## current instrument (eg: default)
+            RVref4inst_modname = RV_instref_modnames[inst_name]
+            if (RV_globalref_instname == inst_name) and (RVref4inst_modname == instmdl_name):
+                requires_instvar = False
+            else:
+                requires_instvar = True
 
     if requires_instvar:
         #################################################
