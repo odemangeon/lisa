@@ -240,7 +240,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
             entete = "'{}'{}{{"
         else:
             entete = "{}{}{{"
-        entete = entete.format(self.code_name, entete_symb)
+        entete = entete.format(self.get_name(recursive=False, include_prefix=False, code_version=False), entete_symb)
         space_entete_param = spacestring_like(entete)
         text = ""
         # First is the name of the parameter
