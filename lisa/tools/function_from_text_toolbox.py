@@ -148,7 +148,10 @@ class FunctionBuilder(object):
                               ldict=self.get_ldict(shortname=shortname_src))
 
     def add_parameter(self, parameter, function_shortname, exist_ok=False):
-        """Add a parameter to the parameter vector of a function
+        """Add a parameter to the parameter vector of a function.
+
+        If the parameter is a duplicate of another parameter. The source parameter (the one that is duplicated)
+        is added.
 
         Arguments
         ---------
@@ -159,6 +162,7 @@ class FunctionBuilder(object):
         exist_ok            : bool
             If True the function will not produce a warning if the parameter already exists in the function
         """
+        # Check if parameter is already in the parameter vector
         if not(self.is_parameter(parameter, function_shortname)):
             if parameter.duplicate is not None:
                 parameter = parameter.duplicate
