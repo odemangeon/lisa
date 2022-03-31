@@ -311,38 +311,50 @@ def get_contamination(l_inst_model, l_dataset, tab, function_builder, l_function
     ########################
     returns = {}
 
-    #################################################
-    # Initialise the new function in function_builder
-    #################################################
-    # Extension for the shortname of the function that do the decorrelation only model
-    contam_func_shortname = "contam"
-    function_builder.add_new_function(shortname=contam_func_shortname)
-    function_builder.set_function_fullname(full_name=f"LC_sim_{contam_func_shortname}{ext_func_fullname}", shortname=contam_func_shortname)
+    #############################################################################
+    # Check if any of the instrument model needs a contamination model
+    #############################################################################
+    requires_contam = False
+    for instmod in l_inst_model:
+        if instmod.contam.main:
+            if instmod.contam.free or float(instmod.contam.value) != 0.0:
+                requires_contam = True
+                break
 
-    ########################################
-    # Update the list of function to address
-    ########################################
-    l_function_shortname += [contam_func_shortname, ]
+    if requires_contam:
+        #################################################
+        # Initialise the new function in function_builder
+        #################################################
+        # Extension for the shortname of the function that do the decorrelation only model
+        contam_func_shortname = "contam"
+        function_builder.add_new_function(shortname=contam_func_shortname)
+        function_builder.set_function_fullname(full_name=f"LC_sim_{contam_func_shortname}{ext_func_fullname}", shortname=contam_func_shortname)
 
-    ################################
-    # Do the Model for each function
-    ################################
-    for function_shortname in l_function_shortname:
-        returns[function_shortname] = []
-        # For each instrument model and dataset, ...
-        for ii, instmdl in enumerate(l_inst_model):
-            returns[function_shortname].append("")
-            # Add the contam parameter
-            function_builder.add_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
-            text_contam_param = function_builder.get_text_4_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
-            if text_contam_param != 0.0:
-                returns[function_shortname][ii] += f"(1 - {text_contam_param})"
+        ########################################
+        # Update the list of function to address
+        ########################################
+        l_function_shortname += [contam_func_shortname, ]
 
-    #####################################
-    # Finalize the inst_var only function
-    #####################################
-    for func_shortname in [contam_func_shortname, ]:
-        function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
+        ################################
+        # Do the Model for each function
+        ################################
+        for function_shortname in l_function_shortname:
+            returns[function_shortname] = []
+            # For each instrument model and dataset, ...
+            for ii, instmdl in enumerate(l_inst_model):
+                returns[function_shortname].append("")
+                # Add the contam parameter
+                function_builder.add_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
+                text_contam_param = function_builder.get_text_4_parameter(parameter=instmdl.contam, function_shortname=function_shortname)
+                if text_contam_param != 0.0:
+                    returns[function_shortname][ii] += f"(1 - {text_contam_param})"
+
+        #####################################
+        # Finalize the inst_var only function
+        #####################################
+        for func_shortname in [contam_func_shortname, ]:
+            l_return = [output_i if output_i != "" else 'None' for output_i in returns.pop(func_shortname)]
+            function_builder.add_to_body_text(text=f"{tab}return {', '.join(l_return)}", function_shortname=func_shortname)
 
     return returns
 
