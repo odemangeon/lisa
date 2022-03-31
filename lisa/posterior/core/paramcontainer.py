@@ -296,7 +296,7 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             param = getattr(self, param_name)
             if param.get_name(recursive=False, include_prefix=False, code_version=False) in dico_config:
                 param.main = True
-                param.load_config(dico_config=dico_config[param.code_name],
+                param.load_config(dico_config=dico_config[param.get_name(recursive=False, include_prefix=False, code_version=False)],
                                   model_instance=model_instance,
                                   available_joint_priors=available_joint_priors,
                                   load_setup=load_setup)
