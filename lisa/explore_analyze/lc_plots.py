@@ -1138,7 +1138,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # Create the data and red=siduals axes and set properties ans style
                 (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
 
-                if show_title:
+                if show_title and (i_row == 0):
                     axe_data.set_title("LC time series", fontsize=fontsize)
                 axe_resi.set_xlabel(f"time [{time_unit}]", fontsize=fontsize)
                 if i_col == 0:
