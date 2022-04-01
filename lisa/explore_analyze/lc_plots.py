@@ -447,7 +447,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                             l_param_name=list(df_fittedval.index),
                                                                             key_obj="contam",
                                                                             datasim_kwargs=datasim_kwargs)
-                        model2plot *= model_contam
+                        if model_contam is not None:
+                            model2plot *= model_contam
                     # Add inst_var if needed
                     if not(remove_inst_var) and (datasetname in inst_vars):
                         model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
@@ -498,7 +499,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                 key_obj="contam",
                                                                                 supersamp=supersamp_bin_model, exptime=exptime,
                                                                                 datasim_kwargs=datasim_kwargs)
-                            model2plot *= model_contam
+                            if model_contam is not None:
+                                model2plot *= model_contam
                         # Add inst_var if needed
                         if not(remove_inst_var) and (datasetname in inst_vars):
                             model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
