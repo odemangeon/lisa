@@ -1270,7 +1270,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     ###############
                     # Plot the data
                     ###############
-                    if pl_show_error[datasetname]:
+                    if pl_show_error[datasetname]['data']:
                         ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname],
                                                    yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
                         if not("ecolor" in pl_kwarg_jitter[datasetname]):
@@ -1287,7 +1287,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     ####################
                     # Plot the residuals
                     ####################
-                    if pl_show_error[datasetname]:
+                    if pl_show_error[datasetname]['data']:
                         if has_jitters[datasetname]:
                             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
                         axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
@@ -1970,6 +1970,9 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
             pl_kwarg_final[datasetname][dataordatabinned].update(deepcopy(pl_kwarg_def))
             # Update with the user's inputs
             pl_kwarg_final[datasetname][dataordatabinned].update(pl_kwargs.get(datasetname, {}).get(dataordatabinned, {}))
+            # Update pl_show_error[datasetname] with user input (Needs to be done before pl_kwarg_final is copied into pl_kwarg_jitter)
+            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
+                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
             # Init pl_kwarg_jitter[datasetname]
             pl_kwarg_jitter[datasetname][dataordatabinned] = deepcopy(pl_kwarg_final[datasetname][dataordatabinned])
             # Update with the user's inputs
@@ -1990,9 +1993,7 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
             # default value for ecolor
             if ("ecolor" not in pl_kwarg_jitter[datasetname][dataordatabinned]) and ("color" in pl_kwarg_jitter[datasetname][dataordatabinned]):
                 pl_kwarg_jitter[datasetname][dataordatabinned]["ecolor"] = pl_kwarg_jitter[datasetname][dataordatabinned]["color"]
-            # Update pl_show_error[datasetname] with user input
-            if "show_error" in pl_kwarg_final[datasetname][dataordatabinned]:
-                pl_show_error[datasetname][dataordatabinned] = pl_kwarg_final[datasetname][dataordatabinned].pop("show_error")
+
     # Fill pl_kwargs_final and pl_kwarg_jitter the databinned of each row if needed
     if (bin_size > 0.) and one_binning_per_row:
         for i_row in range(nb_rows):
