@@ -34,7 +34,8 @@ def get_def_output_folders(run_folder=None, output_folder=None):
     makedirs(output_folder, exist_ok=True)
 
     dict_output_folders = {}
-
+    dict_output_folders["log"] = join(output_folder, "log")
+    makedirs(dict_output_folders["log"], exist_ok=True)
     exploration_output_folder = join(output_folder, "exploration")
     makedirs(exploration_output_folder, exist_ok=True)
     dict_output_folders["pickles_explore"] = join(exploration_output_folder, "pickles")
