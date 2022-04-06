@@ -11,6 +11,7 @@ import matplotlib
 import matplotlib.pyplot as pl
 
 from logging import DEBUG, INFO
+from os.path import join
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -53,7 +54,7 @@ extension_analysis = "_initrun_median"
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 logger.info("1. Load from pickle if necessary")
 if load_from_pickle:

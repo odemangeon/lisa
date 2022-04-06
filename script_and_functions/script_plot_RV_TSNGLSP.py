@@ -13,6 +13,7 @@ from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.rv_plots import create_RV_TSNGLSP_plots
 
 from logging import DEBUG, INFO
+from os.path import join
 
 import lisa.tools.mylogger as ml
 
@@ -55,7 +56,7 @@ extension_analysis = "_initrun_median"
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 logger.info("1. Load from pickle if necessary")
 if load_from_pickle:

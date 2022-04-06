@@ -12,7 +12,6 @@ from os.path import join
 
 from scipy.optimize import minimize
 from numpy import zeros_like
-from emcee import EnsembleSampler
 
 # If needed, add lisa folder to the python path here
 # lisa_folder = ".."  # Change this if needed
@@ -60,7 +59,7 @@ extension_analysis = ""
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 logger.info("########\nMCMC EXPLORATION")
 
