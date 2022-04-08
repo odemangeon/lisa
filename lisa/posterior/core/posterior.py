@@ -577,7 +577,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         with open(join(pickle_folder, pickle_filename), "wb") as fpostinst:
             dump(dico, fpostinst)
 
-    def init_from_pickle(self, pickle_folder=".", pickle_filename=None):
+    def init_from_pickle(self, pickle_folder=".", pickle_filename=None, data_folder=None, run_folder=None):
         """Initialize the instance from the post_instance pickle file produced with save_post_instance.
 
         :param str pickle_folder: path to the folder containing the pickle file.
@@ -589,8 +589,12 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         with open(join(pickle_folder, pickle_filename), "rb") as fdico:
             dico = load(fdico)
         # define data and run folder
-        self.dataset_db.data_folder = dico["data_folder"]
-        self.run_folder = dico["run_folder"]
+        if data_folder is None:
+            data_folder = dico["data_folder"]
+        if run_folder is None:
+            run_folder = dico["run_folder"]
+        self.dataset_db.data_folder = data_folder
+        self.run_folder = run_folder
         # load datasetfile
         self.load_datasetsfile(dico["dataset_file"])
         # define model
@@ -600,7 +604,6 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         self.define_model(category=dico["model_category"], name=dico["object_name"],
                           **dico["model_kwargs"])
         # Automatic model_init: Set parameterisation, set param_file and inst_cat_param_file and load them
-
         self.model.automatic_model_initialisation(**dico["model_auto_init_kwargs"])
         self.get_datasimulators()
         self.get_lnlikelihoods()

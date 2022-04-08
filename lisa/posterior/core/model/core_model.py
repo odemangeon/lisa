@@ -728,14 +728,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
     def automatic_model_initialisation(self, param_file, paramfile4instcat, paramfile4noisemodcat, kwargs_parametrisation):
         """load the parameter file."""
+        if self.hasrun_folder:
+            param_file = join(self.run_folder, param_file)
         self.param_file = param_file
         for inst_cat in paramfile4instcat:
             inscat_model = self.instcat_models[inst_cat]
+            if self.hasrun_folder:
+                paramfile4instcat[inst_cat] = join(self.run_folder, paramfile4instcat[inst_cat])
             if isfile(paramfile4instcat[inst_cat]):
                 inscat_model.paramfile_instcat = paramfile4instcat[inst_cat]
             else:
                 raise AssertionError("File {} doesn't exists".format(paramfile4instcat[inst_cat]))
         for key in paramfile4noisemodcat:
+            if self.hasrun_folder:
+                paramfile4noisemodcat[key] = join(self.run_folder, paramfile4noisemodcat[key])
             if isfile(paramfile4noisemodcat[key]):
                 self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
             else:

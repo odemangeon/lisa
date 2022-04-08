@@ -17,6 +17,8 @@ from logging import getLogger
 from textwrap import dedent
 from collections import OrderedDict
 from pprint import pformat
+from os.path import join
+import os
 
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from .limb_darkening import Manager_LD, CoreLD
@@ -265,8 +267,15 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def read_LC_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_paramfile_instcat:
-            with open(self.paramfile_instcat) as f:
+            if self.model_instance.hasrun_folder:
+                paramfile_instcat = join(self.model_instance.run_folder, self.paramfile_instcat)
+            else:
+                paramfile_instcat = self.paramfile_instcat
+            cwd = os.getcwd()
+            os.chdir(self.model_instance.run_folder)
+            with open(paramfile_instcat) as f:
                 exec(f.read())
+            os.chdir(cwd)
             dico = locals().copy()
             dico.pop("self")
             logger.debug("LC parameter file read.\nContent of the parameter file: {}"

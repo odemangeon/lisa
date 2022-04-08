@@ -16,6 +16,7 @@ for the GravGroup class.
 from logging import getLogger
 from textwrap import dedent
 from pprint import pformat
+from os.path import join
 
 from .datasim_creator_rv import create_datasimulator_RV
 from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
@@ -143,7 +144,11 @@ class RV_InstCat_Model(Core_InstCat_Model):
     def read_RV_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_paramfile_instcat:
-            with open(self.paramfile_instcat) as f:
+            if self.model_instance.hasrun_folder:
+                paramfile_instcat = join(self.model_instance.run_folder, self.paramfile_instcat)
+            else:
+                paramfile_instcat = self.paramfile_instcat
+            with open(paramfile_instcat) as f:
                 exec(f.read())
             dico = locals().copy()
             dico.pop("self")
