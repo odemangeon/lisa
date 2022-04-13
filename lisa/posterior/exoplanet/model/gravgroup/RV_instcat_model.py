@@ -16,7 +16,8 @@ for the GravGroup class.
 from logging import getLogger
 from textwrap import dedent
 from pprint import pformat
-from os.path import join
+from os.path import join, basename
+import os
 
 from .datasim_creator_rv import create_datasimulator_RV
 from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
@@ -132,8 +133,8 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
             # Write the file
             f.write(text_RV_param)
-        logger.info("Parameter file created at path: {}".format(file_path))
-        self.paramfile_instcat = file_path
+        logger.info(f"Parameter file created at path: {file_path}")
+        self.paramfile_instcat = basename(file_path)
 
     def load_instcat_paramfile(self):
         """Load LC_param_file."""
@@ -144,19 +145,18 @@ class RV_InstCat_Model(Core_InstCat_Model):
     def read_RV_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_paramfile_instcat:
-            if self.model_instance.hasrun_folder:
-                paramfile_instcat = join(self.model_instance.run_folder, self.paramfile_instcat)
-            else:
-                paramfile_instcat = self.paramfile_instcat
+            paramfile_instcat = self.paramfile_instcat
+            cwd = os.getcwd()
+            os.chdir(self.model_instance.run_folder)
             with open(paramfile_instcat) as f:
                 exec(f.read())
+            os.chdir(cwd)
             dico = locals().copy()
             dico.pop("self")
-            logger.debug("RV parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
+            logger.debug(f"RV parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:
-            raise IOError("Impossible to read RV parameter file: {}".format(self.paramfile4instcat[self.__inst_cat__]))
+            raise IOError(f"Impossible to read RV parameter file: {self.paramfile_instcat} in {self.model_instance.run_folder}")
 
     def load_RV_config(self, dico_config):
         """load the configuration specified by the dictionnary"""

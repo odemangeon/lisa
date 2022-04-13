@@ -18,6 +18,8 @@ from george import GP
 from numpy import concatenate, sqrt
 import numpy as np
 from collections import defaultdict, Counter, OrderedDict
+import os
+from os.path import basename
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
@@ -866,18 +868,21 @@ class StellarActivityNoiseModelInterface(object):
             logger.info("Parameter file for the stellar activity noise model created at path: {}".format(file_path))
         else:
             logger.info("Parameter file for the stellar activity noise model already existing and not overwritten: {}".format(file_path))
-        self.paramfile4noisemodcat[stelact_GP_noisemodel] = file_path  # paramfile4noisemodcat is from Core_Model
+        self.paramfile4noisemodcat[stelact_GP_noisemodel] = basename(file_path)  # paramfile4noisemodcat is from Core_Model
 
     def read_SANM_param_file(self):
         """Read the content of the Stellar activity noise model parameter file."""
         if self.isdefined_SANMparamfile:
-            with open(self.paramfile4noisemodcat[stelact_GP_noisemodel]) as f:
+            paramfile_noisemod = self.paramfile4noisemodcat[stelact_GP_noisemodel]
+            cwd = os.getcwd()
+            os.chdir(self.model_instance.run_folder)
+            with open(paramfile_noisemod) as f:
                 exec(f.read())
+            os.chdir(cwd)
             dico = locals().copy()
             dico.pop("self")
             dico.pop("f")
-            logger.debug("SANM parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
+            logger.debug(f"SANM parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:
             raise IOError("Impossible to read SANM parameter file: {}".format(self.paramfile4instcat[IND_inst_cat]))

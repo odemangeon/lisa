@@ -17,7 +17,7 @@ from logging import getLogger
 from textwrap import dedent
 from collections import OrderedDict
 from pprint import pformat
-from os.path import join
+from os.path import join, basename
 import os
 
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
@@ -255,8 +255,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
             # Write the file
             f.write(text_LC_param)
-        logger.info("Parameter file created at path: {}".format(file_path))
-        self.paramfile_instcat = file_path
+        logger.info(f"Parameter file for LC inst cat created at path: {file_path}")
+        self.paramfile_instcat = basename(file_path)
 
     def load_instcat_paramfile(self):
         """Load LC_param_file."""
@@ -267,10 +267,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def read_LC_param_file(self):
         """Read the content of the LC parameter file."""
         if self.isdefined_paramfile_instcat:
-            if self.model_instance.hasrun_folder:
-                paramfile_instcat = join(self.model_instance.run_folder, self.paramfile_instcat)
-            else:
-                paramfile_instcat = self.paramfile_instcat
+            paramfile_instcat = self.paramfile_instcat
             cwd = os.getcwd()
             os.chdir(self.model_instance.run_folder)
             with open(paramfile_instcat) as f:
@@ -278,11 +275,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             os.chdir(cwd)
             dico = locals().copy()
             dico.pop("self")
-            logger.debug("LC parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
+            logger.debug(f"LC parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:
-            raise IOError("Impossible to read LC parameter file: {}".format(self.paramfile_instcat))
+            raise IOError(f"Impossible to read LC parameter file: {self.paramfile_instcat} in directory {self.model_instance.run_folder}")
 
     def load_LC_config(self, dico_config):
         """load the configuration specified by the dictionnary"""

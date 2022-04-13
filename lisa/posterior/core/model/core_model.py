@@ -13,7 +13,8 @@ The objective of this package is to provides the core Core_Model class.
     update_paramfile_info, load_config in paramcontainers_database
 """
 from logging import getLogger
-from os.path import isfile, join
+from os import getcwd
+from os.path import isfile, join, basename
 from collections import defaultdict  # OrderedDict
 from numpy import array, ones
 # from copy import deepcopy
@@ -625,7 +626,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         """Return True is the attribute param_file has been defined."""
         return self.param_file is not None
 
-    def create_parameter_file(self, paramfile_path, answer_overwrite=None, answer_create=None):
+    def create_parameter_file(self, param_file, answer_overwrite=None, answer_create=None):
         """Create the parameter file which will specify the status of all main parameters in the model.
 
         Arguments
@@ -639,66 +640,29 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             If the param_file doesn't exists aleardy, where do you want to create it ? "absolute",
             "run_folder" or "error". If this not provide the program will ask you interactively.
         """
-        # Check is the file path provided correspond to an exiting file
-        file_path = self.look4runfile(file_path=paramfile_path)
-        # If path provided is an existing file, ask if you want to overwrite
-        if file_path is not None:
-            answers_list_yn = ['y', 'n']
-            if answer_overwrite is None:
-                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                            "".format(file_path, answers_list_yn))
-                reply = QCM_utilisateur(question, answers_list_yn)
-            else:
-                if answer_overwrite in answers_list_yn:
-                    reply = answer_overwrite
-                else:
-                    raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
-        # If path provided is not an existing file, ask if you want to created it
-        else:
-            answers_list_create = ["absolute", "error"]
-            if self.hasrun_folder:
-                answers_list_create.append("run_folder")
-                run_folder_path = join(self.run_folder, paramfile_path)
-            if answer_create is None:
-                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
-                            "{}".format(paramfile_path, paramfile_path))
-                if self.hasrun_folder:
-                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += ("\nNot create it and raise an 'error' ?\nReply one of these answers {}\n"
-                             "".format(answers_list_create))
-                reply = QCM_utilisateur(question, answers_list_create)
-            else:
-                if answer_create in answers_list_create:
-                    reply = answer_create
-                else:
-                    raise ValueError("answer_create should by in {}".format(answers_list_create))
-            if reply == "absolute":
-                file_path = paramfile_path
-            elif reply == "run_folder":
-                file_path = run_folder_path
-            else:
-                raise ValueError("File {} doesn't exist and the user doesn't want to create it."
-                                 "".format(paramfile_path))
-            reply = "y"
+        param_file_path, reply = self._choose_parameter_file_path(default_paramfile_name="param_file.py",
+                                                                  paramfile_name=param_file,
+                                                                  answer_overwrite=answer_overwrite,
+                                                                  answer_create=answer_create)
         # If the file needs to be created
         if reply == "y":
-            with open(file_path, 'w') as f:
+            with open(param_file_path, 'w') as f:
                 f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
                 f.write("# Parametrisation file of {}\n".format(self.get_name()))
                 f.write("import numpy as np\n\n")
                 f.write("# Parameters\n")
                 f.write(self.get_paramfile_section())
-            logger.info("Parameter file created at path: {}".format(file_path))
+            logger.info("Parameter file created at path: {}".format(param_file_path))
         # If the file doesn't need to be created
         else:
-            logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
+            logger.info("Parameter file already existing and not overwritten: {}".format(param_file_path))
             self.update_paramfile_info()
-        self.param_file = file_path
+        self.param_file = param_file
 
     def read_parameter_file(self):
         """Read the content of the parameter file."""
         if self.isdefined_paramfile:
-            with open(self.param_file) as file:
+            with open(join(self.run_folder, self.param_file)) as file:
                 exec(file.read())
             dico = locals().copy()
             dico.pop("self")
@@ -797,7 +761,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 if reply == "y":
                     instcat_model.create_instcat_paramfile(file_path=file_path)
                 else:
-                    instcat_model.paramfile_instcat = file_path
+                    file_name = basename(paramfile_path)
+                    instcat_model.paramfile_instcat = file_name
                     logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
 
     def create_noisemodcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
@@ -850,7 +815,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             if self.handlers4noisecatparamfile[noisemod_cat][load_key] is not None:
                 self.handlers4noisecatparamfile[noisemod_cat][load_key]()
 
-    def _choose_parameter_file_path(self, default_paramfile_path, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def _choose_parameter_file_path(self, default_paramfile_name, paramfile_name=None, answer_overwrite=None, answer_create=None):
         """Choose the path for any parameter file.
 
         Arguments
@@ -873,14 +838,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         reply     : str ("y" or "n")
             If "y" this file should be created or overwriten, if "n" not.
         """
-        if paramfile_path is None:
-            paramfile_path = default_paramfile_path
-        file_path = self.look4runfile(file_path=paramfile_path)
-        if file_path is not None:
+        if paramfile_name is None:
+            paramfile_name = default_paramfile_name
+        param_file_path = self.look4runfile(file_path=paramfile_name)
+        if param_file_path is not None:
             answers_list_yn = ['y', 'n']
             if answer_overwrite is None:
-                question = ("File {} already exists. Do you want to overwrite it ? {}\n"
-                            "".format(file_path, answers_list_yn))
+                question = f"File {paramfile_name} already exists ({param_file_path}). Do you want to overwrite it ? {answers_list_yn}\n"
                 reply = QCM_utilisateur(question, answers_list_yn)
             else:
                 if answer_overwrite in answers_list_yn:
@@ -888,28 +852,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 else:
                     raise ValueError("answer_overwrite should by in {}".format(answers_list_yn))
         else:
-            answers_list_create = ["absolute", "error"]
-            if self.hasrun_folder:
-                answers_list_create.append("run_folder")
-                run_folder_path = join(self.run_folder, paramfile_path)
+            answers_list_create = ["create", "error"]
+            if not(self.hasrun_folder):
+                self.run_folder = getcwd()
+            param_file_path = join(self.run_folder, paramfile_name)
             if answer_create is None:
-                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' path: "
-                            "{}".format(paramfile_path, paramfile_path))
-                if self.hasrun_folder:
-                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += "\nNot create it and raise an 'error' ? {}\n".format(answers_list_create)
+                question = f"File {paramfile_name} doesn't exists. Do you want to\nCreate it in the run_folder ({self.run_folder}) "
+                question += (f"\nNot create it and raise an 'error' ?\nReply one of these answers {answers_list_create}\n")
                 reply = QCM_utilisateur(question, answers_list_create)
             else:
                 if answer_create in answers_list_create:
                     reply = answer_create
                 else:
-                    raise ValueError("answer_create should by in {}".format(answers_list_create))
-            if reply == "absolute":
-                file_path = paramfile_path
-            elif reply == "run_folder":
-                file_path = run_folder_path
-            else:
-                raise ValueError("File {} doesn't exist and the user doesn't want to create it."
-                                 "".format(paramfile_path))
+                    raise ValueError(f"answer_create should by in {answers_list_create}")
+            if reply == "error":
+                raise ValueError(f"File {paramfile_name} doesn't exist and the user doesn't want to create it.")
             reply = "y"
-        return file_path, reply
+        return param_file_path, reply
