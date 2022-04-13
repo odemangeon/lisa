@@ -16,7 +16,7 @@ for the GravGroup class.
 from logging import getLogger
 from textwrap import dedent
 from pprint import pformat
-from os.path import join, basename
+from os.path import basename
 import os
 
 from .datasim_creator_rv import create_datasimulator_RV

@@ -17,7 +17,7 @@ from logging import getLogger
 from textwrap import dedent
 from collections import OrderedDict
 from pprint import pformat
-from os.path import join, basename
+from os.path import basename
 import os
 
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
