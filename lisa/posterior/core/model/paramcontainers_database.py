@@ -145,9 +145,9 @@ class ParamContainerDatabase(object):
                                                                                         no_duplicate=no_duplicate,
                                                                                         **selectedkwargs)
                 if no_duplicate:
-                    result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
+                    result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                     for param in result_param_cont:
-                        if param.get_name(include_prefix=True, recursive=True) not in result_param_name:
+                        if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
                             result.append(param)
                 else:
                     result.extend(result_param_cont)

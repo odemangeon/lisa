@@ -44,7 +44,6 @@ from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import M
 from ..posterior.core.likelihood.jitter_noise_model import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
-from ..posterior.exoplanet.model.gravgroup import ext_plonly
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
@@ -591,7 +590,6 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     nt = len(t_data)
     data = kwargs.pop("data")
     data_err = kwargs.pop("data_err")
-    kwargs.update(datasim_kwargs.copy())
     # Extract the jitter information:
     # jitter which give the value of the jitter (float)
     # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
@@ -647,7 +645,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
                 model, modelwGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
                                                                                     param=param,
                                                                                     l_param_name=l_param_name,
-                                                                                    key_obj=plnt_name + ext_plonly, datasim_kwargs=kwargs,
+                                                                                    key_obj=plnt_name, datasim_kwargs=datasim_kwargs,
                                                                                     supersamp=supersamp_model, exptime=exptime,
                                                                                     )
                 data_pl = data_pl - model
@@ -676,7 +674,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
              ) = plot_residuals(dataset_name=dataset.dataset_name, param=param,
                                 l_param_name=l_param_name, post_instance=post_instance, key_obj=key_pl,
                                 supersamp=supersamp_model, exptime=exptime,
-                                datasim_kwargs=kwargs, plot_phase=True, Per=P, tref=tc,
+                                datasim_kwargs=datasim_kwargs, plot_phase=True, Per=P, tref=tc,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
             residual_model.append(residual_model_i)
@@ -725,7 +723,7 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
             (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_lines_labels_resi_i
              ) = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
                                 post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                datasim_kwargs=kwargs, supersamp=supersamp_model, exptime=exptime,
+                                datasim_kwargs=datasim_kwargs, supersamp=supersamp_model, exptime=exptime,
                                 plot_phase=False,
                                 pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
                                 ax=ax_resi_i)
@@ -808,15 +806,27 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         l_datasets = dataset_db.get_datasets()
     ndataset = len(l_datasets)
 
+    # Determine how many datasets will be shown
+    nb_dataset2plot = 0
+    for ii, dataset in enumerate(l_datasets):
+        # Get the instrument model name associated to the dataset
+        inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
+        inst_mod_obj = post_instance.model.instruments[inst_mod_fullname]
+        # If there is no noise-model it is that the data are not modeled
+        if inst_mod_obj.noise_model is None:
+            continue
+        else:
+            nb_dataset2plot += 1
+
     # Create the figure and grid which will harbor the plots for each dataset
     # Set defaults values of fig_kwargs
     if fig_kwargs is None:
         fig_kwargs = {}
-    fig = figure(figsize=(plot_width, ndataset * plot_height), constrained_layout=True, **fig_kwargs)
+    fig = figure(figsize=(plot_width, nb_dataset2plot * plot_height), constrained_layout=True, **fig_kwargs)
     gs_kwargs_final = {"bottom": 0.04, "top": 0.9, "left": 0.07, "right": 0.82}
     if gs_kwargs is not None:
         gs_kwargs_final.update(gs_kwargs)
-    gs = GridSpec(nrows=ndataset, ncols=1, figure=fig, **gs_kwargs_final)
+    gs = GridSpec(nrows=nb_dataset2plot, ncols=1, figure=fig, **gs_kwargs_final)
 
     # Define the keywords for tick_params:
     kwargs_tick_params_final = {'axis': 'both', 'which': 'both', 'direction': "in", 'bottom': "on",
@@ -840,10 +850,15 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     if kwargs_add_axeswithsharex is not None:
         add_axeswithsharex_kw_final.update(kwargs_add_axeswithsharex)
 
+    ii_dataset2plot = 0
     for ii, dataset in enumerate(l_datasets):
         modelsNresiduals[dataset.dataset_name] = OrderedDict()
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
+        inst_mod_obj = post_instance.model.instruments[inst_mod_fullname]
+        # If there is no noise-model it is that the data are not modeled
+        if inst_mod_obj.noise_model is None:
+            continue
         # Get the datasimulator for the whole system
         # print(inst_mod_fullname)
         # print(datasim_dbf.instrument_db[inst_mod_fullname])
@@ -858,7 +873,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
             nplanet = len(phasefold_kwargs["planets"])
             # Create the two axes data+model and residuals per planet
             (axes_data, axes_resi
-             ) = add_twoaxeswithsharex_perplanet(gs[ii], nplanet=nplanet, fig=fig, gs_from_sps_kw=gs_from_sps_kw_final,
+             ) = add_twoaxeswithsharex_perplanet(gs[ii_dataset2plot], nplanet=nplanet, fig=fig, gs_from_sps_kw=gs_from_sps_kw_final,
                                                  add_axeswithsharex_kw=add_axeswithsharex_kw_final)
             for ax_data_i, ax_resi_i in zip(axes_data, axes_resi):
                 ax_data_i.xaxis.set_minor_locator(AutoMinorLocator())
@@ -887,7 +902,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         else:
             modelsNresiduals[dataset.dataset_name]["whole"] = {}
             # Create the two axes data+model and residuals
-            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii], fig=fig, gs_from_sps_kw=add_axeswithsharex_kw_final)
+            ax_data, ax_resi = add_twoaxeswithsharex(gs[ii_dataset2plot], fig=fig, gs_from_sps_kw=add_axeswithsharex_kw_final)
             ax_data.xaxis.set_minor_locator(AutoMinorLocator())
             ax_data.yaxis.set_minor_locator(AutoMinorLocator())
             ax_data.tick_params(**kwargs_tick_params_final)
@@ -915,6 +930,8 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
                         ebconts_lines_4_legend.append(dico_ebcont_line_label["ebcont or line"][0])
                     else:
                         ebconts_lines_4_legend.append(dico_ebcont_line_label["ebcont or line"])
+
+        ii_dataset2plot += 1
     # Create the legend for the full figure
     fig.legend(handles=ebconts_lines_4_legend,     # The line objects
                labels=labels_4_legend,   # The labels for each line

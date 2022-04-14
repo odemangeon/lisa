@@ -154,9 +154,12 @@ class Model_Prior(object):
                 params = {}
                 for param_ref, param_name_or_l_param_name in joint_prior_info["params"].items():
                     if isinstance(param_name_or_l_param_name, list):  # If joint prior has multiple parameters param_name_or_l_param_name is a list of parameter names
-                        params[param_ref] = [self.get_parameter(param_name, recursive=True) for param_name in param_name_or_l_param_name]
+                        params[param_ref] = [self.get_parameter(param_name, kwargs_get_list_params={'recursive': True},
+                                                                kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True})
+                                             for param_name in param_name_or_l_param_name]
                     else:
-                        params[param_ref] = self.get_parameter(param_name_or_l_param_name, recursive=True)
+                        params[param_ref] = self.get_parameter(param_name_or_l_param_name, kwargs_get_list_params={'recursive': True},
+                                                               kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True})
                 priors["joint"]["logpdf"][param.joint_prior_ref] = {"function": joint_prior_func.create_logpdf(params),
                                                                     "nb_param": joint_prior_func.get_params_nb()}
             idx = None
@@ -304,10 +307,12 @@ class Model_Prior(object):
         """
         db = {}
         for dataset_name, lnlike_docfunc in lnlike_db_dtst.items():
-            joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
-                                                    individual_priors=individual_priors)
-            if joint_prior is not None:
-                db[dataset_name] = joint_prior
-            else:
-                logger.warning(f"Joint log prior of dataset {dataset_name} could not be created.")
+            # For IND dataset you might not want to model them. In this case the lnlike_docfunc should be None
+            if lnlike_docfunc is not None:
+                joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
+                                                        individual_priors=individual_priors)
+                if joint_prior is not None:
+                    db[dataset_name] = joint_prior
+                else:
+                    logger.warning(f"Joint log prior of dataset {dataset_name} could not be created.")
         return db

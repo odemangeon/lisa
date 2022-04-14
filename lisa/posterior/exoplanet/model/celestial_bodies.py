@@ -174,6 +174,16 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="Fi", name_prefix=self.name, main=False))
         ## H: scale height
         self.add_parameter(Parameter(name="H", name_prefix=self.name, main=False))
+        ## u1: Planetary first limb-darkening parameter
+        self.add_parameter(Parameter(name="u1", name_prefix=self.name, main=False))
+        ## u2: Planetary second limb-darkening parameter
+        self.add_parameter(Parameter(name="u2", name_prefix=self.name, main=False))
+        ## xi: ratio of radiative timescale over advective timescale ))
+        self.add_parameter(Parameter(name="xi", name_prefix=self.name, main=False, unit="w/o unit"))
+        ## Tn: temperature of the nightside
+        self.add_parameter(Parameter(name="Tn", name_prefix=self.name, main=False, unit="K"))
+        ## DeltaT: Day-night temperature contrast
+        self.add_parameter(Parameter(name="deltaT", name_prefix=self.name, main=False, unit="K"))
         ## Mref: Mean Anomaly at reference time
         self.add_parameter(Parameter(name="Mref", name_prefix=self.name, main=False))
         ## transit times
@@ -212,7 +222,7 @@ class Star(CelestialBody):
         ## logg
         self.add_parameter(Parameter(name="logg", name_prefix=self.name, main=False))
         ## Effective temperature of the star
-        self.add_parameter(Parameter(name="Teff", name_prefix=self.name, main=False))
+        self.add_parameter(Parameter(name="Teff", name_prefix=self.name, main=False, unit='K'))
         ## Distance to observer
         self.add_parameter(Parameter(name="dist", name_prefix=self.name, main=False))
         ## Extinction E(B-V)

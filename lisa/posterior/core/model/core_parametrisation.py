@@ -18,18 +18,22 @@ class Core_Parametrisation(object):
         """
         """
         # Initialise available_parametrisations list should be filled in the Child Class
-        # Define name of the parametrisation available (list of string)
+        # Define name of the parametrisation available (list of string) (see property below)
         self.__available_parametrisations = []
-        # Initialise the self.parametrisation hidden variable
+        # Initialise the self.parametrisation hidden variable (see property below)
         self.__parametrisation = None
-        # Initialise the self.parametrisation_kwargs hidden variable
+        # Initialise the self.parametrisation_kwargs hidden variable (see property below)
         self.__parametrisation_kwargs = {}
-        # Initialise the applyparametrisation4noisemodel dictionary
-        # This dictionary should be updated when adding noise models if parameters need to be added
+        # Initialise the applyparametrisation4noisemodel dictionary (see property below)
         self.__applyparametrisation4noisemodel = {}
 
     @property
     def applyparametrisation4noisemodel(self):
+        """Dictionary that provide the function to apply the parameterisation of each noise model
+
+        This is filled during the __init__ of the model when the __init__ function of the noise model
+        interfaces are called (see for example __init__ of gravgroup.model)
+        """
         return self.__applyparametrisation4noisemodel
 
     def set_parametrisation(self, parametrisation, **kwargs):

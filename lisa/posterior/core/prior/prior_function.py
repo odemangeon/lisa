@@ -406,6 +406,13 @@ class PolarPrior(Core_JointPrior_Function):
     Performs the transformation from cartesian to polar coordinate to be able to set prior on the
     polar coordinates.
 
+    How to use it in the param_file:
+    {'category': 'polar', 'args': {'r_prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0}},
+                                   'theta_prior': {'category': 'uniform', 'args': {'vmin': -np.pi, 'vmax': np.pi}},
+                                   },
+     'params': {'x': 'b_ecosw', 'y': 'b_esinw'}
+     }
+
     :param float r_prior: Prior definition on the radial coordinate
     :param float theta_prior: Prior definition on the angular coordinate
     """
@@ -434,7 +441,7 @@ class PolarPrior(Core_JointPrior_Function):
         (param_nb,
          arg_list,
          param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
         dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["atan2"] = mt.atan2
@@ -442,7 +449,7 @@ class PolarPrior(Core_JointPrior_Function):
         dico_text_params = {}
         for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
         function_name = "logpdf_{}".format(self.category)
         text_function = """
         def {function_name}({param_vector_name}):
@@ -456,9 +463,9 @@ class PolarPrior(Core_JointPrior_Function):
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
         logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list))
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
 
     def logpdf(self, x, y):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -526,14 +533,14 @@ class SupInfprior(Core_JointPrior_Function):
         (param_nb,
          arg_list,
          param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(key_param=key_param, param_vector_name=par_vec_name)
+         ldict) = init_arglist_paramnb_arguments_ldict(keys='prior', key_param=key_param, param_vector_name=par_vec_name)
         dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
         ldict["dico_logpdf"] = dico_logpdf
         ldict["infnt"] = infnt
         dico_text_params = {}
         for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
         function_name = "logpdf_{}".format(self.category)
         text_function = """
         def {function_name}({param_vector_name}):
@@ -548,9 +555,9 @@ class SupInfprior(Core_JointPrior_Function):
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
         logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list)[key_param])}))
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist='prior')[key_param])}))
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list))
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist='prior'))
 
     def logpdf(self, sup, inf):
         dico_logpdf = self.priorinstance_hiddenparams

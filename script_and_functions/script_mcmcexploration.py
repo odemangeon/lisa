@@ -12,7 +12,6 @@ from os.path import join
 
 from scipy.optimize import minimize
 from numpy import zeros_like
-from emcee import EnsembleSampler
 
 # If needed, add lisa folder to the python path here
 # lisa_folder = ".."  # Change this if needed
@@ -24,32 +23,28 @@ import lisa.emcee_tools.emcee_tools as et
 import lisa.tools.mylogger as ml
 from lisa.explore_analyze.misc import get_def_output_folders
 
-###############################
 ## Definition of the parameters
-###############################
-obj_name = "WASP-151"  # Name of you target star
-extension_exploration = "_initrun"  # extension of your exploration (will be added to the ouput files).
-model_category = "GravitionalGroups"  # Class of model: Can be GravitionalGroups, GravitionalGroupsDynamic
-nb_planet = 1  # Number of planets
-rv_model = "radvel"  # RV model: None will select the default model being radvel. Currently only radvel available
-transit_model = "batman"  # Transit model: None will select the default model being batman. Curretnly only batman available
-parametrisation = "Multis"  # Parametrisation to use. The possible choices depends on the model used. For GravitionalGroups it can be 'EXOFAST' or 'Multis'
-with_DeltaRV = True  # To you want to us an RV offset between RV instruments. More or less always True
-kwargs_post = {}  # Additional argument to pass to the posterior function. For example reference times.
+obj_name = "WASP-151"  # Change
+extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
+model_category = "GravitionalGroups"
+nb_planet = 1
+parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
+with_DeltaRV = True
+kwargs_post = {}
 
-data_folder = join(getcwd(), "data")  # Folder where the data files are.
-run_folder = getcwd()  # Folder for the log and the parametrisation files
-output_folders = get_def_output_folders(run_folder=run_folder)  # Folder for the outputs
+data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
+run_folder = getcwd()
+output_folders = get_def_output_folders(run_folder=run_folder)
 
 # Pre-minimisation parameters
-do_preminimization = True  # Performs a gradient base optimisation prior to the MCMC exploration
-N_maxiter_preminimization = 1000  # Maximum number of iteration for the gradient base optimisation
-xtol_preminimization = 1e-12  # Convergence criteria for the gradient base optimisation
+do_preminimization = True
+N_maxiter_preminimization = 1000
+xtol_preminimization = 1e-12
 
 # emcee parameters
-nwalker_fact = 2.5  # nwalkers will be round(nwalker_fact * nb parameters)
-nsteps_MCMC = 50000  # Number of steps for the MCMC exploration
-save_to_file = False  # Save the chains to a file while running.
+nwalker_fact = 2.5
+nsteps_MCMC = 50000
+save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # Distribution for the choice of initial parameter values. For now you can only specify gaussian distributions
@@ -59,16 +54,12 @@ init_distrib = {}
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
-load_from_pickle = False  # If True the MCMC chains will start from the inferred parameter distribution found be the chain analysis specified below
-extension_analysis = ""  # Extension of the chain analysis that was used to derived the parameter values that you want to use as initial position distributions
-
-##########################
-## Execution of the script
-##########################
+load_from_pickle = False
+extension_analysis = ""
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 logger.info("########\nMCMC EXPLORATION")
 
@@ -85,8 +76,7 @@ logger.info("3. Add datasets from a datasets file.")
 post_instance.load_datasetsfile("datasets.txt")  # Change if needed by the name you gave or want to give to your dataset file.
 
 logger.info("4. Add a model")
-post_instance.define_model(category=model_category, name=obj_name, stars=1, planets=nb_planet,
-                           rv_model=rv_model, transit_model=transit_model)
+post_instance.define_model(category=model_category, name=obj_name, stars=1, planets=nb_planet)
 
 logger.info("5. Create inst_cat specific parameter file")
 if cluster:
@@ -94,8 +84,9 @@ if cluster:
 else:
     post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
-    if len(post_instance.model.paramfile4instcat) > 0:
-        input("Modifiy the inst_cat specific paramerisation file: {}".format(post_instance.model.paramfile4instcat))
+    input("If there are any inst_cat specific paramerisation file please check them")
+
+print(post_instance.model.inst_categories)
 
 logger.info("6. Load inst_cat specific parameter file")
 post_instance.model.load_instcat_paramfile()

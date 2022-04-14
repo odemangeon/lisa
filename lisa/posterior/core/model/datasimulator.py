@@ -11,9 +11,11 @@ your datasimulator.
 """
 from logging import getLogger
 from collections import defaultdict
+from copy import copy
 
 from .datasim_docfunc import DatasimDocFunc
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
+from ..dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
 from ....tools.function_from_text_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 
 
@@ -36,16 +38,20 @@ class DatasimulatorCreator(object):
     key_mand_kwargs = key_mand_kwargs
     key_opt_kwargs = key_opt_kwargs
 
-    def _create_datasimulator(self, instmod_obj, dataset=None):
+    def _create_datasimulator(self, instmod_obj, dataset, get_times_from_datasets):
         """Return the datasimulator for a given instrument model.
 
         Arguments
         ---------
-        instmod_obj : Instrument_Model
+        instmod_obj              : Instrument_Model
             Instrument_Model instance.
-        dataset     : Dataset/None
+        dataset                  : Dataset/None
             If provided the output datasimulator will simulate the data of
             the provided dataset. The function will include the dataset kwargs (like time or t_ref).
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
+
 
         Returns
         -------
@@ -54,7 +60,7 @@ class DatasimulatorCreator(object):
         # Get the instrument category of the instrument model which will allow to get the correct
         # datasimulator creator function.
         inst_cat = instmod_obj.instrument.category
-        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset)  # self.get_datasimcreator is defined in Core_Model
+        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset, get_times_from_datasets=get_times_from_datasets)  # self.get_datasimcreator is defined in Core_Model
 
     def create_datasimulators(self, affectinstmodel4dataset=False, lock_db=False):
         """Return a database with the datasim docfuncs for each instrument model used separatly.
@@ -86,7 +92,14 @@ class DatasimulatorCreator(object):
             inst_name = instmod_obj.instrument.get_name()
             inst_fullcat = instmod_obj.instrument.full_category
             # ... create and store the datasimulator docfuncs in the database
-            db[inst_fullcat][inst_name][inst_model] = self._create_datasimulator(instmod_obj)
+            # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
+            if (instmod_obj.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj, "indicator_model")):
+                continue
+            l_dataset_name = self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_obj.full_name)  # get_ldatasetname4instmodfullname comes from lisa.posterior.core.instmodel4dataset
+            datasets = [self.dataset_db[dst_name] for dst_name in l_dataset_name]
+            db[inst_fullcat][inst_name][inst_model] = self._create_datasimulator(instmod_obj=instmod_obj,
+                                                                                 dataset=datasets,
+                                                                                 get_times_from_datasets=False)
         # If required lock the database
         if lock_db:
             db.lock()
@@ -95,8 +108,15 @@ class DatasimulatorCreator(object):
     def create_datasimulators_perdataset(self, dataset_db):
         """Return a database with the datasim docfunc for each dataset separatly.
 
-        :param DatasetDatabase dataset_db: Database with all the datasets
-        :return dict db: Database with the datasim docfunc for each dataset in dataset_db. There is
+        Arguments
+        ---------
+        dataset_db  : DatasetDatabase
+            Database with all the datasets
+
+        Returns
+        -------
+        db  : dict
+            Database with the datasim docfunc for each dataset in dataset_db. There is
             only one datasim for each dataset corresponding to the whole object. The dataset are
             included in the functions.
         """
@@ -105,11 +125,13 @@ class DatasimulatorCreator(object):
         # For each dataset, ...
         for dataset in dataset_db.get_datasets():
             dataset_name = dataset.dataset_name
-            db[dataset_name] = {}
             # ... get the associated instrument model object
-            instmod_obj = self.get_instmod(dataset_name=dataset_name)
+            instmod_obj = self.get_instmod(dataset_name=dataset_name)  # get_instmod comes from Instmodel4DatasetAttr
             # ... create and store the datasimulator
-            db[dataset_name] = self._create_datasimulator(instmod_obj, dataset)[self.key_whole]
+            # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
+            if (instmod_obj.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj, "indicator_model")):
+                continue
+            db[dataset_name] = self._create_datasimulator(instmod_obj, dataset, get_times_from_datasets=True)[self.key_whole]
         return db
 
     def __datasim_multipledatasets_creator(self, l_datasim, l_datasim_has_multi_output, l_params_idx, params_model, mand_kwargs, opt_kwargs,
@@ -169,7 +191,14 @@ class DatasimulatorCreator(object):
             same time with the datasets included.
         """
         l_dataset_obj = dataset_db.get_datasets()
-        return self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[self.key_whole]
+        # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
+        # We need to remove these datasets from the list of datasets
+        l_dataset_obj_clean = copy(l_dataset_obj)
+        for dataset_obj_ii in l_dataset_obj:
+            instmod_obj_ii = self.get_instmod(dataset_obj_ii.dataset_name)  # Define in Instmodel4Datase
+            if (instmod_obj_ii.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj_ii, "indicator_model")):
+                l_dataset_obj_clean.remove(dataset_obj_ii)
+        return self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj_clean)[self.key_whole]
 
     def create_datasimulator_4_ldataset(self, l_dataset_obj):
         """Return one datasim docfunction that simulates all the datasets provided.
@@ -223,7 +252,8 @@ class DatasimulatorCreator(object):
         for datsimC_name in datsimC_inputs:
             # ... create the datasim function with all the datasets using this datasimcreator
             dico_datasim_output = self.datasimcreator[datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
-                                                                    datsimC_inputs[datsimC_name]["datasets"])
+                                                                    datsimC_inputs[datsimC_name]["datasets"],
+                                                                    get_times_from_datasets=True)
             for key_obj in dico_datasim_output:
                 l_datsim[key_obj].append(dico_datasim_output[key_obj])
                 l_datsim_has_multi_output[key_obj].append(dico_datasim_output[key_obj].multi_output)

@@ -8,9 +8,8 @@ import matplotlib
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
 from lisa.explore_analyze.misc import get_def_output_folders
-from lisa.explore_analyze.rv_plots import create_RV_TSNGLSP_plots
+from lisa.explore_analyze.lc_plots import create_LC_TSNGLSP_plots
 
 from logging import DEBUG, INFO
 from os.path import join
@@ -39,7 +38,7 @@ matplotlib.rcParams.update({
     'pgf.rcfonts': False})
 
 # Define the object name
-obj_name = "HD27969"
+obj_name = "WASP-76"
 
 # Define dataset names to be loaded
 datasetnames = None  # [f'RV_{obj_name}_SOPHIEp_0', f'RV_{obj_name}_SOPHIE_0', f'RV_{obj_name}_ELODIE_0', ]  #
@@ -51,7 +50,7 @@ kwargs_datasim = {}
 run_folder = os.getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-load_from_pickle = True
+load_from_pickle = False
 extension_analysis = "_initrun_median"
 
 ## logger
@@ -70,33 +69,43 @@ if load_from_pickle:
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_RV_TSNGLSP_plots(fig=fig,
+create_LC_TSNGLSP_plots(fig=fig,
                         post_instance=post_instance, df_fittedval=df_fittedval, planets=planets,
                         datasetnames=datasetnames,
+                        remove1=True, remove_inst_var=False, remove_decorrelation=False,
                         datasim_kwargs=kwargs_datasim,
                         fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
                                    # 'suptitle_kwargs': {"y": 0.99},
                                    },
                         TS_kwargs={"do": True,
-                                   "pl_kwargs": {f"RV_{obj_name}_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                                 f"RV_{obj_name}_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "SOPHIE"},
-                                                 f"RV_{obj_name}_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'alpha': 1., 'label': "ELODIE"},
-                                                 "model": {"color": "C2", "linewidth": 0.75},
+                                   "npt_model": 10000,
+                                   "exptime_bin": 98 / 60 / 24,
+                                   "binning_stat": 'median',
+                                   'datasets_per_row': {f"LC_{obj_name}_CHEOPS_0": 0, },
+                                   "one_binning_per_row": True,
+                                   "pl_kwargs": {f"LC_{obj_name}_CHEOPS_0": {'fmt': '.', 'color': 'C0', 'mfc': 'white', 'alpha': 0.1, 'label': "CHEOPS"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                                                 "model": {"color": "C2", "linewidth": 2.},
                                                  },
-                                   "t_unit": "BJD - 2,400,000",
-                                   # "t_lims_zoom": (58000, 59000),
-                                   # 'pad_data': (0.75, 0.1),
-                                   # "pad_resi": (0.1, -0.2),
+                                   "t_unit": "BJD - 2,457,000",
+                                   # "t_lims_zoom": (2170.5, 2171.5),
+                                   "ylims_data": (-700, 700),
+                                   "ylims_resi": (-700, 700),
+                                   'pad_data': (0.025, -0.025),
+                                   "pad_resi": (0.05, -0.25),
                                    'axeswithsharex_kwargs': {"hspace": 0.1}
                                    },
                         GLSP_kwargs={"do": True,
-                                     "period_range": (0.1, 5000),
+                                     "period_range": (1e-2, 500),
                                      "freq_fact": 1e6,
                                      "freq_unit": "$\mu$Hz",
-                                     "freq_lims": (0, 14),
-                                     "freq_lims_zoom": (0, 1e6 / (100 * 24 * 60 * 60)),
+                                     "freq_lims": (0, 400),
+                                     "freq_lims_zoom": (0, 14),
+                                     'show_inst_var': False,
+                                     'show_decorrelation': True,
                                      'periods': {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
                                                                                                 "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}},
+                                                 98.7 / 60 / 24: {"vlines_kwargs": {"color": "C4", "linestyle": "dashed"},
+                                                                  "text_kwargs": {"label": 'P$_{CHEOPS}$', 'y_pos': 0.85, 'x_shift': 0.05}},
                                                  },
                                      'fap': {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
                                                    "text_kwargs": {"y_shift": 0.08}},
@@ -105,7 +114,7 @@ create_RV_TSNGLSP_plots(fig=fig,
                                              10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
                                                   "text_kwargs": {"y_shift": -0.08}},
                                              },
-                                     'period_no_ticklabels': [100, 10],
+                                     'period_no_ticklabels': [10, ],
                                      'gridspec_kwargs': {"wspace": 0.05},
                                      'axeswithsharex_kwargs': {"hspace": 0.1},
                                      # 'legend_param': {'data': {'loc': 'upper center'},
@@ -114,7 +123,7 @@ create_RV_TSNGLSP_plots(fig=fig,
                                      #                  'WF': {'loc': 'upper center'},
                                      #                  },
                                      },
-                        show_system_name_in_suptitle=False,
+                        show_system_name_in_suptitle=True,
                         RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                         RV_unit="m/s",
                         )

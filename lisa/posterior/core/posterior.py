@@ -21,7 +21,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from logging import getLogger
-from numpy import inf, isfinite
+from numpy import inf, isfinite, ones_like
 from dill import dump, load
 from os.path import join
 from textwrap import dedent
@@ -30,6 +30,7 @@ from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model.manager_model import Manager_Model
+from .model.datasimulator_timeseries_toolbox import time_vec
 from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
@@ -234,7 +235,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             manager_model.load_setup()
         # If the name of the object studied by the model is not provided put default
         if "name" not in kwargs:
-            kwargs.update({"name": "default"})
+            kwargs.update({"name": "Target"})
         # Get the CoreModel subclass associated to the provided category
         logger.info("Defining new model of category {}...".format(category))
         model_subclass = manager_model.get_model_subclass(category)
@@ -356,7 +357,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
     def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None,
                       supersamp=1, exptime=30 / (24 * 60)):
-        """Function to compute the models of a dataset for display purposes.
+        """Function to compute the models of one dataset for display purposes.
 
         Arguments
         ---------
@@ -390,64 +391,77 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         if key_obj is None:
             key_obj = self.model.key_whole
         instmod_fullname = self.model.get_instmod_fullname(dataset_name=dataset_name)
-        datasim_docfunc = self.datasimulators.instrument_db[instmod_fullname][key_obj]
+        if key_obj in self.datasimulators.instrument_db[instmod_fullname]:
+            datasim_docfunc = self.datasimulators.instrument_db[instmod_fullname][key_obj]
 
-        # Compute the model values for each time
-        idx_param_datasim = []
-        datasim_function = datasim_docfunc.function
-        datasim_paramnames = datasim_docfunc.params_model
-        for par in datasim_paramnames:
-            idx_param_datasim.append(l_param_name.index(par))
-        model = datasim_function(param[idx_param_datasim], t_model, **datasim_kwargs)
+            # Compute the model values for each time
+            idx_param_datasim = []
+            datasim_function = datasim_docfunc.function
+            datasim_paramnames = datasim_docfunc.params_model
+            for par in datasim_paramnames:
+                idx_param_datasim.append(l_param_name.index(par))
+            if f"'{time_vec}'" in datasim_docfunc.mand_kwargs_list:
+                mand_kwargs = {"t": t_model}
+            else:
+                mand_kwargs = {}
+            model = datasim_function(param[idx_param_datasim], **mand_kwargs, **datasim_kwargs)
+            if f"'{time_vec}'" not in datasim_docfunc.mand_kwargs_list:
+                model = model * ones_like(t_model)
 
-        # De-supersamp the model if needed.
-        if supersamp > 1:
-            model = average_supersampled_values(model, supersamp)
-
-        # Get the noise model subclass associated with the dataset
-        inst_mod_fullname = self.model.get_instmod_fullname(dataset_name)
-        inst_mod_obj = self.model.instruments[inst_mod_fullname]
-        noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(inst_mod_obj.noise_model)
-
-        # Compute GP contribution if needed.
-        if noise_model_subclass.has_GP:
-            # Get the list of datasets using the same GP kernel
-            l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
-            # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
-            # For that you need the list of dataset_object
-            # At the same time we will get the corresponding list of instrument objects required by for the gp simulator creation
-            l_dataset_obj = []
-            l_instmod_obj = []
-            for dataset_name_ii in l_dataset_sameGP:
-                l_dataset_obj.append(self.dataset_db[dataset_name_ii])
-                l_instmod_obj.append(self.model.get_instmod(dataset_name_ii))  # Define in Instmodel4DatasetAttr
-            model_allsameGPkernel = self.model.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[self.model.key_whole]
-
-            # Create the gp_simulator function
-            # For that I need the list of the parameter full names for the datasimulator
-            l_datasim_param_fullname = model_allsameGPkernel.params_model
-            gp_simulator, f_format_param, datasets_kwargs, l_params_new = noise_model_subclass.create_gpsimulator_and_formatinputs(model_instance=self.model, l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj, l_datasim_param_fullname=l_datasim_param_fullname, l_provided_param_fullname=l_param_name)
-
-            # Compute the simulated data
-            # For that I need the list of the indexes of the datasimulator parameter in the provided list pf parameters
-            l_idx_param_datasim = []
-            for param_fullname_ii in l_datasim_param_fullname:
-                l_idx_param_datasim.append(l_param_name.index(param_fullname_ii))
-            sim_data = model_allsameGPkernel(param[l_idx_param_datasim], **datasim_kwargs)
-            gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
-                                                param_noisemod=f_format_param(param),
-                                                l_datakwargs=datasets_kwargs,
-                                                tsim=t_model)
+            # De-supersamp the model if needed.
             if supersamp > 1:
-                gp_pred = average_supersampled_values(gp_pred, supersamp)
-                gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
-            model_wGP = model + gp_pred
-        else:
-            model_wGP = None
-            gp_pred = None
-            gp_pred_var = None
+                model = average_supersampled_values(model, supersamp)
 
-        return model, model_wGP, gp_pred, gp_pred_var
+            # Get the noise model subclass associated with the dataset
+            inst_mod_fullname = self.model.get_instmod_fullname(dataset_name)
+            inst_mod_obj = self.model.instruments[inst_mod_fullname]
+            noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(inst_mod_obj.noise_model)
+
+            # Compute GP contribution if needed.
+            if noise_model_subclass.has_GP:
+                # Get the list of datasets using the same GP kernel
+                l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
+                # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
+                # For that you need the list of dataset_object
+                # At the same time we will get the corresponding list of instrument objects required by for the gp simulator creation
+                l_dataset_obj = []
+                l_instmod_obj = []
+                for dataset_name_ii in l_dataset_sameGP:
+                    l_dataset_obj.append(self.dataset_db[dataset_name_ii])
+                    l_instmod_obj.append(self.model.get_instmod(dataset_name_ii))  # Define in Instmodel4DatasetAttr
+                model_allsameGPkernel = self.model.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[self.model.key_whole]
+
+                # Create the gp_simulator function
+                # For that I need the list of the parameter full names for the datasimulator
+                l_datasim_param_fullname = model_allsameGPkernel.params_model
+                gp_simulator, f_format_param, datasets_kwargs, l_params_new = noise_model_subclass.create_gpsimulator_and_formatinputs(model_instance=self.model, l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj, l_datasim_param_fullname=l_datasim_param_fullname, l_provided_param_fullname=l_param_name)
+
+                # Compute the simulated data
+                # For that I need the list of the indexes of the datasimulator parameter in the provided list pf parameters
+                l_idx_param_datasim = []
+                for param_fullname_ii in l_datasim_param_fullname:
+                    l_idx_param_datasim.append(l_param_name.index(param_fullname_ii))
+                sim_data = model_allsameGPkernel(param[l_idx_param_datasim])
+                gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
+                                                    param_noisemod=f_format_param(param),
+                                                    l_datakwargs=datasets_kwargs,
+                                                    tsim=t_model)
+                if supersamp > 1:
+                    gp_pred = average_supersampled_values(gp_pred, supersamp)
+                    gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
+                if model is not None:
+                    model_wGP = model + gp_pred
+                else:
+                    model_wGP = None
+            else:
+                model_wGP = None
+                gp_pred = None
+                gp_pred_var = None
+
+            return model, model_wGP, gp_pred, gp_pred_var
+        else:
+            logger.warning(f"{key_obj} doesn't exists in datasimulators.instrument_db.")
+            return None, None, None, None
 
     @property
     def lnposteriors(self):
@@ -563,7 +577,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         with open(join(pickle_folder, pickle_filename), "wb") as fpostinst:
             dump(dico, fpostinst)
 
-    def init_from_pickle(self, pickle_folder=".", pickle_filename=None):
+    def init_from_pickle(self, pickle_folder=".", pickle_filename=None, data_folder=None, run_folder=None):
         """Initialize the instance from the post_instance pickle file produced with save_post_instance.
 
         :param str pickle_folder: path to the folder containing the pickle file.
@@ -575,11 +589,18 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         with open(join(pickle_folder, pickle_filename), "rb") as fdico:
             dico = load(fdico)
         # define data and run folder
-        self.dataset_db.data_folder = dico["data_folder"]
-        self.run_folder = dico["run_folder"]
+        if data_folder is None:
+            data_folder = dico["data_folder"]
+        if run_folder is None:
+            run_folder = dico["run_folder"]
+        self.dataset_db.data_folder = data_folder
+        self.run_folder = run_folder
         # load datasetfile
         self.load_datasetsfile(dico["dataset_file"])
         # define model
+        # Temporary fix for define_model not taking transit_model and rv_model as argument anymore.
+        # transit_model = dico["model_kwargs"].pop("transit_model", None)  # For compatibility with previsous version
+        # rv_model = dico["model_kwargs"].pop("rv_model", None)  # For compatibility with previsous version
         self.define_model(category=dico["model_category"], name=dico["object_name"],
                           **dico["model_kwargs"])
         # Automatic model_init: Set parameterisation, set param_file and inst_cat_param_file and load them

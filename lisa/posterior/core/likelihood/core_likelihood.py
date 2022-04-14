@@ -73,7 +73,9 @@ class LikelihoodCreator(object):
             #     continue
 
             # ..., create the corresponding lnlikelihood doc function
-            db[dataset_name] = self._create_lnlikelihood(datasim)
+            # For IND dataset you might not want to model them. In this case the datasim should be None
+            if datasim is not None:
+                db[dataset_name] = self._create_lnlikelihood(datasim)
             # db[dataset_name] = self.__lnlike_withdataset_creator(lnlike_doc_func.function,
             #                                                      lnlike_doc_func.arg_list,
             #                                                      data=dataset.get_data(),
@@ -178,136 +180,6 @@ class LikelihoodCreator(object):
                                  include_dataset_kwarg=datasim.include_dataset_kwarg,
                                  mand_kwargs=None, opt_kwargs=None,
                                  output_info=output_info_like)
-
-    # def _create_lnlikelihood_old(self, datasim):
-    #     """Return the log likelihood doc function corresponding to a datasim doc function.
-    #
-    #     This function prepares the inputs for __likelihood_creator function which then use it.
-    #     __likelihood_creator just assembles all these to create the full ln likelihood.
-    #     The inputs of __likelihood_creator are the datasimulator (datasim), the list of the idx of
-    #     the parameters in the parameter array for the datasimulator (l_idx_param_dtsim), a dictionary
-    #     giving the inputs for the likelihood of each noise model involved (dico_noisemodel): the lnlike function
-    #     (lnlike_noisemod), the list of the indexes of the parameters of the noise model likelihood in
-    #     the parameter vector (l_idx_param_noisemod), an other dictionary (datasets) with information regarding the datasets involved:
-    #     the indexes of the simulated data corresponding to the dataset in the simulated data vector provided
-    #     by datasim (idx_simdata), the kwargs of each dataset (datakwargs).
-    #
-    #     - l_idx_param_dtsim is built by this function with range(len(datasim.params_model))
-    #     - dico_noisemodel:
-    #         - lnlike_noisemod is provided by Core_NoiseModel.get_prefilledlnlike
-    #         - l_idx_param_noisemod is provided by Core_NoiseModel.get_prefilledlnlike
-    #         - datasets:
-    #             - idx_simdata is provided by this function from range(datasim.noutput): List of index (one of each dataset associated with the noise model)
-    #             - datakwargs is provided by this function via Core_NoiseModel.get_necessary_datakwargs(dataset): list of dictionaries (one of each dataset associated with the noise model)
-    #
-    #     Parameters
-    #     ----------
-    #     datasim : DatasimDocFunc
-    #         DatasimDocFunc specifying the data type (instrument category) and at least instrument model
-    #         you want to get the likelyhood function of. The datasim function thus need to specify all
-    #         the instrument models for the function to be able to infer the noise models to use.
-    #
-    #     Returns
-    #     -------
-    #     lnlike : LikelihoodDocFunc
-    #         LikelihoodDocFunc giving the lnlikelihood asssociated to the datasim DatasimDocFunc provided
-    #         as argument. If the datasim function provided in argument includes the datasets then the
-    #         lnlikelihood function will also include them. Otherwise not
-    #     """
-    #     if not(datasim.include_dataset_kwarg):
-    #         raise NotImplementedError("For now _create_lnlikelihood doesn't handle datasim function"
-    #                                   "which do not include the dataset kwargs.")
-    #
-    #     # Construct the input dictionnary, dico_noisemodel for the __likelihood_creator function:
-    #     # See description of this dictionary in the docstring of __likelihood_creator
-    #     # Define a function for defaultdict class to match the structure for dico_noisemodel
-    #     def defdic_func():
-    #         return {key_noisemod_likefunc: None, key_lparnoisemod: [],
-    #                 key_dtst: {key_idxsim: [],
-    #                            key_dtkwarg: []
-    #                            }
-    #                 }
-    #
-    #     dico_noisemodel = defaultdict(defdic_func)
-    #
-    #     # Get the list of instrument model objects from the list of instrument model full name in
-    #     # the datasim function and the list of dataset object from the list of datasets in the
-    #     # datasim function
-    #     l_instmod = []
-    #     l_dataset = []
-    #     for ii in range(datasim.noutput):
-    #         if datasim.instmodel_fullname[ii] is None:
-    #             raise ValueError("To create a likelihood your datasim function cannot have an "
-    #                              "output that is not associated with an instrument model, because "
-    #                              "the instrument model give the noise model to use.")
-    #         l_instmod.append(self.instruments[datasim.instmodel_fullname[ii]])
-    #         if datasim.dataset[ii] is None:
-    #             l_dataset.append(None)
-    #         else:
-    #             l_dataset.append(self.dataset_db[datasim.dataset[ii]])
-    #         #     raise ValueError("For now to create a likelihood your datasim function cannot "
-    #         #                      "have an output that is not associated with a dataset.")
-    #
-    #     # Initialise instmod4noisemod dictionary giving the the list of instrument model object for
-    #     # each noise model: key = noise model name, value: list of instrument model objects.
-    #     instmod4noisemod = defaultdict(list)
-    #
-    #     # Initialise the output_info DataFrame for the LikelihoodDocFunc
-    #     output_info_like = datasim.output_info.copy()
-    #     output_info_like[noisemod_key] = None
-    #
-    #     # For each instrument model and dataset in the lists produced above, ...
-    #     for ii, instmod, dtst in zip(range(datasim.noutput), l_instmod, l_dataset):
-    #         # ... Set the associate noise model name in output_info_like
-    #         (output_info_like[noisemod_key]
-    #          [output_info_like[instmodfullname_key] == instmod.get_name(include_prefix=True, recursive=True)]) = instmod.noise_model
-    #         # ... add the index corresponding to these dataset and instmod in the output of the
-    #         # datasim function output in the "datasets" and "idx_simdata" section of the
-    #         # corresponding noise model in dico_noisemodel
-    #         dico_noisemodel[instmod.noise_model][key_dtst][key_idxsim].append(ii)
-    #         # ... add the dataset kwargs of the dataset in the "datasets" and "datakwargs" section
-    #         # of the corresponding noise model in dico_noisemodel
-    #         if dtst is None:
-    #             dico_noisemodel[instmod.noise_model][key_dtst][key_dtkwarg].append(None)
-    #         else:
-    #             noise_model = mgr_noisemodel.get_noisemodel_subclass(instmod.noise_model)
-    #             (dico_noisemodel[instmod.noise_model][key_dtst][key_dtkwarg].
-    #              append(noise_model.get_necessary_datakwargs(dtst)))
-    #         # ... add the instrument model obj to the list of instrument mod for the noise model
-    #         instmod4noisemod[instmod.noise_model].append(instmod)
-    #
-    #     # Create the list of indexes for the datasim function in the full list of params of the lnlike
-    #     # function
-    #     params_likelihood = datasim.params_model.copy()
-    #     l_idx_param_dtsim = range(len(params_likelihood))
-    #     # For each noise model, ...
-    #     for noisemod_name in instmod4noisemod:
-    #         # ... get the noise model subclass
-    #         noise_model = mgr_noisemodel.get_noisemodel_subclass(noisemod_name)
-    #         # ... create the prefilled lnlike function thanks to the instruments model
-    #         # object and the l_datasim_param and also the list of indexes for the noise model
-    #         # parameters in the lnlike function parameter add them to dico_noisemodel
-    #         (dico_noisemodel[noisemod_name][key_noisemod_likefunc],
-    #          params_likelihood,
-    #          l_params_noisemod,
-    #          dico_noisemodel[noisemod_name][key_lparnoisemod],
-    #          ) = noise_model.get_prefilledlnlike(l_params=params_likelihood,
-    #                                              l_instmod_obj=instmod4noisemod[noisemod_name],
-    #                                              model_instance=self
-    #                                              )
-    #
-    #     logger.debug("Creation of a likelihood for datasim function:\n {}\nList of the indexes for the datasim"
-    #                  " function:\n{}\nAssociated dictionary of noise models:\n{}\nList of parameters"
-    #                  "for the likelihood function:\n{}"
-    #                  "".format(datasim._info, l_idx_param_dtsim, dico_noisemodel,
-    #                            params_likelihood))
-    #
-    #     return LikelihoodDocFunc(self.__likelihood_creator(datasim, l_idx_param_dtsim,
-    #                                                        dico_noisemodel),
-    #                              params_model=params_likelihood,
-    #                              include_dataset_kwarg=datasim.include_dataset_kwarg,
-    #                              mand_kwargs=None, opt_kwargs=None,
-    #                              output_info=output_info_like)
 
     def __likelihood_creator(self, datasim, l_idx_param_dtsim, dico_noisemodel,
                              include_dataset=True):

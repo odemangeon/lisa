@@ -138,15 +138,18 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
             inst_fullcat = dataset_info["inst_fullcat"]
             inst_name = dataset_info["inst_name"]
             inst_model = dico_df[dataset_filepath]["inst_mod"]
-            noise_model = dico_df[dataset_filepath]["noise_mod"]
 
             # Store the instrument model name associated to a dataset name in instmodel4dataset
             self.instmodel4dataset[dataset_name] = inst_model
 
             # Store the noise model subclass associated to an instrument model into datasetfile_db
             # (self)
-            self[inst_fullcat][inst_name][inst_model] = (mgr_noisemodel.
-                                                         get_noisemodel_subclass(noise_model))
+            noise_model = dico_df[dataset_filepath]["noise_mod"]
+            if noise_model not in ["none", "None"]:
+                self[inst_fullcat][inst_name][inst_model] = (mgr_noisemodel.
+                                                             get_noisemodel_subclass(noise_model))
+            else:
+                self[inst_fullcat][inst_name][inst_model] = None
 
         # Store the datasetsfile path into the read only datasetsfile_path property
         self.__datasetsfile_path = datasetsfile_path
@@ -159,7 +162,10 @@ class DatasetsFileDb(DatabaseInstLvlDataset):
                 for inst_model in self[inst_fullcat][inst_name]:
                     valid, inst_subclass = mgr_inst_dst.validate_inst_fullcat(inst_fullcat)
                     instmod_fullname = inst_subclass.build_instmod_fullname(inst_model=inst_model, inst_name=inst_name, inst_fullcat=inst_fullcat)
-                    res[instmod_fullname] = self[inst_fullcat][inst_name][inst_model].category
+                    if self[inst_fullcat][inst_name][inst_model] is not None:
+                        res[instmod_fullname] = self[inst_fullcat][inst_name][inst_model].category
+                    else:
+                        res[instmod_fullname] = None
         return res
 
     # @property

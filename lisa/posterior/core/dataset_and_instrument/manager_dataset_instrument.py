@@ -97,7 +97,7 @@ class Manager_Inst_Dataset(object):
             inst_cat = inst_instance.category
             if not(self.validate_inst_cat(inst_cat)):
                 raise ValueError("Provided inst_category ({}) is not amongst the valid instrument "
-                                 "categories: {}".format(self.get_available_inst_cat()))
+                                 "categories: {}".format(inst_cat, self.get_available_inst_cat()))
             if inst_cat not in self.__available_inst.keys():
                 self.__available_inst[inst_cat] = {}
             if inst_instance.has_subcategories:
@@ -383,9 +383,9 @@ class Manager_Inst_Dataset(object):
             Returns
             -------
             result: dictionnary with the interpration of the filename which contains the following keys:
-                - inst_cat : category of instrument used to take the data. e.g. "LC", "RV", ...
-                - inst_subcat : sub category of instrument used to take the data. e.g. "FWHM", None is this instrument category doesn't have subcategories
-                - inst_fullcat : full category of instrument used to take the data including or not the
+                - inst_category : category of instrument used to take the data. e.g. "LC", "RV", ...
+                - inst_subcategory : sub category of instrument used to take the data. e.g. "FWHM", None is this instrument category doesn't have subcategories
+                - inst_fullcategory : full category of instrument used to take the data including or not the
                     instrument sub category when needed.
                 - inst_name : give the number of the data file if there is several data files of the
                     same object observed with the same instrument

@@ -4,13 +4,14 @@
 Indicator model module.
 """
 from logging import getLogger
-from collections import OrderedDict, Counter, defaultdict
+from collections import OrderedDict, Counter, defaultdict, Iterable
 from unittest import TestCase
 
 from .polynomial_model import PolynomialIndicatorInterface
+from ..datasim_docfunc import DatasimDocFunc
+from ..datasimulator_toolbox import check_datasets_and_instmodels
+from ..core_instcat_model import Core_InstCat_Model
 from ...dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
-from ....core.model.datasim_docfunc import DatasimDocFunc
-from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels
 from .....tools.miscellaneous import spacestring_like
 from .....tools.human_machine_interface.QCM import QCM_utilisateur
 
@@ -19,23 +20,31 @@ from .....tools.human_machine_interface.QCM import QCM_utilisateur
 logger = getLogger()
 
 
-class IndicatorModelInterface(PolynomialIndicatorInterface):
-    """docstring for IndicatorModelInterface."""
+class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
+    """docstring for LC_InstCat_Model, interface class for a subclass of Core_Model."""
+
+    # Mandatory attributes for a sublass of Core_InstCat_Model
+    __inst_cat__ = IND_inst_cat
+    __has_instcat_paramfile__ = True
+    __default_paramfile_path__ = "IND_param_file.py"
+    __datasim_creator_name__ = "sim_IND"
+    __decorrelation_models__ = []
 
     # models available for the indicators
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one
 
     # Define the dictionary providing the default parameters values for each model
-    _default_param_values = {PolynomialIndicatorInterface._polynomial_method_name: PolynomialIndicatorInterface._default_param_values}
+    _default_param_values_4_indicator_model = {PolynomialIndicatorInterface._polynomial_method_name: PolynomialIndicatorInterface._default_param_values}
 
     # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
     __name_model_4_indicator_dict = "model_4_indicator"
 
-    def __init__(self):
+    def __init__(self, model_instance):
+        super(IND_InstCat_Model, self).__init__(model_instance=model_instance)
         # Define the dictionary giving the function to use to create the text of the dictionaries to defined the paremeters of each model for the parameter file
-        self.__create_text_methods = {self._polynomial_method_name: self.__create_text_polynomial_model}
+        self.__create_text_indicator_methods = {self._polynomial_method_name: self.__create_text_polynomial_model}
         # Define the dictionary giving the function to use to load the text of the dictionaries to defined the paremeters of each model for the parameter file
-        self.__load_text_methods = {self._polynomial_method_name: self.__load_text_polynomial_model}
+        self.__load_text_indicator_methods = {self._polynomial_method_name: self.__load_text_polynomial_model}
 
         # Define the dictionary giving the name of the dictionary to use in the parameter file in which the parameters of each model are going to be defined
         self.__dictname_4_model_indicator = {self._polynomial_method_name: self._polynomial_method_name + "_models"}
@@ -48,23 +57,25 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
 
         # Define the dictionary datasimcreator4indmodel
         self.__datasimcreator4indmodel = {self._polynomial_method_name: self._create_datasimulator_IND_Poly}
-        self.__kwargs_datasimcreator4indmodel = {self._polynomial_method_name: {"polynomial_order_name": self._polynomial_order_name}}  # For each indicator method the dictionary will be passed to the datasim creator function pointed by self.__datasimcreator4indmodel
+        self.__kwargs_datasimcreator4indmodel = {self._polynomial_method_name: {"polynomial_order_name": self._polynomial_order_name,
+                                                                                }
+                                                 }  # For each indicator method the dictionary will be passed to the datasim creator function pointed by self.__datasimcreator4indmodel
         self.__init_indmodel4indmodel = {self._polynomial_method_name: self._init_polynomialind_model}
 
         # Initialise the params_indicator_models
         self.__params_indicator_models = {}
         for model, l_inst_subcat in self.indicator_subcategories_4_model_used.items():
             self.__params_indicator_models[model] = {
-                inst_subcat: self._default_param_values[self.model_4_indicator[inst_subcat]].copy() for inst_subcat in l_inst_subcat}
+                inst_subcat: self._default_param_values_4_indicator_model[self.model_4_indicator[inst_subcat]].copy() for inst_subcat in l_inst_subcat}
 
-        # Check that there is a key for each model in _default_param_values
-        TestCase().assertSequenceEqual(list(self._default_param_values.keys()), self.__available_models_4_indicators__)
+        # Check that there is a key for each model in _default_param_values_4_indicator_model
+        TestCase().assertSequenceEqual(list(self._default_param_values_4_indicator_model.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a create_text_methods for each model
-        TestCase().assertSequenceEqual(list(self.__create_text_methods.keys()), self.__available_models_4_indicators__)
+        TestCase().assertSequenceEqual(list(self.__create_text_indicator_methods.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a load_text_methods for each model
-        TestCase().assertSequenceEqual(list(self.__load_text_methods.keys()), self.__available_models_4_indicators__)
+        TestCase().assertSequenceEqual(list(self.__load_text_indicator_methods.keys()), self.__available_models_4_indicators__)
 
         # Check that there is a dictionary name for each model
         TestCase().assertSequenceEqual(list(self.__dictname_4_model_indicator.keys()), self.__available_models_4_indicators__)
@@ -129,7 +140,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                               inst_model_fullname=inst_model_fullname,
                               dataset=dataset)
 
-    def _create_datasimulator_IND(self, inst_models=None, datasets=None):
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
         """Create the data simulator to be used for the indicators.
 
         Arguments
@@ -138,17 +149,30 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             List of intrument models corresponding to each datasets in datasets
         datasets    : List of IND_Dataset instances
             List of datasets
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
 
         Returns
         -------
         datasimulator : DatasimDocFunc
             Datasimulator simulating the list of datasets provided.
         """
-        # Check the content of inst_models and datasets argument and convert them into lists if only one instrument model/dataset is provided.
-        # The check_datasets_and_instmodels does much more than that but here I just need that
-        (l_dataset, l_inst_model, _, _, _, _, _) = check_datasets_and_instmodels(datasets, inst_models)
+        #############################################################
+        # Check the content of the datasets and inst_models arguments
+        #############################################################
+        # - Check the content of inst_models and datasets argument and transform them into two list l_inst_model
+        # and l_dataset which provide the couple (inst_model_obj, dataset) for each output of the datasimulator
+        # - Set multi True if the datasimulator has several outputs (several datasets to be simulated)
+        # - Set the inst_model_fullnames argument for the Datasim_DocFunc (instmod_docf)
+        # - Set the dst_ext extension to be used for the name of the datasimulator function
+        # - Set the instcat_docf, instmod_docf, dtsts_docf to be used as arguments inst_cat, inst_model_fullname,
+        # datasets in the Datasim_DocFunc.
+        l_dataset, l_inst_model, _, _, _, _, _, _ = check_datasets_and_instmodels(datasets, inst_models)
 
-        # 1. Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
+        ################################################################################################################################
+        # Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
+        ################################################################################################################################
         def defdictfunc():
             return {"datasets": [], "instmodels": []}
         datsimC_inputs = defaultdict(defdictfunc)
@@ -160,7 +184,10 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             # ... store the dataset and instrument model object in datsimC_inputs
             datsimC_inputs[ind_mod]["datasets"].append(dst)
             datsimC_inputs[ind_mod]["instmodels"].append(inst_mod_obj)
-        # 2. Compute a datasimulator for each indicator model (just one even if there is different indicators subcategories). Going to the right function
+
+        ##############################################################################################################################################
+        # Compute a datasimulator for each indicator model (just one even if there is different indicators subcategories). Going to the right function
+        ##############################################################################################################################################
         datsimC = OrderedDict()
         l_indmod = []
         # For each indicator model, ...
@@ -168,13 +195,13 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             # ... add the name of the indicator model to l_ind_mod
             l_indmod.append(ind_mod)
             # ... create the datasim function with all the datasets using this indicator model
-            datsimC[ind_mod] = self.datasimcreator4indmodel[ind_mod](key_whole=self.key_whole,   # self.key_whole comes from Core_Model
-                                                                     key_param=self.key_param,  # self.key_param comes from DatasimulatorCreator
-                                                                     key_mand_kwargs=self.key_mand_kwargs,  # self.key_param comes from DatasimulatorCreator
-                                                                     key_opt_kwargs=self.key_opt_kwargs,   # self.key_param comes from DatasimulatorCreator
-                                                                     **self.__kwargs_datasimcreator4indmodel[ind_mod],
-                                                                     inst_models=datsimC_inputs[ind_mod]["instmodels"], datasets=datsimC_inputs[ind_mod]["datasets"]
-                                                                     )  # self.key_whole is defined in Core_Model
+            datsimC[ind_mod] = self.datasimcreator4indmodel[ind_mod](**self.__kwargs_datasimcreator4indmodel[ind_mod],
+                                                                     INDcat_model=self.model_instance.instcat_models[self.inst_cat],
+                                                                     dataset_db=self.model_instance.dataset_db,
+                                                                     inst_models=datsimC_inputs[ind_mod]["instmodels"],
+                                                                     datasets=datsimC_inputs[ind_mod]["datasets"],
+                                                                     get_times_from_datasets=get_times_from_datasets
+                                                                     )
             dico_inputs_allind = {}
             for obj_key in datsimC[ind_mod].keys():
                 dico_inputs_allind[obj_key] = {"l_params": [],
@@ -239,6 +266,39 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             ind_mod, = list(datsimC.keys())
             return datsimC[ind_mod]
 
+    def get_l_instmod(self, inst_model=None, inst_name=None, inst_fullcat=None):
+        """Return the list of instrument model object for the instrument category
+        """
+        format_not_recognised = False
+        if inst_fullcat is None:
+            l_inst_fullcat = self.model_instance.get_inst_fullcat4inst_cat(inst_cat=self.inst_cat)
+        elif isinstance(inst_fullcat, str):
+            l_inst_fullcat = [inst_fullcat, ]
+        elif isinstance(inst_fullcat, Iterable):
+            if not(all([isinstance(inst_fullcat_i, str) for inst_fullcat_i in inst_fullcat])):
+                format_not_recognised = True
+            else:
+                l_inst_fullcat = inst_fullcat
+        else:
+            format_not_recognised = True
+        if format_not_recognised:
+            raise ValueError("inst_fullcat should be a str, an interable of str or None")
+        res = []
+        for inst_fullcat_i in l_inst_fullcat:
+            res.extend(self.model_instance.get_instmodel_objs(inst_model=None, inst_name=None, inst_fullcat=inst_fullcat_i,
+                                                              sortby_instfullcat=False, sortby_instname=False, sortby_instmodel=False,
+                                                              )
+                       )
+        return res
+
+    def get_l_instmod_full_name(self, inst_model=None, inst_name=None, inst_fullcat=None):
+        """Return the list of instrument model full name for the instrument category
+        """
+        return [inst_mod.full_name for inst_mod in self.get_l_instmod(inst_model=inst_model, inst_name=inst_name,
+                                                                      inst_fullcat=inst_fullcat
+                                                                      )
+                ]
+
     def _init_indmodel(self, inst_model_obj, indicator_model, kwargs_indicator_model):
         """Initialise the indicator model for a given instrument model
 
@@ -260,43 +320,32 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         # If not ind_model match indicator model then raise an error
         raise ValueError(f"Indicator model {indicator_model} is not implemented.")
 
-    def create_IND_param_file(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_instcat_paramfile(self, file_path):
         """Create the param file for definition of the indicators models.
 
         Arguments
         ---------
-        paramfile_path   : str
-            Path to the indicator parameter file (IND_param_file).
-        answer_overwrite : str
-            If the IND_param_file already exists, do you want to
-            overwrite it ? "y" or "n". If this is not provided the program will ask you interactively.
-        answer_create    : str
-            If the IND_param_file doesn't exists already, where do you want
-            to create it ? "absolute", "run_folder" or "error". If this not provide the program will ask you interactively.
+        file_path           : string
+            Path to the param_file.
         """
-        # Choose the parameter file path _choose_parameter_file_path is from Core_Model
-        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='IND_param_file.py', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)
-        if reply == "y":
-            with open(file_path, 'w') as f:
-                # Write the header
-                f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
-                # Put model_4_indicator dictionary
-                f.write(f"# Define the model to use for each indicator category. Available models are {self.available_models_4_indicators}\n")
-                f.write(self.__create_text_model_4_indicator())
-                # Put the model parametrisation directories
-                f.write("\n# Define the parameters of each models used.")
-                for model in self.indicator_models_used:
-                    f.write(f"\n\n# Define the parameters for model {model}.\n")
-                    f.write(self.__create_text_methods[model]())
-            logger.info("Parameter file created at path: {}".format(file_path))
-        else:
-            logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
-        self.paramfile4instcat[IND_inst_cat] = file_path  # paramfile4instcat is from Core_Model
+        with open(file_path, 'w') as f:
+            # Write the header
+            f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+            # Put model_4_indicator dictionary
+            f.write(f"# Define the model to use for each indicator category. Available models are {[None, ] + self.available_models_4_indicators}\n")
+            f.write(self.__create_text_model_4_indicator())
+            # Put the model parametrisation directories
+            f.write("\n# Define the parameters of each models used.")
+            for model in self.indicator_models_used:
+                f.write(f"\n\n# Define the parameters for model {model}.\n")
+                f.write(self.__create_text_indicator_methods[model]())
+        logger.info("Parameter file created at path: {}".format(file_path))
+        self.paramfile_instcat = file_path  # paramfile4instcat is from Core_Model
 
     def read_IND_param_file(self):
         """Read the content of the IND parameter file."""
-        if self.isdefined_INDparamfile:
-            with open(self.paramfile4instcat[IND_inst_cat]) as f:
+        if self.isdefined_paramfile_instcat:
+            with open(self.paramfile_instcat) as f:
                 exec(f.read())
             dico = locals().copy()
             dico.pop("self")
@@ -305,7 +354,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                          "".format(dico.keys()))
             return dico
         else:
-            raise IOError("Impossible to read IND parameter file: {}".format(self.paramfile4instcat[IND_inst_cat]))
+            raise IOError("Impossible to read IND parameter file: {}".format(self.paramfile_instcat))
 
     def __create_text_model_4_indicator(self):
         """Create the string giving the model_4_indicator dictionary for the parameter file.
@@ -315,13 +364,13 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         text : str
             String giving the text for the model_4_indicator dictionary for the indicator parameter file
         """
-        text = f"{self.__name_model_4_indicator_dict} = {{"
+        text = f"{self.__name_model_4_indicator_dict} =" + " {"
         tab = spacestring_like(text)
         for ii, inst_subcat in enumerate(self.indicator_subcategories):
             if ii != 0:
                 text += f"\n{tab}"
             text += f"'{inst_subcat}': '{self.model_4_indicator[inst_subcat]}',"
-        text += f"\n{tab}}}\n"
+        text += f"\n{tab}" + "}\n"
         return text
 
     def __check_IND_param_file(self, dico_config):
@@ -363,6 +412,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         error_list.extend(errors)
         # 3 and 4.
         used_models = list(set(dico_config[self.__name_model_4_indicator_dict].values()))
+        if None in used_models:
+            used_models.remove(None)
         missing_usedmodel_dict_name = [self.__dictname_4_model_indicator[model] for model in used_models]
         model_name_4_model_dict_name = {self.__dictname_4_model_indicator[model]: model for model in used_models}
         model_dict_names_defined = list(dico_config.keys())
@@ -419,7 +470,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         """
         self.__model_4_indicator = model_4_indicator
 
-    def load_IND_param_file(self, answer_recreate=None):
+    def load_instcat_paramfile(self, answer_recreate=None):
         """Load the param file for indicators.
         """
         assert len(self.indicator_models_used) > 0, "There should be a model used by default."
@@ -438,7 +489,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             dict_valid.pop(self.__name_model_4_indicator_dict)
             for model, valid in dict_valid.items():
                 if valid:
-                    self.__load_text_methods[model](dico_config[self.__dictname_4_model_indicator[model]])
+                    self.__load_text_indicator_methods[model](dico_config[self.__dictname_4_model_indicator[model]])
             if len(missing_usedmodel_dict_name) > 0:
                 logger.warning(f"The dictionary to parametrize the following indicator models are missing in the indicator parameter file: {missing_usedmodel_dict_name}")
                 inconsistency = True
@@ -459,8 +510,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
             if inconsistency and (rep == "n"):
                 raise ValueError(f"The content of the indicator parameter file is not valid. Here is the list of detected errors: {error_list}")
             elif inconsistency and (rep == "y"):
-                self.create_IND_param_file(paramfile_path=self.paramfile4instcat[IND_inst_cat], answer_overwrite="y", answer_create=None)
-                input("Modify the IND specific paramerisation file: {}".format(self.paramfile4instcat[IND_inst_cat]))
+                self.create_IND_param_file(paramfile_path=self.paramfile_instcat, answer_overwrite="y", answer_create=None)
+                input("Modify the IND specific paramerisation file: {}".format(self.paramfile_instcat))
 
     @property
     def model_4_indicator(self):
@@ -473,16 +524,11 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         return self.__model_4_indicator
 
     @property
-    def isdefined_INDparamfile(self):
-        """Return True is the attribute param_file has been defined."""
-        return self.isdefined_paramfile_instcat(inst_cat=IND_inst_cat)
-
-    @property
     def indicator_fullcategories(self):
         """Return all indicator full categories in the current model.
         """
         list_indicator_fullcategories = []
-        for inst_fullcat in self.inst_fullcategories:  # self.instfullcategories is from InstrumentContainerInterface Interface class of Core_Model
+        for inst_fullcat in self.model_instance.inst_fullcategories:  # self.instfullcategories is from InstrumentContainerInterface Interface class of Core_Model
             if IND_Instrument.validate_inst_fullcat(inst_fullcat):
                 list_indicator_fullcategories.append(inst_fullcat)
         return list_indicator_fullcategories
@@ -502,7 +548,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
 
         Arguments
         ---------
-        model : str
+        model : str or None
             String giving the model that you want to validate
 
         Returns
@@ -510,7 +556,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         valid : boolean
             True is model is a valid indicator model, False otherwise
         """
-        return model in self.available_models_4_indicators
+        return (model in self.available_models_4_indicators) or (model is None)
 
     @property
     def available_models_4_indicators(self):
@@ -552,7 +598,7 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
                 Values: Parameter value
 
         Initialised in __init__ of IndicatorModelInterface
-        Updated in __load_model_4_indicator_dict and all methods in __load_text_methods
+        Updated in __load_model_4_indicator_dict and all methods in __load_text_indicator_methods
         """
         return self.__params_indicator_models
 
@@ -600,8 +646,8 @@ class IndicatorModelInterface(PolynomialIndicatorInterface):
         for indicator_subcat in indicators_using_model:
             # Check the presence of all parameters
             dict_indicator = dict_model[indicator_subcat]
-            if Counter(list(dict_indicator.keys())) != Counter(self._default_param_values[self._polynomial_method_name].keys()):
-                error_list.append(f"There is an inconsistency between the parameters provided for the polynomial model of {indicator_subcat} ({list(dict_indicator.keys())}) and the expected list of parameters ({self._default_param_values[self._polynomial_method_name].keys()})")
+            if Counter(list(dict_indicator.keys())) != Counter(self._default_param_values_4_indicator_model[self._polynomial_method_name].keys()):
+                error_list.append(f"There is an inconsistency between the parameters provided for the polynomial model of {indicator_subcat} ({list(dict_indicator.keys())}) and the expected list of parameters ({self._default_param_values_4_indicator_model[self._polynomial_method_name].keys()})")
             # Check values of all parameters
             if not isinstance(dict_indicator[self._polynomial_order_name], int):
                 error_list.append(f"Parameter {dict_indicator[self._polynomial_order_name]} for the polynomial model of {indicator_subcat} should be an int.")

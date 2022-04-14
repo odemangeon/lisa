@@ -74,8 +74,11 @@ class InstrumentContainerInterface(object):
     @property
     def noisemodel_categories(self):
         """Return the list of noise model categories used."""
-
-        return list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
+        l_noisemodels_used = list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
+        # Remove None in case it is used.
+        if None in l_noisemodels_used:
+            l_noisemodels_used.remove(None)
+        return l_noisemodels_used
 
     def get_inst_fullcat4inst_cat(self, inst_cat):
         """Return the list of unique instrument full category that correspond to a provided instrument category.
@@ -177,9 +180,9 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             mod = self[inst_mod_name]
             result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
             if no_duplicate:
-                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_mod:
-                    if param.get_name(include_prefix=True, recursive=True) not in result_param_name:
+                    if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
                         result.append(param)
             else:
                 result.extend(result_mod)
@@ -252,14 +255,14 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             inst_fullcat_code = inst_subclass.inst_fullcat_to_code(inst_fullcat=inst_fullcat)
             text += f"{text_tab}# {instrument_model_category} {inst_fullcat}\n"
             if quote_name:
-                entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}{{"
+                entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}" + "{"
             else:
-                entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}{{"
+                entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}" + "{"
             text += f"{text_tab}{entete_inst_fullcat}"
             extra_tab = spacestring_like(entete_inst_fullcat)
             first_instrument_name = True
             for inst_name in self[inst_fullcat]:
-                entete_inst_name = f"'{inst_name}': {{"
+                entete_inst_name = f"'{inst_name}': " + "{"
                 if first_instrument_name:
                     text += entete_inst_name
                     first_instrument_name = False
@@ -276,7 +279,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                     text += ",\n"
                 model_name_def = list(self[inst_fullcat][inst_name].keys())[0]
                 text_instmod4dataset = ""
-                for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
+                for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
                     number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
                     model_name = model_instance.instmodel4dataset[datasetname]
                     text_instmod4dataset += "{}: '{}', ".format(number, model_name)
@@ -294,7 +297,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
             if hasattr(inst_subclass, "_get_instcat_paramfilesection"):
                 func = getattr(inst_subclass, "_get_instcat_paramfilesection")
                 text += func(text_tab=text_tab + extra_tab, model_instance=model_instance)
-            text += f"\n{text_tab + extra_tab}}}\n\n"
+            text += f"\n{text_tab + extra_tab}" + "}\n\n"
         return text
 
     def update_paramfile_info(self, inst_db_info):
@@ -390,7 +393,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                                                                           model_instance=model_instance,
                                                                           available_joint_priors=available_joint_priors)
                 # Load which instrument model to use for which dataset
-                for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name):
+                for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
                     number = mgr_inst_dst.interpret_data_filename(dataset)["number"]
                     inst_model = dico_config[inst_fullcat_code][inst_name][string4datasetdico][number]
                     if model_instance.instmodel4dataset[dataset] != inst_model:

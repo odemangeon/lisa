@@ -26,6 +26,9 @@ logger = getLogger()
 class Named_Parameter(Named):
     """docstring for Named_Parameter(Named):."""
 
+    def __repr__(self):
+        return "<{} {}>".format(self.__class__.__name__, self.get_name(include_prefix=True, recursive=True, force_no_duplicate=True))
+
     def get_name(self, include_prefix=False, code_version=False, recursive=False, prefix_kwargs=None,
                  force_no_duplicate=False):
         """Return the name of the parameter.
@@ -155,7 +158,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
         if self.duplicate is None:
             return self.__main
         else:
-            self.duplicate.main
+            return self.duplicate.main
 
     @main.setter
     def main(self, boolean):
@@ -175,7 +178,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
         if self.duplicate is None:
             return self.__value
         else:
-            self.duplicate.value
+            return self.duplicate.value
 
     @value.setter
     def value(self, val):
@@ -237,7 +240,7 @@ class Parameter(Named_Parameter, Parameter_Prior):
             entete = "'{}'{}{{"
         else:
             entete = "{}{}{{"
-        entete = entete.format(self.code_name, entete_symb)
+        entete = entete.format(self.get_name(recursive=False, include_prefix=False, code_version=False), entete_symb)
         space_entete_param = spacestring_like(entete)
         text = ""
         # First is the name of the parameter
@@ -276,7 +279,9 @@ class Parameter(Named_Parameter, Parameter_Prior):
                             if dico_config[carac] is None:
                                 setattr(self, carac, dico_config[carac])
                             else:
-                                param_duplicated = model_instance.get_parameter(dico_config[carac], main=True, free=True, recursive=True)
+                                param_duplicated = model_instance.get_parameter(dico_config[carac],
+                                                                                kwargs_get_list_params={'recursive': True, 'main': True, 'no_duplicate': False},
+                                                                                kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True, 'code_version': False})
                                 setattr(self, carac, param_duplicated)
                         else:
                             setattr(self, carac, dico_config[carac])

@@ -7,10 +7,10 @@ The Objective of this file is to define the different type of parametrisation av
 """
 from logging import getLogger
 
-from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.rv import RV_inst_cat
-from ..dataset_and_instrument.indicator import IND_inst_cat
-from ...core.model.core_parametrisation import Core_Parametrisation
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
+from ....core.model.core_parametrisation import Core_Parametrisation
+from ....core.dataset_and_instrument.indicator import IND_inst_cat
 
 
 ## Logger Object
@@ -125,14 +125,29 @@ class GravGroup_Parametrisation(Core_Parametrisation):
         See Eastman, J., et al., 2013, Publications of the Astronomical Society of the Pacific,
         Volume 125,Number 923.
         """
+        ##################################################
         # Apply the parametrisation to the star parameters
+        ##################################################
+        # Systemic velocity (RVs)
         if RV_inst_cat in set(self.dataset_db.inst_categories):
             self.apply_star_SystemicRV_parametrisation()
 
+        # Stellar density (orbit Multis parametrisation)
         if (LC_inst_cat in set(self.dataset_db.inst_categories)) and (self.parametrisation == "Multis"):
             star_name = list(self.paramcontainers["stars"].keys())[0]
             self.paramcontainers["stars"][star_name].rho.main = True
             self.paramcontainers["stars"][star_name].rho.unit = "Solar density"
+
+        # Stellar effective temperature (Phase curve if spiderman and zhang brightness model)
+        if LC_inst_cat in set(self.dataset_db.inst_categories):
+            for planet in self.planets.values():
+                planet_name = planet.get_name()
+                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['do']:
+                    for l_mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
+                        for mod_comp_name in l_mod_comp_name:
+                            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                    self.paramcontainers["stars"][star_name].Teff.main = True
 
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -151,6 +166,19 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             self.paramcontainers["planets"][planet_name].tic.unit = "[time of the RV data]"
             self.paramcontainers["planets"][planet_name].ecosw.main = True  # Unit already defined in celestial_bodies
             self.paramcontainers["planets"][planet_name].esinw.main = True  # Unit already defined in celestial_bodies
+            if LC_inst_cat in set(self.dataset_db.inst_categories):
+                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['do']:
+                    for l_mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
+                        for mod_comp_name in l_mod_comp_name:
+                            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                    self.paramcontainers["planets"][planet_name].a.main = True
+                                    self.paramcontainers["planets"][planet_name].a.unit = "AU"
+                                    self.paramcontainers["planets"][planet_name].u1.main = True
+                                    self.paramcontainers["planets"][planet_name].u2.main = True
+                                    self.paramcontainers["planets"][planet_name].xi.main = True
+                                    self.paramcontainers["planets"][planet_name].Tn.main = True
+                                    self.paramcontainers["planets"][planet_name].deltaT.main = True
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
@@ -165,9 +193,10 @@ class GravGroup_Parametrisation(Core_Parametrisation):
     def apply_instmodel_parametrisation(self):
         """Apply the instmodel parametrisation according to the parametrisation chosen."""
         if RV_inst_cat in set(self.dataset_db.inst_categories):
+            RV_instcat_model = self.instcat_models[RV_inst_cat]
             DeltaRV_main = self.parametrisation_kwargs.get("with_DeltaRV", False)
-            RVrefglobal_instname = self.RV_globalref_instname
-            RVrefglobal_modname = self.get_RVref4inst_modname(RVrefglobal_instname)
+            RVrefglobal_instname = RV_instcat_model.RV_globalref_instname
+            RVrefglobal_modname = RV_instcat_model.get_RVref4inst_modname(RVrefglobal_instname)
             list_instmodel = self.get_instmodel_objs(inst_fullcat=RV_inst_cat)  # self.get_instmodel_objs comes from InstrumentContainerInterface
             for inst_model in list_instmodel:
                 inst_name = inst_model.instrument.get_name()
@@ -175,23 +204,37 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                 if not(DeltaRV_main) or ((inst_name == RVrefglobal_instname) and (inst_model.get_name() == RVrefglobal_modname)):
                     inst_model.DeltaRV.free = False
                     inst_model.DeltaRV.value = 0.0
+                RV_instcat_model.apply_instmod_parametrisation(inst_mod_obj=inst_model)
         if LC_inst_cat in set(self.dataset_db.inst_categories):
+            LC_instcat_model = self.instcat_models[LC_inst_cat]
             list_instmodel = self.get_instmodel_objs(inst_fullcat=LC_inst_cat)
             for inst_model in list_instmodel:
-                inst_model.init_OOT_var_parameters(with_OOT_var=self.parametrisation_kwargs.get("with_OOT_var", False),
-                                                   OOT_var_order=self.parametrisation_kwargs.get("OOT_var_order", None))
+                LC_instcat_model.apply_instmod_parametrisation(inst_mod_obj=inst_model)
+
         if IND_inst_cat in set(self.dataset_db.inst_categories):
             l_inst_fullcat_IND = self.instruments.get_inst_fullcat4inst_cat(inst_cat=IND_inst_cat)
             for inst_fullcat_i in l_inst_fullcat_IND:
                 list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
                 for inst_model in list_instmodel:
-                    indicator_model = self.model_4_indicator[inst_model.instrument.indicator_category]
-                    self._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
-                                        kwargs_indicator_model=self.params_indicator_models[indicator_model])
+                    indicator_model = self.instcat_models["IND"].model_4_indicator[inst_model.instrument.indicator_category]
+                    if indicator_model is not None:
+                        self.instcat_models[IND_inst_cat]._init_indmodel(inst_model_obj=inst_model, indicator_model=indicator_model,
+                                                                         kwargs_indicator_model=self.instcat_models["IND"].params_indicator_models[indicator_model])
+        # Decorrelation
+        for inst_cat in self.dataset_db.inst_categories:
+            # if inst_cat.startswith("IND"):
+            #     import pdb; pdb.set_trace()
+            instcat_model = self.instcat_models[inst_cat]
+            if instcat_model.decorrelate_available:
+                l_inst_fullcat = self.instruments.get_inst_fullcat4inst_cat(inst_cat=inst_cat)
+                for inst_fullcat_i in l_inst_fullcat:
+                    list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
+                    for inst_model in list_instmodel:
+                        instcat_model.apply_instmod_parametrisation_decorrelation(inst_mod_obj=inst_model)
 
     def limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
         if LC_inst_cat in set(self.dataset_db.inst_categories):
-            for LD_parcont in self.get_list_LD_parconts():
+            for LD_parcont in self.instcat_models[LC_inst_cat].get_list_LD_parconts():
                 for param in LD_parcont.get_list_params(no_duplicate=True):
                     param.main = True

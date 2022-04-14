@@ -5,18 +5,20 @@ Script template to analysis the chains obtained during the MCMC exploration
 
 @TODO:
 """
+import gc
+
 from logging import DEBUG, INFO
 from os import getcwd
 from os.path import join
-import gc
+from unittest import TestCase
 
-from corner import corner
 import matplotlib
 import matplotlib.pyplot as pl
-# from numpy import median, zeros, where, sqrt
 import numpy as np
 import pandas as pd
 import astropy.units as uu
+
+from corner import corner
 
 # If needed, add lisa folder to the python path here
 # lisa_folder = ".."  # Change this if needed
@@ -28,17 +30,18 @@ import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.exoplanet.exploration_analysis_tools.secondary_parameters as sp
 import lisa.tools.stats.distribution_anali as da
 import lisa.tools.mylogger as ml
+
 from lisa.tools.chain_interpreter import ChainsInterpret
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.plot import hist_lnprob
-from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+# from lisa.posterior.exoplanet.model.gravgroup.datasim_creator_rv import RVdrift_tref_name
 
 ###############################
 ## Definition of the parameters
 ###############################
-obj_name = "WASP-151"  # Name of you target star
-kwargs_datasim = {}  # Additional argument to pass to the datasimulator function. For example reference times.
-star_kwargs = {"M": {"value": 1.077,  # Stellar parameter value and error bars (1-sigma)
+obj_name = "WASP-151"  # Change
+kwargs_datasim = {}
+star_kwargs = {"M": {"value": 1.077,
                      "error": 0.081},
                "R": {"value": 1.14,
                      "error": 0.03},
@@ -49,12 +52,8 @@ star_kwargs = {"M": {"value": 1.077,  # Stellar parameter value and error bars (
 output_folders = get_def_output_folders(run_folder=getcwd())  # Folder for the outputs
 
 # At the end of script_mcmcexploration.py the results of the MCMC exploration and the model are stored
-# in pickle files. If these object are not in Memory and you want to load them from the pickle file, set
-# load_from_pickle to True
-load_from_pickle = True  # Load the MCMC exploration results from saved files
+# in pickle files. If these object are not in Memory and the code will load them from the pickle file
 extension_exploration = "_initrun"  # extension of your exploration (Needs to be the same than in you script_mcmcexploration)
-do_create_chainI = False  # For convenience, the chains (from the emcee sample) are stored in a different object that you need to create at first.
-                          # The emcee sampler will be deleted to save space. So once you have done it if you try to do it again without loading the emcee sampler, this will crash
 
 # Save plots ?
 save_plots = True  # Save all the plots.
@@ -70,15 +69,15 @@ do_hist = False  # Histograms of the lnposteriors can be very long to produce wh
 do_traces = False  # Trace plots can also be very long to produce. So in some cases, it can save you a lot of time not to do them at first
 
 # Raw trace plots and hist of the lnposterior
-do_RP = True  # Do chain trace plot and histogram of the lnposterior plot for raw chains
-thin_RP = 10  # thining factor for the traces plots
+do_RP = False  # Do chain trace plot and histogram of the lnposterior plot for raw chains
+thin_RP = 100  # thining factor for the traces plots
 
 # Acceptance fraction selection
 # The idea for this step is to remove the chains whose acceptance fraction is too low compared to the rest.
 # To use with caution !
 # All chain whose acceptance fraction is < quantile_AFS - sig_fact_AFS * MAD(Acceptance fraction of all chains) will be removed
 do_AFS = True  # Do the acceptance fraction selection
-sig_fact_AFS = 2  # Sigma clipping value.
+sig_fact_AFS = 5  # Sigma clipping value.
 quantile_AFS = 75  # Quantile of the acceptance fraction of all chains that you want to use as reference
 verbose_AFS = 1  # More outputs on screen
 plot_hist_AF = True  # Do the diagnostic plot for this step.
@@ -91,16 +90,16 @@ thin_AFS = 100  # Thining factor for the trace plots
 # The value of the lnposterior obtianed by each chain will be the quantile (quantile_walker_LPS) of the posterior values of the chain.
 # Then all chain whose lnposterior is < quantile_LPS(quantile_walkers_LPS) - sig_fact_LPS * MAD(quantile_walkers_LPS) will be removed
 do_LPS = True  # Do the ln posterior selection
-sig_fact_LPS = 3  # Sigma clipping value.
+sig_fact_LPS = 6  # Sigma clipping value.
 quantile_LPS = 100  # Quantile of the quantile_walker_LPS of all chains that you want to use as reference
 quantile_walker_LPS = 100  # Each walker get as representation lnposterior value the quantile_walker_LPS quantile of it lnposterior chain
 verbose_LPS = 1   # More outputs on screen
 plot_hist_Post = True  # Do the diagnostic plot for this step.
-thin_LPS = 10  # Thining factor for the trace plots
+thin_LPS = 100  # Thining factor for the trace plots
 
 # Trace plots and hist of the lnposterior after AFS and LPS
-do_AFSLPSP = True  # Do chain plot and histogram plot after AFS and LPSs
-thin_AFSLPSP = 10
+do_AFSLPSP = False  # Do chain plot and histogram plot after AFS and LPSs
+thin_AFSLPSP = 100
 
 # Convergence and burnin determination
 # The idea of this step is to determine the burnin fraction of this chain
@@ -109,7 +108,7 @@ thin_AFSLPSP = 10
 # 1. do_GS = True and apply_min_burnin = False
 # 2. Identify the burning thanks to the geweke plot
 # 3. do_GS = False and apply_min_burnin = True with min_burnin = the burnin that you identified
-do_GS = True  # Do the geweke selection diagnostic
+do_GS = False  # Do the geweke selection diagnostic
 geweke_thres = 2.  # Geweke threshold
 last_perc_GS = 10  # Percentage of the chains used as final state the chains in the geweke selection.
 # The rest of the chains will be used to estimate the moment when convergence is reach,
@@ -124,8 +123,8 @@ do_hist_after_geweke = True  # Do the histogram of the lnposterior
 extra_burnin_4_hist_after_geweke = 0  # apply an an extra burnin to the values identified by the geweke algorithm before doing the lnposterior histogram
 sigma_clip_hist_after_geweke = 5  # Sigma clipping for the histogram of the lnposterior
 apply_min_burnin = False  # Will apply a given burnin to all chains even if you did the geweke selection first
-min_burnin = 10000  # Valeu of the burnin to use
-thin_GS = 10  # Thining factor for the trace plots
+min_burnin = 100  # Valeu of the burnin to use
+thin_GS = 100  # Thining factor for the trace plots
 
 # Parameter based walker selection
 # If you have multiple maxima even after all the selection you can use this two separate them
@@ -151,30 +150,29 @@ plot_hist_PS = True
 save_walkersandburnins = True  # Save the walkers selection and burnin values
 
 # Determine best fit values and error bars
-do_bestfit = True
+do_bestfit = False
 method_bestfit = "median"  # Method to use to determine the best values for the parameter. Can be 'median' or 'MAP'
 save_results_bestfit = True
 
 # Do Corner plot
-do_corner = True
-sampling_corner = 10  # thining factor for the corner plot
+do_corner = False
+sampling_corner = 100  # thining factor for the corner plot
 
 # Do model comparison
-do_MComp = True
-do_MComp_Folded = True
+do_MComp = False
 oversamp_MComp = 30
 load_fitted_val_pickle = False
 save_modelsNresiduals = True
 
 # Do compute secondary parameters
-do_SecParam = True
+do_SecParam = False
 force_finite = False
 units = {"K": "kms"}
 units_dict = {"K": uu.km / uu.s}
 omega_0to360 = False
 save_results_bestfit_secpar = True
-do_corner_sec = False
-sampling_corner_sec = 100
+do_corner_sec = True
+sampling_corner_sec = 500
 thin_SecParam = 100
 
 # Do computation of the BIC
@@ -188,14 +186,14 @@ only_bestfit_bic = True
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file="{}.log".format(obj_name))
+                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 # Set matplotlib rcparams to the default value to avoid issues with plots
 matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 logger.info("########\nCHAIN ANALYSIS")
 
-if load_from_pickle:
+if any([var not in globals() for var in ["post_instance", "lnprobability", "acceptance_fraction", "l_param_name"]]):
     logger.info("0. Load from pickle")
     # recreate post_instance object
     post_instance = cpost.Posterior(object_name=obj_name)
@@ -203,10 +201,10 @@ if load_from_pickle:
     l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
     chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
                                                                                    folder=output_folders["pickles_explore"])
-    print("l_param_name from posterior:\n{}".format(l_param_name_bis))
-    print("l_param_name from pickle:\n{}".format(l_param_name))
+    tc = TestCase()
+    tc.assertCountEqual(l_param_name_bis, l_param_name)
 
-if do_create_chainI:
+if "chainI" not in globals():
     nstep = chain.shape[1]
     nwalker = chain.shape[0]
     lnprobability_name = "lnposterior"
@@ -355,9 +353,9 @@ if do_GS:
     if interval_efficiency < min_intervals_efficiency_GS:
         nstep_between_intervals = interval_step / def_intervals_efficiency_GS
         intervals = int(nstep / nstep_between_intervals)
-        logger.warning("The interval efficiency ({interval_eff}) is below the minimum threshold (interval_eff_min). "
-                       "The number of interval is forced to {intervals} to obtain an efficiency of {def_interval_eff_def}"
-                       "".format(interval_eff=interval_efficiency, interval_eff_min=min_intervals_efficiency_GS, intervals=intervals, def_interval_eff_def=def_intervals_efficiency_GS))
+        logger.warning(f"The interval efficiency ({interval_efficiency}) is below the minimum threshold ({min_intervals_efficiency_GS}). "
+                       f"The number of interval is forced to {intervals} to obtain an efficiency of {def_intervals_efficiency_GS}"
+                       )
     zscores, l_first_i_step = et.geweke_multi(chainI, first=interval_step / nstep, last=last_step / nstep,
                                               intervals=intervals, l_walker=l_walker)
     l_burnin, l_walker_conv = et.geweke_selection(zscores, first_steps=l_first_i_step, geweke_thres=geweke_thres,
@@ -452,7 +450,7 @@ if do_PS:
         ax.set_ylim(ylims)
         ax.set_xlabel("Percentage of each walker which statisfy the criteria [%]")
         ax.set_ylabel("Counts")
-        ax.set_title(f"Histogram of the selection criteria satisfaction")
+        ax.set_title("Histogram of the selection criteria satisfaction")
         ax.legend()
         if save_plots:
             pl.savefig(join(output_folders["plots"], f"hist_param_selection{extension_outputs}.pdf"))
@@ -518,30 +516,6 @@ if do_MComp:
         pl.show()
     pl.close("all")
 
-    if do_MComp_Folded:
-        planet_name = []
-        periods = {}
-        tics = {}
-        for planet in post_instance.model.planets.values():
-            planet_name.append(planet.get_name())
-            periods[planet.get_name()] = df_fittedval.loc[planet.P.get_name(include_prefix=True, recursive=True), 'value']
-            tics[planet.get_name()] = df_fittedval.loc[planet.tic.get_name(include_prefix=True, recursive=True), 'value']
-
-        et.overplot_data_model(param=fitted_val_plot, l_param_name=l_param_chainI,
-                               datasim_dbf=post_instance.datasimulators,
-                               dataset_db=post_instance.dataset_db,
-                               post_instance=post_instance,
-                               datasim_kwargs=kwargs_datasim,
-                               oversamp=oversamp_MComp, phasefold=True,
-                               phasefold_kwargs={"planets": list(periods.keys()),
-                                                 "P": periods.values(),
-                                                 "tc": tics.values()})
-        if save_plots:
-            pl.savefig(join(output_folders["plots"], f"data_comparison_pholded{extension_outputs}.pdf"))
-        else:
-            pl.show()
-        pl.close("all")
-
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
     chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
@@ -580,13 +554,14 @@ if do_SecParam:
 
     logger.info("Determine best fit values and error bars for secondary parameters")
     fitted_values_sec, _ = et.get_fitted_values(chainIsec, method=method_bestfit, l_param_name=l_param_chainIsec,
-                                             l_walker=l_walker_PS, l_burnin=l_burnin_PS,
-                                             lnprobability_name=lnprobability_name, force_finite=force_finite)
+                                                l_walker=l_walker_PS, l_burnin=l_burnin_PS,
+                                                lnprobability_name=lnprobability_name, force_finite=force_finite)
     sigma_p_sec, _, sigma_m_sec, _ = da.getconfi(et.get_clean_flatchain(chainIsec,
-                                                                     l_walker=l_walker_PS,
-                                                                     l_burnin=l_burnin_PS, force_finite=force_finite),
-                                              level=1, centre=fitted_values_sec,
-                                              l_param_name=l_param_chainIsec)
+                                                                        l_walker=l_walker_PS,
+                                                                        l_burnin=l_burnin_PS, force_finite=force_finite
+                                                                        ),
+                                                 level=1, centre=fitted_values_sec, l_param_name=l_param_chainIsec
+                                                 )
     df_fittedval = pd.concat([df_fittedval, pd.DataFrame(index=l_param_chainIsec,
                                                          data={'value': fitted_values_sec,
                                                                'sigma-': sigma_m_sec,

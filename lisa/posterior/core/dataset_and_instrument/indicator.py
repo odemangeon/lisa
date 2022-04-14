@@ -11,8 +11,8 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
-from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
+from .dataset import Core_Dataset
+from .instrument import Core_Instrument
 
 
 ## Logger
@@ -113,10 +113,15 @@ class IND_Dataset(Core_Dataset):
 
     def get_kwargs(self):
         pandas_df = self.get_datatable()
-        return {"data": array(pandas_df[self._data_name]),
-                "data_err": array(pandas_df[self._data_err_name]),
-                "t": array(pandas_df["time"]),
-                "tref": array(pandas_df["time"]).min()}
+        if self._data_err_name in pandas_df:
+            return {"data": array(pandas_df[self._data_name]),
+                    "data_err": array(pandas_df[self._data_err_name]),
+                    "t": array(pandas_df["time"]),
+                    "tref": array(pandas_df["time"]).min()}
+        else:
+            return {"data": array(pandas_df[self._data_name]),
+                    "t": array(pandas_df["time"]),
+                    "tref": array(pandas_df["time"]).min()}
 
     def get_time(self):
         pandas_df = self.get_datatable()

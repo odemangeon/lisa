@@ -29,6 +29,7 @@ from numpy import asarray
 
 from ....tools.miscellaneous import get_filename_from_file_path
 from ....tools.metaclasses import MandatoryReadOnlyAttr
+from ....tools.name import check_name_code
 
 
 ## Logger
@@ -117,6 +118,11 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         else:
             return "{}-{}_{}_{}_{}".format(filename_info["inst_cat"], filename_info["inst_subcat"],
                                            filename_info["object"], filename_info["inst_name"], filename_info["number"])
+
+    @property
+    def dataset_code_name(self):
+        """Get the name of the data file suitable for python code."""
+        return check_name_code(self.dataset_name)
 
     @property
     def instrument(self):

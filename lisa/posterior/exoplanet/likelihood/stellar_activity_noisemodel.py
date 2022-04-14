@@ -18,14 +18,16 @@ from george import GP
 from numpy import concatenate, sqrt
 import numpy as np
 from collections import defaultdict, Counter, OrderedDict
+import os
+from os.path import basename
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
 from ..dataset_and_instrument.rv import RV_inst_cat
 from ..dataset_and_instrument.lc import LC_inst_cat
-from ..dataset_and_instrument.indicator import IND_inst_cat
 from ...core.parameter import Parameter
 from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
+from ...core.dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.name import Name, Named
@@ -431,8 +433,13 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         star = cls.get_star(model_instance)
         res = []
         for param_firstname in cls._star_param_GP_names:
-            name, prefix, kwargs, named_inst = get_stelact_GP_param_name(param_first_name=param_firstname, stelact_mod_name=stelact_mod_name, star_obj=star)
-            param_obj = getattr(star, named_inst.store_name)
+            name, prefix, kwargs, named_inst = get_stelact_GP_param_name(param_first_name=param_firstname,
+                                                                         stelact_mod_name=stelact_mod_name,
+                                                                         star_obj=star)
+            param_obj = star.get_parameter(name=named_inst.get_name(recursive=False, include_prefix=True), notexist_ok=False, return_error=False,
+                                           kwargs_get_list_params={"no_duplicate": False},
+                                           kwargs_get_name={'recursive': False, 'include_prefix': True, 'force_no_duplicate': True}
+                                           )
             if free:
                 if param_obj.free:
                     res.append(param_obj)
@@ -861,18 +868,21 @@ class StellarActivityNoiseModelInterface(object):
             logger.info("Parameter file for the stellar activity noise model created at path: {}".format(file_path))
         else:
             logger.info("Parameter file for the stellar activity noise model already existing and not overwritten: {}".format(file_path))
-        self.paramfile4noisemodcat[stelact_GP_noisemodel] = file_path  # paramfile4noisemodcat is from Core_Model
+        self.paramfile4noisemodcat[stelact_GP_noisemodel] = basename(file_path)  # paramfile4noisemodcat is from Core_Model
 
     def read_SANM_param_file(self):
         """Read the content of the Stellar activity noise model parameter file."""
         if self.isdefined_SANMparamfile:
-            with open(self.paramfile4noisemodcat[stelact_GP_noisemodel]) as f:
+            paramfile_noisemod = self.paramfile4noisemodcat[stelact_GP_noisemodel]
+            cwd = os.getcwd()
+            os.chdir(self.model_instance.run_folder)
+            with open(paramfile_noisemod) as f:
                 exec(f.read())
+            os.chdir(cwd)
             dico = locals().copy()
             dico.pop("self")
             dico.pop("f")
-            logger.debug("SANM parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
+            logger.debug(f"SANM parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:
             raise IOError("Impossible to read SANM parameter file: {}".format(self.paramfile4instcat[IND_inst_cat]))

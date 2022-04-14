@@ -11,8 +11,8 @@ available for different transit models.
 
 from logging import getLogger
 
-from ...core.parameter import Parameter
-from ...core.paramcontainer import Core_ParamContainer
+from ....core.parameter import Parameter
+from ....core.paramcontainer import Core_ParamContainer
 
 
 ## Logger object

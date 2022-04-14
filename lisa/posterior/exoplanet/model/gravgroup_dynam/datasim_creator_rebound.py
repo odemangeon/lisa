@@ -2,6 +2,10 @@
 # -*- coding:  utf-8 -*-
 """
 Datasim creator rebound module.
+
+TODO:
+- I am change get_ootvar by get_instvar but just the name of the function the inputs/outputs are not
+correct.
 """
 import numpy as np
 
@@ -16,22 +20,20 @@ from numpy import concatenate, argsort, cumsum, array, append, sign
 from astropy.constants import R_sun, au
 from batman._quadratic_ld import _quadratic_ld
 
-from .datasim_creator_rv import get_starmeanrv_and_deltarv
-from .datasim_creator_lc import get_LD_parcont_and_param, get_ootvar
-from .limb_darkening import (LinearLD, QuadraticLD, SquareRootLD, LogarithmicLD, ExponentialLD,
-                             NonLinearLD)
-from ...core.model.datasim_docfunc import DatasimDocFunc
-from ...core.model.datasimulator_toolbox import (check_datasets_and_instmodels, get_has_datasets,
-                                                 get_lists_bijection_instcat)
-from ...core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
-                                                            time_ref, l_time_ref)
-from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
-from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
-from ....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
-                                                  par_vec_name, key_param, add_argskwargs_argument, argskwargs,
-                                                  add_nonparam_argument)
-from ....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ....posterior.exoplanet.model.convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ..gravgroup.datasim_creator_rv import get_instvar, get_stellarvar
+from ..gravgroup.datasim_creator_lc import get_LD_parcont_and_param, get_instvar
+from ..gravgroup.limb_darkening import QuadraticLD
+from ..convert import getomega_fast, getMref_4_tic_fast, getecc_plc_4_handk_fast, getomega_plc_4_handk_fast, getecc_plb_4_handk_fast, getomega_plb_4_handk_fast
+from ...dataset_and_instrument.lc import LC_inst_cat
+from ...dataset_and_instrument.rv import RV_inst_cat
+from ....core.model.datasim_docfunc import DatasimDocFunc
+from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels, get_lists_bijection_instcat  # , get_has_datasets,
+from ....core.model.datasimulator_timeseries_toolbox import (add_time_argument, time_vec, l_time_vec,
+                                                             time_ref, l_time_ref)
+from .....tools.function_from_text_toolbox import (init_arglist_paramnb_arguments_ldict, add_param_argument,
+                                                   par_vec_name, add_argskwargs_argument,
+                                                   add_nonparam_argument)
+from .....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 
 ## Logger object
 logger = getLogger()
@@ -109,7 +111,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
                                  ldmodel4instmodfname, LDs,
                                  transit_model, SSE4instmodfname,
                                  RV_globalref_instname, RV_instref_modnames, RV_inst_db,
-                                 inst_models=None, datasets=None,
+                                 inst_models, datasets, get_times_from_datasets,
                                  param_vector_name=par_vec_name):
     """Return datasimulator functions.
 
@@ -144,6 +146,9 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         If list of Dataset, it has to provide exactly one dataset (no None) for each Instrument
             model in inst_models and the produced datasimulator will include the kwargs of the
             datasets.
+    get_times_from_datasets  : bool
+        If True the times at which the LC model is computed is taken from the datasets.
+        Else it is an input of the datasimulator function produced.
     :param str param_vector_name: str giving the name of the vector of parameters argument of the
         datasimulator function.
 
@@ -170,8 +175,8 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     logger.debug("list of instrument models: {}".format(instmod_docf))
     logger.debug("list of datasets: {}".format(dtsts_docf))
 
-    # Check if datasets are provided
-    has_dataset = get_has_datasets(l_dataset)
+    # # Check if datasets are provided
+    # has_dataset = get_has_datasets(l_dataset)
 
     # Create the lists of RV and LC Datasets and Instrument_Models and detect if the datasim should
     # output RV or LC
@@ -223,7 +228,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         multi_cat[LC_inst_cat] = len(dico_inst_cat[LC_inst_cat]["l_inst_model"]) > 1
         # Add lc time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
         (arguments, time_arg_name[LC_inst_cat], time_arg_LC, time_arg_LC_in_arguments
-         ) = add_time_argument(arguments=arguments, multi=multi_cat[LC_inst_cat], has_dataset=has_dataset,
+         ) = add_time_argument(arguments=arguments, multi=multi_cat[LC_inst_cat], get_times_from_datasets=get_times_from_datasets,
                                arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
                                key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[LC_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_lc, l_time_vec_name=l_time_vec_lc,
@@ -232,7 +237,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         # Get the out of transit variation contribution for each couple instrument - dataset
         (dico_inst_cat[LC_inst_cat]["l_oot_var"],
          arguments
-         ) = get_ootvar(dico_inst_cat[LC_inst_cat]["l_inst_model"],
+         ) = get_instvar(dico_inst_cat[LC_inst_cat]["l_inst_model"],
                         dico_inst_cat[LC_inst_cat]["l_dataset"], multi_cat[LC_inst_cat],
                         ldict, arguments, param_nb, arg_list, key_whole,
                         key_param, key_mand_kwargs, key_opt_kwargs, time_vec_name=time_vec_lc,
@@ -263,7 +268,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
         multi_cat[RV_inst_cat] = len(dico_inst_cat[RV_inst_cat]["l_inst_model"]) > 1
         # Add rv time as additional argument (TODO: It looks like if I don't have the datasets I don't had the time as argument)
         (arguments, time_arg_name[RV_inst_cat], time_arg_RV, time_arg_RV_in_arguments
-         ) = add_time_argument(arguments=arguments, multi=multi_cat[RV_inst_cat], has_dataset=has_dataset,
+         ) = add_time_argument(arguments=arguments, multi=multi_cat[RV_inst_cat], get_times_from_datasets=get_times_from_datasets,
                                arg_list=arg_list, key_arglist=key_whole, key_mand_kwargs=key_mand_kwargs,
                                key_opt_kwargs=key_opt_kwargs, ldict=ldict, l_dataset=dico_inst_cat[RV_inst_cat]["l_dataset"],
                                time_vec_name=time_vec_rv, l_time_vec_name=l_time_vec_rv,
@@ -286,7 +291,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
     # For RV and LC, add a key "times" to contain the full vector of sorted times
     # also add a key "l_times_retrieve" to contain the index of the time sample corresponding to
     # the each dataset times in the "l_dataset" key
-    if has_dataset:
+    if get_times_from_datasets:
         format_supersamp_time_vec = ""
         l_times_retrieve = {}
         dico_times = {}
@@ -550,7 +555,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
                    time_vec_rv="dico_times['{}']".format(RV_inst_cat))
     text_rebound_wrap = dedent(text_rebound_wrap).format(tab=tab)
     ldict["rebound_wrap_r_z_vz"] = rebound_wrap_r_z_vz
-    if has_dataset:  # Add to ldict the times formatted for the rebound wrapper if has_dataset.
+    if get_times_from_datasets:  # Add to ldict the times formatted for the rebound wrapper if has_dataset.
         for cat in [LC_inst_cat, RV_inst_cat]:
             if dico_inst_cat[cat]["has"]:
                 ldict["dico_times[{}]".format(cat)] = dico_inst_cat[cat]["times"]
@@ -701,7 +706,7 @@ def create_datasimulator_rebound(gravgroup, key_whole, key_param, key_mand_kwarg
                                           params_model=params_model,
                                           inst_cat=instcat_docf,
                                           mand_kwargs=mand_kwargs,
-                                          include_dataset_kwarg=has_dataset,
+                                          include_dataset_kwarg=get_times_from_datasets,
                                           opt_kwargs=opt_kwargs,
                                           inst_model_fullname=instmod_docf,
                                           dataset=dtsts_docf)
