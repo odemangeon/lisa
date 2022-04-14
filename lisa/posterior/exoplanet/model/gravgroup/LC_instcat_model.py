@@ -53,10 +53,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     _transit_models = ["batman", ]  # ["batman", "pytransit-MandelAgol", "pytransit-Gimenez"] Temporarily? remove pytransit from the available transit_models
 
     ## List of available phase curve models, the 1st element is used as default
-    _phasecurve_models = ["spiderman", ]  # ["spiderman", ]
+    _phasecurve_models = ["spiderman", "kelp"]  # ["spiderman", ]
 
     ## List of available occultation models, the 1st element is used as default
-    _occultation_models = ["spiderman", ]  # ["spiderman", ]
+    _occultation_models = ["batman", ]  # ["spiderman", ]
 
     ## List of available limb-darkening models for each lc_models, the 1st element is used as
     ## default
@@ -359,6 +359,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                         if not("brightness_model" in model_comp_dict['args']['ModelParams_kwargs']):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
+                    elif model_comp_dict['model'] == "kelp":
+                        raise NotImplementedError()
                     else:
                         logger.warning(f"Checking the content of the phasecurve dictionary for the phasecurve model {model_comp_dict['model']} is not implemented.")
                     self.phasecurve_model[planet_name] = dico_config["phasecurve_model"][planet_name]
