@@ -43,7 +43,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = LC_inst_cat
     __has_instcat_paramfile__ = True
-    __default_paramfile_path__ = "LC_param_file.py"
+    __default_paramfile_name__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
     __decorrelation_models__ = [LinearDecorrelation]
 
@@ -360,7 +360,9 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         if not("brightness_model" in model_comp_dict['args']['ModelParams_kwargs']):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
                     elif model_comp_dict['model'] == "kelp":
-                        raise NotImplementedError()
+                        l_arg_mand_sp = ["Model_kwargs", "phase_curve_model", ]
+                        if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                     else:
                         logger.warning(f"Checking the content of the phasecurve dictionary for the phasecurve model {model_comp_dict['model']} is not implemented.")
                     self.phasecurve_model[planet_name] = dico_config["phasecurve_model"][planet_name]
