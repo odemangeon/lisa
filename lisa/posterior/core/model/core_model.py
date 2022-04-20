@@ -761,7 +761,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 if reply == "y":
                     instcat_model.create_instcat_paramfile(file_path=file_path)
                 else:
-                    file_name = basename(paramfile_path)
+                    file_name = basename(file_path)
                     instcat_model.paramfile_instcat = file_name
                     logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
 
