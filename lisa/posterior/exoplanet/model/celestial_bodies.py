@@ -186,6 +186,18 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="deltaT", name_prefix=self.name, main=False, unit="K"))
         ## Mref: Mean Anomaly at reference time
         self.add_parameter(Parameter(name="Mref", name_prefix=self.name, main=False))
+        ## f: The Greenhouse factor (typically 1/sqrt(2))
+        self.add_parameter(Parameter(name="f", name_prefix=self.name, main=False))
+        ## hotspotoffset: Offset of the hotspot of the thermal phase curve
+        self.add_parameter(Parameter(name="hotspotoffset", name_prefix=self.name, main=False))
+        ## alpha: Dimensionless fluid number
+        self.add_parameter(Parameter(name="alpha", name_prefix=self.name, main=False))
+        ## omegadrag: Dimensionless drag frequency
+        self.add_parameter(Parameter(name="omegadrag", name_prefix=self.name, main=False))
+        ## AB: Bond Albedo
+        self.add_parameter(Parameter(name="AB", name_prefix=self.name, main=False))
+        ## c11: m=1 l=1 Spherical harmonic coefficients in the kelp thermal phasecurve model
+        self.add_parameter(Parameter(name="c11", name_prefix=self.name, main=False))
         ## transit times
         self.transit_times = {}
 

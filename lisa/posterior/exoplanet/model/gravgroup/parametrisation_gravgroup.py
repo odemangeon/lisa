@@ -148,7 +148,9 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                             if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
                                 if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
                                     self.paramcontainers["stars"][star_name].Teff.main = True
-
+                            elif self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
+                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
+                                    self.paramcontainers["stars"][star_name].Teff.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
             if LC_inst_cat in set(self.dataset_db.inst_categories):
@@ -179,6 +181,15 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                                     self.paramcontainers["planets"][planet_name].xi.main = True
                                     self.paramcontainers["planets"][planet_name].Tn.main = True
                                     self.paramcontainers["planets"][planet_name].deltaT.main = True
+                            elif self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
+                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
+                                    self.paramcontainers["planets"][planet_name].f.main = True  # greenhouse factor
+                                    self.paramcontainers["planets"][planet_name].hotspotoffset.main = True  # hotspot offset
+                                    self.paramcontainers["planets"][planet_name].hotspotoffset.unit = "radians"
+                                    self.paramcontainers["planets"][planet_name].alpha.main = True  # Dimensionless fluid number
+                                    self.paramcontainers["planets"][planet_name].omegadrag.main = True  # Dimensionless drag frequency
+                                    self.paramcontainers["planets"][planet_name].AB.main = True  # Bond albedo
+                                    self.paramcontainers["planets"][planet_name].c11.main = True  # m=1 l=1 Spherical harmonic coefficients
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
