@@ -360,7 +360,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         if not("brightness_model" in model_comp_dict['args']['ModelParams_kwargs']):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
                     elif model_comp_dict['model'] == "kelp":
-                        l_arg_mand_sp = ["Model_kwargs", "phase_curve_model", ]
+                        l_arg_mand_sp = ["Model_kwargs", "brightness_model", "brightness_model_kwargs"]
                         if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                     else:
