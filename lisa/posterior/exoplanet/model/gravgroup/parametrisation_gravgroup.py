@@ -190,6 +190,10 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                                     self.paramcontainers["planets"][planet_name].omegadrag.main = True  # Dimensionless drag frequency
                                     self.paramcontainers["planets"][planet_name].AB.main = True  # Bond albedo
                                     self.paramcontainers["planets"][planet_name].c11.main = True  # m=1 l=1 Spherical harmonic coefficients
+                if self.instcat_models[LC_inst_cat].occultation_model[planet_name]['do']:
+                    for mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
+                        if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'batman':
+                            self.paramcontainers["planets"][planet_name].Frat.main = True
 
     def apply_star_SystemicRV_parametrisation(self):
         """Apply the parametrisation for the modelling of the systemic RV.
