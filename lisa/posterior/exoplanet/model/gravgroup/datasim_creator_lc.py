@@ -36,7 +36,7 @@ try:
 except (ModuleNotFoundError, ImportError):
     spiderman_imported = False
 try:
-    from kelp import Model, Planet
+    from kelp import Model
     kelp_imported = True
 except (ModuleNotFoundError, ImportError):
     kelp_imported = False
