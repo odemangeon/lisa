@@ -145,11 +145,14 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                 if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['do']:
                     for l_mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
                         for mod_comp_name in l_mod_comp_name:
-                            if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
-                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                            pc_component_model = self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]['model_definitions'][mod_comp_name]
+                            if pc_component_model["model"] == 'spiderman':
+                                if pc_component_model['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
                                     self.paramcontainers["stars"][star_name].Teff.main = True
-                            elif self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
-                                if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
+                            elif pc_component_model["model"] == 'kelp':
+                                stellar_spectrum = pc_component_model['args']['Model_kwargs'].get('stellar_spectrum', None)
+                                if ((pc_component_model['args']['brightness_model'] == 'thermal') and
+                                    (stellar_spectrum is None)):
                                     self.paramcontainers["stars"][star_name].Teff.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
