@@ -338,7 +338,7 @@ class FunctionBuilder(object):
         """
         self._database[shortname]["full_name"] = full_name
 
-    def add_variable_to_ldict(self, variable_name, variable_content, function_shortname, exist_ok=False):
+    def add_variable_to_ldict(self, variable_name, variable_content, function_shortname, exist_ok=False, overwrite=False):
         """Add a variable to the local dictionary of a function
 
         Arguments
@@ -367,7 +367,9 @@ class FunctionBuilder(object):
                         l_equals = [all(eq) for eq in l_equals]
                     if all(l_equals):
                         error = False
-                if error:
+                if error and overwrite:
+                    self._database[function_shortname]["ldict"][variable_name] = variable_content
+                else:
                     logger.error(f"Variable {variable_name} already exists in ldict of function {function_shortname} with a different content")
 
     def is_in_ldict(self, variable_name, function_shortname, variable_content=None, check_content=False):

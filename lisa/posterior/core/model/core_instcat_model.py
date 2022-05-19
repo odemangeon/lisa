@@ -41,7 +41,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
     #   This methods needs to be defined even if there is no specific instcat_paramfile.
     #   This function needs to have a model_instance argument
     #   Just make a function that raises an error
-    __mandatoryattrs__ = ["inst_cat", "has_instcat_paramfile", "default_paramfile_path",
+    __mandatoryattrs__ = ["inst_cat", "has_instcat_paramfile", "default_paramfile_name",
                           "datasim_creator_name", "decorrelation_models"]
     # inst_cat: string specifiying the instrument category that the InstCat_Model will handle
     # has_instcat_paramfile: bool that says if there is an instcat specific param_file

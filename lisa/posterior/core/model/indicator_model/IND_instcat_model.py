@@ -26,7 +26,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = IND_inst_cat
     __has_instcat_paramfile__ = True
-    __default_paramfile_path__ = "IND_param_file.py"
+    __default_paramfile_name__ = "IND_param_file.py"
     __datasim_creator_name__ = "sim_IND"
     __decorrelation_models__ = []
 

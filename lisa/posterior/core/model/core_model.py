@@ -754,14 +754,14 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
             instcat_model = self.get_instcat_model(inst_cat)
             if instcat_model.has_instcat_paramfile:
-                file_path, reply = self._choose_parameter_file_path(default_paramfile_path=instcat_model.default_paramfile_path,
-                                                                    paramfile_path=paramfile_path.get(inst_cat, None),
+                file_path, reply = self._choose_parameter_file_path(default_paramfile_name=instcat_model.default_paramfile_name,
+                                                                    paramfile_name=paramfile_path.get(inst_cat, None),
                                                                     answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
                                                                     answer_create=dict_answer_create.get(inst_cat, def_answer_create))
                 if reply == "y":
                     instcat_model.create_instcat_paramfile(file_path=file_path)
                 else:
-                    file_name = basename(paramfile_path)
+                    file_name = basename(file_path)
                     instcat_model.paramfile_instcat = file_name
                     logger.info("Parameter file already existing and not overwritten: {}".format(file_path))
 
@@ -820,10 +820,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
 
         Arguments
         ---------
-        default_paramfile_path : str
+        default_paramfile_name : str
             Default name for the parameter file
-        paramfile_path      : str
-            Path to the indicator parameter file (IND_param_file).
+        paramfile_name      : str or None
+            Name for the parameter file. If None default_paramfile_name is used
         answer_overwrite    : str
             If the IND_param_file already exists, do you want to
             overwrite it ? "y" or "n". If this is not provided the program will ask you interactively.

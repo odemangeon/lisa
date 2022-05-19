@@ -40,7 +40,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = RV_inst_cat
     __has_instcat_paramfile__ = True
-    __default_paramfile_path__ = "RV_param_file.py"
+    __default_paramfile_name__ = "RV_param_file.py"
     __datasim_creator_name__ = "sim_RV"
     __decorrelation_models__ = [LinearDecorrelation]
 
