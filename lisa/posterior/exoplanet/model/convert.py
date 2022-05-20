@@ -1250,6 +1250,128 @@ def gethotspotoffset_vect_v2(xi, deltaT, Tn):
         long_res.append(np.rad2deg(long_bis[np.argmax(temp)]))
     return np.array(long_res).reshape(shape)
 
+
+def getrp_a(Rrat, aR):
+    """
+    Arguments
+    ---------
+    Rrat    : float or np.array
+        Ratio of the planetary or the stellar radius
+    aR      : float or np.array
+        Ratio of the semi-major axis over the stellar radius
+
+    Return
+    ------
+    rp_a    : float or np.array
+        Ratio of the Planetary radius over the semi-major axis
+    """
+    return Rrat / aR
+
+
+def getTdaynigh_vect_stellspec(hotspot_offset, c11, a_rs, rp_a, f, filt, T_s, stellar_spectrum, alpha=0.6, omegadrag=4.5, A_B=0):
+    """Compute the integrated dayside and nightside temperature from the kelp thermal model
+
+    This function is really slow. It take ~10h for 80 000 iterations
+
+    Arguments
+    ---------
+    hotspot_offset      : np.array
+        Ratio of the radiative and advective timescales
+    c11  : np.array
+        Temperature difference between the hotspot and the anti-hotspot point in K
+    a_rs      : np.array
+        Night side temperature in Kelvin
+    rp_a
+    f
+    filt
+    T_s
+    stellar_spectrum
+    alpha
+    omegadrag
+    A_B
+
+    Return
+    ------
+    Tday    : np.array
+    Tnight  : np.array
+    """
+    from kelp import Model
+    from tqdm import trange
+    T_day = []
+    T_night = []
+    C = [[0], [0, c11[0], 0]]
+    model = Model(hotspot_offset=hotspot_offset[0], alpha=alpha[0],
+                  omega_drag=omegadrag[0], A_B=A_B[0], C_ml=C, lmax=1, a_rs=a_rs[0],
+                  T_s=T_s, rp_a=rp_a[0],
+                  filt=filt, stellar_spectrum=stellar_spectrum)
+    for ii, h_off_i, c11_i, a_rs_i, rp_a_i, f_i, alpha_i, omegadrag_i, A_B_i in zip(trange(len(hotspot_offset)), hotspot_offset, c11, a_rs, rp_a, f, alpha, omegadrag, A_B):
+        C = [[[0], [0, c11_i, 0]] for c11_i in c11]
+        model.hotspot_offset = h_off_i
+        model.alpha = alpha_i
+        model.omega_drag = omegadrag_i
+        model.A_B = A_B_i
+        model.C_ml = [[0], [0, c11_i, 0]]
+        model.a_rs = a_rs_i
+        model.rp_a = rp_a_i
+        T_day_i, T_night_i = model.integrated_temperatures(n_theta=100, n_phi=100, f=f_i)
+        T_day.append(T_day_i)
+        T_night.append(T_night_i)
+
+    return np.array(T_day), np.array(T_night)
+
+
+def getABredist_vect_stellspec(hotspot_offset, c11, a_rs, rp_a, f, filt, T_s, stellar_spectrum, alpha=0.6, omegadrag=4.5, A_B=0):
+    """Compute the integrated dayside and nightside temperature from the kelp thermal model
+
+    This function is really slow. It take ~10h for 80 000 iterations
+
+    Arguments
+    ---------
+    hotspot_offset      : np.array
+        Ratio of the radiative and advective timescales
+    c11  : np.array
+        Temperature difference between the hotspot and the anti-hotspot point in K
+    a_rs      : np.array
+        Night side temperature in Kelvin
+    rp_a
+    f
+    filt
+    T_s
+    stellar_spectrum
+    alpha
+    omegadrag
+    A_B
+
+    Return
+    ------
+    A_B_inf    : np.array
+    redist  :
+    """
+    from kelp import Model
+    from tqdm import trange
+    A_B_inf = []
+    redist = []
+    C = [[0], [0, c11[0], 0]]
+    model = Model(hotspot_offset=hotspot_offset[0], alpha=alpha[0],
+                  omega_drag=omegadrag[0], A_B=A_B[0], C_ml=C, lmax=1, a_rs=a_rs[0],
+                  T_s=T_s, rp_a=rp_a[0],
+                  filt=filt, stellar_spectrum=stellar_spectrum)
+    for ii, h_off_i, c11_i, a_rs_i, rp_a_i, f_i, alpha_i, omegadrag_i, A_B_i in zip(trange(len(hotspot_offset)), hotspot_offset, c11, a_rs, rp_a, f, alpha, omegadrag, A_B):
+        C = [[[0], [0, c11_i, 0]] for c11_i in c11]
+        model.hotspot_offset = h_off_i
+        model.alpha = alpha_i
+        model.omega_drag = omegadrag_i
+        model.A_B = A_B_i
+        model.C_ml = [[0], [0, c11_i, 0]]
+        model.a_rs = a_rs_i
+        model.rp_a = rp_a_i
+        A_B_inf_i, redist_i = model.albedo_redist(*model.temperature_map(n_theta=100, n_phi=100, f=f_i, cython=True))
+        A_B_inf.append(A_B_inf_i)
+        redist.append(redist_i)
+
+    return np.array(A_B_inf), np.array(redist)
+
+
 # if __name__ == "__main__":
 #     ipython = get_ipython()
 #     print("Time it for getecc(0.1, 0.2)")
