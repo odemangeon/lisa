@@ -200,6 +200,8 @@ class Planet(CelestialBody):
         self.add_parameter(Parameter(name="c11", name_prefix=self.name, main=False))
         ## Frat: Flux ratio between the planet and the star
         self.add_parameter(Parameter(name="Frat", name_prefix=self.name, main=False))
+        ## rpa: Ratio between the planetary radius and its orbital semi-major axis
+        self.add_parameter(Parameter(name="rpa", name_prefix=self.name, main=False))
         ## transit times
         self.transit_times = {}
 
