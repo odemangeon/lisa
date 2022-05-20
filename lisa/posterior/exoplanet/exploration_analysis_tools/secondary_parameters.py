@@ -235,6 +235,9 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             l_tup_planet.append((planet.Mref.get_name(include_prefix=True, recursive=True), cv.getMref_4_tic_omegadeg, [t_ref],
                                  [planet.tic.get_name(include_prefix=True, recursive=True), planet.P.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
+            # Mean Anomaly at reference time
+            l_tup_planet.append((planet.rpa.get_name(include_prefix=True, recursive=True), cv.getrp_a, [],
+                                 [planet.Rrat.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True)]))
 
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
@@ -452,6 +455,9 @@ def get_secondary_chains(model, chaininterpret, star_kwargs=None, planet_kwargs=
             l_tup_planet.append((planet.Mref.get_name(include_prefix=True, recursive=True), cv.getMref_4_tic_omegadeg, [t_ref],
                                  [planet.tic.get_name(include_prefix=True, recursive=True), planet.P.get_name(include_prefix=True, recursive=True),
                                   planet.ecc.get_name(include_prefix=True, recursive=True), planet.omega.get_name(include_prefix=True, recursive=True)]))
+            # Mean Anomaly at reference time
+            l_tup_planet.append((planet.rpa.get_name(include_prefix=True, recursive=True), cv.getrp_a, [],
+                                 [planet.Rrat.get_name(include_prefix=True, recursive=True), planet.aR.get_name(include_prefix=True, recursive=True)]))
 
             # Compute the secondary parameter
             for sec_paraname, func, args, param_list in l_tup_planet:
