@@ -37,7 +37,6 @@ class LinearDecorrelation(Core_DecorrelationModel):
 
     # Mandatory attributes from Core_DecorrelationModel
     __category__ = "linear"
-    __name_dict_paramfile__ = "linear_decorr"
     __format_config_dict__ = "{'quantity': 'raw'}"
     __allowed_quantity_strs__ = ['raw', ]
 

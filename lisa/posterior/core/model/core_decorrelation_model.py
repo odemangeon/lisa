@@ -29,17 +29,19 @@ class Core_DecorrelationModel(object, metaclass=MandatoryReadOnlyAttrAndMethod):
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "name_dict_paramfile", "format_config_dict"]
+    __mandatoryattrs__ = ["category", "format_config_dict"]
     # category: String which designate the decorrelation model (for example: "linear"). To choose the
     #   decorrelation model to be used, the user will use this string.
-    # name_dict_paramfile: String which gives the str to be used for the dictionary that will be used in the
-    #   isntrument category specific paramfile to contain the parameter of the decorrelation method.
+    # format_config_dict is a strong to be used as the example of how to specify the dictionary in the
+    #   Instrument specific parameter file
     __mandatorymeths__ = ["apply_parametrisation", "get_text_decorrelation"]
     # apply_parametrisation: Method that creates the parameters necessary for the decorrelation model
     #  for each instrument model object of the instrument category to which this decorrelation model applies
     #  The arguments must be inst_mod_obj, the Instrument model object and decorrelation_config_inst_decorr
     #  the dictionary that contains the configuration of the decorrelation model for the instrument model object
     #  considered
+    # get_text_decorrelation: This function produces the text for the decorrelation model for all decorrelation
+    #  variable using a given decorrelation category
 
     @classmethod
     def create_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst, tab=""):
