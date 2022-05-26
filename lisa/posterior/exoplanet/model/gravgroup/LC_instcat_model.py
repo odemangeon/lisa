@@ -489,7 +489,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     decorr_mod.load_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                           decorrelation_config_inst_decorr_paramfile=decorr_dict_instmod_modpart_decorrmod,
                                                           decorrelation_config_inst_decorr=self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category],
-                                                          allowed_what2decorrelate_strs=self.allowed_what2decorrelate_strs
                                                           )
 
     def apply_instmod_parametrisation(self, inst_mod_obj):

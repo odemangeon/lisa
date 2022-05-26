@@ -48,7 +48,7 @@ class LinearDecorrelation(Core_DecorrelationModel):
 
     # Mandatory method from Core_DecorrelationModel
     @classmethod
-    def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr, allowed_what2decorrelate_strs):
+    def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr):
         """load the parametrisation for the decorrelation of one instrument model from the inst cat param file.
 
         This function is used by Core_InstCat_Model.load_config_decorrelation
@@ -69,8 +69,6 @@ class LinearDecorrelation(Core_DecorrelationModel):
                value0: bool, say if the decorelation should be performed
                Keyn: decorrelation model name
                valuen: dict, parameters of the decorrelation model
-        allowed_what2decorrelate_strs               : list of str
-            List of strings allowed for the part of the model to decorrelate
         """
         super(LinearDecorrelation, cls).load_text_decorr_paramfile(inst_mod_obj=inst_mod_obj,
                                                                    decorrelation_config_inst_decorr_paramfile=decorrelation_config_inst_decorr_paramfile,
