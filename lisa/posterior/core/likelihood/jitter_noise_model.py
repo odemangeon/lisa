@@ -16,7 +16,6 @@ from numpy import sum as npsum
 from numpy import log as nplog
 from numpy import pi
 from math import exp
-# from collections import OrderedDict
 
 from .core_noise_model import GaussianNoiseModel
 from ...core.parameter import Parameter
