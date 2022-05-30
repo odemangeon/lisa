@@ -12,9 +12,7 @@ The objective of this module is to define the class LikelihoodCreator.
     -
 """
 from logging import getLogger
-from collections import defaultdict  # , OrderedDict
-# import numpy as np
-# from copy import deepcopy
+from collections import defaultdict
 
 from .manager_noise_model import Manager_NoiseModel
 from .likelihood_docfunc import LikelihoodDocFunc, noisemod_key
