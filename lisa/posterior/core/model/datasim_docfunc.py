@@ -21,177 +21,165 @@ dtst_key = "dataset_name"
 class DatasimDocFunc(DocFunction):
     """docstring for DatasimDocFunc."""
 
-    def __init__(self, function, params_model, inst_cat, include_dataset_kwarg, mand_kwargs=None,
-                 opt_kwargs=None, inst_model_fullname=None, dataset=None):
+    def __init__(self, function, param_model_names_list, params_model_vect_name, inst_cats_list, inst_model_fullnames_list, dataset_names_list,
+                 include_dataset_kwarg, mand_kwargs_list=None, opt_kwargs_dict=None):
         """Initialise the datasim doc function.
 
-        :param function function: function of the datasimulator
-        :param Iterable_of_string params_model: Iterable giving the ordered list of the model
-            parameters as they should be provided to the function.
-        :param Iterable_of_string/string inst_cat: Iterable giving the ordered list of the outputs
-            instrument categories.
-        :param bool include_dataset_kwarg: Boolean saying if the function include the dataset
-            keyword arguments.
-        :param string/None mand_kwargs: String giving the way the mandatory dataset_kwargs
-            (like the time vector or a time reference) should be given to function.
-            If None it means that the dataset kwargs are already included in function and should not
-            be provided.
-        :param string/None opt_kwargs: String giving the way the optional dataset_kwargs
-            (like the time vector or a time reference) should be given to function.
-            If None it means that the dataset kwargs are already included in function and should not
-            be provided.
-        :param Iterable_of_string/string/None inst_model_fullname:
-            If None, the datasimulator doesn't include instrumental effect
+        Arguments
+        ---------
+        function                    : function object
+            function of the datasimulator
+        param_model_names_list      : list of str
+            List of the name of the model parameters as they should be provided to the function in the
+            first argument
+        params_model_vect_name      : str
+            Name of the argument used for the model parameter vector
+        inst_cats_list              : Iterable
+            Iterable giving the ordered list of the outputs instrument categories.
+            It has to match both inst_model_fullnames_list and dataset_names_list
+        include_dataset_kwarg       : bool
+            Boolean saying if the function include the dataset(s) keyword arguments.
+        mand_kwargs_list            : List of str
+            List of the names of the mandatory arguments besides the name of the model parameter vector
+            (like the time vector or a time reference) which should be given to function after the
+             model parameter vector.
+        opt_kwargs_dict             : dict
+            Dictionary whose keys are the name of the optional arguments of the function and the values
+            are the default values for these arguments
+        inst_model_fullnames_list   : Iterable_of_string/string
             If string, the datasimulator simulate only one instrument model and this is its full
-                name
-            If Iterable, give the list of full names of the instrument models simulated (some might
-                be None). This list will be matched to the list of datasets if provided.
-        :param Iterable_of_string/string/None dataset:
-            If None, the datasimulator doesn't include dataset kwargs
+            name.
+            If Iterable, give the list of full names of the instrument models simulated.
+            This list will be matched to dataset_names_list and inst_cats_list.
+        dataset_names_list          : Iterable_of_string/string
             If string, the datasimulator simulate only one dataset and this is its name
             If Iterable, give the list of names of the datasets simualted. This list will be matched
-                to the list of inst_model_fullnames if provided.
+            to inst_model_fullnames_list and inst_cats_list.
         """
-        # Initialise the params_model property
-        self._init_params_model(params_model)
+        # Set param_model_list
+        self.__param_model_names_list = list(param_model_names_list)
 
-        # Get the arg_list input for DocFunction and initialise the include_dataset_kwarg property
-        arg_list = self._init_arg_list(params_model, mand_kwargs, opt_kwargs)
+        # add params_model_vect_name at the beginning of the mandatory keyword argument list
+        if mand_kwargs_list is not None:
+            mand_kwargs_list = [params_model_vect_name, ]
+        else:
+            mand_kwargs_list = [params_model_vect_name, ] + mand_kwargs_list
+
+        # Set include_dataset_kwarg
         self.__include_dataset_kwarg = include_dataset_kwarg
 
-        # Set param_model_list
-        self.__param_model_list = params_model
-
-        # Set mandatory and optional keyword argument list (mand_kwargs_list, opt_kwargs_list)
-        self.__mand_kwargs_list = str(mand_kwargs)
-        self.__opt_kwargs_list = str(opt_kwargs)
-
         # Check inst_model_fullname input and tell if multi instrument models are provided
-        self.__multi_inst_model = self._check_inst_model_fullname(inst_model_fullname)
+        self.__multi_inst_model = self._check_inst_model_fullname(inst_model_fullnames_list)
 
         # Check dataset input and tell if multi datasets are provided
-        self.__multi_dataset = self._check_dataset(dataset)
+        self.__multi_dataset = self._check_dataset(dataset_names_list)
 
         # Check inst_cat input and tell if there is multi_outputs
-        self.__multi_outputs = self._check_inst_cat(inst_cat)
+        self.__multi_outputs = self._check_inst_cat(inst_cats_list)
 
         # Init the output_info property
-        self._init_output_info(self.__multi_outputs, inst_cat, self.__multi_inst_model,
-                               inst_model_fullname, self.__multi_dataset, dataset)
+        self._init_output_info(self.__multi_outputs, inst_cats_list, self.__multi_inst_model,
+                               inst_model_fullnames_list, self.__multi_dataset, dataset_names_list)
 
-        super(DatasimDocFunc, self).__init__(function=function, arg_list=arg_list)
+        super(DatasimDocFunc, self).__init__(function=function, mand_kwargs_list=mand_kwargs_list, opt_kwargs_dict=opt_kwargs_dict)
 
-    def _init_params_model(self, params_model):
-        self.__param_model_list = list(params_model)
+    # def _init_arg_list(self, params_model, mand_kwargs, opt_kwargs):
+    #     # Define the arg_list parameter for __init__ method of DocFunction
+    #     arg_list = str(params_model)
+    #     if mand_kwargs is not None:
+    #         arg_list += ", " + mand_kwargs.strip("[]")
+    #     if opt_kwargs is not None:
+    #         arg_list += ", " + opt_kwargs.strip("[]")
+    #
+    #     return arg_list
 
-    def _init_arg_list(self, params_model, mand_kwargs, opt_kwargs):
-        # Define the arg_list parameter for __init__ method of DocFunction
-        arg_list = str(params_model)
-        if mand_kwargs is not None:
-            arg_list += ", " + mand_kwargs.strip("[]")
-        if opt_kwargs is not None:
-            arg_list += ", " + opt_kwargs.strip("[]")
-
-        return arg_list
-
-    def _check_inst_model_fullname(self, inst_model_fullname):
-        # Check the content of inst_model_fullname: If not provided or string set multi_inst_model
+    def _check_inst_model_fullname(self, inst_model_fullnames_list):
+        # Check the content of inst_model_fullnames_list: If not provided or string set multi_inst_model
         # to False, otherwise to True.
         instmod_err = False
-        if inst_model_fullname is None or isinstance(inst_model_fullname, str):
+        if isinstance(inst_model_fullnames_list, str):
             multi_inst_model = False
-        elif isinstance(inst_model_fullname, Iterable):
-            l_isInstModel = [isinstance(inst_mod, str) for inst_mod in inst_model_fullname]
-            l_isNone = [inst_mod is None for inst_mod in inst_model_fullname]
-            if all(l_isInstModel) or all(l_isNone):
+        elif isinstance(inst_model_fullnames_list, Iterable):
+            l_isstr = [isinstance(inst_mod, str) for inst_mod in inst_model_fullnames_list]
+            if all(l_isstr):
                 multi_inst_model = True
             else:
                 instmod_err = True
         else:
             instmod_err = True
         if instmod_err:
-            raise ValueError("inst_model_fullnames should be None, string or list of strings.")
+            raise ValueError("inst_model_fullnames should be a string or list of strings.")
         return multi_inst_model
 
-    def _check_dataset(self, dataset):
+    def _check_dataset(self, dataset_names_list):
         # Check the content of dataset: If not provided or string set multi_dataset
         # to False, otherwise to True.
         dataset_err = False
-        if dataset is None or isinstance(dataset, str):
+        if isinstance(dataset_names_list, str):
             multi_dataset = False
-        elif isinstance(dataset, Iterable):
-            l_isDataset = [isinstance(dst, str) for dst in dataset]
-            l_isNone = [dst is None for dst in dataset]
-            if all(l_isDataset) or all(l_isNone):
+        elif isinstance(dataset_names_list, Iterable):
+            l_isstr = [isinstance(dst, str) for dst in dataset_names_list]
+            if all(l_isstr):
                 multi_dataset = True
             else:
                 dataset_err = True
         else:
             dataset_err = True
         if dataset_err:
-            raise ValueError("dataset should be None, string or list of strings.")
+            raise ValueError("dataset_names_list should be string or list of strings.")
         return multi_dataset
 
-    def _check_inst_cat(self, inst_cat):
+    def _check_inst_cat(self, inst_cats_list):
         # Check the content of inst_cat: If string set multi_dataset to False, otherwise to True.
         instcat_err = False
-        if isinstance(inst_cat, str):
+        if isinstance(inst_cats_list, str):
             multi_outputs = False
-        elif isinstance(inst_cat, Iterable):
-            if isinstance(inst_cat[0], str):
+        elif isinstance(inst_cats_list, Iterable):
+            l_isstr = [isinstance(instcat, str) for instcat in inst_cats_list]
+            if all(l_isstr):
                 multi_outputs = True
             else:
                 instcat_err = True
         else:
             instcat_err = True
         if instcat_err:
-            raise ValueError("inst_cats should a string or a list of strings.")
+            raise ValueError("inst_cats should be a string or a list of strings.")
         return multi_outputs
 
-    def _init_output_info(self, multi_outputs, inst_cat, multi_inst_model, inst_model_fullname,
-                          multi_dataset, dataset):
+    def _init_output_info(self, multi_outputs, inst_cats_list, multi_inst_model, inst_model_fullnames_list,
+                          multi_dataset, dataset_names_list):
         # Fill output_info giving the instrument category, the instrument model full name and the
         # dataset name for each ouput of the datasimulator function.
         if multi_outputs:
-            noutput = len(inst_cat)
-            l_instcat = list(inst_cat)
+            noutput = len(inst_cats_list)
+            l_instcat = list(inst_cats_list)
             if multi_inst_model:
-                if len(inst_model_fullname) != noutput:
+                if len(inst_model_fullnames_list) != noutput:
                     raise ValueError("inst_model_fullnames should have the same length as inst_cats"
                                      " or a string (meaning that all the ouputs have the same "
                                      "instrument model).")
                 else:
-                    l_instmod = list(inst_model_fullname)
+                    l_instmod = list(inst_model_fullnames_list)
             else:
-                l_instmod = [inst_model_fullname for ii in range(noutput)]
+                l_instmod = [inst_model_fullnames_list for ii in range(noutput)]
             if multi_dataset:
-                if len(dataset) != noutput:
+                if len(dataset_names_list) != noutput:
                     raise ValueError("datasets should have the same length as inst_cats or a string"
                                      " (meaning that all the ouputs have the same dataset).")
                 else:
-                    l_dataset = list(dataset)
+                    l_dataset = list(dataset_names_list)
             else:
-                l_dataset = [dataset for ii in range(noutput)]
+                l_dataset = [dataset_names_list for ii in range(noutput)]
         else:
             if multi_inst_model or multi_dataset:
                 raise ValueError("You can't provide multiple datasets or instrument models if there"
                                  "only one output (len(inst_cats) = 1)")
             else:
-                l_instcat = [inst_cat]
-                l_instmod = [inst_model_fullname]
-                l_dataset = [dataset]
+                l_instcat = [inst_cats_list]
+                l_instmod = [inst_model_fullnames_list]
+                l_dataset = [dataset_names_list]
         self.__output_info = DataFrame({instcat_key: l_instcat, instmodfullname_key: l_instmod,
                                         dtst_key: l_dataset})
-
-    @property
-    def mand_kwargs_list(self):
-        """Return the list of mandatory keyword argument parameters"""
-        return self.__mand_kwargs_list
-
-    @property
-    def opt_kwargs_list(self):
-        """Return the list of optional keyword argument parameters"""
-        return self.__opt_kwargs_list
 
     @property
     def include_dataset_kwarg(self):
@@ -224,24 +212,24 @@ class DatasimDocFunc(DocFunction):
         return self.__output_info
 
     @property
-    def inst_cat(self):
+    def inst_cats_list(self):
         """Return the Serie of instrument category used for the ouputs."""
         return self.output_info[instcat_key]
 
     @property
-    def instmodel_fullname(self):
-        """Return the Serie of instrument model full names used for the ouputs."""
+    def instmodel_fullnames_list(self):
+        """Return the Series of instrument model full names used for the ouputs."""
         return self.output_info[instmodfullname_key]
 
     @property
-    def dataset(self):
+    def dataset_names_list(self):
         """Return the Serie of dataset names used for the ouputs."""
         return self.output_info[dtst_key]
 
     @property
-    def params_model(self):
-        """Return the ordered list of model of the function."""
-        return self.__param_model_list
+    def param_model_names_list(self):
+        """Return the ordered list of model parameters name of the function."""
+        return self.__param_model_names_list
 
     @property
     def _info(self):
