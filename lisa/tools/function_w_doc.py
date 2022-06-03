@@ -19,27 +19,26 @@ logger = getLogger()
 
 class DocFunction(object):
     """DocFunction is a class to create dynamical function with documentation that can be queried at runtime.
-
-    Attributes
-    ----------
-    arg_list : List of the arguments of the function
-    function : The function itself. Note: DocFunction is callable and calls the function attibutes
-        docfunction(...) is equivalent to docfunction.function(...)
-
-    Methods
-    -------
-    info : Return a string with general info about the DocFunction instance
     """
-    def __init__(self, function, arg_list):
+    def __init__(self, function, mand_kwargs_list=None, opt_kwargs_dict=None):
         """
         Arguments
         ---------
         function : Function object
-        arg_list : Usually OrderedDict describing the arguments of the function.
+        mand_kwargs_list : list
+            List of the name of the mandatory arguments of the function
+        opt_kwargs_dict  : dict
+            Dictionary whose keys are the name of the optional arguments of the function and the values
+            are the default values for these arguments
         """
         super(DocFunction, self).__init__()
         self.__function = function
-        self.__arg_list = arg_list
+        if mand_kwargs_list is None:
+            mand_kwargs_list = []
+        self.__mand_kwargs_list = mand_kwargs_list
+        if opt_kwargs_dict is None:
+            opt_kwargs_dict = {}
+        self.__opt_kwargs_dict = opt_kwargs_dict
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, self.function)
@@ -50,9 +49,19 @@ class DocFunction(object):
         return self.__function
 
     @property
-    def arg_list(self):
-        """Return the list of arguments names."""
-        return self.__arg_list
+    def mand_kwargs_list(self):
+        """Return the list of mandatory keyword argument parameters"""
+        return self.__mand_kwargs_list
+
+    @property
+    def opt_kwargs_dict(self):
+        """Return the dictionary of the pair of optional argument name and their default value"""
+        return self.__opt_kwargs_dict
+
+    @property
+    def all_kwargs_list(self):
+        """Return the list of all the arguments names (mandatory and optional)."""
+        return self.mand_kwargs_list + list(self.opt_kwargs_dict.keys())
 
     def __call__(self, *args, **kwargs):
         return self.function(*args, **kwargs)
@@ -60,7 +69,9 @@ class DocFunction(object):
     @property
     def _info(self):
         """String with information about the function."""
-        return "{repr}\narg_list: {arg_list}".format(repr=self.__repr__(), arg_list=self.arg_list)
+        return (f"{self.__repr__()}\nList of mandatory argument names: {self.mand}\n"
+                f"List of optional arguments: {', '.join([f'{arg}={value}' for arg, value in self.mand_kwargs_dict])}"
+                )
 
     def info(self):
         """Provide informations about the function."""
