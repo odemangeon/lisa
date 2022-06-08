@@ -133,7 +133,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        lnlike_jitter, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj)
+        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj)
 
         def f_format_param(param_likelihood):
             return param_likelihood[l_idx_param_noisemod]
@@ -149,7 +149,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         for dataset in l_dataset_obj:
             dataset_kwargs.append(cls.get_necessary_datakwargs(dataset))
 
-        return lnlike_jitter, f_format_param, f_format_simdata, dataset_kwargs, l_params_new
+        return lnlike, f_format_param, f_format_simdata, dataset_kwargs, l_params_new
 
     @classmethod
     def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
