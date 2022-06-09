@@ -46,7 +46,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
     ## name of the data  and data error columns
     __data_column_name = "data"
     __data_err_column_name = "data_err"
-    __extra_datakwarge_names = []
+    __extra_datasetkwargs_names = []
 
     def __init__(self, file_path, instrument_instance):
         """Dataset init method FOR INHERITANCE PURPOSES (as Dataset is an abstract class).
@@ -113,8 +113,8 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         return [self._data_column_name, self._data_err_column_name]
 
     @property
-    def datakwarg_names(self):
-        return self.column_names + self.__extra_datakwarge_names
+    def datasetkwarg_names(self):
+        return self.column_names + self.__extra_datasetkwargs_names
 
     @property
     def filepath(self):
@@ -377,17 +377,17 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         """Return the number of data points in the dataset."""
         return len(self.get_data())
 
-    def get_all_datakwargs(self):
-        """Return all the datakwargs available for the dataset."""
+    def get_all_datasetkwargs(self):
+        """Return all the datasetkwargs available for the dataset."""
         pandas_df = self.get_dataset_content()
         return {column_name: asarray(pandas_df[column_name]) for column_name in pandas_df.columns}
 
-    def get_datakwarg(self, datakwarg):
-        """Return a specific datakwarg."""
-        if datakwarg in self.column_names:
-            return asarray(self.get_dataset_content()[datakwarg]),
+    def get_datasetkwarg(self, datasetkwarg):
+        """Return a specific datasetkwarg."""
+        if datasetkwarg in self.column_names:
+            return asarray(self.get_dataset_content()[datasetkwarg]),
         else:
-            raise ValueError(f"For class {self.__class__}, datakwarg should be in {self.column_names}")
+            raise ValueError(f"For class {self.__class__}, datasetkwarg should be in {self.column_names}")
 
     def plot(self, **kwargs):
         """
@@ -401,7 +401,7 @@ class Core_DatasetTimeSeries(object):
     """docstring for Core_DatasetTimeSeries."""
 
     __time_column_name = "time"
-    __extra_datakwarge_names = ["time_ref"]
+    __extra_datasetkwargs_names = ["time_ref"]
 
     def __init__(self, file_path, instrument_instance, exp_time=None):
         super(Core_DatasetTimeSeries, self).__init__(file_path, instrument_instance)
@@ -431,24 +431,24 @@ class Core_DatasetTimeSeries(object):
         """Return the time_reference value"""
         return (self.get_time()).min()
 
-    def get_all_datakwargs(self):
+    def get_all_datasetkwargs(self):
         """Return the number of data points in the dataset."""
-        datakwargs = super(Core_DatasetTimeSeries, self).get_all_datakwargs()
-        datakwargs["time_ref"] = self.get_time_ref()
-        return datakwargs
+        datasetkwargs = super(Core_DatasetTimeSeries, self).get_all_datasetkwargs()
+        datasetkwargs["time_ref"] = self.get_time_ref()
+        return datasetkwargs
 
-    def get_datakwarg(self, datakwarg):
-        """Return a specific datakwarg."""
+    def get_datasetkwarg(self, datasetkwarg):
+        """Return a specific datasetkwarg."""
         try:
-            super(Core_DatasetTimeSeries, self).get_datakwarg(datakwarg)
+            super(Core_DatasetTimeSeries, self).get_datasetkwarg(datasetkwarg)
         except ValueError:
-            if datakwarg in self.__extra_datakwarge_names:
-                if datakwarg == "time_ref":
+            if datasetkwarg in self.__extra_datasetkwarg_names:
+                if datasetkwarg == "time_ref":
                     return self.get_time_ref()
                 else:
-                    raise NotImplementedError(f"{datakwarg} is a valid datakwarg but its get function was not properly implemented.")
+                    raise NotImplementedError(f"{datasetkwarg} is a valid datasetkwarg but its get function was not properly implemented.")
             else:
-                raise ValueError(f"{datakwarg} is not a valid datakwargs. Should be in {self.datakwarg_names}")
+                raise ValueError(f"{datasetkwarg} is not a valid datasetkwargs. Should be in {self.datasetkwarg_names}")
 
     def plot(self, **kwargs):
         """
