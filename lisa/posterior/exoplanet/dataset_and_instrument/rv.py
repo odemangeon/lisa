@@ -11,7 +11,7 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
+from lisa.posterior.core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.parameter import Parameter
 
@@ -118,56 +118,10 @@ class RV_Dataset(Core_Dataset):
     """
 
     __instrument_subclass__ = RV_Instrument
-    __mandatory_columns__ = ["time", "RV", "RV_err"]
 
     ## name of the data  and data error columns
     _data_name = "RV"
     _data_err_name = "RV_err"
-
-    def plot(self, y="RV", yerr="RV_err", **kwargs):
-        """
-        Plot function to visualise the data.
-
-        This is not very pretty but it plots the flux versus time and the error bars
-        """
-        self.get_datatable().plot(y=y, yerr=yerr, **kwargs)
-        plt.show()
-
-    def get_kwargs(self):
-        pandas_df = self.get_datatable()
-        return {"data": array(pandas_df[self._data_name]),
-                "data_err": array(pandas_df[self._data_err_name]),
-                "t": array(pandas_df["time"]),
-                "tref": array(pandas_df["time"]).min()}
-
-    def get_time(self):
-        pandas_df = self.get_datatable()
-        return array(pandas_df["time"])
-
-    def get_tref(self):
-        return (self.get_time()).min()
-
-    def create_datasimulator_for_dataset(self, datasim_func):
-        # t_dtst = self.get_time()
-        # tmin = t_dtst.min()
-        # tmax = t_dtst.max()
-        # nt = len(t_dtst)
-        # oversamp = 10
-        # tsamp = (tmax - tmin) / (nt * oversamp)
-        # tmin_moins = tmin - oversamp * tsamp
-        # tmax_plus = tmax + oversamp * tsamp
-        # func = datasim_func.function
-        # arg_list = datasim_func.arg_list
-        # arg_list_new = OrderedDict()
-        # arg_list_new["param"] = arg_list["param"]
-        # arg_list_new["kwargs"] = ["tsamp", "tmin", "tmax"]
-
-        # def datasim_func_fordataset(p, tsamp=tsamp, tmin=tmin_moins, tmax=tmax_plus):
-        #     t = linspace(tmin, tmax, (tmax - tmin) / tsamp)
-        #     return func(p, t=t)
-        #
-        # return DocFunction(function=datasim_func_fordataset, arg_list=arg_list_new)
-        return datasim_func
 
 
 HARPS = RV_Instrument("HARPS")

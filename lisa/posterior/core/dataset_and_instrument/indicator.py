@@ -11,7 +11,7 @@ from logging import getLogger
 import matplotlib.pyplot as plt
 from numpy import array
 
-from .dataset import Core_Dataset
+from .dataset import Core_DatasetTimeSeries
 from .instrument import Core_Instrument
 
 
@@ -58,7 +58,7 @@ class IND_Instrument(Core_Instrument):
         self.__params_indicator_models = dict
 
 
-class IND_Dataset(Core_Dataset):
+class IND_Dataset(Core_DatasetTimeSeries):
     """docstring for IND_Dataset class.
 
     This class is designed to habor a indicator data file.
@@ -74,64 +74,22 @@ class IND_Dataset(Core_Dataset):
     """
 
     __instrument_subclass__ = IND_Instrument
-    __mandatory_columns__ = ["time", ]
 
     ## name of the data  and data error columns
-    __data_name = "{}"
-    __data_err_name = "{}_err"
+    __data_column_name = "{}"
+    __data_err_column_name = "{}_err"
 
     def __init__(self, file_path, instrument_instance):
         super(IND_Dataset, self).__init__(file_path, instrument_instance)
         filename_info = self.interpret_data_filename(self.filename)
         self.__indicator_category = filename_info["inst_subcat"]
-        self.__data_name = self.__data_name.format(self.__indicator_category)
-        self.__data_err_name = self.__data_err_name.format(self.__indicator_category)
+        self.__data_column_name = self.__data_name.format(self.__indicator_category)
+        self.__data_err_column_name = self.__data_err_name.format(self.__indicator_category)
 
     @property
     def indicator_category(self):
         """Get the category of indicator."""
         return self.__indicator_category
-
-    @property
-    def _data_name(self):
-        """Get the category of indicator."""
-        return self.__data_name
-
-    @property
-    def _data_err_name(self):
-        """Get the category of indicator."""
-        return self.__data_err_name
-
-    def plot(self, **kwargs):
-        """
-        Plot function to visualise the data.
-
-        This is not very pretty but it plots the flux versus time and the error bars
-        """
-        self.get_datatable().plot(y=self._data_name, yerr=self._data_name_err, **kwargs)
-        plt.show()
-
-    def get_kwargs(self):
-        pandas_df = self.get_datatable()
-        if self._data_err_name in pandas_df:
-            return {"data": array(pandas_df[self._data_name]),
-                    "data_err": array(pandas_df[self._data_err_name]),
-                    "t": array(pandas_df["time"]),
-                    "tref": array(pandas_df["time"]).min()}
-        else:
-            return {"data": array(pandas_df[self._data_name]),
-                    "t": array(pandas_df["time"]),
-                    "tref": array(pandas_df["time"]).min()}
-
-    def get_time(self):
-        pandas_df = self.get_datatable()
-        return array(pandas_df["time"])
-
-    def get_tref(self):
-        return (self.get_time()).min()
-
-    def create_datasimulator_for_dataset(self, datasim_func):
-        return datasim_func
 
 
 HARPS_FWHM = IND_Instrument("HARPS", subcat="FWHM")
