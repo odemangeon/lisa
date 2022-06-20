@@ -189,7 +189,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def instcat_models(self):
         """Dictionary containing the InstCat_Model instances.
 
-        This dictionary is filled in the __init__
+        This dictionary initialised filled in the Core_Model.__init__ and filled in the __init__
+        in the __init__ of the child class with self.finish_init
 
         Structure:
         Key: inst_cat (string giving the instrument category)
