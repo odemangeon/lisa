@@ -4,14 +4,14 @@
 likelihood documented function module.
 """
 
-from ..model.datasim_docfunc import DatasimDocFunc
+from .model.datasim_docfunc import DatasimDocFunc
 
 ## String used for the noise model column in ouput_info of LikelihoodDocFunc
 noisemod_key = "noise_model"
 
 
-class LikelihoodDocFunc(DatasimDocFunc):
-    """docstring for LikelihoodDocFunc."""
+class LikelihoodPosteriorDocFunc(DatasimDocFunc):
+    """docstring for LikelihoodPosteriorDocFunc."""
 
     def __init__(self, function, param_model_names_list, params_model_vect_name, inst_cats_list, inst_model_fullnames_list,
                  dataset_names_list, noisemodel_names_list,
@@ -54,12 +54,12 @@ class LikelihoodDocFunc(DatasimDocFunc):
             Dictionary whose keys are the name of the optional arguments of the function and the values
             are the default values for these arguments
         """
-        super(LikelihoodDocFunc, self).__init__(function=function, param_model_names_list=param_model_names_list,
-                                                params_model_vect_name=params_model_vect_name, inst_cats_list=inst_cats_list,
-                                                inst_model_fullnames_list=inst_model_fullnames_list,
-                                                dataset_names_list=dataset_names_list, include_dataset_kwarg=include_dataset_kwarg,
-                                                mand_kwargs_list=mand_kwargs_list, opt_kwargs_dict=opt_kwargs_dict)
-        self.__output_info[noisemod_key] = noisemodel_names_list
+        super(LikelihoodPosteriorDocFunc, self).__init__(function=function, param_model_names_list=param_model_names_list,
+                                                         params_model_vect_name=params_model_vect_name, inst_cats_list=inst_cats_list,
+                                                         inst_model_fullnames_list=inst_model_fullnames_list,
+                                                         dataset_names_list=dataset_names_list, include_dataset_kwarg=include_dataset_kwarg,
+                                                         mand_kwargs_list=mand_kwargs_list, opt_kwargs_dict=opt_kwargs_dict)
+        self.output_info[noisemod_key] = noisemodel_names_list
 
     @property
     def noisemodel_names_list(self):
@@ -68,7 +68,7 @@ class LikelihoodDocFunc(DatasimDocFunc):
 
     @property
     def noutput(self):
-        """Return the number of outputs of the LikelihoodDocFunc.
+        """Return the number of outputs of the LikelihoodPosteriorDocFunc.
 
         For now Likelihood function cannot be multi_ouput
         """

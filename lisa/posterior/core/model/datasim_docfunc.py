@@ -21,7 +21,8 @@ dtst_key = "dataset_name"
 class DatasimDocFunc(DocFunction):
     """docstring for DatasimDocFunc."""
 
-    def __init__(self, function, param_model_names_list, params_model_vect_name, inst_cats_list, inst_model_fullnames_list, dataset_names_list,
+    def __init__(self, function, param_model_names_list, params_model_vect_name, inst_cats_list,
+                 inst_model_fullnames_list, dataset_names_list,
                  include_dataset_kwarg, mand_kwargs_list=None, opt_kwargs_dict=None):
         """Initialise the datasim doc function.
 
@@ -60,7 +61,7 @@ class DatasimDocFunc(DocFunction):
         self.__param_model_names_list = list(param_model_names_list)
 
         # add params_model_vect_name at the beginning of the mandatory keyword argument list
-        if mand_kwargs_list is not None:
+        if mand_kwargs_list is None:
             mand_kwargs_list = [params_model_vect_name, ]
         else:
             mand_kwargs_list = [params_model_vect_name, ] + mand_kwargs_list
@@ -82,16 +83,6 @@ class DatasimDocFunc(DocFunction):
                                inst_model_fullnames_list, self.__multi_dataset, dataset_names_list)
 
         super(DatasimDocFunc, self).__init__(function=function, mand_kwargs_list=mand_kwargs_list, opt_kwargs_dict=opt_kwargs_dict)
-
-    # def _init_arg_list(self, params_model, mand_kwargs, opt_kwargs):
-    #     # Define the arg_list parameter for __init__ method of DocFunction
-    #     arg_list = str(params_model)
-    #     if mand_kwargs is not None:
-    #         arg_list += ", " + mand_kwargs.strip("[]")
-    #     if opt_kwargs is not None:
-    #         arg_list += ", " + opt_kwargs.strip("[]")
-    #
-    #     return arg_list
 
     def _check_inst_model_fullname(self, inst_model_fullnames_list):
         # Check the content of inst_model_fullnames_list: If not provided or string set multi_inst_model
@@ -217,7 +208,7 @@ class DatasimDocFunc(DocFunction):
         return self.output_info[instcat_key]
 
     @property
-    def instmodel_fullnames_list(self):
+    def inst_model_fullnames_list(self):
         """Return the Series of instrument model full names used for the ouputs."""
         return self.output_info[instmodfullname_key]
 
