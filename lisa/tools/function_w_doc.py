@@ -69,8 +69,8 @@ class DocFunction(object):
     @property
     def _info(self):
         """String with information about the function."""
-        return (f"{self.__repr__()}\nList of mandatory argument names: {self.mand}\n"
-                f"List of optional arguments: {', '.join([f'{arg}={value}' for arg, value in self.mand_kwargs_dict])}"
+        return (f"{self.__repr__()}\nList of mandatory argument names: {self.mand_kwargs_list}\n"
+                f"List of optional arguments: {', '.join([f'{arg}={value}' for arg, value in self.opt_kwargs_dict])}"
                 )
 
     def info(self):
