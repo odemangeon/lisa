@@ -146,7 +146,7 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
 
     :return np.ndarray p0: Ndarray containing the initial positions for all the walkers
     """
-    l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
+    l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
     if init_distrib is not None:
         l_param_name_in_distrib = list(init_distrib.keys())
     else:
