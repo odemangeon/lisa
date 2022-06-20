@@ -5,22 +5,6 @@ dataset module.
 
 The objective of this package is to provides the core Dataset class to store
 and manipulate the data.
-
-@DONE:
-    - Dataset.__init__: Doc an UT
-    - Dataset.filepath: Doc and UT
-    - Dataset.filename: Doc and UT
-    - Dataset.instrument: Doc and UT
-    - Dataset.objectname: Doc and UT
-    - Dataset._rm_data: Doc and UT
-    - Dataset.is_data_loaded: Doc and UT
-    - Dataset.load_data: Doc
-    - Dataset._set_data: Doc and UT
-    - Dataset.get_data: Doc and UT
-
-@TODO:
-    - Dataset.load_data: UT
-    - See if possible to transform data in a property.
 """
 import matplotlib.pyplot as pl
 
@@ -28,6 +12,7 @@ from logging import getLogger
 from sys import exc_info
 from pandas import read_table
 from numpy import asarray, percentile
+from copy import copy
 
 from ....tools.miscellaneous import get_filename_from_file_path
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -41,12 +26,10 @@ logger = getLogger()
 class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
     """docstring for the Dataset abstract class."""
 
-    __mandatoryattrs__ = ["instrument_subclass", ]
+    __mandatoryattrs__ = ["instrument_subclass", "mandatory_columns"]
 
     ## name of the data  and data error columns
-    __data_column_name = "data"
-    __data_err_column_name = "data_err"
-    __extra_datasetkwargs_names = []
+    _extra_datasetkwargs_names = []
 
     def __init__(self, file_path, instrument_instance):
         """Dataset init method FOR INHERITANCE PURPOSES (as Dataset is an abstract class).
@@ -90,7 +73,9 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         else:
             self.__number = int(filename_info["number"])
         # 5.
-        self._rm_data()
+        self._rm_dataset_content()
+        self.__extra_column_names = []
+        self.__dico_common_column_names = {"data": "data", "data_err": "data_err"}
         # Make Dataset an abstract class
         if type(self) is Core_Dataset:
             raise NotImplementedError("Core_Dataset should not be instanciated!")
@@ -99,22 +84,27 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         return "<{} {}:{}>".format(self.__class__.__name__, self.dataset_name, self.filepath)
 
     @property
+    def dico_common_column_names(self):
+        """Get the category of indicator."""
+        return self.__dico_common_column_names
+
+    @property
     def data_column_name(self):
         """Get the category of indicator."""
-        return self.__data_column_name
+        return self.dico_common_column_names["data"]
 
     @property
     def data_err_column_name(self):
         """Get the category of indicator."""
-        return self.__data_err_column_name
+        return self.dico_common_column_names["data_err"]
 
     @property
     def column_names(self):
-        return [self._data_column_name, self._data_err_column_name]
+        return [self.dico_common_column_names[col] for col in self.mandatory_columns] + self.__extra_column_names
 
     @property
     def datasetkwarg_names(self):
-        return self.column_names + self.__extra_datasetkwargs_names
+        return self.column_names + self._extra_datasetkwargs_names
 
     @property
     def filepath(self):
@@ -254,6 +244,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         logger.info("Data attribute has been removed/initialise in dataset of {}."
                     "".format(self.filename))
 
+    @property
     def is_dataset_content_stored(self):
         """Tell if data has been stored.
         ----
@@ -328,15 +319,21 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         # to have a  quick statistic summary of your data
         # lc.describe()
         # 3.
+        l_column_name_4_mandatory_columns = [self.dico_common_column_names[col] for col in self.mandatory_columns]
         if header_used:
-            for col_name in self.column_names:
+            for col_name in l_column_name_4_mandatory_columns:
                 if col_name not in pandas_df.columns:
-                    raise ValueError("{} is a mandatory column for this Dataset subclass."
-                                     "It should be included in the header of the data file that you"
-                                     "provided. Columns provided by the header of your file: {}\n"
+                    raise ValueError(f"{col_name} is a mandatory column for this Dataset subclass. "
+                                     "It should be included in the header of the data file that you "
+                                     f"provided. Columns provided by the header of your file: {pandas_df.columns}\n"
                                      "If this column is provided under a different name please used"
                                      "the skiprows and names arguments."
-                                     "".format(col_name, pandas_df.columns))
+                                     "")
+
+        for column_name in pandas_df.columns:
+            if column_name not in l_column_name_4_mandatory_columns:
+                self.__extra_column_names.append(column_name)
+
         # 4.
         if "inst_flag" not in pandas_df.columns:
             pandas_df["inst_flag"] = 0
@@ -354,7 +351,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
             Unconstrained type but not None, Data stored or loaded from the data file. Return None
                 if no data stored and load-data method not implemented.
         """
-        if not(self.is_data_stored()):
+        if not(self.is_dataset_content_stored):
             try:
                 return self.load_dataset_content(**kwargs)
             except:
@@ -385,7 +382,11 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
     def get_datasetkwarg(self, datasetkwarg):
         """Return a specific datasetkwarg."""
         if datasetkwarg in self.column_names:
-            return asarray(self.get_dataset_content()[datasetkwarg]),
+            return asarray(self.get_dataset_content()[datasetkwarg])
+        elif datasetkwarg == 'data':
+            return asarray(self.get_dataset_content()[self.data_column_name])
+        elif datasetkwarg == 'data_err':
+            return asarray(self.get_dataset_content()[self.data_err_column_name])
         else:
             raise ValueError(f"For class {self.__class__}, datasetkwarg should be in {self.column_names}")
 
@@ -397,24 +398,22 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         pl.show()
 
 
-class Core_DatasetTimeSeries(object):
+class Core_DatasetTimeSeries(Core_Dataset):
     """docstring for Core_DatasetTimeSeries."""
 
-    __time_column_name = "time"
-    __extra_datasetkwargs_names = ["time_ref"]
+    _extra_datasetkwargs_names = ["time_ref"]
 
     def __init__(self, file_path, instrument_instance, exp_time=None):
         super(Core_DatasetTimeSeries, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["time"] = "time"
         self.__exposure_time = exp_time
+        if "time" not in self.mandatory_columns:
+            raise ValueError("time has to be in __mandatory_columns__ for subclasses of Core_DatasetTimeSeries")
 
     @property
     def time_column_name(self):
         """Get the category of indicator."""
-        return self.__time_column_name
-
-    @property
-    def column_names(self):
-        return [self.__time_column_name, ] + super(Core_DatasetTimeSeries, self).column_names
+        return self.dico_common_column_names["time"]
 
     def get_time(self):
         """Return the time vector."""
@@ -440,9 +439,9 @@ class Core_DatasetTimeSeries(object):
     def get_datasetkwarg(self, datasetkwarg):
         """Return a specific datasetkwarg."""
         try:
-            super(Core_DatasetTimeSeries, self).get_datasetkwarg(datasetkwarg)
+            return super(Core_DatasetTimeSeries, self).get_datasetkwarg(datasetkwarg)
         except ValueError:
-            if datasetkwarg in self.__extra_datasetkwarg_names:
+            if datasetkwarg in self._extra_datasetkwargs_names:
                 if datasetkwarg == "time_ref":
                     return self.get_time_ref()
                 else:

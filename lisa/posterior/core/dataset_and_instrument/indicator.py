@@ -8,8 +8,6 @@ The objective of this package is to provides the IND_Instrument and IND_Dataset 
 @TODO:
 """
 from logging import getLogger
-import matplotlib.pyplot as plt
-from numpy import array
 
 from .dataset import Core_DatasetTimeSeries
 from .instrument import Core_Instrument
@@ -74,17 +72,14 @@ class IND_Dataset(Core_DatasetTimeSeries):
     """
 
     __instrument_subclass__ = IND_Instrument
-
-    ## name of the data  and data error columns
-    __data_column_name = "{}"
-    __data_err_column_name = "{}_err"
+    __mandatory_columns__ = ["time", "data"]
 
     def __init__(self, file_path, instrument_instance):
         super(IND_Dataset, self).__init__(file_path, instrument_instance)
         filename_info = self.interpret_data_filename(self.filename)
         self.__indicator_category = filename_info["inst_subcat"]
-        self.__data_column_name = self.__data_name.format(self.__indicator_category)
-        self.__data_err_column_name = self.__data_err_name.format(self.__indicator_category)
+        self.dico_common_column_names["data"] = f"{self.__indicator_category}"
+        self.dico_common_column_names["data_err"] = f"{self.__indicator_category}_err"
 
     @property
     def indicator_category(self):

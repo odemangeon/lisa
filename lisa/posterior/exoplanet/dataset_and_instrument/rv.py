@@ -8,8 +8,6 @@ The objective of this package is to provides the RV_Instrument and RV_Dataset cl
 @TODO:
 """
 from logging import getLogger
-import matplotlib.pyplot as plt
-from numpy import array
 
 from lisa.posterior.core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
@@ -103,7 +101,7 @@ class RV_Instrument(Core_Instrument):
         return "{}{}".format(self.__inst_var_basename__, order)
 
 
-class RV_Dataset(Core_Dataset):
+class RV_Dataset(Core_DatasetTimeSeries):
     """docstring for RV_Dataset class.
 
     This class is designed to habor an radial velocity data file.
@@ -118,10 +116,12 @@ class RV_Dataset(Core_Dataset):
     """
 
     __instrument_subclass__ = RV_Instrument
+    __mandatory_columns__ = ["time", "data", "data_err"]
 
-    ## name of the data  and data error columns
-    _data_name = "RV"
-    _data_err_name = "RV_err"
+    def __init__(self, file_path, instrument_instance, exp_time=None):
+        super(RV_Dataset, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["data"] = "RV"
+        self.dico_common_column_names["data_err"] = "RV_err"
 
 
 HARPS = RV_Instrument("HARPS")

@@ -8,8 +8,6 @@ The objective of this package is to provides the LC_Instrument and LC_Dataset cl
 @TODO:
 """
 import logging
-import matplotlib.pyplot as plt
-from numpy import array, percentile
 
 from lisa.posterior.core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
@@ -84,10 +82,12 @@ class LC_Dataset(Core_DatasetTimeSeries):
     """
 
     __instrument_subclass__ = LC_Instrument
+    __mandatory_columns__ = ["time", "data", "data_err"]
 
-    ## name of the data  and data error columns
-    __data_column_name = "flux"
-    __data_err_Core_DatasetTimeSeriesname = "flux_err"
+    def __init__(self, file_path, instrument_instance, exp_time=None):
+        super(LC_Dataset, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["data"] = "flux"
+        self.dico_common_column_names["data_err"] = "flux_err"
 
 
 K2 = LC_Instrument("K2")
