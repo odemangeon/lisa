@@ -55,6 +55,12 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
     __kwargs_needed__ = ["data", "data_err"]
 
+    ## list of keys (string) giving the dataset kwargs required for the computation of the likelihood
+    # of the noise model.
+    # This info will be used to get this dataset_kwargs out of the dataset and produce the dataset_kwargs
+    # variable which will contain all the dataset_kwargs required for a given likelihood computation.
+    l_required_datasetkwarg_keys = ["data", "data_err"]
+
     def __init__(self):
         """Init method to make Core_Noise_Model an abstract class (not instantiable).
         """
@@ -92,7 +98,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
                                   "noise model.")
 
     @classmethod
-    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj, l_likelihood_param_fullname, datasim_has_multioutputs):
+    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj,
+                                             l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -112,6 +119,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             List of instrument model objects that are used for the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
         l_dataset_obj               : list of Dataset instances
             List of dataset objects that are simulated by the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
+        l_datasetkwargs_req         : list of list of string
+            Give for each dataset obj, the list of datasetkwarg required
         l_likelihood_param_fullname : list of String
             Current list of parameter full names for the likelihood.
         datasim_has_multioutputs    : bool
@@ -119,16 +128,16 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
         Returns
         -------
-        lnlike_function  : function
+        lnlike_function                 : function
             function with the following arguments
                 sim_data         : sim_data using this noise model, and only these, the exact format is defined by f_format_simdata
                 param_noisemodel : param of the current noise model, and only these, the exact format is defined by f_format_param
                 dataset_kwargs   : dataset keyword arguments used by this noise model, and only these, the exact format is defined by this function.
-        f_format_param   : function
+        f_format_param                  : function
             Function to extract and format the parameter of this noise model from the vector of all the parameters of the likelihood function
-        f_format_simdata : function
+        f_format_simdata                : function
             Function extract and format the simulated data of the datasets using this noise model.
-        datasets_kwargs  : ??
+        f_format_dataset_kwargs         : function
             Dataset keyword arguments of the datasets using this noise model
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
@@ -145,11 +154,10 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             def f_format_simdata(sim_data):
                 return [sim_data, ]
 
-        dataset_kwargs = []
-        for dataset in l_dataset_obj:
-            dataset_kwargs.append(cls.get_necessary_datakwargs(dataset))
+        def f_format_dataset_kwargs(dataset_kwargs):
+            return [{datasetkwarg: dataset.get_datasetkwarg(datasetkwarg) for datasetkwarg in l_datasetkwarg} for dataset, l_datasetkwarg in zip(l_dataset_obj, l_datasetkwargs_req)]
 
-        return lnlike, f_format_param, f_format_simdata, dataset_kwargs, l_params_new
+        return lnlike, f_format_param, f_format_simdata, f_format_dataset_kwargs, l_params_new
 
     @classmethod
     def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
@@ -199,32 +207,36 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
         This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
 
-        :param list_of_string l_params: Current list of parameters full names.
-        :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
+        Arguments
+        ---------
+        l_params        : list_of_string
+            Current list of parameters full names.
+        l_instmod_obj   : Instrument_Model/list_of_InstrumentModel
             instrument model for the ln likelihood to produce.
-        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
-            noise model which requires parameter of the object studied (like GP and stellar
-            activity)
-        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
-            model the simulated data (array), param_noisemod the free parameters value for the noise
-            model, the list of dataset kwargs and returns the ln posterior value
-        :return list_of_string l_params_new: Updated list of parameters full names.
-        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
-            the updated list of parameters (l_params_new).
+        model_instance  : Core_Model
+            Instance of Core_Model or a subclass of it. Mandatory for noise model which requires parameter
+            of the object studied (like GP and stellar activity)
+
+        Returns  l_params_new, l_params_noisemod, l_idx_param_noisemod
+        -------
+        prefilled_lnlike        : function
+            Prefilled ln likelihood function with as arguments:
+                - sim_data: the simulated data required (the format can be anything as it is specified by
+                    the f_format_simdata generated by create_lnlikelihood_and_formatinputs)
+                - param_noisemod: the values for free parameters of the noise model required (the format
+                    can be anything as it is specified by the f_format_simdata generated by create_lnlikelihood_and_formatinputs)
+                - datasets_kwargs: the dataset kwargs required (the format can be anything as it is
+                    specified by the f_format_simdata generated by create_lnlikelihood_and_formatinputs)
+            and returns the ln posterior value
+        l_params_new            : list_of_string
+            Updated list of parameters full names.
+        l_params_noisemod       : list_of_string
+            list of the parameters full names for the noise model only.
+        l_idx_param_noisemod    : list_of_int
+            List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
         raise NotImplementedError("You need to ovewrite the get_prefilledlnlike method for your "
                                   "noise model.")
-
-    @classmethod
-    def get_necessary_datakwargs(cls, dataset):
-        """Return the data kwargs necessary for the computation of the likelihood.
-
-        :param Dataset dataset: Dataset instance.
-        :return dict datakwargs: dict with keys= datakwargs type (eg. "data"), value= value(s) of
-            this datakwarg for this dataset.
-        """
-        raise NotImplementedError("You need to ovewrite the get_necessary_datakwargs method for "
-                                  "your noise model.")
 
     @classmethod
     def _check_l_instmod_obj(cls, l_instmod_obj):
@@ -354,12 +366,12 @@ class GaussianNoiseModel(Core_Noise_Model):
 
         return lnlike, l_params, []
 
-    @classmethod
-    def get_necessary_datakwargs(cls, dataset):
-        """Return the data kwargs necessary for the computation of the likelihood.
-
-        :param Dataset dataset: Dataset instance.
-        :return dict datakwargs: dict with keys= datakwargs type (eg. "t"), value= value(s) of this
-            datakwarg for this dataset.
-        """
-        return {"data": dataset.get_data(), "data_err": dataset.get_data_err()}
+    # @classmethod
+    # def get_necessary_datakwargs(cls, dataset):
+    #     """Return the data kwargs necessary for the computation of the likelihood.
+    #
+    #     :param Dataset dataset: Dataset instance.
+    #     :return dict datakwargs: dict with keys= datakwargs type (eg. "t"), value= value(s) of this
+    #         datakwarg for this dataset.
+    #     """
+    #     return {"data": dataset.get_data(), "data_err": dataset.get_data_err()}

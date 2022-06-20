@@ -25,15 +25,18 @@ from numpy import inf, isfinite, ones_like
 from dill import dump, load
 from os.path import join
 from textwrap import dedent
+from copy import copy
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
+from .model import par_vec_name
 from .model.manager_model import Manager_Model
 from .model.datasimulator_timeseries_toolbox import time_vec
 from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
+from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
 from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
@@ -302,9 +305,14 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
     def get_lnpriors(self):
         """Get joint lnpriors from the model and store them into lnpriors."""
         if self.islocked_dataset_db:
+            if not(hasattr(self.lnpriors, "individual")):
+                logger.info("Creating individual lnpriors")
+                self.get_individal_lnpriors()
+            logger.info("Creating lnpriors for all entry in self.lnpriors.instrument_db")
             (self.lnpriors.instrument_db.
              update(self.model.create_lnpriors(lnlike_db=self.lnlikelihoods.instrument_db,
                                                individual_priors=self.lnpriors.individual)))
+            logger.info("Creating lnpriors for all entry in self.lnpriors.dataset_db")
             (self.lnpriors.dataset_db.
              update(self.model.
                     create_lnpriors_perdataset(individual_priors=self.lnpriors.individual,
@@ -530,26 +538,36 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             if lnlike_db_dtset[dataset_name] is None:
                 logger.warning(f"Posterior for dataset {dataset_name} could not be created because lnplikelihood is not available.")
                 continue
-            lnlike_func = lnlike_db_dtset[dataset_name].function
-            arg_list_new = lnprior_db_dtset[dataset_name].arg_list.copy()
+            lnlike_docfunc = lnlike_db_dtset[dataset_name]
 
-            def lnpost_withdataset_creator(prior_func, like_func, arg_list):
-                def lnpost_withdataset(p, *args, **kwargs):
+            def lnpost_withdataset_creator(prior_func, like_func):
+                def lnpost_withdataset(p_vect, *args, **kwargs):
                     # logger.debug("paramnames lnpost ({}): {}\nparams lnpost ({}): {}"
                     #              "".format(len(arg_list["param"]), arg_list["param"], len(p), p))
-                    lnprior_val = prior_func(p)
+                    lnprior_val = prior_func(p_vect)
                     # logger.debug("lnprior: {}".format(lnprior_val))
                     if not isfinite(lnprior_val):
                         return -inf
                     else:
                         # lnlike_val = like_func(p)
                         # logger.debug("lnlike: {}".format(lnlike_val))
-                        return like_func(p, *args, **kwargs) + lnprior_val
-                return DocFunction(function=lnpost_withdataset, arg_list=arg_list_new)
+                        return like_func(p_vect, *args, **kwargs) + lnprior_val
+                return lnpost_withdataset
 
-            db[dataset_name] = lnpost_withdataset_creator(prior_func=lnprior_func,
-                                                          like_func=lnlike_func,
-                                                          arg_list=arg_list_new)
+            mand_kwargs_list = copy(lnlike_docfunc.mand_kwargs_list)
+            if par_vec_name in mand_kwargs_list:
+                mand_kwargs_list.remove(par_vec_name)
+            db[dataset_name] = LikelihoodPosteriorDocFunc(function=lnpost_withdataset_creator(prior_func=lnprior_func, like_func=lnlike_docfunc.function),
+                                                          param_model_names_list=lnlike_docfunc.param_model_names_list,
+                                                          params_model_vect_name=par_vec_name,
+                                                          inst_cats_list=lnlike_docfunc.inst_cats_list,
+                                                          inst_model_fullnames_list=lnlike_docfunc.inst_model_fullnames_list,
+                                                          dataset_names_list=lnlike_docfunc.dataset_names_list,
+                                                          noisemodel_names_list=lnlike_docfunc.noisemodel_names_list,
+                                                          include_dataset_kwarg=lnlike_docfunc.include_dataset_kwarg,
+                                                          mand_kwargs_list=mand_kwargs_list,
+                                                          opt_kwargs_dict=lnlike_docfunc.opt_kwargs_dict
+                                                          )
 
         return db
 

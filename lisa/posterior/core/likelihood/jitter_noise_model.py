@@ -159,18 +159,14 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                                             "main"))
 
     @classmethod
-    def get_prefilledlnlike(cls, l_likelihood_param_fullname, l_instmod_obj):
+    def get_prefilledlnlike(cls, l_param_fullnames_lnlike, l_instmod_obj):
         """Return a ln likelihood function prefilled with the fixed parameters.
-
-        As this noise model doesn't require any parameters from the model instance, it doesn't need a
-        model_instance argument. But as it might be privided one automatically, I put the keyword
-        arguments **kwargs.
 
         Parameters
         ----------
-        l_datasim_param_fullname      : list of String
-            Current list of parameters full names.
-        l_instmod_obj : list of InstrumentModel
+        l_param_fullnames_lnlike : list of String
+            Current list of parameters full names for the likelihood function
+        l_instmod_obj               : list of InstrumentModel
             List of instrument model for the lnlikelihood. There is one element per dataset modeled by
             the datasimulator following this noise model.
 
@@ -187,7 +183,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             the updated list of parameters (l_params_new).
         """
         l_func = []
-        l_params_new = l_likelihood_param_fullname
+        l_params_new = l_param_fullnames_lnlike
         l_params_noisemod = []
         l_idx_param_noisemod = []
         for instmod_obj in l_instmod_obj:
@@ -207,11 +203,11 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         return lnlike_jitter, l_params_new, l_params_noisemod, l_idx_param_noisemod
 
     @classmethod
-    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+    def get_prefilledlnlike_1instmod(cls, l_param_fullnames_lnlike, l_params_noisemod, l_idx_param_noisemod,
                                      instmod_obj):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
-        :param list_of_string l_params_lnlike: Current list of parameters full names for the
+        :param list_of_string l_param_fullnames_lnlike: Current list of parameters full names for the
             lnlikehood function.
         :param list_of_string l_params_noisemod: Current list of parameters full names for the
             noise model only.
@@ -232,7 +228,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         # Get jitter parameter for the instrument model
         jitter_param = instmod_obj.parameters[jitter_name]
         (l_params_lnlike_new, l_params_noisemod_new,
-         l_idx_param_noisemod_new) = cls._update_lists_params(l_params_lnlike, l_params_noisemod,
+         l_idx_param_noisemod_new) = cls._update_lists_params(l_param_fullnames_lnlike, l_params_noisemod,
                                                               l_idx_param_noisemod, jitter_param)
 
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
@@ -251,8 +247,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                 inv_sigma2 = 1.0 / apply_jitter_dfm(data_err, jitter_value, model)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
-        return (lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new,
-                l_idx_param_noisemod_new)
+        return lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
 
     @classmethod
     def apply_jitter(cls, data_err, jitter, model):
