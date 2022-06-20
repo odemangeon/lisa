@@ -29,6 +29,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     __default_paramfile_name__ = "IND_param_file.py"
     __datasim_creator_name__ = "sim_IND"
     __decorrelation_models__ = []
+    __modelpart_4_decorrlikelihood__ = None  # There is currently no decorrelation likelihood model for this instrument category
 
     # models available for the indicators
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one
@@ -216,7 +217,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
                 # ... get the ordered list of instrument categories for this function
                 dico_inputs_allind[obj_key]["inst_fullcats"] = dico_inputs_allind[obj_key]["inst_fullcats"] + list(datsimC[ind_mod][obj_key].inst_cat)
                 # ... get the ordered list of instrument model full names for this function
-                dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] = dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] + list(datsimC[ind_mod][obj_key].instmodel_fullname)
+                dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] = dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] + list(datsimC[ind_mod][obj_key].inst_model_fullnames_list)
                 # ... get the ordered list of dataset names for this function
                 dico_inputs_allind[obj_key]["l_datasets_res_datasim"] = dico_inputs_allind[obj_key]["l_datasets_res_datasim"] + list(datsimC[ind_mod][obj_key].dataset)
                 # ... create the list of indexes for the function parameters and the list of all the
