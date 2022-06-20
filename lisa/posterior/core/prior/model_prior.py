@@ -16,8 +16,9 @@ from collections import OrderedDict
 from textwrap import dedent
 
 from .core_prior import Manager_Prior
+from ..model import par_vec_name
 from ..database_func import DatabaseInstLvlDataset
-from ....tools.function_w_doc import DocFunction
+from .prior_docfunc import PriorDocFunc
 from ....tools.miscellaneous import spacestring_like
 
 
@@ -174,7 +175,7 @@ class Model_Prior(object):
                 priors["joint"]["param_names"][full_name] = {"ref": param.joint_prior_ref, "idx": idx}
         return priors
 
-    def __joint_lnprior_creator(self, lnpriors_and_indexes, arg_list):
+    def __joint_lnprior_creator(self, lnpriors_and_indexes, param_prior_names_list, mand_kwargs_list=None, opt_kwargs_dict=None):
         """Create and return the joint prior function.
 
         :param list_of_tuple lnpriors_and_indexes: List of tuples of 2 elements. Each element
@@ -183,23 +184,23 @@ class Model_Prior(object):
             be one int giving the index of the parameter in the input array. If the prior function is
             a joint prior of several parameters, the second element is a list of int giving the indexes
             of these parameters in the input array.
-        :param dict_of_list arg_list: dictionary with two keys "param" and "kwargs". "param" contain
-            the list of parameter full names giving the order in which the parameter values should be provided
-            in the input array of the output joint prior function.
         :return DocFunction func: Joint prior function.
         """
-        logger.debug("Creating joint prior with the following lnpriors_and_indexes:\n{}\nand the following "
-                     "arg_list {}".format(lnpriors_and_indexes, arg_list))
+        logger.debug(f"Creating joint prior with the following lnpriors_and_indexes:\n{lnpriors_and_indexes}"
+                     f"\nand the following param_prior_names_list {param_prior_names_list}"
+                     f"\nand the following mand_kwargs_list {mand_kwargs_list}"
+                     f"\nand the following opt_kwargs_dict {opt_kwargs_dict}")
 
-        def joint_lnprior(p):
+        def joint_lnprior(p_vect):
             res = 0
             # logger.debug("paramnames prior ({}): {}".format(len(arg_list["param"]),
             #                                                 arg_list["param"]))
             # logger.debug("params prior ({}): {}".format(len(p), p))
             for ln_prior, ii in lnpriors_and_indexes:
-                res += ln_prior(p[ii])
+                res += ln_prior(p_vect[ii])
             return res
-        return DocFunction(function=joint_lnprior, arg_list=arg_list)
+        return PriorDocFunc(function=joint_lnprior, param_prior_names_list=param_prior_names_list, params_prior_vect_name=par_vec_name,
+                            mand_kwargs_list=mand_kwargs_list, opt_kwargs_dict=opt_kwargs_dict)
 
     def create_joint_lnprior(self, list_paramnames, individual_priors=None):
         """Return a joint prior function for the list of parameter provided.
@@ -249,18 +250,15 @@ class Model_Prior(object):
                 logger.warning(f"It was not possible to create the joint prior because joint prior {joint_prior_ref}"
                                " doesn't have access to all his required parameters.")
                 return None
-        # Create the arg_list for the DocFunction
-        arg_list = OrderedDict()
-        arg_list["param"] = list_paramnames.copy()
-        arg_list["kwargs"] = []
         # Call __joint_lnprior_creator to create the Docfunction of the joint lnprior function from
         # marginal_lnpriors, joint_lnpriors and arg_list.
-        docf = self.__joint_lnprior_creator(marginal_lnpriors + list(joint_lnpriors.values()), arg_list)
+        docf = self.__joint_lnprior_creator(lnpriors_and_indexes=marginal_lnpriors + list(joint_lnpriors.values()),
+                                            param_prior_names_list=list_paramnames.copy())
         return docf
 
     def create_lnpriors(self, lnlike_db, individual_priors=None, affectinstmodel4dataset=False,
                         lock_db=False):
-        """Create the joint prior function from the list of parameters of the lnlike functions.
+        """Create the joint prior functions
         """
         if individual_priors is None:
             individual_priors = self.create_individual_lnpriors()
@@ -276,8 +274,7 @@ class Model_Prior(object):
                 for inst_model in lnlike_db[inst_cat][inst_name]:
                     db[inst_cat][inst_name][inst_model] = {}
                     for obj in lnlike_db[inst_cat][inst_name][inst_model]:
-                        arg_list = lnlike_db[inst_cat][inst_name][inst_model][obj].arg_list["param"]
-                        joint_prior = self.create_joint_lnprior(list_paramnames=arg_list,
+                        joint_prior = self.create_joint_lnprior(list_paramnames=lnlike_db[inst_cat][inst_name][inst_model][obj].param_model_names_list,
                                                                 individual_priors=individual_priors)
                         if joint_prior is not None:
                             db[inst_cat][inst_name][inst_model][obj] = joint_prior
@@ -309,7 +306,8 @@ class Model_Prior(object):
         for dataset_name, lnlike_docfunc in lnlike_db_dtst.items():
             # For IND dataset you might not want to model them. In this case the lnlike_docfunc should be None
             if lnlike_docfunc is not None:
-                joint_prior = self.create_joint_lnprior(lnlike_docfunc.params_model,
+                logger.info(f"Creating lnpriors for dataset {dataset_name}")
+                joint_prior = self.create_joint_lnprior(list_paramnames=lnlike_docfunc.param_model_names_list,
                                                         individual_priors=individual_priors)
                 if joint_prior is not None:
                     db[dataset_name] = joint_prior
