@@ -405,15 +405,15 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             # Compute the model values for each time
             idx_param_datasim = []
             datasim_function = datasim_docfunc.function
-            datasim_paramnames = datasim_docfunc.params_model
+            datasim_paramnames = datasim_docfunc.param_model_names_list
             for par in datasim_paramnames:
                 idx_param_datasim.append(l_param_name.index(par))
-            if f"'{time_vec}'" in datasim_docfunc.mand_kwargs_list:
+            if f"{time_vec}" in datasim_docfunc.mand_kwargs_list:
                 mand_kwargs = {"t": t_model}
             else:
                 mand_kwargs = {}
             model = datasim_function(param[idx_param_datasim], **mand_kwargs, **datasim_kwargs)
-            if f"'{time_vec}'" not in datasim_docfunc.mand_kwargs_list:
+            if f"{time_vec}" not in datasim_docfunc.mand_kwargs_list:
                 model = model * ones_like(t_model)
 
             # De-supersamp the model if needed.
