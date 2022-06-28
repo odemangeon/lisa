@@ -1260,11 +1260,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Plot the decorrelation model if needed
                     ########################################
                     if (datasetname in decorrs) and not(remove_decorrelation):
-                        for model_part in decorrs:
+                        for model_part in decorrs[datasetname]:
                             if model_part == "add_2_totalflux":
                                 pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
                                 pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
-                                _ = axe_data.plot(tsim, decorrs["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
+                                _ = axe_data.plot(tsim, model_decorr["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
                             # Else is already addressed above
 
                     ###############
@@ -1817,7 +1817,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
                                                      )
                     decorrs[datasetname][model_part] = model_decorr['add_2_totalflux']
                 else:
-                    logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         #########################################################################
         # Compute the contamination models (contam) to later remove from the data
