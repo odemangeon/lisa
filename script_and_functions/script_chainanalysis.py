@@ -198,7 +198,7 @@ if any([var not in globals() for var in ["post_instance", "lnprobability", "acce
     # recreate post_instance object
     post_instance = cpost.Posterior(object_name=obj_name)
     post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
-    l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
+    l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
     chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
                                                                                    folder=output_folders["pickles_explore"])
     tc = TestCase()
