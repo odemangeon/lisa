@@ -14,6 +14,7 @@ The objective of this module is to define the class LikelihoodCreator.
 from logging import getLogger
 from collections import defaultdict
 from copy import copy
+# import matplotlib.pyplot as pl
 
 from .manager_noise_model import Manager_NoiseModel
 from ..likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
@@ -332,10 +333,17 @@ class LikelihoodCreator(object):
                                                                   )
 
         # Text that add the decorrelation to sim data
+        # func_builder.add_variable_to_ldict(variable_name="plot", variable_content=pl.plot,
+        #                                    function_shortname=func_shortname, exist_ok=True)
+        # func_builder.add_to_body_text(text=f"{tab}figure()\n", function_shortname=func_shortname)
         for ii, (inst_mod_fullname, dataset_name) in enumerate(zip(datasim_docfunc.inst_model_fullnames_list, datasim_docfunc.dataset_names_list)):
+            # func_builder.add_to_body_text(text=f"{tab}plot(dataset_kwargs['{dataset_name}']['data'], '.', label='data')\n", function_shortname=func_shortname)
+            # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_before')\n", function_shortname=func_shortname)
             if inst_mod_fullname in dico_decorr_4_instmod:
                 decorr_text = dico_decorr_4_instmod[inst_mod_fullname]["d_decorrtext_4_dataset"][dataset_name]
                 func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {decorr_text}\n", function_shortname=func_shortname)
+                # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_after')\n", function_shortname=func_shortname)
+                # func_builder.add_to_body_text(text=f"{tab}plot(1 + {decorr_text}, label='decorr')\n", function_shortname=func_shortname)
 
         l_noisemodel_cat = list(dico_noisemodel.keys())
         if len(l_noisemodel_cat) > 1:
