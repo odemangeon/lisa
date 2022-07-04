@@ -23,7 +23,7 @@ class DatasimDocFunc(DocFunction):
 
     def __init__(self, function, param_model_names_list, params_model_vect_name, inst_cats_list,
                  inst_model_fullnames_list, dataset_names_list,
-                 include_dataset_kwarg, mand_kwargs_list=None, opt_kwargs_dict=None):
+                 include_dataset_kwarg, mand_kwargs_list=None, opt_kwargs_dict=None, forced_multioutput=False):
         """Initialise the datasim doc function.
 
         Arguments
@@ -77,6 +77,9 @@ class DatasimDocFunc(DocFunction):
 
         # Check inst_cat input and tell if there is multi_outputs
         self.__multi_outputs = self._check_inst_cat(inst_cats_list)
+
+        # Set self.__forced_multioutput
+        self.__forced_multioutput = forced_multioutput
 
         # Init the output_info property
         self._init_output_info(self.__multi_outputs, inst_cats_list, self.__multi_inst_model,
@@ -194,8 +197,11 @@ class DatasimDocFunc(DocFunction):
 
     @property
     def multi_output(self):
-        """If True the datasim function simulates several outputs."""
-        return self.noutput > 1
+        """If True the output of the datasim function is a list of array, that (can) simulates several outputs."""
+        if self.forced_multioutput:
+            return True
+        else:
+            return self.noutput > 1
 
     @property
     def output_info(self):
@@ -227,6 +233,11 @@ class DatasimDocFunc(DocFunction):
         """String with information about the function."""
         text = super(DatasimDocFunc, self)._info
         return text + "\noutput_info:\n {output_info}".format(output_info=self.output_info)
+
+    @property
+    def forced_multioutput(self):
+        """True if the output is a list even if it's a one element list"""
+        return self.__forced_multioutput
 
     def info(self):
         """Provide informations about the function."""

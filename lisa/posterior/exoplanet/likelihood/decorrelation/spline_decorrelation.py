@@ -7,8 +7,8 @@ from logging import getLogger
 from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import LSQUnivariateSpline  # This should allow to specify the knots
 from numpy import concatenate, argsort
-import matplotlib.pyplot as pl
-import numpy as np
+# import matplotlib.pyplot as pl
+# import numpy as np
 
 from ....core.likelihood.core_decorrelation_likelihood import Core_DecorrelationLikelihood
 

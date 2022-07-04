@@ -186,6 +186,7 @@ class DatasimulatorCreator(object):
                               include_dataset_kwarg=l_datasim[0].include_dataset_kwarg,
                               mand_kwargs_list=mand_kwargs_list,
                               opt_kwargs_dict=opt_kwargs_dict,
+                              forced_multioutput=True,
                               )
 
     def create_datasimulator_alldatasets(self, dataset_db):
