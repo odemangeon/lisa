@@ -356,8 +356,9 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             db_lnlike, db_decorr_like = self.model.create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.dataset_db))
             self.lnlikelihoods.dataset_db.update(db_lnlike)  # create_lnlikelihoods_perdataset is defined in LikelihoodCreator
             self.datasimulators.dataset_db.unlock()
-            for dataset_name, decorr_func in db_decorr_like.items():
-                self.datasimulators.dataset_db[f"{dataset_name}_decorr_like"] = decorr_func
+            for dataset_name, decorr_funcs in db_decorr_like.items():
+                for func_shortname in decorr_funcs.keys():
+                    self.datasimulators.dataset_db[f"{dataset_name}_{func_shortname}_like"] = decorr_funcs[func_shortname]
             self.datasimulators.dataset_db.lock()
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)

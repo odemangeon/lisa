@@ -410,7 +410,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
 
     def create_decorrelation_likelihood(self, function_builder, l_function_shortname, inst_model_obj, dico_decorr_instmod,
                                         l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs,
-                                        datasim_has_multioutputs):
+                                        datasim_has_multioutputs, plot_functionshortname=None):
         """Create the text for the likelihood decorrelation for a given instrument model
 
         It had the required text in the body of the function and return the text for the decorrelation
@@ -424,11 +424,15 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         dico_decorr_instmod         :
         l_dataset_name              :
         l_paramsfullname_likelihood :
+        dataset_kwargs              :
+        inddataset_kwargs           :
+        datasim_has_multioutputs    :
+        plot_functionshortname      :
 
         Return
         ------
         decorrtext_4_dataset        :
-        _paramsfullname_likelihood  :
+        l_paramsfullname_likelihood  :
         """
         decorrtext_4_dataset = {dst_name: "" for dst_name in dico_decorr_instmod["l_dataset_name"]}
         for decorr_cat, dico_decorr_cat in dico_decorr_instmod["decorr_cat"].items():
@@ -448,7 +452,8 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                                  l_paramsfullname_likelihood=l_paramsfullname_likelihood,
                                                                  dataset_kwargs=dataset_kwargs,
                                                                  inddataset_kwargs=inddataset_kwargs,
-                                                                 datasim_has_multioutputs=datasim_has_multioutputs)
+                                                                 datasim_has_multioutputs=datasim_has_multioutputs,
+                                                                 plot_functionshortname=plot_functionshortname)
             for dataset_name, decorrtext_4_dataset_indinstmod in decorrtext_4_dataset_indinstmod.items():
                 if decorrtext_4_dataset[dataset_name] == "":
                     pre_text = ""
