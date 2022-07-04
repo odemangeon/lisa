@@ -14,10 +14,11 @@ The objective of this module is to define the class LikelihoodCreator.
 from logging import getLogger
 from collections import defaultdict
 from copy import copy
-# import matplotlib.pyplot as pl
+import matplotlib.pyplot as pl
 
 from .manager_noise_model import Manager_NoiseModel
 from ..likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
+from ..model.datasim_docfunc import DatasimDocFunc
 from ..database_func import DatabaseInstLvlDataset
 from ....tools.function_from_text_toolbox import FunctionBuilder
 from ..model import par_vec_name
@@ -49,6 +50,7 @@ class LikelihoodCreator(object):
         """
         # Initialise the output dictionary
         db = {}
+        db_decorr = {}
 
         # For each dataset_name and associated datasim in the datasim_db_dtset dictionnary, ...
         for dataset_name, datasim in datasim_db_dtset.items():
@@ -60,12 +62,12 @@ class LikelihoodCreator(object):
             # ..., create the corresponding lnlikelihood doc function
             # For IND dataset you might not want to model them. In this case the datasim should be None
             if datasim is not None:
-                db[dataset_name] = self._create_lnlikelihood(datasim)
+                db[dataset_name], db_decorr[dataset_name] = self._create_lnlikelihood(datasim)
             # db[dataset_name] = self.__lnlike_withdataset_creator(lnlike_doc_func.function,
             #                                                      lnlike_doc_func.arg_list,
             #                                                      data=dataset.get_data(),
             #                                                      data_err=dataset.get_data_err())
-        return db
+        return db, db_decorr
 
     # def _create_lnlikelihood(self, datasim):
     #     """Return the log likelihood doc function corresponding to a datasim doc function.
@@ -225,14 +227,15 @@ class LikelihoodCreator(object):
             raise NotImplementedError("For now, __likelihood_creator cannot be applied to a data "
                                       "simulator for which the dataset is not included")
 
-        func_shortname = "lnlike"
+        func_shortname_lnlike = "lnlike"
+        l_func_shortname = [func_shortname_lnlike, ]
 
         func_builder = FunctionBuilder()
         parameters = [self.get_parameter(name=param_fullname, notexist_ok=False, return_error=False, kwargs_get_list_params={'main': True, 'free': True, 'no_duplicate': True, 'recursive': True}, kwargs_get_name={'recursive': True, 'include_prefix': True}) for param_fullname in datasim_docfunc.param_model_names_list]
         l_mand_args = copy(datasim_docfunc.mand_kwargs_list)
         if par_vec_name in l_mand_args:
             l_mand_args.remove(par_vec_name)
-        func_builder.add_new_function(shortname=func_shortname, parameters=parameters,
+        func_builder.add_new_function(shortname=func_shortname_lnlike, parameters=parameters,
                                       mandatory_args=l_mand_args,
                                       optional_args=copy(datasim_docfunc.opt_kwargs_dict),
                                       full_function_name=None)
@@ -242,6 +245,15 @@ class LikelihoodCreator(object):
          ) = self._get_required_dataset(datasim_docfunc=datasim_docfunc)
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
 
+        # If a likelihood decorrelation is required add a decorr function to the function builder
+        func_shortname_decorr = "decorr"
+        if len(dico_decorr_4_instmod) > 0:
+            l_func_shortname.append(func_shortname_decorr)
+            func_builder.add_new_function(shortname=func_shortname_decorr, parameters=parameters,
+                                          mandatory_args=l_mand_args,
+                                          optional_args=copy(datasim_docfunc.opt_kwargs_dict),
+                                          full_function_name=None)
+
         # Create the datasimulator that simulate all the dataset object required
         if l_dataset_name == list(datasim_docfunc.dataset_names_list):
             datasim_all_dst_doc_func = datasim_docfunc
@@ -249,8 +261,6 @@ class LikelihoodCreator(object):
             datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)
 
         l_idx_param_dtsim = list(range(len(datasim_all_dst_doc_func.param_model_names_list)))
-        func_builder.add_variable_to_ldict(variable_name="l_idx_param_dtsim", variable_content=l_idx_param_dtsim, function_shortname=func_shortname, exist_ok=False)
-        func_builder.add_variable_to_ldict(variable_name="datasim_func_alldst", variable_content=datasim_all_dst_doc_func.function, function_shortname=func_shortname, exist_ok=False)
         datasim_mand_arg = datasim_all_dst_doc_func.mand_kwargs_list
         datasim_mand_arg.remove(par_vec_name)
         mand_args_text = ", ".join(datasim_mand_arg)
@@ -261,7 +271,10 @@ class LikelihoodCreator(object):
             additional_args_text = f', {mand_args_text}, {opt_args_text}'
         else:
             additional_args_text = f', {mand_args_text+opt_args_text}'
-        func_builder.add_to_body_text(text=f"{tab}sim_data = datasim_func_alldst({par_vec_name}[l_idx_param_dtsim]{additional_args_text})\n", function_shortname=func_shortname)
+        for func_shortname in l_func_shortname:
+            func_builder.add_variable_to_ldict(variable_name="l_idx_param_dtsim", variable_content=l_idx_param_dtsim, function_shortname=func_shortname, exist_ok=False)
+            func_builder.add_variable_to_ldict(variable_name="datasim_func_alldst", variable_content=datasim_all_dst_doc_func.function, function_shortname=func_shortname, exist_ok=False)
+            func_builder.add_to_body_text(text=f"{tab}sim_data = datasim_func_alldst({par_vec_name}[l_idx_param_dtsim]{additional_args_text})\n", function_shortname=func_shortname)
 
         # Create the dataset_kwargs dictionary
         dataset_kwargs = defaultdict(dict)
@@ -271,9 +284,9 @@ class LikelihoodCreator(object):
             dataset_obj = l_dataset_obj[l_dataset_name.index(dataset_name)]
             for datasetkwarg in l_datasetkwarg:
                 dataset_kwargs[dataset_name][datasetkwarg] = dataset_obj.get_datasetkwarg(datasetkwarg)
-
-        func_builder.add_variable_to_ldict(variable_name="dataset_kwargs", variable_content=dataset_kwargs,
-                                           function_shortname=func_shortname, exist_ok=False)
+        for func_shortname in l_func_shortname:
+            func_builder.add_variable_to_ldict(variable_name="dataset_kwargs", variable_content=dataset_kwargs,
+                                               function_shortname=func_shortname, exist_ok=False)
 
         # Create the dataset_kwargs dictionary
         inddataset_kwargs = defaultdict(dict)
@@ -284,8 +297,9 @@ class LikelihoodCreator(object):
             for datasetkwarg in l_datasetkwarg:
                 inddataset_kwargs[inddataset_name][datasetkwarg] = dataset_obj.get_datasetkwarg(datasetkwarg)
 
-        func_builder.add_variable_to_ldict(variable_name="inddataset_kwargs", variable_content=inddataset_kwargs,
-                                           function_shortname=func_shortname, exist_ok=False)
+        for func_shortname in l_func_shortname:
+            func_builder.add_variable_to_ldict(variable_name="inddataset_kwargs", variable_content=inddataset_kwargs,
+                                               function_shortname=func_shortname, exist_ok=False)
 
         # Initialise the list of parameter for the likelihood computation with the parameter of the
         # datasimulator
@@ -304,16 +318,18 @@ class LikelihoodCreator(object):
                                                                       l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                       l_datasetkwargs_req=dico["l_datasetkwargs_req"],
                                                                       l_likelihood_param_fullname=l_paramsfullname_likelihood,
-                                                                      datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output
+                                                                      datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
+                                                                      function_builder=func_builder,
+                                                                      function_shortname=func_shortname_lnlike,
                                                                       )
             func_builder.add_variable_to_ldict(variable_name=f"lnlike_{noisemodel_cat}", variable_content=dico["lnlike_func"],
-                                               function_shortname=func_shortname, exist_ok=False)
+                                               function_shortname=func_shortname_lnlike, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name=f"format_param_{noisemodel_cat}", variable_content=dico["f_format_param"],
-                                               function_shortname=func_shortname, exist_ok=False)
+                                               function_shortname=func_shortname_lnlike, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name=f"format_simdata_{noisemodel_cat}", variable_content=dico["f_format_simdata"],
-                                               function_shortname=func_shortname, exist_ok=False)
+                                               function_shortname=func_shortname_lnlike, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name=f"format_datasetkwargs_{noisemodel_cat}", variable_content=dico["f_format_datasetkwargs"],
-                                               function_shortname=func_shortname, exist_ok=False)
+                                               function_shortname=func_shortname_lnlike, exist_ok=False)
 
         # Update the parameters required taking into account the parameter of the decorrelation model
         # Also for each instrument model create the functions of the decorrelation and the functions to format
@@ -323,55 +339,66 @@ class LikelihoodCreator(object):
             instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
             (dico["d_decorrtext_4_dataset"], l_paramsfullname_likelihood
              ) = instcat_mod_inst.create_decorrelation_likelihood(function_builder=func_builder,
-                                                                  function_shortname=func_shortname,
+                                                                  l_function_shortname=l_func_shortname,
                                                                   inst_model_obj=instmod_obj,
                                                                   dico_decorr_instmod=dico,
                                                                   l_dataset_name=l_dataset_name,
                                                                   l_paramsfullname_likelihood=l_paramsfullname_likelihood,
                                                                   dataset_kwargs=dataset_kwargs,
-                                                                  inddataset_kwargs=inddataset_kwargs
+                                                                  inddataset_kwargs=inddataset_kwargs,
+                                                                  datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
                                                                   )
 
         # Text that add the decorrelation to sim data
         # func_builder.add_variable_to_ldict(variable_name="plot", variable_content=pl.plot,
-        #                                    function_shortname=func_shortname, exist_ok=True)
-        # func_builder.add_to_body_text(text=f"{tab}figure()\n", function_shortname=func_shortname)
+        #                                    function_shortname=func_shortname_lnlike, exist_ok=True)
+        # func_builder.add_to_body_text(text=f"{tab}figure()\n", function_shortname=func_shortname_lnlike)
+        return_decorr = ""
         for ii, (inst_mod_fullname, dataset_name) in enumerate(zip(datasim_docfunc.inst_model_fullnames_list, datasim_docfunc.dataset_names_list)):
-            # func_builder.add_to_body_text(text=f"{tab}plot(dataset_kwargs['{dataset_name}']['data'], '.', label='data')\n", function_shortname=func_shortname)
-            # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_before')\n", function_shortname=func_shortname)
+            # func_builder.add_to_body_text(text=f"{tab}plot(dataset_kwargs['{dataset_name}']['data'], '.', label='data')\n", function_shortname=func_shortname_lnlike)
+            # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_before')\n", function_shortname=func_shortname_lnlike)
             if inst_mod_fullname in dico_decorr_4_instmod:
                 decorr_text = dico_decorr_4_instmod[inst_mod_fullname]["d_decorrtext_4_dataset"][dataset_name]
-                func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {decorr_text}\n", function_shortname=func_shortname)
-                # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_after')\n", function_shortname=func_shortname)
-                # func_builder.add_to_body_text(text=f"{tab}plot(1 + {decorr_text}, label='decorr')\n", function_shortname=func_shortname)
+                func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {decorr_text}\n", function_shortname=func_shortname_lnlike)
+                if return_decorr == "" and datasim_docfunc.multi_output:
+                    return_decorr += "["
+                return_decorr += f"{decorr_text}, "
+                # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_after')\n", function_shortname=func_shortname_lnlike)
+                # func_builder.add_to_body_text(text=f"{tab}plot(1 + {decorr_text}, label='decorr')\n", function_shortname=func_shortname_lnlike)
+        if return_decorr != "" and datasim_docfunc.multi_output:
+            return_decorr += "]"
+        else:
+            return_decorr = return_decorr[:-2]
+        if return_decorr != "":
+            func_builder.add_to_body_text(text=f"{tab}return {return_decorr}\n", function_shortname=func_shortname_decorr)
 
         l_noisemodel_cat = list(dico_noisemodel.keys())
         if len(l_noisemodel_cat) > 1:
-            func_builder.add_to_body_text(text=f"{tab}res = 0\n", function_shortname=func_shortname)
+            func_builder.add_to_body_text(text=f"{tab}res = 0\n", function_shortname=func_shortname_lnlike)
             for noisemodel_cat in l_noisemodel_cat:
-                func_builder.add_to_body_text(text=f"{tab}res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname)
-            func_builder.add_to_body_text(text=f"{tab}return res\n", function_shortname=func_shortname)
+                func_builder.add_to_body_text(text=f"{tab}res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab}return res\n", function_shortname=func_shortname_lnlike)
         else:
             noisemodel_cat = l_noisemodel_cat[0]
-            func_builder.add_to_body_text(text=f"{tab}return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname)
+            func_builder.add_to_body_text(text=f"{tab}return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
 
-        # Create the function
-        logger.debug(f"text of {func_shortname} LC simulator function :\n{func_builder.get_full_function_text(shortname=func_shortname)}")
-        exec(func_builder.get_full_function_text(shortname=func_shortname), func_builder._get_ldict(function_shortname=func_shortname))
-        params_model = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname)]
-        dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
+        # Create the lnlike function
+        logger.debug(f"text of {func_shortname_lnlike} lnlikelihood function :\n{func_builder.get_full_function_text(shortname=func_shortname_lnlike)}")
+        exec(func_builder.get_full_function_text(shortname=func_shortname_lnlike), func_builder._get_ldict(function_shortname=func_shortname_lnlike))
+        params_like = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname_lnlike)]
+        dico_param_nb = {nb: param for nb, param in enumerate(params_like)}
         # Check below that it's ok, because of par_vec_name
-        if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+        if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)) > 0:
+            mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike))
         else:
             mand_kwargs = None
-        if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+        if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)) > 0:
+            opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike))
         else:
             opt_kwargs = None
-        logger.debug(f"Parameters for {func_shortname} function :\n{dico_param_nb}")
-        lnlike_docf = LikelihoodPosteriorDocFunc(func_builder._get_ldict(function_shortname=func_shortname)[func_builder.get_function_fullname(shortname=func_shortname)],
-                                                 param_model_names_list=l_paramsfullname_likelihood,
+        logger.debug(f"Parameters for {func_shortname_lnlike} function :\n{dico_param_nb}")
+        lnlike_docf = LikelihoodPosteriorDocFunc(func_builder._get_ldict(function_shortname=func_shortname_lnlike)[func_builder.get_function_fullname(shortname=func_shortname_lnlike)],
+                                                 param_model_names_list=params_like,
                                                  params_model_vect_name=par_vec_name, inst_cats_list=datasim_docfunc.inst_cats_list,
                                                  inst_model_fullnames_list=datasim_docfunc.inst_model_fullnames_list, dataset_names_list=datasim_docfunc.dataset_names_list,
                                                  noisemodel_names_list=noisemodel_names_list, include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
@@ -379,7 +406,32 @@ class LikelihoodCreator(object):
                                                  opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
                                                  )
 
-        return lnlike_docf
+        # Create the decorr function
+        if func_shortname_decorr in func_builder.l_function_shortname:
+            logger.debug(f"text of {func_shortname_decorr} likelihood decorrelation simulator function :\n{func_builder.get_full_function_text(shortname=func_shortname_decorr)}")
+            exec(func_builder.get_full_function_text(shortname=func_shortname_decorr), func_builder._get_ldict(function_shortname=func_shortname_decorr))
+            params_model = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname_decorr)]
+            dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
+            # Check below that it's ok, because of par_vec_name
+            if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_decorr)) > 0:
+                mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_decorr))
+            else:
+                mand_kwargs = None
+            if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_decorr)) > 0:
+                opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_decorr))
+            else:
+                opt_kwargs = None
+            logger.debug(f"Parameters for {func_shortname_decorr} function :\n{dico_param_nb}")
+            decorr_docf = DatasimDocFunc(func_builder._get_ldict(function_shortname=func_shortname_decorr)[func_builder.get_function_fullname(shortname=func_shortname_decorr)],
+                                         param_model_names_list=params_model,
+                                         params_model_vect_name=par_vec_name, inst_cats_list=datasim_docfunc.inst_cats_list,
+                                         inst_model_fullnames_list=datasim_docfunc.inst_model_fullnames_list, dataset_names_list=datasim_docfunc.dataset_names_list,
+                                         include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
+                                         mand_kwargs_list=mand_kwargs,  # datasim.mand_kwargs_list[1:],  # to exclude the params_model_vect_name
+                                         opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
+                                         )
+
+        return lnlike_docf, decorr_docf
 
     # WARNING/TODO: Right now this function is not used, because I am not creating likelihoods without dataset
     # But actually, I think that _create_lnlikelihood might be able to do this case too (To Be Checked)
@@ -416,6 +468,7 @@ class LikelihoodCreator(object):
                                            instmodel4dataset=instmodel4dataset, ordered=False)
         # Unlock the database to be sure that you can modify it
         db_lnlike.database_unlock()
+        datasim_inst_db.database_unlock()
         # For each instrument category, ...
         for inst_cat in datasim_inst_db:
             # For each instrument name, ...
@@ -435,8 +488,9 @@ class LikelihoodCreator(object):
                         # ... get the datasim doc func
                         datasim = datasim_inst_db[inst_cat][inst_name][inst_model][obj]
                         # ... create the likelihood function
-                        (db_lnlike[inst_cat][inst_name][inst_model][obj]
+                        (db_lnlike[inst_cat][inst_name][inst_model][obj], datasim_inst_db[inst_cat][inst_name][inst_model][f"{obj}_decorr_like"]
                          ) = self._create_lnlikelihood(datasim=datasim)
+        datasim_inst_db.lock()
         # If required lock the database
         if lock_db:
             db_lnlike.lock()
