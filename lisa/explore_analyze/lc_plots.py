@@ -61,7 +61,7 @@ fmt_sci_not = FuncFormatter(sci_not_str)
 def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                                 datasetnames=None, row4datasetname=None,
                                 plot_model_for_all_datasets=False, datasetnameformodel4row=None, npt_model=1000,
-                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_contamination=False,
+                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_decorrelation_likelihood=True, remove_contamination=False,
                                 remove_GP_data=True, remove_GP_residual=True, LC_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
@@ -232,7 +232,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination,
+                                     remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_contamination=remove_contamination,
                                      remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
@@ -843,7 +844,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                             datasetnames=None,
-                            remove1=True, remove_inst_var=False, remove_decorrelation=True, remove_contamination=False,
+                            remove1=True, remove_inst_var=False,
+                            remove_decorrelation=True, remove_decorrelation_likelihood=True,
+                            remove_contamination=False,
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
                             LC_fact=1e6, LC_unit="ppm",
@@ -881,6 +884,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     remove_inst_var  : bool (Def: True)
         If True remove the instrumental variations
     remove_decorrelation    : bool
+        If True remove the decorrelation model
+    remove_decorrelation_likelihood    : bool
         If True remove the decorrelation model
     remove_contamination    : bool
         If True remove the contamination model
@@ -1025,18 +1030,34 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     if show_system_name_in_suptitle:
         system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
         suptitle_text = f"{system_name} system"
-    removed_text = ""
-    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"], [remove_inst_var, remove_decorrelation, remove_contamination]):
+    removed_from_model_text = ""
+    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"],
+                              [remove_inst_var, remove_decorrelation, remove_contamination]):
         if removed:
-            if removed_text != "":
-                removed_text += ", "
-            removed_text += compo
-    if removed_text != "":
-        removed_text += " removed from model"
+            if removed_from_model_text != "":
+                removed_from_model_text += ", "
+            removed_from_model_text += compo
+    if removed_from_model_text != "":
+        removed_from_model_text += " removed from model"
+    if removed_from_model_text != "":
         if suptitle_text != "":
-            suptitle_text += f"\n{removed_text}"
+            suptitle_text += f"\n{removed_from_model_text}"
         else:
-            suptitle_text = removed_text
+            suptitle_text = removed_from_model_text
+    removed_from_data_text = ""
+    for compo, removed in zip(["Inst var", "Decorrelation", "Decorrelation Likelihood", "Contamination"],
+                              [remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, remove_contamination]):
+        if removed:
+            if removed_from_data_text != "":
+                removed_from_data_text += ", "
+            removed_from_data_text += compo
+    if removed_from_data_text != "":
+        removed_from_data_text += " removed from data"
+    if removed_from_data_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_data_text}"
+        else:
+            suptitle_text = removed_from_data_text
     if suptitle_text != "":
         fig.suptitle(suptitle_text, fontsize=fontsize)
 
@@ -1063,7 +1084,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
+                                     remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
 
     ################
     # LC TIME SERIES
@@ -1200,6 +1222,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 model -= model_decorr['add_2_totalflux']
                             else:
                                 logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+
                     # Remove the inst_var if required
                     if (datasetname in inst_vars) and remove_inst_var:
                         model -= model_instvar
@@ -1730,7 +1753,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
-                                remove_inst_var, remove_decorrelation, remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
+                                remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood,
+                                remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
     """
     dico_datasets = {}
@@ -1748,6 +1772,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
     gp_pred_vars = {}
     inst_vars = {}
     decorrs = {}
+    decorr_likelihoods = {}
     contams = {}
     residuals = {}
     for datasetname in datasetnames:
@@ -1844,13 +1869,13 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         else:
             models[datasetname] = model
 
-        #######################
-        # Compute the residuals
-        #######################
-        if (model_wGP is not None) and remove_GP_residual:
-            residuals[datasetname] = datas[datasetname] - model_wGP
-        else:
-            residuals[datasetname] = datas[datasetname] - model
+        ###################################################
+        # Compute the likelihood decorrelation contribution
+        ###################################################
+        if remove_decorrelation_likelihood and (f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db):
+            datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+            decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
 
         ################################################################################
         # Remove GP (if needed)
@@ -1877,6 +1902,12 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         ################################################################################
+        # Remove decorrelation likelihood (if needed)
+        ################################################################################
+        if (datasetname in decorrs) and remove_decorrelation_likelihood:
+            datas[datasetname] -= decorr_likelihoods[datasetname]
+
+        ################################################################################
         # Remove contamination (if needed)
         ################################################################################
         if remove_contamination:
@@ -1889,6 +1920,14 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         if remove1:
             datas[datasetname] -= 1
             models[datasetname] -= 1
+
+        #######################
+        # Compute the residuals
+        #######################
+        if (model_wGP is not None) and remove_GP_residual:
+            residuals[datasetname] = datas[datasetname] - model_wGP
+        else:
+            residuals[datasetname] = datas[datasetname] - model
 
         ################################################################################
         # Apply LC_fact
@@ -2038,11 +2077,11 @@ def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, o
     if bin_size > 0.:
         for datasetname in datasetnames:
             # Set label for binned model
-            pl_kwarg_final[datasetname]["modelbinned"]["label"] = f"model: bin={bin_size:.2g}{bin_size_unit}"
+            pl_kwarg_final[datasetname]["modelbinned"]["label"] = f"model: bin={bin_size:.2g}[{bin_size_unit}]"
             # Set label for binned data per dataset
             if not(one_binning_per_row):
-                pl_kwarg_final[datasetname]["databinned"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
+                pl_kwarg_final[datasetname]["databinned"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"
         # Set label for binned data per row
         if one_binning_per_row:
             for i_row in range(nb_rows):
-                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
+                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"
