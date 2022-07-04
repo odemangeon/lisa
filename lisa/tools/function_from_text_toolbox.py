@@ -142,7 +142,7 @@ class FunctionBuilder(object):
         """
         self.add_new_function(shortname=shortname_copy, parameters=self.get_parameter_vector(function_shortname=shortname_src),
                               mandatory_args=self.get_l_mandatory_argument(function_shortname=shortname_src),
-                              optional_args={arg: self.get_default_value_4_arg(argument_name=arg, function_shortname=shortname_src) for arg in self.get_l_optional_argument_name(function_shortname=shortname_src)},
+                              optional_args={arg: self.get_default_value_4_argument(argument_name=arg, function_shortname=shortname_src) for arg in self.get_l_optional_argument_name(function_shortname=shortname_src)},
                               full_function_name=full_function_name_copy,
                               ldict=self.get_ldict(shortname=shortname_src))
 
@@ -457,7 +457,7 @@ class FunctionBuilder(object):
         mand_args = ','.join(self.get_l_mandatory_argument(function_shortname=shortname))
         if mand_args != "":
             mand_args = ", " + mand_args
-        opt_args = ','.join([f"{arg}={self.get_default_value_4_arg(argument_name=arg, function_shortname=shortname)}" for arg in self.get_l_optional_argument_name(function_shortname=shortname)])
+        opt_args = ','.join([f"{arg}={self.get_default_value_4_argument(argument_name=arg, function_shortname=shortname)}" for arg in self.get_l_optional_argument_name(function_shortname=shortname)])
         if opt_args != "":
             opt_args = ", " + opt_args
         return f"def {self.get_function_fullname(shortname=shortname)}({self.parameter_vector_name}{mand_args}{opt_args}):"
