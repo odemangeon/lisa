@@ -99,7 +99,8 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
     @classmethod
     def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj,
-                                             l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs):
+                                             l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,
+                                             function_builder, function_shortname):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -142,7 +143,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj)
+        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
 
         def f_format_param(param_likelihood):
             return param_likelihood[l_idx_param_noisemod]
