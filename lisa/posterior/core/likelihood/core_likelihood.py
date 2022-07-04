@@ -274,11 +274,11 @@ class LikelihoodCreator(object):
         dico_param_nb = {nb: param for nb, param in enumerate(params_like)}
         # Check below that it's ok, because of par_vec_name
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)) > 0:
-            mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike))
+            mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)
         else:
             mand_kwargs = None
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)) > 0:
-            opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike))
+            opt_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname_lnlike)
         else:
             opt_kwargs = None
         logger.debug(f"Parameters for {func_shortname_lnlike} function :\n{dico_param_nb}")
@@ -301,11 +301,11 @@ class LikelihoodCreator(object):
                 dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
                 # Check below that it's ok, because of par_vec_name
                 if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-                    mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+                    mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
                 else:
                     mand_kwargs = None
-                if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-                    opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+                if len(func_builder.get_d_optional_argument(function_shortname=func_shortname)) > 0:
+                    opt_kwargs = func_builder.get_d_optional_argument(function_shortname=func_shortname)
                 else:
                     opt_kwargs = None
                 logger.debug(f"Parameters for {func_shortname} function :\n{dico_param_nb}")
