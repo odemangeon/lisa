@@ -408,8 +408,9 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
 
         return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset, dico_decorr_4_instmod
 
-    def create_decorrelation_likelihood(self, function_builder, function_shortname, inst_model_obj, dico_decorr_instmod,
-                                        l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs):
+    def create_decorrelation_likelihood(self, function_builder, l_function_shortname, inst_model_obj, dico_decorr_instmod,
+                                        l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs,
+                                        datasim_has_multioutputs):
         """Create the text for the likelihood decorrelation for a given instrument model
 
         It had the required text in the body of the function and return the text for the decorrelation
@@ -418,7 +419,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         Arguments
         ---------
         function_builder            :
-        function_shortname          :
+        l_function_shortname        :
         inst_model_obj              :
         dico_decorr_instmod         :
         l_dataset_name              :
@@ -437,7 +438,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                 dico_decorr_config_ind = self.decorrelation_config[inst_model_obj.full_name]["what to decorrelate"][self.modelpart_4_decorrlikelihood][decorr_cat][ind_inst_model_fullname]
                 (decorrtext_4_dataset_indinstmod, l_paramsfullname_likelihood
                  ) = DecorrClass.create_decorrelation_likelihood(function_builder=function_builder,
-                                                                 function_shortname=function_shortname,
+                                                                 l_function_shortname=l_function_shortname,
                                                                  inst_model_obj=inst_model_obj,
                                                                  ind_instmodel_obj=indinstmod_obj,
                                                                  dico_decorr_ind=dico_decorr_ind,
@@ -446,7 +447,8 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                                  l_dataset_name=l_dataset_name,
                                                                  l_paramsfullname_likelihood=l_paramsfullname_likelihood,
                                                                  dataset_kwargs=dataset_kwargs,
-                                                                 inddataset_kwargs=inddataset_kwargs)
+                                                                 inddataset_kwargs=inddataset_kwargs,
+                                                                 datasim_has_multioutputs=datasim_has_multioutputs)
             for dataset_name, decorrtext_4_dataset_indinstmod in decorrtext_4_dataset_indinstmod.items():
                 if decorrtext_4_dataset[dataset_name] == "":
                     pre_text = ""
