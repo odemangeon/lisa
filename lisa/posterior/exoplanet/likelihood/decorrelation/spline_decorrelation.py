@@ -178,6 +178,7 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
                 function_builder.add_to_body_text(text=f"{tab}ax.plot(x_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}, sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}(x_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}), label='spline fit')\n", function_shortname=function_shortname)
                 function_builder.add_to_body_text(text=f"{tab}ax.set_xlabel('{ind_instmodel_obj.full_code_name}')\n", function_shortname=function_shortname)
                 function_builder.add_to_body_text(text=f"{tab}ax.set_ylabel('{inst_model_obj.full_code_name}')\n", function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}ax.legend()\n", function_shortname=function_shortname)
             decorrtext_4_dataset = {dst_name: "" for dst_name in l_dataset_name_4_instmod}
             for dataset_name in l_dataset_name_4_instmod:
                 decorrtext_4_dataset[dataset_name] = f"sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}(inddataset_kwargs['{dico_decorr_config_ind['match datasets'][dataset_name]}']['data'])"
