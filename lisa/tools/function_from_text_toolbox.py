@@ -11,7 +11,6 @@ from text.
 @TODO:
     -
 """
-from numpy import array
 from collections import Iterable, OrderedDict
 from copy import copy
 from logging import getLogger
