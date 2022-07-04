@@ -5,27 +5,14 @@ dataset module.
 
 The objective of this package is to provides the core Dataset class to store
 and manipulate the data.
-
-@DONE:
-    - Dataset.__init__: Doc an UT
-    - Dataset.filepath: Doc and UT
-    - Dataset.filename: Doc and UT
-    - Dataset.instrument: Doc and UT
-    - Dataset.objectname: Doc and UT
-    - Dataset._rm_data: Doc and UT
-    - Dataset.is_data_loaded: Doc and UT
-    - Dataset.load_data: Doc
-    - Dataset._set_data: Doc and UT
-    - Dataset.get_data: Doc and UT
-
-@TODO:
-    - Dataset.load_data: UT
-    - See if possible to transform data in a property.
 """
+import matplotlib.pyplot as pl
+
 from logging import getLogger
 from sys import exc_info
 from pandas import read_table
-from numpy import asarray
+from numpy import asarray, percentile
+from copy import copy
 
 from ....tools.miscellaneous import get_filename_from_file_path
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -39,14 +26,10 @@ logger = getLogger()
 class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
     """docstring for the Dataset abstract class."""
 
-    __mandatoryattrs__ = ["instrument_subclass", ]
-
-    ## Mandatory columns: For this abstract data base there is None
-    _mandatory_columns = []
+    __mandatoryattrs__ = ["instrument_subclass", "mandatory_columns"]
 
     ## name of the data  and data error columns
-    _data_name = "data"
-    _data_err_name = "data_err"
+    _extra_datasetkwargs_names = []
 
     def __init__(self, file_path, instrument_instance):
         """Dataset init method FOR INHERITANCE PURPOSES (as Dataset is an abstract class).
@@ -90,13 +73,38 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         else:
             self.__number = int(filename_info["number"])
         # 5.
-        self._rm_data()
+        self._rm_dataset_content()
+        self.__extra_column_names = []
+        self.__dico_common_column_names = {"data": "data", "data_err": "data_err"}
         # Make Dataset an abstract class
         if type(self) is Core_Dataset:
             raise NotImplementedError("Core_Dataset should not be instanciated!")
 
     def __repr__(self):
         return "<{} {}:{}>".format(self.__class__.__name__, self.dataset_name, self.filepath)
+
+    @property
+    def dico_common_column_names(self):
+        """Get the category of indicator."""
+        return self.__dico_common_column_names
+
+    @property
+    def data_column_name(self):
+        """Get the category of indicator."""
+        return self.dico_common_column_names["data"]
+
+    @property
+    def data_err_column_name(self):
+        """Get the category of indicator."""
+        return self.dico_common_column_names["data_err"]
+
+    @property
+    def column_names(self):
+        return [self.dico_common_column_names[col] for col in self.mandatory_columns] + self.__extra_column_names
+
+    @property
+    def datasetkwarg_names(self):
+        return self.column_names + self._extra_datasetkwargs_names
 
     @property
     def filepath(self):
@@ -221,29 +229,32 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
             return False
         return cls.instrument_subclass.validate_inst_cat(filename_info["inst_cat"])
 
-    def _rm_data(self):
+    def _set_dataset_content(self, data):
+        """Store the data.
+        ----
+        Arguments:
+            data : Unconstrained type but not None,
+                Data loaded from the data file.
+        """
+        self.__dataset_content = data
+
+    def _rm_dataset_content(self):
         """Remove data previously loaded or initialse the data attribute."""
-        self.__data = None
+        self.__dataset_content = None
         logger.info("Data attribute has been removed/initialise in dataset of {}."
                     "".format(self.filename))
 
-    def is_data_stored(self):
+    @property
+    def is_dataset_content_stored(self):
         """Tell if data has been stored.
         ----
         Returns:
             True is data has been loaded, False otherwise.
         """
-        return self.__data is not None
+        return self.__dataset_content is not None
 
-    def load_data(self, store=False,
-                  delim_whitespace=True,
-                  skip_rows=0,
-                  comment="#",
-                  names="mandatory",
-                  index_col=None,
-                  skip_blank_lines=True,
-                  header=0,
-                  **kargs):
+    def load_dataset_content(self, store=False, delim_whitespace=True, skip_rows=0, comment="#",
+                             index_col=None, skip_blank_lines=True, header=0, **kargs):
         """
         Read the light curve into a pandas database using the pandas.read_table function.
 
@@ -267,8 +278,6 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
                 Number of rows to skip (after comment have been removed)
             comment           : string, (default: "#"),
                 If a line starts with this character, it will be ignored
-            names             : list of string, (default: ["time", "flux", "flux_err"]),
-                Give the name of the columns, if your are not using the header argument.
             skip_blank_lines  : bool, (default: True),
                 Ignore blank lines
             header            : Int, (default: None),
@@ -290,13 +299,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         # 1.
         header_used = header is not None
         if not header_used:
-            if names == "mandatory":
-                names = self._mandatory_columns
-            for col_name in self._mandatory_columns:
-                if col_name not in names:
-                    raise ValueError("{} is a mandatory column for this Dataset subclass."
-                                     "It should be included in the argument names. You provided :"
-                                     "{}".format(col_name, names))
+            names = self.column_names
         else:
             names = None
         # 2.
@@ -316,15 +319,21 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         # to have a  quick statistic summary of your data
         # lc.describe()
         # 3.
+        l_column_name_4_mandatory_columns = [self.dico_common_column_names[col] for col in self.mandatory_columns]
         if header_used:
-            for col_name in self._mandatory_columns:
+            for col_name in l_column_name_4_mandatory_columns:
                 if col_name not in pandas_df.columns:
-                    raise ValueError("{} is a mandatory column for this Dataset subclass."
-                                     "It should be included in the header of the data file that you"
-                                     "provided. Columns provided by the header of your file: {}\n"
+                    raise ValueError(f"{col_name} is a mandatory column for this Dataset subclass. "
+                                     "It should be included in the header of the data file that you "
+                                     f"provided. Columns provided by the header of your file: {pandas_df.columns}\n"
                                      "If this column is provided under a different name please used"
                                      "the skiprows and names arguments."
-                                     "".format(col_name, pandas_df.columns))
+                                     "")
+
+        for column_name in pandas_df.columns:
+            if column_name not in l_column_name_4_mandatory_columns:
+                self.__extra_column_names.append(column_name)
+
         # 4.
         if "inst_flag" not in pandas_df.columns:
             pandas_df["inst_flag"] = 0
@@ -335,43 +344,114 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         else:
             return pandas_df
 
-    def _set_data(self, data):
-        """Store the data.
-        ----
-        Arguments:
-            data : Unconstrained type but not None,
-                Data loaded from the data file.
-        """
-        self.__data = data
-
-    def get_datatable(self, **kwargs):
+    def get_dataset_content(self, **kwargs):
         """Return the data table.
         ----
         Returns:
             Unconstrained type but not None, Data stored or loaded from the data file. Return None
                 if no data stored and load-data method not implemented.
         """
-        if not(self.is_data_stored()):
+        if not(self.is_dataset_content_stored):
             try:
-                return self.load_data(**kwargs)
+                return self.load_dataset_content(**kwargs)
             except:
                 logger.warning("No data stored and method load_data failed to load datafile {}"
                                "\nprovided error: {}"
                                "".format(self.filename,
                                          exc_info()))
 
-        return self.__data
+        return self.__dataset_content
 
     def get_data(self):
         """Return the data vector."""
-        pandas_df = self.get_datatable()
-        return asarray(pandas_df[self._data_name])
+        return asarray(self.get_dataset_content()[self.data_column_name])
 
     def get_data_err(self):
         """Return the data vector."""
-        pandas_df = self.get_datatable()
-        return asarray(pandas_df[self._data_err_name])
+        return asarray(self.get_dataset_content()[self.data_err_column_name])
 
     def get_nb_data_points(self):
         """Return the number of data points in the dataset."""
         return len(self.get_data())
+
+    def get_all_datasetkwargs(self):
+        """Return all the datasetkwargs available for the dataset."""
+        pandas_df = self.get_dataset_content()
+        return {column_name: asarray(pandas_df[column_name]) for column_name in pandas_df.columns}
+
+    def get_datasetkwarg(self, datasetkwarg):
+        """Return a specific datasetkwarg."""
+        if datasetkwarg in self.column_names:
+            return asarray(self.get_dataset_content()[datasetkwarg])
+        elif datasetkwarg == 'data':
+            return asarray(self.get_dataset_content()[self.data_column_name])
+        elif datasetkwarg == 'data_err':
+            return asarray(self.get_dataset_content()[self.data_err_column_name])
+        else:
+            raise ValueError(f"For class {self.__class__}, datasetkwarg should be in {self.column_names}")
+
+    def plot(self, **kwargs):
+        """
+        Plot function to visualise the data.
+        """
+        self.get_datatable().plot(y=self.data_column_name, yerr=self.data_err_column_name, **kwargs)
+        pl.show()
+
+
+class Core_DatasetTimeSeries(Core_Dataset):
+    """docstring for Core_DatasetTimeSeries."""
+
+    _extra_datasetkwargs_names = ["time_ref"]
+
+    def __init__(self, file_path, instrument_instance, exp_time=None):
+        super(Core_DatasetTimeSeries, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["time"] = "time"
+        self.__exposure_time = exp_time
+        if "time" not in self.mandatory_columns:
+            raise ValueError("time has to be in __mandatory_columns__ for subclasses of Core_DatasetTimeSeries")
+
+    @property
+    def time_column_name(self):
+        """Get the category of indicator."""
+        return self.dico_common_column_names["time"]
+
+    def get_time(self):
+        """Return the time vector."""
+        return asarray(self.get_dataset_content()[self.time_column_name])
+
+    def get_exptime(self, quartile=50):
+        if self.__exposure_time is not None:
+            return self.__exposure_time
+        else:
+            time = self.get_time()
+            return percentile(time[1:] - time[:-1], quartile)
+
+    def get_time_ref(self):
+        """Return the time_reference value"""
+        return (self.get_time()).min()
+
+    def get_all_datasetkwargs(self):
+        """Return the number of data points in the dataset."""
+        datasetkwargs = super(Core_DatasetTimeSeries, self).get_all_datasetkwargs()
+        datasetkwargs["time_ref"] = self.get_time_ref()
+        return datasetkwargs
+
+    def get_datasetkwarg(self, datasetkwarg):
+        """Return a specific datasetkwarg."""
+        try:
+            return super(Core_DatasetTimeSeries, self).get_datasetkwarg(datasetkwarg)
+        except ValueError:
+            if datasetkwarg in self._extra_datasetkwargs_names:
+                if datasetkwarg == "time_ref":
+                    return self.get_time_ref()
+                else:
+                    raise NotImplementedError(f"{datasetkwarg} is a valid datasetkwarg but its get function was not properly implemented.")
+            else:
+                raise ValueError(f"{datasetkwarg} is not a valid datasetkwargs. Should be in {self.datasetkwarg_names}")
+
+    def plot(self, **kwargs):
+        """
+        Plot function to visualise the data.
+        """
+        self.get_datatable().plot(x=self.time_column_name, y=self.data_column_name, yerr=self.data_err_column, **kwargs)
+        pl.show()

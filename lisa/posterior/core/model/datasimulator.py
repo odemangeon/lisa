@@ -10,9 +10,10 @@ your datasimulator.
     - implement boolean argument used_instmodel_only in create_datasimulators
 """
 from logging import getLogger
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from copy import copy
 
+from . import par_vec_name
 from .datasim_docfunc import DatasimDocFunc
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
 from ..dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
@@ -134,8 +135,9 @@ class DatasimulatorCreator(object):
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset, get_times_from_datasets=True)[self.key_whole]
         return db
 
-    def __datasim_multipledatasets_creator(self, l_datasim, l_datasim_has_multi_output, l_params_idx, params_model, mand_kwargs, opt_kwargs,
-                                           inst_fullcat, inst_model_fullname=None, dataset=None):
+    def __datasim_multipledatasets_creator(self, l_datasim, l_datasim_has_multi_output, l_params_idx,
+                                           param_model_names_list, mand_kwargs_list, opt_kwargs_dict,
+                                           inst_cats_list, inst_model_fullnames_list=None, dataset_names_list=None):
         """Return the datasimulator for all datasets
 
         WARNING/TODO eventually: For now *args, **kwargs of the datasim_alldatasets are passed to all the datasim function.
@@ -147,13 +149,14 @@ class DatasimulatorCreator(object):
             list of datasimulators
         l_params_idx        : List of list of int
             List of list of indexes in the param array for each datasim function in l_datasim.
-        params_model        : List of string
+        param_model_names_list        : List of string
             Ordered list of parameters full name for the datasimulator being created
-        mand_kwargs         : String
+        mand_kwargs_list    : List of String or None
             String giving the mandatory keyword arguments for the datasimulator being created
-        opt_kwargs          : String
+            with the model parameter vector name
+        opt_kwargs_dict          : Dictionary or None
             String giving the optional keyword arguments along with their default values
-        inst_fullcat        : String or List of string or None
+        inst_cats_list        : String or List of string or None
             Gives instrument full categories of the instrument models used
         inst_model_fullname : String or List of string
             Gives the full name of the instrument models used
@@ -165,23 +168,25 @@ class DatasimulatorCreator(object):
         datasim_multipledatasets: DatasimDocFunc
             Datasimulator for all datasets
         """
-        def datasim_multipledatasets(p, *args, **kwargs):
+        def datasim_multipledatasets(p_vect, *args, **kwargs):
             l_res = []
             for datasim, multi_output, idxs in zip(l_datasim, l_datasim_has_multi_output, l_params_idx):
                 if multi_output:
-                    l_res.extend(datasim(p[idxs], *args, **kwargs))
+                    l_res.extend(datasim(p_vect[idxs], *args, **kwargs))
                 else:
-                    l_res.append(datasim(p[idxs], *args, **kwargs))
+                    l_res.append(datasim(p_vect[idxs], *args, **kwargs))
             return l_res
 
         return DatasimDocFunc(function=datasim_multipledatasets,
-                              params_model=params_model,
-                              inst_cat=inst_fullcat,
-                              mand_kwargs=mand_kwargs,
-                              opt_kwargs=opt_kwargs,
+                              param_model_names_list=param_model_names_list,
+                              params_model_vect_name=par_vec_name,
+                              inst_cats_list=inst_cats_list,
+                              inst_model_fullnames_list=inst_model_fullnames_list,
+                              dataset_names_list=dataset_names_list,
                               include_dataset_kwarg=l_datasim[0].include_dataset_kwarg,
-                              inst_model_fullname=inst_model_fullname,
-                              dataset=dataset)
+                              mand_kwargs_list=mand_kwargs_list,
+                              opt_kwargs_dict=opt_kwargs_dict,
+                              )
 
     def create_datasimulator_alldatasets(self, dataset_db):
         """Return one datasim docfunction that simulates all the datasets at the same time.
@@ -232,14 +237,13 @@ class DatasimulatorCreator(object):
             datsimC_inputs[datsimC_name]["datasets"].append(dataset_obj_ii)
             datsimC_inputs[datsimC_name]["instmodels"].append(instmod_obj_ii)
 
-        datsimC_inputs
         # Initialise the list of Datasim list of DatasimDocFunc
         l_datsim = defaultdict(list)
         l_datsim_has_multi_output = defaultdict(list)
         l_params = defaultdict(list)
         l_allparams = defaultdict(list)
         l_allmand_kwargs = defaultdict(list)
-        l_allopt_kwargs = defaultdict(list)
+        d_allopt_kwargs = defaultdict(OrderedDict)
         l_params_idx = defaultdict(list)
         inst_fullcats = defaultdict(list)
         inst_model_fullnames = defaultdict(list)
@@ -258,22 +262,26 @@ class DatasimulatorCreator(object):
                 l_datsim[key_obj].append(dico_datasim_output[key_obj])
                 l_datsim_has_multi_output[key_obj].append(dico_datasim_output[key_obj].multi_output)
                 # ... get the ordered list of instrument categories for this function
-                inst_fullcats[key_obj] = inst_fullcats[key_obj] + list(l_datsim[key_obj][-1].inst_cat)
+                inst_fullcats[key_obj] = inst_fullcats[key_obj] + list(l_datsim[key_obj][-1].inst_cats_list)
                 # ... get the ordered list of instrument model full names for this function
                 inst_model_fullnames[key_obj] = (inst_model_fullnames[key_obj] +
-                                                 list(l_datsim[key_obj][-1].instmodel_fullname))
+                                                 list(l_datsim[key_obj][-1].inst_model_fullnames_list))
                 # ... get the ordered list of dataset names for this function
-                datasets[key_obj] = datasets[key_obj] + list(l_datsim[key_obj][-1].dataset)
+                datasets[key_obj] = datasets[key_obj] + list(l_datsim[key_obj][-1].dataset_names_list)
                 # ... create the list of indexes for the function parameters and the list of all the
                 # model parameter for the all datasets function
                 idx_par = []
                 # For each parameter in the list of this function, ...
-                l_params[key_obj].append(l_datsim[key_obj][-1].params_model)
+                l_params[key_obj].append(l_datsim[key_obj][-1].param_model_names_list)
                 # WARNING/TODO: This two lines are a quick and very dirty way to pass the mand and opt kwargs to the __datasim_alldatasets_creator
                 # and after the DatasimDocFunc init because if several functions use the same kwargs, it will then appear several times
-                l_allmand_kwargs[key_obj].append(l_datsim[key_obj][-1].mand_kwargs_list)
-                l_allopt_kwargs[key_obj].append(l_datsim[key_obj][-1].opt_kwargs_list)
-                for par in l_datsim[key_obj][-1].params_model:
+                for kwarg in l_datsim[key_obj][-1].mand_kwargs_list:
+                    if kwarg not in l_allmand_kwargs[key_obj]:
+                        l_allmand_kwargs[key_obj].append(kwarg)
+                if par_vec_name in l_allmand_kwargs[key_obj]:
+                    l_allmand_kwargs[key_obj].remove(par_vec_name)
+                d_allopt_kwargs[key_obj].update(l_datsim[key_obj][-1].opt_kwargs_dict)
+                for par in l_datsim[key_obj][-1].param_model_names_list:
                     # ... if the param is not in the list of all parameters already, add it
                     if par not in l_allparams[key_obj]:
                         l_allparams[key_obj].append(par)
@@ -296,8 +304,11 @@ class DatasimulatorCreator(object):
             dico_datasim_4_obj[key_obj] = self.__datasim_multipledatasets_creator(l_datasim=l_datsim[key_obj],
                                                                                   l_datasim_has_multi_output=l_datsim_has_multi_output[key_obj],
                                                                                   l_params_idx=l_params_idx[key_obj],
-                                                                                  params_model=l_allparams[key_obj], mand_kwargs=str(l_allmand_kwargs[key_obj]), opt_kwargs=str(l_allopt_kwargs[key_obj]),
-                                                                                  inst_fullcat=inst_fullcats[key_obj],
-                                                                                  inst_model_fullname=inst_model_fullnames[key_obj], dataset=datasets[key_obj])
+                                                                                  param_model_names_list=l_allparams[key_obj],
+                                                                                  mand_kwargs_list=l_allmand_kwargs[key_obj],
+                                                                                  opt_kwargs_dict=d_allopt_kwargs[key_obj],
+                                                                                  inst_cats_list=inst_fullcats[key_obj],
+                                                                                  inst_model_fullnames_list=inst_model_fullnames[key_obj],
+                                                                                  dataset_names_list=datasets[key_obj])
 
         return dico_datasim_4_obj

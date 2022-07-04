@@ -11,7 +11,6 @@ from text.
 @TODO:
     -
 """
-from numpy import array
 from collections import Iterable, OrderedDict
 from copy import copy
 from logging import getLogger
@@ -275,6 +274,21 @@ class FunctionBuilder(object):
             List of the name of the mandatory arguments
         """
         return copy(self._database[function_shortname]["mandatory_args"])
+
+    def get_d_optional_argument(self, function_shortname):
+        """Return the list of the name of the optional arguments of a function
+
+        Arguments
+        ---------
+        function_shortname  : str
+            Short name of the function
+
+        Return
+        ------
+        l_argument_name : list of str
+            List of the name of the optional arguments
+        """
+        return copy(self._database[function_shortname]["optional_args"])
 
     def get_l_optional_argument_name(self, function_shortname):
         """Return the list of the name of the optional arguments of a function

@@ -158,18 +158,14 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                                             "main"))
 
     @classmethod
-    def get_prefilledlnlike(cls, l_likelihood_param_fullname, l_instmod_obj):
+    def get_prefilledlnlike(cls, l_param_fullnames_lnlike, l_instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
-
-        As this noise model doesn't require any parameters from the model instance, it doesn't need a
-        model_instance argument. But as it might be privided one automatically, I put the keyword
-        arguments **kwargs.
 
         Parameters
         ----------
-        l_datasim_param_fullname      : list of String
-            Current list of parameters full names.
-        l_instmod_obj : list of InstrumentModel
+        l_param_fullnames_lnlike : list of String
+            Current list of parameters full names for the likelihood function
+        l_instmod_obj               : list of InstrumentModel
             List of instrument model for the lnlikelihood. There is one element per dataset modeled by
             the datasimulator following this noise model.
 
@@ -186,7 +182,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
             the updated list of parameters (l_params_new).
         """
         l_func = []
-        l_params_new = l_likelihood_param_fullname
+        l_params_new = l_param_fullnames_lnlike
         l_params_noisemod = []
         l_idx_param_noisemod = []
         for instmod_obj in l_instmod_obj:
@@ -194,7 +190,8 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
              l_idx_param_noisemod) = cls.get_prefilledlnlike_1instmod(l_params_new,
                                                                       l_params_noisemod,
                                                                       l_idx_param_noisemod,
-                                                                      instmod_obj)
+                                                                      instmod_obj,
+                                                                      function_builder, function_shortname)
             l_func.append(lnlike_1instmod)
 
         def lnlike_jitter(sim_data, param_noisemodel, datasets_kwargs):
@@ -206,11 +203,11 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         return lnlike_jitter, l_params_new, l_params_noisemod, l_idx_param_noisemod
 
     @classmethod
-    def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+    def get_prefilledlnlike_1instmod(cls, l_param_fullnames_lnlike, l_params_noisemod, l_idx_param_noisemod,
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
-        :param list_of_string l_params_lnlike: Current list of parameters full names for the
+        :param list_of_string l_param_fullnames_lnlike: Current list of parameters full names for the
             lnlikehood function.
         :param list_of_string l_params_noisemod: Current list of parameters full names for the
             noise model only.
@@ -231,12 +228,13 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
         # Get jitter parameter for the instrument model
         jitter_param = instmod_obj.parameters[jitter_name]
         (l_params_lnlike_new, l_params_noisemod_new,
-         l_idx_param_noisemod_new) = cls._update_lists_params(l_params_lnlike, l_params_noisemod,
+         l_idx_param_noisemod_new) = cls._update_lists_params(l_param_fullnames_lnlike, l_params_noisemod,
                                                               l_idx_param_noisemod, jitter_param)
 
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.full_name)
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_dfmjitter_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 + model**2 * exp(2 * param_noisemod[idx_jitter_param]))
@@ -250,8 +248,7 @@ class GaussianNoiseModel_wdfmjitter(GaussianNoiseModel):
                 inv_sigma2 = 1.0 / apply_jitter_dfm(data_err, jitter_value, model)
                 return -0.5 * (npsum((data - model)**2 * inv_sigma2 - nplog(twopi * inv_sigma2)))
 
-        return (lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new,
-                l_idx_param_noisemod_new)
+        return lnlike_dfmjitter_1instmod, l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
 
     @classmethod
     def apply_jitter(cls, data_err, jitter, model):
@@ -276,7 +273,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -306,6 +303,7 @@ class GaussianNoiseModel_wjittermulti(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
@@ -340,7 +338,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -371,6 +369,7 @@ class GaussianNoiseModel_wjittermultiBaluev(GaussianNoiseModel_wdfmjitter):
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err * param_noisemod[idx_jitter_param])**2
@@ -413,7 +412,7 @@ class GaussianNoiseModel_wjittermultilog(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -443,6 +442,7 @@ class GaussianNoiseModel_wjittermultilog(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jittermulti_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
@@ -477,7 +477,7 @@ class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -508,6 +508,7 @@ class GaussianNoiseModel_wjittermultiBaluevlog(GaussianNoiseModel_wdfmjitter):
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jittermultiBaluev_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * exp(2 * param_noisemod[idx_jitter_param]))
@@ -553,7 +554,7 @@ class GaussianNoiseModel_wjitteraddfraclog(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -583,6 +584,7 @@ class GaussianNoiseModel_wjitteraddfraclog(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
@@ -618,7 +620,7 @@ class GaussianNoiseModel_wjitteraddfracBaluevlog(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -649,6 +651,7 @@ class GaussianNoiseModel_wjitteraddfracBaluevlog(GaussianNoiseModel_wdfmjitter):
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * (1 + exp(2 * param_noisemod[idx_jitter_param])))
@@ -692,7 +695,7 @@ class GaussianNoiseModel_wjitteraddfrac(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -722,6 +725,7 @@ class GaussianNoiseModel_wjitteraddfrac(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteraddfrac_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
@@ -757,7 +761,7 @@ class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -788,6 +792,7 @@ class GaussianNoiseModel_wjitteraddfracBaluev(GaussianNoiseModel_wdfmjitter):
         nparam = len(l_params_lnlike) - len(l_params_noisemod)  # For the Baluev Coefficient
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteraddfracBaluev_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 * (1 + param_noisemod[idx_jitter_param]**2))
@@ -833,7 +838,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -863,6 +868,7 @@ class GaussianNoiseModel_wjitteradd(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 + param_noisemod[idx_jitter_param]**2)
@@ -900,7 +906,7 @@ class GaussianNoiseModel_wjitteraddlog(GaussianNoiseModel_wdfmjitter):
 
     @classmethod
     def get_prefilledlnlike_1instmod(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                                     instmod_obj):
+                                     instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         :param list_of_string l_params_lnlike: Current list of parameters full names for the
@@ -930,6 +936,7 @@ class GaussianNoiseModel_wjitteraddlog(GaussianNoiseModel_wdfmjitter):
         # Produce the lnlike dfmjitter for one instrument if the jitter param is free or not.
         if jitter_param.free:
             idx_jitter_param = l_params_noisemod_new.index(jitter_param.get_name(include_prefix=True, recursive=True))
+            function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
 
             def lnlike_jitteradd_1instmod(model, param_noisemod, data, data_err):
                 # inv_sigma2 = 1.0 / (data_err**2 + exp(2 * param_noisemod[idx_jitter_param]))

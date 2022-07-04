@@ -20,8 +20,9 @@ from os.path import basename
 import os
 
 from .datasim_creator_rv import create_datasimulator_RV
-from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
+from ..decorrelation.linear_decorrelation import LinearDecorrelation
 from ...dataset_and_instrument.rv import RV_inst_cat
+from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .....tools.miscellaneous import spacestring_like
@@ -42,7 +43,8 @@ class RV_InstCat_Model(Core_InstCat_Model):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "RV_param_file.py"
     __datasim_creator_name__ = "sim_RV"
-    __decorrelation_models__ = [LinearDecorrelation]
+    __decorrelation_models__ = [LinearDecorrelation, SplineDecorrelation]
+    __modelpart_4_decorrlikelihood__ = "add_2_totalrv"
 
     allowed_what2decorrelate_strs = ['add_2_totalrv', 'multiply_2_totalrv']
 

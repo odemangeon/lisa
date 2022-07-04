@@ -8,10 +8,8 @@ The objective of this package is to provides the LC_Instrument and LC_Dataset cl
 @TODO:
 """
 import logging
-import matplotlib.pyplot as plt
-from numpy import array, percentile
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
+from lisa.posterior.core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.parameter import Parameter
 
@@ -68,7 +66,7 @@ class LC_Instrument(Core_Instrument):
         return "{}{}".format(self.__inst_var_basename__, order)
 
 
-class LC_Dataset(Core_Dataset):
+class LC_Dataset(Core_DatasetTimeSeries):
     """docstring for LC_Dataset class.
 
     This class is designed to habor a light-curve data file for study of transits.
@@ -84,41 +82,12 @@ class LC_Dataset(Core_Dataset):
     """
 
     __instrument_subclass__ = LC_Instrument
-    __mandatory_columns__ = ["time", "flux", "flux_err"]
+    __mandatory_columns__ = ["time", "data", "data_err"]
 
-    ## name of the data  and data error columns
-    _data_name = "flux"
-    _data_err_name = "flux_err"
-
-    def plot(self, y="flux", yerr="flux_err", **kwargs):
-        """
-        Plot function to visualise the data.
-
-        This is not very pretty but it plots the flux versus time and the error bars
-        """
-        self.get_datatable().plot(y=y, yerr=yerr, **kwargs)
-        plt.show()
-
-    def get_kwargs(self):
-        pandas_df = self.get_datatable()
-        return {"data": array(pandas_df[self._data_name]),
-                "data_err": array(pandas_df[self._data_err_name]),
-                "t": array(pandas_df["time"]),
-                "tref": array(pandas_df["time"]).min()}
-
-    def get_time(self):
-        pandas_df = self.get_datatable()
-        return array(pandas_df["time"])
-
-    def get_tref(self):
-        return (self.get_time()).min()
-
-    def get_exptime(self, quartile=50):
-        time = self.get_time()
-        return percentile(time[1:] - time[:-1], quartile)
-
-    def create_datasimulator_for_dataset(self, datasim_func):
-        return datasim_func
+    def __init__(self, file_path, instrument_instance, exp_time=None):
+        super(LC_Dataset, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["data"] = "flux"
+        self.dico_common_column_names["data_err"] = "flux_err"
 
 
 K2 = LC_Instrument("K2")

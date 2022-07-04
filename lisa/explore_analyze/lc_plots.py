@@ -61,7 +61,7 @@ fmt_sci_not = FuncFormatter(sci_not_str)
 def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                                 datasetnames=None, row4datasetname=None,
                                 plot_model_for_all_datasets=False, datasetnameformodel4row=None, npt_model=1000,
-                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_contamination=False,
+                                remove1=False, remove_inst_var=True, remove_decorrelation=True, remove_decorrelation_likelihood=True, remove_contamination=False,
                                 remove_GP_data=True, remove_GP_residual=True, LC_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
@@ -232,7 +232,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination,
+                                     remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_contamination=remove_contamination,
                                      remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
@@ -341,7 +342,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             x_min_data = np.inf
             x_max_data = -np.inf
             for datasetname in datasetnames4rowidx[i_row]:
-                phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
+                phases_dst = (foldAt(dico_kwargs[datasetname]['time'], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
                 x_values[datasetname] = phases_dst * Per * time_fact if show_time_from_tic else phases_dst
                 if np.min(x_values[datasetname]) < x_min_data:
                     x_min_data = np.min(x_values[datasetname])
@@ -389,7 +390,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         continue
                     else:
                         (model_pl_only, _, _, _
-                         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname,
+                         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]['time'], dataset_name=datasetname,
                                                          param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
                                                          key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs
                                                          )
@@ -843,7 +844,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                             datasetnames=None,
-                            remove1=True, remove_inst_var=False, remove_decorrelation=True, remove_contamination=False,
+                            remove1=True, remove_inst_var=False,
+                            remove_decorrelation=True, remove_decorrelation_likelihood=True,
+                            remove_contamination=False,
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
                             LC_fact=1e6, LC_unit="ppm",
@@ -881,6 +884,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     remove_inst_var  : bool (Def: True)
         If True remove the instrumental variations
     remove_decorrelation    : bool
+        If True remove the decorrelation model
+    remove_decorrelation_likelihood    : bool
         If True remove the decorrelation model
     remove_contamination    : bool
         If True remove the contamination model
@@ -1025,18 +1030,34 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     if show_system_name_in_suptitle:
         system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
         suptitle_text = f"{system_name} system"
-    removed_text = ""
-    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"], [remove_inst_var, remove_decorrelation, remove_contamination]):
+    removed_from_model_text = ""
+    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"],
+                              [remove_inst_var, remove_decorrelation, remove_contamination]):
         if removed:
-            if removed_text != "":
-                removed_text += ", "
-            removed_text += compo
-    if removed_text != "":
-        removed_text += " removed from model"
+            if removed_from_model_text != "":
+                removed_from_model_text += ", "
+            removed_from_model_text += compo
+    if removed_from_model_text != "":
+        removed_from_model_text += " removed from model"
+    if removed_from_model_text != "":
         if suptitle_text != "":
-            suptitle_text += f"\n{removed_text}"
+            suptitle_text += f"\n{removed_from_model_text}"
         else:
-            suptitle_text = removed_text
+            suptitle_text = removed_from_model_text
+    removed_from_data_text = ""
+    for compo, removed in zip(["Inst var", "Decorrelation", "Decorrelation Likelihood", "Contamination"],
+                              [remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, remove_contamination]):
+        if removed:
+            if removed_from_data_text != "":
+                removed_from_data_text += ", "
+            removed_from_data_text += compo
+    if removed_from_data_text != "":
+        removed_from_data_text += " removed from data"
+    if removed_from_data_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_data_text}"
+        else:
+            suptitle_text = removed_from_data_text
     if suptitle_text != "":
         fig.suptitle(suptitle_text, fontsize=fontsize)
 
@@ -1063,7 +1084,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
-                                     remove_decorrelation=remove_decorrelation, remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
+                                     remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
 
     ################
     # LC TIME SERIES
@@ -1135,7 +1157,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     t_lims_i = t_lims[i_row]
                 else:  # i_col == 1
                     t_lims_i = t_lims_zoom[i_row]
-                # Create the data and red=siduals axes and set properties ans style
+                # Create the data and residuals axes and set properties ans style
                 (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
 
                 if show_title and (i_row == 0):
@@ -1163,8 +1185,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Compute the models
                     ###################
                     npt_model = TS_kwargs.get("npt_model", 1000)
-                    tsim = np.linspace(np.min(dico_kwargs[datasetname]['t']) - TS_kwargs.get("extra_dt_model", 0.),
-                                       np.max(dico_kwargs[datasetname]['t']) + TS_kwargs.get("extra_dt_model", 0.),
+                    tsim = np.linspace(np.min(dico_kwargs[datasetname]['time']) - TS_kwargs.get("extra_dt_model", 0.),
+                                       np.max(dico_kwargs[datasetname]['time']) + TS_kwargs.get("extra_dt_model", 0.),
                                        npt_model)
                     # Full model
                     model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
@@ -1200,6 +1222,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 model -= model_decorr['add_2_totalflux']
                             else:
                                 logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+
                     # Remove the inst_var if required
                     if (datasetname in inst_vars) and remove_inst_var:
                         model -= model_instvar
@@ -1260,55 +1283,55 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Plot the decorrelation model if needed
                     ########################################
                     if (datasetname in decorrs) and not(remove_decorrelation):
-                        for model_part in decorrs:
+                        for model_part in decorrs[datasetname]:
                             if model_part == "add_2_totalflux":
                                 pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
                                 pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
-                                _ = axe_data.plot(tsim, decorrs["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
+                                _ = axe_data.plot(tsim, model_decorr["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
                             # Else is already addressed above
 
                     ###############
                     # Plot the data
                     ###############
                     if pl_show_error[datasetname]['data']:
-                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname],
+                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
                                                    yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
                         if not("ecolor" in pl_kwarg_jitter[datasetname]):
                             pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                         if not("color" in pl_kwarg_final[datasetname]):
                             pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
                         if has_jitters[datasetname]:
-                            axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname],
+                            axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
                                               yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
 
                     else:
-                        axe_data.errorbar(dico_kwargs[datasetname]["t"], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
+                        axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
 
                     ####################
                     # Plot the residuals
                     ####################
                     if pl_show_error[datasetname]['data']:
                         if has_jitters[datasetname]:
-                            axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
-                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
+                            axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
                     else:
-                        axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
                     ################################################################################
                     if not(one_binning_per_row) and (exptime_bin > 0.):
-                        t_min_data, t_max_data = (min(dico_kwargs[datasetname]["t"]), max(dico_kwargs[datasetname]["t"]))
+                        t_min_data, t_max_data = (min(dico_kwargs[datasetname]['time']), max(dico_kwargs[datasetname]['time']))
                         bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                         midbins = bins[:-1] + exptime_bin / 2
                         nbins = len(bins) - 1
                         # Compute the binned values
                         (bindata, binedges, binnb
-                         ) = binned_statistic(dico_kwargs[datasetname]["t"], datas[datasetname],
+                         ) = binned_statistic(dico_kwargs[datasetname]['time'], datas[datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(t_min_data, t_max_data))
                         (binresi, binedges, binnb
-                         ) = binned_statistic(dico_kwargs[datasetname]["t"], residuals[datasetname],
+                         ) = binned_statistic(dico_kwargs[datasetname]['time'], residuals[datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(t_min_data, t_max_data))
                         # Compute the err on the binned values
@@ -1348,7 +1371,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
-                    t_row = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames4rowidx[i_row]])
+                    t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
                     bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                     midbins = bins[:-1] + exptime_bin / 2
@@ -1367,8 +1390,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                         binstd_jitter = np.zeros(nbins)
                     bincount = np.zeros(nbins)
-                    data_err_row = np.concatenate([dico_kwargs[dst]["data_err"] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]["data_err"]) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    data_err_row = np.concatenate([dico_kwargs[dst]['flux_err'] for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]['flux_err']) * np.nan for dst in datasetnames4rowidx[i_row]])
                     for i_bin in range(nbins):
                         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
@@ -1416,7 +1439,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # y_lims can change after each dataset
                 if TS_kwargs.get("indicate_y_outliers_data", True):
                     for datasetname in datasetnames4rowidx[i_row]:
-                        et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=datas[datasetname],
+                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=datas[datasetname],
                                                ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
                                                alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
@@ -1437,7 +1460,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # y_lims can change after each dataset
                 if TS_kwargs.get("indicate_y_outliers_resi", True):
                     for datasetname in datasetnames:
-                        et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=residuals[datasetname],
+                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=residuals[datasetname],
                                                ax=axe_resi, color=pl_kwarg_final[datasetname]["color"],
                                                alpha=pl_kwarg_final[datasetname].get("alpha", 1))
 
@@ -1461,7 +1484,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     if GLSP_kwargs.get("do", True):
         # Create the all_time array which gathers the times from all datasets
         # WARNING:
-        all_time = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames])
+        all_time = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames])
         idx_sort = np.argsort(all_time)
         all_time = all_time[idx_sort]
         all_data = np.concatenate([datas[dst] for dst in datasetnames])[idx_sort]
@@ -1476,7 +1499,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         all_gp_pred_var = []
         for dst in datasetnames:
             if dst in gp_preds:
-                all_time_gp.append(dico_kwargs[dst]["t"])
+                all_time_gp.append(dico_kwargs[dst]['time'])
                 all_gp_pred.append(gp_preds[dst])
                 all_gp_pred_var.append(gp_pred_vars[dst])
         if len(all_time_gp) > 0:
@@ -1489,7 +1512,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         all_inst_var = []
         for dst in datasetnames:
             if dst in inst_vars:
-                all_time_inst_var.append(dico_kwargs[dst]["t"])
+                all_time_inst_var.append(dico_kwargs[dst]['time'])
                 all_inst_var.append(inst_vars[dst])
         if len(all_time_inst_var) > 0:
             all_time_inst_var = np.concatenate(all_time_inst_var)
@@ -1506,7 +1529,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             all_decorrs[model_part] = []
                             all_time_decorrs[model_part] = []
                         all_decorrs[model_part].append(decorrs[dst][model_part])
-                        all_time_decorrs[model_part].append(dico_kwargs[dst]["t"])
+                        all_time_decorrs[model_part].append(dico_kwargs[dst]['time'])
                     else:
                         logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
             for model_part in all_decorrs:
@@ -1730,12 +1753,14 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_fittedval, remove1, LC_fact,
-                                remove_inst_var, remove_decorrelation, remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
+                                remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood,
+                                remove_contamination, remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
     """
     dico_datasets = {}
     dico_kwargs = {}
     dico_nb_dstperinsts = defaultdict(lambda: 0)
+    times = {}
     datas = {}
     data_errs = {}
     data_err_jitters = {}
@@ -1747,6 +1772,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
     gp_pred_vars = {}
     inst_vars = {}
     decorrs = {}
+    decorr_likelihoods = {}
     contams = {}
     residuals = {}
     for datasetname in datasetnames:
@@ -1754,9 +1780,10 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         # Load Data and instrument and noise model
         ##########################################
         dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
-        dico_kwargs[datasetname] = dico_datasets[datasetname].get_kwargs()
-        datas[datasetname] = dico_kwargs[datasetname]["data"].copy()
-        data_errs[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+        dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
+        times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
+        datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
+        data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
@@ -1767,7 +1794,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         # Apply the jitter to the data error if needed
         ##############################################
         dico_jitters[datasetname] = {}
-        data_err_jitters[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+        data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
         has_jitters[datasetname] = noise_model.has_jitter
         if has_jitters[datasetname]:
             dico_jitters[datasetname]["type"] = noise_model.jitter_type
@@ -1793,7 +1820,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         # and remove RV_drift
         if inst_mod.get_with_inst_var():
             (model_inst_var, _, _, _
-             ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+             ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                              l_param_name=list(df_fittedval.index), key_obj="inst_var", datasim_kwargs=datasim_kwargs
                                              )
             inst_vars[datasetname] = model_inst_var
@@ -1803,25 +1830,25 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         #########################################################################
         if post_instance.model.instcat_models["LC"].decorrelation_config[inst_mod_fullname]["do"]:
             (model_decorr, _, _, _
-             ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+             ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                              l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                              )
             decorrs[datasetname] = {}
             for model_part in post_instance.model.instcat_models["LC"].decorrelation_config[inst_mod_fullname]['what to decorrelate']:
                 if model_part == "add_2_totalflux":
                     (model_decorr, _, _, _
-                     ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+                     ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                                      l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                                      )
                     decorrs[datasetname][model_part] = model_decorr['add_2_totalflux']
                 else:
-                    logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         #########################################################################
         # Compute the contamination models (contam) to later remove from the data
         #########################################################################
         (model_contam, _, _, _
-         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                          l_param_name=list(df_fittedval.index), key_obj="contam", datasim_kwargs=datasim_kwargs
                                          )
         contams[datasetname] = model_contam
@@ -1830,7 +1857,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         # Compute the models and GP predictions
         #######################################
         (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]['t'], dataset_name=datasetname,
+         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs)
         if model_wGP is not None:
@@ -1842,13 +1869,13 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         else:
             models[datasetname] = model
 
-        #######################
-        # Compute the residuals
-        #######################
-        if (model_wGP is not None) and remove_GP_residual:
-            residuals[datasetname] = datas[datasetname] - model_wGP
-        else:
-            residuals[datasetname] = datas[datasetname] - model
+        ###################################################
+        # Compute the likelihood decorrelation contribution
+        ###################################################
+        if remove_decorrelation_likelihood and (f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db):
+            datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+            decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
 
         ################################################################################
         # Remove GP (if needed)
@@ -1875,6 +1902,12 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         ################################################################################
+        # Remove decorrelation likelihood (if needed)
+        ################################################################################
+        if (datasetname in decorrs) and remove_decorrelation_likelihood:
+            datas[datasetname] -= decorr_likelihoods[datasetname]
+
+        ################################################################################
         # Remove contamination (if needed)
         ################################################################################
         if remove_contamination:
@@ -1887,6 +1920,14 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         if remove1:
             datas[datasetname] -= 1
             models[datasetname] -= 1
+
+        #######################
+        # Compute the residuals
+        #######################
+        if (model_wGP is not None) and remove_GP_residual:
+            residuals[datasetname] = datas[datasetname] - model_wGP
+        else:
+            residuals[datasetname] = datas[datasetname] - model
 
         ################################################################################
         # Apply LC_fact
@@ -2036,11 +2077,11 @@ def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, o
     if bin_size > 0.:
         for datasetname in datasetnames:
             # Set label for binned model
-            pl_kwarg_final[datasetname]["modelbinned"]["label"] = f"model: bin={bin_size:.2g}{bin_size_unit}"
+            pl_kwarg_final[datasetname]["modelbinned"]["label"] = f"model: bin={bin_size:.2g}[{bin_size_unit}]"
             # Set label for binned data per dataset
             if not(one_binning_per_row):
-                pl_kwarg_final[datasetname]["databinned"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
+                pl_kwarg_final[datasetname]["databinned"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"
         # Set label for binned data per row
         if one_binning_per_row:
             for i_row in range(nb_rows):
-                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{bin_size_unit}"
+                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"

@@ -146,7 +146,7 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
 
     :return np.ndarray p0: Ndarray containing the initial positions for all the walkers
     """
-    l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
+    l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
     if init_distrib is not None:
         l_param_name_in_distrib = list(init_distrib.keys())
     else:
@@ -585,11 +585,10 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     inst_mod = post_instance.model.get_instmod(dataset.dataset_name)
     noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
     # Get data point (time, data, data_err) and other kwargs
-    kwargs = dataset.get_kwargs()
-    t_data = kwargs.pop("t")
+    t_data = dataset.get_datasetkwarg("time")
     nt = len(t_data)
-    data = kwargs.pop("data")
-    data_err = kwargs.pop("data_err")
+    data = dataset.get_datasetkwarg("data")
+    data_err = dataset.get_datasetkwarg("data_err")
     # Extract the jitter information:
     # jitter which give the value of the jitter (float)
     # jitter_type which give the type of jitter model used (string: 'multi' or 'add')

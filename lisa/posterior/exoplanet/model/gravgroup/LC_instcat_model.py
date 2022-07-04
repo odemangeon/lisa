@@ -23,11 +23,13 @@ import os
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_lc import create_datasimulator_LC
+from ..decorrelation.linear_decorrelation import LinearDecorrelation
+from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from .....tools.miscellaneous import spacestring_like
-from ..decorrelation_model.linear_decorrelation import LinearDecorrelation
+
 
 ## Logger object
 logger = getLogger()
@@ -45,7 +47,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
-    __decorrelation_models__ = [LinearDecorrelation]
+    __decorrelation_models__ = [LinearDecorrelation, SplineDecorrelation]
+    __modelpart_4_decorrlikelihood__ = "add_2_totalflux"
 
     allowed_what2decorrelate_strs = ['multiply_2_totalflux', 'add_2_totalflux', ]
 
@@ -138,9 +141,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                        inst_models=inst_models,
                                        datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets,
-                                       decorrelation_config=self.decorrelation_config,
+                                       # decorrelation_config=self.decorrelation_config,
                                        dataset_db=self.model_instance.dataset_db,
-                                       LCcat_model=self.model_instance.instcat_models[self.inst_cat]
+                                       LCcat_model=self
+                                       # LCcat_model=self.model_instance.instcat_models[self.inst_cat]
                                        )
 
     def create_instcat_paramfile(self, file_path):
@@ -438,7 +442,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                 decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
                 dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                                                    decorrelation_config_inst=decorr_model_current_config_dict,
-                                                                                   tab=tab + tab_what2decorrdict + tab_modelpart)
+                                                                                   tab=tab + tab_what2decorrdict + tab_modelpart) + ","
             dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "},"
 
         return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
@@ -489,7 +493,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     decorr_mod.load_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                           decorrelation_config_inst_decorr_paramfile=decorr_dict_instmod_modpart_decorrmod,
                                                           decorrelation_config_inst_decorr=self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category],
-                                                          allowed_what2decorrelate_strs=self.allowed_what2decorrelate_strs
                                                           )
 
     def apply_instmod_parametrisation(self, inst_mod_obj):

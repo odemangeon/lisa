@@ -67,7 +67,8 @@ template_return = dedent(template_return)
 
 
 def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
-                            phasecurve_model, occultation_model, decorrelation_config, dataset_db, LCcat_model,
+                            phasecurve_model, occultation_model,  # decorrelation_config,
+                            dataset_db, LCcat_model,
                             inst_models, datasets, get_times_from_datasets,
                             ):
     """Return datasimulator functions.
@@ -243,8 +244,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # Produce the decorrelation
     ###########################
     d_l_d_decorr = get_decorrelation(multi=multi, planets=planets, l_inst_model=l_inst_model, l_dataset=l_dataset,
-                                     get_times_from_datasets=get_times_from_datasets, decorrelation_config=decorrelation_config,
-                                     dataset_db=dataset_db, LCcat_model=LCcat_model, tab=tab, time_vec_name=time_vec,
+                                     get_times_from_datasets=get_times_from_datasets, dataset_db=dataset_db,
+                                     LCcat_model=LCcat_model, tab=tab, time_vec_name=time_vec,
                                      l_time_vec_name=l_time_vec, function_builder=func_builder, l_function_shortname=[function_whole_shortname, ],
                                      ext_func_fullname=func_full_name_MultiOrDst_ext)
 
@@ -291,22 +292,25 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
         params_model = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname)]
         dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            # mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
         else:
             mand_kwargs = None
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            # opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            opt_kwargs = func_builder.get_d_optional_argument(function_shortname=func_shortname)
         else:
             opt_kwargs = None
         logger.debug(f"Parameters for {func_shortname} LC simulator function :\n{dico_param_nb}")
         dico_docf[func_shortname] = DatasimDocFunc(function=func_builder._get_ldict(function_shortname=func_shortname)[func_builder.get_function_fullname(shortname=func_shortname)],
-                                                   params_model=params_model,
-                                                   inst_cat=instcat_docf,
+                                                   param_model_names_list=params_model,
+                                                   params_model_vect_name=par_vec_name,
+                                                   inst_cats_list=instcat_docf,
+                                                   inst_model_fullnames_list=instmod_docf,
+                                                   dataset_names_list=dtsts_docf,
                                                    include_dataset_kwarg=get_times_from_datasets,
-                                                   mand_kwargs=mand_kwargs,
-                                                   opt_kwargs=opt_kwargs,
-                                                   inst_model_fullname=instmod_docf,
-                                                   dataset=dtsts_docf)
+                                                   mand_kwargs_list=mand_kwargs,
+                                                   opt_kwargs_dict=opt_kwargs)
     return dico_docf
 
 
@@ -1668,7 +1672,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                         function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
                                         params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
                                         if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
-                                            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
+                                            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2  # Doing this here will change the content of the variable in ldict. So that's fine.
                                         function_builder.add_to_body_text(text=f"{tab}m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params=params_{planet_name}_{instmod_fullname}, t={time_vect}, transittype='secondary'{supersamp_text})\n", function_shortname=func_shortname)
                                         function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)  # This is necessary, because the init of TransitModel modifies the params instance (which is not a good idea in my opinion, but batman is not my code)
                                         function_builder.add_to_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
@@ -2056,8 +2060,8 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
     return returns
 
 
-def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets, decorrelation_config,
-                      dataset_db, LCcat_model, tab, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
+def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets, dataset_db,
+                      LCcat_model, tab, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
                       ext_func_fullname):
     """Provide the text for the decorrelation of the LC model text (return).
 
@@ -2083,9 +2087,6 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
     get_times_from_datasets : bool
         If True the times at which the model should be computed will be taken from the datasets and
         included into the function. I False the user of the function will have to provide the times.
-    decorrelation_config    : dict
-        Dictionary describing the decorrelation model to use. The format of this disctionary is:
-        {}
     dataset_db              : DatasetDatabase
         Dataset database to access the dataset for the decorrelation.
     LCcat_model              : LC_InstCat_Model
@@ -2116,12 +2117,13 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
     # Check if any of the instrument model is associated to a decorrelation model
     #############################################################################
     requires_decorr = False
-    for instmod in l_inst_model:
-        if decorrelation_config[instmod.full_name]["do"]:
+    for instmod_obj in l_inst_model:
+        if LCcat_model.require_model_decorrelation(instmod_fullname=instmod_obj.full_name):
             requires_decorr = True
             break
 
     if requires_decorr:
+        decorrelation_config = LCcat_model.decorrelation_config
         #################################################
         # Initialise the new function in function_builder
         #################################################
@@ -2162,12 +2164,13 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
                     # List of the datasets associated with the instrument model
                     l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmod.full_name)
                     for model_part, config_decorr_instmod_modelpart in decorrelation_config[instmod.full_name]["what to decorrelate"].items():
-                        (returns[func_shortname][i_inputoutput][model_part]
-                         ) = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
-                                                            l_dataset_name_instmod=l_dataset_name_instmod,
-                                                            dataset_db=dataset_db, decorrelation_config_instmod=config_decorr_instmod_modelpart,
-                                                            model_part=model_part, time_arg_name=time_arg_name,
-                                                            function_builder=function_builder, function_shortname=func_shortname)
+                        text_decorr = LCcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
+                                                                     l_dataset_name_instmod=l_dataset_name_instmod,
+                                                                     dataset_db=dataset_db, decorrelation_config_instmod=config_decorr_instmod_modelpart,
+                                                                     model_part=model_part, time_arg_name=time_arg_name,
+                                                                     function_builder=function_builder, function_shortname=func_shortname)
+                        if text_decorr != "":
+                            returns[func_shortname][i_inputoutput][model_part] = text_decorr
 
         ##########################################
         # Finalize the decorrelation only function

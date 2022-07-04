@@ -21,20 +21,21 @@ mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
 
-class Core_DecorrelationModel(object, metaclass=MandatoryReadOnlyAttrAndMethod):
-    """docstring for Core_DecorrelationModel class, Parent class of all Decorrelation Model Class"""
+class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMethod):
+    """docstring for Core_DecorrelationLikelihood class, Parent class of all Decorrelation likelihood Class"""
 
     ## List of mandatory arguments which have to be defined in the subclasses.
     # For example "category" is in this list. It has to be defined in the subclass as a class
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "format_config_dict"]
+    __mandatoryattrs__ = ["category", "format_config_dict", "l_required_inddatasetkwarg_keys",
+                          "l_required_datasetkwarg_keys"]
     # category: String which designate the decorrelation model (for example: "linear"). To choose the
     #   decorrelation model to be used, the user will use this string.
     # format_config_dict is a strong to be used as the example of how to specify the dictionary in the
     #   Instrument specific parameter file
-    __mandatorymeths__ = ["apply_parametrisation", "get_text_decorrelation"]
+    __mandatorymeths__ = ["apply_parametrisation", "create_decorrelation_likelihood"]
     # apply_parametrisation: Method that creates the parameters necessary for the decorrelation model
     #  for each instrument model object of the instrument category to which this decorrelation model applies
     #  The arguments must be inst_mod_obj, the Instrument model object and decorrelation_config_inst_decorr

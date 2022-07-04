@@ -8,10 +8,8 @@ The objective of this package is to provides the RV_Instrument and RV_Dataset cl
 @TODO:
 """
 from logging import getLogger
-import matplotlib.pyplot as plt
-from numpy import array
 
-from lisa.posterior.core.dataset_and_instrument.dataset import Core_Dataset
+from lisa.posterior.core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from lisa.posterior.core.dataset_and_instrument.instrument import Core_Instrument
 from lisa.posterior.core.parameter import Parameter
 
@@ -103,7 +101,7 @@ class RV_Instrument(Core_Instrument):
         return "{}{}".format(self.__inst_var_basename__, order)
 
 
-class RV_Dataset(Core_Dataset):
+class RV_Dataset(Core_DatasetTimeSeries):
     """docstring for RV_Dataset class.
 
     This class is designed to habor an radial velocity data file.
@@ -118,56 +116,12 @@ class RV_Dataset(Core_Dataset):
     """
 
     __instrument_subclass__ = RV_Instrument
-    __mandatory_columns__ = ["time", "RV", "RV_err"]
+    __mandatory_columns__ = ["time", "data", "data_err"]
 
-    ## name of the data  and data error columns
-    _data_name = "RV"
-    _data_err_name = "RV_err"
-
-    def plot(self, y="RV", yerr="RV_err", **kwargs):
-        """
-        Plot function to visualise the data.
-
-        This is not very pretty but it plots the flux versus time and the error bars
-        """
-        self.get_datatable().plot(y=y, yerr=yerr, **kwargs)
-        plt.show()
-
-    def get_kwargs(self):
-        pandas_df = self.get_datatable()
-        return {"data": array(pandas_df[self._data_name]),
-                "data_err": array(pandas_df[self._data_err_name]),
-                "t": array(pandas_df["time"]),
-                "tref": array(pandas_df["time"]).min()}
-
-    def get_time(self):
-        pandas_df = self.get_datatable()
-        return array(pandas_df["time"])
-
-    def get_tref(self):
-        return (self.get_time()).min()
-
-    def create_datasimulator_for_dataset(self, datasim_func):
-        # t_dtst = self.get_time()
-        # tmin = t_dtst.min()
-        # tmax = t_dtst.max()
-        # nt = len(t_dtst)
-        # oversamp = 10
-        # tsamp = (tmax - tmin) / (nt * oversamp)
-        # tmin_moins = tmin - oversamp * tsamp
-        # tmax_plus = tmax + oversamp * tsamp
-        # func = datasim_func.function
-        # arg_list = datasim_func.arg_list
-        # arg_list_new = OrderedDict()
-        # arg_list_new["param"] = arg_list["param"]
-        # arg_list_new["kwargs"] = ["tsamp", "tmin", "tmax"]
-
-        # def datasim_func_fordataset(p, tsamp=tsamp, tmin=tmin_moins, tmax=tmax_plus):
-        #     t = linspace(tmin, tmax, (tmax - tmin) / tsamp)
-        #     return func(p, t=t)
-        #
-        # return DocFunction(function=datasim_func_fordataset, arg_list=arg_list_new)
-        return datasim_func
+    def __init__(self, file_path, instrument_instance, exp_time=None):
+        super(RV_Dataset, self).__init__(file_path, instrument_instance)
+        self.dico_common_column_names["data"] = "RV"
+        self.dico_common_column_names["data_err"] = "RV_err"
 
 
 HARPS = RV_Instrument("HARPS")
