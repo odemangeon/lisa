@@ -2528,7 +2528,7 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
     # import pdb; pdb.set_trace()
     lnlike = post_instance.lnlikelihoods.dataset_db["all"]
 
-    nb_free_param = len(lnlike.params_model)
+    nb_free_param = len(lnlike.param_model_names_list)
     logger.info(f"Number of free parameters : {nb_free_param}")
     l_datasetname = post_instance.dataset_db.get_datasetnames()
     nb_data_points = 0
@@ -2552,7 +2552,7 @@ def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_bu
     else:
         bic = None
 
-    l_fit_val = get_param_vector(df_fittedval, lnlike.params_model)
+    l_fit_val = get_param_vector(df_fittedval, lnlike.param_model_names_list)
     bestfit_lnlikehood = lnlike(l_fit_val, **datasim_kwargs)
     logger.info(f"Ln likelihood for the best parameter values : {bestfit_lnlikehood}")
 
