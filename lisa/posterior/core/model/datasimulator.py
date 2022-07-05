@@ -16,7 +16,7 @@ from copy import copy
 from . import par_vec_name
 from .datasim_docfunc import DatasimDocFunc
 from ..database_instlevelsanddataset import DatabaseInstLvlDataset
-from ..dataset_and_instrument.indicator import IND_inst_cat, IND_Instrument
+from ..dataset_and_instrument.indicator import IND_inst_cat  # , IND_Instrument
 from ....tools.function_from_text_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 
 
