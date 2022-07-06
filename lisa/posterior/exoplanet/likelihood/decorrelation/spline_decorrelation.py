@@ -177,7 +177,6 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
             function_builder.add_variable_to_ldict(variable_name="linspace", variable_content=linspace, function_shortname=plot_functionshortname, exist_ok=True)
             function_builder.add_optional_argument(argument_name="npt_spline", default_value=100, function_shortname=plot_functionshortname, exist_ok=True)
             plotdecorr_body_text = f"""
-            {{tab}}import pdb; pdb.set_trace()
             {{tab}}fig, ax = subplots()
             {{tab}}x_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name} = linspace(min({text_all_indval}), max({text_all_indval}), npt_spline)
             {{tab}}ax.plot({text_all_indval}, {text_all_resi}, '.', label='residuals')
