@@ -1023,6 +1023,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
+    if fig_param is None:
+        fig_param = {}
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
     # Do the suptitle
@@ -1220,15 +1222,21 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         for model_part in model_decorr:
                             if model_part == "add_2_totalflux":
                                 model -= model_decorr['add_2_totalflux']
+                                if model_wGP is not None:
+                                    model_wGP -= model_decorr['add_2_totalflux']
                             else:
                                 logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
                     # Remove the inst_var if required
                     if (datasetname in inst_vars) and remove_inst_var:
                         model -= model_instvar
+                        if model_wGP is not None:
+                            model_wGP -= model_instvar
                     # Remove the contamination
                     if (datasetname in contams) and remove_contamination:
                         model /= model_contam
+                        if model_wGP is not None:
+                            model_wGP /= model_contam
                     # remove 1 if required
                     if remove1:
                         model -= 1
@@ -1243,7 +1251,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             # Else is already addressed above
                     # Multiply by LC fact
                     model *= LC_fact
-                    model_instvar *= LC_fact
+                    if (datasetname in inst_vars):
+                        model_instvar *= LC_fact
                     if (datasetname in decorrs):
                         for model_part in model_decorr:
                             if model_part == "add_2_totalflux":
@@ -1440,8 +1449,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 if TS_kwargs.get("indicate_y_outliers_data", True):
                     for datasetname in datasetnames4rowidx[i_row]:
                         et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=datas[datasetname],
-                                               ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
-                                               alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+                                               ax=axe_data, color=pl_kwarg_final[datasetname]["data"].get("color", None),
+                                               alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
                 # Draw a horizontal line at 0 in the residual plot
                 axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
@@ -1461,8 +1470,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 if TS_kwargs.get("indicate_y_outliers_resi", True):
                     for datasetname in datasetnames:
                         et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=residuals[datasetname],
-                                               ax=axe_resi, color=pl_kwarg_final[datasetname]["color"],
-                                               alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+                                               ax=axe_resi, color=pl_kwarg_final[datasetname]["data"].get("color", None),
+                                               alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
                 ############################
                 # Set the t_lims if provided
