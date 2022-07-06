@@ -22,6 +22,7 @@ from ..model.datasim_docfunc import DatasimDocFunc
 from ..database_func import DatabaseInstLvlDataset
 from ....tools.function_from_text_toolbox import FunctionBuilder
 from ..model import par_vec_name
+from .. import function_whole_shortname
 
 
 ## logger object
@@ -141,7 +142,7 @@ class LikelihoodCreator(object):
         if l_dataset_name == list(datasim_docfunc.dataset_names_list):
             datasim_all_dst_doc_func = datasim_docfunc
         else:
-            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)
+            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[function_whole_shortname]
 
         l_idx_param_dtsim = list(range(len(datasim_all_dst_doc_func.param_model_names_list)))
         datasim_mand_arg = datasim_all_dst_doc_func.mand_kwargs_list
@@ -398,8 +399,10 @@ class LikelihoodCreator(object):
         """
         ## Deal with the noise_model/likelihood
         # Get list of dataset objects required by datasim_doc_func
-        l_dataset_obj = list(set([self.dataset_db[dataset_name] for dataset_name in datasim_docfunc.dataset_names_list]))
-        l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
+        l_dataset_name = list(datasim_docfunc.dataset_names_list.values)
+        # l_dataset_name_noduplicate = list(set(l_dataset_name))
+        l_dataset_obj = [self.dataset_db[dataset_name] for dataset_name in l_dataset_name]
+        # l_dataset_obj_noduplicate = [self.dataset_db[dataset_name] for dataset_name in l_dataset_obj]
 
         noisemodel_names_list = []
 
