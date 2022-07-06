@@ -17,8 +17,6 @@ from logging import getLogger
 from textwrap import dedent
 from collections import OrderedDict
 from pprint import pformat
-from os.path import basename
-import os
 
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from .limb_darkening import Manager_LD, CoreLD
@@ -47,8 +45,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
-    __decorrelation_models__ = [LinearDecorrelation, SplineDecorrelation]
-    __modelpart_4_decorrlikelihood__ = "add_2_totalflux"
+    __l_decorrelation_class__ = [LinearDecorrelation, SplineDecorrelation]
 
     allowed_what2decorrelate_strs = ['multiply_2_totalflux', 'add_2_totalflux', ]
 
@@ -117,6 +114,16 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def LDs(self):
         return self.model_instance.paramcontainers[CoreLD.category]
 
+    def _init_decorrelation_model_config(self):
+        # Get list of inst model full name for the inst cat
+        l_instcat_instmod = self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+        for inst_mod_obj in l_instcat_instmod:
+            self.decorrelation_model_config[inst_mod_obj.full_name] = {"do": False, "what to decorrelate": {}}
+            for model_part in self.allowed_what2decorrelate_strs:
+                self.decorrelation_model_config[inst_mod_obj.full_name]["what to decorrelate"][model_part] = {}
+                for decorr_model_cat in self.l_decorrelation_model_category:
+                    self.decorrelation_model_config[inst_mod_obj.full_name]["what to decorrelate"][model_part][decorr_model_cat] = {}
+
     def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
         """
         Arguments
@@ -147,144 +154,110 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                        # LCcat_model=self.model_instance.instcat_models[self.inst_cat]
                                        )
 
-    def create_instcat_paramfile(self, file_path):
-        """Create a parameter file for the light-curve parametrisation.
+    def create_text_instcat_paramfile_model(self, model_instance):
+        """Create text for parameter file for the light-curve parametrisation.
 
         Arguments
         ---------
-        file_path           : string
-            Path to the param_file.
+        model_instance  :
         """
-        with open(file_path, 'w') as f:
-            # Write the header
-            f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+        text = """
+        # Light-curve parametrisation file of {object_name}
 
-            # Define the global structure of the file
-            text_LC_param = """
-            # Light-curve parametrisation file of {object_name}
+        # Which model do you want to use for the transit ?
+        transit_model = {transit_model}
 
-            # Which model do you want to use for the transit ?
-            transit_model = {transit_model}
+        # Limb-darkening.
+        # Associate LC instrument models with LD param containers.
+        # Available limb-darkening models are:
+        # {available_lds}
+        {ld_dict_name} = {{{star_ld_dict}
+        {tab_ld}}}
 
-            # Limb-darkening.
-            # Associate LC instrument models with LD param containers.
-            # Available limb-darkening models are:
-            # {available_lds}
-            {ld_dict_name} = {{{star_ld_dict}
-            {tab_ld}}}
+        # Supersampling and exposure_time
+        {supersamp_dict} = {{{inst_ss_dict}
+        {tab_ss}}}
 
-            # Supersampling and exposure_time
-            {supersamp_dict} = {{{inst_ss_dict}
-            {tab_ss}}}
+        # Which model do you want to use for the phase curve ?
+        phasecurve_model = {phasecurve_model}
 
-            # Which model do you want to use for the phase curve ?
-            phasecurve_model = {phasecurve_model}
+        # Which model do you want to use for the occultation ?
+        # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
+        occultation_model = {occultation_model}
+        """
+        text = dedent(text)  # Remove undesired indentation
 
-            # Which model do you want to use for the occultation ?
-            # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
-            occultation_model = {occultation_model}
+        # Create some of the easy content of the file
+        available_lds = self._ld_models["batman"]  # For now I am providing the ld models available with batman
+        tab_ld = spacestring_like(f"{self.__ld_dict_name} =  ")
+        tab_ss = spacestring_like(f"{self.__supersamp_dict} =  ")
+        tab_trmod = spacestring_like("transit_model = ")
+        tab_pcmod = spacestring_like("phasecurve_model = ")
+        tab_occmod = spacestring_like("occultation_model = ")
 
-            {text_general_decorrelation}
-            """
-            text_LC_param = dedent(text_LC_param)  # Remove undesired indentation
+        # Create the structure of the star_ld_dict
+        star_ld_dict = """
+        '{star_name}': {{{inst_ld_dict}
 
-            # Create some of the easy content of the file
-            available_lds = self._ld_models["batman"]  # For now I am providing the ld models available with batman
-            tab_ld = spacestring_like(f"{self.__ld_dict_name} =  ")
-            tab_ss = spacestring_like(f"{self.__supersamp_dict} =  ")
-            tab_trmod = spacestring_like("transit_model = ")
-            tab_pcmod = spacestring_like("phasecurve_model = ")
-            tab_occmod = spacestring_like("occultation_model = ")
+        {tab_star_ld}'{LD_dict_name}': {{{LDmodels}}}
+        {tab_star_ld}}}
+        """
+        star_ld_dict = dedent(star_ld_dict)[1:-1]  # Remove undesired indentation
 
-            # Create the structure of the star_ld_dict
-            star_ld_dict = """
-            '{star_name}': {{{inst_ld_dict}
+        # Create some of the easy content of the star_ld_dict
+        default_parcontname = 'default'
+        star = self.model_instance.stars[list(self.model_instance.stars.keys())[0]]
+        tab_star_ld = tab_ld + spacestring_like(f"'{star.get_name()}':  ")  # I put an extra space instead of the curly braket because the color algorithm of atom
+        LDmodels = (f"'{default_parcontname}': 'quadratic'")
 
-            {tab_star_ld}'{LD_dict_name}': {{{LDmodels}}}
-            {tab_star_ld}}}
-            """
-            star_ld_dict = dedent(star_ld_dict)[1:-1]  # Remove undesired indentation
+        # Create the content related to LC instruments (inst_ld_dict and inst_ss_dict)
+        inst_ld_dict = ""
+        inst_ss_dict = ""
+        ss_dict = "'{instmod_fullname}': {{'{supersamp_key}': {default_supersamp}, '{exptime_key}': {default_exptime}}},"
+        ld_dict = "'{instmod_fullname}': '{def_LDparcont}',"
+        default_supersamp = 1
+        default_exptime = 0.02043402778  # Kepler long cadence exposure time in days
+        first_instmodel = True
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            ld_tab = ""
+            ss_tab = ""
+            if not(first_instmodel):
+                ld_tab = "\n{tab_star_ld}"
+                ss_tab = "\n{tab_ss}"
+            else:
+                first_instmodel = False
+            inst_ld_dict += (ld_tab +
+                             ld_dict).format(tab_star_ld=tab_star_ld,
+                                             instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
+                                             def_LDparcont=default_parcontname)
+            inst_ss_dict += (ss_tab +
+                             ss_dict).format(tab_ss=tab_ss,
+                                             instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
+                                             supersamp_key=_supersamp_key,
+                                             default_supersamp=default_supersamp,
+                                             exptime_key=_exptime_key,
+                                             default_exptime=default_exptime)
 
-            # Create some of the easy content of the star_ld_dict
-            default_parcontname = 'default'
-            star = self.model_instance.stars[list(self.model_instance.stars.keys())[0]]
-            tab_star_ld = tab_ld + spacestring_like(f"'{star.get_name()}':  ")  # I put an extra space instead of the curly braket because the color algorithm of atom
-            LDmodels = (f"'{default_parcontname}': 'quadratic'")
+        # Fill the structures of star_ld_dict
+        star_ld_dict = star_ld_dict.format(star_name=star.get_name(), inst_ld_dict=inst_ld_dict,
+                                           tab_star_ld=tab_star_ld, LDmodels=LDmodels,
+                                           LD_dict_name=self.__ldmod_dict_name)
 
-            # Create the content related to LC instruments (inst_ld_dict and inst_ss_dict)
-            inst_ld_dict = ""
-            inst_ss_dict = ""
-            ss_dict = "'{instmod_fullname}': {{'{supersamp_key}': {default_supersamp}, '{exptime_key}': {default_exptime}}},"
-            ld_dict = "'{instmod_fullname}': '{def_LDparcont}',"
-            default_supersamp = 1
-            default_exptime = 0.02043402778  # Kepler long cadence exposure time in days
-            first_instmodel = True
-            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
-                ld_tab = ""
-                ss_tab = ""
-                if not(first_instmodel):
-                    ld_tab = "\n{tab_star_ld}"
-                    ss_tab = "\n{tab_ss}"
-                else:
-                    first_instmodel = False
-                inst_ld_dict += (ld_tab +
-                                 ld_dict).format(tab_star_ld=tab_star_ld,
-                                                 instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                 def_LDparcont=default_parcontname)
-                inst_ss_dict += (ss_tab +
-                                 ss_dict).format(tab_ss=tab_ss,
-                                                 instmod_fullname=instmod_obj.get_name(include_prefix=True, code_version=True, recursive=True),
-                                                 supersamp_key=_supersamp_key,
-                                                 default_supersamp=default_supersamp,
-                                                 exptime_key=_exptime_key,
-                                                 default_exptime=default_exptime)
+        # Fill the whole text_LC_param string
+        text = text.format(object_name=self.model_instance.get_name(),
+                           transit_model=pformat(self.transit_model, compact=True).replace("\n", f"\n{tab_trmod}"),
+                           available_lds=available_lds,
+                           ld_dict_name=self.__ld_dict_name,
+                           tab_ld=tab_ld, star_ld_dict=star_ld_dict,
+                           supersamp_dict=self.__supersamp_dict,
+                           tab_ss=tab_ss, inst_ss_dict=inst_ss_dict,
+                           phasecurve_model=pformat(self.phasecurve_model, compact=True).replace("\n", f"\n{tab_pcmod}"),
+                           occultation_model=pformat(self.occultation_model, compact=True).replace("\n", f"\n{tab_occmod}"),
+                           )
 
-            # Fill the structures of star_ld_dict
-            star_ld_dict = star_ld_dict.format(star_name=star.get_name(), inst_ld_dict=inst_ld_dict,
-                                               tab_star_ld=tab_star_ld, LDmodels=LDmodels,
-                                               LD_dict_name=self.__ldmod_dict_name)
+        return text
 
-            # Fill the whole text_LC_param string
-            text_LC_param = text_LC_param.format(object_name=self.model_instance.get_name(),
-                                                 transit_model=pformat(self.transit_model, compact=True).replace("\n", f"\n{tab_trmod}"),
-                                                 available_lds=available_lds,
-                                                 ld_dict_name=self.__ld_dict_name,
-                                                 tab_ld=tab_ld, star_ld_dict=star_ld_dict,
-                                                 supersamp_dict=self.__supersamp_dict,
-                                                 tab_ss=tab_ss, inst_ss_dict=inst_ss_dict,
-                                                 phasecurve_model=pformat(self.phasecurve_model, compact=True).replace("\n", f"\n{tab_pcmod}"),
-                                                 occultation_model=pformat(self.occultation_model, compact=True).replace("\n", f"\n{tab_occmod}"),
-                                                 text_general_decorrelation=self.create_text_paramfile_decorrelation(model_instance=self.model_instance)  # Comes from Core_InstCat_Model
-                                                 )
-
-            # Write the file
-            f.write(text_LC_param)
-        logger.info(f"Parameter file for LC inst cat created at path: {file_path}")
-        self.paramfile_instcat = basename(file_path)
-
-    def load_instcat_paramfile(self):
-        """Load LC_param_file."""
-        dico_config = self.read_LC_param_file()
-        self.load_LC_config(dico_config)
-        self.load_config_decorrelation(dico_config)
-
-    def read_LC_param_file(self):
-        """Read the content of the LC parameter file."""
-        if self.isdefined_paramfile_instcat:
-            paramfile_instcat = self.paramfile_instcat
-            cwd = os.getcwd()
-            os.chdir(self.model_instance.run_folder)
-            with open(paramfile_instcat) as f:
-                exec(f.read())
-            os.chdir(cwd)
-            dico = locals().copy()
-            dico.pop("self")
-            logger.debug(f"LC parameter file read.\nContent of the parameter file: {dico.keys()}")
-            return dico
-        else:
-            raise IOError(f"Impossible to read LC parameter file: {self.paramfile_instcat} in directory {self.model_instance.run_folder}")
-
-    def load_LC_config(self, dico_config):
+    def load_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
         # Check and load the content of the LDs and Supersamps dict
         for star in self.model_instance.stars.values():
@@ -410,44 +383,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def get_list_LD_parconts(self):
         return self.model_instance.paramcontainers[CoreLD.category].values()
 
-    def create_text4paramfile_decorrmodels(self, instmod_obj, tab):
-        """This function creates the text for the decorrelation of an instrument model object.
-
-        Arguments
-        ---------
-        instmod_obj : Instrument_Model instance
-            Instrument model object for which you want to create the text to configure the decorrelation
-        tab         : str
-            White spaces giving the tabulation to use
-
-        Returns
-        -------
-        text_instmod_decorr_models_content  : str
-            Text to configure the decorrelation for instmod_obj
-        """
-        tab_what2decorrdict = spacestring_like("'what to decorrelate':  ")
-        # template_decorrmethoddict = "{decorr_category}: " + "{" + "{dictdecorrcat_content}\n{tab}" + "}"
-        dictmodelpart_content = ""
-        for modelpart2decor in self.allowed_what2decorrelate_strs:
-            if len(dictmodelpart_content) > 0:
-                dictmodelpart_content += f"\n{tab + tab_what2decorrdict}"
-            modelpart_1stline = f"'{modelpart2decor}': " + "{"
-            tab_modelpart = spacestring_like(modelpart_1stline)
-            dictmodelpart_content += modelpart_1stline
-            dictdecorrcat_content = ""
-            for decorr_model_name in self.available_decorrelationmodel_names:
-                if len(dictdecorrcat_content) > 0:
-                    dictdecorrcat_content += f"\n{tab + tab_what2decorrdict + tab_modelpart}"
-                decorr_model = self.get_DecorrModel(decorrmodel_cat=decorr_model_name)
-                decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
-                dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
-                                                                                   decorrelation_config_inst=decorr_model_current_config_dict,
-                                                                                   tab=tab + tab_what2decorrdict + tab_modelpart) + ","
-            dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "},"
-
-        return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
-
-    def load_config_decorrelation(self, dico_config):
+    def load_config_decorrelation_model(self, dico_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
         for each dataset.
 
@@ -459,41 +395,61 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         dico_config : dict
             Dictionary which contain the content of the inst_cat specific param_file
         """
-        # TODO: Check that the decorrelation dictionary has on entry per instrument model object of
-        # the current instrument category
-        for instmod_obj_name, decorr_dict_instmod in dico_config.get(self._decorr_dict_name, {}).items():
+        for instmod_obj_name, decorr_dict_instmod in dico_config.get(self._decorr_model_dict_name, {}).items():
             instmod_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=instmod_obj_name, raise_error=True)
             instmod_obj = self.model_instance.get_instmodel_objs(inst_fullcat=instmod_name_info["inst_fullcategory"],
                                                                  inst_model=instmod_name_info["inst_model"],
                                                                  inst_name=instmod_name_info["inst_name"])[0]
             # Check that the dictionary of each instrument model object has a "do" key
             assert "do" in decorr_dict_instmod.keys()
-            if instmod_obj_name not in self.decorrelation_config:
-                self.decorrelation_config[instmod_obj_name] = {}
-            self.decorrelation_config[instmod_obj_name]["do"] = decorr_dict_instmod["do"]
+            if instmod_obj_name not in self.decorrelation_model_config:
+                self.decorrelation_model_config[instmod_obj_name] = {}
+            self.decorrelation_model_config[instmod_obj_name]["do"] = decorr_dict_instmod["do"]
             # Check that the "what to decorrelate" is in the dictionary
             if "what to decorrelate" not in decorr_dict_instmod:
                 raise ValueError(f"The dictionary for the configuration of the linear decorrelation of {instmod_obj_name}"
                                  f" must include the key 'what to decorrelate'.")
-            if 'what to decorrelate' not in self.decorrelation_config[instmod_obj_name]:
-                self.decorrelation_config[instmod_obj_name]['what to decorrelate'] = {}
+            if 'what to decorrelate' not in self.decorrelation_model_config[instmod_obj_name]:
+                self.decorrelation_model_config[instmod_obj_name]['what to decorrelate'] = {}
             for model_part, decorr_dict_instmod_modpart in decorr_dict_instmod['what to decorrelate'].items():
                 # Check that the "what to decorrelate" value is valid
                 if model_part not in self.allowed_what2decorrelate_strs:
                     raise ValueError(f"Keys of 'what to decorrelate' for the configuration of the {instmod_obj_name}"
                                      f" must be in {self.allowed_what2decorrelate_strs}.")
-                if model_part not in self.decorrelation_config[instmod_obj_name]['what to decorrelate']:
-                    self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part] = {}
-                for decorr_mod in self.decorrelation_models:
+                if model_part not in self.decorrelation_model_config[instmod_obj_name]['what to decorrelate']:
+                    self.decorrelation_model_config[instmod_obj_name]['what to decorrelate'][model_part] = {}
+                for decorr_mod in self.l_decorrelation_model_class:
                     # Check that the dictionary of each instrument model object has a key for each decorrelation models
                     assert decorr_mod.category in decorr_dict_instmod_modpart.keys()
                     decorr_dict_instmod_modpart_decorrmod = decorr_dict_instmod_modpart[decorr_mod.category]
-                    if decorr_mod.category not in self.decorrelation_config[instmod_obj_name]['what to decorrelate']:
-                        self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category] = {}
+                    if decorr_mod.category not in self.decorrelation_model_config[instmod_obj_name]['what to decorrelate']:
+                        self.decorrelation_model_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category] = {}
                     decorr_mod.load_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                           decorrelation_config_inst_decorr_paramfile=decorr_dict_instmod_modpart_decorrmod,
-                                                          decorrelation_config_inst_decorr=self.decorrelation_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category],
+                                                          decorrelation_config_inst_decorr=self.decorrelation_model_config[instmod_obj_name]['what to decorrelate'][model_part][decorr_mod.category],
                                                           )
+
+    def require_model_decorrelation(self, instmod_fullname):
+        """True if any of the instrument models of the instrument category require model decorrelation
+
+        Argument
+        --------
+        instmod_fullname    : str
+            Intrument model full name
+
+        Return
+        ------
+        require : bool
+            True if the instrument model requires model decorelation
+        """
+        require = False
+        if self.do_decorrelate_model_instmod(instmod_fullname=instmod_fullname):
+            for model_part, dico_decor_model_part_config in self.decorrelation_model_config[instmod_fullname]['what to decorrelate'].items():
+                for decor_cat, dico_decor_cat_config in dico_decor_model_part_config.items():
+                    if len(dico_decor_cat_config) > 0:
+                        require = True
+                        break
+        return require
 
     def apply_instmod_parametrisation(self, inst_mod_obj):
         """Apply the parametrisation to an instrument model object.
@@ -519,9 +475,16 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         inst_mod_obj : Instrument_Model
             Instrument_Model instance providing the instrument model to be parametrised.
         """
-        if self.do_decorrelate_instmod(inst_mod_obj=inst_mod_obj):
-            for model_part in self.decorrelation_config[inst_mod_obj.full_name]['what to decorrelate'].keys():
-                for DecorModel in self.decorrelation_models:
+        # Decorrelation model
+        if self.do_decorrelate_model_instmod(instmod_fullname=inst_mod_obj.full_name):
+            for model_part in self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'].keys():
+                for DecorModel in self.l_decorrelation_model_class:
                     DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
                                                      model_part=model_part,
-                                                     decorrelation_config_inst_decorr=self.decorrelation_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
+                                                     decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
+        # Decorrelation likelihood
+        if self.do_decorrelate_likelihood_instmod(instmod_fullname=inst_mod_obj.full_name):
+            for DecorModel in self.l_decorrelation_likelihood_class:
+                DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
+                                                 model_part=model_part,
+                                                 decorrelation_config_inst_decorr=self.decorrelation_likelihood_config[inst_mod_obj.full_name][DecorModel.category])

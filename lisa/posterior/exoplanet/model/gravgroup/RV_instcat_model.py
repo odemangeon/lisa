@@ -43,8 +43,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "RV_param_file.py"
     __datasim_creator_name__ = "sim_RV"
-    __decorrelation_models__ = [LinearDecorrelation, SplineDecorrelation]
-    __modelpart_4_decorrlikelihood__ = "add_2_totalrv"
+    __l_decorrelation_class__ = [LinearDecorrelation, SplineDecorrelation]
 
     allowed_what2decorrelate_strs = ['add_2_totalrv', 'multiply_2_totalrv']
 
@@ -100,67 +99,33 @@ class RV_InstCat_Model(Core_InstCat_Model):
                                        get_times_from_datasets=get_times_from_datasets
                                        )
 
-    def create_instcat_paramfile(self, file_path):
+    def create_text_instcat_paramfile_model(self, model_instance):
         """Create a parameter file for the light-curve parametrisation.
 
         Arguments
         ---------
-        file_path           : string
-            Path to the param_file.
         model_instance      : Model instance
         """
-        with open(file_path, 'w') as f:
-            # Write the header
-            f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+        # Define the global structure of the file
+        text_RV_param = """
+        # Radial Velocity parametrisation file of {object_name}
 
-            # Define the global structure of the file
-            text_RV_param = """
-            # Radial Velocity parametrisation file of {object_name}
+        # Which model do you want to use for the rv keplerian ?
+        keplerian_rv_model = {keprv_model}
+        """
+        text_RV_param = dedent(text_RV_param)  # Remove undesired indentation
 
-            # Which model do you want to use for the rv keplerian ?
-            keplerian_rv_model = {keprv_model}
+        # Create some of the easy content of the file
+        tab_keprvmod = spacestring_like("keplerian_rv_model = ")
 
-            {text_general_decorrelation}
-            """
-            text_RV_param = dedent(text_RV_param)  # Remove undesired indentation
+        # Fill the whole text_LC_param string
+        text_RV_param = text_RV_param.format(object_name=self.model_instance.get_name(),
+                                             keprv_model=pformat(self.rv_model, compact=True).replace("\n", f"\n{tab_keprvmod}"),
+                                             )
 
-            # Create some of the easy content of the file
-            tab_keprvmod = spacestring_like("keplerian_rv_model = ")
+        return text_RV_param
 
-            # Fill the whole text_LC_param string
-            text_RV_param = text_RV_param.format(object_name=self.model_instance.get_name(),
-                                                 keprv_model=pformat(self.rv_model, compact=True).replace("\n", f"\n{tab_keprvmod}"),
-                                                 text_general_decorrelation=self.create_text_paramfile_decorrelation(model_instance=self.model_instance)  # Comes from Core_InstCat_Model
-                                                 )
-
-            # Write the file
-            f.write(text_RV_param)
-        logger.info(f"Parameter file created at path: {file_path}")
-        self.paramfile_instcat = basename(file_path)
-
-    def load_instcat_paramfile(self):
-        """Load LC_param_file."""
-        dico_config = self.read_RV_param_file()
-        self.load_RV_config(dico_config)
-        self.load_config_decorrelation(dico_config)
-
-    def read_RV_param_file(self):
-        """Read the content of the LC parameter file."""
-        if self.isdefined_paramfile_instcat:
-            paramfile_instcat = self.paramfile_instcat
-            cwd = os.getcwd()
-            os.chdir(self.model_instance.run_folder)
-            with open(paramfile_instcat) as f:
-                exec(f.read())
-            os.chdir(cwd)
-            dico = locals().copy()
-            dico.pop("self")
-            logger.debug(f"RV parameter file read.\nContent of the parameter file: {dico.keys()}")
-            return dico
-        else:
-            raise IOError(f"Impossible to read RV parameter file: {self.paramfile_instcat} in {self.model_instance.run_folder}")
-
-    def load_RV_config(self, dico_config):
+    def load_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
         # Check the rv_model
         dict_name = "keplerian_rv_model"
@@ -224,7 +189,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
             for decorr_model_name in self.available_decorrelationmodel_names:
                 if len(dictdecorrcat_content) > 0:
                     dictdecorrcat_content += f"\n{tab + tab_what2decorrdict + tab_modelpart}"
-                decorr_model = self.get_DecorrModel(decorrmodel_cat=decorr_model_name)
+                decorr_model = self.get_DecorrClass(decorrmodel_cat=decorr_model_name)
                 decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
                 dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
                                                                                    decorrelation_config_inst=decorr_model_current_config_dict,
@@ -233,7 +198,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
 
-    def load_config_decorrelation(self, dico_config):
+    def load_config_decorrelation_model(self, dico_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
         for each dataset.
 
