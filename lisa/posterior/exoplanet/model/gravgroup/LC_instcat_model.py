@@ -148,10 +148,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                        inst_models=inst_models,
                                        datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets,
-                                       # decorrelation_config=self.decorrelation_config,
                                        dataset_db=self.model_instance.dataset_db,
                                        LCcat_model=self
-                                       # LCcat_model=self.model_instance.instcat_models[self.inst_cat]
                                        )
 
     def create_text_instcat_paramfile_model(self, model_instance):
