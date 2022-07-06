@@ -16,7 +16,7 @@ from PyAstronomy.pyasl import foldAt
 from scipy.stats import binned_statistic
 
 
-from .lc_plots import check_row4datasetname, get_pl_kwargs
+from .lc_plots import check_row4datasetname, get_pl_kwargs, update_binned_label
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -62,7 +62,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 datasetnames=None, row4datasetname=None,
                                 plot_model_for_all_datasets=False, datasetnameformodel4row=None, npt_model=1000,
                                 remove_inst_var=True, remove_stellar_var=True, remove_decorrelation=True,
-                                remove_GP_data=True, remove_GP_residual=True, RV_fact=1.,
+                                remove_GP_dataNmodel=True, remove_GP_residual=True, RV_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 phase_binsize=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 one_binning_per_row=True,
@@ -204,7 +204,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
      ) = load_datasets_and_models_RV(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, RV_fact=RV_fact, remove_inst_var=remove_inst_var,
                                      remove_stellar_var=remove_stellar_var, remove_decorrelation=remove_decorrelation,
-                                     remove_GP_dataNmodel=remove_GP_data, remove_GP_residual=remove_GP_residual)
+                                     remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_GP_dataNmodel=remove_GP_dataNmodel, remove_GP_residual=remove_GP_residual)
 
     # Get the central phase for the plot
     phasefold_central_phase = fig_param.get("phasefold_central_phase", 0.)
@@ -951,11 +952,12 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
 def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
                             datasetnames=None,
-                            remove_sysvel=True,
+                            remove_inst_var=False, remove_stellar_var=False, remove_decorrelation=True,
+                            remove_decorrelation_likelihood=True,
+                            remove_GP_dataNmodel=True, remove_GP_residual=True,
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
-                            RV_fact=1.,
-                            RV_unit="$km/s$",
+                            RV_fact=1., RV_unit="$km/s$",
                             *args, **kwargs
                             ):
     """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
@@ -985,8 +987,18 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 function creating two axes data and residuals per planet.
             - 'fontsize' : Int specifiying the fontsize
             - 'suptitle_kwargs': to pass kwargs to the suptitle command
-    remove_sysvel   : bool (Def: True)
-        If True remove the systemic velocity (if model includes a slope, remove velocity at tref)
+    remove_inst_var  : bool
+        If True remove the instrumental variations
+    remove_stellar_var  : bool
+        If True remove the systemic velocity and the stellar variations
+    remove_decorrelation  : bool
+        If True remove the model decorrelation
+    remove_decorrelation_likelihood  : bool
+        If True remove the likelihood decorrelation
+    remove_GP_data  : bool
+        If True remove the GP model from the data
+    remove_GP_residual  : bool
+        If True remove the GP model from the residuals
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
             - 'npt_model': int (Def: 1000) giving the number of points to use for the model
@@ -1100,7 +1112,45 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     ###
     # Setup figure structure and common parameters
     ###
+    if fig_param is None:
+        fig_param = {}
     fontsize = fig_param.get("fontsize", AandA_fontsize)
+
+    # Do the suptitle
+    suptitle_text = ""
+    if show_system_name_in_suptitle:
+        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
+        suptitle_text = f"{system_name} system"
+    removed_from_model_text = ""
+    for compo, removed in zip(["Stellar var", "Inst var", "Decorrelation", ],
+                              [remove_stellar_var, remove_inst_var, remove_decorrelation, ]):
+        if removed:
+            if removed_from_model_text != "":
+                removed_from_model_text += ", "
+            removed_from_model_text += compo
+    if removed_from_model_text != "":
+        removed_from_model_text += " removed from model"
+    if removed_from_model_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_model_text}"
+        else:
+            suptitle_text = removed_from_model_text
+    removed_from_data_text = ""
+    for compo, removed in zip(["Stellar var", "Inst var", "Decorrelation", "Decorrelation Likelihood", ],
+                              [remove_stellar_var, remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, ]):
+        if removed:
+            if removed_from_data_text != "":
+                removed_from_data_text += ", "
+            removed_from_data_text += compo
+    if removed_from_data_text != "":
+        removed_from_data_text += " removed from data"
+    if removed_from_data_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_data_text}"
+        else:
+            suptitle_text = removed_from_data_text
+    if suptitle_text != "":
+        fig.suptitle(suptitle_text, fontsize=fontsize)
 
     # Make sure that the TS_kwargs and GLSP_kwargs are dictionaries
     TS_kwargs = {} if TS_kwargs is None else TS_kwargs
@@ -1119,315 +1169,697 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     # If no dataset name is provided get all the available RV datasets
     if datasetnames is None:
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat="RV", sortby_instcat=False, sortby_instname=False)
+
     # Load the defined datasets and check how many dataset there is by instrument.
-    dico_dataset = {}
-    dico_kwargs = {}
-    dico_nb_dstperinst = defaultdict(lambda: 0)
-    data_err_jitter = OrderedDict()
-    dico_jitter = {}
-    deltaRV = OrderedDict()
-    RVrefglobal_instname = post_instance.model.instcat_models["RV"].RV_references["global"]
-    RVrefglobal_modname = post_instance.model.instcat_models["RV"].RV_references[RVrefglobal_instname]
-    residuals = {}
-    for datasetname in datasetnames:
-        ##########################################
-        # Load Data and instrument and noise model
-        ##########################################
-        dico_dataset[datasetname] = post_instance.dataset_db[datasetname]
-        dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
-        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
-        inst_mod = post_instance.model.instruments[inst_mod_fullname]
-        noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-        dico_nb_dstperinst[filename_info["inst_name"]] += 1
-
-        ##############################################
-        # Apply the jitter to the data error if needed
-        ##############################################
-        dico_jitter[datasetname] = {}
-        data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
-        if noise_model.has_jitter:
-            dico_jitter[datasetname]["type"] = noise_model.jitter_type
-            if inst_mod.jitter.free:
-                dico_jitter[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
-            else:
-                dico_jitter[datasetname]["value"] = inst_mod.jitter.value
-            if dico_jitter[datasetname]["type"] == "multi":
-                data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-            elif dico_jitter[datasetname]["type"] == "add":
-                data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-            else:
-                raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
-        else:
-            dico_jitter[datasetname]["type"] = None
-            dico_jitter[datasetname]["value"] = None
-            data_err_jitter[datasetname] = None
-
-        ##################################################################
-        # Compute and remove the deltaRV to apply to the remove to the data and model
-        ##################################################################
-        # For each dataset
-        RVref4inst_modname = post_instance.model.instcat_models["RV"].RV_references[filename_info["inst_name"]]
-        deltaRV[datasetname] = 0.0
-        # If the current instrument is not the instrument of the global reference:
-        # Add to Delta_RV the values of delta RV of the current instrument model reference to the global reference.
-        if filename_info['inst_name'] != RVrefglobal_instname:
-            instmod_RVref4inst = post_instance.model.instruments["RV"][filename_info['inst_name']][RVref4inst_modname]
-            if instmod_RVref4inst.DeltaRV.main:
-                if instmod_RVref4inst.DeltaRV.free:
-                    deltaRV[datasetname] += df_fittedval.loc[instmod_RVref4inst.DeltaRV.full_name]["value"]
-                else:
-                    deltaRV[datasetname] += instmod_RVref4inst.DeltaRV.value
-        # If the current instrument model is not the reference instrument model for the instrument:
-        # Add to Delta_RV the values of delta RV of the current instrument model to the current instrument model reference.
-        if inst_mod.get_name() != RVref4inst_modname:
-            if inst_mod.DeltaRV.main:
-                if inst_mod.DeltaRV.free:
-                    deltaRV[datasetname] += df_fittedval.loc[inst_mod.DeltaRV.full_name]["value"]
-                else:
-                    deltaRV[datasetname] += inst_mod.DeltaRV.value
-
-        #######################
-        # Compute the residuals
-        #######################
-        # Compute the model for the dataset
-        model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=dico_kwargs[datasetname]['t'],
-                                                                             dataset_name=datasetname,
-                                                                             param=df_fittedval["value"].values,
-                                                                             l_param_name=list(df_fittedval.index),
-                                                                             key_obj=key_whole,
-                                                                             datasim_kwargs=datasim_kwargs)
-        # Compute the residuals
-        if model_wGP is not None:
-            residuals[datasetname] = dico_kwargs[datasetname]["data"] - model_wGP
-        else:
-            residuals[datasetname] = dico_kwargs[datasetname]["data"] - model
-
-        ################################################################################
-        # Remove the systemic velocity, delta_RV and apply RV_fact when and where needed
-        ################################################################################
-        # Remove the systemic velocity
-        if remove_sysvel:
-            dico_kwargs[datasetname]["data"] -= df_fittedval.loc[star.v0.full_name]["value"]
-        # Remove the deltaRV
-        dico_kwargs[datasetname]["data"] -= deltaRV[datasetname]
-        # apply the RV fact to RV and RV_err
-        dico_kwargs[datasetname]["data"] *= RV_fact
-        dico_kwargs[datasetname]["data_err"] *= RV_fact
-        dico_jitter[datasetname]["value"] *= RV_fact
-        data_err_jitter[datasetname] *= RV_fact
-        deltaRV[datasetname] *= RV_fact
-        residuals[datasetname] *= RV_fact
-
-    # Create the all_time array which gathers the times from all datasets
-    all_time = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames])
-    idx_sort = np.argsort(all_time)
-    all_time = all_time[idx_sort]
-    tmin = all_time[0]
-    tmax = all_time[-1]
-    # tspan = tmax - tmin
-    all_resi = np.concatenate([residuals[dst] for dst in datasetnames])
+    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs, residuals
+     ) = load_datasets_and_models_RV(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                     df_fittedval=df_fittedval, RV_fact=RV_fact, remove_inst_var=remove_inst_var,
+                                     remove_stellar_var=remove_stellar_var, remove_decorrelation=remove_decorrelation,
+                                     remove_decorrelation_likelihood=remove_decorrelation_likelihood,
+                                     remove_GP_dataNmodel=remove_GP_dataNmodel, remove_GP_residual=remove_GP_residual)
+    # dico_dataset = {}
+    # dico_kwargs = {}
+    # dico_nb_dstperinst = defaultdict(lambda: 0)
+    # data_err_jitter = OrderedDict()
+    # dico_jitter = {}
+    # deltaRV = OrderedDict()
+    # residuals = {}
+    # for datasetname in datasetnames:
+    #     ##########################################
+    #     # Load Data and instrument and noise model
+    #     ##########################################
+    #     dico_dataset[datasetname] = post_instance.dataset_db[datasetname]
+    #     dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
+    #     filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+    #     inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+    #     inst_mod = post_instance.model.instruments[inst_mod_fullname]
+    #     noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+    #     dico_nb_dstperinst[filename_info["inst_name"]] += 1
+    #
+    #     ##############################################
+    #     # Apply the jitter to the data error if needed
+    #     ##############################################
+    #     dico_jitter[datasetname] = {}
+    #     data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+    #     if noise_model.has_jitter:
+    #         dico_jitter[datasetname]["type"] = noise_model.jitter_type
+    #         if inst_mod.jitter.free:
+    #             dico_jitter[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
+    #         else:
+    #             dico_jitter[datasetname]["value"] = inst_mod.jitter.value
+    #         if dico_jitter[datasetname]["type"] == "multi":
+    #             data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
+    #         elif dico_jitter[datasetname]["type"] == "add":
+    #             data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
+    #         else:
+    #             raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+    #     else:
+    #         dico_jitter[datasetname]["type"] = None
+    #         dico_jitter[datasetname]["value"] = None
+    #         data_err_jitter[datasetname] = None
+    #
+    #     ##################################################################
+    #     # Compute and remove the deltaRV to apply to the remove to the data and model
+    #     ##################################################################
+    #     # For each dataset
+    #     RVref4inst_modname = post_instance.model.instcat_models["RV"].RV_references[filename_info["inst_name"]]
+    #     deltaRV[datasetname] = 0.0
+    #     # If the current instrument is not the instrument of the global reference:
+    #     # Add to Delta_RV the values of delta RV of the current instrument model reference to the global reference.
+    #     if filename_info['inst_name'] != RVrefglobal_instname:
+    #         instmod_RVref4inst = post_instance.model.instruments["RV"][filename_info['inst_name']][RVref4inst_modname]
+    #         if instmod_RVref4inst.DeltaRV.main:
+    #             if instmod_RVref4inst.DeltaRV.free:
+    #                 deltaRV[datasetname] += df_fittedval.loc[instmod_RVref4inst.DeltaRV.full_name]["value"]
+    #             else:
+    #                 deltaRV[datasetname] += instmod_RVref4inst.DeltaRV.value
+    #     # If the current instrument model is not the reference instrument model for the instrument:
+    #     # Add to Delta_RV the values of delta RV of the current instrument model to the current instrument model reference.
+    #     if inst_mod.get_name() != RVref4inst_modname:
+    #         if inst_mod.DeltaRV.main:
+    #             if inst_mod.DeltaRV.free:
+    #                 deltaRV[datasetname] += df_fittedval.loc[inst_mod.DeltaRV.full_name]["value"]
+    #             else:
+    #                 deltaRV[datasetname] += inst_mod.DeltaRV.value
+    #
+    #     #######################
+    #     # Compute the residuals
+    #     #######################
+    #     # Compute the model for the dataset
+    #     model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=dico_kwargs[datasetname]['t'],
+    #                                                                          dataset_name=datasetname,
+    #                                                                          param=df_fittedval["value"].values,
+    #                                                                          l_param_name=list(df_fittedval.index),
+    #                                                                          key_obj=key_whole,
+    #                                                                          datasim_kwargs=datasim_kwargs)
+    #     # Compute the residuals
+    #     if model_wGP is not None:
+    #         residuals[datasetname] = dico_kwargs[datasetname]["data"] - model_wGP
+    #     else:
+    #         residuals[datasetname] = dico_kwargs[datasetname]["data"] - model
+    #
+    #     ################################################################################
+    #     # Remove the systemic velocity, delta_RV and apply RV_fact when and where needed
+    #     ################################################################################
+    #     # Remove the systemic velocity
+    #     if remove_sysvel:
+    #         dico_kwargs[datasetname]["data"] -= df_fittedval.loc[star.v0.full_name]["value"]
+    #     # Remove the deltaRV
+    #     dico_kwargs[datasetname]["data"] -= deltaRV[datasetname]
+    #     # apply the RV fact to RV and RV_err
+    #     dico_kwargs[datasetname]["data"] *= RV_fact
+    #     dico_kwargs[datasetname]["data_err"] *= RV_fact
+    #     dico_jitter[datasetname]["value"] *= RV_fact
+    #     data_err_jitter[datasetname] *= RV_fact
+    #     deltaRV[datasetname] *= RV_fact
+    #     residuals[datasetname] *= RV_fact
+    #
+    # # Create the all_time array which gathers the times from all datasets
+    # all_time = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames])
+    # idx_sort = np.argsort(all_time)
+    # all_time = all_time[idx_sort]
+    # tmin = all_time[0]
+    # tmax = all_time[-1]
+    # # tspan = tmax - tmin
+    # all_resi = np.concatenate([residuals[dst] for dst in datasetnames])
 
     ## Get the list of dataset names using the global RV reference to use for the functions computing the model
-    inst_RVclass = mgr_inst_dst.get_inst_subclass("RV")
-    RVrefglobal_instmod_fullname = inst_RVclass.build_instmod_fullname(inst_model=RVrefglobal_modname, inst_name=RVrefglobal_instname, inst_fullcat="RV")
-    l_datasetname_RVrefglobal = post_instance.model.get_ldatasetname4instmodfullname(instmod_fullname=RVrefglobal_instmod_fullname)
+    # inst_RVclass = mgr_inst_dst.get_inst_subclass("RV")
+    # RVrefglobal_instname = post_instance.model.instcat_models["RV"].RV_references["global"]
+    # RVrefglobal_modname = post_instance.model.instcat_models["RV"].RV_references[RVrefglobal_instname]
+    # RVrefglobal_instmod_fullname = inst_RVclass.build_instmod_fullname(inst_model=RVrefglobal_modname, inst_name=RVrefglobal_instname, inst_fullcat="RV")
+    # l_datasetname_RVrefglobal = post_instance.model.get_ldatasetname4instmodfullname(instmod_fullname=RVrefglobal_instmod_fullname)
 
     ################
     # RV TIME SERIES
     ################
     if TS_kwargs.get("do", True):
-        ###################
-        # Compute the model
-        ###################
-        npt_model = TS_kwargs.get("npt_model", 1000)
-        tsim = np.linspace(tmin - TS_kwargs.get("extra_dt_model", 0.), tmax + TS_kwargs.get("extra_dt_model", 0.),
-                           npt_model)
-        model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=l_datasetname_RVrefglobal[0],
-                                                                             param=df_fittedval["value"].values,
-                                                                             l_param_name=list(df_fittedval.index),
-                                                                             key_obj=key_whole,
-                                                                             datasim_kwargs=datasim_kwargs)
-        if remove_sysvel:
-            model -= df_fittedval.loc[star.v0.full_name]["value"]
-        model *= RV_fact
-        if model_wGP is not None:
-            if remove_sysvel:
-                model_wGP -= df_fittedval.loc[star.v0.full_name]["value"]
-            model_wGP *= RV_fact
-            gp_pred *= RV_fact
-            gp_pred_var *= RV_fact**2
 
-        ###############################
-        # Create additional axe if zoom
-        ###############################
-        if TS_kwargs.get("t_lims_zoom", None) is not None:
-            gs_ts = GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_ts, **TS_kwargs.get('gridspec_kwargs', {}))  # wspace=0.2, width_ratios=(2, 1)
-            t_lims = [TS_kwargs.get("t_lims", None), TS_kwargs["t_lims_zoom"]]
+        ################################################
+        # Create additional axe if zoom and several rows
+        ################################################
+        # Define on which rows the datasets are plots using the row4datasetname input
+        row4datasetname, datasetnames4rowidx = check_row4datasetname(row4datasetname=TS_kwargs.get("row4datasetname", None), datasetnames=datasetnames)
+        nb_rows = len(datasetnames4rowidx)
+        # Create the updated grid space according to the number of rows
+        gs_ts = GridSpecFromSubplotSpec(nb_rows, 1, subplot_spec=gs_ts, **TS_kwargs.get('gridspec_kwargs', {}))
+        # Determine which rows require a zoom.
+        if TS_kwargs.get("t_lims", None) is None:
+            t_lims = [None for row in range(nb_rows)]
         else:
-            gs_ts = [gs_ts, ]
-            t_lims = [TS_kwargs.get("t_lims", None), ]
+            if isinstance(TS_kwargs["t_lims"], dict):
+                t_lims = [TS_kwargs["t_lims"][row] for row in range(nb_rows)]
+            else:
+                if nb_rows == 1:
+                    t_lims = [TS_kwargs["t_lims"], ]
+                else:
+                    raise ValueError("Since theer is more than one row, TS_kwargs['t_lims'] should be a dictionary.")
+        if TS_kwargs.get("t_lims_zoom", None) is None:
+            t_lims_zoom = [None for row in range(nb_rows)]
+        else:
+            if isinstance(TS_kwargs["t_lims_zoom"], dict):
+                t_lims_zoom = [TS_kwargs["t_lims_zoom"][row] for row in range(nb_rows)]
+            else:
+                if nb_rows == 1:
+                    t_lims_zoom = [TS_kwargs["t_lims_zoom"], ]
+                else:
+                    raise ValueError("Since theer is more than one row, TS_kwargs['t_lims_zoom'] should be a dictionary.")
+        # Infer from t_lims_zoom how many columns are required
+        if any([zoom is not None for zoom in t_lims_zoom]):
+            nb_cols = 2
+        else:
+            nb_cols = 1
+
+        # Set the binning variables
+        one_binning_per_row = TS_kwargs.get("one_binning_per_row", False)
+        exptime_bin = TS_kwargs.get("exptime_bin", 0.)
+        binning_stat = TS_kwargs.get("binning_stat", "mean")
+        time_unit = TS_kwargs.get('t_unit', 'days')
 
         ##############################################
         # Set the arguments for the plotting functions
         ##############################################
-        pl_kwarg_data = {"fmt": "."}
-        pl_kwarg_model = {"linestyle": "-", "label": "model"}
-
         pl_kwargs = TS_kwargs.get('pl_kwargs', {})
-        pl_kwarg_final = {}
-        pl_kwarg_jitter = {}
-        pl_show_error = {}
-
-        pl_kwarg_final["model"] = deepcopy(pl_kwarg_model)
-        pl_kwarg_final["model"].update(pl_kwargs.get("model", {}))
-        pl_kwarg_final["GP"] = {}
-        pl_kwarg_final["GP"].update(pl_kwargs.get("GP", {}))
-
-        for datasetname in datasetnames:
-            # Set the labels
-            filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-            if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-                label_dst = filename_info["inst_name"]
-            else:
-                label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
-            pl_kwarg_final[datasetname] = {"label": label_dst, }
-            pl_kwarg_final[datasetname].update(deepcopy(pl_kwarg_data))
-            # Update with the user's inputs
-            pl_kwarg_final[datasetname].update(pl_kwargs.get(datasetname, {}))
-            if "jitter" in pl_kwarg_final[datasetname]:
-                dico_jitter = pl_kwarg_final[datasetname].pop("jitter")
-            else:
-                dico_jitter = {}
-            dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-            pl_kwarg_jitter[datasetname] = deepcopy(pl_kwarg_final[datasetname])
-            pl_kwarg_jitter[datasetname].update(dico_jitter)
-            pl_kwarg_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
-            # default value for alpha jitter
-            if "alpha" not in dico_jitter:
-                if "alpha" in pl_kwarg_jitter[datasetname]:
-                    pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
-                else:
-                    pl_kwarg_jitter[datasetname]["alpha"] = 0.5
-            # default value for ecolor
-            if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
-                pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
-            pl_show_error[datasetname] = pl_kwarg_final[datasetname].pop("show_error") if "show_error" in pl_kwarg_final[datasetname] else True
+        (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
+         ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts,
+                           datasetnames=datasetnames, bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
+                           nb_rows=nb_rows, alpha_def_data=1, color_def_data=None, show_error_data_def=True)
+        update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
+                            bin_size_unit=f" {time_unit}", one_binning_per_row=one_binning_per_row,
+                            nb_rows=nb_rows)
 
         #############################################################
         # Make the RV and residuals plots (full and zoomed if needed)
         #############################################################
         show_title = TS_kwargs.get("show_title", True)
-        for ii, (gs_ts_i, t_lims_i) in enumerate(zip(gs_ts, t_lims)):
-            # Create the data and red=siduals axes and set properties ans style
-            (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
+        for i_row in range(nb_rows):
+            gs_ts_row = GridSpecFromSubplotSpec(1, nb_cols, subplot_spec=gs_ts[i_row], **TS_kwargs.get('gridspec_kwargs', {}))
+            for i_col in range(nb_cols):
+                gs_ts_i = gs_ts_row[i_col]
+                if i_col == 0:
+                    t_lims_i = t_lims[i_row]
+                else:  # i_col == 1
+                    t_lims_i = t_lims_zoom[i_row]
+                # Create the data and residuals axes and set properties ans style
+                (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
 
-            if show_title:
-                axe_data.set_title("RV time series", fontsize=fontsize)
-            axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
-            if ii == 0:
-                axe_data.set_ylabel("RV [m/s]", fontsize=fontsize)
-                axe_resi.set_ylabel("residuals [m/s]", fontsize=fontsize)
+                if show_title and (i_row == 0):
+                    axe_data.set_title("RV time series", fontsize=fontsize)
+                axe_resi.set_xlabel(f"time [{time_unit}]", fontsize=fontsize)
+                if i_col == 0:
+                    y_str = "RV"
+                    ylabel_data = f"{y_str} [{RV_unit}]" if RV_unit is not None else f"{y_str}"
+                    ylabel_resi = f"O - C [{RV_unit}]" if RV_unit is not None else "O - C"
+                    axe_data.set_ylabel(ylabel_data, fontsize=fontsize)
+                    axe_resi.set_ylabel(ylabel_resi, fontsize=fontsize)
 
-            axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
-            axe_data.xaxis.set_minor_locator(AutoMinorLocator())
-            axe_data.yaxis.set_minor_locator(AutoMinorLocator())
-            axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-            axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
-            axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
-            axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+                axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+                axe_data.xaxis.set_minor_locator(AutoMinorLocator())
+                axe_data.yaxis.set_minor_locator(AutoMinorLocator())
+                axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+                axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+                axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
+                axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
+                axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+                axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
-            #####################################
-            # Plot the model and the GP if needed
-            #####################################
-            line_model = axe_data.plot(tsim, model, **pl_kwarg_final["model"])
-            if not("color" in pl_kwarg_final["model"]):
-                pl_kwarg_final["model"]["color"] = line_model[0].get_color()
-            if not("alpha" in pl_kwarg_final["model"]):
-                pl_kwarg_final["model"]["alpha"] = line_model[0].get_alpha()
-            if model_wGP is not None:
-                if not("color" in pl_kwarg_final["GP"]):
-                    pl_kwarg_final["GP"]["color"] = pl_kwarg_final["model"]["color"]
-                if not("alpha" in pl_kwarg_final["GP"]):
-                    pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2 if pl_kwarg_final["model"]["alpha"] is not None else 0.5
-                _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                          color=pl_kwarg_final["GP"]["color"], alpha=pl_kwarg_final["GP"]["alpha"],
-                                          label=pl_kwarg_final["GP"]["label"]  # **kwarg_GP_pred_var
-                                          )
+                for datasetname in datasetnames4rowidx[i_row]:
+                    ###################
+                    # Compute the models
+                    ###################
+                    npt_model = TS_kwargs.get("npt_model", 1000)
+                    tsim = np.linspace(np.min(dico_kwargs[datasetname]['time']) - TS_kwargs.get("extra_dt_model", 0.),
+                                       np.max(dico_kwargs[datasetname]['time']) + TS_kwargs.get("extra_dt_model", 0.),
+                                       npt_model)
 
-            ###############
-            # Plot the data
-            ###############
-            for datasetname in datasetnames:
-                if pl_show_error[datasetname]:
-                    ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-                                               yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname], zorder=10)  # Plot the data point and error bars without jitter
-                    if not("ecolor" in pl_kwarg_jitter[datasetname]):
-                        pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
-                    if not("color" in pl_kwarg_final[datasetname]):
-                        pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
-                    axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-                                      yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname], zorder=1)  # Plot the error bars with jitter
+                    model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                                         param=df_fittedval["value"].values,
+                                                                                         l_param_name=list(df_fittedval.index),
+                                                                                         key_obj=key_whole,
+                                                                                         datasim_kwargs=datasim_kwargs)
 
+                    # stellar_var
+                    if (datasetname in stellar_vars):
+                        model_stellarvar, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                                param=df_fittedval["value"].values,
+                                                                                l_param_name=list(df_fittedval.index),
+                                                                                key_obj="stellar_var",
+                                                                                datasim_kwargs=datasim_kwargs)
+
+                    # inst_var
+                    if (datasetname in inst_vars):
+                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                             param=df_fittedval["value"].values,
+                                                                             l_param_name=list(df_fittedval.index),
+                                                                             key_obj="inst_var",
+                                                                             datasim_kwargs=datasim_kwargs)
+
+                    # decorr
+                    if (datasetname in decorrs):
+                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                            param=df_fittedval["value"].values,
+                                                                            l_param_name=list(df_fittedval.index),
+                                                                            key_obj="decorr",
+                                                                            datasim_kwargs=datasim_kwargs)
+
+                    # Remove the decorrelation:
+                    if (datasetname in decorrs) and remove_decorrelation:
+                        for model_part in model_decorr:
+                            if model_part == "add_2_totalrv":
+                                model -= model_decorr['add_2_totalrv']
+                                if model_wGP is not None:
+                                    model_wGP -= model_decorr['add_2_totalrv']
+                            else:
+                                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+
+                    # Remove the stellar_var if required
+                    if (datasetname in stellar_vars) and remove_stellar_var:
+                        model -= model_stellarvar
+                        if model_wGP is not None:
+                            model_wGP -= model_stellarvar
+                    # Remove the inst_var if required
+                    if (datasetname in inst_vars) and remove_inst_var:
+                        model -= model_instvar
+                        if model_wGP is not None:
+                            model_wGP -= model_instvar
+
+                    # Multiply by LC fact
+                    model *= RV_fact
+                    if (datasetname in inst_vars):
+                        model_instvar *= RV_fact
+                    if (datasetname in stellar_vars):
+                        model_stellarvar *= RV_fact
+                    if (datasetname in decorrs):
+                        for model_part in model_decorr:
+                            if model_part == "add_2_totalrv":
+                                model_decorr["add_2_totalrv"] *= RV_fact
+                        # Else is already addressed above
+                    if model_wGP is not None:
+                        model_wGP *= RV_fact
+                        gp_pred *= RV_fact
+                        gp_pred_var *= RV_fact**2
+
+                    #####################################
+                    # Plot the model and the GP if needed
+                    #####################################
+                    line_model = axe_data.errorbar(tsim, model, **pl_kwarg_final[datasetname]["model"], zorder=20)
+                    if not("color" in pl_kwarg_final[datasetname]["model"]):
+                        pl_kwarg_final[datasetname]["model"]["color"] = line_model[0].get_color()
+                    if not("alpha" in pl_kwarg_final[datasetname]["model"]):
+                        pl_kwarg_final[datasetname]["model"]["alpha"] = line_model[0].get_alpha()
+                    if model_wGP is not None:
+                        if not("color" in pl_kwarg_final[datasetname]["GP"]):
+                            pl_kwarg_final[datasetname]["GP"]["color"] = pl_kwarg_final[datasetname]["model"]["color"]
+                        if not("alpha" in pl_kwarg_final[datasetname]["GP"]):
+                            pl_kwarg_final[datasetname]["GP"]["alpha"] = pl_kwarg_final[datasetname]["model"]["alpha"] / 2
+                        _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+                                                  color=pl_kwarg_final[datasetname]["GP"]["color"], alpha=pl_kwarg_final[datasetname]["GP"]["alpha"],
+                                                  label=pl_kwarg_final[datasetname]["GP"]["label"],  # **kwarg_GP_pred_var
+                                                  zorder=0
+                                                  )
+
+                    #############################
+                    # Plot the inst_var if needed
+                    #############################
+                    if (datasetname in inst_vars) and not(remove_inst_var):
+                        _ = axe_data.plot(tsim, model_stellarvar, **pl_kwarg_final[datasetname]["stellar_var"])
+
+                    #############################
+                    # Plot the inst_var if needed
+                    #############################
+                    if (datasetname in inst_vars) and not(remove_inst_var):
+                        _ = axe_data.plot(tsim, model_instvar, **pl_kwarg_final[datasetname]["inst_var"])
+
+                    ########################################
+                    # Plot the decorrelation model if needed
+                    ########################################
+                    if (datasetname in decorrs) and not(remove_decorrelation):
+                        for model_part in decorrs[datasetname]:
+                            if model_part == "add_2_totalflux":
+                                pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
+                                pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
+                                _ = axe_data.plot(tsim, model_decorr["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
+                            # Else is already addressed above
+
+                    ###############
+                    # Plot the data
+                    ###############
+                    if pl_show_error[datasetname]['data']:
+                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                                                   yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
+                        if not("ecolor" in pl_kwarg_jitter[datasetname]):
+                            pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
+                        if not("color" in pl_kwarg_final[datasetname]):
+                            pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
+                        if has_jitters[datasetname]:
+                            axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                                              yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
+
+                    else:
+                        axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
+
+                    ####################
+                    # Plot the residuals
+                    ####################
+                    if pl_show_error[datasetname]['data']:
+                        if has_jitters[datasetname]:
+                            axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
+                    else:
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
+
+                    ################################################################################
+                    # Compute and Plot the binned data and residuals if one_binning_per_row is False
+                    ################################################################################
+                    if not(one_binning_per_row) and (exptime_bin > 0.):
+                        t_min_data, t_max_data = (min(dico_kwargs[datasetname]['time']), max(dico_kwargs[datasetname]['time']))
+                        bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
+                        midbins = bins[:-1] + exptime_bin / 2
+                        nbins = len(bins) - 1
+                        # Compute the binned values
+                        (bindata, binedges, binnb
+                         ) = binned_statistic(dico_kwargs[datasetname]['time'], datas[datasetname],
+                                              statistic=binning_stat, bins=bins,
+                                              range=(t_min_data, t_max_data))
+                        (binresi, binedges, binnb
+                         ) = binned_statistic(dico_kwargs[datasetname]['time'], residuals[datasetname],
+                                              statistic=binning_stat, bins=bins,
+                                              range=(t_min_data, t_max_data))
+                        # Compute the err on the binned values
+                        binstd = np.zeros(nbins)
+                        if has_jitters[datasetname]:
+                            binstd_jitter = np.zeros(nbins)
+                        bincount = np.zeros(nbins)
+                        for i_bin in range(nbins):
+                            bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                            if bincount[i_bin] > 0.0:
+                                binstd[i_bin] = np.sqrt(np.sum(np.power((data_errs[datasetname]
+                                                                         [binnb == (i_bin + 1)]),
+                                                                        2.)) /
+                                                        bincount[i_bin]**2)
+                                if has_jitters[datasetname]:
+                                    binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitters[datasetname]
+                                                                                    [binnb == (i_bin + 1)]),
+                                                                                   2.)) /
+                                                                   bincount[i_bin]**2)
+                            else:
+                                binstd[i_bin] = np.nan
+                                if has_jitters[datasetname]:
+                                    binstd_jitter[i_bin] = np.nan
+                        # Plot the binned data
+                        bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
+                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                        if not("color" in pl_kwarg_final[datasetname]["databinned"]):
+                            pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
+                        if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
+                            pl_kwarg_jitter[datasetname]["databinned"] = pl_kwarg_final[datasetname]["databinned"]["color"]
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"], zorder=40)
+                        if has_jitters[datasetname] and pl_show_error[datasetname]["databinned"]:
+                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+
+                ################################################################################
+                # Compute and Plot the binned data and residuals if one_binning_per_row is True
+                ################################################################################
+                if one_binning_per_row and (exptime_bin > 0.):
+                    t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
+                    t_min_data, t_max_data = (min(t_row), max(t_row))
+                    bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
+                    midbins = bins[:-1] + exptime_bin / 2
+                    nbins = len(bins) - 1
+                    # Compute the binned values
+                    (bindata, binedges, binnb
+                     ) = binned_statistic(t_row, np.concatenate([datas[dst] for dst in datasetnames4rowidx[i_row]]),
+                                          statistic=binning_stat, bins=bins,
+                                          range=(t_min_data, t_max_data))
+                    (binresi, binedges, binnb
+                     ) = binned_statistic(t_row, np.concatenate([residuals[dst] for dst in datasetnames4rowidx[i_row]]),
+                                          statistic=binning_stat, bins=bins,
+                                          range=(t_min_data, t_max_data))
+                    # Compute the err on the binned values
+                    binstd = np.zeros(nbins)
+                    if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                        binstd_jitter = np.zeros(nbins)
+                    bincount = np.zeros(nbins)
+                    data_err_row = np.concatenate([dico_kwargs[dst]['flux_err'] for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]['flux_err']) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    for i_bin in range(nbins):
+                        bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                        if bincount[i_bin] > 0.0:
+                            binstd[i_bin] = np.sqrt(np.sum(np.power((data_err_row
+                                                                     [binnb == (i_bin + 1)]),
+                                                                    2.)) /
+                                                    bincount[i_bin]**2)
+                            if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                                binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitter_row
+                                                                                [binnb == (i_bin + 1)]),
+                                                                               2.)) /
+                                                               bincount[i_bin]**2)
+                        else:
+                            binstd[i_bin] = np.nan
+                            if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                                binstd_jitter[i_bin] = np.nan
+                    # Plot the binned data
+                    bin_err = binstd if pl_show_error[f"row{i_row}"] else None
+                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"], zorder=40)
+                    if not("color" in pl_kwarg_final[f"row{i_row}"]):
+                        pl_kwarg_final[f"row{i_row}"]["color"] = ebcont_binned[0].get_color()
+                    if not("ecolor" in pl_kwarg_jitter[f"row{i_row}"]):
+                        pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_final[f"row{i_row}"]["color"]
+                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"], zorder=40)
+                    if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
+                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
+
+                # Draw a horizontal line at the level of reference stellar flux level
+                xlims = axe_data.get_xlim()
+                reference_stellar_flux = 0 if TS_kwargs.get("remove1", True) else 1
+                axe_data.hlines(reference_stellar_flux, *xlims, colors="k", linestyles="dashed")
+
+                # Adjust the y lims for the data plot
+                ylims_data = TS_kwargs.get("ylims_data", None)
+                if ylims_data is None:
+                    pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
+                    et.auto_y_lims(np.concatenate([datas[dst] for dst in datasetnames]), axe_data,
+                                   pad=pad_data)
                 else:
-                    axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"], **pl_kwarg_final[datasetname])  # Plot the data point and error bars without jitter
+                    axe_data.set_ylim(ylims_data)
 
-            # ylims = axe_data.get_ylim()
-            xlims = axe_data.get_xlim()
-            if remove_sysvel:
-                v0 = 0.
-            else:
-                v0 = df_fittedval.loc[star.v0.full_name]["value"]
-            axe_data.hlines(v0, *xlims, colors="k", linestyles="dashed")
+                # Indicate values that are off y-axis with an arrows in the data plot
+                # This should be here an not in the previous for datasetname in datasetnames4rowidx[i_row] loop because the
+                # y_lims can change after each dataset
+                if TS_kwargs.get("indicate_y_outliers_data", True):
+                    for datasetname in datasetnames4rowidx[i_row]:
+                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                                               ax=axe_data, color=pl_kwarg_final[datasetname]["data"].get("color", None),
+                                               alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
-            # Set the y axis limits
-            pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
-            et.auto_y_lims(np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames]), axe_data,
-                           pad=pad_data)
-            # Indicate values that are off y-axis with anarrows
-            if TS_kwargs.get("indicate_y_outliers_data", True):
-                for datasetname in datasetnames:
-                    et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-                                           ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
-                                           alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+                # Draw a horizontal line at 0 in the residual plot
+                axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
 
-            ####################
-            # Plot the residuals
-            ####################
-            for datasetname in datasetnames:
-                if pl_show_error[datasetname]:
-                    axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname])  # Plot the error bars with jitter
-                    axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname])
+                # Adjust the y lims for the residuals plot
+                ylims_resi = TS_kwargs.get("ylims_resi", None)
+                if ylims_resi is None:
+                    pad_resi = TS_kwargs.get("pad_resi", (0.1, 0.1))
+                    et.auto_y_lims(np.concatenate([residuals[dst] for dst in datasetnames]), axe_resi,
+                                   pad=pad_resi)
                 else:
-                    axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname])
-            axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
+                    axe_resi.set_ylim(ylims_resi)
 
-            # Set the y axis limits
-            pad_resi = TS_kwargs.get("pad_resi", (0.1, 0.1))
-            et.auto_y_lims(np.concatenate([residuals[dst] for dst in datasetnames]), axe_resi,
-                           pad=pad_resi)
-            # Indicate values that are off y-axis with anarrows
-            if TS_kwargs.get("indicate_y_outliers_resi", True):
-                for datasetname in datasetnames:
-                    et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=residuals[datasetname],
-                                           ax=axe_resi, color=pl_kwarg_final[datasetname]["color"],
-                                           alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+                # Indicate values that are off y-axis with an arrows in the residuals plot
+                # This should be here an not in the previous for datasetname in datasetnames4rowidx[i_row] loop because the
+                # y_lims can change after each dataset
+                if TS_kwargs.get("indicate_y_outliers_resi", True):
+                    for datasetname in datasetnames:
+                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=residuals[datasetname],
+                                               ax=axe_resi, color=pl_kwarg_final[datasetname]["data"].get("color", None),
+                                               alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
-            ############################
-            # Set the t_lims if provided
-            ############################
-            if t_lims_i is None:
-                axe_resi.set_xlim(xlims)
-            else:
-                axe_resi.set_xlim(t_lims_i)
+                ############################
+                # Set the t_lims if provided
+                ############################
+                if t_lims_i is None:
+                    axe_resi.set_xlim(xlims)
+                else:
+                    axe_resi.set_xlim(t_lims_i)
 
-            ##########################
-            # Set the legend if needed
-            ##########################
-            if (ii == 0) and TS_kwargs.get('show_legend', True):
-                axe_data.legend(fontsize=fontsize, **TS_kwargs.get('legend_param', {}))
+                ##########################
+                # Set the legend if needed
+                ##########################
+                if (i_col == 0) and TS_kwargs.get('show_legend', True):
+                    axe_data.legend(fontsize=fontsize, **TS_kwargs.get('legend_param', {}))
+
+        # ###############################
+        # # Create additional axe if zoom
+        # ###############################
+        # if TS_kwargs.get("t_lims_zoom", None) is not None:
+        #     gs_ts = GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_ts, **TS_kwargs.get('gridspec_kwargs', {}))  # wspace=0.2, width_ratios=(2, 1)
+        #     t_lims = [TS_kwargs.get("t_lims", None), TS_kwargs["t_lims_zoom"]]
+        # else:
+        #     gs_ts = [gs_ts, ]
+        #     t_lims = [TS_kwargs.get("t_lims", None), ]
+        #
+        # ##############################################
+        # # Set the arguments for the plotting functions
+        # ##############################################
+        # pl_kwarg_data = {"fmt": "."}
+        # pl_kwarg_model = {"linestyle": "-", "label": "model"}
+        #
+        # pl_kwargs = TS_kwargs.get('pl_kwargs', {})
+        # pl_kwarg_final = {}
+        # pl_kwarg_jitter = {}
+        # pl_show_error = {}
+        #
+        # pl_kwarg_final["model"] = deepcopy(pl_kwarg_model)
+        # pl_kwarg_final["model"].update(pl_kwargs.get("model", {}))
+        # pl_kwarg_final["GP"] = {}
+        # pl_kwarg_final["GP"].update(pl_kwargs.get("GP", {}))
+        #
+        # for datasetname in datasetnames:
+        #     # Set the labels
+        #     filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+        #     if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
+        #         label_dst = filename_info["inst_name"]
+        #     else:
+        #         label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
+        #     pl_kwarg_final[datasetname] = {"label": label_dst, }
+        #     pl_kwarg_final[datasetname].update(deepcopy(pl_kwarg_data))
+        #     # Update with the user's inputs
+        #     pl_kwarg_final[datasetname].update(pl_kwargs.get(datasetname, {}))
+        #     if "jitter" in pl_kwarg_final[datasetname]:
+        #         dico_jitter = pl_kwarg_final[datasetname].pop("jitter")
+        #     else:
+        #         dico_jitter = {}
+        #     dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
+        #     pl_kwarg_jitter[datasetname] = deepcopy(pl_kwarg_final[datasetname])
+        #     pl_kwarg_jitter[datasetname].update(dico_jitter)
+        #     pl_kwarg_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
+        #     # default value for alpha jitter
+        #     if "alpha" not in dico_jitter:
+        #         if "alpha" in pl_kwarg_jitter[datasetname]:
+        #             pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
+        #         else:
+        #             pl_kwarg_jitter[datasetname]["alpha"] = 0.5
+        #     # default value for ecolor
+        #     if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
+        #         pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
+        #     pl_show_error[datasetname] = pl_kwarg_final[datasetname].pop("show_error") if "show_error" in pl_kwarg_final[datasetname] else True
+        #
+        # #############################################################
+        # # Make the RV and residuals plots (full and zoomed if needed)
+        # #############################################################
+        # show_title = TS_kwargs.get("show_title", True)
+        # for ii, (gs_ts_i, t_lims_i) in enumerate(zip(gs_ts, t_lims)):
+        #     # Create the data and red=siduals axes and set properties ans style
+        #     (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
+        #
+        #     if show_title:
+        #         axe_data.set_title("RV time series", fontsize=fontsize)
+        #     axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
+        #     if ii == 0:
+        #         axe_data.set_ylabel("RV [m/s]", fontsize=fontsize)
+        #         axe_resi.set_ylabel("residuals [m/s]", fontsize=fontsize)
+        #
+        #     axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+        #     axe_data.xaxis.set_minor_locator(AutoMinorLocator())
+        #     axe_data.yaxis.set_minor_locator(AutoMinorLocator())
+        #     axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        #     axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+        #     axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
+        #     axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
+        #     axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        #     axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+        #
+        #     #####################################
+        #     # Plot the model and the GP if needed
+        #     #####################################
+        #     line_model = axe_data.plot(tsim, model, **pl_kwarg_final["model"])
+        #     if not("color" in pl_kwarg_final["model"]):
+        #         pl_kwarg_final["model"]["color"] = line_model[0].get_color()
+        #     if not("alpha" in pl_kwarg_final["model"]):
+        #         pl_kwarg_final["model"]["alpha"] = line_model[0].get_alpha()
+        #     if model_wGP is not None:
+        #         if not("color" in pl_kwarg_final["GP"]):
+        #             pl_kwarg_final["GP"]["color"] = pl_kwarg_final["model"]["color"]
+        #         if not("alpha" in pl_kwarg_final["GP"]):
+        #             pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2 if pl_kwarg_final["model"]["alpha"] is not None else 0.5
+        #         _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+        #                                   color=pl_kwarg_final["GP"]["color"], alpha=pl_kwarg_final["GP"]["alpha"],
+        #                                   label=pl_kwarg_final["GP"]["label"]  # **kwarg_GP_pred_var
+        #                                   )
+        #
+        #     ###############
+        #     # Plot the data
+        #     ###############
+        #     for datasetname in datasetnames:
+        #         if pl_show_error[datasetname]:
+        #             ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
+        #                                        yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname], zorder=10)  # Plot the data point and error bars without jitter
+        #             if not("ecolor" in pl_kwarg_jitter[datasetname]):
+        #                 pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
+        #             if not("color" in pl_kwarg_final[datasetname]):
+        #                 pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
+        #             axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
+        #                               yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname], zorder=1)  # Plot the error bars with jitter
+        #
+        #         else:
+        #             axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"], **pl_kwarg_final[datasetname])  # Plot the data point and error bars without jitter
+        #
+        #     # ylims = axe_data.get_ylim()
+        #     xlims = axe_data.get_xlim()
+        #     if remove_sysvel:
+        #         v0 = 0.
+        #     else:
+        #         v0 = df_fittedval.loc[star.v0.full_name]["value"]
+        #     axe_data.hlines(v0, *xlims, colors="k", linestyles="dashed")
+        #
+        #     # Set the y axis limits
+        #     pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
+        #     et.auto_y_lims(np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames]), axe_data,
+        #                    pad=pad_data)
+        #     # Indicate values that are off y-axis with anarrows
+        #     if TS_kwargs.get("indicate_y_outliers_data", True):
+        #         for datasetname in datasetnames:
+        #             et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
+        #                                    ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
+        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+        #
+        #     ####################
+        #     # Plot the residuals
+        #     ####################
+        #     for datasetname in datasetnames:
+        #         if pl_show_error[datasetname]:
+        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname])  # Plot the error bars with jitter
+        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname])
+        #         else:
+        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname])
+        #     axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
+        #
+        #     # Set the y axis limits
+        #     pad_resi = TS_kwargs.get("pad_resi", (0.1, 0.1))
+        #     et.auto_y_lims(np.concatenate([residuals[dst] for dst in datasetnames]), axe_resi,
+        #                    pad=pad_resi)
+        #     # Indicate values that are off y-axis with anarrows
+        #     if TS_kwargs.get("indicate_y_outliers_resi", True):
+        #         for datasetname in datasetnames:
+        #             et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=residuals[datasetname],
+        #                                    ax=axe_resi, color=pl_kwarg_final[datasetname]["color"],
+        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
+        #
+        #     ############################
+        #     # Set the t_lims if provided
+        #     ############################
+        #     if t_lims_i is None:
+        #         axe_resi.set_xlim(xlims)
+        #     else:
+        #         axe_resi.set_xlim(t_lims_i)
+        #
+        #     ##########################
+        #     # Set the legend if needed
+        #     ##########################
+        #     if (ii == 0) and TS_kwargs.get('show_legend', True):
+        #         axe_data.legend(fontsize=fontsize, **TS_kwargs.get('legend_param', {}))
 
     #########
     # RV GLSP
@@ -1656,12 +2088,27 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_fittedval, RV_fact,
-                                remove_inst_var, remove_stellar_var, remove_decorrelation, remove_GP_dataNmodel, remove_GP_residual):
+                                remove_inst_var, remove_stellar_var, remove_decorrelation, remove_decorrelation_likelihood,
+                                remove_GP_dataNmodel, remove_GP_residual):
     """Load the dataset and models for later use by the other two function
+
+    remove_inst_var  : bool
+        If True remove the instrumental variations
+    remove_stellar_var  : bool
+        If True remove the systemic velocity and the stellar variations
+    remove_decorrelation  : bool
+        If True remove the model decorrelation
+    remove_decorrelation_likelihood  : bool
+        If True remove the likelihood decorrelation
+    remove_GP_data  : bool
+        If True remove the GP model from the data
+    remove_GP_residual  : bool
+        If True remove the GP model from the residuals
     """
     dico_datasets = {}
     dico_kwargs = {}
     dico_nb_dstperinsts = defaultdict(lambda: 0)
+    times = {}
     datas = {}
     data_errs = {}
     data_err_jitters = {}
@@ -1674,15 +2121,17 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
     inst_vars = {}
     stellar_vars = {}
     decorrs = {}
+    decorr_likelihoods = {}
     residuals = {}
     for datasetname in datasetnames:
         ##########################################
         # Load Data and instrument and noise model
         ##########################################
         dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
-        dico_kwargs[datasetname] = dico_datasets[datasetname].get_kwargs()
-        datas[datasetname] = dico_kwargs[datasetname]["data"].copy()
-        data_errs[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+        dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
+        times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
+        datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
+        data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
@@ -1693,7 +2142,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # Apply the jitter to the data error if needed
         ##############################################
         dico_jitters[datasetname] = {}
-        data_err_jitters[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
+        data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
         has_jitters[datasetname] = noise_model.has_jitter
         if has_jitters[datasetname]:
             dico_jitters[datasetname]["type"] = noise_model.jitter_type
@@ -1718,7 +2167,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
         # and remove RV_drift
         (model_stellar_vars, _, _, _
-         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                          l_param_name=list(df_fittedval.index), key_obj="stellar_var", datasim_kwargs=datasim_kwargs
                                          )
         if model_stellar_vars is not None:
@@ -1731,7 +2180,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
         # and remove RV_drift
         (model_inst_var, _, _, _
-         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                          l_param_name=list(df_fittedval.index), key_obj="inst_var", datasim_kwargs=datasim_kwargs
                                          )
         if model_inst_var is not None:
@@ -1740,16 +2189,16 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         #########################################################################
         # Compute the decorrelation models (decorr) to later remove from the data
         #########################################################################
-        if post_instance.model.instcat_models["RV"].decorrelation_config[inst_mod_fullname]["do"]:
+        if post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]:
             (model_decorr, _, _, _
-             ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+             ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                              l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                              )
             decorrs[datasetname] = {}
-            for model_part in post_instance.model.instcat_models["RV"].decorrelation_config[inst_mod_fullname]['what to decorrelate']:
+            for model_part in post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
                 if model_part == "add_2_totalflux":
                     (model_decorr, _, _, _
-                     ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname, param=df_fittedval["value"],
+                     ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                                      l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                                      )
                     decorrs[datasetname][model_part] = model_decorr['add_2_totalflux']
@@ -1760,7 +2209,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # Compute the models and GP predictions
         #######################################
         (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]['t'], dataset_name=datasetname,
+         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs)
         if model_wGP is not None:
@@ -1771,6 +2220,14 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
             models[datasetname] = model_wGP
         else:
             models[datasetname] = model
+
+        ###################################################
+        # Compute the likelihood decorrelation contribution
+        ###################################################
+        if remove_decorrelation_likelihood and (f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db):
+            datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+            decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
 
         #######################
         # Compute the residuals
@@ -1810,6 +2267,12 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
                     models[datasetname] -= decorrs[datasetname]['add_2_totalrv']
                 else:
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+
+        ################################################################################
+        # Remove decorrelation likelihood (if needed)
+        ################################################################################
+        if (datasetname in decorrs) and remove_decorrelation_likelihood:
+            datas[datasetname] -= decorr_likelihoods[datasetname]
 
         ################################################################################
         # Apply RV_fact

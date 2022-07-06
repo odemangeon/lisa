@@ -1,19 +1,17 @@
 """Making plots that show all the RV data on the same plot (with the delta RV and the v0 removed)
 modelsNresiduals
 """
+import matplotlib
 import matplotlib.pyplot as pl
 import os
 
-import matplotlib
+from os.path import join
+from logging import DEBUG, INFO
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_LC_TSNGLSP_plots
-
-from logging import DEBUG, INFO
-from os.path import join
-
 import lisa.tools.mylogger as ml
 
 # import sys
@@ -31,11 +29,11 @@ default_figheight_factor = 0.6
 
 AandA_fontsize = 8
 
-matplotlib.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False})
+# matplotlib.rcParams.update({
+#     "pgf.texsystem": "pdflatex",
+#     'font.family': 'serif',
+#     'text.usetex': True,
+#     'pgf.rcfonts': False})
 
 # Define the object name
 obj_name = "WASP-76"
@@ -50,20 +48,20 @@ kwargs_datasim = {}
 run_folder = os.getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-load_from_pickle = False
 extension_analysis = "_initrun_median"
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
-logger.info("1. Load from pickle if necessary")
-if load_from_pickle:
+if "post_instance" not in globals():
+    logger.info("Loading post_instance from pickle")
     # recreate post_instance object
     post_instance = cpost.Posterior(object_name=obj_name)
     post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
-    l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
+if "df_fittedval" not in globals():
+    logger.info("Loading df_fittedval from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                     folder=output_folders["pickles_analyze"])
 
@@ -72,11 +70,12 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
 create_LC_TSNGLSP_plots(fig=fig,
                         post_instance=post_instance, df_fittedval=df_fittedval, planets=planets,
                         datasetnames=datasetnames,
-                        remove1=True, remove_inst_var=False, remove_decorrelation=False,
+                        remove1=True, remove_inst_var=True, remove_decorrelation=False, remove_decorrelation_likelihood=True,
+                        remove_contamination=False,
                         datasim_kwargs=kwargs_datasim,
-                        fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
-                                   # 'suptitle_kwargs': {"y": 0.99},
-                                   },
+                        # fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
+                        #            'suptitle_kwargs': {"y": 0.99},
+                        #            },
                         TS_kwargs={"do": True,
                                    "npt_model": 10000,
                                    "exptime_bin": 98 / 60 / 24,
@@ -90,9 +89,11 @@ create_LC_TSNGLSP_plots(fig=fig,
                                    # "t_lims_zoom": (2170.5, 2171.5),
                                    "ylims_data": (-700, 700),
                                    "ylims_resi": (-700, 700),
-                                   'pad_data': (0.025, -0.025),
-                                   "pad_resi": (0.05, -0.25),
-                                   'axeswithsharex_kwargs': {"hspace": 0.1}
+                                   # 'pad_data': (0.025, -0.025),
+                                   # "pad_resi": (0.05, -0.25),
+                                   'axeswithsharex_kwargs': {"hspace": 0.1},
+                                   'indicate_y_outliers_data': False,
+                                   'indicate_y_outliers_resi': False,
                                    },
                         GLSP_kwargs={"do": True,
                                      "period_range": (1e-2, 500),
@@ -124,8 +125,8 @@ create_LC_TSNGLSP_plots(fig=fig,
                                      #                  },
                                      },
                         show_system_name_in_suptitle=True,
-                        RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
-                        RV_unit="m/s",
+                        LC_fact=1e6,  # 1
+                        LC_unit="ppm",  # "wo unit"
                         )
 
 pl.show()
