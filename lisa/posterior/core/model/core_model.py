@@ -724,7 +724,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                              " Remove the datasets of this(ese) category(ies) or change the model."
                              "".format(self.category, set(self.dataset_db.inst_categories) - self.possible_inst_categories))
 
-    def create_instcat_paramfile(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_instcat_paramfiles(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
         """Create the param files specific to each instrument category (if needed).
 
         :param dict_of_str paramfile_path: Dictionary giving the path of the specific parameter file

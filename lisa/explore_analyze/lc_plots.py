@@ -1828,13 +1828,13 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         #########################################################################
         # Compute the decorrelation models (decorr) to later remove from the data
         #########################################################################
-        if post_instance.model.instcat_models["LC"].decorrelation_config[inst_mod_fullname]["do"]:
+        if post_instance.model.instcat_models["LC"].decorrelation_model_config[inst_mod_fullname]["do"]:
             (model_decorr, _, _, _
              ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                              l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                              )
             decorrs[datasetname] = {}
-            for model_part in post_instance.model.instcat_models["LC"].decorrelation_config[inst_mod_fullname]['what to decorrelate']:
+            for model_part in post_instance.model.instcat_models["LC"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
                 if model_part == "add_2_totalflux":
                     (model_decorr, _, _, _
                      ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],

@@ -28,8 +28,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "IND_param_file.py"
     __datasim_creator_name__ = "sim_IND"
-    __decorrelation_models__ = []
-    __modelpart_4_decorrlikelihood__ = None  # There is currently no decorrelation likelihood model for this instrument category
+    __l_decorrelation_class__ = []
 
     # models available for the indicators
     __available_models_4_indicators__ = [PolynomialIndicatorInterface._polynomial_method_name, ]  # The first one is the default one

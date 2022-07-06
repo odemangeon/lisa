@@ -2123,7 +2123,7 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
             break
 
     if requires_decorr:
-        decorrelation_config = LCcat_model.decorrelation_config
+        decorrelation_config = LCcat_model.decorrelation_model_config
         #################################################
         # Initialise the new function in function_builder
         #################################################
