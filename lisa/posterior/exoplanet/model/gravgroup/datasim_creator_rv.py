@@ -30,7 +30,7 @@ tab = "    "
 
 
 def create_datasimulator_RV(star, planets, RV_globalref_instname, RV_instref_modnames, RV_inst_db, rv_model,
-                            decorrelation_config, dataset_db, RVcat_model,
+                            dataset_db, RVcat_model,
                             inst_models, datasets, get_times_from_datasets):
     """Return a radial velocity datasimulator functions.
 
@@ -169,7 +169,7 @@ def create_datasimulator_RV(star, planets, RV_globalref_instname, RV_instref_mod
     # Produce the decorrelation
     ###########################
     d_l_d_decorr = get_decorrelation(multi=multi, planets=planets, l_inst_model=l_inst_model, l_dataset=l_dataset,
-                                     get_times_from_datasets=get_times_from_datasets, decorrelation_config=decorrelation_config,
+                                     get_times_from_datasets=get_times_from_datasets,
                                      dataset_db=dataset_db, RVcat_model=RVcat_model, tab=tab, time_vec_name=time_vec,
                                      l_time_vec_name=l_time_vec, function_builder=func_builder, l_function_shortname=[function_whole_shortname, ],
                                      ext_func_fullname=func_full_name_MultiOrDst_ext)
@@ -201,22 +201,24 @@ def create_datasimulator_RV(star, planets, RV_globalref_instname, RV_instref_mod
         params_model = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname)]
         dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
         else:
             mand_kwargs = None
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            opt_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
         else:
             opt_kwargs = None
         logger.debug(f"Parameters for {func_shortname} LC simulator function :\n{dico_param_nb}")
         dico_docf[func_shortname] = DatasimDocFunc(function=func_builder._get_ldict(function_shortname=func_shortname)[func_builder.get_function_fullname(shortname=func_shortname)],
-                                                   params_model=params_model,
-                                                   inst_cat=instcat_docf,
+                                                   param_model_names_list=params_model,
+                                                   params_model_vect_name=par_vec_name,
+                                                   inst_cats_list=instcat_docf,
+                                                   inst_model_fullnames_list=instmod_docf,
+                                                   dataset_names_list=dtsts_docf,
                                                    include_dataset_kwarg=get_times_from_datasets,
-                                                   mand_kwargs=mand_kwargs,
-                                                   opt_kwargs=opt_kwargs,
-                                                   inst_model_fullname=instmod_docf,
-                                                   dataset=dtsts_docf)
+                                                   mand_kwargs_list=mand_kwargs,
+                                                   opt_kwargs_dict=opt_kwargs,
+                                                   )
     return dico_docf
 
     # # Iterate over the planets to create the preambules (preambule_planet and preambule_whole),
@@ -856,7 +858,7 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
     return returns
 
 
-def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets, decorrelation_config,
+def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets,
                       dataset_db, RVcat_model, tab, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
                       ext_func_fullname):
     """Provide the text for the decorrelation of the RV model text (return).
@@ -883,9 +885,6 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
     get_times_from_datasets : bool
         If True the times at which the model should be computed will be taken from the datasets and
         included into the function. I False the user of the function will have to provide the times.
-    decorrelation_config    : dict
-        Dictionary describing the decorrelation model to use. The format of this disctionary is:
-        {}
     dataset_db              : DatasetDatabase
         Dataset database to access the dataset for the decorrelation.
     LCcat_model              : LC_InstCat_Model
@@ -916,12 +915,13 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
     # Check if any of the instrument model is associated to a decorrelation model
     #############################################################################
     requires_decorr = False
-    for instmod in l_inst_model:
-        if decorrelation_config[instmod.full_name]["do"]:
+    for instmod_obj in l_inst_model:
+        if RVcat_model.require_model_decorrelation(instmod_fullname=instmod_obj.full_name):
             requires_decorr = True
             break
 
     if requires_decorr:
+        decorrelation_config = RVcat_model.decorrelation_model_config
         #################################################
         # Initialise the new function in function_builder
         #################################################
