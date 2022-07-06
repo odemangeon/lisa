@@ -29,7 +29,9 @@ extension_exploration = "_initrun"  # Change extension to add at the end (before
 model_category = "GravitionalGroups"
 nb_planet = 1
 parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
-with_DeltaRV = True
+with_DeltaRV = False
+with_inst_var = True
+inst_var_order = 0
 kwargs_post = {}
 
 data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
@@ -104,7 +106,8 @@ logger.info("8. Load noise model category specific parameter file")
 post_instance.model.load_noisemodcat_paramfile()
 
 logger.info("9. Set parametrisation of the model")
-post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV)
+post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV,
+                                        with_inst_var=with_inst_var, inst_var_order=inst_var_order)
 
 logger.info("10. Create and modify the paramerisation file")
 if cluster:
