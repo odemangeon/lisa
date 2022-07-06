@@ -180,9 +180,10 @@ class LikelihoodCreator(object):
             for datasetkwarg in l_datasetkwarg:
                 inddataset_kwargs[inddataset_name][datasetkwarg] = dataset_obj.get_datasetkwarg(datasetkwarg)
 
-        for func_shortname in l_func_shortname:
-            func_builder.add_variable_to_ldict(variable_name="inddataset_kwargs", variable_content=inddataset_kwargs,
-                                               function_shortname=func_shortname, exist_ok=False)
+        if len(dico_decorr_4_instmod) > 0:
+            for func_shortname in l_func_shortname:
+                func_builder.add_variable_to_ldict(variable_name="inddataset_kwargs", variable_content=inddataset_kwargs,
+                                                   function_shortname=func_shortname, exist_ok=False)
 
         # Initialise the list of parameter for the likelihood computation with the parameter of the
         # datasimulator
@@ -220,7 +221,8 @@ class LikelihoodCreator(object):
         for inst_mod_fullname, dico in dico_decorr_4_instmod.items():
             instmod_obj = self.instruments[inst_mod_fullname]
             instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
-            (dico["d_decorrtext_4_dataset"], l_paramsfullname_likelihood
+            (dico["simdata_decorr_4_dataset_4_indinstmod"], dico["decorr_body_text_4_decorrcat_4_indinstmod"],
+             dico["plotdecorr_body_text_4_decorrcat_4_indinstmod"], l_paramsfullname_likelihood
              ) = instcat_mod_inst.create_decorrelation_likelihood(function_builder=func_builder,
                                                                   l_function_shortname=l_func_shortname,
                                                                   inst_model_obj=instmod_obj,
@@ -234,26 +236,32 @@ class LikelihoodCreator(object):
                                                                   )
 
         # Text that add the decorrelation to sim data
-        # func_builder.add_variable_to_ldict(variable_name="plot", variable_content=pl.plot,
-        #                                    function_shortname=func_shortname_lnlike, exist_ok=True)
-        # func_builder.add_to_body_text(text=f"{tab}figure()\n", function_shortname=func_shortname_lnlike)
-        return_decorr = ""
-        for ii, (inst_mod_fullname, dataset_name) in enumerate(zip(datasim_docfunc.inst_model_fullnames_list, datasim_docfunc.dataset_names_list)):
-            # func_builder.add_to_body_text(text=f"{tab}plot(dataset_kwargs['{dataset_name}']['data'], '.', label='data')\n", function_shortname=func_shortname_lnlike)
-            # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_before')\n", function_shortname=func_shortname_lnlike)
-            if inst_mod_fullname in dico_decorr_4_instmod:
-                decorr_text = dico_decorr_4_instmod[inst_mod_fullname]["d_decorrtext_4_dataset"][dataset_name]
-                func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {decorr_text}\n", function_shortname=func_shortname_lnlike)
-                if return_decorr == "" and datasim_docfunc.multi_output:
-                    return_decorr += "["
-                return_decorr += f"{decorr_text}, "
-                # func_builder.add_to_body_text(text=f"{tab}plot(sim_data[{ii}], label='simdata_after')\n", function_shortname=func_shortname_lnlike)
-                # func_builder.add_to_body_text(text=f"{tab}plot(1 + {decorr_text}, label='decorr')\n", function_shortname=func_shortname_lnlike)
-        if return_decorr != "" and datasim_docfunc.multi_output:
-            return_decorr += "]"
-        else:
-            return_decorr = return_decorr[:-2]
-        if return_decorr != "":
+        if len(dico_decorr_4_instmod) > 0:
+            return_decorr = []
+            for ii, (inst_mod_fullname, dataset_name) in enumerate(zip(datasim_docfunc.inst_model_fullnames_list, datasim_docfunc.dataset_names_list)):
+                return_decorr.append("")
+                for func_shortname in l_func_shortname:
+                    if inst_mod_fullname in dico_decorr_4_instmod:
+                        for decorr_cat, ind_instmod_fullname in dico_decorr_4_instmod[inst_mod_fullname]["order"]:
+                            decorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['decorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
+                            func_builder.add_to_body_text(text=f"{tab}{decorr_body_text}\n", function_shortname=func_shortname)
+                            if func_shortname == func_shortname_plotdecorr:
+                                plotdecorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['plotdecorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
+                                func_builder.add_to_body_text(text=f"{tab}{plotdecorr_body_text}\n", function_shortname=func_shortname)
+                            simdata_decorr = dico_decorr_4_instmod[inst_mod_fullname]['simdata_decorr_4_dataset_4_indinstmod'][dataset_name][ind_instmod_fullname]
+                            if datasim_all_dst_doc_func.multi_output:
+                                func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {simdata_decorr}\n", function_shortname=func_shortname)
+                            else:
+                                func_builder.add_to_body_text(text=f"{tab}sim_data += {simdata_decorr}\n", function_shortname=func_shortname)
+                            if return_decorr[ii] == "":
+                                return_decorr[ii] += f"{simdata_decorr}"
+                            else:
+                                return_decorr[ii] += f" + {simdata_decorr}"
+                if return_decorr[ii] == "":
+                    return_decorr[ii] = None
+            if not(datasim_docfunc.multi_output):
+                return_decorr = return_decorr[0]
+
             func_builder.add_to_body_text(text=f"{tab}return {return_decorr}\n", function_shortname=func_shortname_decorr)
             func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
 
@@ -291,7 +299,7 @@ class LikelihoodCreator(object):
                                                  opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
                                                  )
 
-        # Create the decorr function
+        # Create the decorr functions
         decorr_docfs = {}
         for func_shortname in l_func_shortname_decorr:
             if func_shortname in func_builder.l_function_shortname:
