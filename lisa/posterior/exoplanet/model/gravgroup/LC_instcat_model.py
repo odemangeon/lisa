@@ -486,5 +486,4 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         if self.do_decorrelate_likelihood_instmod(instmod_fullname=inst_mod_obj.full_name):
             for DecorModel in self.l_decorrelation_likelihood_class:
                 DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
-                                                 model_part=model_part,
                                                  decorrelation_config_inst_decorr=self.decorrelation_likelihood_config[inst_mod_obj.full_name][DecorModel.category])

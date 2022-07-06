@@ -97,7 +97,7 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
             decorrelation_config_inst_decorr[inst_mod_obj_decorr_var_name] = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]
 
     @classmethod
-    def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr, model_part=""):
+    def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr):
         """Apply the parametrisation for the decorrelation to an instrument model.
 
         This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation.
