@@ -45,38 +45,6 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
     #  variable using a given decorrelation category
 
     @classmethod
-    def create_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst, tab=""):
-        """Create the text for the linear decorrelation of the data of a given instrument model object.
-
-        Method which create the text to be written in an instrument category specific paramfile to contain
-        the parameterisation of the decorrelation models for each instrument model of the category.
-
-        This function is used by Core_InstCat_Model.create_text_paramfile_decorrelation
-
-        Arguments
-        ---------
-        inst_mod_obj                : Instrument Model
-            Instrument model object used for the data that you are trying to decorrelate
-        decorrelation_config_inst   : dict
-            dictionary with the current decorrelation config parameter for the provided of the instrument
-            model object provided and the linear decorrelation
-        tab                         : str
-            tabulations/space characters that needs to be added at the beginning of each line.
-
-        Returns
-        -------
-        text_decorr : string
-            Text to add to the parameter
-        """
-        text_decorr_vars = ""
-        tab_newline = f"{tab}" + spacestring_like(f"'{cls.category}':  ")
-        for inst_mod_obj_decorr_var, dico_config in decorrelation_config_inst.items():
-            if len(text_decorr_vars) > 0:
-                text_decorr_vars += tab_newline
-            text_decorr_vars += f"'{inst_mod_obj_decorr_var}': {dico_config},\n"
-        return f"'{cls.category}': " + "{" + f"{text_decorr_vars}\n{tab_newline}" + "}"
-
-    @classmethod
     def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr,
                                    skip_load=False):
         """load the parametrisation for the decorrelation of the instrument model from the inst cat param file.
