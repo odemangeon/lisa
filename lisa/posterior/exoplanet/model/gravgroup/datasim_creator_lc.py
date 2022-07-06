@@ -67,7 +67,7 @@ template_return = dedent(template_return)
 
 
 def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
-                            phasecurve_model, occultation_model,  # decorrelation_config,
+                            phasecurve_model, occultation_model,
                             dataset_db, LCcat_model,
                             inst_models, datasets, get_times_from_datasets,
                             ):
@@ -117,17 +117,6 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
          'model4instrument': {'<instrument_full_name>': '<name_given_to_a_model>', ...},  # For each instrument provide a model name, same name means same model
          'model_definitions': {'default_model': {'model': 'batman', 'modulate_pc': True}}}}
          }
-    decorrelation_config        : dict
-        Dictionary decribing the decorrelation models for the LC instrument models.
-        The format is {'<instrument model name>': {'do': <bool>,
-                                                   'what to decorrelate': {'<model part>': {'<decorrelation model name>': {'<IND isntrument model name>': {<parameters of the decorrelation>},
-                                                                                                                          ...
-                                                                                                                          },
-                                                                                            ...
-                                                                                            },
-                                                                           ...
-                                                                           }
-                                                   }
     dataset_db                  : DatasetDatabase
         Dataset database, this will be used by the function to access the dataset for the decorrelation,
         not to access the LC datasets to be simulated.
@@ -292,12 +281,10 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
         params_model = [param.full_name for param in func_builder.get_free_parameter_vector(function_shortname=func_shortname)]
         dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            # mand_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
             mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
         else:
             mand_kwargs = None
         if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-            # opt_kwargs = str(func_builder.get_l_mandatory_argument(function_shortname=func_shortname))
             opt_kwargs = func_builder.get_d_optional_argument(function_shortname=func_shortname)
         else:
             opt_kwargs = None
@@ -310,7 +297,8 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
                                                    dataset_names_list=dtsts_docf,
                                                    include_dataset_kwarg=get_times_from_datasets,
                                                    mand_kwargs_list=mand_kwargs,
-                                                   opt_kwargs_dict=opt_kwargs)
+                                                   opt_kwargs_dict=opt_kwargs
+                                                   )
     return dico_docf
 
 
