@@ -243,7 +243,7 @@ class GravGroup_Parametrisation(Core_Parametrisation):
             # if inst_cat.startswith("IND"):
             #     import pdb; pdb.set_trace()
             instcat_model = self.instcat_models[inst_cat]
-            if instcat_model.decorrelate_available:
+            if (instcat_model.decorrelation_model_available) or (instcat_model.decorrelation_likelihood_available):
                 l_inst_fullcat = self.instruments.get_inst_fullcat4inst_cat(inst_cat=inst_cat)
                 for inst_fullcat_i in l_inst_fullcat:
                     list_instmodel = self.get_instmodel_objs(inst_fullcat=inst_fullcat_i)
