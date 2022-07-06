@@ -80,9 +80,9 @@ post_instance.define_model(category=model_category, name=obj_name, stars=1, plan
 
 logger.info("5. Create inst_cat specific parameter file")
 if cluster:
-    post_instance.model.create_instcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
+    post_instance.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite="n", answer_create=None)
 else:
-    post_instance.model.create_instcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
+    post_instance.model.create_instcat_paramfiles(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
     input("If there are any inst_cat specific paramerisation file please check them")
 
@@ -124,20 +124,18 @@ logger.info("13. Create likelihood functions")
 post_instance.get_lnlikelihoods()
 
 logger.info("14. Create prior functions")
-post_instance.get_individal_lnpriors()
 post_instance.get_lnpriors()
 
 logger.info("15. Create posterior functions")
 post_instance.get_lnposteriors()
-l_param_name = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
+l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
 
 logger.info("16. Save posterior instance")
 post_instance.save_post_instance(pickle_folder=output_folders["pickles_explore"])
 
 logger.info("17. Create sampler")
-ndim = len(post_instance.lnposteriors.dataset_db["all"].arg_list["param"])
+ndim = len(post_instance.lnposteriors.dataset_db["all"].param_model_names_list)
 lnpostfn = post_instance.lnposteriors.dataset_db["all"].function
-arg_list = post_instance.lnposteriors.dataset_db["all"].arg_list
 lnpriorfn = post_instance.lnpriors.dataset_db["all"].function
 lnlikefn = post_instance.lnlikelihoods.dataset_db["all"].function
 nwalkers = ceil(int(ndim * nwalker_fact) / 2) * 2  # To get an even number of walkers
