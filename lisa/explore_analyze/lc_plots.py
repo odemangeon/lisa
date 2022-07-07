@@ -1913,7 +1913,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         ################################################################################
         # Remove decorrelation likelihood (if needed)
         ################################################################################
-        if (datasetname in decorrs) and remove_decorrelation_likelihood:
+        if (datasetname in decorr_likelihoods) and remove_decorrelation_likelihood:
             datas[datasetname] -= decorr_likelihoods[datasetname]
 
         ################################################################################
