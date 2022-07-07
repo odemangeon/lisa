@@ -803,11 +803,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
     # Get the list of all datasets names and the number of datasets
     if l_datasets is None:
         l_datasets = dataset_db.get_datasets()
-    ndataset = len(l_datasets)
+    # ndataset = len(l_datasets)
 
     # Determine how many datasets will be shown
     nb_dataset2plot = 0
-    for ii, dataset in enumerate(l_datasets):
+    for dataset in l_datasets:
         # Get the instrument model name associated to the dataset
         inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
         inst_mod_obj = post_instance.model.instruments[inst_mod_fullname]
