@@ -183,6 +183,7 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
             {{tab}}ax.plot(x_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}, sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}(x_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}), label='spline fit')
             {{tab}}ax.set_xlabel('{ind_instmodel_obj.full_code_name}')
             {{tab}}ax.set_ylabel('{inst_model_obj.full_code_name}')
+            {{tab}}ax.grid(b=True, which='both', axis='y', alpha=0.5)
             {{tab}}ax.legend()
             """
             plotdecorr_body_text = dedent(plotdecorr_body_text)
