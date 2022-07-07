@@ -401,13 +401,15 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 # Plot the data
                 ###############
                 if pl_show_error[datasetname]["data"]:
-                    ebcont = axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
+                    ebcont = axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname],
+                                                             yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
                     if not("ecolor" in pl_kwarg_jitter[datasetname]["data"]):
                         pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                     if not("color" in pl_kwarg_final[datasetname]["data"]):
                         pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
                     if has_jitters[datasetname]:
-                        axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)
+                        axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname],
+                                                        yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)
                 else:
                     axes_data[i_row][i_pl].errorbar(x_values[datasetname], y=data_pl[datasetname], **pl_kwarg_final[datasetname]['data'], zorder=10)
 
@@ -1320,11 +1322,11 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Plot the residuals
                     ####################
                     if pl_show_error[datasetname]['data']:
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
                         if has_jitters[datasetname]:
-                            axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
-                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
+                            axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
                     else:
-                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
+                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -1380,7 +1382,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
-                    t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
+                    t_row = np.concatenate([dico_kwargs[datasetname]['time'] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
                     bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                     midbins = bins[:-1] + exptime_bin / 2
@@ -1399,8 +1401,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                         binstd_jitter = np.zeros(nbins)
                     bincount = np.zeros(nbins)
-                    data_err_row = np.concatenate([dico_kwargs[dst]['flux_err'] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]['flux_err']) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    data_err_row = np.concatenate([data_errs[dst] for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(data_errs[dst]) * np.nan for dst in datasetnames4rowidx[i_row]])
                     for i_bin in range(nbins):
                         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
