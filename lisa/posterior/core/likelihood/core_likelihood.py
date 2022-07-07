@@ -254,10 +254,11 @@ class LikelihoodCreator(object):
                                 func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {simdata_decorr}\n", function_shortname=func_shortname)
                             else:
                                 func_builder.add_to_body_text(text=f"{tab}sim_data += {simdata_decorr}\n", function_shortname=func_shortname)
-                            if return_decorr[ii] == "":
-                                return_decorr[ii] += f"{simdata_decorr}"
-                            else:
-                                return_decorr[ii] += f" + {simdata_decorr}"
+                            if func_shortname == func_shortname_decorr:
+                                if return_decorr[ii] == "":
+                                    return_decorr[ii] += f"{simdata_decorr}"
+                                else:
+                                    return_decorr[ii] += f" + {simdata_decorr}"
                 if return_decorr[ii] == "":
                     return_decorr[ii] = None
             if not(datasim_docfunc.multi_output):
