@@ -6,7 +6,7 @@ Decorrelation model module.
 from logging import getLogger
 from scipy.interpolate import UnivariateSpline
 from scipy.interpolate import LSQUnivariateSpline  # This should allow to specify the knots
-from numpy import concatenate, argsort, linspace
+from numpy import concatenate, argsort, linspace, mean
 from matplotlib.pyplot import subplots
 from textwrap import dedent
 
@@ -159,9 +159,11 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
             text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data[idx] for idx in {dico_decorr_ind['l_idx_simdata']}])[idx_sort_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}]"
         else:
             text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data for idx in {dico_decorr_ind['l_idx_simdata']}])[idx_sort_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}]"
-        decorr_body_text = f"sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name} = {spline_type}(x={text_all_indval}, y={text_all_resi}, **spline_kargs_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name})\n"
+        decorr_body_text = f"all_resi = {text_all_resi}\n"
+        decorr_body_text += f"sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name} = {spline_type}(x={text_all_indval}, y=all_resi - mean(all_resi), **spline_kargs_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name})\n"
         for function_shortname in l_function_shortname:
             # You need to store in ldict spline_kargs_{ind_inst_model_fullname.strip('-')}
+            function_builder.add_variable_to_ldict(variable_name="mean", variable_content=mean, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="concatenate", variable_content=concatenate, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="l_dataset_name", variable_content=l_dataset_name, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name=f"spline_kargs_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}", variable_content=dico_decorr_config_ind['spline_kwargs'], function_shortname=function_shortname, exist_ok=False, overwrite=False)

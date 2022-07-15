@@ -245,6 +245,11 @@ class LikelihoodCreator(object):
                     if inst_mod_fullname in dico_decorr_4_instmod:
                         for decorr_cat, ind_instmod_fullname in dico_decorr_4_instmod[inst_mod_fullname]["order"]:
                             decorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['decorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
+                            nb_rc = decorr_body_text.count('\n')
+                            if decorr_body_text.endswith('\n'):
+                                nb_rc -= 1
+                            if nb_rc > 0:
+                                decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}', nb_rc)
                             func_builder.add_to_body_text(text=f"{tab}{decorr_body_text}\n", function_shortname=func_shortname)
                             if func_shortname == func_shortname_plotdecorr:
                                 plotdecorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['plotdecorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
