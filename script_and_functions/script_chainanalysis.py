@@ -112,7 +112,7 @@ do_GS = False  # Do the geweke selection diagnostic
 geweke_thres = 2.  # Geweke threshold
 last_perc_GS = 10  # Percentage of the chains used as final state the chains in the geweke selection.
 # The rest of the chains will be used to estimate the moment when convergence is reach,
-last_min_GS = 50  # Minimum number of steps to use for the final state of the chains
+last_minstep_GS = 50  # Minimum number of steps to use for the final state of the chains
 intervals_GS = 100  # Number of intervals in which the first percentage of the chain will be split to address convergence
 min_intervals_efficiency_GS = 0.1  # Min ratio between the number of steps in each interval and the number of steps between to intervals
 def_intervals_efficiency_GS = 0.5  # If interval efficiency is below min_intervals_efficiency_GS the number of intervals will be change to get this efficiency
@@ -321,11 +321,11 @@ if do_AFSLPSP:
 if do_GS:
     logger.info("5. Determine convergence and burnin values and plot lnpost histogram")
     last_step = nstep * last_perc_GS / 100
-    if last_step < last_min_GS:
-        last_step = last_min_GS
+    if last_step < last_minstep_GS:
+        last_step = last_minstep_GS
         logger.warning("The last percentage provided ({last_perc}%) correspond to a number of step ({nb_last}) "
                        "below the specified number ({last_min}). last is forced to {last_min}"
-                       "".format(last_perc=last_perc_GS, nb_last=nstep * last_perc_GS, last_min=last_min_GS))
+                       "".format(last_perc=last_perc_GS, nb_last=nstep * last_perc_GS, last_min=last_minstep_GS))
     first_step = (nstep - last_step)
     nstep_between_intervals = first_step / intervals_GS
     if nstep_between_intervals < 1:
@@ -338,11 +338,10 @@ if do_GS:
         intervals = intervals_GS
     interval_step = nstep * interval_perc_GS / 100
     if interval_step < interval_step_min_GS:
-        interval_perc = interval_step_min_GS / nstep
-        logger.warning("The number of steps in each interval ({interval_step}) is below the minimum "
-                       "specified ({interval_step_min}). interval_perc is forced to the corresponding "
-                       "value ({interval_perc})".format(interval_step=interval_step, interval_step_min=interval_step_min_GS,
-                                                        interval_perc=interval_perc))
+        interval_perc = interval_step_min_GS / nstep * 100
+        logger.warning(f"The number of steps in each interval ({interval_step}) is below the minimum "
+                       f"specified ({interval_step_min_GS}). interval_perc is forced to the corresponding "
+                       f"value ({interval_perc})")
         interval_step = nstep * interval_perc / 100
     else:
         interval_perc = interval_perc_GS
