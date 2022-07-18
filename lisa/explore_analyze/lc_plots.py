@@ -947,7 +947,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 If True, show the titles (of the main and the zoom)
             - 'legend_param' : dict
                 Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True).
-            - 'show_rms_residuals_in_title': bool
+            - 'show_rms': bool
                If True the rms of the residuals will be provided in the title.
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
             - 'gridspec_kwargs': dict
@@ -1152,6 +1152,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         #############################################################
         # Make the LC and residuals plots (full and zoomed if needed)
         #############################################################
+        rms_format = fig_param.get("rms_format", ".1e")
+        text_rms = OrderedDict()
+        text_rms_binned = OrderedDict()
         show_title = TS_kwargs.get("show_title", True)
         for i_row in range(nb_rows):
             gs_ts_row = GridSpecFromSubplotSpec(1, nb_cols, subplot_spec=gs_ts[i_row], **TS_kwargs.get('gridspec_kwargs', {}))
@@ -1185,6 +1188,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
                 for datasetname in datasetnames4rowidx[i_row]:
+                    if t_lims_i is None:
+                        lims_time_dst = [dico_kwargs[datasetname]['time'].min(), dico_kwargs[datasetname]['time'].max()]
+                    else:
+                        lims_time_dst = t_lims_i
                     ###################
                     # Compute the models
                     ###################
@@ -1327,6 +1334,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
                     else:
                         axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
+                    # Compute rms of the residuals and print it on the top of the residuals graphs
+                    text_rms_template = f"{{:{rms_format}}}"
+                    text_rms[datasetname] = text_rms_template.format(np.std(residuals[datasetname][np.logical_and(dico_kwargs[datasetname]['time'] > lims_time_dst[0], dico_kwargs[datasetname]['time'] < lims_time_dst[1])]))
+                    print(f"RMS {datasetname} = {text_rms[datasetname]} {LC_unit} (raw cadence)")
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -1377,6 +1388,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         if has_jitters[datasetname] and pl_show_error[datasetname]["databinned"]:
                             _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
                             _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                        # Compute rms of the binned residuals
+                        text_rms_binned_template = f"{{:{rms_format}}} (bin)"
+                        text_rms_binned[datasetname] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins > lims_time_dst[0], midbins < lims_time_dst[1])]))
+                        print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
@@ -1384,6 +1399,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 if one_binning_per_row and (exptime_bin > 0.):
                     t_row = np.concatenate([dico_kwargs[datasetname]['time'] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
+                    if t_lims_i is None:
+                        lims_time_row = [t_row.min(), t_row.max()]
+                    else:
+                        lims_time_row = t_lims_i
                     bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                     midbins = bins[:-1] + exptime_bin / 2
                     nbins = len(bins) - 1
@@ -1430,6 +1449,10 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
                         _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
                         _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
+                    # Compute rms of the binned residuals
+                    text_rms_binned_template = f"{{:{rms_format}}} (bin)"
+                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins > lims_time_row[0], midbins < lims_time_row[1])]))
+                    print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {LC_unit}")
 
                 # Draw a horizontal line at the level of reference stellar flux level
                 xlims = axe_data.get_xlim()
@@ -1482,6 +1505,27 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     axe_resi.set_xlim(xlims)
                 else:
                     axe_resi.set_xlim(t_lims_i)
+
+                ###########
+                # Write rms
+                ###########
+                # WARNING, TO BE IMPROVED for more than one dataset
+                if (i_col == 0) and TS_kwargs.get('show_rms', True):
+                    text_rms_to_plot = ""
+                    for i_dst, datasetname in enumerate(datasetnames4rowidx[i_row]):
+                        # text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
+                        text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
+                        if datasetname in text_rms_binned:
+                            text_rms_to_plot_dst += f", {text_rms_binned[datasetname]} (bin)"
+                        if i_dst == 0:
+                            text_rms_to_plot_dst = "rms = " + text_rms_to_plot_dst
+                        if LC_unit is not None:
+                            text_rms_to_plot_dst += f" {LC_unit}"
+                        text_rms_to_plot += text_rms_to_plot_dst + "; "
+                    if f"row{i_row}" in text_rms_binned:
+                        text_rms_to_plot += "\n"
+                        text_rms_to_plot += f"rms bin = {text_rms_binned[f'row{i_row}']} {LC_unit}"
+                    axe_resi.text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axe_resi.transAxes)
 
                 ##########################
                 # Set the legend if needed
