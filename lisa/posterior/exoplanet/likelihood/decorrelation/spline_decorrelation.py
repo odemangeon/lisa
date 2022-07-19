@@ -73,9 +73,9 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
                                                                    skip_load=True)
         for inst_mod_obj_decorr_var_name in decorrelation_config_inst_decorr_paramfile.keys():
             # Check that the "quantity" and "spline_kwargs" are in the dictionary
-            if not(all([key in decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name] for key in ["quantity", "spline_kwargs"]])):
+            if not(all([key in decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name] for key in ["quantity", 'spline_type', "spline_kwargs"]])):
                 raise ValueError(f"The dictionary for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {inst_mod_obj_decorr_var_name} must include the keys 'quantity' and 'spline_kwargs'.")
+                                 f" with {inst_mod_obj_decorr_var_name} must include the keys 'quantity', 'spline_type' and 'spline_kwargs'.")
             quantity = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]["quantity"]
             spline_type = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name].get("spline_type", "UnivariateSpline")
             spline_kwargs = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]["spline_kwargs"]
