@@ -11,6 +11,7 @@ from ...dataset_and_instrument.lc import LC_inst_cat
 from ...dataset_and_instrument.rv import RV_inst_cat
 from ....core.model.core_parametrisation import Core_Parametrisation
 from ....core.dataset_and_instrument.indicator import IND_inst_cat
+from ....core.parameter import Parameter
 
 
 ## Logger Object
@@ -151,8 +152,7 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                                     self.paramcontainers["stars"][star_name].Teff.main = True
                             elif pc_component_model["model"] == 'kelp':
                                 stellar_spectrum = pc_component_model['args']['Model_kwargs'].get('stellar_spectrum', None)
-                                if ((pc_component_model['args']['brightness_model'] == 'thermal') and
-                                    (stellar_spectrum is None)):
+                                if (pc_component_model['args']['brightness_model'] == 'thermal') and (stellar_spectrum is None):
                                     self.paramcontainers["stars"][star_name].Teff.main = True
         # Apply the parametrisation to the planets parameters
         for planet_name in list(self.paramcontainers["planets"].keys()):
@@ -193,6 +193,24 @@ class GravGroup_Parametrisation(Core_Parametrisation):
                                     self.paramcontainers["planets"][planet_name].omegadrag.main = True  # Dimensionless drag frequency
                                     self.paramcontainers["planets"][planet_name].AB.main = True  # Bond albedo
                                     self.paramcontainers["planets"][planet_name].c11.main = True  # m=1 l=1 Spherical harmonic coefficients
+                            elif self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'sincos':
+                                for sincos_comp_name, dico_sincos_comp in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["args"].items():
+                                    if dico_sincos_comp['sincos'] is None:
+                                        self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name=f"C{mod_comp_name}{sincos_comp_name}",
+                                                                                                             name_prefix=self.paramcontainers["planets"][planet_name].name,
+                                                                                                             main=True))
+                                    else:  # 'sin' or 'cos'
+                                        self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name=f"A{mod_comp_name}{sincos_comp_name}",
+                                                                                                             name_prefix=self.paramcontainers["planets"][planet_name].name,
+                                                                                                             main=True))
+                                        if dico_sincos_comp['phase_offset'] == "param":
+                                            self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name=f"Phi{mod_comp_name}{sincos_comp_name}",
+                                                                                                                 name_prefix=self.paramcontainers["planets"][planet_name].name,
+                                                                                                                 main=True))
+                                        if dico_sincos_comp['flux_offset'] == "param":
+                                            self.paramcontainers["planets"][planet_name].add_parameter(Parameter(name=f"Foffset{mod_comp_name}{sincos_comp_name}",
+                                                                                                                 name_prefix=self.paramcontainers["planets"][planet_name].name,
+                                                                                                                 main=True))
                 if self.instcat_models[LC_inst_cat].occultation_model[planet_name]['do']:
                     for mod_comp_name in self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model4instrument"].values():
                         if self.instcat_models[LC_inst_cat].phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'batman':

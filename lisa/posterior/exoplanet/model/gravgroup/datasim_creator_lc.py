@@ -18,7 +18,7 @@ from textwrap import dedent
 # from copy import deepcopy, copy
 from math import acos, degrees, sqrt
 from numpy import ones_like, inf, mean, pi, sin, cos, abs, argsort
-# from collections import Iterable
+from collections import defaultdict
 
 try:
     from batman import TransitModel, TransitParams
@@ -646,7 +646,7 @@ def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_
             Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
             function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat}))\n", function_shortname=function_shortname)
         else:
-            function_builder.add_to_body_text(text=f"condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=function_shortname)
+            function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=function_shortname)
     if more_than_1_planet:
         condition_text = [f"condition_{planet.get_name()}" for planet in l_planet].join(" or ")
     else:
@@ -762,6 +762,14 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     # Extension for the shortname of the function that do the transit only model
     ext_func_tr_only = "_tr"
 
+    ##########################################################################################
+    # Initialise the list to keep track of the updates of the TransitParams instance of Batman
+    ##########################################################################################
+    # Init the list that will indicate that rp has been updated in the batman TransitParams instances used for the occultation
+    rp_updates = defaultdict(list)
+    # Init the list that will indicate that LD has been updated in the batman TransitParams instances used for the occultation
+    ld_updates = defaultdict(list)
+
     ##############################
     # Do the Model for each planet
     ##############################
@@ -842,122 +850,30 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                     if transit_model_pl_inst["model"] == "batman":
                         if not(batman_imported):
                             raise ValueError("Batman doesn't seems to be installed. The import failed.")
+
                         ## Add the limb darkening parameters
                         LD_mod_name = ldmodel4instmodfname[instmod_fullname][star.code_name]
                         LD_mod = LDs[star.code_name + "_" + LD_mod_name]
                         for param in LD_mod.get_list_params(main=True):
                             if not(function_builder.is_parameter(parameter=param, function_shortname=func_shortname)):
                                 function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-                        ## Creation of the TransitParams instances and add them to the ldicts
-                        if not(function_builder.is_in_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                            params_bat = TransitParams()
-                            params_bat.per = 1.   # orbital period
-                            params_bat.rp = 0.1   # planet radius(in stel radii)
-                            params_bat.a = 15.    # semi-major axis(in stel radii)
-                            params_bat.inc = 90.  # orbital inclination (in degrees)
-                            params_bat.ecc = 0.   # eccentricity
-                            params_bat.w = 90.    # long. of periastron (in deg.)
-                            if get_times_from_datasets:
-                                time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]  # Time is the same for all function
-                            else:
-                                if multi:
-                                    time_arg_value = []
-                                    for dst in l_dataset:
-                                        time_arg_value.append(dst.get_time())
-                                else:
-                                    time_arg_value = l_dataset[0].get_time()
-                            if multi:
-                                t_mean = mean(time_arg_value[0])
-                            else:
-                                t_mean = mean(time_arg_value)
-                            params_bat.t0 = t_mean
-                            LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                            LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                            params_bat.limb_dark = LD_mod.ld_type  # LD model
-                            params_bat.u = LD_mod.init_LD_values  # LDC init val
-                            function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
-                                                                   variable_content=params_bat, function_shortname=func_shortname, exist_ok=False)
-                        ## writing the preambule and return (First preambules after returns)
-                        ## preambule: Update the parameter values in the TransitParams object
-                        if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                            period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                            ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                            esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                            cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
-                            if parametrisation == "Multis":
-                                if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
-                                    rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
-                                    function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
-                            tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                            Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                            if parametrisation == "Multis":
-                                aR = f"aR_{planet_name}\n"
-                            else:
-                                aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=func_shortname)
-                            LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                            LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                            ld_param_list = "["
-                            for param in LD_mod.get_list_params(main=True):
-                                ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
-                            ld_param_list += "]"
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.u = {ld_param_list}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.limb_dark = '{LD_mod.ld_type}'\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=func_shortname)
-                            function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
-                        ## preambule: Create the TransitModel object
-                        if get_times_from_datasets:
-                            if not(function_builder.is_in_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]
-                                if multi:
-                                    time_vect_value = time_arg_value[i_inputoutput]
-                                else:
-                                    time_vect_value = time_arg_value
-                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                if supersamp > 1:
-                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
-                                else:
-                                    kwargs_TransitModel = {}
-                                params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                                m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
-                                function_builder.add_variable_to_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dst.number}",
-                                                                       variable_content=m_bat, function_shortname=func_shortname, exist_ok=False)
-                        else:
-                            if not(function_builder.is_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                if multi:
-                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                else:
-                                    time_vect = f"{time_arg_name}"
-                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                if supersamp > 1:
-                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
-                                else:
-                                    supersamp_text = ""
-                                function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+
+                        text_transit, _ = do_batman_transit_occultation_models(function_builder=function_builder, function_shortname=func_shortname,
+                                                                               planet=planet, star=star,
+                                                                               inst_model_obj=instmod, dataset=dst,
+                                                                               parametrisation=parametrisation,
+                                                                               get_times_from_datasets=get_times_from_datasets,
+                                                                               time_arg_name=time_arg_name,
+                                                                               SSE4instmodfname=SSE4instmodfname,
+                                                                               do_transit=True,
+                                                                               do_occultation=False,
+                                                                               l_dataset=l_dataset, multi=multi,
+                                                                               i_inputoutput=i_inputoutput,
+                                                                               ldmodel4instmodfname=ldmodel4instmodfname,
+                                                                               LDs=LDs, rp_updates=rp_updates,
+                                                                               ld_updates=ld_updates,
+                                                                               )
+
                         ## writing the returns
                         if returns[func_shortname][i_inputoutput] == "":
                             pre_text = ""
@@ -1125,6 +1041,14 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
 
     # Extension for the shortname of the function that do the transit only model
     ext_func_pc_only = "_pc"
+
+    ##########################################################################################
+    # Initialise the list to keep track of the updates of the TransitParams instance of Batman
+    ##########################################################################################
+    # Init the list that will indicate that t_secondary has been updated in the batman TransitParams instances used for the occultation
+    t_sec_updates = defaultdict(list)
+    # Init the list that will indicate that fp has been set to 1 in the batman TransitParams instances used for the occultation
+    fp_updates = defaultdict(list)
 
     ##############################
     # Do the Model for each planet
@@ -1384,7 +1308,34 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     sincos_components = {"": {"sincos": "cos", "factor_period": 1. / 2., "average": 'zero', 'phase_offset': pi}}
                             else:
                                 sincos_components = pc_component_model["args"]
-                            for sincos_comp_name, sincos_comp_dict in sincos_components:
+                            for sincos_comp_name, sincos_comp_dict in sincos_components.items():
+                                if sincos_comp_dict["occultation"]:
+                                    # Add required parameters for the Batman occultation model
+                                    if parametrisation == "Multis":
+                                        function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+                                    # Create the planetary model parameters that are model independent
+                                    l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
+                                    if parametrisation != "Multis":
+                                        l_param.append(planet.aR)
+                                    for param in l_param:
+                                        function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+
+                                    _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                                       function_shortname=func_shortname,
+                                                                                       planet=planet, star=star, inst_model_obj=instmod,
+                                                                                       dataset=dst, parametrisation=parametrisation,
+                                                                                       get_times_from_datasets=get_times_from_datasets,
+                                                                                       time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                                       do_transit=False, do_occultation=True,
+                                                                                       l_dataset=l_dataset, multi=multi,
+                                                                                       i_inputoutput=i_inputoutput,
+                                                                                       normalize_occultation=True,
+                                                                                       fp_updates=fp_updates, t_sec_updates=t_sec_updates
+                                                                                       )
+                                    text_occ = f" * ({text_occ})"
+                                else:
+                                    text_occ = ""
+
                                 if sincos_comp_dict["sincos"] is None:
                                     ################
                                     # Add parameters
@@ -1398,7 +1349,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                         pre_text = ""
                                     else:
                                         pre_text = " + "
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{constant}"
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{constant}{text_occ}"
                                 else:
                                     ################
                                     # Add parameters
@@ -1424,6 +1375,13 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                         phi = function_builder.get_text_4_parameter(parameter=phi_param, function_shortname=func_shortname)
                                     else:
                                         phi = f"{sincos_comp_dict.get('phase_offset', 0)}"
+                                    # flux offset
+                                    if sincos_comp_dict.get("flux_offset", 0) == "param":
+                                        flux_offset_param = planet.get_parameter(f"Foffset{component_name}{sincos_comp_name}",
+                                                                                 return_error=False, kwargs_get_list_params={'main': True},
+                                                                                 kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
+                                        function_builder.add_parameter(parameter=flux_offset_param, function_shortname=func_shortname, exist_ok=True)
+                                        flux_offset = function_builder.get_text_4_parameter(parameter=flux_offset_param, function_shortname=func_shortname)
                                     # Add sin or cos and pi to ldict
                                     function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
                                                                            function_shortname=func_shortname, exist_ok=True)
@@ -1448,23 +1406,20 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                         pre_text = ""
                                     else:
                                         pre_text = " + "
-                                    if sincos_comp_dict["average"] == "zero":
-                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})"
-                                    else:  # it has to be semi-amplitude
-                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi}))"
+                                    if sincos_comp_dict["flux_offset"] == "zero":
+                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi}){text_occ}"
+                                    elif sincos_comp_dict["flux_offset"] == "semi-amplitude":
+                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})){text_occ}"
+                                    else:  # it has to be 'param'
+                                        returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})) + {flux_offset}){text_occ}"
 
                         #############
                         # Kelp models
                         #############
-                        if pc_component_model["model"] == "kelp":
+                        elif pc_component_model["model"] == "kelp":
                             if not(kelp_imported):
                                 raise ValueError("Kelp doesn't seems to be installed. The import failed.")
                             brightness_model = pc_component_model["args"]["brightness_model"]
-
-                            # Init the list that will indicate that t_secondary has been updated in the batman TransitParams instances used for the occultation
-                            t_sec_updates = []
-                            # Init the list that will indicate that fp has been set to 1 in the batman TransitParams instances used for the occultation
-                            fp_updates = []
 
                             ####################################
                             # Thermal model using the spherical harmonics
@@ -1517,82 +1472,24 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     function_builder.add_variable_to_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}",
                                                                            variable_content=model_kelp_pl_inst, function_shortname=func_shortname, exist_ok=False)
 
-                                ## If it doesn't already exists, create a batman TransitParams instance for the occultation
-                                if not(function_builder.is_in_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    params_bat = TransitParams()
-                                    params_bat.per = 1.   # orbital period
-                                    params_bat.rp = 0.1   # planet radius(in stel radii)
-                                    params_bat.a = 15.    # semi-major axis(in stel radii)
-                                    params_bat.inc = 90.  # orbital inclination (in degrees)
-                                    params_bat.ecc = 0.   # eccentricity
-                                    params_bat.w = 90.    # long. of periastron (in deg.)
-                                    if get_times_from_datasets:
-                                        time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]  # Time is the same for all function
-                                    else:
-                                        if multi:
-                                            time_arg_value = []
-                                            for dst in l_dataset:
-                                                time_arg_value.append(dst.get_time())
-                                        else:
-                                            time_arg_value = l_dataset[0].get_time()
-                                    if multi:
-                                        t_mean = mean(time_arg_value[0])
-                                    else:
-                                        t_mean = mean(time_arg_value)
-                                    params_bat.t0 = t_mean
-                                    params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
-                                    # Providing the limbd darkening info seems to be still necessary even for the secondary eclipse.
-                                    params_bat.limb_dark = 'linear'  # LD model
-                                    params_bat.u = [0., ]  # LDC init val
-                                    function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
-                                                                           variable_content=params_bat, function_shortname=func_shortname, exist_ok=False)
+                                _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                                   function_shortname=func_shortname,
+                                                                                   planet=planet, star=star, inst_model_obj=instmod,
+                                                                                   dataset=dst, parametrisation=parametrisation,
+                                                                                   get_times_from_datasets=get_times_from_datasets,
+                                                                                   time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                                   do_transit=False, do_occultation=True,
+                                                                                   l_dataset=l_dataset, multi=multi,
+                                                                                   i_inputoutput=i_inputoutput,
+                                                                                   normalize_occultation=True,
+                                                                                   fp_updates=fp_updates, t_sec_updates=t_sec_updates,
+                                                                                   )
 
-                                ## Need to set fp to 1 in the batman parameter instance for the occultation
-                                if f"params_{planet_name}_{instmod_fullname}" not in fp_updates:
-                                    params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                                    params_bat.fp = 1.
-                                    function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", variable_content=params_bat, function_shortname=func_shortname,)
-                                    fp_updates.append(f"params_{planet_name}_{instmod_fullname}")
-
-                                ####################################################################
-                                # Writing the preambule and return (First preambules, after returns)
-                                ####################################################################
-                                ## preambule: define all the parameter necessary to update the plaent and model kelp instances
-                                period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                                tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                                ## preambule: define aR if needed in the preambule and get the text
-                                if parametrisation == "Multis":
-                                    if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
-                                        rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
-                                        function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                                        function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n", function_shortname=func_shortname)
-                                        function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
-                                    aR = f"aR_{planet_name}\n"
-                                else:
-                                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
                                 ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
                                 Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
                                 if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
                                     function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
                                     function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
-                                ## preambule: define ecc, omega, inc if needed
-                                # WARNING eccentricity is just taken into account in the timing of the occulation, not the shape of the PC.
-                                ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                                esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                                cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
                                 c11 = function_builder.get_text_4_parameter(parameter=planet.c11, function_shortname=func_shortname)
                                 hotspotoffset = function_builder.get_text_4_parameter(parameter=planet.hotspotoffset, function_shortname=func_shortname)
                                 alpha = function_builder.get_text_4_parameter(parameter=planet.alpha, function_shortname=func_shortname)
@@ -1600,17 +1497,6 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 AB = function_builder.get_text_4_parameter(parameter=planet.AB, function_shortname=func_shortname)
                                 if stellar_spectrum is None:
                                     Teff = function_builder.get_text_4_parameter(parameter=star.Teff, function_shortname=func_shortname)
-
-                                # Update the transit params instance if it's not already done
-                                if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
 
                                 ## Update the parameters of the kelp model and planet
                                 if not(function_builder.is_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
@@ -1624,51 +1510,6 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.rp_a = rpa_{planet_name}\n", function_shortname=func_shortname)
                                     function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.a_rs = {aR}\n", function_shortname=func_shortname)
                                     function_builder.add_to_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
-
-                                ## preambule: Create the TransitModel object for the occulation on the kelp model
-                                if get_times_from_datasets:
-                                    if not(function_builder.is_in_ldict(variable_name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                        time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]
-                                        if multi:
-                                            time_vect_value = time_arg_value[i_inputoutput]
-                                        else:
-                                            time_vect_value = time_arg_value
-                                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                        if supersamp > 1:
-                                            exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                            kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
-                                        else:
-                                            kwargs_TransitModel = {}
-                                        params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                                        if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
-                                            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
-                                        m_bat = TransitModel(params=params_bat, t=time_vect_value, transittype="secondary", **kwargs_TransitModel)
-                                        function_builder.add_variable_to_ldict(variable_name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}",
-                                                                               variable_content=m_bat, function_shortname=func_shortname, exist_ok=False)
-                                else:
-                                    if not(function_builder.is_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                        if multi:
-                                            time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                        else:
-                                            time_vect = f"{time_arg_name}"
-                                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                        if supersamp > 1:
-                                            exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                            supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
-                                        else:
-                                            supersamp_text = ""
-                                        function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
-                                        params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                                        if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
-                                            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2  # Doing this here will change the content of the variable in ldict. So that's fine.
-                                        function_builder.add_to_body_text(text=f"{tab}m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params=params_{planet_name}_{instmod_fullname}, t={time_vect}, transittype='secondary'{supersamp_text})\n", function_shortname=func_shortname)
-                                        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)  # This is necessary, because the init of TransitModel modifies the params instance (which is not a good idea in my opinion, but batman is not my code)
-                                        function_builder.add_to_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-
-                                ## Need to updata the t_secondary of a batman parameter instance for the occultation
-                                if f"params_{planet_name}_{instmod_fullname}" not in t_sec_updates:
-                                    function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t_secondary = m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}.get_t_secondary(params_{planet_name}_{instmod_fullname})\n", function_shortname=func_shortname)
-                                    t_sec_updates.append(f"params_{planet_name}_{instmod_fullname}")
 
                                 ####################################################
                                 # Produce the text for the phase curve model returns
@@ -1701,7 +1542,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 else:
                                     pre_text = " + "
                                 f = function_builder.get_text_4_parameter(parameter=planet.f, function_shortname=func_shortname)
-                                returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, check_sorted=False).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * (m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dst.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1)"
+                                returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, check_sorted=False).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
 
                             ###################################
                             # No other brightness model for now
@@ -1794,7 +1635,9 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
     ext_func_occ_only = "_occ"
 
     # Init the list that will indicate that t_secondary has been updated in the batman TransitParams instances used for the occultation
-    t_sec_updates = []
+    t_sec_updates = defaultdict(list)
+    # Init the list that will indicate that fp has been set to 1 in the batman TransitParams instances used for the occultation
+    fp_updates = defaultdict(list)
 
     ##############################
     # Do the Model for each planet
@@ -1862,8 +1705,6 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
             for func_shortname in l_function_shortname_4_planet:
 
                 for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
-                    instmod_fullname = instmod.full_code_name
-
                     ####################################################################################
                     # Get the transit model implementation definition for the planet and the instrument
                     ####################################################################################
@@ -1876,149 +1717,26 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
                     if occ_model_pl_inst["model"] == "batman":
                         if not(batman_imported):
                             raise ValueError("Batman doesn't seems to be installed. The import failed.")
-                        ## Add the limb darkening parameters: FOR NOW, NO LD FOR SECONDARY ECLIPSE
-                        # LD_mod_name = ldmodel4instmodfname[instmod_fullname][star.code_name]
-                        # LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                        # for param in LD_mod.get_list_params(main=True):
-                        #     if not(function_builder.is_parameter(parameter=param, function_shortname=func_shortname)):
-                        #         function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-                        ## Creation of the TransitParams instances and add them to the ldicts
-                        if not(function_builder.is_in_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                            params_bat = TransitParams()
-                            params_bat.per = 1.   # orbital period
-                            params_bat.rp = 0.1   # planet radius(in stel radii)
-                            params_bat.a = 15.    # semi-major axis(in stel radii)
-                            params_bat.inc = 90.  # orbital inclination (in degrees)
-                            params_bat.ecc = 0.   # eccentricity
-                            params_bat.w = 90.    # long. of periastron (in deg.)
-                            if get_times_from_datasets:
-                                time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]  # Time is the same for all function
-                            else:
-                                if multi:
-                                    time_arg_value = []
-                                    for dst in l_dataset:
-                                        time_arg_value.append(dst.get_time())
-                                else:
-                                    time_arg_value = l_dataset[0].get_time()
-                            if multi:
-                                t_mean = mean(time_arg_value[0])
-                            else:
-                                t_mean = mean(time_arg_value)
-                            params_bat.t0 = t_mean
-                            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
-                            params_bat.fp = 1e-3
-                            # LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                            # LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                            # params_bat.limb_dark = LD_mod.ld_type  # LD model
-                            # params_bat.u = LD_mod.init_LD_values  # LDC init val
-                            # Providing the limbd darkening info seems to be still necessary even for the secondary eclipse.
-                            # So I set it a linear with a coeff of 0 (meaning no limbd darkening)
-                            params_bat.limb_dark = "linear"
-                            params_bat.u = [0., ]
-                            function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
-                                                                   variable_content=params_bat, function_shortname=func_shortname, exist_ok=False)
 
-                        ## writing the preambule and return (First preambules after returns)
-                        ## preambule: Update the parameter values in the TransitParams object
-                        if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                            period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                            ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                            esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                            cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
-                            if parametrisation == "Multis":
-                                if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
-                                    rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
-                                    function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
-                            tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                            Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                            if parametrisation == "Multis":
-                                aR = f"aR_{planet_name}\n"
-                            else:
-                                aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=func_shortname)
-                            # LD_mod_name = ldmodel4instmodfname[instmod.get_name(include_prefix=True, code_version=True, recursive=True)][star.code_name]
-                            # LD_mod = LDs[star.code_name + "_" + LD_mod_name]
-                            # ld_param_list = "["
-                            # for param in LD_mod.get_list_params(main=True):
-                            #     ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname) + ", "
-                            # ld_param_list += "]"
-                            # function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.u = {ld_param_list}\n", function_shortname=func_shortname)
-                            # function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.limb_dark = '{LD_mod.ld_type}'\n", function_shortname=func_shortname)
-                            # Providing the limbd darkening info seems to be still necessary even for the secondary eclipse.
-                            # So I set it a linear with a coeff of 0 (meaning no limbd darkening)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.limb_dark = 'linear'\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.u = [0., ]\n", function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=func_shortname)
-                            Frat = function_builder.get_text_4_parameter(parameter=planet.Frat, function_shortname=func_shortname)
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.fp = {Frat}\n", function_shortname=func_shortname)
-                            function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
-                        ## preambule: Create the TransitModel object
-                        if get_times_from_datasets:
-                            if not(function_builder.is_in_ldict(variable_name=f"m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                time_arg_value = function_builder.get_ldict(function_shortname=func_shortname)[time_arg_name]
-                                if multi:
-                                    time_vect_value = time_arg_value[i_inputoutput]
-                                else:
-                                    time_vect_value = time_arg_value
-                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                if supersamp > 1:
-                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
-                                else:
-                                    kwargs_TransitModel = {}
-                                params_bat = function_builder.get_ldict(function_shortname=func_shortname)[f"params_{planet_name}_{instmod_fullname}"]
-                                m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel, transittype="secondary")
-                                function_builder.add_variable_to_ldict(variable_name=f"m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}",
-                                                                       variable_content=m_bat, function_shortname=func_shortname, exist_ok=False)
-                                # function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t_secondary = m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}.get_t_secondary(params_{planet_name}_{instmod_fullname})\n", function_shortname=func_shortname)
-                        else:
-                            if not(function_builder.is_done_in_text(name=f"m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                if multi:
-                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                else:
-                                    time_vect = f"{time_arg_name}"
-                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                if supersamp > 1:
-                                    exptime = SSE4instmodfname.get_exptime(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
-                                else:
-                                    supersamp_text = ""
-                                function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}, transittype='secondary'{supersamp_text})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                                # function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t_secondary = m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}.get_t_secondary(params_{planet_name}_{instmod_fullname})\n", function_shortname=func_shortname)
-
-                        ## Need to updata the t_secondary of a batman parameter instance for the occultation
-                        if f"params_{planet_name}_{instmod_fullname}" not in t_sec_updates:
-                            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t_secondary = m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}.get_t_secondary(params_{planet_name}_{instmod_fullname})\n", function_shortname=func_shortname)
-                            t_sec_updates.append(f"params_{planet_name}_{instmod_fullname}")
+                        _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                           function_shortname=func_shortname,
+                                                                           planet=planet, star=star, inst_model_obj=instmod,
+                                                                           dataset=dst, parametrisation=parametrisation,
+                                                                           get_times_from_datasets=get_times_from_datasets,
+                                                                           time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                           do_transit=False, do_occultation=True,
+                                                                           l_dataset=l_dataset, multi=multi,
+                                                                           i_inputoutput=i_inputoutput,
+                                                                           normalize_occultation=False,
+                                                                           fp_updates=fp_updates, t_sec_updates=t_sec_updates
+                                                                           )
 
                         ## writing the returns
                         if returns[func_shortname][i_inputoutput] == "":
                             pre_text = ""
                         else:
                             pre_text = " + "
-                        returns[func_shortname][i_inputoutput] += f"{pre_text}m_bat_occ_{planet_name}_{instmod_fullname}_dst{dst.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1 - {Frat} "
+                        returns[func_shortname][i_inputoutput] += f"{pre_text}{text_occ}"
 
                     ########################
                     # No other model for now
@@ -2279,3 +1997,228 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                                                                                                          function_builder=function_builder,
                                                                                                          function_shortname=function_shortname)),
                                       function_shortname=function_shortname)
+
+
+def do_batman_transit_occultation_models(function_builder, function_shortname, planet, star,
+                                         inst_model_obj, dataset, parametrisation,
+                                         get_times_from_datasets, time_arg_name, SSE4instmodfname,
+                                         do_transit, do_occultation,
+                                         l_dataset, multi, i_inputoutput=None,
+                                         ldmodel4instmodfname=None, LDs=None,
+                                         normalize_occultation=True, fp_updates=None, t_sec_updates=None,
+                                         rp_updates=None, ld_updates=None,
+                                         ):
+    if not(do_transit or do_occultation):
+        return None, None
+
+    planet_name = planet.get_name()
+    instmod_fullname = inst_model_obj.full_name
+
+    ## If it doesn't already exists, create a batman TransitParams instance for the occultation
+    if not(function_builder.is_in_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)):
+        params_bat = TransitParams()
+        params_bat.per = 1.   # orbital period
+        params_bat.rp = 0.1   # planet radius(in stel radii)
+        params_bat.a = 15.    # semi-major axis(in stel radii)
+        params_bat.inc = 90.  # orbital inclination (in degrees)
+        params_bat.ecc = 0.   # eccentricity
+        params_bat.w = 90.    # long. of periastron (in deg.)
+        if get_times_from_datasets:
+            time_arg_value = function_builder.get_ldict(function_shortname=function_shortname)[time_arg_name]  # Time is the same for all function
+        else:
+            if multi:
+                time_arg_value = []
+                for dst in l_dataset:
+                    time_arg_value.append(dst.get_time())
+            else:
+                time_arg_value = l_dataset[0].get_time()
+        if multi:
+            t_mean = mean(time_arg_value[0])
+        else:
+            t_mean = mean(time_arg_value)
+        params_bat.t0 = t_mean
+        params_bat.limb_dark = 'linear'  # LD model
+        params_bat.u = [0., ]  # LDC init val
+        if do_occultation:
+            params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
+        function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
+                                               variable_content=params_bat, function_shortname=function_shortname, exist_ok=False)
+
+    ## Need to set fp to 1 in the batman parameter instance for the occultation
+    if do_occultation and (f"params_{planet_name}_{instmod_fullname}" not in fp_updates[function_shortname]):
+        params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+        if normalize_occultation:
+            params_bat.fp = 1.
+        else:
+            params_bat.fp = 1e-3
+        function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
+                                               variable_content=params_bat, function_shortname=function_shortname,
+                                               exist_ok=True, overwrite=True)
+
+    if do_transit and (f"params_{planet_name}_{instmod_fullname}" not in ld_updates[function_shortname]):
+        params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+        LD_mod_name = ldmodel4instmodfname[instmod_fullname][star.code_name]
+        LD_mod = LDs[star.code_name + "_" + LD_mod_name]
+        params_bat.limb_dark = LD_mod.ld_type  # LD model
+        params_bat.u = LD_mod.init_LD_values  # LDC init val
+        function_builder.add_variable_to_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}",
+                                               variable_content=params_bat, function_shortname=function_shortname,
+                                               exist_ok=True, overwrite=True)
+
+    ## preambule: Update the parameter values in the TransitParams object
+    if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)):
+        period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=function_shortname)
+        tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=function_shortname)
+        ## preambule: define ecc, omega, inc if needed
+        # WARNING eccentricity is just taken into account in the timing of the occulation, not the shape of the PC.
+        ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=function_shortname)
+        esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=function_shortname)
+        cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=function_shortname)
+        if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)):
+            function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=function_shortname, exist_ok=True)
+            function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=function_shortname)
+            function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)
+        if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)):
+            function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=function_shortname, exist_ok=True)
+            function_builder.add_to_body_text(text=f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=function_shortname)
+            function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)
+        if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=function_shortname)):
+            function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=function_shortname, exist_ok=True)
+            function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=function_shortname, exist_ok=True)
+            function_builder.add_to_body_text(text=f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n", function_shortname=function_shortname)
+            function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=function_shortname)
+        ## preambule: define aR if needed in the preambule and get the text
+        if parametrisation == "Multis":
+            if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)):
+                rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=function_shortname)
+                function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=function_shortname, exist_ok=True)
+                function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=function_shortname)
+                function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)
+            aR = f"aR_{planet_name}\n"
+        else:
+            aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=function_shortname)
+
+        # Update the transit params instance if it's not already done
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=function_shortname)
+        function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)
+
+    if do_transit and (f"params_{planet_name}_{instmod_fullname}" not in rp_updates[function_shortname]):
+        Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=function_shortname)
+        rp_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
+
+    if do_transit and (f"params_{planet_name}_{instmod_fullname}" not in ld_updates[function_shortname]):
+        ld_param_list = "["
+        for param in LD_mod.get_list_params(main=True):
+            ld_param_list += function_builder.get_text_4_parameter(parameter=param, function_shortname=function_shortname) + ", "
+        ld_param_list += "]"
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.u = {ld_param_list}\n", function_shortname=function_shortname)
+        ld_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
+
+    ## preambule: Create the TransitModel object
+    if do_transit:
+        if get_times_from_datasets:
+            if not(function_builder.is_in_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)):
+                time_arg_value = function_builder.get_ldict(function_shortname=function_shortname)[time_arg_name]
+                if multi:
+                    time_vect_value = time_arg_value[i_inputoutput]
+                else:
+                    time_vect_value = time_arg_value
+                supersamp = SSE4instmodfname.get_supersamp(instmod_fullname)
+                if supersamp > 1:
+                    exptime = SSE4instmodfname.get_exptime(instmod_fullname)
+                    kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
+                else:
+                    kwargs_TransitModel = {}
+                params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+                m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
+                function_builder.add_variable_to_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}",
+                                                       variable_content=m_bat, function_shortname=function_shortname, exist_ok=False)
+        else:
+            if not(function_builder.is_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)):
+                if multi:
+                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                else:
+                    time_vect = f"{time_arg_name}"
+                supersamp = SSE4instmodfname.get_supersamp(instmod_fullname)
+                if supersamp > 1:
+                    exptime = SSE4instmodfname.get_exptime(instmod_fullname)
+                    supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
+                else:
+                    supersamp_text = ""
+                function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=function_shortname, exist_ok=True)
+                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n", function_shortname=function_shortname)
+                function_builder.add_to_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
+
+    ## preambule: Create the TransitModel object for the occulation
+    if do_occultation:
+        if get_times_from_datasets:
+            if not(function_builder.is_in_ldict(variable_name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)):
+                time_arg_value = function_builder.get_ldict(function_shortname=function_shortname)[time_arg_name]
+                if multi:
+                    time_vect_value = time_arg_value[i_inputoutput]
+                else:
+                    time_vect_value = time_arg_value
+                supersamp = SSE4instmodfname.get_supersamp(instmod_fullname)
+                if supersamp > 1:
+                    exptime = SSE4instmodfname.get_exptime(instmod_fullname)
+                    kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
+                else:
+                    kwargs_TransitModel = {}
+                params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+                if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
+                    params_bat.t_secondary = params_bat.t0 + params_bat.per / 2
+                m_bat = TransitModel(params=params_bat, t=time_vect_value, transittype="secondary", **kwargs_TransitModel)
+                function_builder.add_variable_to_ldict(variable_name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}",
+                                                       variable_content=m_bat, function_shortname=function_shortname, exist_ok=False)
+        else:
+            if not(function_builder.is_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)):
+                if multi:
+                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                else:
+                    time_vect = f"{time_arg_name}"
+                supersamp = SSE4instmodfname.get_supersamp(instmod_fullname)
+                if supersamp > 1:
+                    exptime = SSE4instmodfname.get_exptime(instmod_fullname)
+                    supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
+                else:
+                    supersamp_text = ""
+                function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=function_shortname, exist_ok=True)
+                params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
+                if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
+                    params_bat.t_secondary = params_bat.t0 + params_bat.per / 2  # Doing this here will change the content of the variable in ldict. So that's fine.
+                function_builder.add_to_body_text(text=f"{tab}m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params=params_{planet_name}_{instmod_fullname}, t={time_vect}, transittype='secondary'{supersamp_text})\n", function_shortname=function_shortname)
+                tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=function_shortname)  # This is necessary, because the init of TransitModel modifies the params instance (which is not a good idea in my opinion, but batman is not my code)
+                function_builder.add_to_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
+
+    ## Need to updata the t_secondary of a batman parameter instance for the occultation
+    if do_occultation and (f"params_{planet_name}_{instmod_fullname}" not in t_sec_updates[function_shortname]):
+        function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t_secondary = m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}.get_t_secondary(params_{planet_name}_{instmod_fullname})\n", function_shortname=function_shortname)
+        t_sec_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
+
+    if do_occultation and (f"params_{planet_name}_{instmod_fullname}" not in fp_updates[function_shortname]):
+        if not(normalize_occultation):
+            Frat = function_builder.get_text_4_parameter(parameter=planet.Frat, function_shortname=function_shortname)
+            function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.fp = {Frat}\n", function_shortname=function_shortname)
+        fp_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
+
+    if do_transit:
+        return_transit = f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1"
+    else:
+        return_transit = None
+
+    if do_occultation:
+        if normalize_occultation:
+            return_occultation = f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1"
+        else:
+            return_occultation = f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}.light_curve(params_{planet_name}_{instmod_fullname}) - 1 - {Frat}"
+    else:
+        return_occultation = None
+
+    return return_transit, return_occultation
