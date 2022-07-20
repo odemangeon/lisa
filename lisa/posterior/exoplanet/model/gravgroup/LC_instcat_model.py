@@ -23,6 +23,7 @@ from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_lc import create_datasimulator_LC
 from ..decorrelation.linear_decorrelation import LinearDecorrelation
 from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
+from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
@@ -45,7 +46,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __has_instcat_paramfile__ = True
     __default_paramfile_name__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
-    __l_decorrelation_class__ = [LinearDecorrelation, SplineDecorrelation]
+    __l_decorrelation_class__ = [LinearDecorrelation, SplineDecorrelation, BiSplineDecorrelation]
 
     allowed_what2decorrelate_strs = ['multiply_2_totalflux', 'add_2_totalflux', ]
 

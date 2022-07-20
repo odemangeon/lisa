@@ -17,7 +17,7 @@ methods and attributes to model a data of a given insttument category.
     - The load_config_decorrelation
 """
 from textwrap import dedent
-from collections import Iterable, defaultdict
+from collections import Iterable
 from os import getcwd, chdir
 from logging import getLogger
 from pprint import pformat
@@ -587,23 +587,18 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                 if instmod_fullname not in dico_decorr_4_instmod:
                     dico_decorr_4_instmod[instmod_fullname] = {"l_dataset_name": [], "order": decorr_instmod_dict['order'], "decorr_cat": {}}
                 dico_decorr_4_instmod[instmod_fullname]["l_dataset_name"].append(dataset_name)
-                for decorr_cat, ind_inst_model_fullname in decorr_instmod_dict['order']:
+                for decorr_cat, decorr_name in decorr_instmod_dict['order']:
                     DecorrModel = self.get_DecorrClass(decorrmodel_cat=decorr_cat)
-                    dico_decorr_ind = decorr_instmod_dict[decorr_cat][ind_inst_model_fullname]
-                    if decorr_cat not in dico_decorr_4_instmod[instmod_fullname]["decorr_cat"]:
-                        dico_decorr_4_instmod[instmod_fullname]["decorr_cat"][decorr_cat] = defaultdict(defdic_decorr_indinst_func)
-                    for dataset_name_4_ind_decorr, ind_dataset_name in dico_decorr_ind["match datasets"].items():
-                        dico_decorr_4_instmod[instmod_fullname]["decorr_cat"][decorr_cat][ind_inst_model_fullname]["l_idx_simdata"].append(l_dataset_name.index(dataset_name_4_ind_decorr))
-                        dico_decorr_4_instmod[instmod_fullname]["decorr_cat"][decorr_cat][ind_inst_model_fullname]["l_datasetkwargs_req"].append(DecorrModel.l_required_datasetkwarg_keys)
-                        for datasetkwarg in DecorrModel.l_required_datasetkwarg_keys:
-                            if datasetkwarg not in d_required_datasetkwargkeys_4_dataset[dataset_name]:
-                                d_required_datasetkwargkeys_4_dataset[dataset_name].append(datasetkwarg)
-                        dico_decorr_4_instmod[instmod_fullname]["decorr_cat"][decorr_cat][ind_inst_model_fullname]["l_inddataset_name"].append(ind_dataset_name)
-                        dico_decorr_4_instmod[instmod_fullname]["decorr_cat"][decorr_cat][ind_inst_model_fullname]["l_inddatasetkwargs_req"].append(DecorrModel.l_required_inddatasetkwarg_keys)
-                        for datasetkwarg in DecorrModel.l_required_inddatasetkwarg_keys:
-                            if datasetkwarg not in d_required_datasetkwargkeys_4_inddataset[ind_dataset_name]:
-                                d_required_datasetkwargkeys_4_inddataset[ind_dataset_name].append(datasetkwarg)
-
+                    (dico_decorr_4_instmod[instmod_fullname]["decorr_cat"],
+                     d_required_datasetkwargkeys_4_dataset,
+                     d_required_datasetkwargkeys_4_inddataset
+                     ) = DecorrModel.get_required_dataset(decorr_config_instmod_decorr_cat=decorr_instmod_dict[decorr_cat],
+                                                          dico_decorr_instmod_decorr_cat=dico_decorr_4_instmod[instmod_fullname]["decorr_cat"],
+                                                          decorr_name=decorr_name,
+                                                          d_required_datasetkwargkeys_4_dataset=d_required_datasetkwargkeys_4_dataset,
+                                                          d_required_datasetkwargkeys_4_inddataset=d_required_datasetkwargkeys_4_inddataset,
+                                                          l_dataset_name=l_dataset_name
+                                                          )
         return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset, dico_decorr_4_instmod
 
     def create_decorrelation_likelihood(self, function_builder, l_function_shortname, inst_model_obj, dico_decorr_instmod,
@@ -634,7 +629,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         plotdecorr_body_text_4_decorrcat_4_indinstmod   :
         l_paramsfullname_likelihood                     :
         """
-        simdata_decorr_4_dataset_4_indinstmod = {dst_name: {} for dst_name in dico_decorr_instmod["l_dataset_name"]}
+        simdata_decorr_4_dataset_4_decorr_name = {dst_name: {} for dst_name in dico_decorr_instmod["l_dataset_name"]}
         decorr_body_text_4_decorrcat_4_indinstmod = {}
         plotdecorr_body_text_4_decorrcat_4_indinstmod = {}
         for decorr_cat, dico_decorr_cat in dico_decorr_instmod["decorr_cat"].items():
@@ -643,19 +638,19 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                 decorr_body_text_4_decorrcat_4_indinstmod[decorr_cat] = {}
             if decorr_cat not in plotdecorr_body_text_4_decorrcat_4_indinstmod:
                 plotdecorr_body_text_4_decorrcat_4_indinstmod[decorr_cat] = {}
-            for ind_inst_model_fullname, dico_decorr_ind in dico_decorr_cat.items():
-                indinstmod_obj = self.model_instance.instruments[ind_inst_model_fullname]
-                dico_decorr_config_ind = self.decorrelation_likelihood_config[inst_model_obj.full_name][decorr_cat][ind_inst_model_fullname]
+            for decorr_name, dico_decorr in dico_decorr_cat.items():
+                # indinstmod_obj = self.model_instance.instruments[ind_inst_model_fullname]
+                dico_decorr_config = self.decorrelation_likelihood_config[inst_model_obj.full_name][decorr_cat][decorr_name]
                 (simdata_decorr_4_dataset_indinstmod,
-                 decorr_body_text_4_decorrcat_4_indinstmod[decorr_cat][ind_inst_model_fullname],
-                 plotdecorr_body_text_4_decorrcat_4_indinstmod[decorr_cat][ind_inst_model_fullname],
+                 decorr_body_text_4_decorrcat_4_indinstmod[decorr_cat][decorr_name],
+                 plotdecorr_body_text_4_decorrcat_4_indinstmod[decorr_cat][decorr_name],
                  l_paramsfullname_likelihood
                  ) = DecorrClass.create_decorrelation_likelihood(function_builder=function_builder,
                                                                  l_function_shortname=l_function_shortname,
                                                                  inst_model_obj=inst_model_obj,
-                                                                 ind_instmodel_obj=indinstmod_obj,
-                                                                 dico_decorr_ind=dico_decorr_ind,
-                                                                 dico_decorr_config_ind=dico_decorr_config_ind,
+                                                                 decorr_name=decorr_name,
+                                                                 dico_decorr=dico_decorr,
+                                                                 dico_decorr_config=dico_decorr_config,
                                                                  l_dataset_name_4_instmod=dico_decorr_instmod["l_dataset_name"],
                                                                  l_dataset_name=l_dataset_name,
                                                                  l_paramsfullname_likelihood=l_paramsfullname_likelihood,
@@ -664,9 +659,9 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                                  datasim_has_multioutputs=datasim_has_multioutputs,
                                                                  plot_functionshortname=plot_functionshortname)
                 for dataset_name, decorrtext_dataset_indinstmod in simdata_decorr_4_dataset_indinstmod.items():
-                    simdata_decorr_4_dataset_4_indinstmod[dataset_name][ind_inst_model_fullname] = decorrtext_dataset_indinstmod
+                    simdata_decorr_4_dataset_4_decorr_name[dataset_name][decorr_name] = decorrtext_dataset_indinstmod
 
-        return simdata_decorr_4_dataset_4_indinstmod, decorr_body_text_4_decorrcat_4_indinstmod, plotdecorr_body_text_4_decorrcat_4_indinstmod, l_paramsfullname_likelihood
+        return simdata_decorr_4_dataset_4_decorr_name, decorr_body_text_4_decorrcat_4_indinstmod, plotdecorr_body_text_4_decorrcat_4_indinstmod, l_paramsfullname_likelihood
 
     def get_l_dataset_obj_4_decorrelation(self, instmod_obj):
         """Return the list of dataset name
