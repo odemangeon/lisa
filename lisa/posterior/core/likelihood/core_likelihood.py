@@ -108,11 +108,22 @@ class LikelihoodCreator(object):
             raise NotImplementedError("For now, __likelihood_creator cannot be applied to a data "
                                       "simulator for which the dataset is not included")
 
+        (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
+         dico_noisemodel, dico_decorr_4_instmod, noisemodel_names_list
+         ) = self._get_required_dataset(datasim_docfunc=datasim_docfunc)
+        l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
+
+        # Create the datasimulator that simulate all the dataset object required
+        if l_dataset_name == list(datasim_docfunc.dataset_names_list):
+            datasim_all_dst_doc_func = datasim_docfunc
+        else:
+            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[function_whole_shortname]
+
         func_shortname_lnlike = "lnlike"
         l_func_shortname = [func_shortname_lnlike, ]
 
         func_builder = FunctionBuilder()
-        parameters = [self.get_parameter(name=param_fullname, notexist_ok=False, return_error=False, kwargs_get_list_params={'main': True, 'free': True, 'no_duplicate': True, 'recursive': True}, kwargs_get_name={'recursive': True, 'include_prefix': True}) for param_fullname in datasim_docfunc.param_model_names_list]
+        parameters = [self.get_parameter(name=param_fullname, notexist_ok=False, return_error=False, kwargs_get_list_params={'main': True, 'free': True, 'no_duplicate': True, 'recursive': True}, kwargs_get_name={'recursive': True, 'include_prefix': True}) for param_fullname in datasim_all_dst_doc_func.param_model_names_list]
         l_mand_args = copy(datasim_docfunc.mand_kwargs_list)
         if par_vec_name in l_mand_args:
             l_mand_args.remove(par_vec_name)
@@ -120,11 +131,6 @@ class LikelihoodCreator(object):
                                       mandatory_args=l_mand_args,
                                       optional_args=copy(datasim_docfunc.opt_kwargs_dict),
                                       full_function_name=None)
-
-        (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
-         dico_noisemodel, dico_decorr_4_instmod, noisemodel_names_list
-         ) = self._get_required_dataset(datasim_docfunc=datasim_docfunc)
-        l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
 
         # If a likelihood decorrelation is required add a decorr function to the function builder
         func_shortname_decorr = "decorr"
@@ -137,12 +143,6 @@ class LikelihoodCreator(object):
                                               mandatory_args=l_mand_args,
                                               optional_args=copy(datasim_docfunc.opt_kwargs_dict),
                                               full_function_name=None)
-
-        # Create the datasimulator that simulate all the dataset object required
-        if l_dataset_name == list(datasim_docfunc.dataset_names_list):
-            datasim_all_dst_doc_func = datasim_docfunc
-        else:
-            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[function_whole_shortname]
 
         l_idx_param_dtsim = list(range(len(datasim_all_dst_doc_func.param_model_names_list)))
         datasim_mand_arg = datasim_all_dst_doc_func.mand_kwargs_list
@@ -172,7 +172,7 @@ class LikelihoodCreator(object):
             func_builder.add_variable_to_ldict(variable_name="dataset_kwargs", variable_content=dataset_kwargs,
                                                function_shortname=func_shortname, exist_ok=False)
 
-        # Create the dataset_kwargs dictionary
+        # Create the inddataset_kwargs dictionary
         inddataset_kwargs = defaultdict(dict)
 
         # Fill the inddataset_kwargs dictionary with what is required
