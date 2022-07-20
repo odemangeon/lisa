@@ -1929,7 +1929,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
         ###################################################
         if remove_decorrelation_likelihood and (f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db):
             datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list].values
             decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
 
         ################################################################################
