@@ -1486,8 +1486,12 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                                                                    )
 
                                 ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
-                                Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
+                                if parametrisation == "Multis":
+                                    aR = f"aR_{planet_name}\n"
+                                else:
+                                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
                                 if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
+                                    Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
                                     function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
                                     function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
                                 c11 = function_builder.get_text_4_parameter(parameter=planet.c11, function_shortname=func_shortname)
@@ -1524,6 +1528,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                         supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
                                         if supersamp > 1:
                                             logger.warning("Currently the kelp model doesn't include supersampling !")
+                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
                                     function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                     function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
                                     function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
