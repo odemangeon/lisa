@@ -273,7 +273,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         # Create one pair (data, residuals) of axes per planet
         ######################################################
         (axes_data[i_row], axes_resi[i_row]
-         ) = et.add_twoaxeswithsharex_perplanet(gs[i_row], nplanet=nplanet, fig=fig, sharey=sharey,
+         ) = et.add_twoaxeswithsharex_perplanet(subplotspec=gs[i_row], nplanet=nplanet, fig=fig, sharey=sharey,
                                                 gs_from_sps_kw=gs_from_sps_kw,
                                                 add_axeswithsharex_kw=add_axeswithsharex_kw)
 
@@ -1397,7 +1397,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
-                    t_row = np.concatenate([dico_kwargs[datasetname]['time'] for dst in datasetnames4rowidx[i_row]])
+                    t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
                     if t_lims_i is None:
                         lims_time_row = [t_row.min(), t_row.max()]
