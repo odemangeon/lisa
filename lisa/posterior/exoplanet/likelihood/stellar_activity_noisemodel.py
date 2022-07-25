@@ -841,12 +841,12 @@ class StellarActivityNoiseModelInterface(object):
         """Return True is the attribute param_file has been defined."""
         return self.isdefined_paramfile_noisemod(stelact_GP_noisemodel)  # isdefined_paramfile_noisemod is defined in Core_Model
 
-    def create_SANM_param_file(self, paramfile_path=None, answer_overwrite=None, answer_create=None):
+    def create_SANM_param_file(self, paramfile_name=None, answer_overwrite=None, answer_create=None):
         """Create the parameter file for the definition of the stellar activity noise model.
 
         Arguments
         ---------
-        paramfile_path   : str
+        paramfile_name   : str
             Path to the stellar activity noise model parameter file (SANM_param_file).
         answer_overwrite : str
             If the SANM_param_file already exists, do you want to
@@ -856,7 +856,7 @@ class StellarActivityNoiseModelInterface(object):
             to create it ? "absolute", "run_folder" or "error". If this not provide the program will ask you interactively.
         """
         # Choose the parameter file path _choose_parameter_file_path is from Core_Model
-        file_path, reply = self._choose_parameter_file_path(default_paramfile_path='SANM_param_file.py', paramfile_path=paramfile_path, answer_overwrite=answer_overwrite, answer_create=answer_create)
+        file_path, reply = self._choose_parameter_file_path(default_paramfile_name='SANM_param_file.py', paramfile_name=paramfile_name, answer_overwrite=answer_overwrite, answer_create=answer_create)
         if reply == "y":
             with open(file_path, 'w') as f:
                 # Write the header
@@ -875,13 +875,12 @@ class StellarActivityNoiseModelInterface(object):
         if self.isdefined_SANMparamfile:
             paramfile_noisemod = self.paramfile4noisemodcat[stelact_GP_noisemodel]
             cwd = os.getcwd()
-            os.chdir(self.model_instance.run_folder)
+            os.chdir(self.run_folder)
+            dico = {}
             with open(paramfile_noisemod) as f:
-                exec(f.read())
+                exec(f.read(), dico)
             os.chdir(cwd)
-            dico = locals().copy()
-            dico.pop("self")
-            dico.pop("f")
+            dico.pop('__builtins__')
             logger.debug(f"SANM parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:
@@ -932,7 +931,7 @@ class StellarActivityNoiseModelInterface(object):
             if inconsistency and (rep == "n"):
                 raise ValueError(f"The content of the stellar activity parameter file is not valid. Here is the list of detected errors: {error_list}")
             elif inconsistency and (rep == "y"):
-                self.create_SANM_param_file(paramfile_path=self.paramfile4noisemodcat[stelact_GP_noisemodel], answer_overwrite="y", answer_create=None)
+                self.create_SANM_param_file(paramfile_name=self.paramfile4noisemodcat[stelact_GP_noisemodel], answer_overwrite="y", answer_create=None)
                 input("Modify the SANM specific paramerisation file: {}".format(self.paramfile4noisemodcat[stelact_GP_noisemodel]))
 
     def __create_text_modelstelactname_4_instmodfullname(self, text_tab="", entete_symb=" = "):
