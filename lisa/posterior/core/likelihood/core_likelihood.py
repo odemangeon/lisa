@@ -405,7 +405,7 @@ class LikelihoodCreator(object):
         """
         ## Deal with the noise_model/likelihood
         # Get list of dataset objects required by datasim_doc_func
-        l_dataset_name = list(datasim_docfunc.dataset_names_list.values)
+        l_dataset_name = datasim_docfunc.dataset_names_list
         # l_dataset_name_noduplicate = list(set(l_dataset_name))
         l_dataset_obj = [self.dataset_db[dataset_name] for dataset_name in l_dataset_name]
         # l_dataset_obj_noduplicate = [self.dataset_db[dataset_name] for dataset_name in l_dataset_obj]

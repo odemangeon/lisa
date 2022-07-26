@@ -237,10 +237,9 @@ class Parameter(Named_Parameter, Parameter_Prior):
             obtain the good alignment in the input file.
         """
         if quote_name:
-            entete = "'{}'{}{{"
+            entete = f"'{self.get_name(recursive=False, include_prefix=False, code_version=False)}'{entete_symb}" + "{"
         else:
-            entete = "{}{}{{"
-        entete = entete.format(self.get_name(recursive=False, include_prefix=False, code_version=False), entete_symb)
+            entete = f"{self.get_name(recursive=False, include_prefix=False, code_version=False)}{entete_symb}" + "{"
         space_entete_param = spacestring_like(entete)
         text = ""
         # First is the name of the parameter
@@ -248,12 +247,11 @@ class Parameter(Named_Parameter, Parameter_Prior):
             text += text_tab
         text += entete
         # Duplicate key
-        text += "'duplicate': {},\n".format(self.duplicate)
+        text += f"'duplicate': {self.duplicate},\n"
         # Free key
-        text += text_tab + space_entete_param + "'free': {},\n".format(self.free)
+        text += text_tab + space_entete_param + f"'free': {self.free},\n"
         # Value key
-        text += text_tab + space_entete_param + "'value': {},  # unit: {}\n".format(self.value,
-                                                                                    self.unit)
+        text += text_tab + space_entete_param + f"'value': {self.value},  # unit: {self.unit}\n"
         # Finally the prior info
         text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
         return text

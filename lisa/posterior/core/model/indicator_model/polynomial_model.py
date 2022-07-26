@@ -224,20 +224,22 @@ class PolynomialIndicatorInterface(object):
             params_model = [param.full_name for param in function_builder.get_free_parameter_vector(function_shortname=func_shortname)]
             dico_param_nb = {nb: param for nb, param in enumerate(params_model)}
             if len(function_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-                mand_kwargs = str(function_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+                mand_kwargs = function_builder.get_l_mandatory_argument(function_shortname=func_shortname)
             else:
                 mand_kwargs = None
-            if len(function_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
-                opt_kwargs = str(function_builder.get_l_mandatory_argument(function_shortname=func_shortname))
+            if len(function_builder.get_d_optional_argument(function_shortname=func_shortname)) > 0:
+                opt_kwargs = function_builder.get_d_optional_argument(function_shortname=func_shortname)
             else:
                 opt_kwargs = None
             logger.debug(f"Parameters for {func_shortname} LC simulator function :\n{dico_param_nb}")
             dico_docf[func_shortname] = DatasimDocFunc(function=function_builder._get_ldict(function_shortname=func_shortname)[function_builder.get_function_fullname(shortname=func_shortname)],
-                                                       params_model=params_model,
-                                                       inst_cat=instcat_docf,
+                                                       param_model_names_list=params_model,
+                                                       params_model_vect_name=par_vec_name,
+                                                       inst_cats_list=instcat_docf,
+                                                       inst_model_fullnames_list=instmod_docf,
+                                                       dataset_names_list=dtsts_docf,
                                                        include_dataset_kwarg=get_times_from_datasets,
-                                                       mand_kwargs=mand_kwargs,
-                                                       opt_kwargs=opt_kwargs,
-                                                       inst_model_fullname=instmod_docf,
-                                                       dataset=dtsts_docf)
+                                                       mand_kwargs_list=mand_kwargs,
+                                                       opt_kwargs_dict=opt_kwargs,
+                                                       )
         return dico_docf

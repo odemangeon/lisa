@@ -53,7 +53,6 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     """
 
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
-    __kwargs_needed__ = ["data", "data_err"]
 
     ## list of keys (string) giving the dataset kwargs required for the computation of the likelihood
     # of the noise model.
@@ -156,7 +155,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
                 return [sim_data, ]
 
         def f_format_dataset_kwargs(dataset_kwargs):
-            return [{datasetkwarg: dataset.get_datasetkwarg(datasetkwarg) for datasetkwarg in l_datasetkwarg} for dataset, l_datasetkwarg in zip(l_dataset_obj, l_datasetkwargs_req)]
+            return [{datasetkwarg: dataset_kwargs[dataset.dataset_name][datasetkwarg] for datasetkwarg in l_datasetkwarg} for dataset, l_datasetkwarg in zip(l_dataset_obj, l_datasetkwargs_req)]
 
         return lnlike, f_format_param, f_format_simdata, f_format_dataset_kwargs, l_params_new
 

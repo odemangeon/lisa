@@ -207,28 +207,28 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
                 dico_inputs_allind[obj_key] = {"l_params": [],
                                                "l_allparams": [],
                                                "l_allmand_kwargs": [],
-                                               "l_allopt_kwargs": [],
+                                               "d_allopt_kwargs": {},
                                                "l_params_idx": [],
                                                "inst_fullcats": [],
                                                "l_inst_model_fullnames_res_datasim": [],
                                                "l_datasets_res_datasim": []
                                                }
                 # ... get the ordered list of instrument categories for this function
-                dico_inputs_allind[obj_key]["inst_fullcats"] = dico_inputs_allind[obj_key]["inst_fullcats"] + list(datsimC[ind_mod][obj_key].inst_cat)
+                dico_inputs_allind[obj_key]["inst_fullcats"] = dico_inputs_allind[obj_key]["inst_fullcats"] + datsimC[ind_mod][obj_key].inst_cats_list
                 # ... get the ordered list of instrument model full names for this function
                 dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] = dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] + list(datsimC[ind_mod][obj_key].inst_model_fullnames_list)
                 # ... get the ordered list of dataset names for this function
-                dico_inputs_allind[obj_key]["l_datasets_res_datasim"] = dico_inputs_allind[obj_key]["l_datasets_res_datasim"] + list(datsimC[ind_mod][obj_key].dataset)
+                dico_inputs_allind[obj_key]["l_datasets_res_datasim"] = dico_inputs_allind[obj_key]["l_datasets_res_datasim"] + datsimC[ind_mod][obj_key].dataset_names_list
                 # ... create the list of indexes for the function parameters and the list of all the
                 # model parameter for the all datasets function
                 idx_par = []
                 # For each parameter in the list of this function, ...
-                dico_inputs_allind[obj_key]["l_params"].append(datsimC[ind_mod][obj_key].params_model)
+                dico_inputs_allind[obj_key]["l_params"].append(datsimC[ind_mod][obj_key].param_model_names_list)
                 # WARNING/TODO: This two lines are a quick and very dirty way to pass the mand and opt kwargs to the __datasim_alldatasets_creator
                 # and after the DatasimDocFunc init because if several functions use the same kwargs, it will then appear several times
                 dico_inputs_allind[obj_key]["l_allmand_kwargs"].append(datsimC[ind_mod][obj_key].mand_kwargs_list)
-                dico_inputs_allind[obj_key]["l_allopt_kwargs"].append(datsimC[ind_mod][obj_key].opt_kwargs_list)
-                for par in datsimC[ind_mod][obj_key].params_model:
+                dico_inputs_allind[obj_key]["d_allopt_kwargs"].update(datsimC[ind_mod][obj_key].opt_kwargs_dict)
+                for par in datsimC[ind_mod][obj_key].param_model_names_list:
                     # ... if the param is not in the list of all parameters already, add it
                     if par not in dico_inputs_allind[obj_key]["l_allparams"]:
                         dico_inputs_allind[obj_key]["l_allparams"].append(par)
@@ -257,7 +257,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
                                        dico_inputs_allind[obj_key]["l_datasets_res_datasim"]))
                 dico_docf[obj_key] = self.__datasim_alldatasets_creator(l_datasim=[datsimC[ind_mod][obj_key] for ind_mod in l_indmod],
                                                                         l_params_idx=dico_inputs_allind[obj_key]["l_params"],
-                                                                        params_model=dico_inputs_allind[obj_key]["l_allparams"], mand_kwargs=str(dico_inputs_allind[obj_key]["l_allmand_kwargs"]), opt_kwargs=str(dico_inputs_allind[obj_key]["l_allopt_kwargs"]),
+                                                                        params_model=dico_inputs_allind[obj_key]["l_allparams"], mand_kwargs_list=dico_inputs_allind[obj_key]["l_allmand_kwargs"], opt_kwargs=dico_inputs_allind[obj_key]["l_allopt_kwargs"],
                                                                         instfull_cat=dico_inputs_allind[obj_key]["inst_fullcats"],
                                                                         inst_model_fullname=dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"],
                                                                         dataset=dico_inputs_allind[obj_key]["l_datasets_res_datasim"])

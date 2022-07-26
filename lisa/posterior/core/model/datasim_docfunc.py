@@ -211,17 +211,17 @@ class DatasimDocFunc(DocFunction):
     @property
     def inst_cats_list(self):
         """Return the Serie of instrument category used for the ouputs."""
-        return self.output_info[instcat_key]
+        return list(self.output_info[instcat_key].values)
 
     @property
     def inst_model_fullnames_list(self):
         """Return the Series of instrument model full names used for the ouputs."""
-        return self.output_info[instmodfullname_key]
+        return list(self.output_info[instmodfullname_key].values)
 
     @property
     def dataset_names_list(self):
         """Return the Serie of dataset names used for the ouputs."""
-        return self.output_info[dtst_key]
+        return list(self.output_info[dtst_key].values)
 
     @property
     def param_model_names_list(self):
