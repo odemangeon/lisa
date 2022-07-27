@@ -71,7 +71,7 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     __category__ = stelact_GP_noisemodel
     __has_GP__ = True
     __has_jitter__ = True
-    
+
     l_required_datasetkwarg_keys = ["data", "data_err", "time"]
 
     kernel_text = ("{amp}**2 * ExpSquaredKernel(metric={tau}) * "
@@ -500,9 +500,9 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
             function_builder.add_parameter(parameter=param, function_shortname=function_shortname, exist_ok=True)
             if param.free:
                 idx_param_noisemod = l_params_noisemod_new.index(param.full_name)
-                dico[param.get_name()] = f"{param_noisemod_name}[{idx_param_noisemod}]"
+                dico[param.get_name(force_no_duplicate=True)] = f"{param_noisemod_name}[{idx_param_noisemod}]"
             else:
-                dico[param.get_name()] = "{}".format(param.value)
+                dico[param.get_name(force_no_duplicate=True)] = "{}".format(param.value)
 
         ker = cls.kernel_text.format(amp=dico[get_stelact_GP_param_name(param_GP_name=amp, stelact_mod_name=stelact_mod_name)],
                                      tau=dico[get_stelact_GP_param_name(param_GP_name=tau, stelact_mod_name=stelact_mod_name)],
