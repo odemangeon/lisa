@@ -858,8 +858,8 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
     return returns
 
 
-def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets,
-                      dataset_db, RVcat_model, tab, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
+def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_datasets, dataset_db,
+                      RVcat_model, tab, time_vec_name, l_time_vec_name, function_builder, l_function_shortname,
                       ext_func_fullname):
     """Provide the text for the decorrelation of the RV model text (return).
 
@@ -962,12 +962,13 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
                     # List of the datasets associated with the instrument model
                     l_dataset_name_instmod = RVcat_model.get_l_datasetname(instmod_fullnames=instmod.full_name)
                     for model_part, config_decorr_instmod_modelpart in decorrelation_config[instmod.full_name]["what to decorrelate"].items():
-                        (returns[func_shortname][i_inputoutput][model_part]
-                         ) = RVcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
-                                                            l_dataset_name_instmod=l_dataset_name_instmod,
-                                                            dataset_db=dataset_db, decorrelation_config_instmod=config_decorr_instmod_modelpart,
-                                                            model_part=model_part, time_arg_name=time_arg_name,
-                                                            function_builder=function_builder, function_shortname=func_shortname)
+                        text_decorr = RVcat_model.create_text_decorr(multi=multi, inst_mod_obj=instmod, idx_inst_mod_obj=i_inputoutput,
+                                                                     l_dataset_name_instmod=l_dataset_name_instmod,
+                                                                     dataset_db=dataset_db, decorrelation_config_instmod=config_decorr_instmod_modelpart,
+                                                                     model_part=model_part, time_arg_name=time_arg_name,
+                                                                     function_builder=function_builder, function_shortname=func_shortname)
+                        if text_decorr != "":
+                            returns[func_shortname][i_inputoutput][model_part] = text_decorr
 
         ##########################################
         # Finalize the decorrelation only function
