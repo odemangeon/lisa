@@ -583,7 +583,7 @@ class IND_InstCat_Model(Core_InstCat_Model, PolynomialIndicatorInterface):
         """List of indicator model used.
         """
         ll = list(set(self.model_4_indicator.values()))
-        ll.sort()
+        # ll.sort()  # Cannot sort like that since a possible model is None. I Don't think that it really needs to be sorted anyway.
         return ll
 
     @property
