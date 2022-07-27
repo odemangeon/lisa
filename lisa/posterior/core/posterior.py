@@ -441,7 +441,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
 
                 # Create the gp_simulator function
                 # For that I need the list of the parameter full names for the datasimulator
-                l_datasim_param_fullname = model_allsameGPkernel.params_model
+                l_datasim_param_fullname = model_allsameGPkernel.param_model_names_list
                 gp_simulator, f_format_param, datasets_kwargs, l_params_new = noise_model_subclass.create_gpsimulator_and_formatinputs(model_instance=self.model, l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj, l_datasim_param_fullname=l_datasim_param_fullname, l_provided_param_fullname=l_param_name)
 
                 # Compute the simulated data

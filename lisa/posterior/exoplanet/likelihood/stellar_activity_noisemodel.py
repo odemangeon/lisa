@@ -30,7 +30,7 @@ from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseMode
 from ...core.dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.name import Name, Named
+from ....tools.function_from_text_toolbox import FunctionBuilder
 # from ....tools.function_w_doc import DocFunction
 
 
@@ -565,7 +565,8 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         return text_l_jitter, l_params_new, l_params_noisemod_new, l_idx_param_noisemod_new, l_jitter_paramname
 
     @classmethod
-    def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname, l_provided_param_fullname):
+    def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname,
+                                            l_provided_param_fullname):
         """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -603,7 +604,17 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         l_datasim_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        gp_simulator, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_gp_simulator(l_params=l_datasim_param_fullname, model_instance=model_instance, l_instmod_obj=l_instmod_obj)
+        func_builder = FunctionBuilder()
+        func_shortname = "gp_simulator"
+        parameters = [model_instance.get_parameter(name=param_fullname, notexist_ok=False, return_error=False,
+                                                   kwargs_get_list_params={'main': True, 'free': True, 'no_duplicate': True, 'recursive': True},
+                                                   kwargs_get_name={'recursive': True, 'include_prefix': True})
+                      for param_fullname in l_datasim_param_fullname]
+        func_builder.add_new_function(shortname=func_shortname, parameters=parameters,
+                                      mandatory_args=None, optional_args=None, full_function_name=None)
+        (gp_simulator, l_params_new, params_noisemod, l_idx_param_noisemod
+         ) = cls.get_gp_simulator(l_params=l_datasim_param_fullname, model_instance=model_instance,
+                                  l_instmod_obj=l_instmod_obj, function_builder=func_builder, function_shortname=func_shortname)
 
         l_idx_param_noisemod_in_all_param = [l_provided_param_fullname.index(param_noisemod_name_ii) for param_noisemod_name_ii in params_noisemod]
 
@@ -612,13 +623,13 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
 
         dataset_kwargs = []
         for dataset in l_dataset_obj:
-            dataset_kwargs.append(cls.get_necessary_datakwargs(dataset))
+            dataset_kwargs.append({datasetkwarg: dataset.get_datasetkwarg(datasetkwarg) for datasetkwarg in cls.l_required_datasetkwarg_keys})
 
         return gp_simulator, f_format_param, dataset_kwargs, l_params_new
 
     # TODO: Adapt to the possibility of several stellar activity noise model. I DON'T THINK THAT I NEED TO BECAUSE THIS IS ONLY FOR DISPLAY PRUPOSES AND I CAN ASK NOISE MODEL PAR NOISE MODEL
     @classmethod
-    def get_gp_simulator(cls, l_params, model_instance, l_instmod_obj):
+    def get_gp_simulator(cls, l_params, model_instance, l_instmod_obj, function_builder, function_shortname):
         """Return the simulated values with the GP at given simulated times.
 
         Arguments
@@ -654,14 +665,17 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
         (ker, l_params_new,
          l_params_noisemod,
          l_idx_param_noisemod) = cls.__get_text_define_GP(model_instance=model_instance, l_params=l_params_new,
-                                                          l_params_noisemod=[], l_idx_param_noisemod=[], stelact_mod_name=stelact_noisemodel_name)
+                                                          l_params_noisemod=[], l_idx_param_noisemod=[],
+                                                          stelact_mod_name=stelact_noisemodel_name,
+                                                          function_builder=function_builder, function_shortname=function_shortname)
         (text_l_jitter,
          l_params_new,
          l_params_noisemod,
          l_idx_param_noisemod,
          l_jitter_paramname) = cls.__get_text_l_jitter(l_instmod_obj=l_instmod_obj, l_params=l_params_new,
                                                        l_params_noisemod=l_params_noisemod,
-                                                       l_idx_param_noisemod=l_idx_param_noisemod)
+                                                       l_idx_param_noisemod=l_idx_param_noisemod,
+                                                       function_builder=function_builder, function_shortname=function_shortname)
         func = cls.gpsim_func_text.format(func_name=cls.gpsim_function_name, param_noisemod_name=param_noisemod_name, kernel=ker, text_l_jitter=text_l_jitter)
         ldict["defaultdict"] = defaultdict
         ldict["list"] = list
