@@ -65,14 +65,15 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 remove_decorrelation_likelihood=True, remove_GP_dataNmodel=True, remove_GP_residual=True,
                                 RV_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
-                                phase_binsize=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
+                                exptime_bin=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 one_binning_per_row=True,
                                 sharey=False,
                                 fig_param=None, pl_kwargs=None, show_legend=True, legend_param=None,
                                 show_datasetnames=True,
                                 show_system_name_in_suptitle=True,
                                 show_rms_residuals_in_suptitle=True,
-                                RV_unit="$km/s$", *args, **kwargs):
+                                RV_unit="$km/s$"
+                                ):
     """Produce clean RV phase folded plots of a system.
 
     WARNING/TODO: Because the plots are done independantly for each planet when sharey is True,
@@ -104,9 +105,11 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         If True the GP model is remove from the data for the plot.
     RV_fact       : float
         Factor to apply to the RV
-    phase_binsize : float
-        If phase_binsize is superior to 0. The the data will be binned (all dataset included) and display.
-        phase_binsize then gives the size of the bin used
+    exptime_bin : float
+        Width of the bins used for the binning the unit of this depends on the value of show_time_from_tic.
+        If show_time_from_tic is True, it's a time unit otherwise the unit is orbital phase.
+        If it's a time unit then the unit depend on the unit of the data after time_fact is applied.
+        For example if the time unit of the data is days and time_fact=24, the unit of exptime_bin is hours.
     binning_stat  : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
@@ -233,7 +236,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # Define the default values
     (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
      ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_nb_dstperinsts, datasetnames=datasetnames,
-                       bin_size=phase_binsize, bin_size_unit=" orb. phase", one_binning_per_row=one_binning_per_row,
+                       bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
                        nb_rows=nb_rows, alpha_def_data=1., color_def_data=None, show_error_data_def=True)
 
     #################################
@@ -310,12 +313,12 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 xlims = xlims_def
             x_min, x_max = xlims
 
-            # Compute the phase  or tume (x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
+            # Compute the phase or time (x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
             x_values = OrderedDict()
             x_min_data = np.inf
             x_max_data = -np.inf
             for datasetname in datasetnames4rowidx[i_row]:
-                phases_dst = (foldAt(dico_kwargs[datasetname]["t"], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
+                phases_dst = (foldAt(dico_kwargs[datasetname]['time'], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
                 x_values[datasetname] = phases_dst * Per * time_fact if show_time_from_tic else phases_dst
                 if np.min(x_values[datasetname]) < x_min_data:
                     x_min_data = np.min(x_values[datasetname])
@@ -330,10 +333,13 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     x_max_data = x_max
 
             # Define the bins
-            if phase_binsize > 0.:
-                bin_size = phase_binsize * Per * time_fact if show_time_from_tic else phase_binsize
-                bins = np.arange(x_min_data, x_max_data + bin_size, bin_size)
-                midbins = bins[:-1] + bin_size / 2
+            if exptime_bin > 0.:
+                bin_size_unit = f" {time_unit}" if show_time_from_tic else "orb. phase"
+                update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
+                                    bin_size_unit=bin_size_unit, one_binning_per_row=one_binning_per_row,
+                                    nb_rows=nb_rows)
+                bins = np.arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
+                midbins = bins[:-1] + exptime_bin / 2
                 nbins = len(bins) - 1
 
             # Define time for evaluating the plotting the model
@@ -359,7 +365,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         continue
                     else:
                         (model_pl_only, _, _, _
-                         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]["t"], dataset_name=datasetname,
+                         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]['time'], dataset_name=datasetname,
                                                          param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
                                                          key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs
                                                          )
@@ -447,12 +453,15 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         pl_kwarg_final[datasetnames]["model"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
                     # Compute the oversampled model to plot for the binned cadence
                     if show_binned_model:
+                        # Compute the exposure time for the binned model in the same unit than the data
+                        # Since exptime_bin unit depends on show_time_from_tic and time_fact
+                        exptime = exptime_bin / time_fact if show_time_from_tic else exptime_bin * Per
                         model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
                                                                           dataset_name=datasetname,
                                                                           param=df_fittedval["value"].values,
                                                                           l_param_name=list(df_fittedval.index),
                                                                           key_obj=f"{planet_name}",
-                                                                          supersamp=supersamp_bin_model, exptime=phase_binsize * Per,
+                                                                          supersamp=supersamp_bin_model, exptime=exptime,
                                                                           datasim_kwargs=datasim_kwargs)
                         # Add inst_var if needed
                         if not(remove_inst_var) and (datasetname in inst_vars):
@@ -461,7 +470,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                  param=df_fittedval["value"].values,
                                                                                  l_param_name=list(df_fittedval.index),
                                                                                  key_obj="inst_var",
-                                                                                 supersamp=supersamp_bin_model, exptime=phase_binsize * Per,
+                                                                                 supersamp=supersamp_bin_model, exptime=exptime,
                                                                                  datasim_kwargs=datasim_kwargs)
                             model2plot += model_instvar
                         # Add inst_var if needed
@@ -471,7 +480,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                     param=df_fittedval["value"].values,
                                                                                     l_param_name=list(df_fittedval.index),
                                                                                     key_obj="stellar_var",
-                                                                                    supersamp=supersamp_bin_model, exptime=phase_binsize * Per,
+                                                                                    supersamp=supersamp_bin_model, exptime=exptime,
                                                                                     datasim_kwargs=datasim_kwargs)
                             model2plot += model_stellarvar
                         # Add decorrelation if needed
@@ -480,7 +489,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                 param=df_fittedval["value"].values,
                                                                                 l_param_name=list(df_fittedval.index),
                                                                                 key_obj="decorr",
-                                                                                supersamp=supersamp_bin_model, exptime=phase_binsize * Per,
+                                                                                supersamp=supersamp_bin_model, exptime=exptime,
                                                                                 datasim_kwargs=datasim_kwargs)
                             for model_part in model_decorr:
                                 if model_part == "add_2_totalflux":
@@ -497,7 +506,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is False
                 ################################################################################
-                if not(one_binning_per_row) and (phase_binsize > 0.):
+                if not(one_binning_per_row) and (exptime_bin > 0.):
                     # Compute the binned values
                     (bindata, binedges, binnb
                      ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
@@ -547,7 +556,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             ################################################################################
             # Compute and Plot the binned data and residuals if one_binning_per_row is True
             ################################################################################
-            if one_binning_per_row and (phase_binsize > 0.):
+            if one_binning_per_row and (exptime_bin > 0.):
                 x_values_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                 # Compute the binned values
                 (bindata, binedges, binnb
@@ -667,279 +676,6 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             # Set the x axis limits
             axes_data[i_row][i_pl].set_xlim((x_min_data, x_max_data))
 
-        # ###############
-        # # Plot the data
-        # ###############
-        # data_pl = OrderedDict()
-        # for datasetname in datasetnames:
-        #     # The data to plot for a planet and an instrument are the raw data to which you substract
-        #     # the delta RV to the global reference (deltaRV[datasetname]) and then to which you substract the
-        #     # other planets contribution
-        #
-        #     # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
-        #     # and remove RV_drift
-        #     kwargs_dataset = dico_kwargs[datasetname].copy()
-        #     t_dst = kwargs_dataset.pop("t")
-        #     kwargs_dataset.pop("data")
-        #     kwargs_dataset.pop("data_err")
-        #     kwargs_dataset.update(datasim_kwargs.copy())
-        #
-        #     # Remove the DeltaRV to the global RV reference
-        #     data_pl[datasetname] = dico_kwargs[datasetname]["data"] - deltaRV[datasetname]
-        #
-        #     # Remove the systemic velocity (with drift when needed)
-        #     data_pl[datasetname] -= df_fittedval.loc[star.v0.full_name]["value"] * RV_fact
-        #     if star.with_RVdrift:
-        #         for orderm1 in range(star.RVdrift_order):
-        #             data_pl[datasetname] -= df_fittedval.loc[star.parameters[star.get_RVdrift_param_name(orderm1 + 1)].full_name]["value"] * RV_fact * (t_dst - datasim_kwargs[RVdrift_tref_name])**(orderm1 + 1)
-        #
-        #     print(f"RMS of the data of {datasetname} before GP model removal: {np.std(data_pl[datasetname])} {RV_unit}")
-        #     # Remove GP model
-        #     if remove_GP:
-        #         (model_dst, model_wGP_dst, GP_pred, GP_pred_var
-        #          ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
-        #                                          l_param_name=list(df_fittedval.index), key_obj=key_whole, datasim_kwargs=kwargs_dataset
-        #                                          )
-        #         # Apply RV_fact to models and GP
-        #         model_dst *= RV_fact
-        #         if model_wGP_dst is not None:
-        #             model_wGP_dst *= RV_fact
-        #             GP_pred *= RV_fact
-        #             GP_pred_var *= RV_fact**2
-        #             # Correct data from GP pred
-        #             data_pl[datasetname] -= GP_pred
-        #
-        #     print(f"RMS of the data of {datasetname} after GP model removal: {np.std(data_pl[datasetname])} {RV_unit}")
-        #
-        #     # Compute and remove the other planet contribution
-        #     for plnt in all_planets:
-        #         if plnt == planet_name:
-        #             continue
-        #         else:
-        #             (model_pl_only, _, _, _
-        #              ) = post_instance.compute_model(tsim=t_dst, dataset_name=datasetname, param=df_fittedval["value"],
-        #                                              l_param_name=list(df_fittedval.index), key_obj=f"{plnt}_only", datasim_kwargs=kwargs_dataset
-        #                                              )
-        #             # Apply RV_fact to models
-        #             model_pl_only *= RV_fact
-        #             data_pl[datasetname] = data_pl[datasetname] - model_pl_only
-        #
-        #     # Plot the data
-        #     if pl_show_error[datasetname]:
-        #         data_err = dico_kwargs[datasetname]["data_err"]
-        #     else:
-        #         data_err = None
-        #     ebcont, _, _ = et.plot_phase_folded_timeserie(t_data=dico_kwargs[datasetname]["t"],
-        #                                                   data=data_pl[datasetname],
-        #                                                   data_err=data_err,
-        #                                                   Per=Per, tref=tc,
-        #                                                   ax=ax_data_pl, pl_kwargs=pl_kwarg_final[datasetname],
-        #                                                   )
-        #     if not("ecolor" in pl_kwarg_jitter[datasetname]):
-        #         pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
-        #     if not("color" in pl_kwarg_final[datasetname]):
-        #         pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
-        #     if pl_show_error[datasetname]:
-        #         ebcont, _, _ = et.plot_phase_folded_timeserie(t_data=dico_kwargs[datasetname]["t"],
-        #                                                       data=data_pl[datasetname],
-        #                                                       data_err=data_err_jitter[datasetname],
-        #                                                       only_errorbar=True,
-        #                                                       Per=Per, tref=tc,
-        #                                                       ax=ax_data_pl,
-        #                                                       # pl_kwargs={'fmt': 'none', 'alpha': 0.25}
-        #                                                       pl_kwargs=pl_kwarg_jitter[datasetname],
-        #                                                       )
-        #
-        # # Set the y axis limits
-        # pad_data_default = (0.1, 0.1)
-        # if planet_name in fig_param.get("pad_data", {}):
-        #     pad_data = fig_param["pad_data"][planet_name]
-        # else:
-        #     pad_data_content = fig_param.get("pad_data", pad_data_default)
-        #     if isinstance(pad_data_content, dict):
-        #         pad_data = pad_data_default
-        #     else:
-        #         pad_data = pad_data_content
-        # et.auto_y_lims(np.concatenate([y for y in data_pl.values()]), ax_data_pl, pad=pad_data)
-        # # Indicate values that are off y-axis with anarrows
-        # if fig_param.get("indicate_y_outliers_data", True):
-        #     for datasetname in datasetnames:
-        #         et.indicate_y_outliers(x=phases[datasetname], y=data_pl[datasetname], ax=ax_data_pl, color=pl_kwarg_final[datasetname]["color"],
-        #                                alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-        #
-        # ################
-        # # Plot the model
-        # ################
-        # ebconts_lines_labels = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model, dataset_name=l_datasetname_RVrefglobal[0],
-        #                                      param=df_fittedval["value"], l_param_name=list(df_fittedval.index), post_instance=post_instance,
-        #                                      key_obj=f"{planet_name}_only", datasim_kwargs=kwargs_dataset,
-        #                                      multiplication_factor=RV_fact,
-        #                                      plot_phase=True, Per=Per, tref=tc,
-        #                                      pl_kwargs_model=pl_kwarg_final["model"], pl_kwargs_modelandGP=pl_kwarg_final["model"],
-        #                                      show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
-        #                                      ax=ax_data_pl)
-        # if not("color" in pl_kwarg_final["model"]):
-        #     pl_kwarg_final["model"]["color"] = ebconts_lines_labels["model"]["ebcont or line"][0].get_color()
-        #
-        # ####################
-        # # Plot the residuals
-        # ####################
-        # residual_pl = OrderedDict()
-        # residual_wGP_pl = OrderedDict()
-        # y_residuals_all = []
-        # for datasetname in datasetnames:
-        #     (_, _, _, _, _, residual_pl[datasetname], residual_wGP_pl[datasetname], ebconts_lines_labels
-        #      ) = et.plot_residuals(dataset_name=datasetname, param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-        #                            post_instance=post_instance, key_obj=key_whole, datasim_kwargs=kwargs_dataset,
-        #                            multiplication_factor=RV_fact,
-        #                            plot_phase=True, Per=Per, tref=tc,
-        #                            pl_kwargs_model=pl_kwarg_final[datasetname], show_model=not(remove_GP),
-        #                            show_error_model=pl_show_error[datasetname],
-        #                            pl_kwargs_modelandGP=pl_kwarg_final[datasetname], show_modelandGP=remove_GP,
-        #                            show_error_modelandGP=pl_show_error[datasetname],
-        #                            ax=ax_resi_pl)
-        #     if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
-        #         y_residuals_all.append(residual_pl[datasetname])
-        #     else:
-        #         y_residuals_all.append(residual_wGP_pl[datasetname])
-        # # Set the y axis limits
-        # y_residuals_all = np.concatenate(y_residuals_all)
-        # pad_resi_default = (0.1, 0.1)
-        # if planet_name in fig_param.get("pad_resi", {}):
-        #     pad_resi = fig_param["pad_resi"][planet_name]
-        # else:
-        #     pad_resi_content = fig_param.get("pad_resi", pad_data_default)
-        #     if isinstance(pad_resi_content, dict):
-        #         pad_resi = pad_resi_default
-        #     else:
-        #         pad_resi = pad_resi_content
-        # et.auto_y_lims(y_residuals_all, ax_resi_pl, pad=pad_resi)
-        # # Indicate values that are off y-axis with arrows
-        # # Also print the rms of the residuals
-        # if ii == 0:
-        #     rms_resi = []
-        #     rms_resi_label = []
-        #     rms_format = fig_param.get("rms_format", ".1e")
-        #     text_rms = f"{{:{rms_format}}}"
-        # for datasetname in datasetnames:
-        #     if fig_param.get("indicate_y_outliers_resi", True):
-        #         if (residual_wGP_pl[datasetname] is None) or not(remove_GP):
-        #             et.indicate_y_outliers(x=phases[datasetname], y=residual_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-        #         else:
-        #             et.indicate_y_outliers(x=phases[datasetname], y=residual_wGP_pl[datasetname], ax=ax_resi_pl, color=pl_kwarg_final[datasetname]["color"],
-        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-        #     if ii == 0:
-        #         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-        #         if residual_pl[datasetname] is not None:
-        #             rms_resi.append(text_rms.format(np.std(residual_pl[datasetname])))
-        #             if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-        #                 label_rms_resi_ii = pl_kwargs.get(datasetname, {}).get("label", filename_info["inst_name"])
-        #             else:
-        #                 label_rms_resi_ii = pl_kwargs.get(datasetname, {}).get("label", filename_info["inst_name"]) + "({})".format(filename_info["number"])
-        #             rms_resi_label.append(label_rms_resi_ii)
-        #             print(f"RMS of the residuals of {datasetname} before GP model removal: {rms_resi[-1]} {RV_unit}")
-        #         if residual_wGP_pl[datasetname] is not None:
-        #             rms_resi.append(text_rms.format(np.std(residual_wGP_pl[datasetname])))
-        #             if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-        #                 label_rms_resi_ii = f"{pl_kwargs.get(datasetname, {}).get('label', filename_info['inst_name'])}(GP)"
-        #             else:
-        #                 label_rms_resi_ii = f"{pl_kwargs.get(datasetname, {}).get('label', filename_info['inst_name'])}({filename_info['number']},GP)"
-        #             rms_resi_label.append(label_rms_resi_ii)
-        #             print(f"RMS of the residuals of {datasetname} after GP model removal: {rms_resi[-1]} {RV_unit}")
-        #
-        # if ii == 0:
-        #     if show_system_name_in_suptitle:
-        #         system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-        #         text_system_name = f"{system_name} system\n"
-        #     else:
-        #         text_system_name = ""
-        #     if show_rms_residuals_in_suptitle:
-        #         text_rms_resi = f"rms of the residuals = {', '.join(rms_resi)} {RV_unit} ({rms_resi_label})"
-        #     else:
-        #         text_rms_resi = ""
-        #     fig.suptitle(f"{text_system_name}{text_rms_resi}", fontsize=fontsize, **fig_param.get('suptitle_kwargs', {}))
-        #
-        # ##########################################
-        # # Bin the data and residuals and plot them
-        # ##########################################
-        # # Make array gathering all datasets
-        # # TODO: plot the binned model
-        # if phase_binsize > 0.:
-        #     all_phase = np.concatenate([phases[datasetname] for datasetname in datasetnames])
-        #     idx_sort_alldatasetphase = np.argsort(all_phase)
-        #     all_phase = all_phase[idx_sort_alldatasetphase]
-        #     all_data_pl = np.concatenate([data_pl[datasetname] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-        #     all_data_err = np.concatenate([dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-        #     all_data_err_jitter = np.concatenate([data_err_jitter[datasetname] if data_err_jitter[datasetname] is not None else dico_kwargs[datasetname]["data_err"] for datasetname in datasetnames])[idx_sort_alldatasetphase]
-        #     l_residuals_wGP_pl = [residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname] for datasetname in datasetnames]
-        #     all_residuals_pl = np.concatenate(l_residuals_wGP_pl)[idx_sort_alldatasetphase]
-        #     # Define the phase bins for the binned data/resi plot
-        #     bins = np.arange(-0.5, 0.5 + phase_binsize, phase_binsize)
-        #     midbins = bins[:-1] + phase_binsize / 2
-        #     # Bin the data and residuals
-        #     (binval, binedges, binnb
-        #      ) = binned_statistic(all_phase, all_data_pl, statistic=binning_stat, bins=bins, range=(0, 1))
-        #     (binval_resi, _, _
-        #      ) = binned_statistic(all_phase, all_residuals_pl, statistic=binning_stat, bins=bins, range=(0, 1))
-        #     # Compute the error bars on the binned data (and residuals)
-        #     nbins = len(bins) - 1
-        #     binstd = np.zeros(nbins)
-        #     binstd_jitter = np.zeros(nbins) if (data_err_jitter[datasetname] is not None) else None
-        #     bincount = np.zeros(nbins)
-        #     for i_bin in range(nbins):
-        #         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
-        #         if bincount[i_bin] > 0.0:
-        #             binstd[i_bin] = np.sqrt(np.sum(np.power(all_data_err[binnb == (i_bin + 1)], 2.)) /
-        #                                     bincount[i_bin]**2)
-        #             if data_err_jitter[datasetname] is not None:
-        #                 binstd_jitter[i_bin] = np.sqrt(np.sum(np.power(all_data_err_jitter[binnb == (i_bin + 1)], 2.)) /
-        #                                                bincount[i_bin]**2)
-        #         else:
-        #             binstd[i_bin] = np.nan
-        #             if data_err_jitter[datasetname] is not None:
-        #                 binstd_jitter[i_bin] = np.nan
-        #     # Plot the binned data
-        #     if pl_show_error["databinned"]:
-        #         bin_err = binstd
-        #     else:
-        #         bin_err = None
-        #     ebcont_binned = ax_data_pl.errorbar(midbins, binval, yerr=bin_err, **pl_kwarg_final["databinned"])
-        #     # I always print the data_jitter error bar even if they are identical to the normal error bars.
-        #     if not("color" in pl_kwarg_final["databinned"]):
-        #         pl_kwarg_final["databinned"]["color"] = ebcont_binned[0].get_color()
-        #     if not("ecolor" in pl_kwarg_final["binned_jitter"]):
-        #         pl_kwarg_final["binned_jitter"]["ecolor"] = pl_kwarg_final["databinned"]["color"]
-        #     if (binstd_jitter is not None) and pl_show_error["databinned"]:
-        #         ax_data_pl.errorbar(midbins, binval, yerr=binstd_jitter, **pl_kwarg_final["binned_jitter"])
-        #     # Indicate values that are off y-axis with arrows
-        #     et.indicate_y_outliers(x=midbins, y=binval, ax=ax_data_pl,
-        #                            color=pl_kwarg_final["databinned"]["color"],
-        #                            alpha=pl_kwarg_final["databinned"]["alpha"])
-        #     # Plot the binned residuals
-        #     ax_resi_pl.errorbar(midbins, binval_resi, yerr=bin_err, **pl_kwarg_final["databinned"])
-        #     if (binstd_jitter is not None) and pl_show_error["databinned"]:
-        #         ax_resi_pl.errorbar(midbins, binval_resi, yerr=binstd_jitter, **pl_kwarg_final["binned_jitter"])
-        #     # Indicate values that are off y-axis with arrows
-        #     et.indicate_y_outliers(x=midbins, y=binval_resi, ax=ax_resi_pl,
-        #                            color=pl_kwarg_final["databinned"]["color"],
-        #                            alpha=pl_kwarg_final["databinned"]["alpha"])
-        #     # Plot binned model  f"{planet_name}_only"
-        #     if show_binned_model:
-        #         ebconts_lines_labels_model = et.plot_model(tmin=tmin_model, tmax=tmax_model, nt=npt_model,
-        #                                                    dataset_name=datasetname, param=df_fittedval["value"],
-        #                                                    l_param_name=list(df_fittedval.index), post_instance=post_instance,
-        #                                                    key_obj=f"{planet_name}_only", datasim_kwargs=kwargs_dataset,
-        #                                                    multiplication_factor=RV_fact,
-        #                                                    supersamp=supersamp_bin_model, exptime=phase_binsize * Per,
-        #                                                    plot_phase=True, Per=Per, tref=tc,
-        #                                                    show_time_from_tref=False,
-        #                                                    pl_kwargs_model=pl_kwarg_final["modelbinned"], pl_kwargs_modelandGP=pl_kwarg_final["modelbinned"],
-        #                                                    show_modelandGP=not(remove_GP), force_plot_phase_GP=False,
-        #                                                    ax=ax_data_pl)
-        #         if not("color" in pl_kwarg_final["modelbinned"]):
-        #             pl_kwarg_final["modelbinned"]["color"] = ebconts_lines_labels_model["model"]["ebcont or line"][0].get_color()
-
     ###################
     # Finalise the plot
     ###################
@@ -960,7 +696,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             fig_param=None, TS_kwargs=None, GLSP_kwargs=None,
                             show_system_name_in_suptitle=True,
                             RV_fact=1., RV_unit="$km/s$",
-                            *args, **kwargs
                             ):
     """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
 
@@ -1605,177 +1340,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 ##########################
                 if (i_col == 0) and TS_kwargs.get('show_legend', True):
                     axe_data.legend(fontsize=fontsize, **TS_kwargs.get('legend_param', {}))
-
-        # ###############################
-        # # Create additional axe if zoom
-        # ###############################
-        # if TS_kwargs.get("t_lims_zoom", None) is not None:
-        #     gs_ts = GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_ts, **TS_kwargs.get('gridspec_kwargs', {}))  # wspace=0.2, width_ratios=(2, 1)
-        #     t_lims = [TS_kwargs.get("t_lims", None), TS_kwargs["t_lims_zoom"]]
-        # else:
-        #     gs_ts = [gs_ts, ]
-        #     t_lims = [TS_kwargs.get("t_lims", None), ]
-        #
-        # ##############################################
-        # # Set the arguments for the plotting functions
-        # ##############################################
-        # pl_kwarg_data = {"fmt": "."}
-        # pl_kwarg_model = {"linestyle": "-", "label": "model"}
-        #
-        # pl_kwargs = TS_kwargs.get('pl_kwargs', {})
-        # pl_kwarg_final = {}
-        # pl_kwarg_jitter = {}
-        # pl_show_error = {}
-        #
-        # pl_kwarg_final["model"] = deepcopy(pl_kwarg_model)
-        # pl_kwarg_final["model"].update(pl_kwargs.get("model", {}))
-        # pl_kwarg_final["GP"] = {}
-        # pl_kwarg_final["GP"].update(pl_kwargs.get("GP", {}))
-        #
-        # for datasetname in datasetnames:
-        #     # Set the labels
-        #     filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-        #     if dico_nb_dstperinst[filename_info["inst_name"]] == 1:
-        #         label_dst = filename_info["inst_name"]
-        #     else:
-        #         label_dst = filename_info["inst_name"] + "({})".format(filename_info["number"])
-        #     pl_kwarg_final[datasetname] = {"label": label_dst, }
-        #     pl_kwarg_final[datasetname].update(deepcopy(pl_kwarg_data))
-        #     # Update with the user's inputs
-        #     pl_kwarg_final[datasetname].update(pl_kwargs.get(datasetname, {}))
-        #     if "jitter" in pl_kwarg_final[datasetname]:
-        #         dico_jitter = pl_kwarg_final[datasetname].pop("jitter")
-        #     else:
-        #         dico_jitter = {}
-        #     dico_jitter["fmt"] = "none"  # To ensure that only the error bars are drawn
-        #     pl_kwarg_jitter[datasetname] = deepcopy(pl_kwarg_final[datasetname])
-        #     pl_kwarg_jitter[datasetname].update(dico_jitter)
-        #     pl_kwarg_jitter[datasetname].pop("label")  # To ensure that a second label doesn't appear on the legend
-        #     # default value for alpha jitter
-        #     if "alpha" not in dico_jitter:
-        #         if "alpha" in pl_kwarg_jitter[datasetname]:
-        #             pl_kwarg_jitter[datasetname]["alpha"] = pl_kwarg_jitter[datasetname]["alpha"] / 2
-        #         else:
-        #             pl_kwarg_jitter[datasetname]["alpha"] = 0.5
-        #     # default value for ecolor
-        #     if ("ecolor" not in pl_kwarg_jitter[datasetname]) and ("color" in pl_kwarg_jitter[datasetname]):
-        #         pl_kwarg_jitter[datasetname]["ecolor"] = pl_kwarg_jitter[datasetname]["color"]
-        #     pl_show_error[datasetname] = pl_kwarg_final[datasetname].pop("show_error") if "show_error" in pl_kwarg_final[datasetname] else True
-        #
-        # #############################################################
-        # # Make the RV and residuals plots (full and zoomed if needed)
-        # #############################################################
-        # show_title = TS_kwargs.get("show_title", True)
-        # for ii, (gs_ts_i, t_lims_i) in enumerate(zip(gs_ts, t_lims)):
-        #     # Create the data and red=siduals axes and set properties ans style
-        #     (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=TS_kwargs.get('axeswithsharex_kwargs', {}))  # gs_from_sps_kw={"wspace": 0.1}
-        #
-        #     if show_title:
-        #         axe_data.set_title("RV time series", fontsize=fontsize)
-        #     axe_resi.set_xlabel(f"time [{TS_kwargs.get('t_unit', 'days')}]", fontsize=fontsize)
-        #     if ii == 0:
-        #         axe_data.set_ylabel("RV [m/s]", fontsize=fontsize)
-        #         axe_resi.set_ylabel("residuals [m/s]", fontsize=fontsize)
-        #
-        #     axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
-        #     axe_data.xaxis.set_minor_locator(AutoMinorLocator())
-        #     axe_data.yaxis.set_minor_locator(AutoMinorLocator())
-        #     axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-        #     axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-        #     axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
-        #     axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
-        #     axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-        #     axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-        #
-        #     #####################################
-        #     # Plot the model and the GP if needed
-        #     #####################################
-        #     line_model = axe_data.plot(tsim, model, **pl_kwarg_final["model"])
-        #     if not("color" in pl_kwarg_final["model"]):
-        #         pl_kwarg_final["model"]["color"] = line_model[0].get_color()
-        #     if not("alpha" in pl_kwarg_final["model"]):
-        #         pl_kwarg_final["model"]["alpha"] = line_model[0].get_alpha()
-        #     if model_wGP is not None:
-        #         if not("color" in pl_kwarg_final["GP"]):
-        #             pl_kwarg_final["GP"]["color"] = pl_kwarg_final["model"]["color"]
-        #         if not("alpha" in pl_kwarg_final["GP"]):
-        #             pl_kwarg_final["GP"]["alpha"] = pl_kwarg_final["model"]["alpha"] / 2 if pl_kwarg_final["model"]["alpha"] is not None else 0.5
-        #         _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-        #                                   color=pl_kwarg_final["GP"]["color"], alpha=pl_kwarg_final["GP"]["alpha"],
-        #                                   label=pl_kwarg_final["GP"]["label"]  # **kwarg_GP_pred_var
-        #                                   )
-        #
-        #     ###############
-        #     # Plot the data
-        #     ###############
-        #     for datasetname in datasetnames:
-        #         if pl_show_error[datasetname]:
-        #             ebcont = axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-        #                                        yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname], zorder=10)  # Plot the data point and error bars without jitter
-        #             if not("ecolor" in pl_kwarg_jitter[datasetname]):
-        #                 pl_kwarg_jitter[datasetname]["ecolor"] = ebcont[0].get_color()
-        #             if not("color" in pl_kwarg_final[datasetname]):
-        #                 pl_kwarg_final[datasetname]["color"] = ebcont[0].get_color()
-        #             axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-        #                               yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname], zorder=1)  # Plot the error bars with jitter
-        #
-        #         else:
-        #             axe_data.errorbar(dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"], **pl_kwarg_final[datasetname])  # Plot the data point and error bars without jitter
-        #
-        #     # ylims = axe_data.get_ylim()
-        #     xlims = axe_data.get_xlim()
-        #     if remove_sysvel:
-        #         v0 = 0.
-        #     else:
-        #         v0 = df_fittedval.loc[star.v0.full_name]["value"]
-        #     axe_data.hlines(v0, *xlims, colors="k", linestyles="dashed")
-        #
-        #     # Set the y axis limits
-        #     pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
-        #     et.auto_y_lims(np.concatenate([dico_kwargs[dst]["data"] for dst in datasetnames]), axe_data,
-        #                    pad=pad_data)
-        #     # Indicate values that are off y-axis with anarrows
-        #     if TS_kwargs.get("indicate_y_outliers_data", True):
-        #         for datasetname in datasetnames:
-        #             et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=dico_kwargs[datasetname]["data"],
-        #                                    ax=axe_data, color=pl_kwarg_final[datasetname]["color"],
-        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-        #
-        #     ####################
-        #     # Plot the residuals
-        #     ####################
-        #     for datasetname in datasetnames:
-        #         if pl_show_error[datasetname]:
-        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=data_err_jitter[datasetname], **pl_kwarg_jitter[datasetname])  # Plot the error bars with jitter
-        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], yerr=dico_kwargs[datasetname]["data_err"], **pl_kwarg_final[datasetname])
-        #         else:
-        #             axe_resi.errorbar(dico_kwargs[datasetname]["t"], y=residuals[datasetname], **pl_kwarg_final[datasetname])
-        #     axe_resi.hlines(0, *xlims, colors="k", linestyles="dashed")
-        #
-        #     # Set the y axis limits
-        #     pad_resi = TS_kwargs.get("pad_resi", (0.1, 0.1))
-        #     et.auto_y_lims(np.concatenate([residuals[dst] for dst in datasetnames]), axe_resi,
-        #                    pad=pad_resi)
-        #     # Indicate values that are off y-axis with anarrows
-        #     if TS_kwargs.get("indicate_y_outliers_resi", True):
-        #         for datasetname in datasetnames:
-        #             et.indicate_y_outliers(x=dico_kwargs[datasetname]["t"], y=residuals[datasetname],
-        #                                    ax=axe_resi, color=pl_kwarg_final[datasetname]["color"],
-        #                                    alpha=pl_kwarg_final[datasetname].get("alpha", 1))
-        #
-        #     ############################
-        #     # Set the t_lims if provided
-        #     ############################
-        #     if t_lims_i is None:
-        #         axe_resi.set_xlim(xlims)
-        #     else:
-        #         axe_resi.set_xlim(t_lims_i)
-        #
-        #     ##########################
-        #     # Set the legend if needed
-        #     ##########################
-        #     if (ii == 0) and TS_kwargs.get('show_legend', True):
-        #         axe_data.legend(fontsize=fontsize, **TS_kwargs.get('legend_param', {}))
 
     #########
     # RV GLSP

@@ -359,13 +359,13 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
             # Define the bins
             if exptime_bin > 0.:
-                bin_size = exptime_bin if show_time_from_tic else exptime_bin / Per / time_fact
-                bin_size_unit = f" {time_unit}" if show_time_from_tic else ""
-                update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=bin_size,
+                # bin_size = exptime_bin if show_time_from_tic else exptime_bin / Per / time_fact
+                bin_size_unit = f" {time_unit}" if show_time_from_tic else "orb. phase"
+                update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
                                     bin_size_unit=bin_size_unit, one_binning_per_row=one_binning_per_row,
                                     nb_rows=nb_rows)
-                bins = np.arange(x_min_data, x_max_data + bin_size, bin_size)
-                midbins = bins[:-1] + bin_size / 2
+                bins = np.arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
+                midbins = bins[:-1] + exptime_bin / 2
                 nbins = len(bins) - 1
 
             # Define time for evaluating the plotting the model
@@ -660,90 +660,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         text_rms_to_plot += f"rms bin = {text_rms_binned[f'row{i_row}']} {LC_unit}"
                 axes_resi[i_row][i_pl].text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axes_resi[i_row][i_pl].transAxes)
 
-            # ##########################################
-            # # Bin the data and residuals and plot them
-            # ##########################################
-            # text_rms_binned = OrderedDict()
-            # if exptime_bin > 0.:
-            #     bin_size = exptime_bin * time_fact if show_time_from_tic else exptime_bin / Per
-            #     bins = {}
-            #     binval = {}
-            #     binval_resi = {}
-            #     binstd = {}
-            #     binstd_jitter = {}
-            #     binerr = {}
-            #     midbins = {}
-            #     for datasetname in datasetnames4rowidx[i_row]:
-            #         # define the bins, it's currently the same for all datasets, but I will want to be able to group datasets in the same plot in the future.
-            #         bins[datasetname] = np.arange(x_min_data, x_max_data + bin_size, bin_size)
-            #         midbins[datasetname] = bins[datasetname][:-1] + bin_size / 2
-            #         # Bin the data and residuals
-            #         # binval[datasetname] = {}
-            #         # binval_resi[datasetname] = {}
-            #         (binval[datasetname], binedges, binnb
-            #          ) = binned_statistic(x_values[datasetname], data_pl[datasetname],
-            #                               statistic=binning_stat, bins=bins[datasetname],
-            #                               range=(x_min_data, x_max_data))
-            #         # resi_pl_dst = residual_wGP_pl[datasetname] if (remove_GP and (residual_wGP_pl[datasetname] is not None)) else residual_pl[datasetname]
-            #         resi_pl_dst = residual_worwoGP_pl[datasetname]
-            #         (binval_resi[datasetname], _, _
-            #          ) = binned_statistic(x_values[datasetname], resi_pl_dst,
-            #                               statistic=binning_stat, bins=bins[datasetname],
-            #                               range=(x_min_data, x_max_data))
-            #         # Compute the error bars on the binned data (and residuals)
-            #         nbins = len(bins[datasetname]) - 1
-            #         binstd[datasetname] = np.zeros(nbins)
-            #         if has_jitter[datasetname]:
-            #             binstd_jitter[datasetname] = np.zeros(nbins)
-            #         bincount = np.zeros(nbins)
-            #         for i_bin in range(nbins):
-            #             bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
-            #             if bincount[i_bin] > 0.0:
-            #                 binstd[datasetname][i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
-            #                                                                       [binnb == (i_bin + 1)]),
-            #                                                                      2.)) /
-            #                                                      bincount[i_bin]**2)
-            #                 if has_jitter[datasetname]:
-            #                     binstd_jitter[datasetname][i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
-            #                                                                                  [binnb == (i_bin + 1)]),
-            #                                                                        2.)) /
-            #                                                                 bincount[i_bin]**2)
-            #
-            #             else:
-            #                 binstd[datasetname][i_bin] = np.nan
-            #                 if has_jitter[datasetname]:
-            #                     binstd_jitter[datasetname][i_bin] = np.nan
-            #         # Plot the binned data
-            #         if not(one_binning_per_row):
-            #             if pl_show_error[datasetname]["databinned"]:
-            #                 binerr[datasetname] = binstd[datasetname]
-            #                 binerr[datasetname] *= LC_fact
-            #             else:
-            #                 binerr[datasetname] = None
-            #             ebcont_binned = axes_data[i_row][jj].errorbar(midbins[datasetname], binval[datasetname], yerr=binerr[datasetname], **pl_kwarg_final[datasetname]["databinned"])
-            #             if not("color" in pl_kwarg_final[datasetname]["databinned"]):
-            #                 pl_kwarg_final[datasetname]["databinned"] = ebcont_binned[0].get_color()
-            #             if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
-            #                 pl_kwarg_jitter[datasetname]["databinned"]["ecolor"] = pl_kwarg_final[datasetname]["databinned"]
-            #             if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-            #                 ebcont_binned = axes_data[i_row][jj].errorbar(midbins[datasetname], binval[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
-            #             # Indicate values that are off y-axis with arrows
-            #             # et.indicate_y_outliers(x=midbins[datasetname], y=binval[datasetname], ax=axes_data[i_row][jj],
-            #             #                        color=pl_kwarg_final[datasetname]["databinned"]["color"],
-            #             #                        alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
-            #             # Plot the binned residuals
-            #             ebcont_binned = axes_resi[i_row][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binerr[datasetname], **pl_kwarg_final[datasetname]["databinned"])
-            #             if (binstd_jitter[datasetname] is not None) and pl_show_error[datasetname]["databinned"]:
-            #                 ebcont_binned = axes_resi[i_row][jj].errorbar(midbins[datasetname], binval_resi[datasetname], yerr=binstd_jitter[datasetname], **pl_kwarg_jitter[datasetname]["databinned"])
-            #             # Compute rms of the binned residuals
-            #             text_rms_binned_template = f"{{:{rms_format}}} (bin={exptime_bin * 24 * 60:.0f} min)"
-            #             text_rms_binned[datasetname] = text_rms_binned_template.format(np.nanstd(binval_resi[datasetname][np.logical_and(midbins[datasetname] > x_min_data, midbins[datasetname] < x_max_data)]))
-            #             print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {LC_unit}")
-            #         # Indicate values that are off y-axis with arrows
-            #         # et.indicate_y_outliers(x=midbins[datasetname], y=binval_resi[datasetname], ax=axes_resi[i_row][jj],
-            #         #                        color=pl_kwarg_final[datasetname]["databinned"]["color"],
-            #         #                        alpha=pl_kwarg_final[datasetname]["databinned"]["alpha"])
-
             # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
             default_ylims = None
             default_pad = (0.1, 0.1)
@@ -790,48 +706,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
             # Set the x axis limits
             axes_data[i_row][i_pl].set_xlim((x_min_data, x_max_data))
-
-            # # for binned points
-            # if exptime_bin > 0.:
-            #     for axe, data_or_resi, points, binned_points in zip((axes_data[i_row][jj], axes_resi[i_row][jj]),
-            #                                                         ("data", "resi"),
-            #                                                         (binval, binval_resi),
-            #                                                         ):
-            #         if one_binning_per_row:
-            #             # bin the points
-            #             bins = np.arange(x_min_data, x_max_data + bin_size, bin_size)
-            #             midbins = bins[:-1] + bin_size / 2
-            #             x_values_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
-            #             (binpoint_i_row, binedges_i_row, binnb_i_row
-            #              ) = binned_statistic(x_values_row, np.concatenate([points[datasetname] for dst in datasetnames4rowidx[i_row]]),
-            #                                   statistic=binning_stat, bins=bins,
-            #                                   range=(x_min_data, x_max_data))
-            #             # Compute the err on the binned points
-            #             binstd = np.zeros(nbins)
-            #             if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-            #                 binstd_jitter_i_row = np.zeros(nbins)
-            #             bincount_i_row = np.zeros(nbins)
-            #             for i_bin in range(nbins):
-            #                 bincount_i_row[i_bin] = len(np.where(binnb_i_row == (i_bin + 1))[0])
-            #                 if bincount[i_bin] > 0.0:
-            #                     binstd[i_bin] = np.sqrt(np.sum(np.power((dico_kwargs[datasetname]["data_err"]
-            #                                                              [binnb == (i_bin + 1)]),
-            #                                                             2.)) /
-            #                                             bincount[i_bin]**2)
-            #                     if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-            #                         binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitter[datasetname]
-            #                                                                         [binnb == (i_bin + 1)]),
-            #                                                                        2.)) /
-            #                                                        bincount[i_bin]**2)
-            #                 else:
-            #                     binstd[i_bin] = np.nan
-            #                     if any([has_jitter[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-            #                         binstd_jitter[i_bin] = np.nan
-            #         else:
-            #             for datasetname in datasetnames4rowidx[i_row]:
-            #                 et.indicate_y_outliers(x=midbins[datasetname], y=binval[datasetname], ax=axe,
-            #                                        color=pl_kwarg_final[datasetname]["data"]["color"],
-            #                                        alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
 
     ###################
     # Finalise the plot
