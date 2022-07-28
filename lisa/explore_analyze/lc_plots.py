@@ -228,7 +228,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     # star = post_instance.model.stars[star_name]
 
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, times, datas, data_errs, data_err_jitters, data_err_worwojitters,
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
      contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
@@ -343,7 +343,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
             x_min_data = np.inf
             x_max_data = -np.inf
             for datasetname in datasetnames4rowidx[i_row]:
-                phases_dst = (foldAt(dico_kwargs[datasetname]['time'], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
+                phases_dst = (foldAt(times[datasetname], Per, T0=(tc + Per * (phasefold_central_phase - 0.5))) + (phasefold_central_phase - 0.5))
                 x_values[datasetname] = phases_dst * Per * time_fact if show_time_from_tic else phases_dst
                 if np.min(x_values[datasetname]) < x_min_data:
                     x_min_data = np.min(x_values[datasetname])
@@ -391,7 +391,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         continue
                     else:
                         (model_pl_only, _, _, _
-                         ) = post_instance.compute_model(tsim=dico_kwargs[datasetname]['time'], dataset_name=datasetname,
+                         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
                                                          param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
                                                          key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs
                                                          )
@@ -923,7 +923,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat="LC", sortby_instcat=False, sortby_instname=False)
 
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+    (dico_datasets, dico_kwargs, dico_nb_dstperinsts, times, datas, data_errs, data_err_jitters, data_err_worwojitters,
      has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
      contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
@@ -1069,15 +1069,15 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
                 for datasetname in datasetnames4rowidx[i_row]:
                     if t_lims_i is None:
-                        lims_time_dst = [dico_kwargs[datasetname]['time'].min(), dico_kwargs[datasetname]['time'].max()]
+                        lims_time_dst = [times[datasetname].min(), times[datasetname].max()]
                     else:
                         lims_time_dst = t_lims_i
                     ###################
                     # Compute the models
                     ###################
                     npt_model = TS_kwargs.get("npt_model", 1000)
-                    tsim = np.linspace(np.min(dico_kwargs[datasetname]['time']) - TS_kwargs.get("extra_dt_model", 0.),
-                                       np.max(dico_kwargs[datasetname]['time']) + TS_kwargs.get("extra_dt_model", 0.),
+                    tsim = np.linspace(np.min(times[datasetname]) - TS_kwargs.get("extra_dt_model", 0.),
+                                       np.max(times[datasetname]) + TS_kwargs.get("extra_dt_model", 0.),
                                        npt_model)
                     # Full model
                     model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
@@ -1192,48 +1192,48 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     # Plot the data
                     ###############
                     if pl_show_error[datasetname]['data']:
-                        ebcont = axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                        ebcont = axe_data.errorbar(times[datasetname], y=datas[datasetname],
                                                    yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
                         if not("ecolor" in pl_kwarg_jitter[datasetname]):
                             pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                         if not("color" in pl_kwarg_final[datasetname]):
                             pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
                         if has_jitters[datasetname]:
-                            axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                            axe_data.errorbar(times[datasetname], y=datas[datasetname],
                                               yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
 
                     else:
-                        axe_data.errorbar(dico_kwargs[datasetname]['time'], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
+                        axe_data.errorbar(times[datasetname], y=datas[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)  # Plot the data point and error bars without jitter
 
                     ####################
                     # Plot the residuals
                     ####################
                     if pl_show_error[datasetname]['data']:
-                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
+                        axe_resi.errorbar(times[datasetname], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
                         if has_jitters[datasetname]:
-                            axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
+                            axe_resi.errorbar(times[datasetname], y=residuals[datasetname], yerr=data_err_jitters[datasetname], **pl_kwarg_jitter[datasetname]["data"], zorder=1)  # Plot the error bars with jitter
                     else:
-                        axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
+                        axe_resi.errorbar(times[datasetname], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"], zorder=10)
                     # Compute rms of the residuals and print it on the top of the residuals graphs
                     text_rms_template = f"{{:{rms_format}}}"
-                    text_rms[datasetname] = text_rms_template.format(np.std(residuals[datasetname][np.logical_and(dico_kwargs[datasetname]['time'] > lims_time_dst[0], dico_kwargs[datasetname]['time'] < lims_time_dst[1])]))
+                    text_rms[datasetname] = text_rms_template.format(np.std(residuals[datasetname][np.logical_and(times[datasetname] > lims_time_dst[0], times[datasetname] < lims_time_dst[1])]))
                     print(f"RMS {datasetname} = {text_rms[datasetname]} {LC_unit} (raw cadence)")
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
                     ################################################################################
                     if not(one_binning_per_row) and (exptime_bin > 0.):
-                        t_min_data, t_max_data = (min(dico_kwargs[datasetname]['time']), max(dico_kwargs[datasetname]['time']))
+                        t_min_data, t_max_data = (min(times[datasetname]), max(times[datasetname]))
                         bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                         midbins = bins[:-1] + exptime_bin / 2
                         nbins = len(bins) - 1
                         # Compute the binned values
                         (bindata, binedges, binnb
-                         ) = binned_statistic(dico_kwargs[datasetname]['time'], datas[datasetname],
+                         ) = binned_statistic(times[datasetname], datas[datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(t_min_data, t_max_data))
                         (binresi, binedges, binnb
-                         ) = binned_statistic(dico_kwargs[datasetname]['time'], residuals[datasetname],
+                         ) = binned_statistic(times[datasetname], residuals[datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(t_min_data, t_max_data))
                         # Compute the err on the binned values
@@ -1277,7 +1277,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
-                    t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
+                    t_row = np.concatenate([times[dst] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
                     if t_lims_i is None:
                         lims_time_row = [t_row.min(), t_row.max()]
@@ -1336,7 +1336,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
                 # Draw a horizontal line at the level of reference stellar flux level
                 xlims = axe_data.get_xlim()
-                reference_stellar_flux = 0 if remove_stellar_var else 1
+                reference_stellar_flux = 0 if remove_inst_var else 1
                 axe_data.hlines(reference_stellar_flux, *xlims, colors="k", linestyles="dashed")
 
                 # Adjust the y lims for the data plot
@@ -1353,7 +1353,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # y_lims can change after each dataset
                 if TS_kwargs.get("indicate_y_outliers_data", True):
                     for datasetname in datasetnames4rowidx[i_row]:
-                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=datas[datasetname],
+                        et.indicate_y_outliers(x=times[datasetname], y=datas[datasetname],
                                                ax=axe_data, color=pl_kwarg_final[datasetname]["data"].get("color", None),
                                                alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
@@ -1374,7 +1374,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 # y_lims can change after each dataset
                 if TS_kwargs.get("indicate_y_outliers_resi", True):
                     for datasetname in datasetnames:
-                        et.indicate_y_outliers(x=dico_kwargs[datasetname]['time'], y=residuals[datasetname],
+                        et.indicate_y_outliers(x=times[datasetname], y=residuals[datasetname],
                                                ax=axe_resi, color=pl_kwarg_final[datasetname]["data"].get("color", None),
                                                alpha=pl_kwarg_final[datasetname]["data"].get("alpha", 1))
 
@@ -1419,7 +1419,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     if GLSP_kwargs.get("do", True):
         # Create the all_time array which gathers the times from all datasets
         # WARNING:
-        all_time = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames])
+        all_time = np.concatenate([times[dst] for dst in datasetnames])
         idx_sort = np.argsort(all_time)
         all_time = all_time[idx_sort]
         all_data = np.concatenate([datas[dst] for dst in datasetnames])[idx_sort]
@@ -1434,7 +1434,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         all_gp_pred_var = []
         for dst in datasetnames:
             if dst in gp_preds:
-                all_time_gp.append(dico_kwargs[dst]['time'])
+                all_time_gp.append(times[dst])
                 all_gp_pred.append(gp_preds[dst])
                 all_gp_pred_var.append(gp_pred_vars[dst])
         if len(all_time_gp) > 0:
@@ -1447,7 +1447,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         all_inst_var = []
         for dst in datasetnames:
             if dst in inst_vars:
-                all_time_inst_var.append(dico_kwargs[dst]['time'])
+                all_time_inst_var.append(times[dst])
                 all_inst_var.append(inst_vars[dst])
         if len(all_time_inst_var) > 0:
             all_time_inst_var = np.concatenate(all_time_inst_var)
@@ -1464,7 +1464,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             all_decorrs[model_part] = []
                             all_time_decorrs[model_part] = []
                         all_decorrs[model_part].append(decorrs[dst][model_part])
-                        all_time_decorrs[model_part].append(dico_kwargs[dst]['time'])
+                        all_time_decorrs[model_part].append(times[dst])
                     else:
                         logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
             for model_part in all_decorrs:
@@ -1879,7 +1879,7 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
             dico_jitters[datasetname]["value"] *= LC_fact
             data_err_jitters[datasetname] *= LC_fact
 
-    return (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+    return (dico_datasets, dico_kwargs, dico_nb_dstperinsts, times, datas, data_errs, data_err_jitters, data_err_worwojitters,
             has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
             contams, residuals
             )
