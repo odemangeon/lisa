@@ -8,7 +8,7 @@ import matplotlib
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-from lisa.posterior.exoplanet.model.datasim_creator_rv import RVdrift_tref_name
+from lisa.posterior.exoplanet.model.gravgroup.datasim_creator_rv import RVdrift_tref_name
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.rv_plots import create_RV_TSNGLSP_plots
 
@@ -39,7 +39,7 @@ matplotlib.rcParams.update({
     'pgf.rcfonts': False})
 
 # Define the object name
-obj_name = "HD27969"
+obj_name = "HD207496"
 
 # Define dataset names to be loaded
 datasetnames = None  # [f'RV_{obj_name}_SOPHIEp_0', f'RV_{obj_name}_SOPHIE_0', f'RV_{obj_name}_ELODIE_0', ]  #
@@ -51,20 +51,20 @@ kwargs_datasim = {}
 run_folder = os.getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-load_from_pickle = True
 extension_analysis = "_initrun_median"
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
-logger.info("1. Load from pickle if necessary")
-if load_from_pickle:
+if "post_instance" not in globals():
+    logger.info("Loading post_instance from pickle")
     # recreate post_instance object
     post_instance = cpost.Posterior(object_name=obj_name)
     post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
-    l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].arg_list["param"]
 
+if "df_fittedval" not in globals():
+    logger.info("Loading df_fittedval from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                     folder=output_folders["pickles_analyze"])
 
@@ -72,20 +72,21 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
 
 create_RV_TSNGLSP_plots(fig=fig,
                         post_instance=post_instance, df_fittedval=df_fittedval, planets=planets,
-                        datasetnames=datasetnames,
-                        datasim_kwargs=kwargs_datasim,
+                        datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
+                        remove_inst_var=False, remove_stellar_var=True, remove_decorrelation=True,
+                        remove_decorrelation_likelihood=True, remove_GP_dataNmodel=True, remove_GP_residual=True,
                         fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
                                    # 'suptitle_kwargs': {"y": 0.99},
                                    },
                         TS_kwargs={"do": True,
-                                   "pl_kwargs": {f"RV_{obj_name}_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                                 f"RV_{obj_name}_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "SOPHIE"},
-                                                 f"RV_{obj_name}_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'alpha': 1., 'label': "ELODIE"},
-                                                 "model": {"color": "C2", "linewidth": 0.75},
+                                   "pl_kwargs": {# f"RV_{obj_name}_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                                                 # f"RV_{obj_name}_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "SOPHIE"},
+                                                 # f"RV_{obj_name}_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'alpha': 1., 'label': "ELODIE"},
+                                                 # "model": {"color": "C2", "linewidth": 0.75},
                                                  },
                                    "t_unit": "BJD - 2,400,000",
                                    # "t_lims_zoom": (58000, 59000),
-                                   # 'pad_data': (0.75, 0.1),
+                                   # 'pad_data': (0.5, 0.5),
                                    # "pad_resi": (0.1, -0.2),
                                    'axeswithsharex_kwargs': {"hspace": 0.1}
                                    },
@@ -105,16 +106,16 @@ create_RV_TSNGLSP_plots(fig=fig,
                                              10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
                                                   "text_kwargs": {"y_shift": -0.08}},
                                              },
-                                     'period_no_ticklabels': [100, 10],
-                                     'gridspec_kwargs': {"wspace": 0.05},
-                                     'axeswithsharex_kwargs': {"hspace": 0.1},
+                                     # 'period_no_ticklabels': [100, 10],
+                                     # 'gridspec_kwargs': {"wspace": 0.05},
+                                     # 'axeswithsharex_kwargs': {"hspace": 0.1},
                                      # 'legend_param': {'data': {'loc': 'upper center'},
                                      #                  'model': {'loc': 'upper center'},
                                      #                  'resi': {'loc': 'upper center'},
                                      #                  'WF': {'loc': 'upper center'},
                                      #                  },
                                      },
-                        show_system_name_in_suptitle=False,
+                        show_system_name_in_suptitle=True,
                         RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                         RV_unit="m/s",
                         )

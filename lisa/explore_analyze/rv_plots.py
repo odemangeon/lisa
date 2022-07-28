@@ -62,7 +62,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 datasetnames=None, row4datasetname=None,
                                 plot_model_for_all_datasets=False, datasetnameformodel4row=None, npt_model=1000,
                                 remove_inst_var=True, remove_stellar_var=True, remove_decorrelation=True,
-                                remove_GP_dataNmodel=True, remove_GP_residual=True, RV_fact=1.,
+                                remove_decorrelation_likelihood=True, remove_GP_dataNmodel=True, remove_GP_residual=True,
+                                RV_fact=1.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
                                 phase_binsize=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 one_binning_per_row=True,
@@ -200,7 +201,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs,
+     decorr_likelihoods, residuals
      ) = load_datasets_and_models_RV(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, RV_fact=RV_fact, remove_inst_var=remove_inst_var,
                                      remove_stellar_var=remove_stellar_var, remove_decorrelation=remove_decorrelation,
@@ -1116,42 +1118,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         fig_param = {}
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
-    # Do the suptitle
-    suptitle_text = ""
-    if show_system_name_in_suptitle:
-        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-        suptitle_text = f"{system_name} system"
-    removed_from_model_text = ""
-    for compo, removed in zip(["Stellar var", "Inst var", "Decorrelation", ],
-                              [remove_stellar_var, remove_inst_var, remove_decorrelation, ]):
-        if removed:
-            if removed_from_model_text != "":
-                removed_from_model_text += ", "
-            removed_from_model_text += compo
-    if removed_from_model_text != "":
-        removed_from_model_text += " removed from model"
-    if removed_from_model_text != "":
-        if suptitle_text != "":
-            suptitle_text += f"\n{removed_from_model_text}"
-        else:
-            suptitle_text = removed_from_model_text
-    removed_from_data_text = ""
-    for compo, removed in zip(["Stellar var", "Inst var", "Decorrelation", "Decorrelation Likelihood", ],
-                              [remove_stellar_var, remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, ]):
-        if removed:
-            if removed_from_data_text != "":
-                removed_from_data_text += ", "
-            removed_from_data_text += compo
-    if removed_from_data_text != "":
-        removed_from_data_text += " removed from data"
-    if removed_from_data_text != "":
-        if suptitle_text != "":
-            suptitle_text += f"\n{removed_from_data_text}"
-        else:
-            suptitle_text = removed_from_data_text
-    if suptitle_text != "":
-        fig.suptitle(suptitle_text, fontsize=fontsize)
-
     # Make sure that the TS_kwargs and GLSP_kwargs are dictionaries
     TS_kwargs = {} if TS_kwargs is None else TS_kwargs
     GLSP_kwargs = {} if GLSP_kwargs is None else GLSP_kwargs
@@ -1172,124 +1138,53 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs,
+     decorr_likelihoods, residuals
      ) = load_datasets_and_models_RV(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, RV_fact=RV_fact, remove_inst_var=remove_inst_var,
                                      remove_stellar_var=remove_stellar_var, remove_decorrelation=remove_decorrelation,
                                      remove_decorrelation_likelihood=remove_decorrelation_likelihood,
                                      remove_GP_dataNmodel=remove_GP_dataNmodel, remove_GP_residual=remove_GP_residual)
-    # dico_dataset = {}
-    # dico_kwargs = {}
-    # dico_nb_dstperinst = defaultdict(lambda: 0)
-    # data_err_jitter = OrderedDict()
-    # dico_jitter = {}
-    # deltaRV = OrderedDict()
-    # residuals = {}
-    # for datasetname in datasetnames:
-    #     ##########################################
-    #     # Load Data and instrument and noise model
-    #     ##########################################
-    #     dico_dataset[datasetname] = post_instance.dataset_db[datasetname]
-    #     dico_kwargs[datasetname] = dico_dataset[datasetname].get_kwargs()
-    #     filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-    #     inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
-    #     inst_mod = post_instance.model.instruments[inst_mod_fullname]
-    #     noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-    #     dico_nb_dstperinst[filename_info["inst_name"]] += 1
-    #
-    #     ##############################################
-    #     # Apply the jitter to the data error if needed
-    #     ##############################################
-    #     dico_jitter[datasetname] = {}
-    #     data_err_jitter[datasetname] = dico_kwargs[datasetname]["data_err"].copy()
-    #     if noise_model.has_jitter:
-    #         dico_jitter[datasetname]["type"] = noise_model.jitter_type
-    #         if inst_mod.jitter.free:
-    #             dico_jitter[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
-    #         else:
-    #             dico_jitter[datasetname]["value"] = inst_mod.jitter.value
-    #         if dico_jitter[datasetname]["type"] == "multi":
-    #             data_err_jitter[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-    #         elif dico_jitter[datasetname]["type"] == "add":
-    #             data_err_jitter[datasetname] = np.sqrt(apply_jitter_add(data_err_jitter[datasetname], dico_jitter[datasetname]["value"]))
-    #         else:
-    #             raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
-    #     else:
-    #         dico_jitter[datasetname]["type"] = None
-    #         dico_jitter[datasetname]["value"] = None
-    #         data_err_jitter[datasetname] = None
-    #
-    #     ##################################################################
-    #     # Compute and remove the deltaRV to apply to the remove to the data and model
-    #     ##################################################################
-    #     # For each dataset
-    #     RVref4inst_modname = post_instance.model.instcat_models["RV"].RV_references[filename_info["inst_name"]]
-    #     deltaRV[datasetname] = 0.0
-    #     # If the current instrument is not the instrument of the global reference:
-    #     # Add to Delta_RV the values of delta RV of the current instrument model reference to the global reference.
-    #     if filename_info['inst_name'] != RVrefglobal_instname:
-    #         instmod_RVref4inst = post_instance.model.instruments["RV"][filename_info['inst_name']][RVref4inst_modname]
-    #         if instmod_RVref4inst.DeltaRV.main:
-    #             if instmod_RVref4inst.DeltaRV.free:
-    #                 deltaRV[datasetname] += df_fittedval.loc[instmod_RVref4inst.DeltaRV.full_name]["value"]
-    #             else:
-    #                 deltaRV[datasetname] += instmod_RVref4inst.DeltaRV.value
-    #     # If the current instrument model is not the reference instrument model for the instrument:
-    #     # Add to Delta_RV the values of delta RV of the current instrument model to the current instrument model reference.
-    #     if inst_mod.get_name() != RVref4inst_modname:
-    #         if inst_mod.DeltaRV.main:
-    #             if inst_mod.DeltaRV.free:
-    #                 deltaRV[datasetname] += df_fittedval.loc[inst_mod.DeltaRV.full_name]["value"]
-    #             else:
-    #                 deltaRV[datasetname] += inst_mod.DeltaRV.value
-    #
-    #     #######################
-    #     # Compute the residuals
-    #     #######################
-    #     # Compute the model for the dataset
-    #     model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=dico_kwargs[datasetname]['t'],
-    #                                                                          dataset_name=datasetname,
-    #                                                                          param=df_fittedval["value"].values,
-    #                                                                          l_param_name=list(df_fittedval.index),
-    #                                                                          key_obj=key_whole,
-    #                                                                          datasim_kwargs=datasim_kwargs)
-    #     # Compute the residuals
-    #     if model_wGP is not None:
-    #         residuals[datasetname] = dico_kwargs[datasetname]["data"] - model_wGP
-    #     else:
-    #         residuals[datasetname] = dico_kwargs[datasetname]["data"] - model
-    #
-    #     ################################################################################
-    #     # Remove the systemic velocity, delta_RV and apply RV_fact when and where needed
-    #     ################################################################################
-    #     # Remove the systemic velocity
-    #     if remove_sysvel:
-    #         dico_kwargs[datasetname]["data"] -= df_fittedval.loc[star.v0.full_name]["value"]
-    #     # Remove the deltaRV
-    #     dico_kwargs[datasetname]["data"] -= deltaRV[datasetname]
-    #     # apply the RV fact to RV and RV_err
-    #     dico_kwargs[datasetname]["data"] *= RV_fact
-    #     dico_kwargs[datasetname]["data_err"] *= RV_fact
-    #     dico_jitter[datasetname]["value"] *= RV_fact
-    #     data_err_jitter[datasetname] *= RV_fact
-    #     deltaRV[datasetname] *= RV_fact
-    #     residuals[datasetname] *= RV_fact
-    #
-    # # Create the all_time array which gathers the times from all datasets
-    # all_time = np.concatenate([dico_kwargs[dst]["t"] for dst in datasetnames])
-    # idx_sort = np.argsort(all_time)
-    # all_time = all_time[idx_sort]
-    # tmin = all_time[0]
-    # tmax = all_time[-1]
-    # # tspan = tmax - tmin
-    # all_resi = np.concatenate([residuals[dst] for dst in datasetnames])
 
-    ## Get the list of dataset names using the global RV reference to use for the functions computing the model
-    # inst_RVclass = mgr_inst_dst.get_inst_subclass("RV")
-    # RVrefglobal_instname = post_instance.model.instcat_models["RV"].RV_references["global"]
-    # RVrefglobal_modname = post_instance.model.instcat_models["RV"].RV_references[RVrefglobal_instname]
-    # RVrefglobal_instmod_fullname = inst_RVclass.build_instmod_fullname(inst_model=RVrefglobal_modname, inst_name=RVrefglobal_instname, inst_fullcat="RV")
-    # l_datasetname_RVrefglobal = post_instance.model.get_ldatasetname4instmodfullname(instmod_fullname=RVrefglobal_instmod_fullname)
+    # Do the suptitle
+    suptitle_text = ""
+    if show_system_name_in_suptitle:
+        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
+        suptitle_text = f"{system_name} system"
+    removed_from_model_text = ""
+    for compo, asked2removed, compo_models in zip(["Stellar var", "Inst var", "Decorrelation", "GP"],
+                                                  [remove_stellar_var, remove_inst_var, remove_decorrelation, remove_GP_dataNmodel],
+                                                  [stellar_vars, inst_vars, decorrs, gp_preds],
+                                                  ):
+        if asked2removed and len(compo_models) > 0:
+            if removed_from_model_text != "":
+                removed_from_model_text += ", "
+            removed_from_model_text += compo
+    if removed_from_model_text != "":
+        removed_from_model_text += " removed from model"
+    if removed_from_model_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_model_text}"
+        else:
+            suptitle_text = removed_from_model_text
+    removed_from_data_text = ""
+    for compo, asked2removed, compo_models in zip(["Stellar var", "Inst var", "Decorrelation", "Decorrelation Likelihood", "GP"],
+                                                  [remove_stellar_var, remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, remove_GP_dataNmodel],
+                                                  [stellar_vars, inst_vars, decorrs, decorr_likelihoods, gp_preds],
+                                                  ):
+        if asked2removed and len(compo_models) > 0:
+            if removed_from_data_text != "":
+                removed_from_data_text += ", "
+            removed_from_data_text += compo
+    if removed_from_data_text != "":
+        removed_from_data_text += " removed from data"
+    if removed_from_data_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_data_text}"
+        else:
+            suptitle_text = removed_from_data_text
+    if suptitle_text != "":
+        fig.suptitle(suptitle_text, fontsize=fontsize)
 
     ################
     # RV TIME SERIES
@@ -1434,15 +1329,26 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
                     # Remove the stellar_var if required
-                    if (datasetname in stellar_vars) and remove_stellar_var:
-                        model -= model_stellarvar
-                        if model_wGP is not None:
-                            model_wGP -= model_stellarvar
+                    if datasetname in stellar_vars:
+                        if remove_stellar_var:
+                            model -= model_stellarvar
+                            if model_wGP is not None:
+                                model_wGP -= model_stellarvar
+                        else:
+                            if model_wGP is not None:
+                                gp_pred += model_stellarvar
+                                pl_kwarg_final[datasetname]["GP"]['label'] += " + stellar"
+
                     # Remove the inst_var if required
-                    if (datasetname in inst_vars) and remove_inst_var:
-                        model -= model_instvar
-                        if model_wGP is not None:
-                            model_wGP -= model_instvar
+                    if datasetname in inst_vars:
+                        if remove_inst_var:
+                            model -= model_instvar
+                            if model_wGP is not None:
+                                model_wGP -= model_instvar
+                        else:
+                            if model_wGP is not None:
+                                gp_pred += model_instvar
+                                pl_kwarg_final[datasetname]["GP"]['label'] += " + inst."
 
                     # Multiply by LC fact
                     model *= RV_fact
@@ -1473,16 +1379,26 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             pl_kwarg_final[datasetname]["GP"]["color"] = pl_kwarg_final[datasetname]["model"]["color"]
                         if not("alpha" in pl_kwarg_final[datasetname]["GP"]):
                             pl_kwarg_final[datasetname]["GP"]["alpha"] = pl_kwarg_final[datasetname]["model"]["alpha"] / 2
-                        _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                                  color=pl_kwarg_final[datasetname]["GP"]["color"], alpha=pl_kwarg_final[datasetname]["GP"]["alpha"],
-                                                  label=pl_kwarg_final[datasetname]["GP"]["label"],  # **kwarg_GP_pred_var
-                                                  zorder=0
-                                                  )
+                        if not(remove_GP_dataNmodel):
+                            pl_kwarg_final[datasetname]["GP"].pop("label")
+                            _ = axe_data.errorbar(tsim, model_wGP, **pl_kwarg_final[datasetname]["modelwGP"], zorder=20)
+                            _ = axe_data.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+                                                      **pl_kwarg_final[datasetname]["GP"],
+                                                      # color=pl_kwarg_final[datasetname]["GP"]["color"], alpha=pl_kwarg_final[datasetname]["GP"]["alpha"],
+                                                      # label=pl_kwarg_final[datasetname]["GP"]["label"],  # **kwarg_GP_pred_var
+                                                      zorder=0
+                                                      )
+                        else:
+                            _ = axe_data.errorbar(tsim, gp_pred, **pl_kwarg_final[datasetname]["GP"], zorder=20)
+                            pl_kwarg_final[datasetname]["GP"].pop("label")
+                            _ = axe_data.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
+                                                      **pl_kwarg_final[datasetname]["GP"], zorder=0
+                                                      )
 
                     #############################
                     # Plot the inst_var if needed
                     #############################
-                    if (datasetname in inst_vars) and not(remove_inst_var):
+                    if (datasetname in stellar_vars) and not(remove_stellar_var):
                         _ = axe_data.plot(tsim, model_stellarvar, **pl_kwarg_final[datasetname]["stellar_var"])
 
                     #############################
@@ -1641,7 +1557,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 ylims_data = TS_kwargs.get("ylims_data", None)
                 if ylims_data is None:
                     pad_data = TS_kwargs.get("pad_data", (0.1, 0.1))
-                    et.auto_y_lims(np.concatenate([datas[dst] for dst in datasetnames]), axe_data,
+                    et.auto_y_lims(np.concatenate([datas[dst] for dst in datasetnames4rowidx[i_row]]), axe_data,
                                    pad=pad_data)
                 else:
                     axe_data.set_ylim(ylims_data)
@@ -2289,4 +2205,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
             dico_jitters[datasetname]["value"] *= RV_fact
             data_err_jitters[datasetname] *= RV_fact
 
-    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters, has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs, residuals
+    return (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+            has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, stellar_vars, decorrs,
+            decorr_likelihoods, residuals
+            )

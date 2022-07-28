@@ -229,7 +229,8 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
+     contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
                                      remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
@@ -1029,42 +1030,6 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         fig_param = {}
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
-    # Do the suptitle
-    suptitle_text = ""
-    if show_system_name_in_suptitle:
-        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
-        suptitle_text = f"{system_name} system"
-    removed_from_model_text = ""
-    for compo, removed in zip(["Inst var", "Decorrelation", "Contamination"],
-                              [remove_inst_var, remove_decorrelation, remove_contamination]):
-        if removed:
-            if removed_from_model_text != "":
-                removed_from_model_text += ", "
-            removed_from_model_text += compo
-    if removed_from_model_text != "":
-        removed_from_model_text += " removed from model"
-    if removed_from_model_text != "":
-        if suptitle_text != "":
-            suptitle_text += f"\n{removed_from_model_text}"
-        else:
-            suptitle_text = removed_from_model_text
-    removed_from_data_text = ""
-    for compo, removed in zip(["Inst var", "Decorrelation", "Decorrelation Likelihood", "Contamination"],
-                              [remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, remove_contamination]):
-        if removed:
-            if removed_from_data_text != "":
-                removed_from_data_text += ", "
-            removed_from_data_text += compo
-    if removed_from_data_text != "":
-        removed_from_data_text += " removed from data"
-    if removed_from_data_text != "":
-        if suptitle_text != "":
-            suptitle_text += f"\n{removed_from_data_text}"
-        else:
-            suptitle_text = removed_from_data_text
-    if suptitle_text != "":
-        fig.suptitle(suptitle_text, fontsize=fontsize)
-
     # Make sure that the TS_kwargs and GLSP_kwargs are dictionaries
     TS_kwargs = {} if TS_kwargs is None else TS_kwargs
     GLSP_kwargs = {} if GLSP_kwargs is None else GLSP_kwargs
@@ -1085,11 +1050,52 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
-     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
+     has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
+     contams, residuals
      ) = load_datasets_and_models_LC(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
                                      df_fittedval=df_fittedval, remove1=remove1, LC_fact=LC_fact, remove_inst_var=remove_inst_var,
                                      remove_decorrelation=remove_decorrelation, remove_decorrelation_likelihood=remove_decorrelation_likelihood,
                                      remove_contamination=remove_contamination, remove_GP_dataNmodel=False, remove_GP_residual=False)
+
+    # Do the suptitle
+    suptitle_text = ""
+    if show_system_name_in_suptitle:
+        system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
+        suptitle_text = f"{system_name} system"
+    removed_from_model_text = ""
+    for compo, asked2removed, compo_models in zip(["Inst var", "Decorrelation", "Contamination"],
+                                                  [remove_inst_var, remove_decorrelation, remove_contamination],
+                                                  [inst_vars, decorrs, contams],
+                                                  ):
+        if asked2removed and len(compo_models) > 0:
+            if removed_from_model_text != "":
+                removed_from_model_text += ", "
+            removed_from_model_text += compo
+    if removed_from_model_text != "":
+        removed_from_model_text += " removed from model"
+    if removed_from_model_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_model_text}"
+        else:
+            suptitle_text = removed_from_model_text
+    removed_from_data_text = ""
+    for compo, asked2removed, compo_models in zip(["Inst var", "Decorrelation", "Decorrelation Likelihood", "Contamination"],
+                                                  [remove_inst_var, remove_decorrelation, remove_decorrelation_likelihood, remove_contamination],
+                                                  [inst_vars, decorrs, decorr_likelihoods, contams],
+                                                  ):
+        if asked2removed and len(compo_models) > 0:
+            if removed_from_data_text != "":
+                removed_from_data_text += ", "
+            removed_from_data_text += compo
+    if removed_from_data_text != "":
+        removed_from_data_text += " removed from data"
+    if removed_from_data_text != "":
+        if suptitle_text != "":
+            suptitle_text += f"\n{removed_from_data_text}"
+        else:
+            suptitle_text = removed_from_data_text
+    if suptitle_text != "":
+        fig.suptitle(suptitle_text, fontsize=fontsize)
 
     ################
     # LC TIME SERIES
@@ -1999,7 +2005,10 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
             dico_jitters[datasetname]["value"] *= LC_fact
             data_err_jitters[datasetname] *= LC_fact
 
-    return dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters, has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, contams, residuals
+    return (dico_datasets, dico_kwargs, dico_nb_dstperinsts, datas, data_errs, data_err_jitters, data_err_worwojitters,
+            has_jitters, dico_jitters, models, gp_preds, gp_pred_vars, inst_vars, decorrs, decorr_likelihoods,
+            contams, residuals
+            )
 
 
 def check_row4datasetname(row4datasetname, datasetnames):
@@ -2033,8 +2042,10 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model"}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1.}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP"}
+    pl_kwarg_modelwGP_def = {"color": "C0", "linestyle": "-", "label": "model + GP"}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst."}
-    pl_kwarg_decorr_def = {"color": "C2", "linestyle": "-", "label": "decorr."}
+    pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar"}
+    pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr."}
     show_error_data = show_error_data_def
     show_error_databinned = True
 
@@ -2056,11 +2067,17 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
                                        "data": {"label": label_dst, },
                                        "databinned": {},  # "label": f"{label_dst}: bin={bin_size}{bin_size_unit}",
                                        "GP": deepcopy(pl_kwarg_GP_def),
+                                       "modelwGP": deepcopy(pl_kwarg_modelwGP_def),
                                        "inst_var": deepcopy(pl_kwarg_instvar_def),
+                                       "stellar_var": deepcopy(pl_kwarg_stellarvar_def),
                                        "decorr": deepcopy(pl_kwarg_decorr_def),
                                        }
         pl_kwarg_jitter[datasetname] = {}
         pl_show_error[datasetname] = {"data": show_error_data, "databinned": show_error_databinned}
+        for key in ["model", "modelbinned", "modelwGP", "inst_var", "stellar_var", "decorr"]:
+            # Update with the user's inputs
+            pl_kwarg_final[datasetname][key].update(pl_kwargs.get(key, {}))
+            pl_kwarg_final[datasetname][key].update(pl_kwargs.get(datasetname, {}).get(key, {}))
         for dataordatabinned, pl_kwarg_def in zip(["data", "databinned"], [pl_kwarg_data_def, pl_kwarg_databinned_def]):
             # Load default values in pl_kwarg_final[datasetname]
             pl_kwarg_final[datasetname][dataordatabinned].update(deepcopy(pl_kwarg_def))
