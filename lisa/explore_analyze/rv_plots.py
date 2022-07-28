@@ -492,8 +492,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                                                 supersamp=supersamp_bin_model, exptime=exptime,
                                                                                 datasim_kwargs=datasim_kwargs)
                             for model_part in model_decorr:
-                                if model_part == "add_2_totalflux":
-                                    model2plot += model_decorr['add_2_totalflux']
+                                if model_part == "add_2_totalRV":
+                                    model2plot += model_decorr['add_2_totalRV']
                                 else:
                                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
                         # Multiply by RV fact
@@ -772,8 +772,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 If True, show the titles (of the main and the zoom)
             - 'legend_param' : dict
                 Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True).
-            - 'show_rms_residuals_in_title': bool
-               If True the rms of the residuals will be provided in the title.
+            - 'show_rms': bool
+               If True the rms of the residuals will will be printed above the residual plots
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
             - 'gridspec_kwargs': dict
                 The content of this entry should be a dictionary which will be passed to
@@ -982,6 +982,9 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         #############################################################
         # Make the RV and residuals plots (full and zoomed if needed)
         #############################################################
+        rms_format = fig_param.get("rms_format", ".1e")
+        text_rms = OrderedDict()
+        text_rms_binned = OrderedDict()
         show_title = TS_kwargs.get("show_title", True)
         for i_row in range(nb_rows):
             gs_ts_row = GridSpecFromSubplotSpec(1, nb_cols, subplot_spec=gs_ts[i_row], **TS_kwargs.get('gridspec_kwargs', {}))
@@ -1015,6 +1018,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
                 for datasetname in datasetnames4rowidx[i_row]:
+                    if t_lims_i is None:
+                        lims_time_dst = [dico_kwargs[datasetname]['time'].min(), dico_kwargs[datasetname]['time'].max()]
+                    else:
+                        lims_time_dst = t_lims_i
                     ###################
                     # Compute the models
                     ###################
@@ -1147,10 +1154,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     ########################################
                     if (datasetname in decorrs) and not(remove_decorrelation):
                         for model_part in decorrs[datasetname]:
-                            if model_part == "add_2_totalflux":
+                            if model_part == "add_2_totalRV":
                                 pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
                                 pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
-                                _ = axe_data.plot(tsim, model_decorr["add_2_totalflux"], **pl_kwarg_final_decorr_model_part)
+                                _ = axe_data.plot(tsim, model_decorr["add_2_totalRV"], **pl_kwarg_final_decorr_model_part)
                             # Else is already addressed above
 
                     ###############
@@ -1179,6 +1186,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], yerr=data_errs[datasetname], **pl_kwarg_final[datasetname]["data"])
                     else:
                         axe_resi.errorbar(dico_kwargs[datasetname]['time'], y=residuals[datasetname], **pl_kwarg_final[datasetname]["data"])
+                    # Compute rms of the residuals and print it on the top of the residuals graphs
+                    text_rms_template = f"{{:{rms_format}}}"
+                    text_rms[datasetname] = text_rms_template.format(np.std(residuals[datasetname][np.logical_and(dico_kwargs[datasetname]['time'] > lims_time_dst[0], dico_kwargs[datasetname]['time'] < lims_time_dst[1])]))
+                    print(f"RMS {datasetname} = {text_rms[datasetname]} {RV_unit} (raw cadence)")
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -1229,6 +1240,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                         if has_jitters[datasetname] and pl_show_error[datasetname]["databinned"]:
                             _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
                             _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"], zorder=30)
+                        # Compute rms of the binned residuals
+                        text_rms_binned_template = f"{{:{rms_format}}} (bin)"
+                        text_rms_binned[datasetname] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins > lims_time_dst[0], midbins < lims_time_dst[1])]))
+                        print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {RV_unit}")
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
@@ -1236,6 +1251,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 if one_binning_per_row and (exptime_bin > 0.):
                     t_row = np.concatenate([dico_kwargs[dst]['time'] for dst in datasetnames4rowidx[i_row]])
                     t_min_data, t_max_data = (min(t_row), max(t_row))
+                    if t_lims_i is None:
+                        lims_time_row = [t_row.min(), t_row.max()]
+                    else:
+                        lims_time_row = t_lims_i
                     bins = np.arange(t_min_data, t_max_data + exptime_bin, exptime_bin)
                     midbins = bins[:-1] + exptime_bin / 2
                     nbins = len(bins) - 1
@@ -1253,8 +1272,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     if any([has_jitters[datasetname] for datasetname in datasetnames4rowidx[i_row]]):
                         binstd_jitter = np.zeros(nbins)
                     bincount = np.zeros(nbins)
-                    data_err_row = np.concatenate([dico_kwargs[dst]['flux_err'] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]['flux_err']) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    data_err_row = np.concatenate([dico_kwargs[dst]['RV_err'] for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = np.concatenate([data_err_jitters[dst] if has_jitters[dst] else np.ones_like(dico_kwargs[dst]['RV_err']) * np.nan for dst in datasetnames4rowidx[i_row]])
                     for i_bin in range(nbins):
                         bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
@@ -1282,11 +1301,16 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     if any([has_jitters[dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
                         _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
                         _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"], zorder=30)
+                    # Compute rms of the binned residuals
+                    text_rms_binned_template = f"{{:{rms_format}}} (bin)"
+                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins > lims_time_row[0], midbins < lims_time_row[1])]))
+                    print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {RV_unit}")
 
-                # Draw a horizontal line at the level of reference stellar flux level
-                xlims = axe_data.get_xlim()
-                reference_stellar_flux = 0 if TS_kwargs.get("remove1", True) else 1
-                axe_data.hlines(reference_stellar_flux, *xlims, colors="k", linestyles="dashed")
+                # Draw a horizontal line at the level of reference stellar RV level
+                if remove_stellar_var:
+                    xlims = axe_data.get_xlim()
+                    reference_stellar_RV = 0
+                    axe_data.hlines(reference_stellar_RV, *xlims, colors="k", linestyles="dashed")
 
                 # Adjust the y lims for the data plot
                 ylims_data = TS_kwargs.get("ylims_data", None)
@@ -1334,6 +1358,27 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     axe_resi.set_xlim(xlims)
                 else:
                     axe_resi.set_xlim(t_lims_i)
+
+                ###########
+                # Write rms
+                ###########
+                # WARNING, TO BE IMPROVED for more than one dataset
+                if (i_col == 0) and TS_kwargs.get('show_rms', True):
+                    text_rms_to_plot = ""
+                    for i_dst, datasetname in enumerate(datasetnames4rowidx[i_row]):
+                        # text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
+                        text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
+                        if datasetname in text_rms_binned:
+                            text_rms_to_plot_dst += f", {text_rms_binned[datasetname]} (bin)"
+                        if i_dst == 0:
+                            text_rms_to_plot_dst = "rms = " + text_rms_to_plot_dst
+                        if RV_unit is not None:
+                            text_rms_to_plot_dst += f" {RV_unit}"
+                        text_rms_to_plot += text_rms_to_plot_dst + "; "
+                    if f"row{i_row}" in text_rms_binned:
+                        text_rms_to_plot += "\n"
+                        text_rms_to_plot += f"rms bin = {text_rms_binned[f'row{i_row}']} {RV_unit}"
+                    axe_resi.text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axe_resi.transAxes)
 
                 ##########################
                 # Set the legend if needed
@@ -1676,12 +1721,12 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
                                              )
             decorrs[datasetname] = {}
             for model_part in post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
-                if model_part == "add_2_totalflux":
+                if model_part == "add_2_totalRV":
                     (model_decorr, _, _, _
                      ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
                                                      l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
                                                      )
-                    decorrs[datasetname][model_part] = model_decorr['add_2_totalflux']
+                    decorrs[datasetname][model_part] = model_decorr['add_2_totalRV']
                 else:
                     logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
 

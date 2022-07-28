@@ -823,7 +823,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
             - 'legend_param' : dict
                 Dictionary providing keyword arguments for the pyplot.legend function (if show_legend is True).
             - 'show_rms': bool
-               If True the rms of the residuals will be provided in the title.
+               If True the rms of the residuals will be printed above the residual plots
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
             - 'gridspec_kwargs': dict
                 The content of this entry should be a dictionary which will be passed to
@@ -1336,7 +1336,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
                 # Draw a horizontal line at the level of reference stellar flux level
                 xlims = axe_data.get_xlim()
-                reference_stellar_flux = 0 if TS_kwargs.get("remove1", True) else 1
+                reference_stellar_flux = 0 if remove_stellar_var else 1
                 axe_data.hlines(reference_stellar_flux, *xlims, colors="k", linestyles="dashed")
 
                 # Adjust the y lims for the data plot
