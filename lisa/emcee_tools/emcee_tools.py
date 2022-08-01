@@ -641,12 +641,11 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
             if plnt_name == planet_name:
                 continue
             else:
-                model, modelwGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
-                                                                                    param=param,
-                                                                                    l_param_name=l_param_name,
-                                                                                    key_obj=plnt_name, datasim_kwargs=datasim_kwargs,
-                                                                                    supersamp=supersamp_model, exptime=exptime,
-                                                                                    )
+                model = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
+                                                    param=param, l_param_name=l_param_name, key_obj=plnt_name,
+                                                    datasim_kwargs=datasim_kwargs, supersamp=supersamp_model,
+                                                    exptime=exptime, include_gp=False
+                                                    )
                 data_pl = data_pl - model
         # Plot these data phase folded at the ephemeris of the planet.
         # Plot the model
@@ -1087,7 +1086,8 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
                                                                          param=param, l_param_name=l_param_name,
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                                         supersamp=supersamp, exptime=exptime)
+                                                                         supersamp=supersamp, exptime=exptime,
+                                                                         include_gp=True)
     model *= multiplication_factor
     if model_wGP is not None:
         model_wGP *= multiplication_factor
@@ -1240,7 +1240,8 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
                                                                          param=param, l_param_name=l_param_name,
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                                         supersamp=supersamp, exptime=exptime)
+                                                                         supersamp=supersamp, exptime=exptime,
+                                                                         include_gp=True)
     model *= multiplication_factor
     if model_wGP is not None:
         model_wGP *= multiplication_factor

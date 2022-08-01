@@ -364,7 +364,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
     def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None,
-                      supersamp=1, exptime=30 / (24 * 60)):
+                      supersamp=1, exptime=30 / (24 * 60), include_gp=False):
         """Function to compute the models of one dataset for display purposes.
 
         Arguments
@@ -373,9 +373,12 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         dataset_name   : String
         param          : np.array
         l_param_name   : List of String
-        datasim_kwargs :  Dictionary
-        supersamp      :  Integer
+        datasim_kwargs : Dictionary
+        supersamp      : Integer
         exptime        : Float
+        include_gp     : Bool
+            If True and if the noise model includes a gp, the function will output model_wGP, gp_pred
+            and gp_pred_var on top of model
 
         Returns
         -------
@@ -426,7 +429,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(inst_mod_obj.noise_model)
 
             # Compute GP contribution if needed.
-            if noise_model_subclass.has_GP:
+            if noise_model_subclass.has_GP and include_gp:
                 # Get the list of datasets using the same GP kernel
                 l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
                 # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
@@ -457,19 +460,24 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                 if supersamp > 1:
                     gp_pred = average_supersampled_values(gp_pred, supersamp)
                     gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
-                if gp_pred is not None:
-                    model_wGP = model + gp_pred
-                else:
-                    model_wGP = None
+
+                model_wGP = model + gp_pred
+
             else:
                 model_wGP = None
                 gp_pred = None
                 gp_pred_var = None
 
-            return model, model_wGP, gp_pred, gp_pred_var
+            if include_gp:
+                return model, model_wGP, gp_pred, gp_pred_var
+            else:
+                return model
         else:
             logger.warning(f"{key_obj} doesn't exists in datasimulators.instrument_db.")
-            return None, None, None, None
+            if include_gp:
+                return None, None, None, None
+            else:
+                return None
 
     @property
     def lnposteriors(self):

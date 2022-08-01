@@ -364,11 +364,11 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     if plnt == planet_name:
                         continue
                     else:
-                        (model_pl_only, _, _, _
-                         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                         param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                         key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs
-                                                         )
+                        model_pl_only = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+                                                                    param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                                    key_obj=f"{plnt}",
+                                                                    datasim_kwargs=datasim_kwargs, include_gp=False
+                                                                    )
                         model_pl_only *= RV_fact
                         data_pl[datasetname] = data_pl[datasetname] - model_pl_only
 
@@ -407,39 +407,41 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                     tsim = np.linspace(tmin_model, tmax_model, npt_model)
                     xsim = np.linspace(x_min_data, x_max_data, npt_model)
                     # Compute the oversampled model to plot for the raw cadence
-                    model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                      dataset_name=datasetname,
-                                                                      param=df_fittedval["value"].values,
-                                                                      l_param_name=list(df_fittedval.index),
-                                                                      key_obj=f"{planet_name}",
-                                                                      datasim_kwargs=datasim_kwargs)
+                    model2plot = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                             param=df_fittedval["value"].values,
+                                                             l_param_name=list(df_fittedval.index),
+                                                             key_obj=f"{planet_name}",
+                                                             datasim_kwargs=datasim_kwargs, include_gp=False
+                                                             )
 
                     # Add inst_var if needed
                     if not(remove_inst_var) and (datasetname in inst_vars):
-                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                             dataset_name=datasetname,
-                                                                             param=df_fittedval["value"].values,
-                                                                             l_param_name=list(df_fittedval.index),
-                                                                             key_obj="inst_var",
-                                                                             datasim_kwargs=datasim_kwargs)
+                        model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                    param=df_fittedval["value"].values,
+                                                                    l_param_name=list(df_fittedval.index),
+                                                                    key_obj="inst_var",
+                                                                    datasim_kwargs=datasim_kwargs, include_gp=False
+                                                                    )
                         model2plot += model_instvar
 
                     # Add inst_var if needed
                     if not(remove_stellar_var) and (datasetname in stellar_vars):
-                        model_stellarvar, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                                dataset_name=datasetname,
-                                                                                param=df_fittedval["value"].values,
-                                                                                l_param_name=list(df_fittedval.index),
-                                                                                key_obj="stellar_var",
-                                                                                datasim_kwargs=datasim_kwargs)
+                        model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                       param=df_fittedval["value"].values,
+                                                                       l_param_name=list(df_fittedval.index),
+                                                                       key_obj="stellar_var",
+                                                                       datasim_kwargs=datasim_kwargs,
+                                                                       include_gp=False
+                                                                       )
                         model2plot += model_stellarvar
                     # Add decorrelation if needed
                     if not(remove_decorrelation) and (datasetname in decorrs):
-                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                            param=df_fittedval["value"].values,
-                                                                            l_param_name=list(df_fittedval.index),
-                                                                            key_obj="decorr",
-                                                                            datasim_kwargs=datasim_kwargs)
+                        model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                   param=df_fittedval["value"].values,
+                                                                   l_param_name=list(df_fittedval.index),
+                                                                   key_obj="decorr",
+                                                                   datasim_kwargs=datasim_kwargs, include_gp=False
+                                                                   )
                         for model_part in model_decorr:
                             if model_part == "add_2_totalrv":
                                 model2plot += model_decorr['add_2_totalrv']
@@ -456,44 +458,48 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                         # Compute the exposure time for the binned model in the same unit than the data
                         # Since exptime_bin unit depends on show_time_from_tic and time_fact
                         exptime = exptime_bin / time_fact if show_time_from_tic else exptime_bin * Per
-                        model2plot, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                          dataset_name=datasetname,
-                                                                          param=df_fittedval["value"].values,
-                                                                          l_param_name=list(df_fittedval.index),
-                                                                          key_obj=f"{planet_name}",
-                                                                          supersamp=supersamp_bin_model, exptime=exptime,
-                                                                          datasim_kwargs=datasim_kwargs)
+                        model2plot = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                 param=df_fittedval["value"].values,
+                                                                 l_param_name=list(df_fittedval.index),
+                                                                 key_obj=f"{planet_name}",
+                                                                 supersamp=supersamp_bin_model, exptime=exptime,
+                                                                 datasim_kwargs=datasim_kwargs, include_gp=False
+                                                                 )
                         # Add inst_var if needed
                         if not(remove_inst_var) and (datasetname in inst_vars):
-                            model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                                 dataset_name=datasetname,
-                                                                                 param=df_fittedval["value"].values,
-                                                                                 l_param_name=list(df_fittedval.index),
-                                                                                 key_obj="inst_var",
-                                                                                 supersamp=supersamp_bin_model, exptime=exptime,
-                                                                                 datasim_kwargs=datasim_kwargs)
+                            model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                        param=df_fittedval["value"].values,
+                                                                        l_param_name=list(df_fittedval.index),
+                                                                        key_obj="inst_var",
+                                                                        supersamp=supersamp_bin_model, exptime=exptime,
+                                                                        datasim_kwargs=datasim_kwargs,
+                                                                        include_gp=False
+                                                                        )
                             model2plot += model_instvar
                         # Add inst_var if needed
                         if not(remove_stellar_var) and (datasetname in stellar_vars):
-                            model_stellarvar, _, _, _ = post_instance.compute_model(tsim=tsim,
-                                                                                    dataset_name=datasetname,
-                                                                                    param=df_fittedval["value"].values,
-                                                                                    l_param_name=list(df_fittedval.index),
-                                                                                    key_obj="stellar_var",
-                                                                                    supersamp=supersamp_bin_model, exptime=exptime,
-                                                                                    datasim_kwargs=datasim_kwargs)
+                            model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                           param=df_fittedval["value"].values,
+                                                                           l_param_name=list(df_fittedval.index),
+                                                                           key_obj="stellar_var",
+                                                                           supersamp=supersamp_bin_model, exptime=exptime,
+                                                                           datasim_kwargs=datasim_kwargs,
+                                                                           include_gp=False
+                                                                           )
                             model2plot += model_stellarvar
                         # Add decorrelation if needed
                         if not(remove_decorrelation) and (datasetname in decorrs):
-                            model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                                param=df_fittedval["value"].values,
-                                                                                l_param_name=list(df_fittedval.index),
-                                                                                key_obj="decorr",
-                                                                                supersamp=supersamp_bin_model, exptime=exptime,
-                                                                                datasim_kwargs=datasim_kwargs)
+                            model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                       param=df_fittedval["value"].values,
+                                                                       l_param_name=list(df_fittedval.index),
+                                                                       key_obj="decorr",
+                                                                       supersamp=supersamp_bin_model, exptime=exptime,
+                                                                       datasim_kwargs=datasim_kwargs,
+                                                                       include_gp=False
+                                                                       )
                             for model_part in model_decorr:
-                                if model_part == "add_2_totalRV":
-                                    model2plot += model_decorr['add_2_totalRV']
+                                if model_part == "add_2_totalrv":
+                                    model2plot += model_decorr['add_2_totalrv']
                                 else:
                                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
                         # Multiply by RV fact
@@ -1030,35 +1036,38 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                        np.max(times[datasetname]) + TS_kwargs.get("extra_dt_model", 0.),
                                        npt_model)
 
-                    model, model_wGP, gp_pred, gp_pred_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                                         param=df_fittedval["value"].values,
-                                                                                         l_param_name=list(df_fittedval.index),
-                                                                                         key_obj=key_whole,
-                                                                                         datasim_kwargs=datasim_kwargs)
+                    (model, model_wGP, gp_pred, gp_pred_var
+                     ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname, param=df_fittedval["value"].values,
+                                                     l_param_name=list(df_fittedval.index), key_obj=key_whole,
+                                                     datasim_kwargs=datasim_kwargs, include_gp=True
+                                                     )
 
                     # stellar_var
                     if (datasetname in stellar_vars):
-                        model_stellarvar, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                                param=df_fittedval["value"].values,
-                                                                                l_param_name=list(df_fittedval.index),
-                                                                                key_obj="stellar_var",
-                                                                                datasim_kwargs=datasim_kwargs)
+                        model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                       param=df_fittedval["value"].values,
+                                                                       l_param_name=list(df_fittedval.index),
+                                                                       key_obj="stellar_var",
+                                                                       datasim_kwargs=datasim_kwargs,
+                                                                       include_gp=False
+                                                                       )
 
                     # inst_var
                     if (datasetname in inst_vars):
-                        model_instvar, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                             param=df_fittedval["value"].values,
-                                                                             l_param_name=list(df_fittedval.index),
-                                                                             key_obj="inst_var",
-                                                                             datasim_kwargs=datasim_kwargs)
+                        model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                    param=df_fittedval["value"].values,
+                                                                    l_param_name=list(df_fittedval.index),
+                                                                    key_obj="inst_var",
+                                                                    datasim_kwargs=datasim_kwargs, include_gp=False)
 
                     # decorr
                     if (datasetname in decorrs):
-                        model_decorr, _, _, _ = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                                            param=df_fittedval["value"].values,
-                                                                            l_param_name=list(df_fittedval.index),
-                                                                            key_obj="decorr",
-                                                                            datasim_kwargs=datasim_kwargs)
+                        model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                                   param=df_fittedval["value"].values,
+                                                                   l_param_name=list(df_fittedval.index),
+                                                                   key_obj="decorr",
+                                                                   datasim_kwargs=datasim_kwargs, include_gp=False
+                                                                   )
 
                     # Remove the decorrelation:
                     if (datasetname in decorrs) and remove_decorrelation:
@@ -1154,10 +1163,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                     ########################################
                     if (datasetname in decorrs) and not(remove_decorrelation):
                         for model_part in decorrs[datasetname]:
-                            if model_part == "add_2_totalRV":
+                            if model_part == "add_2_totalrv":
                                 pl_kwarg_final_decorr_model_part = deepcopy(pl_kwarg_final[datasetname]["decorr"])
                                 pl_kwarg_final_decorr_model_part.update(pl_kwargs.get(f"decorr_{model_part}", {}))
-                                _ = axe_data.plot(tsim, model_decorr["add_2_totalRV"], **pl_kwarg_final_decorr_model_part)
+                                _ = axe_data.plot(tsim, model_decorr["add_2_totalrv"], **pl_kwarg_final_decorr_model_part)
                             # Else is already addressed above
 
                     ###############
@@ -1413,7 +1422,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
         # model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=l_datasetname_RVrefglobal[0],
         #                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-        #                                                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs)
+        #                                                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True)
         # model_GLS *= RV_fact
         # if gp_pred_GLS is not None:
         #     gp_pred_GLS *= RV_fact
@@ -1705,10 +1714,11 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # For each dataset
         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
         # and remove RV_drift
-        (model_stellar_vars, _, _, _
-         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
-                                         l_param_name=list(df_fittedval.index), key_obj="stellar_var", datasim_kwargs=datasim_kwargs
-                                         )
+        model_stellar_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+                                                         param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                         key_obj="stellar_var", datasim_kwargs=datasim_kwargs,
+                                                         include_gp=False
+                                                         )
         if model_stellar_vars is not None:
             stellar_vars[datasetname] = model_stellar_vars
 
@@ -1718,10 +1728,11 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # For each dataset
         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
         # and remove RV_drift
-        (model_inst_var, _, _, _
-         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
-                                         l_param_name=list(df_fittedval.index), key_obj="inst_var", datasim_kwargs=datasim_kwargs
-                                         )
+        model_inst_var = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+                                                     param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                     key_obj="inst_var", datasim_kwargs=datasim_kwargs,
+                                                     include_gp=False
+                                                     )
         if model_inst_var is not None:
             inst_vars[datasetname] = model_inst_var
 
@@ -1729,20 +1740,22 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         # Compute the decorrelation models (decorr) to later remove from the data
         #########################################################################
         if post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]:
-            (model_decorr, _, _, _
-             ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
-                                             l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
-                                             )
+            model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+                                                       param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                       key_obj="decorr", datasim_kwargs=datasim_kwargs,
+                                                       include_gp=False
+                                                       )
             decorrs[datasetname] = {}
             for model_part in post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
-                if model_part == "add_2_totalRV":
-                    (model_decorr, _, _, _
-                     ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname, param=df_fittedval["value"],
-                                                     l_param_name=list(df_fittedval.index), key_obj="decorr", datasim_kwargs=datasim_kwargs
-                                                     )
-                    decorrs[datasetname][model_part] = model_decorr['add_2_totalRV']
+                if model_part == "add_2_totalrv":
+                    model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+                                                               param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                               key_obj="decorr", datasim_kwargs=datasim_kwargs,
+                                                               include_gp=False
+                                                               )
+                    decorrs[datasetname][model_part] = model_decorr['add_2_totalrv']
                 else:
-                    logger.error("Decorrelation of model part {model_part} is not currently taken into account by this function.")
+                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         #######################################
         # Compute the models and GP predictions
@@ -1750,7 +1763,8 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         (model, model_wGP, gp_pred, gp_pred_var
          ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-                                         key_obj=key_whole, datasim_kwargs=datasim_kwargs)
+                                         key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True
+                                         )
         if model_wGP is not None:
             gp_preds[datasetname] = gp_pred
             gp_pred_vars[datasetname] = gp_pred_var
@@ -1810,7 +1824,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
         ################################################################################
         # Remove decorrelation likelihood (if needed)
         ################################################################################
-        if (datasetname in decorrs) and remove_decorrelation_likelihood:
+        if (datasetname in decorr_likelihoods) and remove_decorrelation_likelihood:
             datas[datasetname] -= decorr_likelihoods[datasetname]
 
         ################################################################################
