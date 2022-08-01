@@ -187,16 +187,16 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
+    # Make sure that fig_param is a dictionaries
+    if fig_param is None:
+        fig_param = {}
+
     fontsize = fig_param.get("fontsize", AandA_fontsize)
 
     # Do the suptitle
     if show_system_name_in_suptitle:
         system_name = fig_param.get('system_name_4_suptitle', post_instance.full_name)
         fig.suptitle(f"{system_name} system", fontsize=fontsize)
-
-    # Make sure that fig_param is a dictionaries
-    if fig_param is None:
-        fig_param = {}
 
     # If no dataset name is provided get all the available LC datasets
     if datasetnames is None:

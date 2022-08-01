@@ -457,7 +457,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                 if supersamp > 1:
                     gp_pred = average_supersampled_values(gp_pred, supersamp)
                     gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
-                if model is not None:
+                if gp_pred is not None:
                     model_wGP = model + gp_pred
                 else:
                     model_wGP = None
