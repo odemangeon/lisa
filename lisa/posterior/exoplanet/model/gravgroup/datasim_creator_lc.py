@@ -648,7 +648,7 @@ def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_
         else:
             function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=function_shortname)
     if more_than_1_planet:
-        condition_text = [f"condition_{planet.get_name()}" for planet in l_planet].join(" or ")
+        condition_text = " or ".join([f"condition_{planet.get_name()}" for planet in l_planet])
     else:
         condition_text = f"condition_{planet_name}"
     function_builder.add_to_body_text(text=f"{tab}if {condition_text}:\n", function_shortname=function_shortname)
