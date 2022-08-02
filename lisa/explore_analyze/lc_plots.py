@@ -162,6 +162,9 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                tuples giving the minimum and maximum phases or time from mid-transit (depending on show_time_from_tic)
                for all planets or a specific ones. If show_time_from_tic is True than the provided times
                should also include the time_fact
+            - 'force_xlims': boolean (default: False). By default, the maximum xlims is the extrema
+               of the data. So if the user provides larger xlims, the actual xlims will be reduced.
+               This will not happen if you set force_xlims to True
             - 'rms_format': Format that will be used to format the rms values (for example '.0f')
     pl_kwargs    : dict
         Dictionary with keys a dataset name (ex: "LC_HD209458_CHEOPS_0") or "model" or "binned_data" and values
@@ -708,7 +711,11 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
 
             # Set the x axis limits
-            axes_data[i_row][i_pl].set_xlim((x_min_data, x_max_data))
+            if fig_param.get('force_xlims', False):
+                axes_data[i_row][i_pl].set_xlim((x_min, x_max))
+            else:
+                axes_data[i_row][i_pl].set_xlim((x_min_data, x_max_data))
+
 
     ###################
     # Finalise the plot
