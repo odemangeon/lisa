@@ -175,8 +175,8 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             function_builder.add_variable_to_ldict(variable_name=f"l_y_inddataset_name_{inst_model_obj.full_code_name}_{decorr_name}", variable_content=dico_decorr["l_inddataset_name_4_indinstmod_fullname"][y_indinstmod_fullname], function_shortname=function_shortname, exist_ok=False, overwrite=False)
             if spline_type == "SmoothBivariateSpline":
                 function_builder.add_variable_to_ldict(variable_name="SmoothBivariateSpline", variable_content=SmoothBivariateSpline, function_shortname=function_shortname, exist_ok=True, overwrite=False)
-            elif spline_type == "LSQBiivariateSpline":
-                function_builder.add_variable_to_ldict(variable_name="LSQBiivariateSpline", variable_content=LSQBivariateSpline, function_shortname=function_shortname, exist_ok=True, overwrite=False)
+            elif spline_type == "LSQBivariateSpline":
+                function_builder.add_variable_to_ldict(variable_name="LSQBivariateSpline", variable_content=LSQBivariateSpline, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             # function_builder.add_variable_to_ldict(variable_name=f"idx_sort_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name}", variable_content=idx_sort_x_vect, function_shortname=function_shortname, exist_ok=False, overwrite=False)
             # function_builder.add_to_body_text(f"{tab}sp_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name} = {spline_type}(x={text_all_indval}, y={text_all_resi}, **spline_kargs_{inst_model_obj.full_code_name}_{ind_instmodel_obj.full_code_name})\n", function_shortname=function_shortname)
         if plot_functionshortname in l_function_shortname:
