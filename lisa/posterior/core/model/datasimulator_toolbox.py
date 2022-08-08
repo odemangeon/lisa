@@ -50,13 +50,13 @@ def check_datasets_and_instmodels(datasets, inst_models):
         Instrument Model full name, or list of Instrument Model full names or None, matching inst_models.
     """
     # Check the content of inst_models and datasets argument for the datasim creator functions.
-    # Set mulit_input for each of these to True if several instances are provided or to False otherwise.
+    # Set multi_input for each of these to True if several instances are provided or to False otherwise.
     # Finally set the inputsname4docf for each of these two to list the names of the instances
     # for the Datasim_DocFunc (dtsts_docf).
 
     # This dictionnary will be filled with two keys "datasets", "inst_models" and the Value
     # will be a boolean state is this inputs has multiple instances or just one
-    mulit_input = {}
+    multi_input = {}
 
     # This dictionnary will be filled with two keys "datasets", "inst_models" and the Value
     # will be a the name or the list of name of these inputs to be used in the datasimulator docfunc
@@ -66,9 +66,9 @@ def check_datasets_and_instmodels(datasets, inst_models):
         if isinstance(inputs, Iterable):
             if all([isinstance(input, input_class) for input in inputs]):
                 if len(inputs) > 1:
-                    mulit_input[input_type] = True
+                    multi_input[input_type] = True
                 else:
-                    mulit_input[input_type] = False
+                    multi_input[input_type] = False
                     # In practice, it's just one so for the datasim docfunc it is better to make is a non multi
                     if input_type == "datasets":
                         datasets = datasets[0]
@@ -78,10 +78,10 @@ def check_datasets_and_instmodels(datasets, inst_models):
                 inputs_err = True
         else:
             inputs_err = not(isinstance(inputs, input_class))
-            mulit_input[input_type] = False
+            multi_input[input_type] = False
         if inputs_err:
             raise ValueError(f"{input_type} should be an instance of {input_class} or a list of isntances of {input_class}.")
-        if mulit_input[input_type]:
+        if multi_input[input_type]:
             inputsname4docf[input_type] = []
             for input in inputs:
                 input_name = input.full_name if input_type == "inst_models" else input.dataset_name
@@ -90,15 +90,15 @@ def check_datasets_and_instmodels(datasets, inst_models):
             inputsname4docf[input_type] = inst_models.full_name if input_type == "inst_models" else datasets.dataset_name  # inst_models.get_name(include_prefix=True, recursive=True)
 
     # Produce l_dataset and l_inst_model the list of datasets and list of instrument models (even of 1 element)
-    multi = mulit_input["datasets"] or mulit_input["inst_models"]
-    both_multi = multi and (mulit_input["datasets"] == mulit_input["inst_models"])
+    multi = multi_input["datasets"] or multi_input["inst_models"]
+    both_multi = multi and (multi_input["datasets"] == multi_input["inst_models"])
     if multi and not(both_multi):
-        if (mulit_input["datasets"]):
-            l_dataset = [datasets for instmod in inst_models]
-            l_inst_model = inst_models
-        else:  # multi_instmodl
+        if (multi_input["datasets"]):
             l_inst_model = [inst_models for dtst in datasets]
             l_dataset = datasets
+        else:  # multi_instmodl
+            l_dataset = [datasets for instmod in inst_models]
+            l_inst_model = inst_models
     elif multi:
         l_dataset = datasets
         l_inst_model = inst_models
