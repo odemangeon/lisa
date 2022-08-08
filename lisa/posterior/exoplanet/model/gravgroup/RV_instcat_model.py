@@ -171,43 +171,6 @@ class RV_InstCat_Model(Core_InstCat_Model):
     def set_RVref4inst_modname(self, inst_name, inst_model_name):
         self.__RV_references[inst_name] = inst_model_name
 
-    # def create_text4paramfile_decorrmodels(self, instmod_obj, tab):
-    #     """This function creates the text for the decorrelation of an instrument model object.
-    #
-    #     Arguments
-    #     ---------
-    #     instmod_obj : Instrument_Model instance
-    #         Instrument model object for which you want to create the text to configure the decorrelation
-    #     tab         : str
-    #         White spaces giving the tabulation to use
-    #
-    #     Returns
-    #     -------
-    #     text_instmod_decorr_models_content  : str
-    #         Text to configure the decorrelation for instmod_obj
-    #     """
-    #     tab_what2decorrdict = spacestring_like("'what to decorrelate':  ")
-    #     # template_decorrmethoddict = "{decorr_category}: " + "{" + "{dictdecorrcat_content}\n{tab}" + "}"
-    #     dictmodelpart_content = ""
-    #     for modelpart2decor in self.allowed_what2decorrelate_strs:
-    #         if len(dictmodelpart_content) > 0:
-    #             dictmodelpart_content += f"\n{tab + tab_what2decorrdict}"
-    #         modelpart_1stline = f"'{modelpart2decor}': " + "{"
-    #         tab_modelpart = spacestring_like(modelpart_1stline)
-    #         dictmodelpart_content += modelpart_1stline
-    #         dictdecorrcat_content = ""
-    #         for decorr_model_name in self.available_decorrelationmodel_names:
-    #             if len(dictdecorrcat_content) > 0:
-    #                 dictdecorrcat_content += f"\n{tab + tab_what2decorrdict + tab_modelpart}"
-    #             decorr_model = self.get_DecorrClass(decorrmodel_cat=decorr_model_name)
-    #             decorr_model_current_config_dict = self.decorrelation_config.get(instmod_obj.full_name, {}).get(decorr_model_name, {})
-    #             dictdecorrcat_content += decorr_model.create_text_decorr_paramfile(inst_mod_obj=instmod_obj,
-    #                                                                                decorrelation_config_inst=decorr_model_current_config_dict,
-    #                                                                                tab=tab + tab_what2decorrdict + tab_modelpart)
-    #         dictmodelpart_content += dictdecorrcat_content + f"\n{tab + tab_what2decorrdict + tab_modelpart}" + "},"
-    #
-    #     return "'what to decorrelate': {" + f"{dictmodelpart_content}\n{tab + tab_what2decorrdict}" + "},"
-
     def load_config_decorrelation_model(self, dico_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
         for each dataset.
