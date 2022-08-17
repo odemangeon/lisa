@@ -277,16 +277,12 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                                                              quote_name=True)
                     texttab_1tline = True
                     text += ",\n"
-                model_name_def = list(self[inst_fullcat][inst_name].keys())[0]
                 text_instmod4dataset = ""
                 for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
                     number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
                     model_name = model_instance.instmodel4dataset[datasetname]
                     text_instmod4dataset += "{}: '{}', ".format(number, model_name)
-                text += (f"{text_tab + extra_tab + extra_tab2}# By default all the datasets of an instrument are associated "
-                         f"to {model_name_def}.\n{text_tab + extra_tab + extra_tab2}# If you want to model some datasets with another "
-                         f"instrument model copy paste it,\n{text_tab + extra_tab + extra_tab2}# give it a new name and "
-                         f"file the {string4datasetdico} dict.\n{text_tab + extra_tab + extra_tab2}'{string4datasetdico}': {{{text_instmod4dataset}}},"
+                text += (f"{text_tab + extra_tab + extra_tab2}'{string4datasetdico}': {{{text_instmod4dataset}}},"
                          )
                 if hasattr(inst_subclass, "_get_inst_paramfilesection"):
                     text += "\n\n"

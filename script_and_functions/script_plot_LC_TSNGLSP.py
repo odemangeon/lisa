@@ -73,9 +73,8 @@ create_LC_TSNGLSP_plots(fig=fig,
                         remove1=True, remove_inst_var=True, remove_decorrelation=False, remove_decorrelation_likelihood=True,
                         remove_contamination=False,
                         datasim_kwargs=kwargs_datasim,
-                        # fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
-                        #            'suptitle_kwargs': {"y": 0.99},
-                        #            },
+                        fig_param={# 'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
+                                   },
                         TS_kwargs={"do": True,
                                    "npt_model": 10000,
                                    "exptime_bin": 98 / 60 / 24,
@@ -124,7 +123,7 @@ create_LC_TSNGLSP_plots(fig=fig,
                                      #                  'WF': {'loc': 'upper center'},
                                      #                  },
                                      },
-                        show_system_name_in_suptitle=True,
+                        suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
                         LC_fact=1e6,  # 1
                         LC_unit="ppm",  # "wo unit"
                         )

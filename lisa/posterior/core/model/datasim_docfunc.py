@@ -60,6 +60,8 @@ class DatasimDocFunc(DocFunction):
         # Set param_model_list
         self.__param_model_names_list = list(param_model_names_list)
 
+        # Set param_model_vect_name
+        self.__param_model_vect_name = params_model_vect_name
         # add params_model_vect_name at the beginning of the mandatory keyword argument list
         if mand_kwargs_list is None:
             mand_kwargs_list = [params_model_vect_name, ]
@@ -174,6 +176,11 @@ class DatasimDocFunc(DocFunction):
                 l_dataset = [dataset_names_list]
         self.__output_info = DataFrame({instcat_key: l_instcat, instmodfullname_key: l_instmod,
                                         dtst_key: l_dataset})
+
+    @property
+    def param_model_vect_name(self):
+        """Return the string of the parameter vector of the model (datasimulator)."""
+        return self.__param_model_vect_name
 
     @property
     def include_dataset_kwarg(self):

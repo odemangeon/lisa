@@ -21,7 +21,7 @@ from ..paramcontainer import Core_ParamContainer
 from ..parameter import Parameter
 from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ....tools.name import Named
-from ....tools.metaclasses import MandatoryReadOnlyAttr
+from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 # from ....tools.miscellaneous import spacestring_like
 
 
@@ -110,7 +110,7 @@ def _getinsthas_subcategories():
     return _getmethod
 
 
-class Core_Instrument_metaclass(MandatoryReadOnlyAttr):
+class Core_Instrument_metaclass(MandatoryReadOnlyAttrAndMethod):
 
     @property
     def has_subcategories(cls):
@@ -127,6 +127,7 @@ class Core_Instrument(Named, metaclass=Core_Instrument_metaclass):
     """docstring for Core_Instrument abstract class."""
 
     __mandatoryattrs__ = ["category", "sub_category", "params_model"]
+    __mandatorymeths__ = ["apply_parametrisation"]
 
     def __init__(self, name, subcat=None):
         """Core_Instrument init method FOR INHERITANCE PURPOSES (as Core_Instrument is an abstract class).
@@ -385,6 +386,7 @@ class Core_Instrument(Named, metaclass=Core_Instrument_metaclass):
 
 class Default_Instrument(Core_Instrument):
     """docstring for Default_Instrument class (not abstract contrary to Core_Instrument)."""
+
     def __init__(self, category, name, params_model={}, sub_category=None):
         """Default_Instrument init method.
 
@@ -402,6 +404,19 @@ class Default_Instrument(Core_Instrument):
         self.__sub_category__ = sub_category
         self.__params_model__ = params_model
         super(Default_Instrument, self).__init__(name)
+
+    @classmethod
+    def apply_parametrisation(cls, inst_model):
+        """Apply the parametrisation to the instrument model.
+
+        Arguments
+        ---------
+        inst_model_obj  : Default_Instrument object
+            WARNING you cannot change the name of this argument for it to work with the __getattr__
+            of lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model
+        """
+        # cls.apply_polymodel_parametrisation(inst_model=inst_model)
+        pass
 
 
 # def get_instrument_paramfilesection(model_instance, inst_db, text_tab="", entete_symb=" = ",

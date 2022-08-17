@@ -43,11 +43,13 @@ except (ModuleNotFoundError, ImportError):
 from PyAstronomy.pyasl import foldAt
 
 from . import get_function_planet_shortname
+from ...dataset_and_instrument.lc import LC_Instrument
 from ....core import function_whole_shortname
 from ....core.model import par_vec_name
 from ....core.model.datasim_docfunc import DatasimDocFunc
 from ....core.model.datasimulator_toolbox import check_datasets_and_instmodels
 from ....core.model.datasimulator_timeseries_toolbox import add_time_argument, time_vec, l_time_vec
+from ....core.model.polynomial_model import get_polymodel
 from .....tools.function_from_text_toolbox import FunctionBuilder  # , argskwargs
 from .....posterior.exoplanet.model.convert import getaoverr, getomega_fast, getomega_deg_fast
 
@@ -250,6 +252,15 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
                                get_times_from_datasets=get_times_from_datasets, tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                LCcat_model=LCcat_model, dataset_db=dataset_db)
 
+    #################################################
+    # Produce stellar_var models (analytical, not GP)
+    #################################################
+    d_l_stellar_var = get_stellarvar(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
+                                     tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, star=star,
+                                     LCcat_model=LCcat_model, dataset_db=dataset_db,
+                                     function_builder=func_builder, l_function_shortname=[function_whole_shortname, ],
+                                     ext_func_fullname=func_full_name_MultiOrDst_ext)
+
     #######################################################################
     # Finalise the functions combining different outputs (whole and planet)
     #######################################################################
@@ -257,17 +268,20 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     for func_shortname in [function_whole_shortname, ]:
         combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                               reference_flux_level=1, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
-                              inst_var=d_l_inst_var.get(func_shortname, None), transit=returns_tr.get(func_shortname, None),
-                              phasecurve=returns_pc.get(func_shortname, None), occultation=returns_occ.get(func_shortname, None),
-                              contamination=returns_contam.get(func_shortname, None), decorrelation=d_l_d_decorr.get(func_shortname, None))
+                              inst_var=d_l_inst_var.get(func_shortname, None), stellar_var=d_l_stellar_var.get(func_shortname, None),
+                              transit=returns_tr.get(func_shortname, None), phasecurve=returns_pc.get(func_shortname, None),
+                              occultation=returns_occ.get(func_shortname, None), contamination=returns_contam.get(func_shortname, None),
+                              decorrelation=d_l_d_decorr.get(func_shortname, None)
+                              )
 
     # Function of the planets only
     for func_shortname in l_function_planet_shortname:
         combine_return_models(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                               reference_flux_level=0, tab=tab, function_builder=func_builder, function_shortname=func_shortname,
-                              inst_var=None, transit=returns_tr.get(func_shortname, None),
+                              inst_var=None, stellar_var=None, transit=returns_tr.get(func_shortname, None),
                               phasecurve=returns_pc.get(func_shortname, None), occultation=returns_occ.get(func_shortname, None),
-                              contamination=None, decorrelation=None)
+                              contamination=None, decorrelation=None
+                              )
 
     ###################################
     # Execute the text of all functions
@@ -284,7 +298,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
             mand_kwargs = func_builder.get_l_mandatory_argument(function_shortname=func_shortname)
         else:
             mand_kwargs = None
-        if len(func_builder.get_l_mandatory_argument(function_shortname=func_shortname)) > 0:
+        if len(func_builder.get_d_optional_argument(function_shortname=func_shortname)) > 0:
             opt_kwargs = func_builder.get_d_optional_argument(function_shortname=func_shortname)
         else:
             opt_kwargs = None
@@ -423,117 +437,179 @@ def get_instvar(l_inst_model, l_dataset, multi, get_times_from_datasets, tab, ti
         - key : key or keys specificied by l_function_shortname
         - value: List = ["<inst variation model for instrument1 and dataset1>", ...]
     """
-    ########################
-    # Initialise the outputs
-    ########################
-    returns = {}
+    return get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
+                         tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=LCcat_model,
+                         dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
+                         polyonly_func_shortname="inst_var", ext_func_fullname=ext_func_fullname, name_coeff_const="DeltaF",
+                         func_param_name=lambda order: LC_Instrument.get_polymodel_param_name(inst_model=None, order=order),
+                         instrument_per_instrument_model=True, param_container=None, prefix_config=None,
+                         )
+    # ########################
+    # # Initialise the outputs
+    # ########################
+    # returns = {}
+    #
+    # #############################################################################
+    # # Check if any of the instrument model needs an inst var model
+    # #############################################################################
+    # requires_instvar = False
+    # for instmod in l_inst_model:
+    #     if instmod.get_with_inst_var():
+    #         requires_instvar = True
+    #         break
+    #
+    # if requires_instvar:
+    #     #################################################
+    #     # Initialise the new function in function_builder
+    #     #################################################
+    #     # Extension for the shortname of the function that do the decorrelation only model
+    #     inst_var_func_shortname = "inst_var"
+    #     function_builder.add_new_function(shortname=inst_var_func_shortname)
+    #     function_builder.set_function_fullname(full_name=f"LC_sim_{inst_var_func_shortname}{ext_func_fullname}", shortname=inst_var_func_shortname)
+    #
+    #     ########################################
+    #     # Update the list of function to address
+    #     ########################################
+    #     l_function_shortname += [inst_var_func_shortname, ]
+    #
+    #     ################################
+    #     # Do the Model for each function
+    #     ################################
+    #     for function_shortname in l_function_shortname:
+    #         returns[function_shortname] = []
+    #
+    #         # Add the time argument
+    #         # Even if the model is a constant you want to generate a vector of constant values that can
+    #         # compared with the data (for the likelihood computation) or plotted without issue
+    #         time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
+    #                                           multi=multi, get_times_from_datasets=get_times_from_datasets,
+    #                                           l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
+    #                                           exist_ok=True)
+    #
+    #         # For each instrument model and dataset, ...
+    #         for ii, instmdl in enumerate(l_inst_model):
+    #             returns[function_shortname].append("")
+    #             # ..., if instrument variations have been asked, ...
+    #             if instmdl.get_with_inst_var():
+    #                 # ..., For each order in the required polynomial model, ...
+    #                 for order in range(instmdl.get_inst_var_order() + 1):
+    #                     # ..., get the name and full name of the parameter for this order
+    #                     instvar_param_name = instmdl.get_inst_var_param_name(order)
+    #                     # ..., If this parameter is a main parameter (it should be), ...
+    #                     if instmdl.parameters[instvar_param_name].main:
+    #                         value_not0 = True
+    #                         function_builder.add_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
+    #                         text_instvar_param = function_builder.get_text_4_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
+    #                         # ..., if the parameter is free or the fixed value is not zero, ...
+    #                         if text_instvar_param != 0.0:
+    #                             if (order == 0) and (instmdl.get_inst_var_order() == 0):
+    #                                 function_builder.add_variable_to_ldict(variable_name="ones_like",
+    #                                                                        variable_content=ones_like,
+    #                                                                        function_shortname=function_shortname,
+    #                                                                        exist_ok=True)
+    #                                 if multi:
+    #                                     returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name}[{ii}])"
+    #                                 else:
+    #                                     returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name})"
+    #                             else:
+    #                                 if returns[function_shortname][ii] == "":
+    #                                     pretext = ""
+    #                                 else:
+    #                                     pretext = " + "
+    #                                 returns[function_shortname][ii] += f"{pretext}{text_instvar_param}"
+    #                         # ..., else, since the fixed value is zero, this order doesn't have any
+    #                         # contribution
+    #                         else:
+    #                             value_not0 = False
+    #                         # ..., if the order has a contribution to the instrumental variations and
+    #                         # the considered order is more than 0 meaning the time plays a role, ...
+    #                         if value_not0 and order > 0:
+    #                             # ..., and you need a time reference. There is one time reference per instrument
+    #                             # model, which is automatically set to the time of the first measurement
+    #                             # among the datasets associated with this instrument model.
+    #                             # So start be creating the name of the instrument model
+    #                             timeref_instmod = f"timeref_instvar_{instmdl.full_code_name}"
+    #                             # if this time_reference is not already in the ldict of the function ...
+    #                             if timeref_instmod not in function_builder.get_ldict(function_shortname=function_shortname):
+    #                                 # we have to compute its value and add it to the ldict
+    #                                 l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmdl.full_name)
+    #                                 timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_instmod])
+    #                                 function_builder.add_variable_to_ldict(variable_name=timeref_instmod, variable_content=timeref_instmod_value, function_shortname=function_shortname)
+    #                             # ..., add the end of this order's contribution to the text of the instruments variations, ...
+    #                             if order == 1:
+    #                                 if multi:
+    #                                     returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})"
+    #                                 else:
+    #                                     returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})"
+    #                             elif order > 1:
+    #                                 if multi:
+    #                                     returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}"
+    #                                 else:
+    #                                     returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})**{order}"
+    #
+    #     #####################################
+    #     # Finalize the inst_var only function
+    #     #####################################
+    #     for func_shortname in [inst_var_func_shortname, ]:
+    #         l_return = [output_i if output_i != "" else 'None' for output_i in returns.pop(func_shortname)]
+    #         function_builder.add_to_body_text(text=f"{tab}return {', '.join(l_return)}", function_shortname=func_shortname)
+    #
+    # return returns
 
-    #############################################################################
-    # Check if any of the instrument model needs an inst var model
-    #############################################################################
-    requires_instvar = False
-    for instmod in l_inst_model:
-        if instmod.get_with_inst_var():
-            requires_instvar = True
-            break
 
-    if requires_instvar:
-        #################################################
-        # Initialise the new function in function_builder
-        #################################################
-        # Extension for the shortname of the function that do the decorrelation only model
-        inst_var_func_shortname = "inst_var"
-        function_builder.add_new_function(shortname=inst_var_func_shortname)
-        function_builder.set_function_fullname(full_name=f"LC_sim_{inst_var_func_shortname}{ext_func_fullname}", shortname=inst_var_func_shortname)
+def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
+                   tab, time_vec_name, l_time_vec_name,
+                   star, LCcat_model, dataset_db,
+                   function_builder, l_function_shortname, ext_func_fullname):
+    """Get the stellar variation contribution to the LCs including the systemic velocity
 
-        ########################################
-        # Update the list of function to address
-        ########################################
-        l_function_shortname += [inst_var_func_shortname, ]
+    Arguments
+    ---------
+    multi                   : bool
+        True if the datasim function needs to give multiple outputs.
+        Not used right now but there to be able to produce instrumental drift in the future
+    l_inst_model            : list_of_Instrument_Model
+        Checked list of Instrument_Model instance(s).
+    l_dataset               : list_of_Dataset
+        Checked list of Dataset instance(s).
+    get_times_from_datasets : bool
+        True the datasets should be used to extract the time vectors
+        Not used right now but there to be able to produce instrumental drift in the future
+    tab                     : str
+        String providing the space to put in front of each new line
+    time_vec_name           : str
+        Str used to design the time vector
+        Not used right now but there to be able to produce instrumental drift in the future
+    l_time_vec_name         : str
+        Str used to design the list of time vector
+        Not used right now but there to be able to produce instrumental drift in the future
+    star                        : Star
+        Star object
+    LCcat_model                 : LC_InstCat_Model
+        Instance of the LC_InstCat_Model
+    dataset_db                  : DatasetDatabase
+        Dataset database, this will be used by the function to access the all the LC dataset,
+        not only the datasets to be simulated.
+    function_builder        : FunctionBuilder
+        Function builder instance
+    l_function_shortname    : list of str
+        List of the short name of the functions for which you want to add the instrument variation component
+    ext_func_fullname       : str
+        Extension to add and the end of the full name of the function simulating the instrumental variation only
+        which is defined by this function in the function_builder
 
-        ################################
-        # Do the Model for each function
-        ################################
-        for function_shortname in l_function_shortname:
-            returns[function_shortname] = []
-
-            # Add the time argument
-            # Even if the model is a constant you want to generate a vector of constant values that can
-            # compared with the data (for the likelihood computation) or plotted without issue
-            time_arg_name = add_time_argument(function_builder=function_builder, function_shortname=function_shortname,
-                                              multi=multi, get_times_from_datasets=get_times_from_datasets,
-                                              l_dataset=l_dataset, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name,
-                                              exist_ok=True)
-
-            # For each instrument model and dataset, ...
-            for ii, instmdl in enumerate(l_inst_model):
-                returns[function_shortname].append("")
-                # ..., if instrument variations have been asked, ...
-                if instmdl.get_with_inst_var():
-                    # ..., For each order in the required polynomial model, ...
-                    for order in range(instmdl.get_inst_var_order() + 1):
-                        # ..., get the name and full name of the parameter for this order
-                        instvar_param_name = instmdl.get_inst_var_param_name(order)
-                        # ..., If this parameter is a main parameter (it should be), ...
-                        if instmdl.parameters[instvar_param_name].main:
-                            value_not0 = True
-                            function_builder.add_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
-                            text_instvar_param = function_builder.get_text_4_parameter(parameter=instmdl.parameters[instvar_param_name], function_shortname=function_shortname)
-                            # ..., if the parameter is free or the fixed value is not zero, ...
-                            if text_instvar_param != 0.0:
-                                if (order == 0) and (instmdl.get_inst_var_order() == 0):
-                                    function_builder.add_variable_to_ldict(variable_name="ones_like",
-                                                                           variable_content=ones_like,
-                                                                           function_shortname=function_shortname,
-                                                                           exist_ok=True)
-                                    if multi:
-                                        returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name}[{ii}])"
-                                    else:
-                                        returns[function_shortname][ii] += f"{text_instvar_param} * ones_like({time_arg_name})"
-                                else:
-                                    if returns[function_shortname][ii] == "":
-                                        pretext = ""
-                                    else:
-                                        pretext = " + "
-                                    returns[function_shortname][ii] += f"{pretext}{text_instvar_param}"
-                            # ..., else, since the fixed value is zero, this order doesn't have any
-                            # contribution
-                            else:
-                                value_not0 = False
-                            # ..., if the order has a contribution to the instrumental variations and
-                            # the considered order is more than 0 meaning the time plays a role, ...
-                            if value_not0 and order > 0:
-                                # ..., and you need a time reference. There is one time reference per instrument
-                                # model, which is automatically set to the time of the first measurement
-                                # among the datasets associated with this instrument model.
-                                # So start be creating the name of the instrument model
-                                timeref_instmod = f"timeref_instvar_{instmdl.full_code_name}"
-                                # if this time_reference is not already in the ldict of the function ...
-                                if timeref_instmod not in function_builder.get_ldict(function_shortname=function_shortname):
-                                    # we have to compute its value and add it to the ldict
-                                    l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmdl.full_name)
-                                    timeref_instmod_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name_instmod])
-                                    function_builder.add_variable_to_ldict(variable_name=timeref_instmod, variable_content=timeref_instmod_value, function_shortname=function_shortname)
-                                # ..., add the end of this order's contribution to the text of the instruments variations, ...
-                                if order == 1:
-                                    if multi:
-                                        returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})"
-                                    else:
-                                        returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})"
-                                elif order > 1:
-                                    if multi:
-                                        returns[function_shortname][ii] += f" * ({time_arg_name}[{ii}] - {timeref_instmod})**{order}"
-                                    else:
-                                        returns[function_shortname][ii] += f" * ({time_arg_name} - {timeref_instmod})**{order}"
-
-        #####################################
-        # Finalize the inst_var only function
-        #####################################
-        for func_shortname in [inst_var_func_shortname, ]:
-            l_return = [output_i if output_i != "" else 'None' for output_i in returns.pop(func_shortname)]
-            function_builder.add_to_body_text(text=f"{tab}return {', '.join(l_return)}", function_shortname=func_shortname)
-
-    return returns
+    Returns
+    -------
+    returns     : dict of list of str
+        Dictionary of list of str giving the return for stellarvar for each function and each output
+    """
+    return get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
+                         tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=LCcat_model,
+                         dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
+                         polyonly_func_shortname="stellar_var", ext_func_fullname=ext_func_fullname, name_coeff_const=star.__name_coeff_const_LC__,
+                         func_param_name=lambda order: star.get_polymodel_param_name(order=order, inst_cat=LCcat_model.inst_cat),
+                         instrument_per_instrument_model=False, param_container=star, prefix_config=LCcat_model.inst_cat,
+                         )
 
 
 def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, l_planet_name, LDs, function_builder, l_function_shortname):
@@ -1920,7 +1996,8 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
     l_time_vec_name         : str
         Str used to designate the list of time vectors
     reference_flux_level    : float
-        Reference_flux_level for the photometry (in principle 1 or 0)
+        Reference_flux_level for the photometry (in principle 1 or 0). This argument is ignored if stellar_var
+        is provided (as it provides the reference level)
     tab                     : str
         String providing the space to put in front of each new line
     function_builder        : FunctionBuilder
@@ -1973,12 +2050,12 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
             if stellar_var is None or stellar_var[i_inputoutput] == "":
                 return_text[i_inputoutput] += f"{planet_contribution}"
             else:
-                return_text[i_inputoutput] += f"(1 + {stellar_var}) * (1 + {planet_contribution}) - 1"
+                return_text[i_inputoutput] += f"({stellar_var}) * (1 + {planet_contribution}) - 1"
         else:
             if stellar_var is None or stellar_var[i_inputoutput] == "":
                 return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {planet_contribution})"
             else:
-                return_text[i_inputoutput] += f"({reference_flux_level} + {stellar_var}) * (1 + {planet_contribution})"
+                return_text[i_inputoutput] += f"({stellar_var}) * (1 + {planet_contribution})"
 
         # Apply the contamination correction
         if (contamination is not None) and (contamination[i_inputoutput] != ""):

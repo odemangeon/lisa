@@ -411,7 +411,8 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         """Load LC_param_file."""
         dico_config = self.read_param_file()
         self.load_config(dico_config)
-        self.load_config_decorrelations(dico_config)
+        if self.decorrelation_model_available or self.decorrelation_likelihood_available:
+            self.load_config_decorrelations(dico_config)
 
     def read_param_file(self):
         """Read the content of the inst cat parameter file."""
@@ -423,7 +424,8 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                 exec(f.read())
             chdir(cwd)
             dico = locals().copy()
-            dico.pop("self")
+            for var_name in ["self", "cwd", "f", "paramfile_instcat"]:
+                dico.pop(var_name)
             logger.debug(f"{self.inst_cat} parameter file read.\nContent of the parameter file: {dico.keys()}")
             return dico
         else:

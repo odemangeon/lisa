@@ -94,7 +94,7 @@ class DatasimulatorCreator(object):
             inst_fullcat = instmod_obj.instrument.full_category
             # ... create and store the datasimulator docfuncs in the database
             # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
-            if (instmod_obj.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj, "indicator_model")):
+            if (instmod_obj.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj.full_name]):
                 continue
             l_dataset_name = self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_obj.full_name)  # get_ldatasetname4instmodfullname comes from lisa.posterior.core.instmodel4dataset
             datasets = [self.dataset_db[dst_name] for dst_name in l_dataset_name]
@@ -130,7 +130,7 @@ class DatasimulatorCreator(object):
             instmod_obj = self.get_instmod(dataset_name=dataset_name)  # get_instmod comes from Instmodel4DatasetAttr
             # ... create and store the datasimulator
             # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
-            if (instmod_obj.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj, "indicator_model")):
+            if (instmod_obj.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj.full_name]):
                 continue
             db[dataset_name] = self._create_datasimulator(instmod_obj, dataset, get_times_from_datasets=True)[self.key_whole]
         return db
@@ -202,7 +202,7 @@ class DatasimulatorCreator(object):
         l_dataset_obj_clean = copy(l_dataset_obj)
         for dataset_obj_ii in l_dataset_obj:
             instmod_obj_ii = self.get_instmod(dataset_obj_ii.dataset_name)  # Define in Instmodel4Datase
-            if (instmod_obj_ii.instrument.category == IND_inst_cat) and not(hasattr(instmod_obj_ii, "indicator_model")):
+            if (instmod_obj_ii.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj_ii.full_name]):
                 l_dataset_obj_clean.remove(dataset_obj_ii)
         return self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj_clean)[self.key_whole]
 

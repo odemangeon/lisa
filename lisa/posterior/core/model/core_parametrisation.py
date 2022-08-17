@@ -50,7 +50,7 @@ class Core_Parametrisation(object):
         self.save_parametrisation_kwargs(**kwargs)
         # TODO: I want it to have here the apply_instmodel_parametrisation from parametrisation_gravgroup, but it requires a bit of uniformisation of the instrument category parameterisation methods.
         # Apply the parametrisation of the noise models
-        self.apply_noisemodel_parameterisation()
+        # self.apply_noisemodel_parameterisation()
         # Used the Subclass of Core_Model apply_parametrisation method
         self.apply_parametrisation(**kwargs)
 
@@ -115,12 +115,19 @@ class Core_Parametrisation(object):
 
     def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation pointed by the parametrisation property."""
-        raise NotImplementedError("This function needs to be overloaded in the child Class.")
+        self.apply_instcat_parameterisation(**kwargs)
+        self.apply_noisemodel_parameterisation(**kwargs)
+        # raise NotImplementedError("This function needs to be overloaded in the child Class.")
 
-    def apply_noisemodel_parameterisation(self):
+    def apply_noisemodel_parameterisation(self, **kwargs):
         """Apply the parametrisation of the noise models"""
         for noisemod_cat in self.noisemodel_categories:  # noisemodel_categories comes from InstrumentContainerInterface
             self.applyparametrisation4noisemodel[noisemod_cat]()
+
+    def apply_instcat_parameterisation(self, **kwargs):
+        """Apply the parametrisation of the instrument models"""
+        for inst_cat_model in self.instcat_models.values():  # instcat_models comes from Core_Model
+            inst_cat_model.apply_parametrisation(parametrisation=self.parametrisation, **kwargs)
 
     def save_parametrisation_kwargs(self, **kwargs):
         """Save the keyword arguments of the parmetrisation function in parametrisation_kwargs."""

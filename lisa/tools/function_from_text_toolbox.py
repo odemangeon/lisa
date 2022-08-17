@@ -487,6 +487,31 @@ class FunctionBuilder(object):
         else:
             raise ValueError(f"{parameter.full_name} is not a parameter of the model, you need to add this parameter first with add_parameter")
 
+    def get_index_4_parameter(self, parameter, function_shortname):
+        """Return the index of the parameter in the free parameter vector.
+
+        Arguments
+        ---------
+        parameter           : Parameter
+            Model parameter
+        function_shortname  : str
+            Short name of the function
+
+        Return
+        ------
+        index : int
+            Index of the parameter in the free parameter vector
+        """
+        if parameter.duplicate is not None:
+            parameter = parameter.duplicate
+        if self.is_parameter(parameter=parameter, function_shortname=function_shortname):
+            if parameter.free:
+                return self.get_free_parameter_vector(function_shortname=function_shortname).index(parameter)
+            else:
+                raise ValueError(f"{parameter.full_name} is not a free parameter.")
+        else:
+            raise ValueError(f"{parameter.full_name} is not a parameter of the model, you need to add this parameter first with add_parameter")
+
     def get_body_text(self, function_shortname):
         """Return the text of the body of the function
 

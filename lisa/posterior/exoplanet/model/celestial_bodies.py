@@ -12,6 +12,9 @@ from numpy import rad2deg, arcsin, sqrt, pi
 
 from ...core.parameter import Parameter
 from ...core.paramcontainer import Core_ParamContainer
+from ...core.model.polynomial_model import get_dico_config, set_dico_config
+from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
+
 
 ## Logger object
 logger = getLogger()
@@ -214,7 +217,9 @@ class Star(CelestialBody):
     """
 
     __category__ = "stars"
-    __RVdrift_basename__ = "RVdrift"
+    __drift_basename__ = "drift"
+    __name_coeff_const_LC__ = "F0"
+    __name_coeff_const_RV__ = "v0"
 
     def __init__(self, gravgroup=None, name="", **kwargs):
         """docstring Planet init method.
@@ -256,37 +261,50 @@ class Star(CelestialBody):
         ## Metallicity
         self.add_parameter(Parameter(name="feh", name_prefix=self.name, main=False))
 
-    def init_RVdrift_parameters(self, with_RVdrift=False, RVdrift_order=1):
-        """Initialise/Create the required parameter for the modelling of the RV_drift."""
-        self.__with_RVdrift = with_RVdrift
-        self.__RVdrift_order = RVdrift_order
-        if with_RVdrift:
-            if isinstance(RVdrift_order, int) and RVdrift_order >= 1:
-                for order in range(1, RVdrift_order + 1):
-                    self.add_parameter(Parameter(name=(self.get_RVdrift_param_name(order)),
-                                                 name_prefix=self.name,
-                                                 main=True,
-                                                 unit="[K].s^(-{})".format(order)))
-            else:
-                raise ValueError("If you want to model an RV drift you need to "
-                                 "provide an RVdrift_order that above 1 !")
+    def apply_polymodel_parametrisation(self, inst_cat):
+        """Apply the parametrisation for the polynomial modelling of a given instrument category.
 
-    @property
-    def with_RVdrift(self):
-        """True if the stellar model includes an RV drift."""
-        try:
-            return self.__with_RVdrift
-        except AttributeError:
-            return False
+        Arguments
+        ---------
+        inst_cat    : str
+            Instrument category
+        """
+        if inst_cat == "RV":
+            name_coeff_const = "v0"
+        elif inst_cat == "LC":
+            name_coeff_const = "F0"
+        apply_polymodel_parametrisation_def(param_container=self, name_coeff_const=name_coeff_const,
+                                            func_param_name=lambda order: self.get_polymodel_param_name(order=order, inst_cat=inst_cat),
+                                            full_category_4_unit=inst_cat,
+                                            prefix=inst_cat)
 
-    @property
-    def RVdrift_order(self):
-        """Return the order of the RV drift model or None, if it's not modeled."""
-        if self.with_RVdrift:
-            return self.__RVdrift_order
-        else:
-            return None
-
-    def get_RVdrift_param_name(self, order):
+    def get_polymodel_param_name(self, order, inst_cat):
         """Return the parameter name of the coefficient of the RV drift model."""
-        return "{}{}".format(self.__RVdrift_basename__, order)
+        return f"{inst_cat}{self.__drift_basename__}{order}"
+
+    def set_dico_config_polymodel(self, inst_cat, dico_config=None):
+        """Get the dictionary that configures the polynomial model for a given instrument category
+        Proxy for lisa.posterior.core.model.polynomial_model.set_dico_config
+
+        Arguments
+        ---------
+        inst_cat        : str
+            Instrument category
+        dico_config     : dict
+            Updates that you might want to do to the dico that configure the polynomial model
+        """
+        set_dico_config(param_container=self, prefix=inst_cat, dico_config=dico_config)
+
+    def get_dico_config_polymodel(self, inst_cat, notexist_ok=False, return_None_if_notexist=False):
+        """Get the dictionary that configures the polynomial model for a given instrument category
+        Proxy for lisa.posterior.core.model.polynomial_model.set_dico_config
+
+        Arguments
+        ---------
+        inst_cat        : str
+            Instrument category
+        dico_config     : dict
+            Updates that you might want to do to the dico that configure the polynomial model
+        """
+        return get_dico_config(param_container=self, prefix=inst_cat, notexist_ok=notexist_ok,
+                               return_None_if_notexist=return_None_if_notexist)

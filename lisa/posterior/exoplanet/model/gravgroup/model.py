@@ -32,8 +32,8 @@ from .LC_instcat_model import LC_InstCat_Model
 from .RV_instcat_model import RV_InstCat_Model
 from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..celestial_bodies import Star, Planet
-from ...dataset_and_instrument.lc import LC_inst_cat
-from ...dataset_and_instrument.rv import RV_inst_cat
+# from ...dataset_and_instrument.lc import LC_inst_cat
+# from ...dataset_and_instrument.rv import RV_inst_cat
 from ...likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, StellarActivityNoiseModelInterface
 from ....core.model.core_model import Core_Model, create_key, load_key
 from ....core.model.indicator_model.IND_instcat_model import IND_InstCat_Model

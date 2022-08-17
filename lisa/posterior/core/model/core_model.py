@@ -360,18 +360,25 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     def get_list_params(self, main=False, free=False, no_duplicate=True, recursive=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
-        :param bool recursive: If true (default false) also returns the parameters in the param
-            containers of the param container database
+        Arguments
+        ---------
+        main    : bool
+            If True returns only the main parameters. If False returns both
+        free    : bool
+            If True returns only the free parameters. If False returns both
+        no_duplicate    : bool
+            If False returns all parameters (even duplicates). If True, the duplicates of a parameter
+            also in the list are not returned
+        recursive   : bool
+            If True (default false) also returns the parameters in the param containers of the
+            param container database
 
-        Keyword arguments are given to ParamContainerDatabase.get_list_params (see docstring for
-        exhaustive information. Below I describe some of these.
-        :param dict inst_models : Dictionnary which for each instrument name give the list of the
-                names of instrument models for which you want the params.
-                Default = all instrument models used
+        Keyword arguments are given to ParamContainerDatabase.get_list_params (see docstring for information)
 
-        :return list_of_param result: list of Parameter instances
+        Return
+        ------
+        result  : list_of_Parameter
+            list of Parameter instances
         """
         result = []
         # Get parameters that in the model parameters and not in any specific param container

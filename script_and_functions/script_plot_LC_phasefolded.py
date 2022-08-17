@@ -86,6 +86,7 @@ create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=d
                             #            },
                             # pl_kwargs={f"LC_{obj_name}_TESS_0": {"data": {'color': 'k', 'alpha': 0.2}, },
                             #            },
+                            suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
                             sharey=True,
                             LC_unit="ppm",
                             )

@@ -76,7 +76,6 @@ create_RV_TSNGLSP_plots(fig=fig,
                         remove_inst_var=False, remove_stellar_var=True, remove_decorrelation=True,
                         remove_decorrelation_likelihood=True, remove_GP_dataNmodel=True, remove_GP_residual=True,
                         fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
-                                   # 'suptitle_kwargs': {"y": 0.99},
                                    },
                         TS_kwargs={"do": True,
                                    "exptime_bin": 1,
@@ -119,7 +118,7 @@ create_RV_TSNGLSP_plots(fig=fig,
                                      #                  'WF': {'loc': 'upper center'},
                                      #                  },
                                      },
-                        show_system_name_in_suptitle=True,
+                        suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
                         RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                         RV_unit="m/s",
                         )

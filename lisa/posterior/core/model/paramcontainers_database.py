@@ -126,6 +126,8 @@ class ParamContainerDatabase(object):
     def get_list_params(self, model_instance, main=False, free=False, no_duplicate=True, **kwargs):
         """Return the list of all parameters.
 
+        TODO: This doesn't seems right. Check why would you need model_instance here and if this function is actually used.
+
         :param Core_Model model_instance: Model instance which is used for the default value of
             some SpecificParamContainerCategory .
         :param bool main: If true (default false) returns only the main parameters

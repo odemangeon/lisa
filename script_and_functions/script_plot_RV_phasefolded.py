@@ -86,8 +86,7 @@ create_RV_phasefolded_plots(fig=fig,
                                        # "databinned": {"color": "C3"}  # 'ms': 14, "elinewidth": 5
                                        },
                             # legend_param={"idx_planet": 0, "loc": 1},
-                            show_system_name_in_suptitle=True,
-                            show_rms_residuals_in_suptitle=True,
+                            suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
                             RV_unit="m/s",
                             )
 pl.show()

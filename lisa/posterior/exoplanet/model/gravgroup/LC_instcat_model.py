@@ -27,6 +27,8 @@ from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrela
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
+from ....core.model.polynomial_model import set_dico_config, get_dico_config
+from ....core.parameter import Parameter
 from .....tools.miscellaneous import spacestring_like
 
 
@@ -106,6 +108,11 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                   }
         self.__ldmodel4instmodfname = OrderedDict()  # Limb darkening model for each instrument
         SuperSampExpTimeAttr.__init__(self)
+        # Set the dictionaries for the polynomial models
+        for star in self.model_instance.stars.values():
+            star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config={'do': False})
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            instmod_obj.set_dico_config_polymodel(dico_config={'do': True})  # Defined in lisa.posterior.exoplanet.dataset_and_instrument.rv.Instrument_RV and accessed through lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model.__getattr__
 
     @property
     def ldmodel4instmodfname(self):
@@ -184,6 +191,9 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         # Which model do you want to use for the occultation ?
         # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
         occultation_model = {occultation_model}
+
+        # Polynomial trends
+        polynomial_model = {poly_models}
         """
         text = dedent(text)  # Remove undesired indentation
 
@@ -194,6 +204,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         tab_trmod = spacestring_like("transit_model = ")
         tab_pcmod = spacestring_like("phasecurve_model = ")
         tab_occmod = spacestring_like("occultation_model = ")
+        tab_poly = spacestring_like("polynomial_model = ")
 
         # Create the structure of the star_ld_dict
         star_ld_dict = """
@@ -243,6 +254,13 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                            tab_star_ld=tab_star_ld, LDmodels=LDmodels,
                                            LD_dict_name=self.__ldmod_dict_name)
 
+        # Create the dictionary for the polynomial models
+        dico_poly = {}
+        for star_name, star in self.model_instance.stars.items():
+            dico_poly[star_name] = star.get_dico_config_polymodel(inst_cat=self.inst_cat, notexist_ok=False)
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            dico_poly[instmod_obj.full_name] = instmod_obj.get_dico_config_polymodel(notexist_ok=False)
+
         # Fill the whole text_LC_param string
         text = text.format(object_name=self.model_instance.get_name(),
                            transit_model=pformat(self.transit_model, compact=True).replace("\n", f"\n{tab_trmod}"),
@@ -253,6 +271,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                            tab_ss=tab_ss, inst_ss_dict=inst_ss_dict,
                            phasecurve_model=pformat(self.phasecurve_model, compact=True).replace("\n", f"\n{tab_pcmod}"),
                            occultation_model=pformat(self.occultation_model, compact=True).replace("\n", f"\n{tab_occmod}"),
+                           poly_models=pformat(dico_poly, compact=True).replace("\n", f"\n{tab_poly}")
                            )
 
         return text
@@ -277,7 +296,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         for instmod_name, dico in supersamp_dict.items():
             self.SSE4instmodfname.add_instmodel_SSEdict(instmod_name, dico)
         # Check the transit_model, phasecurve_model and occultation_model
-        # A big part of structure of these dictionary are the same where are going to check that
+        # A big part of structure of these dictionary are the same, we are going to check that
         l_dico_model_name = ["transit_model", "phasecurve_model", "occultation_model"]
         for dict_name in l_dico_model_name:
             if dict_name not in dico_config:
@@ -377,6 +396,15 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available phasecurve model.")
                 self.occultation_model[planet_name] = dico_config["occultation_model"][planet_name]
 
+        # Check and load the polynomial models
+        if "polynomial_model" in dico_config:
+            for star_name, star in self.model_instance.stars.items():
+                if star_name in dico_config["polynomial_model"]:
+                    star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config["polynomial_model"][star_name])
+            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+                if instmod_obj.full_name in dico_config["polynomial_model"]:
+                    instmod_obj.set_dico_config_polymodel(dico_config=dico_config["polynomial_model"][instmod_obj.full_name])
+
     def add_a_LD(self, star, ld_type, name, kwargs_getname_4_storename={"include_prefix": True, "code_version": True},
                  kwargs_getname_4_codename={"include_prefix": True, "code_version": True}):
         """Add a Planet in the GravGroup.
@@ -468,21 +496,134 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         break
         return require
 
-    def apply_instmod_parametrisation(self, inst_mod_obj):
-        """Apply the parametrisation to an instrument model object.
+    def apply_parametrisation(self, parametrisation, **kwargs):
+        """Apply the parametrisation for the instrument category
 
-        This parametrisation should not include the decorrelation
-
-        Arguments
-        ---------
-        inst_mod_obj : Instrument_Model
-            Instrument_Model instance providing the instrument model to be parametrised.
+        This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
-        # instrumental variation parametrisation
-        inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
-                                              inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
-        # The initialisation of the instrumental contamination is already made in the instrument model
-        # See exoplanet.dataset_and_instrument.lc.LC_Instrument.__params_model__
+        # Apply the parametrisation to the star and planets parameters
+        self.apply_star_planet_parametrisation(parametrisation=parametrisation)
+
+        # Apply the parametrisation to the instrument models parameters
+        self.apply_instmodel_parametrisation(parametrisation=parametrisation)
+
+        # If needed apply the limbdarkening coefficient parametrisation
+        self.apply_limbdarkening_parametrisation(parametrisation=parametrisation)
+
+    def apply_star_planet_parametrisation(self, parametrisation):
+        """Apply the parametrisation to the star and planet objects.
+        """
+        ##################################################
+        # Apply the parametrisation to the star parameters
+        ##################################################
+        # Stellar flux polynomial_model
+        for star in self.model_instance.paramcontainers["stars"].values():
+            star.apply_polymodel_parametrisation(inst_cat=LC_inst_cat)
+
+        host_star = list(self.model_instance.paramcontainers["stars"].values())[0]
+
+        # Stellar density (orbit Multis parametrisation)
+        if parametrisation == "Multis":
+            host_star.rho.main = True
+            host_star.rho.unit = "Solar density"
+
+        # Stellar effective temperature (Phase curve if spiderman and zhang brightness model)
+        for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            if self.phasecurve_model[planet_name]['do']:
+                for l_mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
+                    for mod_comp_name in l_mod_comp_name:
+                        pc_component_model = self.phasecurve_model[planet_name]['model_definitions'][mod_comp_name]
+                        if pc_component_model["model"] == 'spiderman':
+                            if pc_component_model['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                host_star.Teff.main = True
+                        elif pc_component_model["model"] == 'kelp':
+                            stellar_spectrum = pc_component_model['args']['Model_kwargs'].get('stellar_spectrum', None)
+                            if (pc_component_model['args']['brightness_model'] == 'thermal') and (stellar_spectrum is None):
+                                host_star.Teff.main = True
+
+        # Apply the parametrisation to the planets parameters
+        for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            planet.Rrat.main = True
+            planet.Rrat.unit = "w/o unit"
+            planet.cosinc.main = True  # Unit already defined in celestial_bodies
+            if parametrisation == "EXOFAST":
+                planet.aR.main = True  # Unit already defined in celestial_bodies
+            planet.P.main = True
+            planet.P.unit = "[time of the RV/LC data]"
+            planet.tic.main = True
+            planet.tic.unit = "[time of the RV/LC data]"
+            planet.ecosw.main = True  # Unit already defined in celestial_bodies
+            planet.esinw.main = True  # Unit already defined in celestial_bodies
+            if self.phasecurve_model[planet_name]['do']:
+                for l_mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
+                    for mod_comp_name in l_mod_comp_name:
+                        if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                            if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                                planet.a.main = True
+                                planet.a.unit = "AU"
+                                planet.u1.main = True
+                                planet.u2.main = True
+                                planet.xi.main = True
+                                planet.Tn.main = True
+                                planet.deltaT.main = True
+                        elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
+                            if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
+                                planet.f.main = True  # greenhouse factor
+                                planet.hotspotoffset.main = True  # hotspot offset
+                                planet.hotspotoffset.unit = "radians"
+                                planet.alpha.main = True  # Dimensionless fluid number
+                                planet.omegadrag.main = True  # Dimensionless drag frequency
+                                planet.AB.main = True  # Bond albedo
+                                planet.c11.main = True  # m=1 l=1 Spherical harmonic coefficients
+                        elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'sincos':
+                            for sincos_comp_name, dico_sincos_comp in self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["args"].items():
+                                if dico_sincos_comp['sincos'] is None:
+                                    planet.add_parameter(Parameter(name=f"C{mod_comp_name}{sincos_comp_name}",
+                                                                   name_prefix=planet.name, main=True
+                                                                   )
+                                                         )
+                                else:  # 'sin' or 'cos'
+                                    planet.add_parameter(Parameter(name=f"A{mod_comp_name}{sincos_comp_name}",
+                                                                   name_prefix=planet.name, main=True
+                                                                   )
+                                                         )
+                                    if dico_sincos_comp['phase_offset'] == "param":
+                                        planet.add_parameter(Parameter(name=f"Phi{mod_comp_name}{sincos_comp_name}",
+                                                                       name_prefix=planet.name, main=True
+                                                                       )
+                                                             )
+                                    if dico_sincos_comp['flux_offset'] == "param":
+                                        planet.add_parameter(Parameter(name=f"Foffset{mod_comp_name}{sincos_comp_name}",
+                                                                       name_prefix=planet.name, main=True
+                                                                       )
+                                                             )
+            if self.occultation_model[planet_name]['do']:
+                for mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
+                    if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'batman':
+                        planet.Frat.main = True
+
+    def apply_limbdarkening_parametrisation(self, parametrisation):
+        """Make all the parameters of all the Limb Darkening param containers main parameters."""
+        if LC_inst_cat in set(self.model_instance.dataset_db.inst_categories):
+            for LD_parcont in self.get_list_LD_parconts():
+                for param in LD_parcont.get_list_params(no_duplicate=True):
+                    param.main = True
+
+    def apply_instmodel_parametrisation(self, parametrisation):
+        """Apply the parametrisation to an instrument model object.
+        """
+        # # instrumental variation parametrisation
+        # inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
+        #                                       inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
+        # # The initialisation of the instrumental contamination is already made in the instrument model
+        # # See exoplanet.dataset_and_instrument.lc.LC_Instrument.__params_model__
+        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=LC_inst_cat)
+        for inst_fullcat_i in l_inst_fullcat:
+            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=LC_inst_cat):
+                inst_model.apply_parametrisation()
+                self.apply_instmod_parametrisation_decorrelation(inst_mod_obj=inst_model)
 
     def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.

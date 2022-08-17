@@ -25,6 +25,7 @@ from ...dataset_and_instrument.rv import RV_inst_cat
 from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
 from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from ....core.model.core_instcat_model import Core_InstCat_Model
+from ....core.model.polynomial_model import set_dico_config, get_dico_config
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .....tools.miscellaneous import spacestring_like
 
@@ -58,22 +59,31 @@ class RV_InstCat_Model(Core_InstCat_Model):
                                              }
                          for planet in self.model_instance.planets.values()
                          }
-        # Initialise the dictionary giving the RV zero point RV_references
-        self.__RV_references = dict.fromkeys(model_instance.get_inst_names(inst_fullcat=RV_inst_cat), None)
-        logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
-        self.__RV_references["global"] = list(self.__RV_references.keys())[0]
-        for key in self.__RV_references:
-            if key != "global":
-                self.__RV_references[key] = model_instance.get_instmodel_names(inst_name=key,
-                                                                               inst_fullcat=RV_inst_cat)[0]
+        # # Initialise the dictionary giving the RV zero point RV_references
+        # self.__RV_references = dict.fromkeys(model_instance.get_inst_names(inst_fullcat=RV_inst_cat), None)
+        # logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
+        # self.__RV_references["global"] = list(self.__RV_references.keys())[0]
+        # for key in self.__RV_references:
+        #     if key != "global":
+        #         self.__RV_references[key] = model_instance.get_instmodel_names(inst_name=key,
+        #                                                                        inst_fullcat=RV_inst_cat)[0]
+        # Set the dictionaries for the polynomial models
+        for star in self.model_instance.stars.values():
+            star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config={'do': True})
+        for ii, instmod_obj in enumerate(self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)):
+            if ii == 0:
+                dico_config = {'do': False}
+            else:
+                dico_config = {'do': True}
+            instmod_obj.set_dico_config_polymodel(dico_config=dico_config)  # Defined in lisa.posterior.exoplanet.dataset_and_instrument.rv.Instrument_RV and accessed through lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model.__getattr__
 
-    @property
-    def RV_references(self):
-        return self.__RV_references
-
-    @property
-    def RV_globalref_instname(self):
-        return self.__RV_references["global"]
+    # @property
+    # def RV_references(self):
+    #     return self.__RV_references
+    #
+    # @property
+    # def RV_globalref_instname(self):
+    #     return self.__RV_references["global"]
 
     def _init_decorrelation_model_config(self):
         # Get list of inst model full name for the inst cat
@@ -97,15 +107,9 @@ class RV_InstCat_Model(Core_InstCat_Model):
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
         """
-        return create_datasimulator_RV(star=list(self.model_instance.stars.values())[0],
-                                       planets=self.model_instance.planets,
-                                       RV_globalref_instname=self.RV_globalref_instname,
-                                       RV_instref_modnames=self.RV_references,
-                                       RV_inst_db=self.model_instance.instruments[RV_inst_cat],
-                                       rv_model=self.rv_model,
-                                       dataset_db=self.model_instance.dataset_db,
-                                       RVcat_model=self,
-                                       inst_models=inst_models, datasets=datasets,
+        return create_datasimulator_RV(star=list(self.model_instance.stars.values())[0], planets=self.model_instance.planets,
+                                       rv_model=self.rv_model, dataset_db=self.model_instance.dataset_db,
+                                       RVcat_model=self, inst_models=inst_models, datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets
                                        )
 
@@ -122,15 +126,27 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         # Which model do you want to use for the rv keplerian ?
         keplerian_rv_model = {keprv_model}
+
+        # Polynomial trends
+        polynomial_model = {poly_models}
         """
         text_RV_param = dedent(text_RV_param)  # Remove undesired indentation
 
         # Create some of the easy content of the file
         tab_keprvmod = spacestring_like("keplerian_rv_model = ")
+        tab_poly = spacestring_like("polynomial_model = ")
+
+        # Create the dictionary for the polynomial models
+        dico_poly = {}
+        for star_name, star in self.model_instance.stars.items():
+            dico_poly[star_name] = star.get_dico_config_polymodel(inst_cat=self.inst_cat, notexist_ok=False)
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            dico_poly[instmod_obj.full_name] = instmod_obj.get_dico_config_polymodel(notexist_ok=False)  # Defined in lisa.posterior.exoplanet.dataset_and_instrument.rv.Instrument_RV and accessed through lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model.__getattr__
 
         # Fill the whole text_LC_param string
         text_RV_param = text_RV_param.format(object_name=self.model_instance.get_name(),
                                              keprv_model=pformat(self.rv_model, compact=True).replace("\n", f"\n{tab_keprvmod}"),
+                                             poly_models=pformat(dico_poly, compact=True).replace("\n", f"\n{tab_poly}"),
                                              )
 
         return text_RV_param
@@ -162,14 +178,23 @@ class RV_InstCat_Model(Core_InstCat_Model):
                 # TODO?: Make checks on the content of each model in 'model_definitions'
                 self.rv_model[planet_name] = dico_config["keplerian_rv_model"][planet_name]
 
-    def set_RV_globalref_instname(self, inst_name):
-        self.__RV_references["global"] = inst_name
+        # Check and load the polynomial models
+        if "polynomial_model" in dico_config:
+            for star_name, star in self.model_instance.stars.items():
+                if star_name in dico_config["polynomial_model"]:
+                    star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config["polynomial_model"][star_name])
+            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+                if instmod_obj.full_name in dico_config["polynomial_model"]:
+                    instmod_obj.set_dico_config_polymodel(dico_config=dico_config["polynomial_model"][instmod_obj.full_name])  # Defined in lisa.posterior.exoplanet.dataset_and_instrument.rv.Instrument_RV and accessed through lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model.__getattr__
 
-    def get_RVref4inst_modname(self, inst_name):
-        return self.__RV_references[inst_name]
-
-    def set_RVref4inst_modname(self, inst_name, inst_model_name):
-        self.__RV_references[inst_name] = inst_model_name
+    # def set_RV_globalref_instname(self, inst_name):
+    #     self.__RV_references["global"] = inst_name
+    #
+    # def get_RVref4inst_modname(self, inst_name):
+    #     return self.__RV_references[inst_name]
+    #
+    # def set_RVref4inst_modname(self, inst_name, inst_model_name):
+    #     self.__RV_references[inst_name] = inst_model_name
 
     def load_config_decorrelation_model(self, dico_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
@@ -241,7 +266,40 @@ class RV_InstCat_Model(Core_InstCat_Model):
                         break
         return require
 
-    def apply_instmod_parametrisation(self, inst_mod_obj):
+    def apply_parametrisation(self, parametrisation, **kwargs):
+        """Apply the parametrisation for the instrument category
+
+        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        """
+        # Apply the parametrisation to the star and planets parameters
+        self.apply_star_planet_parametrisation(parametrisation=parametrisation)
+
+        # Apply the parametrisation to the instrument models parameters
+        self.apply_instmodel_parametrisation(parametrisation=parametrisation)
+
+    def apply_star_planet_parametrisation(self, parametrisation):
+        """Apply the parametrisation to the star and planet objects.
+        """
+        ##################################################
+        # Apply the parametrisation to the star parameters
+        ##################################################
+        # Systemic velocity (RVs)
+        for star in self.model_instance.stars.values():
+            star.apply_polymodel_parametrisation(inst_cat=RV_inst_cat)
+
+        # Apply the parametrisation to the planets parameters
+        for planet in self.model_instance.planets.values():
+            # planet_name = planet.get_name()
+            planet.K.main = True
+            planet.K.unit = "[amplitude of the RV data]"
+            planet.P.main = True
+            planet.P.unit = "[time of the RV/LC data]"
+            planet.tic.main = True
+            planet.tic.unit = "[time of the RV/LC data]"
+            planet.ecosw.main = True  # Unit already defined in celestial_bodies
+            planet.esinw.main = True  # Unit already defined in celestial_bodies
+
+    def apply_instmodel_parametrisation(self, parametrisation):
         """Apply the parametrisation to an instrument model object.
 
         This parametrisation should not include the decorrelation
@@ -254,7 +312,12 @@ class RV_InstCat_Model(Core_InstCat_Model):
         # instrumental variation parametrisation
         # For I have not implemented how the use can define inst_var for RVs but once it's done
         # It only needs to be provided here
-        inst_mod_obj.init_inst_var_parameters(with_inst_var=False, inst_var_order=1)
+        # inst_mod_obj.init_inst_var_parameters(with_inst_var=False, inst_var_order=1)
+        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=RV_inst_cat)
+        for inst_fullcat_i in l_inst_fullcat:
+            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=RV_inst_cat):
+                inst_model.apply_parametrisation()
+                self.apply_instmod_parametrisation_decorrelation(inst_mod_obj=inst_model)
 
     def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
