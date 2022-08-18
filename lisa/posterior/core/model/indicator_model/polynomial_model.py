@@ -168,8 +168,9 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
         d_l_instvar = get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                                     tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=INDcat_model,
                                     dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
-                                    polyonly_func_shortname=f"{indicator_category}_inst_var", ext_func_fullname=ext_func_fullname, name_coeff_const=cls.__name_coeff_const_inst__,
-                                    func_param_name=lambda order: INDcat_model.get_polymodel_param_name(inst_model=None, order=order),
+                                    polyonly_func_shortname=f"{indicator_category}_inst_var", ext_func_fullname=ext_func_fullname,
+                                    name_coeff_const=cls.__name_coeff_const_inst__,
+                                    func_param_name=lambda order: cls.get_param_name(order=order, prefix=None),
                                     instrument_per_instrument_model=True, param_container=None, prefix_config=None,
                                     )
 
@@ -179,9 +180,10 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
         d_l_sysvar = get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                                    tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=INDcat_model,
                                    dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
-                                   polyonly_func_shortname=f"{indicator_category}_sys_var", ext_func_fullname=ext_func_fullname, name_coeff_const=cls.__name_coeff_const_sys__.format(indicator=indicator_category),
-                                   func_param_name=lambda order: INDcat_model.get_polymodel_param_name(inst_model=None, order=order),
-                                   instrument_per_instrument_model=False, param_container=model_instance, prefix_config=None,
+                                   polyonly_func_shortname=f"{indicator_category}_sys_var", ext_func_fullname=ext_func_fullname,
+                                   name_coeff_const=cls.__name_coeff_const_sys__.format(indicator=indicator_category),
+                                   func_param_name=lambda order: cls.get_param_name(order=order, prefix=indicator_category),
+                                   instrument_per_instrument_model=False, param_container=model_instance, prefix_config=indicator_category,
                                    )
 
         return {f"{indicator_category}_poly_instvar": d_l_instvar, f"{indicator_category}_poly_sysvar": d_l_sysvar}
