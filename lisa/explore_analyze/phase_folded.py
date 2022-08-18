@@ -400,25 +400,26 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval, load_datasets_and
                 # Compute and plot the oversampled models
                 #########################################
                 if (datasetnameformodel4row[i_row] == datasetname) or (datasetnameformodel4row[i_row] == 'all'):
-                    pl_kwarg_final = compute_and_plot_oversamp_model_func(datasetname=datasetname,
-                                                                          post_instance=post_instance,
-                                                                          df_fittedval=df_fittedval,
-                                                                          key_compute_model=planet_name,
-                                                                          key_pl_kwarg="model",
-                                                                          include_gp_model=False,
-                                                                          datasim_kwargs=datasim_kwargs,
-                                                                          remove_dict=remove_dict_compute_model,
-                                                                          add_dict=add_dict_compute_model,
-                                                                          dico_output_load=dico_output_load,
-                                                                          amplitude_fact=amplitude_fact,
-                                                                          ax=axes_data[i_row][i_pl], pl_kwarg=pl_kwarg_final,
-                                                                          show_binned_model=show_binned_model,
-                                                                          exptime_bin=exptime_bin,
-                                                                          supersamp_bin_model=supersamp_bin_model,
-                                                                          fact_conversion_exptime_bin=(1 / time_fact if show_time_from_tic else Per),
-                                                                          npt_model=npt_model, tlims_model=(tmin_model, tmax_model),
-                                                                          xlims_model=(x_min_data, x_max_data),
-                                                                          )
+                    _, pl_kwarg_final = compute_and_plot_oversamp_model_func(datasetname=datasetname,
+                                                                             post_instance=post_instance,
+                                                                             df_fittedval=df_fittedval,
+                                                                             key_compute_model=planet_name,
+                                                                             key_pl_kwarg="model",
+                                                                             include_gp_model=False,
+                                                                             datasim_kwargs=datasim_kwargs,
+                                                                             remove_dict=remove_dict_compute_model,
+                                                                             add_dict=add_dict_compute_model,
+                                                                             dico_output_load=dico_output_load,
+                                                                             amplitude_fact=amplitude_fact,
+                                                                             npt_model=npt_model, tlims_model=(tmin_model, tmax_model),
+                                                                             xlims_model=(x_min_data, x_max_data),
+                                                                             exptime_bin=exptime_bin,
+                                                                             supersamp_bin_model=supersamp_bin_model,
+                                                                             fact_conversion_exptime_bin=(1 / time_fact if show_time_from_tic else Per),
+                                                                             plot=True, ax=axes_data[i_row][i_pl],
+                                                                             pl_kwarg=pl_kwarg_final,
+                                                                             show_binned_model=show_binned_model,
+                                                                             )
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is False

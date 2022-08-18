@@ -643,10 +643,12 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
 
 
 def compute_and_plot_oversamp_model_LC(datasetname,
-                                       post_instance, df_fittedval, key_compute_model, key_pl_kwarg, include_gp_model, datasim_kwargs,
-                                       remove_dict, add_dict, dico_output_load, amplitude_fact, ax, pl_kwarg,
-                                       show_binned_model, exptime_bin, supersamp_bin_model, fact_conversion_exptime_bin,
+                                       post_instance, df_fittedval, key_compute_model, key_pl_kwarg,
+                                       include_gp_model, datasim_kwargs,
+                                       remove_dict, add_dict, dico_output_load, amplitude_fact,
                                        npt_model, tlims_model, xlims_model=None,
+                                       exptime_bin=None, supersamp_bin_model=None, fact_conversion_exptime_bin=None,
+                                       plot=True, ax=None, pl_kwarg=None, show_binned_model=True
                                        ):
     """
     """
@@ -666,18 +668,22 @@ def compute_and_plot_oversamp_model_LC(datasetname,
     else:
         xsim = tsim
 
+    if exptime_bin is None:
+        exptime_bin = 0.
+
     key_pl_kwarg_user = key_pl_kwarg
+    models = {}
     for binned in [False, True]:
         if binned:
             if show_binned_model and (exptime_bin > 0.):
                 exptime = exptime_bin * fact_conversion_exptime_bin
-                ext_key_pl_kwarg = '_binned'
+                extension = '_binned'
             else:
                 continue
         else:
             exptime = 0.
             key_pl_kwarg = key_pl_kwarg_user
-            ext_key_pl_kwarg = ''
+            extension = ''
 
         # Compute the model
         if include_gp_model:
@@ -700,7 +706,7 @@ def compute_and_plot_oversamp_model_LC(datasetname,
             model_wGP = gp_pred = gp_pred_var = None
 
         if model is None:
-            return pl_kwarg
+            return models, pl_kwarg
 
         # Remove/Add contamination if needed
         if remove_dict['1']:
@@ -787,41 +793,47 @@ def compute_and_plot_oversamp_model_LC(datasetname,
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
         # Multiply by LC fact
         model *= amplitude_fact
+        models[key_compute_model + extension] = model
         if model_wGP is not None:
             model_wGP *= amplitude_fact
             gp_pred *= amplitude_fact
             gp_pred_var *= amplitude_fact**2
+            models['model_wGP' + extension] = model_wGP
+            models['GP' + extension] = gp_pred
+            models['GP_var' + extension] = gp_pred_var
+
         # Plot the model
-        key_pl_kwarg = key_pl_kwarg_user + ext_key_pl_kwarg
-        ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
-        if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
-            pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
-        if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
-            pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
-        # Plot the GP
-        if model_wGP is not None:
-            key_GP = "GP" + ext_key_pl_kwarg
-            key_GP_err = "GP_err" + ext_key_pl_kwarg
-            if not("color" in pl_kwarg[datasetname][key_GP]):
-                pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-            if not("color" in pl_kwarg[datasetname]["GP_err"]):
-                pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-            if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
-            if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-                pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
-            if not(remove_dict["GP_dataNmodel"]):
-                pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
-                _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
-                _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                    **pl_kwarg[datasetname][key_GP_err],
-                                    )
-            else:
-                _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
-                _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
-                                    **pl_kwarg[datasetname][key_GP_err]
-                                    )
-    return pl_kwarg
+        if plot:
+            key_pl_kwarg = key_pl_kwarg_user + extension
+            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
+            if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
+                pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
+            if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
+                pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+            # Plot the GP
+            if model_wGP is not None:
+                key_GP = "GP" + extension
+                key_GP_err = "GP_err" + extension
+                if not("color" in pl_kwarg[datasetname][key_GP]):
+                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                if not("color" in pl_kwarg[datasetname]["GP_err"]):
+                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                if not("alpha" in pl_kwarg[datasetname]["GP"]):
+                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+                if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
+                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
+                if not(remove_dict["GP_dataNmodel"]):
+                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+                    _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
+                    _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+                                        **pl_kwarg[datasetname][key_GP_err],
+                                        )
+                else:
+                    _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
+                    _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
+                                        **pl_kwarg[datasetname][key_GP_err]
+                                        )
+    return models, pl_kwarg
 
 
 # def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
