@@ -38,7 +38,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                          y_name, inst_cat, d_name_component_removed_to_print,
                          remove_dict, remove_dict_def, add_dict, add_dict_def,
                          show_dict, l_model_1_per_row, datasetnames4model4row=None,
-                         datasim_kwargs=None, star_name="A",
+                         datasim_kwargs=None,
                          datasetnames=None,
                          amplitude_fact=1., unit=None,
                          create_axes_kwargs=None,
@@ -190,8 +190,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
     unit        : str
         String giving the unit of the data
     """
-    star = post_instance.model.stars[star_name]
-
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
@@ -251,7 +249,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                 suptitle_kwargs=suptitle_kwargs)
 
     # Make sure the show_dict is well define
-    show_dict_user = show_dict
+    show_dict_user = show_dict if show_dict is not None else {}
     show_dict = {"model": True, "GP": True}
     show_dict.update(show_dict_user)
 

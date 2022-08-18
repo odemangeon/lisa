@@ -333,7 +333,7 @@ def check_row4datasetname(row4datasetname, datasetnames):
         row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
     # Check that all datasets are in row4datasetname
     if (set(row4datasetname.keys()) != set(datasetnames)) or (len(list(row4datasetname.keys())) != len(datasetnames)):
-        raise ValueError("row4datasetname is not correct !")
+        raise ValueError(f"row4datasetname is not correct ! Datasetnames are {datasetnames} while row4datasetname keys are {row4datasetname.keys()}")
     # Check the row idx values and determine the number of rows to use.
     set_row_idx = set(row4datasetname.values())
     nb_rows = len(set_row_idx)
@@ -474,14 +474,14 @@ def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, o
     if bin_size > 0.:
         for datasetname in datasetnames:
             # Set label for binned model
-            pl_kwarg_final[datasetname]["model_binned"]["label"] = f"model: bin={bin_size:.2g}[{bin_size_unit}]"
+            pl_kwarg_final[datasetname]["model_binned"]["label"] = f"model: bin={bin_size:.2g} [{bin_size_unit}]"
             # Set label for binned data per dataset
             if not(one_binning_per_row):
-                pl_kwarg_final[datasetname]["data_binned"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"
+                pl_kwarg_final[datasetname]["data_binned"]["label"] = f"bin={bin_size:.2g} [{bin_size_unit}]"
         # Set label for binned data per row
         if one_binning_per_row:
             for i_row in range(nb_rows):
-                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}[{bin_size_unit}]"
+                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g} [{bin_size_unit}]"
 
 
 def do_suptitle(fig, post_instance, fontsize, t_l_removed_from_model=None, t_l_removed_from_data=None,

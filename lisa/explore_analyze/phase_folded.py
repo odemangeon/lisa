@@ -28,7 +28,7 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval, load_datasets_and
                              d_name_component_removed_to_print,
                              remove_dict, remove_dict_def, add_dict, add_dict_def,
                              remove_dict_compute_model=None, add_dict_compute_model=None,
-                             datasim_kwargs=None, planets=None, star_name="A",
+                             datasim_kwargs=None, planets=None, periods=None,
                              datasetnames=None, row4datasetname=None,
                              datasetnameformodel4row=None, npt_model=1000,
                              phasefold_central_phase=0.,
@@ -58,7 +58,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval, load_datasets_and
         Dictionary of keyword arguments for the datasimulator.
     planets             : list_of_str or None
         List of the names of the planets for which you want a phase pholded curve. If None all planets are used
-    star_name           : String
+    periods             : list of floats
+        TODO !
     datasetnames        : list of String
         List providing the datasets to load and use
     row4datasetname    : dict of int
@@ -188,6 +189,10 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval, load_datasets_and
         planets = copy(all_planets)
     nplanet = len(planets)
 
+    # Make sure that periods is well defined
+    if periods is None:
+        periods = []
+
     # Make sure that xlims is well defined
     xlims = check_spec_by_column_or_row(spec_user=xlims, l_row_name=list(range(nb_rows)), l_col_name=planets,
                                         l_type_spec=[tuple, list], spec_def=(None, None)
@@ -204,8 +209,6 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval, load_datasets_and
                                                    l_col_name=list(range(len(planets))), kwargs_def={'do': False},
                                                    kwargs_init={0: {0: {'do': True}}}
                                                    )
-
-    # star = post_instance.model.stars[star_name]
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_output_load, d_remove_from_model, d_remove_from_data, remove_dict, add_dict

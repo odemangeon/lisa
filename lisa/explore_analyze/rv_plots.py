@@ -54,7 +54,8 @@ d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Ste
                                      }
 
 
-def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",
+def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None,
+                                planets=None, periods=None,
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
                                 phasefold_central_phase=0.,
@@ -88,7 +89,8 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         Dictionary of keyword arguments for the datasimulator.
     planets : list_of_str or None
         List of the names of the planets for which you want a phase pholded curve. If None all planets are used
-    star_name     : String
+    periods             : list of floats
+        TODO !
     datasetnames  : list of String
         List providing the datasets to load and use
     row4datasetname    : dict of int
@@ -164,7 +166,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                              remove_dict={}, remove_dict_def=remove_dict_def_PF,
                              add_dict={}, add_dict_def=add_dict_def_PF,
                              remove_dict_compute_model={}, add_dict_compute_model={},
-                             datasim_kwargs=datasim_kwargs, planets=planets, star_name=star_name,
+                             datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
                              datasetnames=datasetnames, row4datasetname=row4datasetname,
                              datasetnameformodel4row=datasetnameformodel4row,
                              npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
@@ -180,7 +182,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                              )
 
 
-def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, star_name="A",
+def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None,
                             datasetnames=None,
                             remove_dict=None,
                             show_dict=None, datasetnames4model4row=None,
@@ -200,21 +202,10 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
     datasim_kwargs : dict
         Dictionary of keyword arguments for the datasimulator.
-    planets : list_of_str or None
-        List of the names of the planets for which you want a phase pholded curve. If None all planets are used
-    star_name     : String
     datasetnames  : list of String
         List providing the datasets to load and use
-    fig_param     : dict
-        Dictionary providing keyword arguments for the figure definition and settings. The possible keys are
-            - 'gridspec_kwargs': The content of this entry should be a dictionary which will be passed to
-                GridSpec (GridSpec(..., **fig_param['gridspec_kwargs'])) instance creation with create the gridspec
-                separating the TS and GLSP
-            - 'add_axeswithsharex_kw': The content of this entry should be a dictionary which will be
-                passed to add_twoaxeswithsharex_perplanet (add_twoaxeswithsharex_perplanet(..., add_axeswithsharex_kw=fig_param['add_axeswithsharex_kw'])
-                function creating two axes data and residuals per planet.
-            - 'fontsize' : Int specifiying the fontsize
     remove_dict   : dict
+    datasetnames4model4row  : dict of dict of
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
             - 'row4datasetname'   : dict of int
@@ -349,7 +340,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                          add_dict={}, add_dict_def=add_dict_def_TS,
                          show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
                          datasetnames4model4row=datasetnames4model4row,
-                         datasim_kwargs=datasim_kwargs, star_name="A",
+                         datasim_kwargs=datasim_kwargs,
                          datasetnames=datasetnames,
                          amplitude_fact=RV_fact, unit=RV_unit,
                          create_axes_kwargs=create_axes_kwargs,
@@ -532,7 +523,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
                 models[datasetname] += stellar_vars[datasetname]
 
         ################################################################################
-        # Remove inst_vars (if needed)
+        # Remove/Add inst_vars (if needed)
         ################################################################################
         if datasetname in inst_vars:
             if remove_dict['inst_var']:
@@ -543,7 +534,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
                 models[datasetname] += inst_vars[datasetname]
 
         ################################################################################
-        # Remove decorrelation (if needed)
+        # Remove/Add decorrelation (if needed)
         ################################################################################
         if datasetname in decorrs:
             for model_part in decorrs[datasetname]:
@@ -558,7 +549,7 @@ def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
 
         ################################################################################
-        # Remove decorrelation likelihood (if needed)
+        # Remove/Add decorrelation likelihood (if needed)
         ################################################################################
         if datasetname in decorr_likelihoods:
             if remove_dict['decorrelation_likelihood']:
@@ -623,204 +614,132 @@ def compute_and_plot_oversamp_model_RV(datasetname,
     else:
         xsim = tsim
 
-    # Compute the oversampled model to plot for the raw cadence
-    if include_gp_model:
-        (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                         param=df_fittedval["value"].values,
-                                         l_param_name=list(df_fittedval.index),
-                                         key_obj=key_compute_model,
-                                         datasim_kwargs=datasim_kwargs, include_gp=include_gp_model
-                                         )
-    else:
-        model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                            param=df_fittedval["value"].values,
-                                            l_param_name=list(df_fittedval.index),
-                                            key_obj=key_compute_model,
-                                            datasim_kwargs=datasim_kwargs, include_gp=include_gp_model
-                                            )
-        model_wGP = gp_pred = gp_pred_var = None
-
-    if model is None:
-        return pl_kwarg
-
-    # Add stellar_var if needed
-    if (remove_dict['stellar_var'] or add_dict['stellar_var']) and (datasetname in dico_output_load['stellar_vars']):
-        model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                       param=df_fittedval["value"].values,
-                                                       l_param_name=list(df_fittedval.index),
-                                                       key_obj="stellar_var",
-                                                       datasim_kwargs=datasim_kwargs,
-                                                       include_gp=False
-                                                       )
-        if remove_dict['stellar_var']:
-            model -= model_stellarvar
-            if model_wGP is not None:
-                model_wGP -= model_stellarvar
-        if add_dict['stellar_var']:
-            model += model_stellarvar
-            if model_wGP is not None:
-                model_wGP += model_stellarvar
-    # Add inst_var if needed
-    if (remove_dict['inst_var'] or add_dict['inst_var']) and (datasetname in dico_output_load['inst_vars']):
-        model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                    param=df_fittedval["value"].values,
-                                                    l_param_name=list(df_fittedval.index),
-                                                    key_obj="inst_var", datasim_kwargs=datasim_kwargs,
-                                                    include_gp=False
-                                                    )
-        if remove_dict['inst_var']:
-            model -= model_instvar
-            if model_wGP is not None:
-                model_wGP -= model_instvar
-        if add_dict['inst_var']:
-            model += model_instvar
-            if model_wGP is not None:
-                model_wGP += model_instvar
-    # Add decorrelation if needed
-    if (remove_dict['decorrelation'] or add_dict['decorrelation']) and (datasetname in dico_output_load['decorrs']):
-        model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                   param=df_fittedval["value"].values,
-                                                   l_param_name=list(df_fittedval.index),
-                                                   key_obj="decorr", datasim_kwargs=datasim_kwargs,
-                                                   include_gp=False
-                                                   )
-        for model_part in model_decorr:
-            if model_part == "add_2_totalrv":
-                if remove_dict['decorrelation']:
-                    model -= model_decorr['add_2_totalrv']
-                    if model_wGP is not None:
-                        model_wGP -= model_decorr['add_2_totalrv']
-                if add_dict['decorrelation']:
-                    model += model_decorr['add_2_totalrv']
-                    if model_wGP is not None:
-                        model_wGP += model_decorr['add_2_totalrv']
+    key_pl_kwarg_user = key_pl_kwarg
+    for binned in [False, True]:
+        if binned:
+            if show_binned_model and (exptime_bin > 0.):
+                exptime = exptime_bin * fact_conversion_exptime_bin
+                ext_key_pl_kwarg = '_binned'
             else:
-                logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-    # Multiply by RV fact
-    model *= amplitude_fact
-    if model_wGP is not None:
-        model_wGP *= amplitude_fact
-        gp_pred *= amplitude_fact
-        gp_pred_var *= amplitude_fact**2
-    # Plot model and GP for the row cadence
-    ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
-    if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
-        pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
-    if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
-        pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
-    if model_wGP is not None:
-        if not("color" in pl_kwarg[datasetname]["GP"]):
-            pl_kwarg[datasetname]["GP"]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-        if not("color" in pl_kwarg[datasetname]["GP_err"]):
-            pl_kwarg[datasetname]["GP_err"]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-        if not("alpha" in pl_kwarg[datasetname]["GP"]):
-            pl_kwarg[datasetname]["GP"]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
-        if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-            pl_kwarg[datasetname]["GP_err"]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
-        if not(remove_dict["GP_dataNmodel"]):
-            pl_kwarg[datasetname]["GP"]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
-            _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname]["GP"])
-            _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                **pl_kwarg[datasetname]["GP_err"],
-                                )
+                continue
         else:
-            _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname]["GP"])
-            _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
-                                **pl_kwarg[datasetname]["GP_err"]
-                                )
-    # Compute the oversampled model to plot for the binned cadence
-    if show_binned_model and (exptime_bin > 0.):
-        # Compute the exposure time for the binned model in the same unit than the data
-        # Since exptime_bin unit depends on show_time_from_tic and time_fact
-        exptime = exptime_bin * fact_conversion_exptime_bin
+            exptime = 0.
+            key_pl_kwarg = key_pl_kwarg_user
+            ext_key_pl_kwarg = ''
+
+        # Compute the model
         if include_gp_model:
             (model, model_wGP, gp_pred, gp_pred_var
              ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
                                              param=df_fittedval["value"].values,
                                              l_param_name=list(df_fittedval.index),
-                                             key_obj=key_compute_model,
-                                             supersamp=supersamp_bin_model, exptime=exptime,
-                                             datasim_kwargs=datasim_kwargs, include_gp=include_gp_model
+                                             key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+                                             include_gp=include_gp_model,
+                                             supersamp=supersamp_bin_model, exptime=exptime
                                              )
         else:
             model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
                                                 param=df_fittedval["value"].values,
                                                 l_param_name=list(df_fittedval.index),
-                                                key_obj=key_compute_model,
-                                                supersamp=supersamp_bin_model, exptime=exptime,
-                                                datasim_kwargs=datasim_kwargs, include_gp=include_gp_model
+                                                key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+                                                include_gp=include_gp_model,
+                                                supersamp=supersamp_bin_model, exptime=exptime
                                                 )
             model_wGP = gp_pred = gp_pred_var = None
-        # Add stellar if needed
-        if remove_dict['stellar_var'] and (datasetname in dico_output_load['stellar_vars']):
-            model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                        param=df_fittedval["value"].values,
-                                                        l_param_name=list(df_fittedval.index),
-                                                        key_obj='stellar_var',
-                                                        supersamp=supersamp_bin_model, exptime=exptime,
-                                                        datasim_kwargs=datasim_kwargs,
-                                                        include_gp=False)
+
+        if model is None:
+            return pl_kwarg
+
+        # Remove/Add stellar_var if needed
+        if (remove_dict['stellar_var'] or add_dict['stellar_var']) and (datasetname in dico_output_load['stellar_vars']):
+            model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                           param=df_fittedval["value"].values,
+                                                           l_param_name=list(df_fittedval.index),
+                                                           key_obj="stellar_var", datasim_kwargs=datasim_kwargs,
+                                                           include_gp=False,
+                                                           supersamp=supersamp_bin_model, exptime=exptime
+                                                           )
             if remove_dict['stellar_var']:
                 model -= model_stellarvar
+                if model_wGP is not None:
+                    model_wGP -= model_stellarvar
             if add_dict['stellar_var']:
                 model += model_stellarvar
-        # Add inst_var if needed
-        if remove_dict['inst_var'] and (datasetname in dico_output_load['inst_vars']):
+                if model_wGP is not None:
+                    model_wGP += model_stellarvar
+        # Remove/Add inst_var if needed
+        if (remove_dict['inst_var'] or add_dict['inst_var']) and (datasetname in dico_output_load['inst_vars']):
             model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
                                                         param=df_fittedval["value"].values,
                                                         l_param_name=list(df_fittedval.index),
-                                                        key_obj="inst_var",
-                                                        supersamp=supersamp_bin_model, exptime=exptime,
-                                                        datasim_kwargs=datasim_kwargs,
-                                                        include_gp=False)
+                                                        key_obj="inst_var", datasim_kwargs=datasim_kwargs,
+                                                        include_gp=False,
+                                                        supersamp=supersamp_bin_model, exptime=exptime
+                                                        )
             if remove_dict['inst_var']:
                 model -= model_instvar
+                if model_wGP is not None:
+                    model_wGP -= model_instvar
             if add_dict['inst_var']:
                 model += model_instvar
-        # Add decorrelation if needed
-        if remove_dict['decorrelation'] and (datasetname in dico_output_load['decorrs']):
+                if model_wGP is not None:
+                    model_wGP += model_instvar
+        # Remove/Add decorrelation if needed
+        if (remove_dict['decorrelation'] or add_dict['decorrelation']) and (datasetname in dico_output_load['decorrs']):
             model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
                                                        param=df_fittedval["value"].values,
                                                        l_param_name=list(df_fittedval.index),
-                                                       key_obj="decorr",
-                                                       supersamp=supersamp_bin_model, exptime=exptime,
-                                                       datasim_kwargs=datasim_kwargs,
-                                                       include_gp=False)
+                                                       key_obj="decorr", datasim_kwargs=datasim_kwargs,
+                                                       include_gp=False,
+                                                       supersamp=supersamp_bin_model, exptime=exptime
+                                                       )
             for model_part in model_decorr:
                 if model_part == "add_2_totalrv":
                     if remove_dict['decorrelation']:
                         model -= model_decorr['add_2_totalrv']
+                        if model_wGP is not None:
+                            model_wGP -= model_decorr['add_2_totalrv']
                     if add_dict['decorrelation']:
                         model += model_decorr['add_2_totalrv']
+                        if model_wGP is not None:
+                            model_wGP += model_decorr['add_2_totalrv']
                 else:
                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
         # Multiply by RV fact
         model *= amplitude_fact
-        # Plot the oversampled model to plot for the raw cadence
+        if model_wGP is not None:
+            model_wGP *= amplitude_fact
+            gp_pred *= amplitude_fact
+            gp_pred_var *= amplitude_fact**2
+        # Plot the model
+        key_pl_kwarg = key_pl_kwarg_user + ext_key_pl_kwarg
         ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
         if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
             pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
         if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
             pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+        # Plot the GP
         if model_wGP is not None:
-            if not("color" in pl_kwarg[datasetname]["GP_binned"]):
-                pl_kwarg[datasetname]["GP_binned"]["color"] = pl_kwarg[datasetname][f"{key_pl_kwarg}_binned"]["color"]
+            key_GP = "GP" + ext_key_pl_kwarg
+            key_GP_err = "GP_err" + ext_key_pl_kwarg
+            if not("color" in pl_kwarg[datasetname][key_GP]):
+                pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+            if not("color" in pl_kwarg[datasetname]["GP_err"]):
+                pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
             if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                pl_kwarg[datasetname]["GP_binned"]["alpha"] = pl_kwarg[datasetname][f"{key_pl_kwarg}_binned"]["alpha"] / 2
+                pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+            if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
+                pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
             if not(remove_dict["GP_dataNmodel"]):
-                pl_kwarg[datasetname]["GP_binned"]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP binned"
-                _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname]["GP"])
+                pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+                _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
                 _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                    **pl_kwarg[datasetname]["GP_binned"],
-                                    # color=pl_kwarg[datasetname]["GP"]["color"], alpha=pl_kwarg[datasetname]["GP"]["alpha"],
-                                    # label=pl_kwarg[datasetname]["GP"]["label"],  # **kwarg_GP_pred_var
-                                    # zorder=0
+                                    **pl_kwarg[datasetname][key_GP_err],
                                     )
             else:
-                _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname]["GP_binned"])
+                _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
                 _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
-                                    **pl_kwarg[datasetname]["GP_binned"],  # zorder=0
+                                    **pl_kwarg[datasetname][key_GP_err]
                                     )
     return pl_kwarg
 
