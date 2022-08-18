@@ -1,7 +1,6 @@
 """Making plots that show all the RV data on the same plot (with the delta RV and the v0 removed)
 modelsNresiduals
 """
-import matplotlib
 import matplotlib.pyplot as pl
 import os
 
@@ -36,7 +35,7 @@ AandA_fontsize = 8
 #     'pgf.rcfonts': False})
 
 # Define the object name
-obj_name = "WASP-76"
+obj_name = "target_name"
 
 # Define dataset names to be loaded
 datasetnames = None  # [f'RV_{obj_name}_SOPHIEp_0', f'RV_{obj_name}_SOPHIE_0', f'RV_{obj_name}_ELODIE_0', ]  #
@@ -67,34 +66,35 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_LC_TSNGLSP_plots(fig=fig,
-                        post_instance=post_instance, df_fittedval=df_fittedval, planets=planets,
-                        datasetnames=datasetnames,
-                        remove1=True, remove_inst_var=True, remove_decorrelation=False, remove_decorrelation_likelihood=True,
-                        remove_contamination=False,
-                        datasim_kwargs=kwargs_datasim,
-                        fig_param={# 'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
+create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                        datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
+                        remove_dict={'1': True, 'inst_var': True, 'stellar_var': True, 'contamination': True,
+                                     'decorrelation': True, 'decorrelation_likelihood': True,
+                                     'GP_dataNmodel': False, 'GP_residual': True
+                                     },
+                        show_dict={'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+                                   'decorrelation_likelihood': False,
                                    },
+                        datasetnames4model4row=None,
                         TS_kwargs={"do": True,
                                    "npt_model": 10000,
-                                   "exptime_bin": 98 / 60 / 24,
+                                   "exptime_bin": 20 / 60 / 24,
                                    "binning_stat": 'median',
-                                   'datasets_per_row': {f"LC_{obj_name}_CHEOPS_0": 0, },
+                                   "show_binned_model": True,
                                    "one_binning_per_row": True,
-                                   "pl_kwargs": {f"LC_{obj_name}_CHEOPS_0": {'fmt': '.', 'color': 'C0', 'mfc': 'white', 'alpha': 0.1, 'label': "CHEOPS"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                                 "model": {"color": "C2", "linewidth": 2.},
-                                                 },
-                                   "t_unit": "BJD - 2,457,000",
+                                   # 'row4datasetname': {f"LC_{obj_name}_TESS_0": 0, f"LC_{obj_name}_TESS_1": 0, f"LC_{obj_name}_TESS_2": 0},
+                                   # "pl_kwargs": {f"LC_{obj_name}_TESS_0": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS0"},
+                                   #                                         'model': {"color": "k", "linewidth": 0.5},
+                                   #                                         },
+                                   #               f"LC_{obj_name}_TESS_1": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS1"}, },
+                                   #               f"LC_{obj_name}_TESS_2": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS2"}, },
+                                   #               },
+                                   "t_unit": "BJD - 2,400,000",
                                    # "t_lims_zoom": (2170.5, 2171.5),
-                                   "ylims_data": (-700, 700),
-                                   "ylims_resi": (-700, 700),
-                                   # 'pad_data': (0.025, -0.025),
-                                   # "pad_resi": (0.05, -0.25),
-                                   'axeswithsharex_kwargs': {"hspace": 0.1},
-                                   'indicate_y_outliers_data': False,
-                                   'indicate_y_outliers_resi': False,
+                                   # 'ylims': {"data": {"all": (-1000, 1000), }, },
+                                   'indicate_y_outliers': {"data": False, "resi": False}
                                    },
-                        GLSP_kwargs={"do": True,
+                        GLSP_kwargs={"do": False,
                                      "period_range": (1e-2, 500),
                                      "freq_fact": 1e6,
                                      "freq_unit": "$\mu$Hz",

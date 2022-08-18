@@ -5,7 +5,6 @@ Script to produce pretty plots of LC data
 
 @TODO:
 """
-import matplotlib
 import matplotlib.pyplot as pl
 
 from os import getcwd
@@ -27,6 +26,8 @@ AandA_full_width = 7.2712643025  # in inches = \hsize = 523.53 pt
 default_figwidth = AandA_width
 default_figheight_factor = 0.75
 
+AandA_fontsize = 8
+
 # matplotlib.rcParams.update({
 #     "pgf.texsystem": "pdflatex",
 #     'font.family': 'serif',
@@ -34,7 +35,7 @@ default_figheight_factor = 0.75
 #     'pgf.rcfonts': False})
 
 # Define the object name
-obj_name = "TOI-175"
+obj_name = "target_name"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
@@ -64,31 +65,37 @@ if "df_fittedval" not in globals():
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                     folder=output_folders["pickles_analyze"])
 
-fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=True)
+fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=kwargs_datasim,
-                            planets=planets, star_name="A", datasetnames=datasetnames,
-                            # row4datasetname={f"LC_{obj_name}_TESS_0": 0,
-                            #                  },
-                            remove_GP=False, remove1=True, remove_contamination=False, remove_inst_var=True, remove_decorrelation=True,
-                            remove_decorrelation_likelihood=True,
-                            LC_fact=1e6,
+create_LC_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                            planets=planets, datasetnames=datasetnames,
+                            datasim_kwargs=kwargs_datasim,
+                            row4datasetname={f"LC_{obj_name}_TESS_0": 0,
+                                             f"LC_{obj_name}_TESS_1": 0,
+                                             f"LC_{obj_name}_TESS_2": 0,
+                                             },
                             exptime_bin=20 / 60, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                             one_binning_per_row=True,
                             show_time_from_tic=True, time_fact=24, time_unit="h",
-                            # fig_param={'x_lims': {"all": (0, 1.)},
-                            #            'ylims_data': (-400, 500),
-                            #            'ylims_resi': (-500, 500),
-                            #            'pad_data': (-0.86, -0.08),
-                            #            'pad_resi': (-0.44, -0.46),
-                            #            'indicate_y_outliers_data': False, 'indicate_y_outliers_resi': False,
-                            #            'phasefold_central_phase': 0.5,
-                            #            },
-                            # pl_kwargs={f"LC_{obj_name}_TESS_0": {"data": {'color': 'k', 'alpha': 0.2}, },
-                            #            },
-                            suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
                             sharey=True,
+                            create_axes_kwargs=None,
+                            pad=None,
+                            indicate_y_outliers=None,
+                            # pl_kwargs={f"LC_{obj_name}_TESS_0": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'alpha': 1., 'label': "TESS0"}, },
+                            #            f"LC_{obj_name}_TESS_1": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "TESS1"}, },
+                            #            f"LC_{obj_name}_TESS_2": {'data': {'fmt': 'o', 'color': 'C2', 'mfc': 'white', 'alpha': 1., 'label': "TESS2"}, },
+                            #            "model": {"color": "C2", "linewidth": 0.75},
+                            #            "model_binned": {"color": "C4"},
+                            #            "data_binned": {"color": "C3"}
+                            #            },
+                            xlims={'all': (-3, 3)}, force_xlims=False, ylims=None,
+                            rms_kwargs={'do': True, 'format': '.2f'},
+                            legend_kwargs=None,
+                            show_datasetnames=True,
+                            suptitle_kwargs=None,
+                            LC_fact=1e6,
                             LC_unit="ppm",
+                            fontsize=AandA_fontsize,
                             )
 
 pl.show()

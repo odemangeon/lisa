@@ -24,14 +24,12 @@ import lisa.tools.mylogger as ml
 from lisa.explore_analyze.misc import get_def_output_folders
 
 ## Definition of the parameters
-obj_name = "WASP-151"  # Change
+obj_name = "target_name"  # Change
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
 nb_planet = 1
 parametrisation = "Multis"  # None will select the default parametrisation which is EXOFAST for this model
-with_DeltaRV = False
-with_inst_var = True
-inst_var_order = 0
+
 kwargs_post = {}
 
 data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
@@ -44,7 +42,7 @@ N_maxiter_preminimization = 1000
 xtol_preminimization = 1e-12
 
 # emcee parameters
-nwalker_fact = 2.5
+nwalker_fact = 4
 nsteps_MCMC = 50000
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
@@ -106,8 +104,7 @@ logger.info("8. Load noise model category specific parameter file")
 post_instance.model.load_noisemodcat_paramfile()
 
 logger.info("9. Set parametrisation of the model")
-post_instance.model.set_parametrisation(parametrisation=parametrisation, with_DeltaRV=with_DeltaRV,
-                                        with_inst_var=with_inst_var, inst_var_order=inst_var_order)
+post_instance.model.set_parametrisation(parametrisation=parametrisation)
 
 logger.info("10. Create and modify the paramerisation file")
 if cluster:

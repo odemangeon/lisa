@@ -8,7 +8,6 @@ import matplotlib
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-from lisa.posterior.exoplanet.model.gravgroup.datasim_creator_rv import RVdrift_tref_name
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.rv_plots import create_RV_TSNGLSP_plots
 
@@ -39,12 +38,10 @@ matplotlib.rcParams.update({
     'pgf.rcfonts': False})
 
 # Define the object name
-obj_name = "HD207496"
+obj_name = "target_name"
 
 # Define dataset names to be loaded
 datasetnames = None  # [f'RV_{obj_name}_SOPHIEp_0', f'RV_{obj_name}_SOPHIE_0', f'RV_{obj_name}_ELODIE_0', ]  #
-
-planets = None
 
 kwargs_datasim = {}
 
@@ -70,30 +67,34 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_RV_TSNGLSP_plots(fig=fig,
-                        post_instance=post_instance, df_fittedval=df_fittedval, planets=planets,
+create_RV_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                         datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
-                        remove_inst_var=False, remove_stellar_var=True, remove_decorrelation=True,
-                        remove_decorrelation_likelihood=True, remove_GP_dataNmodel=True, remove_GP_residual=True,
-                        fig_param={'gridspec_kwargs': {"top": 0.88, 'bottom': 0.08, 'right': 0.95, 'left': 0.07, 'wspace': 0.17},
+                        remove_dict={'inst_var': True, 'stellar_var': False, 'decorrelation': True,
+                                     'decorrelation_likelihood': True, 'GP_dataNmodel': False, 'GP_residual': True
+                                     },
+                        show_dict={'inst_var': True, 'stellar_var': True, 'decorrelation': True,
+                                   'decorrelation_likelihood': True,
                                    },
+                        datasetnames4model4row=None,
                         TS_kwargs={"do": True,
-                                   "exptime_bin": 1,
-                                   "binning_stat": 'median',
-                                   # 'datasets_per_row': {f"RV_{obj_name}_SOPHIE_0": 0, },
-                                   "one_binning_per_row": True,
-                                   "pl_kwargs": {# f"RV_{obj_name}_SOPHIEp_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "SOPHIE+"},  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                                 # f"RV_{obj_name}_SOPHIE_0": {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "SOPHIE"},
-                                                 # f"RV_{obj_name}_ELODIE_0": {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'alpha': 1., 'label': "ELODIE"},
-                                                 # "model": {"color": "C2", "linewidth": 0.75},
-                                                 },
+                                   "npt_model": 50000,
+                                   # "exptime_bin": 1,
+                                   # "binning_stat": 'median',
+                                   # "show_binned_model": True,
+                                   # "one_binning_per_row": True,
+                                   # 'row4datasetname': {f"RV_{obj_name}_HARPS_0": 0, f"RV_{obj_name}_HARPS_1": 0, f"RV_{obj_name}_PFS_0": 0},
+                                   # "pl_kwargs": {f"RV_{obj_name}_HARPS_0": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS0"},
+                                   #                                          'model': {"color": "k", "linewidth": 0.5},
+                                   #                                          'GP': {'alpha': 0.5, "linewidth": 0.3}
+                                   #                                          },  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                                   #               f"RV_{obj_name}_HARPS_1": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "HARPS1"}, },
+                                   #               f"RV_{obj_name}_PFS_0": {'data': {'fmt': 'o', 'color': 'C0', 'mfc': 'white', 'ms': 4, 'alpha': 1., 'label': "PFS"}, },
+                                   #               },
                                    "t_unit": "BJD - 2,400,000",
                                    # "t_lims_zoom": (58000, 59000),
-                                   # 'pad_data': (0.5, 0.5),
-                                   # "pad_resi": (0.1, -0.2),
-                                   'axeswithsharex_kwargs': {"hspace": 0.1}
+                                   # 'ylims': {"data": {"all": (0, 40000), }, },
                                    },
-                        GLSP_kwargs={"do": True,
+                        GLSP_kwargs={"do": False,
                                      "period_range": (0.1, 5000),
                                      "freq_fact": 1e6,
                                      "freq_unit": "$\mu$Hz",
@@ -118,7 +119,8 @@ create_RV_TSNGLSP_plots(fig=fig,
                                      #                  'WF': {'loc': 'upper center'},
                                      #                  },
                                      },
-                        suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
+                        create_axes_kwargs=None,
+                        suptitle_kwargs=None,
                         RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
                         RV_unit="m/s",
                         )
