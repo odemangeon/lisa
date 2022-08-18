@@ -15,7 +15,7 @@ from scipy.stats import binned_statistic
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_binned_label,
                    check_spec_by_column_or_row, check_spec_data_or_resi, check_datasetname4model4row,
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
-                   set_legend,
+                   set_legend, fmt_sci_not
                    )
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
@@ -640,36 +640,10 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     x_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                     axe_data.set_xlim((min(x_row), max(x_row)))
 
-                # ###########
-                # # Write rms
-                # ###########
-                # # WARNING, TO BE IMPROVED for more than one dataset
-                # if (i_col == 0) and rms_kwargs['do']:
-                #     text_rms_to_plot = ""
-                #     for i_dst, datasetname in enumerate(datasetnames4rowidx[i_row]):
-                #         # text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
-                #         text_rms_to_plot_dst = f"{pl_kwarg_final[datasetname]['data']['label']}: {text_rms[datasetname]}"
-                #         if datasetname in text_rms_binned:
-                #             text_rms_to_plot_dst += f", {text_rms_binned[datasetname]} (bin)"
-                #         if i_dst == 0:
-                #             text_rms_to_plot_dst = "rms = " + text_rms_to_plot_dst
-                #         if unit is not None:
-                #             text_rms_to_plot_dst += f" {unit}"
-                #         text_rms_to_plot += text_rms_to_plot_dst + "; "
-                #     if f"row{i_row}" in text_rms_binned:
-                #         text_rms_to_plot += "\n"
-                #         text_rms_to_plot += f"rms bin = {text_rms_binned[f'row{i_row}']} {unit}"
-                #     axe_resi.text(0.0, 1.05, text_rms_to_plot, fontsize=fontsize, transform=axe_resi.transAxes)
-
                 ##########################
                 # Set the legend if needed
                 ##########################
                 set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize=fontsize)
-                # legend_kwargs_i_row = TS_kwargs.get('legend_kwargs', {}).get('all', {'do': True})
-                # legend_kwargs_i_row.update(TS_kwargs.get('legend_kwargs', {}).get(i_row, {}))
-                # if (i_col == 0) and legend_kwargs_i_row.get('do', True):
-                #     legend_kwargs_i_row.pop('do')
-                #     axe_data.legend(fontsize=fontsize, **legend_kwargs_i_row)
 
     ######################################
     # Generalized Lomb-Scargle Periodogram
@@ -683,7 +657,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
             all_data_err = np.concatenate([dico_output_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
         else:
             all_data_err = np.concatenate([dico_output_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
-        all_model = np.concatenate([models[dst] for dst in datasetnames])[idx_sort]
+        all_model = np.concatenate([dico_output_load['models'][dst] for dst in datasetnames])[idx_sort]
         all_resi = np.concatenate([dico_output_load['residuals'][dst] for dst in datasetnames])[idx_sort]
         gls_inputs = {"data": {"time": all_time, "data": all_data, "err": all_data_err, 'label': "data"},
                       "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # np.sqrt(gp_pred_var_GLS)
