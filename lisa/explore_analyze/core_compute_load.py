@@ -1,0 +1,309 @@
+from copy import copy
+from numpy import zeros_like, sqrt
+from logging import getLogger
+from collections import defaultdict
+
+from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+
+
+# Set extension for raw models
+extension_raw = '_raw'
+
+# managers
+mgr_noisemodel = Manager_NoiseModel()
+mgr_noisemodel.load_setup()
+
+mgr_inst_dst = Manager_Inst_Dataset()
+mgr_inst_dst.load_setup()
+
+# logger
+logger = getLogger()
+
+
+def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
+                           include_gp_model, amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
+                           remove_dict=None, add_dict=None,
+                           exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None,
+                           plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                           models=None, l_valid_model=None
+                           ):
+    """
+    Arguments
+    ---------
+    models : dict
+        Previously computed models for the same input (not the same key_model, but the same tsim, datasetname)
+    """
+    # Make sure that remove_dict and add_dict have all necessary keys
+    if l_valid_model is None:
+        l_valid_model = ['model']
+    l_valid_model_bis = copy(l_valid_model)
+    l_valid_model_bis.remove('model')
+    remove_dict_user = remove_dict if (remove_dict is not None) else {}
+    remove_dict = {key: False for key in l_valid_model_bis}
+    remove_dict.update(remove_dict_user)
+    add_dict_user = add_dict if (add_dict is not None) else {}
+    add_dict = {key: False for key in l_valid_model_bis}
+    add_dict.update(add_dict_user)
+
+    # Init models if not provided
+    if models is None:
+        models = {}
+
+    # # Define the time vector tsim at which the models will be evaluated
+    # tsim = np.linspace(*tlims_model, npt_model)
+    # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
+    # if xlims_model is not None:
+    #     xsim = np.linspace(*xlims_model, npt_model)
+    # else:
+    #     xsim = tsim
+
+    # Set exptime_bin if not provided
+    if exptime_bin is None:
+        exptime_bin = 0.
+
+    # Set fact_tsim_to_xsim if not provided
+    if fact_tsim_to_xsim is None:
+        fact_tsim_to_xsim = 1.
+
+    # Set xsim the x values for the plot
+    if plot:
+        if xsim is None:
+            xsim = tsim * fact_tsim_to_xsim
+
+    #############################################
+    # Compute and plot the model and binned model
+    #############################################
+    key_pl_kwarg_user = key_pl_kwarg
+    for binned in [False, True]:
+        # Set exptime, extension and adjust key_pl_kwarg depending on whether we are treating the binned model or not
+        if binned:
+            if show_binned_model and (exptime_bin > 0.):
+                exptime = exptime_bin / fact_tsim_to_xsim
+                extension = '_binned'
+            else:
+                continue
+        else:
+            exptime = 0.
+            key_pl_kwarg = key_pl_kwarg_user
+            extension = ''
+
+        ################################################
+        # Compute the model (can be different procedure)
+        ################################################
+        if (key_model + extension + extension_raw) not in models:
+            if key_model == 'data':
+                model = zeros_like(tsim)
+                model_wGP = gp_pred = gp_pred_var = None
+            else:
+                (model, model_wGP, gp_pred, gp_pred_var
+                 ) = compute_raw_models_func(tsim=tsim, key_model=key_model, datasetname=datasetname,
+                                             post_instance=post_instance, df_fittedval=df_fittedval,
+                                             datasim_kwargs=datasim_kwargs, include_gp_model=include_gp_model,
+                                             exptime=exptime, supersamp=supersamp_bin_model)
+
+            if model is None:
+                logger.warning(f"Model '{key_model}' not available")
+                return models, pl_kwarg
+
+            # Apply the amplitude_fact
+            model *= amplitude_fact
+            if model_wGP is not None:
+                model_wGP *= amplitude_fact
+                gp_pred *= amplitude_fact
+                gp_pred_var *= amplitude_fact**2
+
+            # Store the raw model in the output (models)
+            models[key_model + extension + extension_raw] = copy(model)
+            if model_wGP is not None:
+                models[f'{key_model}_wGP' + extension + extension_raw] = copy(model_wGP)
+                models[f'GP_{key_model}' + extension + extension_raw] = gp_pred
+                models[f'GP_var_{key_model}' + extension + extension_raw] = gp_pred_var
+
+        else:
+            model = models[key_model + extension + extension_raw]
+            if f'{key_model}_wGP' + extension + extension_raw in models:
+                model_wGP = models[f'{key_model}_wGP' + extension + extension_raw]
+                gp_pred = models[f'GP_{key_model}' + extension + extension_raw]
+                gp_pred_var = models[f'GP_var_{key_model}' + extension + extension_raw]
+
+        ##################################
+        # Compute the models to remove/add
+        ##################################
+        l_model_remove = [key for key, do in remove_dict.items() if do]
+        l_model_add = [key for key, do in add_dict.items() if do]
+        for key_model_removeoradd in (l_model_remove + l_model_add):
+            if key_model_removeoradd + extension + extension_raw not in models:
+                models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
+                                                   post_instance=post_instance, df_fittedval=df_fittedval,
+                                                   datasim_kwargs=datasim_kwargs, include_gp_model=False,
+                                                   amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                   remove_add_model_components_func=remove_add_model_components_func,
+                                                   exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
+                                                   plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                   models=models, l_valid_model=l_valid_model
+                                                   )
+
+        ##########################################
+        # Remove/Add model components as requested
+        ##########################################
+        model, model_wGP = remove_add_model_components_func(model=model, model_wGP=model_wGP, remove_dict=remove_dict,
+                                                            add_dict=add_dict, extension=extension,
+                                                            extension_raw=extension_raw, models=models
+                                                            )
+
+        # Fill computed model into output (models)
+        models[key_model + extension] = model
+        if model_wGP is not None:
+            models[f'{key_model}_wGP' + extension] = model_wGP
+            models[f'GP_{key_model}' + extension] = gp_pred
+            models[f'GP_var_{key_model}' + extension] = gp_pred_var
+
+        # Plot the model
+        if plot:
+            key_pl_kwarg = key_pl_kwarg_user + extension
+            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
+            if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
+                pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
+            if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
+                pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+            # Plot the GP
+            if model_wGP is not None:
+                key_GP = "GP" + extension
+                key_GP_err = "GP_err" + extension
+                if not("color" in pl_kwarg[datasetname][key_GP]):
+                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                if not("color" in pl_kwarg[datasetname]["GP_err"]):
+                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                if not("alpha" in pl_kwarg[datasetname]["GP"]):
+                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+                if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
+                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
+                if not(remove_dict["GP_dataNmodel"]):
+                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+                    _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
+                    _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
+                                        **pl_kwarg[datasetname][key_GP_err],
+                                        )
+                else:
+                    _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
+                    _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
+                                        **pl_kwarg[datasetname][key_GP_err]
+                                        )
+    return models, pl_kwarg
+
+
+def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval,
+                             amplitude_fact,
+                             compute_raw_models_func, remove_add_model_components_func,
+                             kwargs_compute_model_4_key_model,
+                             l_valid_model=None,
+                             ):
+    """Load the dataset and models for later use by the other two function
+    """
+    dico_outputs = {'dico_datasets': {},
+                    'dico_kwargs': {},
+                    'dico_nb_dstperinsts': defaultdict(lambda: 0),
+                    'times': {},
+                    'datas': {},
+                    'data_errs': {},
+                    'data_err_jitters': {},
+                    'data_err_worwojitters': {},
+                    'has_jitters': {},
+                    'dico_jitters': {},
+                    'residuals': {},
+                    'models': {}
+                    }
+    for datasetname in datasetnames:
+        ##########################################
+        # Load Data and instrument and noise model
+        ##########################################
+        dico_outputs['dico_datasets'][datasetname] = post_instance.dataset_db[datasetname]
+        dico_outputs['dico_kwargs'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_all_datasetkwargs()
+        dico_outputs['times'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("time")
+        dico_outputs['datas'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data")
+        dico_outputs['data_errs'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data_err")
+        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+        inst_mod = post_instance.model.instruments[inst_mod_fullname]
+        noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+        dico_outputs['dico_nb_dstperinsts'][filename_info["inst_name"]] += 1
+
+        ##############################################
+        # Apply the jitter to the data error if needed
+        ##############################################
+        dico_outputs['dico_jitters'][datasetname] = {}
+        dico_outputs['data_err_jitters'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data_err")
+        dico_outputs['has_jitters'][datasetname] = noise_model.has_jitter
+        if dico_outputs['has_jitters'][datasetname]:
+            dico_outputs['dico_jitters'][datasetname]["type"] = noise_model.jitter_type
+            if inst_mod.jitter.free:
+                dico_outputs['dico_jitters'][datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
+            else:
+                dico_outputs['dico_jitters'][datasetname]["value"] = inst_mod.jitter.value
+            if dico_outputs['dico_jitters'][datasetname]["type"] == "multi":
+                dico_outputs['data_err_jitters'][datasetname] = sqrt(apply_jitter_multi(dico_outputs['data_err_jitters'][datasetname], dico_outputs['dico_jitters'][datasetname]["value"]))
+            elif dico_outputs['dico_jitters'][datasetname]["type"] == "add":
+                dico_outputs['data_err_jitters'][datasetname] = sqrt(apply_jitter_add(dico_outputs['data_err_jitters'][datasetname], dico_outputs['dico_jitters'][datasetname]["value"]))
+            else:
+                raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+            dico_outputs['data_err_worwojitters'][datasetname] = dico_outputs['data_err_jitters'][datasetname].copy()
+        else:
+            dico_outputs['data_err_worwojitters'][datasetname] = dico_outputs['data_errs'][datasetname].copy()
+
+        ################################################################################
+        # Apply amplitude fact
+        ################################################################################
+        dico_outputs['datas'][datasetname] *= amplitude_fact
+        dico_outputs['data_errs'][datasetname] *= amplitude_fact
+        dico_outputs['data_err_worwojitters'][datasetname] *= amplitude_fact
+        if dico_outputs['has_jitters'][datasetname]:
+            dico_outputs['dico_jitters'][datasetname]["value"] *= amplitude_fact
+            dico_outputs['data_err_jitters'][datasetname] *= amplitude_fact
+
+        ############################################################
+        # Compute the model components to later remove from the data
+        ############################################################
+        # Init the dico_outputs['models'] for the datasetname
+        dico_outputs['models'][datasetname] = {}
+        # Make sure that kwargs_compute_model_4_key_model has at least the model key
+        kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model
+        kwargs_compute_model_4_key_model = {'model': {'include_gp_model': True, 'remove_dict': None, 'add_dict': None}}
+        for key_model in kwargs_compute_model_4_key_model_user:
+            if key_model not in kwargs_compute_model_4_key_model:
+                kwargs_compute_model_4_key_model[key_model] = kwargs_compute_model_4_key_model_user[key_model]
+            else:
+                kwargs_compute_model_4_key_model[key_model].update(kwargs_compute_model_4_key_model_user[key_model])
+        # Make sure that kwargs_compute_model_4_key_model has the "data" key
+        if "data" not in kwargs_compute_model_4_key_model:
+            kwargs_compute_model_4_key_model["data"] = {'remove_dict': kwargs_compute_model_4_key_model['model']['remove_dict'],
+                                                        'add_dict': kwargs_compute_model_4_key_model['model']['add_dict']
+                                                        }
+        for key_model, kwargs in kwargs_compute_model_4_key_model.items():
+            if 'include_gp_model' not in kwargs:
+                kwargs['include_gp_model'] = True if key_model == 'model' else False
+            (dico_outputs['models'][datasetname], _
+             ) = compute_and_plot_model(tsim=dico_outputs['times'][datasetname], key_model=key_model,
+                                        datasetname=datasetname, post_instance=post_instance, df_fittedval=df_fittedval,
+                                        datasim_kwargs=datasim_kwargs, amplitude_fact=amplitude_fact,
+                                        compute_raw_models_func=compute_raw_models_func,
+                                        remove_add_model_components_func=remove_add_model_components_func,
+                                        exptime_bin=None, supersamp_bin_model=None,
+                                        fact_tsim_to_xsim=None, plot=False, ax=None, pl_kwarg=None,
+                                        key_pl_kwarg=None, show_binned_model=True, models=dico_outputs['models'][datasetname],
+                                        l_valid_model=l_valid_model, **kwargs
+                                        )
+
+        #######################
+        # Compute the residuals
+        #######################
+        dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model' + extension_raw]
+
+        #################################
+        # Remove components from the data
+        #################################
+        if "data" in dico_outputs['models'][datasetname]:
+            dico_outputs['datas'][datasetname] += dico_outputs['models'][datasetname]["data"]
+
+    return dico_outputs, kwargs_compute_model_4_key_model

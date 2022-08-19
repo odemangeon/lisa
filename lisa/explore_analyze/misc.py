@@ -1,13 +1,24 @@
+from logging import getLogger
 from os import getcwd, makedirs
 from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
+from ..posterior.core.model.core_model import Core_Model
 
 
 AandA_fontsize = 8
 
+key_whole = Core_Model.key_whole
+
+# logger
+logger = getLogger()
+
+# managers
+mgr_noisemodel = Manager_NoiseModel()
+mgr_noisemodel.load_setup()
 
 # Formatter for the Ticks major of the period axis
 sf = ScalarFormatter(useOffset=False, useMathText=True)
@@ -19,7 +30,6 @@ def sci_not_str(x, pos):
 
 
 fmt_sci_not = FuncFormatter(sci_not_str)
-
 
 # managers
 mgr_inst_dst = Manager_Inst_Dataset()
@@ -484,8 +494,8 @@ def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, o
                 pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g} [{bin_size_unit}]"
 
 
-def do_suptitle(fig, post_instance, fontsize, t_l_removed_from_model=None, t_l_removed_from_data=None,
-                suptitle_kwargs=None):
+def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_removed_or_add_dict,
+                data_remove_or_add_dict, suptitle_kwargs=None):
     """Make the suptitle
 
     Arguments
@@ -496,22 +506,7 @@ def do_suptitle(fig, post_instance, fontsize, t_l_removed_from_model=None, t_l_r
         Posterior instance
     fontsize                : int
         Font size to use for the suptitle
-    t_l_removed_from_model  : tuple_of_3_lists
-        Tuple of 3 list.
-        1st element : list of str
-            Name of the components that can be remove from the model
-        2nd element : list of bool
-            If True the user has asked to remove the component
-        3rd element : dict of array
-            If not empty a component exists and has thus been removed from the model
-    t_l_removed_from_data   : tuple_of_3_lists
-        Tuple of 3 list.
-        1st element : list of str
-            Name of the components that can be remove from the data
-        2nd element : list of bool
-            If True the user has asked to remove the data
-        3rd element : dict of array
-            If not empty a component exists and has thus been removed from the data
+
     suptitle_kwargs         : dict
         keys are
             do                      : bool
@@ -533,33 +528,25 @@ def do_suptitle(fig, post_instance, fontsize, t_l_removed_from_model=None, t_l_r
         suptitle_text = ""
         if suptitle_kwargs.get("show_system_name", suptitle_kwargs_default["show_system_name"]):
             suptitle_text = f"{suptitle_kwargs.get('system_name', post_instance.full_name)} system"
-        if t_l_removed_from_model is not None:
-            removed_from_model_text = ""
-            for compo, asked2removed, compo_models in zip(*t_l_removed_from_model):
-                if asked2removed and len(compo_models) > 0:
-                    if removed_from_model_text != "":
-                        removed_from_model_text += ", "
-                    removed_from_model_text += compo
-            if removed_from_model_text != "":
-                removed_from_model_text += " removed from model"
-            if removed_from_model_text != "":
-                if suptitle_text != "":
-                    suptitle_text += f"\n{removed_from_model_text}"
-                else:
-                    suptitle_text = removed_from_model_text
-        if t_l_removed_from_data is not None:
-            removed_from_data_text = ""
-            for compo, asked2removed, compo_models in zip(*t_l_removed_from_data):
-                if asked2removed and len(compo_models) > 0:
-                    if removed_from_data_text != "":
-                        removed_from_data_text += ", "
-                    removed_from_data_text += compo
-            if removed_from_data_text != "":
-                removed_from_data_text += " removed from data"
-            if removed_from_data_text != "":
-                if suptitle_text != "":
-                    suptitle_text += f"\n{removed_from_data_text}"
-                else:
-                    suptitle_text = removed_from_data_text
+        for model_or_data, model_or_data_removed_or_add_dict in zip(["model", "data"],
+                                                                    [model_removed_or_add_dict, data_remove_or_add_dict]
+                                                                    ):
+            text = ""
+            for add_or_remove, remove_or_add_dict in zip(["added", "removed"],
+                                                         [model_or_data_removed_or_add_dict["add_dict"], model_or_data_removed_or_add_dict["remove_dict"]]
+                                                         ):
+                text_remove_or_add = ""
+                for key_model, asked2remove in model_removed_or_add_dict["remove_dict"].items():
+                    if any([key_model in dico_models[dst_name] for dst_name in datasetnames]):
+                        text_remove_or_add += f"{key_model}, "
+                if len(text_remove_or_add) > 0:
+                    text_remove_or_add = text_remove_or_add[:-2]
+                    text_remove_or_add += f" ({add_or_remove}); "
+                    text += text_remove_or_add
+            if len(text) > 0:
+                text = text[:-2]
+                text = f"{model_or_data}: " + text
+                suptitle_text += "\n" + text
+
         if suptitle_text != "":
             fig.suptitle(suptitle_text, fontsize=fontsize)

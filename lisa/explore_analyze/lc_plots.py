@@ -175,7 +175,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     y_name = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                              load_datasets_and_models_func=load_datasets_and_models_LC,
-                             compute_and_plot_oversamp_model_func=compute_and_plot_oversamp_model_LC,
+                             compute_and_plot_oversamp_model_func=compute_and_plot_model_LC,
                              y_name=y_name, inst_cat='LC', d_name_component_removed_to_print=d_name_component_removed_to_print,
                              remove_dict={'1': remove1}, remove_dict_def=remove_dict_def_PF,
                              add_dict={}, add_dict_def=add_dict_def_PF,
@@ -355,7 +355,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     y_name = "$\Delta$F / F" if remove_dict.get("1", remove_dict_def_TS["1"]) else "(F + $\Delta$F) / F"
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                          load_datasets_and_models_func=load_datasets_and_models_LC,
-                         compute_and_plot_oversamp_model_func=compute_and_plot_oversamp_model_LC,
+                         compute_and_plot_oversamp_model_func=compute_and_plot_model_LC,
                          y_name=y_name, inst_cat='LC',
                          d_name_component_removed_to_print=d_name_component_removed_to_print,
                          remove_dict=remove_dict, remove_dict_def=remove_dict_def_TS,
@@ -642,14 +642,14 @@ def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_
             )
 
 
-def compute_and_plot_oversamp_model_LC(datasetname,
-                                       post_instance, df_fittedval, key_compute_model, key_pl_kwarg,
-                                       include_gp_model, datasim_kwargs,
-                                       remove_dict, add_dict, dico_output_load, amplitude_fact,
-                                       npt_model, tlims_model, xlims_model=None,
-                                       exptime_bin=None, supersamp_bin_model=None, fact_conversion_exptime_bin=None,
-                                       plot=True, ax=None, pl_kwarg=None, show_binned_model=True
-                                       ):
+def compute_and_plot_model_LC(datasetname,
+                              post_instance, df_fittedval, key_compute_model,
+                              include_gp_model, datasim_kwargs,
+                              remove_dict, add_dict, amplitude_fact,
+                              tsim, fact_tsim_to_xsim=None,
+                              exptime_bin=None, supersamp_bin_model=None,
+                              plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True
+                              ):
     """
     """
     remove_dict_user = remove_dict
@@ -661,22 +661,27 @@ def compute_and_plot_oversamp_model_LC(datasetname,
     add_dict.update(add_dict_user)
 
     # Define the time vector tsim at which the models will be evaluated
-    tsim = np.linspace(*tlims_model, npt_model)
-    # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
-    if xlims_model is not None:
-        xsim = np.linspace(*xlims_model, npt_model)
-    else:
-        xsim = tsim
+    # tsim = np.linspace(*tlims_model, npt_model)
+    # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
+    # if xlims_model is not None:
+    #     xsim = np.linspace(*xlims_model, npt_model)
+    # else:
+    #     xsim = tsim
 
     if exptime_bin is None:
         exptime_bin = 0.
+
+    if fact_tsim_to_xsim is None:
+        fact_tsim_to_xsim = 1.
+
+    xsim = tsim * fact_tsim_to_xsim
 
     key_pl_kwarg_user = key_pl_kwarg
     models = {}
     for binned in [False, True]:
         if binned:
             if show_binned_model and (exptime_bin > 0.):
-                exptime = exptime_bin * fact_conversion_exptime_bin
+                exptime = exptime_bin / fact_tsim_to_xsim
                 extension = '_binned'
             else:
                 continue

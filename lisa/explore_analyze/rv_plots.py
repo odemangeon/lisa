@@ -5,31 +5,16 @@ Module to create plots specifically for radial velocity data
 
 @TODO:
 """
-import numpy as np
 from logging import getLogger
-
 from copy import copy
-from collections import defaultdict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
 from .misc import AandA_fontsize
-from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-day2sec = 24 * 60 * 60
-
-# managers
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
-
-mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 # logger
 logger = getLogger()
@@ -38,13 +23,18 @@ logger = getLogger()
 remove_dict_def_TS = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
                       'inst_var': True, 'stellar_var': True, 'GP_residual': True}
 remove_dict_def_PF = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-                      'inst_var': True, 'stellar_var': True, 'GP_residual': True}
+                      'inst_var': True, 'stellar_var': True, 'GP': True}
 add_dict_def_PF = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
                    'inst_var': False, 'stellar_var': False, 'GP_residual': False}
 add_dict_def_TS = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-                   'inst_var': False, 'stellar_var': False, 'GP_residual': False}
+                   'inst_var': False, 'stellar_var': False, 'GP': False}
 
 y_name = "RV"
+
+l_valid_model = ["model", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
+
+dict_model_false = {key: False for key in l_valid_model[1:]}
+dict_model_true = {key: True for key in l_valid_model[1:]}
 
 d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Stellar var",
                                      'decorrelation': "Decorrelation",
@@ -158,14 +148,21 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     RV_unit        : str
         String giving the unit of the RVs
     """
+    remove_dict = copy(dict_model_true)
+    remove_dict["GP_model"] = True
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                             load_datasets_and_models_func=load_datasets_and_models_RV,
-                             compute_and_plot_oversamp_model_func=compute_and_plot_oversamp_model_RV,
+                             compute_raw_models_func=compute_raw_models,
+                             remove_add_model_components_func=remove_add_model_components,
+                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                         'add_dict': dict_model_false
+                                                                         },
+                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                        'add_dict': dict_model_false
+                                                                        },
+                                                               },
+                             l_valid_model=l_valid_model,
                              y_name=y_name, inst_cat='RV',
                              d_name_component_removed_to_print=d_name_component_removed_to_print,
-                             remove_dict={}, remove_dict_def=remove_dict_def_PF,
-                             add_dict={}, add_dict_def=add_dict_def_PF,
-                             remove_dict_compute_model={}, add_dict_compute_model={},
                              datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
                              datasetnames=datasetnames, row4datasetname=row4datasetname,
                              datasetnameformodel4row=datasetnameformodel4row,
@@ -332,8 +329,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         String giving the unit of the RVs
     """
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                         load_datasets_and_models_func=load_datasets_and_models_RV,
-                         compute_and_plot_oversamp_model_func=compute_and_plot_oversamp_model_RV,
+                         load_datasets_and_models_func=load_datasets_and_models,
+                         compute_and_plot_oversamp_model_func=compute_and_plot_model,
                          y_name=y_name, inst_cat='RV',
                          d_name_component_removed_to_print=d_name_component_removed_to_print,
                          remove_dict=remove_dict, remove_dict_def=remove_dict_def_TS,
@@ -351,289 +348,27 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                          )
 
 
-def load_datasets_and_models_RV(datasetnames, post_instance, datasim_kwargs, df_fittedval,
-                                amplitude_fact, remove_dict, add_dict, remove_dict_def, add_dict_def
-                                ):
-    """Load the dataset and models for later use by the other two function
-    """
-    remove_dict_user = remove_dict
-    remove_dict = copy(remove_dict_def)
-    remove_dict.update(remove_dict_user)
-
-    add_dict_user = add_dict
-    add_dict = copy(add_dict_def)
-    add_dict.update(add_dict_user)
-
-    dico_datasets = {}
-    dico_kwargs = {}
-    dico_nb_dstperinsts = defaultdict(lambda: 0)
-    times = {}
-    datas = {}
-    data_errs = {}
-    data_err_jitters = {}
-    data_err_worwojitters = {}
-    has_jitters = {}
-    dico_jitters = {}
-    models = {}
-    gp_preds = {}
-    gp_pred_vars = {}
-    inst_vars = {}
-    stellar_vars = {}
-    decorrs = {}
-    decorr_likelihoods = {}
-    residuals = {}
-    for datasetname in datasetnames:
-        ##########################################
-        # Load Data and instrument and noise model
-        ##########################################
-        dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
-        dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
-        times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
-        datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
-        data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
-        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
-        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
-        inst_mod = post_instance.model.instruments[inst_mod_fullname]
-        noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-        dico_nb_dstperinsts[filename_info["inst_name"]] += 1
-
-        ##############################################
-        # Apply the jitter to the data error if needed
-        ##############################################
-        dico_jitters[datasetname] = {}
-        data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
-        has_jitters[datasetname] = noise_model.has_jitter
-        if has_jitters[datasetname]:
-            dico_jitters[datasetname]["type"] = noise_model.jitter_type
-            if inst_mod.jitter.free:
-                dico_jitters[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
-            else:
-                dico_jitters[datasetname]["value"] = inst_mod.jitter.value
-            if dico_jitters[datasetname]["type"] == "multi":
-                data_err_jitters[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
-            elif dico_jitters[datasetname]["type"] == "add":
-                data_err_jitters[datasetname] = np.sqrt(apply_jitter_add(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
-            else:
-                raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
-            data_err_worwojitters[datasetname] = data_err_jitters[datasetname].copy()
-        else:
-            data_err_worwojitters[datasetname] = data_errs[datasetname].copy()
-
-        ###############################################################################
-        # Compute the stellar variations (stellar_vars) to later remove from the data
-        ###############################################################################
-        # For each dataset
-        # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
-        # and remove RV_drift
-        star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
-        if (star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True) is not None) and (star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True)["do"]):
-            model_stellar_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                             param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                             key_obj="stellar_var",
-                                                             datasim_kwargs=datasim_kwargs, include_gp=False
-                                                             )
-
-            if model_stellar_vars is not None:
-                stellar_vars[datasetname] = model_stellar_vars
-
-        ###############################################################################
-        # Compute the instrumental variations (inst_vars) to later remove from the data
-        ###############################################################################
-        # For each dataset
-        # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
-        # and remove RV_drift
-        if (inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True) is not None) and (inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True)["do"]):
-            model_inst_var = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                         param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                         key_obj="inst_var",
-                                                         datasim_kwargs=datasim_kwargs, include_gp=False
-                                                         )
-            if model_inst_var is not None:
-                inst_vars[datasetname] = model_inst_var
-
-        #########################################################################
-        # Compute the decorrelation models (decorr) to later remove from the data
-        #########################################################################
-        if post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]:
-            model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                       param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                       key_obj="decorr", datasim_kwargs=datasim_kwargs,
-                                                       include_gp=False
-                                                       )
-            decorrs[datasetname] = {}
-            for model_part in post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
-                if model_part == "add_2_totalrv":
-                    model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                               param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                               key_obj="decorr", datasim_kwargs=datasim_kwargs,
-                                                               include_gp=False
-                                                               )
-                    decorrs[datasetname][model_part] = model_decorr['add_2_totalrv']
-                else:
-                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-
-        #######################################
-        # Compute the models and GP predictions
-        #######################################
-        (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                         param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-                                         key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True
-                                         )
-        if model_wGP is not None:
-            gp_preds[datasetname] = gp_pred
-            gp_pred_vars[datasetname] = gp_pred_var
-
-        if (model_wGP is not None) and not(remove_dict['GP_dataNmodel']):
-            models[datasetname] = model_wGP
-        else:
-            models[datasetname] = model
-
-        ###################################################
-        # Compute the likelihood decorrelation contribution
-        ###################################################
-        if f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db:  # remove_dict['decorrelation_likelihood'] and
-            datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
-            decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
-
-        #######################
-        # Compute the residuals
-        #######################
-        if (model_wGP is not None) and remove_dict['GP_residual']:
-            residuals[datasetname] = datas[datasetname] - model_wGP
-        else:
-            residuals[datasetname] = datas[datasetname] - model
-
-        ################################################################################
-        # Remove GP (if needed)
-        ################################################################################
-        if (model_wGP is not None) and remove_dict['GP_dataNmodel']:
-            datas[datasetname] -= gp_pred
-
-        ################################################################################
-        # Remove/Add stellar_vars (if needed)
-        ################################################################################
-        if datasetname in stellar_vars:
-            if remove_dict['stellar_var']:
-                datas[datasetname] -= stellar_vars[datasetname]
-                models[datasetname] -= stellar_vars[datasetname]
-            if add_dict['stellar_var']:
-                datas[datasetname] += stellar_vars[datasetname]
-                models[datasetname] += stellar_vars[datasetname]
-
-        ################################################################################
-        # Remove/Add inst_vars (if needed)
-        ################################################################################
-        if datasetname in inst_vars:
-            if remove_dict['inst_var']:
-                datas[datasetname] -= inst_vars[datasetname]
-                models[datasetname] -= inst_vars[datasetname]
-            if add_dict['inst_var']:
-                datas[datasetname] += inst_vars[datasetname]
-                models[datasetname] += inst_vars[datasetname]
-
-        ################################################################################
-        # Remove/Add decorrelation (if needed)
-        ################################################################################
-        if datasetname in decorrs:
-            for model_part in decorrs[datasetname]:
-                if model_part == "add_2_totalrv":
-                    if remove_dict['decorrelation']:
-                        datas[datasetname] -= decorrs[datasetname]['add_2_totalrv']
-                        models[datasetname] -= decorrs[datasetname]['add_2_totalrv']
-                    if add_dict['decorrelation']:
-                        datas[datasetname] += decorrs[datasetname]['add_2_totalrv']
-                        models[datasetname] += decorrs[datasetname]['add_2_totalrv']
-                else:
-                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-
-        ################################################################################
-        # Remove/Add decorrelation likelihood (if needed)
-        ################################################################################
-        if datasetname in decorr_likelihoods:
-            if remove_dict['decorrelation_likelihood']:
-                datas[datasetname] -= decorr_likelihoods[datasetname]
-            if add_dict['decorrelation_likelihood']:
-                datas[datasetname] += decorr_likelihoods[datasetname]
-
-        ################################################################################
-        # Apply RV_fact
-        ################################################################################
-        datas[datasetname] *= amplitude_fact
-        data_errs[datasetname] *= amplitude_fact
-        data_err_worwojitters[datasetname] *= amplitude_fact
-        residuals[datasetname] *= amplitude_fact
-        models[datasetname] *= amplitude_fact
-        if model_wGP is not None:
-            gp_preds[datasetname] *= amplitude_fact
-            gp_pred_vars[datasetname] *= amplitude_fact**2
-        if has_jitters[datasetname]:
-            dico_jitters[datasetname]["value"] *= amplitude_fact
-            data_err_jitters[datasetname] *= amplitude_fact
-
-    d_remove_from_model = {'stellar_var': 'stellar_vars', 'inst_var': 'inst_vars', 'decorrelation': 'decorrs',
-                           'GP_dataNmodel': 'gp_preds'
-                           }
-    d_remove_from_data = {'stellar_var': 'stellar_vars', 'inst_var': 'inst_vars', 'decorrelation': 'decorrs',
-                          'decorrelation_likelihood': 'decorr_likelihoods', 'GP_dataNmodel': 'gp_preds',
-                          }
-
-    return ({'dico_datasets': dico_datasets, 'dico_kwargs': dico_kwargs, 'dico_nb_dstperinsts': dico_nb_dstperinsts,
-             'times': times, 'datas': datas, 'data_errs': data_errs, 'data_err_jitters': data_err_jitters,
-             'data_err_worwojitters': data_err_worwojitters, 'has_jitters': has_jitters, 'dico_jitters': dico_jitters,
-             'models': models, 'gp_preds': gp_preds, 'gp_pred_vars': gp_pred_vars, 'inst_vars': inst_vars,
-             'stellar_vars': stellar_vars, 'decorrs': decorrs, 'decorr_likelihoods': decorr_likelihoods,
-             'residuals': residuals,
-             },
-            d_remove_from_model, d_remove_from_data, remove_dict, add_dict,
-            )
-
-
-def compute_and_plot_oversamp_model_RV(datasetname,
-                                       post_instance, df_fittedval, key_compute_model, key_pl_kwarg,
-                                       include_gp_model, datasim_kwargs,
-                                       remove_dict, add_dict, dico_output_load, amplitude_fact,
-                                       npt_model, tlims_model, xlims_model=None,
-                                       exptime_bin=None, supersamp_bin_model=None, fact_conversion_exptime_bin=None,
-                                       plot=True, ax=None, pl_kwarg=None, show_binned_model=True
-                                       ):
+def compute_raw_models(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
+                       include_gp_model, exptime, supersamp):
     """
     """
-    remove_dict_user = remove_dict
-    remove_dict = copy({'stellar_var': False, 'inst_var': False, 'decorrelation': False})
-    remove_dict.update(remove_dict_user)
+    if key_model in l_valid_model:
+        if not(is_valid_model_available(key_model, datasetname, post_instance)):
+            model = model_wGP = gp_pred = gp_pred_var = None
+            return model, model_wGP, gp_pred, gp_pred_var
 
-    add_dict_user = add_dict
-    add_dict = copy({'stellar_var': False, 'inst_var': False, 'decorrelation': False})
-    add_dict.update(add_dict_user)
+    if exptime is None:
+        exptime = 0.
+    if supersamp is None:
+        supersamp = 5
 
-    # Define the time vector tsim at which the models will be evaluated
-    tsim = np.linspace(*tlims_model, npt_model)
-    # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
-    if xlims_model is not None:
-        xsim = np.linspace(*xlims_model, npt_model)
+    if key_model == 'decorrelation_likelihood':
+        datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+        p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+        model = datasim_docfunc_decorr_like.function(p_vect)
+        model_wGP = gp_pred = gp_pred_var = None
     else:
-        xsim = tsim
-
-    if exptime_bin is None:
-        exptime_bin = 0.
-
-    key_pl_kwarg_user = key_pl_kwarg
-    models = {}
-    for binned in [False, True]:
-        if binned:
-            if show_binned_model and (exptime_bin > 0.):
-                exptime = exptime_bin * fact_conversion_exptime_bin
-                extension = '_binned'
-            else:
-                continue
-        else:
-            exptime = 0.
-            key_pl_kwarg = key_pl_kwarg_user
-            extension = ''
-
-        # Compute the model
+        key_compute_model = get_key_compute_model(key_model=key_model)
         if include_gp_model:
             (model, model_wGP, gp_pred, gp_pred_var
              ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
@@ -641,7 +376,7 @@ def compute_and_plot_oversamp_model_RV(datasetname,
                                              l_param_name=list(df_fittedval.index),
                                              key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
                                              include_gp=include_gp_model,
-                                             supersamp=supersamp_bin_model, exptime=exptime
+                                             supersamp=supersamp, exptime=exptime
                                              )
         else:
             model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
@@ -649,111 +384,551 @@ def compute_and_plot_oversamp_model_RV(datasetname,
                                                 l_param_name=list(df_fittedval.index),
                                                 key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
                                                 include_gp=include_gp_model,
-                                                supersamp=supersamp_bin_model, exptime=exptime
+                                                supersamp=supersamp, exptime=exptime
                                                 )
             model_wGP = gp_pred = gp_pred_var = None
 
-        if model is None:
-            return models, pl_kwarg
+    return model, model_wGP, gp_pred, gp_pred_var
 
-        # Remove/Add stellar_var if needed
-        if (remove_dict['stellar_var'] or add_dict['stellar_var']) and (datasetname in dico_output_load['stellar_vars']):
-            model_stellarvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                           param=df_fittedval["value"].values,
-                                                           l_param_name=list(df_fittedval.index),
-                                                           key_obj="stellar_var", datasim_kwargs=datasim_kwargs,
-                                                           include_gp=False,
-                                                           supersamp=supersamp_bin_model, exptime=exptime
-                                                           )
-            if remove_dict['stellar_var']:
-                model -= model_stellarvar
-                if model_wGP is not None:
-                    model_wGP -= model_stellarvar
-            if add_dict['stellar_var']:
-                model += model_stellarvar
-                if model_wGP is not None:
-                    model_wGP += model_stellarvar
-        # Remove/Add inst_var if needed
-        if (remove_dict['inst_var'] or add_dict['inst_var']) and (datasetname in dico_output_load['inst_vars']):
-            model_instvar = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                        param=df_fittedval["value"].values,
-                                                        l_param_name=list(df_fittedval.index),
-                                                        key_obj="inst_var", datasim_kwargs=datasim_kwargs,
-                                                        include_gp=False,
-                                                        supersamp=supersamp_bin_model, exptime=exptime
-                                                        )
-            if remove_dict['inst_var']:
-                model -= model_instvar
-                if model_wGP is not None:
-                    model_wGP -= model_instvar
-            if add_dict['inst_var']:
-                model += model_instvar
-                if model_wGP is not None:
-                    model_wGP += model_instvar
-        # Remove/Add decorrelation if needed
-        if (remove_dict['decorrelation'] or add_dict['decorrelation']) and (datasetname in dico_output_load['decorrs']):
-            model_decorr = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                       param=df_fittedval["value"].values,
-                                                       l_param_name=list(df_fittedval.index),
-                                                       key_obj="decorr", datasim_kwargs=datasim_kwargs,
-                                                       include_gp=False,
-                                                       supersamp=supersamp_bin_model, exptime=exptime
-                                                       )
-            for model_part in model_decorr:
-                if model_part == "add_2_totalrv":
-                    if remove_dict['decorrelation']:
-                        model -= model_decorr['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP -= model_decorr['add_2_totalrv']
-                    if add_dict['decorrelation']:
-                        model += model_decorr['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP += model_decorr['add_2_totalrv']
-                else:
-                    logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
-        # Multiply by RV fact
-        model *= amplitude_fact
-        models[key_compute_model + extension] = model
-        if model_wGP is not None:
-            model_wGP *= amplitude_fact
-            gp_pred *= amplitude_fact
-            gp_pred_var *= amplitude_fact**2
-            models['model_wGP' + extension] = model_wGP
-            models['GP' + extension] = gp_pred
-            models['GP_var' + extension] = gp_pred_var
 
-        # Plot the model
-        if plot:
-            key_pl_kwarg = key_pl_kwarg_user + extension
-            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
-            if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
-            if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
-            # Plot the GP
-            if model_wGP is not None:
-                key_GP = "GP" + extension
-                key_GP_err = "GP_err" + extension
-                if not("color" in pl_kwarg[datasetname][key_GP]):
-                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-                if not("color" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-                if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
-                if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
-                if not(remove_dict["GP_dataNmodel"]):
-                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
-                    _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err],
-                                        )
-                else:
-                    _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err]
-                                        )
-    return models, pl_kwarg
+def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models):
+    """
+    """
+    # Remove components if needed
+    for key, do in remove_dict.items():
+        if do and ((key + extension + extension_raw) in models):
+            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+                model -= models[key + extension + extension_raw]
+                if (model_wGP is not None) and (key != 'GP_model'):
+                    model_wGP -= models[key + extension + extension_raw]
+            elif key == 'decorrelation':
+                for model_part in models[key + extension + extension_raw]:
+                    if model_part == "add_2_totalrv":
+                        model -= models[key + extension + extension_raw]['add_2_totalrv']
+                        if model_wGP is not None:
+                            model_wGP -= models[key + extension + extension_raw]['add_2_totalrv']
+                    else:
+                        logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+            else:
+                raise NotImplementedError(f"Remove from model is not implement for component {key}")
+    # Add components if needed
+    for key, do in add_dict.items():
+        if do and ((key + extension + extension_raw) in models):
+            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+                model += models[key + extension + extension_raw]
+                if (model_wGP is not None) and (key != 'GP_model'):
+                    model_wGP += models[key + extension + extension_raw]
+            elif key == 'decorrelation':
+                for model_part in models[key + extension + extension_raw]:
+                    if model_part == "add_2_totalrv":
+                        model += models[key + extension + extension_raw]['add_2_totalrv']
+                        if model_wGP is not None:
+                            model_wGP += models[key + extension + extension_raw]['add_2_totalrv']
+                    else:
+                        logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+            else:
+                raise NotImplementedError(f"Remove from model is not implement for component {key}")
+
+    return model, model_wGP
+
+
+def get_key_compute_model(key_model):
+    """
+    """
+    if key_model == "decorrelation":
+        key_compute_model = "decorr"
+    elif key_model == "model":
+        key_compute_model = key_whole
+    else:
+        key_compute_model = key_model
+    return key_compute_model
+
+
+def is_valid_model_available(key_model, datasetname, post_instance):
+    """
+    """
+    if key_model == "model":
+        return True
+    elif key_model == "stellar_var":
+        star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
+        return ((star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True) is not None) and
+                star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True)["do"]
+                )
+    elif key_model == "inst_var":
+        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+        inst_mod = post_instance.model.instruments[inst_mod_fullname]
+        return ((inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True) is not None) and
+                inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True)["do"]
+                )
+    elif key_model == "decorrelation":
+        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+        return post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]
+    elif key_model == "decorrelation_likelihood":
+        return f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db
+    else:
+        return False
+
+
+# def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval,
+#                              amplitude_fact, remove_dict, add_dict, remove_dict_def, add_dict_def
+#                              ):
+#     """Load the dataset and models for later use by the other two function
+#     """
+#     remove_dict_user = remove_dict
+#     remove_dict = copy(remove_dict_def)
+#     remove_dict.update(remove_dict_user)
+#
+#     add_dict_user = add_dict
+#     add_dict = copy(add_dict_def)
+#     add_dict.update(add_dict_user)
+#
+#     dico_datasets = {}
+#     dico_kwargs = {}
+#     dico_nb_dstperinsts = defaultdict(lambda: 0)
+#     times = {}
+#     datas = {}
+#     data_errs = {}
+#     data_err_jitters = {}
+#     data_err_worwojitters = {}
+#     has_jitters = {}
+#     dico_jitters = {}
+#     models = {}
+#     gp_preds = {}
+#     gp_pred_vars = {}
+#     inst_vars = {}
+#     stellar_vars = {}
+#     decorrs = {}
+#     decorr_likelihoods = {}
+#     residuals = {}
+#     for datasetname in datasetnames:
+#         ##########################################
+#         # Load Data and instrument and noise model
+#         ##########################################
+#         dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
+#         dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
+#         times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
+#         datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
+#         data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
+#         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+#         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+#         inst_mod = post_instance.model.instruments[inst_mod_fullname]
+#         noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+#         dico_nb_dstperinsts[filename_info["inst_name"]] += 1
+#
+#         ##############################################
+#         # Apply the jitter to the data error if needed
+#         ##############################################
+#         dico_jitters[datasetname] = {}
+#         data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
+#         has_jitters[datasetname] = noise_model.has_jitter
+#         if has_jitters[datasetname]:
+#             dico_jitters[datasetname]["type"] = noise_model.jitter_type
+#             if inst_mod.jitter.free:
+#                 dico_jitters[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
+#             else:
+#                 dico_jitters[datasetname]["value"] = inst_mod.jitter.value
+#             if dico_jitters[datasetname]["type"] == "multi":
+#                 data_err_jitters[datasetname] = sqrt(apply_jitter_multi(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
+#             elif dico_jitters[datasetname]["type"] == "add":
+#                 data_err_jitters[datasetname] = sqrt(apply_jitter_add(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
+#             else:
+#                 raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+#             data_err_worwojitters[datasetname] = data_err_jitters[datasetname].copy()
+#         else:
+#             data_err_worwojitters[datasetname] = data_errs[datasetname].copy()
+#
+#         ###############################################################################
+#         # Compute the stellar variations (stellar_vars) to later remove from the data
+#         ###############################################################################
+#         # For each dataset
+#         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+#         # and remove RV_drift
+#         star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
+#         if (star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True) is not None) and (star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True)["do"]):
+#             model_stellar_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                              param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                              key_obj="stellar_var",
+#                                                              datasim_kwargs=datasim_kwargs, include_gp=False
+#                                                              )
+#
+#             if model_stellar_vars is not None:
+#                 stellar_vars[datasetname] = model_stellar_vars
+#
+#         ###############################################################################
+#         # Compute the instrumental variations (inst_vars) to later remove from the data
+#         ###############################################################################
+#         # For each dataset
+#         # Get the kwargs of the dataset which will be used for remove_GP and remove other planets contributions
+#         # and remove RV_drift
+#         if (inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True) is not None) and (inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True)["do"]):
+#             model_inst_var = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                          param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                          key_obj="inst_var",
+#                                                          datasim_kwargs=datasim_kwargs, include_gp=False
+#                                                          )
+#             if model_inst_var is not None:
+#                 inst_vars[datasetname] = model_inst_var
+#
+#         #########################################################################
+#         # Compute the decorrelation models (decorr) to later remove from the data
+#         #########################################################################
+#         if post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]:
+#             model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                        param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                        key_obj="decorr", datasim_kwargs=datasim_kwargs,
+#                                                        include_gp=False
+#                                                        )
+#             decorrs[datasetname] = {}
+#             for model_part in post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]['what to decorrelate']:
+#                 if model_part == "add_2_totalrv":
+#                     model_decorr = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                                param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                                key_obj="decorr", datasim_kwargs=datasim_kwargs,
+#                                                                include_gp=False
+#                                                                )
+#                     decorrs[datasetname][model_part] = model_decorr['add_2_totalrv']
+#                 else:
+#                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+#
+#         #######################################
+#         # Compute the models and GP predictions
+#         #######################################
+#         (model, model_wGP, gp_pred, gp_pred_var
+#          ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
+#                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True
+#                                          )
+#         if model_wGP is not None:
+#             gp_preds[datasetname] = gp_pred
+#             gp_pred_vars[datasetname] = gp_pred_var
+#
+#         if (model_wGP is not None) and not(remove_dict['GP_dataNmodel']):
+#             models[datasetname] = model_wGP
+#         else:
+#             models[datasetname] = model
+#
+#         ###################################################
+#         # Compute the likelihood decorrelation contribution
+#         ###################################################
+#         if f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db:  # remove_dict['decorrelation_likelihood'] and
+#             datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+#             p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+#             decorr_likelihoods[datasetname] = datasim_docfunc_decorr_like.function(p_vect)
+#
+#         #######################
+#         # Compute the residuals
+#         #######################
+#         if (model_wGP is not None) and remove_dict['GP_residual']:
+#             residuals[datasetname] = datas[datasetname] - model_wGP
+#         else:
+#             residuals[datasetname] = datas[datasetname] - model
+#
+#         ################################################################################
+#         # Remove GP (if needed)
+#         ################################################################################
+#         if (model_wGP is not None) and remove_dict['GP_dataNmodel']:
+#             datas[datasetname] -= gp_pred
+#
+#         ################################################################################
+#         # Remove/Add stellar_vars (if needed)
+#         ################################################################################
+#         if datasetname in stellar_vars:
+#             if remove_dict['stellar_var']:
+#                 datas[datasetname] -= stellar_vars[datasetname]
+#                 models[datasetname] -= stellar_vars[datasetname]
+#             if add_dict['stellar_var']:
+#                 datas[datasetname] += stellar_vars[datasetname]
+#                 models[datasetname] += stellar_vars[datasetname]
+#
+#         ################################################################################
+#         # Remove/Add inst_vars (if needed)
+#         ################################################################################
+#         if datasetname in inst_vars:
+#             if remove_dict['inst_var']:
+#                 datas[datasetname] -= inst_vars[datasetname]
+#                 models[datasetname] -= inst_vars[datasetname]
+#             if add_dict['inst_var']:
+#                 datas[datasetname] += inst_vars[datasetname]
+#                 models[datasetname] += inst_vars[datasetname]
+#
+#         ################################################################################
+#         # Remove/Add decorrelation (if needed)
+#         ################################################################################
+#         if datasetname in decorrs:
+#             for model_part in decorrs[datasetname]:
+#                 if model_part == "add_2_totalrv":
+#                     if remove_dict['decorrelation']:
+#                         datas[datasetname] -= decorrs[datasetname]['add_2_totalrv']
+#                         models[datasetname] -= decorrs[datasetname]['add_2_totalrv']
+#                     if add_dict['decorrelation']:
+#                         datas[datasetname] += decorrs[datasetname]['add_2_totalrv']
+#                         models[datasetname] += decorrs[datasetname]['add_2_totalrv']
+#                 else:
+#                     logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+#
+#         ################################################################################
+#         # Remove/Add decorrelation likelihood (if needed)
+#         ################################################################################
+#         if datasetname in decorr_likelihoods:
+#             if remove_dict['decorrelation_likelihood']:
+#                 datas[datasetname] -= decorr_likelihoods[datasetname]
+#             if add_dict['decorrelation_likelihood']:
+#                 datas[datasetname] += decorr_likelihoods[datasetname]
+#
+#         ################################################################################
+#         # Apply RV_fact
+#         ################################################################################
+#         datas[datasetname] *= amplitude_fact
+#         data_errs[datasetname] *= amplitude_fact
+#         data_err_worwojitters[datasetname] *= amplitude_fact
+#         residuals[datasetname] *= amplitude_fact
+#         models[datasetname] *= amplitude_fact
+#         if model_wGP is not None:
+#             gp_preds[datasetname] *= amplitude_fact
+#             gp_pred_vars[datasetname] *= amplitude_fact**2
+#         if has_jitters[datasetname]:
+#             dico_jitters[datasetname]["value"] *= amplitude_fact
+#             data_err_jitters[datasetname] *= amplitude_fact
+#
+#     d_remove_from_model = {'stellar_var': 'stellar_vars', 'inst_var': 'inst_vars', 'decorrelation': 'decorrs',
+#                            'GP_dataNmodel': 'gp_preds'
+#                            }
+#     d_remove_from_data = {'stellar_var': 'stellar_vars', 'inst_var': 'inst_vars', 'decorrelation': 'decorrs',
+#                           'decorrelation_likelihood': 'decorr_likelihoods', 'GP_dataNmodel': 'gp_preds',
+#                           }
+#
+#     return ({'dico_datasets': dico_datasets, 'dico_kwargs': dico_kwargs, 'dico_nb_dstperinsts': dico_nb_dstperinsts,
+#              'times': times, 'datas': datas, 'data_errs': data_errs, 'data_err_jitters': data_err_jitters,
+#              'data_err_worwojitters': data_err_worwojitters, 'has_jitters': has_jitters, 'dico_jitters': dico_jitters,
+#              'models': models, 'gp_preds': gp_preds, 'gp_pred_vars': gp_pred_vars, 'inst_vars': inst_vars,
+#              'stellar_vars': stellar_vars, 'decorrs': decorrs, 'decorr_likelihoods': decorr_likelihoods,
+#              'residuals': residuals,
+#              },
+#             d_remove_from_model, d_remove_from_data, remove_dict, add_dict,
+#             )
+
+
+# def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
+#                            include_gp_model, amplitude_fact,
+#                            compute_raw_model=False, remove_dict=None, add_dict=None,
+#                            exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None,
+#                            plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+#                            models=None
+#                            ):
+#     """
+#     Arguments
+#     ---------
+#     models : dict
+#         Previously computed models for the same input (not the same key_model, but the same tsim, datasetname)
+#     """
+#     # Make sure that remove_dict and add_dict have all necessary keys
+#     l_valid_model_bis = copy(l_valid_model)
+#     l_valid_model_bis.pop('model')
+#     remove_dict_user = remove_dict if ((remove_dict is not None) or not(compute_raw_model)) else {}
+#     remove_dict = {key: False for key in l_valid_model_bis}
+#     remove_dict.update(remove_dict_user)
+#     add_dict_user = add_dict if ((add_dict is not None) or not(compute_raw_model)) else {}
+#     add_dict = {key: False for key in l_valid_model_bis}
+#     add_dict.update(add_dict_user)
+#
+#     # Init models if not provided
+#     if models is None:
+#         models = {}
+#
+#     # # Define the time vector tsim at which the models will be evaluated
+#     # tsim = np.linspace(*tlims_model, npt_model)
+#     # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
+#     # if xlims_model is not None:
+#     #     xsim = np.linspace(*xlims_model, npt_model)
+#     # else:
+#     #     xsim = tsim
+#
+#     # Set exptime_bin if not provided
+#     if exptime_bin is None:
+#         exptime_bin = 0.
+#
+#     # Set fact_tsim_to_xsim if not provided
+#     if fact_tsim_to_xsim is None:
+#         fact_tsim_to_xsim = 1.
+#
+#     # Set xsim the x values for the plot
+#     if plot:
+#         xsim = tsim * fact_tsim_to_xsim
+#
+#     #############################################
+#     # Compute and plot the model and binned model
+#     #############################################
+#     key_pl_kwarg_user = key_pl_kwarg
+#     for binned in [False, True]:
+#         # Set exptime, extension and adjust key_pl_kwarg depending on whether we are treating the binned model or not
+#         if binned:
+#             if show_binned_model and (exptime_bin > 0.):
+#                 exptime = exptime_bin / fact_tsim_to_xsim
+#                 extension = '_binned'
+#             else:
+#                 continue
+#         else:
+#             exptime = 0.
+#             key_pl_kwarg = key_pl_kwarg_user
+#             extension = ''
+#
+#         # Check if the requested model is available in the current post_instance and if not return models without
+#         # adding any new model
+#         if is_valid_key_model(key_model=key_model):
+#             if not(is_valid_model_available(key_model, datasetname, post_instance)):
+#                 return models, pl_kwarg
+#
+#         ################################################
+#         # Compute the model (can be different procedure)
+#         ################################################
+#         if (key_model + extension + extension_raw) not in models:
+#             if key_model == 'data':
+#                 model = zeros_like(tsim)
+#                 model_wGP = gp_pred = gp_pred_var = None
+#             if key_model == 'decorrelation_likelihood':
+#                 datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+#                 p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+#                 model = datasim_docfunc_decorr_like.function(p_vect)
+#                 model_wGP = gp_pred = gp_pred_var = None
+#             else:
+#                 key_compute_model = get_key_compute_model(key_model=key_model)
+#                 if include_gp_model:
+#                     (model, model_wGP, gp_pred, gp_pred_var
+#                      ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                                      param=df_fittedval["value"].values,
+#                                                      l_param_name=list(df_fittedval.index),
+#                                                      key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+#                                                      include_gp=include_gp_model,
+#                                                      supersamp=supersamp_bin_model, exptime=exptime
+#                                                      )
+#                 else:
+#                     model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                                         param=df_fittedval["value"].values,
+#                                                         l_param_name=list(df_fittedval.index),
+#                                                         key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+#                                                         include_gp=include_gp_model,
+#                                                         supersamp=supersamp_bin_model, exptime=exptime
+#                                                         )
+#                     model_wGP = gp_pred = gp_pred_var = None
+#
+#             if model is None:
+#                 logger.warning(f"Model '{key_model}' not available")
+#                 return models, pl_kwarg
+#
+#             # Apply the amplitude_fact
+#             model *= amplitude_fact
+#             if model_wGP is not None:
+#                 model_wGP *= amplitude_fact
+#                 gp_pred *= amplitude_fact
+#                 gp_pred_var *= amplitude_fact**2
+#
+#             # Store the raw model in the output (models)
+#             models[key_model + extension + extension_raw] = model
+#             if model_wGP is not None:
+#                 models[f'{key_model}_wGP' + extension + extension_raw] = model_wGP
+#                 models[f'GP_{key_model}' + extension + extension_raw] = gp_pred
+#                 models[f'GP_var_{key_model}' + extension + extension_raw] = gp_pred_var
+#
+#         else:
+#             model = models[key_model + extension + extension_raw]
+#             if f'{key_model}_wGP' + extension + extension_raw in models:
+#                 model_wGP = models[f'{key_model}_wGP' + extension + extension_raw]
+#                 gp_pred = models[f'GP_{key_model}' + extension + extension_raw]
+#                 gp_pred_var = models[f'GP_var_{key_model}' + extension + extension_raw]
+#
+#         ##################################
+#         # Compute the models to remove/add
+#         ##################################
+#         l_model_remove = list(remove_dict.keys())
+#         l_model_add = list(add_dict.keys())
+#         for key_model_removeoradd in (l_model_remove + l_model_add):
+#             if key_model_removeoradd + extension + extension_raw not in models:
+#                 models = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
+#                                                 post_instance=post_instance, df_fittedval=df_fittedval,
+#                                                 datasim_kwargs=datasim_kwargs, include_gp_model=False,
+#                                                 amplitude_fact=amplitude_fact, compute_raw_model=True,
+#                                                 exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
+#                                                 plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+#                                                 models=models,
+#                                                 )
+#
+#         ##########################################
+#         # Remove/Add model components as requested
+#         ##########################################
+#         # Remove components if needed
+#         for key, do in remove_dict.items():
+#             if do and ((key + extension + extension_raw) in models):
+#                 if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+#                     model -= models[key + extension + extension_raw]
+#                     if (model_wGP is not None) and (key != 'GP_model'):
+#                         model_wGP -= models[key + extension + extension_raw]
+#                 elif key == 'decorrelation':
+#                     for model_part in models[key + extension + extension_raw]:
+#                         if model_part == "add_2_totalrv":
+#                             model -= models[key + extension + extension_raw]['add_2_totalrv']
+#                             if model_wGP is not None:
+#                                 model_wGP -= models[key + extension + extension_raw]['add_2_totalrv']
+#                         else:
+#                             logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+#                 else:
+#                     raise NotImplementedError(f"Remove from model is not implement for component {key}")
+#         # Add components if needed
+#         for key, do in add_dict.items():
+#             if do and ((key + extension + extension_raw) in models):
+#                 if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+#                     model += models[key + extension + extension_raw]
+#                     if (model_wGP is not None) and (key != 'GP_model'):
+#                         model_wGP += models[key + extension + extension_raw]
+#                 elif key == 'decorrelation':
+#                     for model_part in models[key + extension + extension_raw]:
+#                         if model_part == "add_2_totalrv":
+#                             model += models[key + extension + extension_raw]['add_2_totalrv']
+#                             if model_wGP is not None:
+#                                 model_wGP += models[key + extension + extension_raw]['add_2_totalrv']
+#                         else:
+#                             logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+#                 else:
+#                     raise NotImplementedError(f"Remove from model is not implement for component {key}")
+#
+#         # Fill computed model into output (models)
+#         models[key_model + extension] = model
+#         if model_wGP is not None:
+#             models[f'{key_model}_wGP' + extension] = model_wGP
+#             models[f'GP_{key_model}' + extension] = gp_pred
+#             models[f'GP_var_{key_model}' + extension] = gp_pred_var
+#
+#         # Plot the model
+#         if plot:
+#             key_pl_kwarg = key_pl_kwarg_user + extension
+#             ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
+#             if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
+#                 pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
+#             if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
+#                 pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+#             # Plot the GP
+#             if model_wGP is not None:
+#                 key_GP = "GP" + extension
+#                 key_GP_err = "GP_err" + extension
+#                 if not("color" in pl_kwarg[datasetname][key_GP]):
+#                     pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+#                 if not("color" in pl_kwarg[datasetname]["GP_err"]):
+#                     pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+#                 if not("alpha" in pl_kwarg[datasetname]["GP"]):
+#                     pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+#                 if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
+#                     pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
+#                 if not(remove_dict["GP_dataNmodel"]):
+#                     pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+#                     _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
+#                     _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
+#                                         **pl_kwarg[datasetname][key_GP_err],
+#                                         )
+#                 else:
+#                     _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
+#                     _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
+#                                         **pl_kwarg[datasetname][key_GP_err]
+#                                         )
+#     return models, pl_kwarg
 
 
 # def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None, planets=None, star_name="A",

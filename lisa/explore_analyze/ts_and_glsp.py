@@ -17,6 +17,7 @@ from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kw
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
                    set_legend, fmt_sci_not
                    )
+from .core_compute_load import load_datasets_and_models, compute_and_plot_model
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
 
@@ -34,7 +35,7 @@ day2sec = 24 * 60 * 60
 
 
 def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_models_func,
-                         compute_and_plot_oversamp_model_func,
+                         compute_and_plot_model_func,
                          y_name, inst_cat, d_name_component_removed_to_print,
                          remove_dict, remove_dict_def, add_dict, add_dict_def,
                          show_dict, l_model_1_per_row, datasetnames4model4row=None,
@@ -407,28 +408,28 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                             remove_dict = remove_dict if model == "model" else {}
                             key_model = model if model != "model" else key_whole
                             key_pl_kwarg = model
-                            _, pl_kwarg_final = compute_and_plot_oversamp_model_func(datasetname=datasetname,
-                                                                                     post_instance=post_instance,
-                                                                                     df_fittedval=df_fittedval,
-                                                                                     key_compute_model=key_model,
-                                                                                     key_pl_kwarg=key_pl_kwarg,
-                                                                                     include_gp_model=include_gp_model,
-                                                                                     datasim_kwargs=datasim_kwargs,
-                                                                                     remove_dict=remove_dict,
-                                                                                     add_dict=add_dict,
-                                                                                     dico_output_load=dico_output_load,
-                                                                                     amplitude_fact=amplitude_fact,
-                                                                                     npt_model=npt_model,
-                                                                                     tlims_model=tlims_model,
-                                                                                     xlims_model=xlims_model,
-                                                                                     exptime_bin=exptime_bin,
-                                                                                     supersamp_bin_model=supersamp_bin_model,
-                                                                                     fact_conversion_exptime_bin=time_fact,
-                                                                                     plot=True,
-                                                                                     ax=axe_data,
-                                                                                     pl_kwarg=pl_kwarg_final,
-                                                                                     show_binned_model=show_binned_model,
-                                                                                     )
+                            _, pl_kwarg_final = compute_and_plot_model_func(datasetname=datasetname,
+                                                                            post_instance=post_instance,
+                                                                            df_fittedval=df_fittedval,
+                                                                            key_compute_model=key_model,
+                                                                            key_pl_kwarg=key_pl_kwarg,
+                                                                            include_gp_model=include_gp_model,
+                                                                            datasim_kwargs=datasim_kwargs,
+                                                                            remove_dict=remove_dict,
+                                                                            add_dict=add_dict,
+                                                                            dico_output_load=dico_output_load,
+                                                                            amplitude_fact=amplitude_fact,
+                                                                            npt_model=npt_model,
+                                                                            tlims_model=tlims_model,
+                                                                            xlims_model=xlims_model,
+                                                                            exptime_bin=exptime_bin,
+                                                                            supersamp_bin_model=supersamp_bin_model,
+                                                                            fact_conversion_exptime_bin=time_fact,
+                                                                            plot=True,
+                                                                            ax=axe_data,
+                                                                            pl_kwarg=pl_kwarg_final,
+                                                                            show_binned_model=show_binned_model,
+                                                                            )
 
                     ###############
                     # Plot the data
