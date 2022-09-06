@@ -5,11 +5,8 @@ Module to create plot specifically for light curve data
 
 @TODO:
 """
-import numpy as np
 from logging import getLogger
-
 from copy import copy
-from collections import defaultdict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
@@ -17,22 +14,10 @@ from .misc import AandA_fontsize
 from .core_compute_load import compute_raw_models
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
-from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
 from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-day2sec = 24 * 60 * 60
-
-# managers
-mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
-
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
 
 # logger
 logger = getLogger()
