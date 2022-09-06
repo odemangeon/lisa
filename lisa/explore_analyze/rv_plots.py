@@ -11,6 +11,8 @@ from copy import copy
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
 from .misc import AandA_fontsize
+from .core_compute_load import compute_raw_models
+from .core_compute_load import is_valid_model_available as is_valid_model_available_core
 from ..posterior.core.model.core_model import Core_Model
 
 
@@ -20,14 +22,14 @@ key_whole = Core_Model.key_whole
 logger = getLogger()
 
 
-remove_dict_def_TS = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-                      'inst_var': True, 'stellar_var': True, 'GP_residual': True}
-remove_dict_def_PF = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-                      'inst_var': True, 'stellar_var': True, 'GP': True}
-add_dict_def_PF = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-                   'inst_var': False, 'stellar_var': False, 'GP_residual': False}
-add_dict_def_TS = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-                   'inst_var': False, 'stellar_var': False, 'GP': False}
+# remove_dict_def_TS = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
+#                       'inst_var': True, 'stellar_var': True, 'GP_residual': True}
+# remove_dict_def_PF = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
+#                       'inst_var': True, 'stellar_var': True, 'GP': True}
+# add_dict_def_PF = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
+#                    'inst_var': False, 'stellar_var': False, 'GP_residual': False}
+# add_dict_def_TS = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
+#                    'inst_var': False, 'stellar_var': False, 'GP': False}
 
 y_name = "RV"
 
@@ -175,7 +177,9 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                              pl_kwargs=pl_kwargs, xlims=xlims, force_xlims=force_xlims, ylims=ylims,
                              rms_kwargs=rms_kwargs, legend_kwargs=legend_kwargs, show_datasetnames=show_datasetnames,
                              suptitle_kwargs=suptitle_kwargs,
-                             unit=RV_unit, fontsize=fontsize
+                             unit=RV_unit, fontsize=fontsize,
+                             # get_key_compute_model_func=get_key_compute_model,
+                             is_valid_model_available_func=is_valid_model_available,
                              )
 
 
@@ -329,13 +333,19 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         String giving the unit of the RVs
     """
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                         load_datasets_and_models_func=load_datasets_and_models,
-                         compute_and_plot_oversamp_model_func=compute_and_plot_model,
                          y_name=y_name, inst_cat='RV',
+                         compute_raw_models_func=compute_raw_models,
+                         remove_add_model_components_func=remove_add_model_components,
+                         kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                     'add_dict': dict_model_false
+                                                                     },
+                                                           "data": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                    'add_dict': dict_model_false
+                                                                    },
+                                                           },
+                         l_valid_model=l_valid_model,
                          d_name_component_removed_to_print=d_name_component_removed_to_print,
-                         remove_dict=remove_dict, remove_dict_def=remove_dict_def_TS,
-                         add_dict={}, add_dict_def=add_dict_def_TS,
-                         show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
+                         show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP_model'],
                          datasetnames4model4row=datasetnames4model4row,
                          datasim_kwargs=datasim_kwargs,
                          datasetnames=datasetnames,
@@ -345,50 +355,9 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                          GLSP_kwargs=GLSP_kwargs,
                          suptitle_kwargs=suptitle_kwargs,
                          fontsize=fontsize,
+                         # get_key_compute_model_func=get_key_compute_model,
+                         is_valid_model_available_func=is_valid_model_available,
                          )
-
-
-def compute_raw_models(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
-                       include_gp_model, exptime, supersamp):
-    """
-    """
-    if key_model in l_valid_model:
-        if not(is_valid_model_available(key_model, datasetname, post_instance)):
-            model = model_wGP = gp_pred = gp_pred_var = None
-            return model, model_wGP, gp_pred, gp_pred_var
-
-    if exptime is None:
-        exptime = 0.
-    if supersamp is None:
-        supersamp = 5
-
-    if key_model == 'decorrelation_likelihood':
-        datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-        p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
-        model = datasim_docfunc_decorr_like.function(p_vect)
-        model_wGP = gp_pred = gp_pred_var = None
-    else:
-        key_compute_model = get_key_compute_model(key_model=key_model)
-        if include_gp_model:
-            (model, model_wGP, gp_pred, gp_pred_var
-             ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                             param=df_fittedval["value"].values,
-                                             l_param_name=list(df_fittedval.index),
-                                             key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                             include_gp=include_gp_model,
-                                             supersamp=supersamp, exptime=exptime
-                                             )
-        else:
-            model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                param=df_fittedval["value"].values,
-                                                l_param_name=list(df_fittedval.index),
-                                                key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                                include_gp=include_gp_model,
-                                                supersamp=supersamp, exptime=exptime
-                                                )
-            model_wGP = gp_pred = gp_pred_var = None
-
-    return model, model_wGP, gp_pred, gp_pred_var
 
 
 def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models):
@@ -432,27 +401,15 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
     return model, model_wGP
 
 
-def get_key_compute_model(key_model):
-    """
-    """
-    if key_model == "decorrelation":
-        key_compute_model = "decorr"
-    elif key_model == "model":
-        key_compute_model = key_whole
-    else:
-        key_compute_model = key_model
-    return key_compute_model
-
-
 def is_valid_model_available(key_model, datasetname, post_instance):
     """
     """
-    if key_model == "model":
-        return True
-    elif key_model == "stellar_var":
+    if key_model == "stellar_var":
         star = post_instance.model.stars[list(post_instance.model.stars.keys())[0]]
-        return ((star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True) is not None) and
-                star.get_dico_config_polymodel(inst_cat="RV", notexist_ok=True, return_None_if_notexist=True)["do"]
+        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+        inst_mod = post_instance.model.instruments[inst_mod_fullname]
+        return ((star.get_dico_config_polymodel(inst_cat=inst_mod.instrument.category, notexist_ok=True, return_None_if_notexist=True) is not None) and
+                star.get_dico_config_polymodel(inst_cat=inst_mod.instrument.category, notexist_ok=True, return_None_if_notexist=True)["do"]
                 )
     elif key_model == "inst_var":
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
@@ -460,13 +417,8 @@ def is_valid_model_available(key_model, datasetname, post_instance):
         return ((inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True) is not None) and
                 inst_mod.get_dico_config_polymodel(notexist_ok=True, return_None_if_notexist=True)["do"]
                 )
-    elif key_model == "decorrelation":
-        inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
-        return post_instance.model.instcat_models["RV"].decorrelation_model_config[inst_mod_fullname]["do"]
-    elif key_model == "decorrelation_likelihood":
-        return f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db
     else:
-        return False
+        return is_valid_model_available_core(key_model=key_model, datasetname=datasetname, post_instance=post_instance)
 
 
 # def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval,

@@ -20,7 +20,9 @@ from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetnam
                    get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_binned_label,
                    print_rms, set_legend
                    )
-from .core_compute_load import load_datasets_and_models, compute_and_plot_model
+from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
+                                is_valid_model_available
+                                )
 from ..emcee_tools import emcee_tools as et
 
 
@@ -45,6 +47,9 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                              show_datasetnames=True,
                              suptitle_kwargs=None,
                              fontsize=AandA_fontsize,
+                             get_key_compute_model_func=get_key_compute_model,
+                             is_valid_model_available_func=is_valid_model_available,
+                             kwargs_is_valid_model_available=None
                              ):
     """Produce a clean LC plot.
 
@@ -218,7 +223,10 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                   compute_raw_models_func=compute_raw_models_func,
                                   remove_add_model_components_func=remove_add_model_components_func,
                                   kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                  l_valid_model=l_valid_model
+                                  l_valid_model=l_valid_model,
+                                  get_key_compute_model_func=get_key_compute_model_func,
+                                  is_valid_model_available_func=is_valid_model_available_func,
+                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available
                                   )
 
     # Do the suptitle
@@ -410,6 +418,9 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                                                show_binned_model=show_binned_model,
                                                                models=None,
                                                                l_valid_model=l_valid_model,
+                                                               get_key_compute_model_func=get_key_compute_model_func,
+                                                               is_valid_model_available_func=is_valid_model_available_func,
+                                                               kwargs_is_valid_model_available=kwargs_is_valid_model_available
                                                                )
 
                 ################################################################################

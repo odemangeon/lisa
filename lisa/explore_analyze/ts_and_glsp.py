@@ -5,8 +5,9 @@ Module to create phase folded plots
 
 @TODO:
 """
-import numpy as np
-
+from numpy import (linspace, inf, min, max, arange, std, logical_and, zeros, where, sqrt, sum, power,
+                   nan, nanstd, concatenate, ones_like, argsort, mean, floor, log10, ceil, format_float_positional
+                   )
 from collections import OrderedDict
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
@@ -17,7 +18,9 @@ from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kw
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
                    set_legend, fmt_sci_not
                    )
-from .core_compute_load import load_datasets_and_models, compute_and_plot_model
+from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
+                                is_valid_model_available
+                                )
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
 
@@ -34,11 +37,13 @@ key_whole = Core_Model.key_whole
 day2sec = 24 * 60 * 60
 
 
-def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_models_func,
-                         compute_and_plot_model_func,
-                         y_name, inst_cat, d_name_component_removed_to_print,
-                         remove_dict, remove_dict_def, add_dict, add_dict_def,
-                         show_dict, l_model_1_per_row, datasetnames4model4row=None,
+def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
+                         compute_raw_models_func, remove_add_model_components_func,
+                         kwargs_compute_model_4_key_model, l_valid_model,
+                         y_name, inst_cat,
+                         d_name_component_removed_to_print,
+                         show_dict, l_model_1_per_row,
+                         datasetnames4model4row=None,
                          datasim_kwargs=None,
                          datasetnames=None,
                          amplitude_fact=1., unit=None,
@@ -47,6 +52,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                          GLSP_kwargs=None,
                          suptitle_kwargs=None,
                          fontsize=AandA_fontsize,
+                         get_key_compute_model_func=get_key_compute_model,
+                         is_valid_model_available_func=is_valid_model_available,
+                         kwargs_is_valid_model_available=None
                          ):
     """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
 
@@ -230,28 +238,27 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat=inst_cat, sortby_instcat=False, sortby_instname=False)
 
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_output_load, d_remove_from_model, d_remove_from_data, remove_dict, add_dict
-     ) = load_datasets_and_models_func(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-                                       df_fittedval=df_fittedval, amplitude_fact=amplitude_fact, remove_dict=remove_dict,
-                                       add_dict=add_dict, remove_dict_def=remove_dict_def, add_dict_def=add_dict_def)
+    (dico_load, kwargs_compute_model_4_key_model
+     ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                  df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
+                                  compute_raw_models_func=compute_raw_models_func,
+                                  remove_add_model_components_func=remove_add_model_components_func,
+                                  kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                  l_valid_model=l_valid_model,
+                                  get_key_compute_model_func=get_key_compute_model_func,
+                                  is_valid_model_available_func=is_valid_model_available_func,
+                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                  )
 
     # Do the suptitle
-    l_remove_from_model = list(d_remove_from_model.keys())
-    l_remove_from_data = list(d_remove_from_data.keys())
-    do_suptitle(fig=fig, post_instance=post_instance, fontsize=fontsize,
-                t_l_removed_from_model=([d_name_component_removed_to_print[key] for key in l_remove_from_model],
-                                        [remove_dict[key] for key in l_remove_from_model],
-                                        [dico_output_load[d_remove_from_model[key]] for key in l_remove_from_model],
-                                        ),
-                t_l_removed_from_data=([d_name_component_removed_to_print[key] for key in l_remove_from_data],
-                                       [remove_dict[key] for key in l_remove_from_data],
-                                       [dico_output_load[d_remove_from_data[key]] for key in l_remove_from_data],
-                                       ),
-                suptitle_kwargs=suptitle_kwargs)
+    do_suptitle(fig=fig, post_instance=post_instance, datasetnames=datasetnames, fontsize=fontsize,
+                dico_models=dico_load["models"], model_removed_or_add_dict=kwargs_compute_model_4_key_model["model"],
+                data_remove_or_add_dict=kwargs_compute_model_4_key_model["data"], suptitle_kwargs=suptitle_kwargs
+                )
 
     # Make sure the show_dict is well define
     show_dict_user = show_dict if show_dict is not None else {}
-    show_dict = {"model": True, "GP": True}
+    show_dict = {"model": True, "GP_model": True}
     show_dict.update(show_dict_user)
 
     #############
@@ -326,7 +333,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
         # Set the arguments for the plotting functions
         ##############################################
         (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
-         ) = get_pl_kwargs(pl_kwargs=TS_kwargs.get('pl_kwargs', None), dico_nb_dstperinsts=dico_output_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
+         ) = get_pl_kwargs(pl_kwargs=TS_kwargs.get('pl_kwargs', None), dico_nb_dstperinsts=dico_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
                            bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
                            nb_rows=nb_rows, alpha_def_data=1, color_def_data=None, show_error_data_def=True)
 
@@ -335,7 +342,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                             nb_rows=nb_rows)
 
         #############################################################
-        # Make the RV and residuals plots (full and zoomed if needed)
+        # Make the data and residuals plots (full and zoomed if needed)
         #############################################################
         text_rms = OrderedDict()
         text_rms_binned = OrderedDict()
@@ -355,12 +362,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                 xlims_datas = OrderedDict()
                 x_values = OrderedDict()
                 for datasetname in datasetnames4rowidx[i_row]:
-                    xlims_datas[datasetname] = [np.inf, -np.inf]
-                    x_values[datasetname] = dico_output_load['times'][datasetname] * time_fact
-                    if np.min(x_values[datasetname]) < xlims_datas[datasetname][0]:
-                        xlims_datas[datasetname][0] = np.min(x_values[datasetname])
-                    if np.max(x_values[datasetname]) > xlims_datas[datasetname][1]:
-                        xlims_datas[datasetname][1] = np.max(x_values[datasetname])
+                    xlims_datas[datasetname] = [inf, -inf]
+                    x_values[datasetname] = dico_load['times'][datasetname] * time_fact
+                    if min(x_values[datasetname]) < xlims_datas[datasetname][0]:
+                        xlims_datas[datasetname][0] = min(x_values[datasetname])
+                    if max(x_values[datasetname]) > xlims_datas[datasetname][1]:
+                        xlims_datas[datasetname][1] = max(x_values[datasetname])
 
                 # Create the data and residuals axes and set properties ans style
                 (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=create_axes_kwargs['add_twoaxeswithsharex_TS'])  # gs_from_sps_kw={"wspace": 0.1}
@@ -388,8 +395,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     ###################
                     # Compute the models
                     ###################
+                    computed_models = {}
                     for model, show_model in show_dict.items():
-                        if model == "GP":
+                        if model == "GP_model":
                             continue
                         if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')):
                             if datasetname4model4row[model][i_row] == 'all':
@@ -404,59 +412,70 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                                 if (tlims_i[1] is not None) and (tlims_i[1] < xlims_model[1]):
                                     xlims_model[1] = tlims_i[1]
                             tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
-                            include_gp_model = True if ((model == "model") and show_dict["GP"]) else False
-                            remove_dict = remove_dict if model == "model" else {}
-                            key_model = model if model != "model" else key_whole
-                            key_pl_kwarg = model
-                            _, pl_kwarg_final = compute_and_plot_model_func(datasetname=datasetname,
-                                                                            post_instance=post_instance,
-                                                                            df_fittedval=df_fittedval,
-                                                                            key_compute_model=key_model,
-                                                                            key_pl_kwarg=key_pl_kwarg,
-                                                                            include_gp_model=include_gp_model,
-                                                                            datasim_kwargs=datasim_kwargs,
-                                                                            remove_dict=remove_dict,
-                                                                            add_dict=add_dict,
-                                                                            dico_output_load=dico_output_load,
-                                                                            amplitude_fact=amplitude_fact,
-                                                                            npt_model=npt_model,
-                                                                            tlims_model=tlims_model,
-                                                                            xlims_model=xlims_model,
-                                                                            exptime_bin=exptime_bin,
-                                                                            supersamp_bin_model=supersamp_bin_model,
-                                                                            fact_conversion_exptime_bin=time_fact,
-                                                                            plot=True,
-                                                                            ax=axe_data,
-                                                                            pl_kwarg=pl_kwarg_final,
-                                                                            show_binned_model=show_binned_model,
-                                                                            )
+                            # include_gp_model = True if ((model == "model") and show_dict["GP"]) else False
+                            kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
+                            if 'include_gp_model' in kwargs_compute_model:
+                                include_gp_model = kwargs_compute_model['include_gp_model']
+                            else:
+                                if model == 'model':
+                                    include_gp_model = True
+                                else:
+                                    include_gp_model = False
+
+                            (computed_models, pl_kwarg_final
+                             ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
+                                                        key_model=model,
+                                                        datasetname=datasetname,
+                                                        post_instance=post_instance,
+                                                        df_fittedval=df_fittedval,
+                                                        datasim_kwargs=datasim_kwargs,
+                                                        include_gp_model=include_gp_model,
+                                                        amplitude_fact=amplitude_fact,
+                                                        compute_raw_models_func=compute_raw_models_func,
+                                                        remove_add_model_components_func=remove_add_model_components_func,
+                                                        key_pl_kwarg=model,
+                                                        remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                        add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                        exptime_bin=exptime_bin,
+                                                        supersamp_bin_model=supersamp_bin_model,
+                                                        fact_tsim_to_xsim=time_fact,
+                                                        xsim=None,
+                                                        plot=True, ax=axe_data,
+                                                        pl_kwarg=pl_kwarg_final,
+                                                        show_binned_model=show_binned_model,
+                                                        models=computed_models,
+                                                        l_valid_model=l_valid_model,
+                                                        get_key_compute_model_func=get_key_compute_model_func,
+                                                        is_valid_model_available_func=is_valid_model_available_func,
+                                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                                        )
 
                     ###############
                     # Plot the data
                     ###############
                     if pl_show_error[datasetname]['data']:
-                        ebcont = axe_data.errorbar(x_values[datasetname], y=dico_output_load['datas'][datasetname],
-                                                   yerr=dico_output_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
+                        ebcont = axe_data.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname],
+                                                   yerr=dico_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
                         if not("ecolor" in pl_kwarg_jitter[datasetname]):
                             pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
                         if not("color" in pl_kwarg_final[datasetname]):
                             pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
-                        if dico_output_load['has_jitters'][datasetname]:
-                            axe_data.errorbar(x_values[datasetname], y=dico_output_load['datas'][datasetname],
-                                              yerr=dico_output_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                        if dico_load['has_jitters'][datasetname]:
+                            axe_data.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname],
+                                              yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
 
                     else:
-                        axe_data.errorbar(x_values[datasetname], y=dico_output_load['datas'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
+                        axe_data.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
 
                     ####################
                     # Plot the residuals
                     ####################
                     if pl_show_error[datasetname]['data']:
-                        if dico_output_load['has_jitters'][datasetname]:
-                            axe_resi.errorbar(x_values[datasetname], y=dico_output_load['residuals'][datasetname], yerr=dico_output_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
-                        axe_resi.errorbar(x_values[datasetname], y=dico_output_load['residuals'][datasetname], yerr=dico_output_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])
+                        if dico_load['has_jitters'][datasetname]:
+                            axe_resi.errorbar(x_values[datasetname], y=dico_load['residuals'][datasetname], yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                        axe_resi.errorbar(x_values[datasetname], y=dico_load['residuals'][datasetname], yerr=dico_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])
                     else:
-                        axe_resi.errorbar(x_values[datasetname], y=dico_output_load['residuals'][datasetname], **pl_kwarg_final[datasetname]["data"])
+                        axe_resi.errorbar(x_values[datasetname], y=dico_load['residuals'][datasetname], **pl_kwarg_final[datasetname]["data"])
                     # Compute rms of the residuals and print it on the top of the residuals graphs
                     x_min_rms = xlims_datas[datasetname][0]
                     if tlims_i is not None and tlims_i[0] is not None:
@@ -465,7 +484,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     if tlims_i is not None and tlims_i[1] is not None:
                         x_max_rms = tlims_i[1]
                     text_rms_template = f"{{:{rms_kwargs['format']}}}"
-                    text_rms[datasetname] = text_rms_template.format(np.std(dico_output_load['residuals'][datasetname][np.logical_and(x_values[datasetname] >= x_min_rms, x_values[datasetname] <= x_max_rms)]))
+                    text_rms[datasetname] = text_rms_template.format(std(dico_load['residuals'][datasetname][logical_and(x_values[datasetname] >= x_min_rms, x_values[datasetname] <= x_max_rms)]))
                     print(f"RMS {datasetname} = {text_rms[datasetname]} {unit} (raw cadence)")
 
                     ################################################################################
@@ -473,39 +492,47 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     ################################################################################
                     if not(one_binning_per_row) and (exptime_bin > 0.):
                         x_min_data, x_max_data = (min(x_values[datasetname]), max(x_values[datasetname]))
-                        bins = np.arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
+                        bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
                         midbins = bins[:-1] + exptime_bin / 2
                         nbins = len(bins) - 1
                         # Compute the binned values
                         (bindata, binedges, binnb
-                         ) = binned_statistic(dico_output_load['times'][datasetname], dico_output_load['datas'][datasetname],
+                         ) = binned_statistic(dico_load['times'][datasetname], dico_load['datas'][datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(x_min_data, x_max_data))
                         (binresi, binedges, binnb
-                         ) = binned_statistic(dico_output_load['times'][datasetname], dico_output_load['residuals'][datasetname],
+                         ) = binned_statistic(dico_load['times'][datasetname], dico_load['residuals'][datasetname],
                                               statistic=binning_stat, bins=bins,
                                               range=(x_min_data, x_max_data))
                         # Compute the err on the binned values
-                        binstd = np.zeros(nbins)
-                        if dico_output_load['has_jitters'][datasetname]:
-                            binstd_jitter = np.zeros(nbins)
-                        bincount = np.zeros(nbins)
+                        binstd = zeros(nbins)
+                        if dico_load['has_jitters'][datasetname]:
+                            binstd_jitter = zeros(nbins)
+                        bincount = zeros(nbins)
                         for i_bin in range(nbins):
-                            bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                            bincount[i_bin] = len(where(binnb == (i_bin + 1))[0])
                             if bincount[i_bin] > 0.0:
-                                binstd[i_bin] = np.sqrt(np.sum(np.power((dico_output_load['data_errs'][datasetname]
-                                                                         [binnb == (i_bin + 1)]),
-                                                                        2.)) /
-                                                        bincount[i_bin]**2)
-                                if dico_output_load['has_jitters'][datasetname]:
-                                    binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((dico_output_load['data_err_jitters'][datasetname]
-                                                                                    [binnb == (i_bin + 1)]),
-                                                                                   2.)) /
-                                                                   bincount[i_bin]**2)
+                                binstd[i_bin] = sqrt(sum(power((dico_load['data_errs'][datasetname]
+                                                                         [binnb == (i_bin + 1)]
+                                                                ),
+                                                               2.
+                                                               )
+                                                         ) /
+                                                     bincount[i_bin]**2
+                                                     )
+                                if dico_load['has_jitters'][datasetname]:
+                                    binstd_jitter[i_bin] = sqrt(sum(power((dico_load['data_err_jitters'][datasetname]
+                                                                                    [binnb == (i_bin + 1)]
+                                                                           ),
+                                                                          2.
+                                                                          )
+                                                                    ) /
+                                                                bincount[i_bin]**2
+                                                                )
                             else:
-                                binstd[i_bin] = np.nan
-                                if dico_output_load['has_jitters'][datasetname]:
-                                    binstd_jitter[i_bin] = np.nan
+                                binstd[i_bin] = nan
+                                if dico_load['has_jitters'][datasetname]:
+                                    binstd_jitter[i_bin] = nan
                         # Plot the binned data
                         bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
                         ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
@@ -514,7 +541,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                         if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
                             pl_kwarg_jitter[datasetname]["databinned"] = pl_kwarg_final[datasetname]["databinned"]["color"]
                         _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
-                        if dico_output_load['has_jitters'][datasetname] and pl_show_error[datasetname]["databinned"]:
+                        if dico_load['has_jitters'][datasetname] and pl_show_error[datasetname]["databinned"]:
                             _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
                             _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
                         # Compute rms of the binned residuals
@@ -525,50 +552,51 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                         if tlims_i is not None and tlims_i[1] is not None:
                             x_max_rms = tlims_i[1]
                         text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
-                        text_rms_binned[datasetname] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
+                        text_rms_binned[datasetname] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
                         print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {unit}")
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
-                    x_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
+                    x_row = concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                     x_min_data, x_max_data = (min(x_row), max(x_row))
-                    bins = np.arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
+                    bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
                     midbins = bins[:-1] + exptime_bin / 2
                     nbins = len(bins) - 1
                     # Compute the binned values
                     (bindata, binedges, binnb
-                     ) = binned_statistic(x_row, np.concatenate([dico_output_load['datas'][dst] for dst in datasetnames4rowidx[i_row]]),
+                     ) = binned_statistic(x_row, concatenate([dico_load['datas'][dst] for dst in datasetnames4rowidx[i_row]]),
                                           statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     (binresi, binedges, binnb
-                     ) = binned_statistic(x_row, np.concatenate([dico_output_load['residuals'][dst] for dst in datasetnames4rowidx[i_row]]),
+                     ) = binned_statistic(x_row, concatenate([dico_load['residuals'][dst] for dst in datasetnames4rowidx[i_row]]),
                                           statistic=binning_stat, bins=bins,
                                           range=(x_min_data, x_max_data))
                     # Compute the err on the binned values
-                    binstd = np.zeros(nbins)
-                    if any([dico_output_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-                        binstd_jitter = np.zeros(nbins)
-                    bincount = np.zeros(nbins)
-                    data_err_row = np.concatenate([dico_output_load['data_errs'][dst] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = np.concatenate([dico_output_load['data_err_jitters'][dst] if dico_output_load['has_jitters'][dst] else np.ones_like(dico_output_load['data_errs'][dst]) * np.nan for dst in datasetnames4rowidx[i_row]])
+                    binstd = zeros(nbins)
+                    if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                        binstd_jitter = zeros(nbins)
+                    bincount = zeros(nbins)
+                    data_err_row = concatenate([dico_load['data_errs'][dst] for dst in datasetnames4rowidx[i_row]])
+                    data_err_jitter_row = concatenate([dico_load['data_err_jitters'][dst] if dico_load['has_jitters'][dst] else ones_like(dico_load['data_errs'][dst]) * nan for dst in datasetnames4rowidx[i_row]])
                     for i_bin in range(nbins):
-                        bincount[i_bin] = len(np.where(binnb == (i_bin + 1))[0])
+                        bincount[i_bin] = len(where(binnb == (i_bin + 1))[0])
                         if bincount[i_bin] > 0.0:
-                            binstd[i_bin] = np.sqrt(np.sum(np.power((data_err_row
-                                                                     [binnb == (i_bin + 1)]),
-                                                                    2.)) /
-                                                    bincount[i_bin]**2)
-                            if any([dico_output_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-                                binstd_jitter[i_bin] = np.sqrt(np.sum(np.power((data_err_jitter_row
-                                                                                [binnb == (i_bin + 1)]),
-                                                                               2.)) /
-                                                               bincount[i_bin]**2)
+                            binstd[i_bin] = sqrt(sum(power(data_err_row[binnb == (i_bin + 1)], 2.)) /
+                                                 bincount[i_bin]**2
+                                                 )
+                            if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                                binstd_jitter[i_bin] = sqrt(sum(power(data_err_jitter_row[binnb == (i_bin + 1)],
+                                                                      2.
+                                                                      )
+                                                                ) /
+                                                            bincount[i_bin]**2
+                                                            )
                         else:
-                            binstd[i_bin] = np.nan
-                            if any([dico_output_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-                                binstd_jitter[i_bin] = np.nan
+                            binstd[i_bin] = nan
+                            if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                                binstd_jitter[i_bin] = nan
                     # Plot the binned data
                     bin_err = binstd if pl_show_error[f"row{i_row}"] else None
                     ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"])
@@ -577,7 +605,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     if not("ecolor" in pl_kwarg_jitter[f"row{i_row}"]):
                         pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_final[f"row{i_row}"]["color"]
                     _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"])
-                    if any([dico_output_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
+                    if any([dico_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
                         _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
                         _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
                     # Compute rms of the binned residuals
@@ -588,7 +616,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     if tlims_i is not None and tlims_i[1] is not None:
                         x_max_rms = tlims_i[1]
                     text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
-                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(np.nanstd(binresi[np.logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
+                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
                     print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {unit}")
 
                 # Draw a horizontal line at the level of reference stellar RV level
@@ -613,12 +641,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                 # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
                 for axe, data_or_resi, points, in zip((axe_data, axe_resi),
                                                       ("data", "resi"),
-                                                      (dico_output_load['datas'], dico_output_load['residuals']),
+                                                      (dico_load['datas'], dico_load['residuals']),
                                                       ):
                     # Set the y axis limits
                     ylims_to_use = define_x_or_y_lims(x_or_ylims=ylims[data_or_resi], row_name=i_row, col_name=i_col)
                     if (ylims_to_use is None) and (pad[data_or_resi] is not None):
-                        points_pl_i_row = np.concatenate([points[datasetname] for datasetname in datasetnames4rowidx[i_row]])
+                        points_pl_i_row = concatenate([points[datasetname] for datasetname in datasetnames4rowidx[i_row]])
                         et.auto_y_lims(points_pl_i_row, axe, pad=pad[data_or_resi])
                     else:
                         axe.set_ylim(ylims)
@@ -640,7 +668,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                 if (i_col == 1) or TS_kwargs.get('force_tlims', False):
                     axe_data.set_xlim(tlims_i)
                 else:
-                    x_row = np.concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
+                    x_row = concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                     axe_data.set_xlim((min(x_row), max(x_row)))
 
                 ##########################
@@ -653,17 +681,18 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
     ######################################
     if GLSP_kwargs.get("do", True):
         # Variable that are always available
-        all_time = np.concatenate([dico_output_load['times'][dst] for dst in datasetnames])
-        idx_sort = np.argsort(all_time)
-        all_data = np.concatenate([dico_output_load['datas'][dst] for dst in datasetnames])[idx_sort]
+        # import pdb; pdb.set_trace()
+        all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
+        idx_sort = argsort(all_time)
+        all_data = concatenate([dico_load['datas'][dst] for dst in datasetnames])[idx_sort]
         if GLSP_kwargs.get("use_jitter", True):
-            all_data_err = np.concatenate([dico_output_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
+            all_data_err = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
         else:
-            all_data_err = np.concatenate([dico_output_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
-        all_model = np.concatenate([dico_output_load['models'][dst] for dst in datasetnames])[idx_sort]
-        all_resi = np.concatenate([dico_output_load['residuals'][dst] for dst in datasetnames])[idx_sort]
+            all_data_err = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
+        all_model = concatenate([dico_load['models'][dst]['model'] for dst in datasetnames])[idx_sort]
+        all_resi = concatenate([dico_load['residuals'][dst] for dst in datasetnames])[idx_sort]
         gls_inputs = {"data": {"time": all_time, "data": all_data, "err": all_data_err, 'label': "data"},
-                      "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # np.sqrt(gp_pred_var_GLS)
+                      "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
                       "resi": {"time": all_time, "data": all_resi, "err": all_data_err, 'label': "residuals"},
                       }
         l_gls_key = ["data", "model", "resi"]
@@ -682,14 +711,14 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
         #     gp_pred_var_GLS *= RV_fact**2
         # if model_wGP is not None:  # WARNING: This assumes that all datasets have (or don't have) GP
         #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
-        #                   "model": {"data": model_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "model"},  # np.sqrt(gp_pred_var_GLS)
-        #                   "GP": {"data": gp_pred_GLS, "err": np.sqrt(gp_pred_var_GLS), 'label': "GP"},
+        #                   "model": {"data": model_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "model"},  # sqrt(gp_pred_var_GLS)
+        #                   "GP": {"data": gp_pred_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "GP"},
         #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
         #                   }
         #     l_gls_key = ["data", "model", "GP", "resi"]
         # else:
         #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
-        #                   "model": {"data": model_GLS, "err": all_rv_data_err, 'label': "model"},  # np.sqrt(gp_pred_var_GLS)
+        #                   "model": {"data": model_GLS, "err": all_rv_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
         #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
         #                   }
         #     l_gls_key = ["data", "model", "resi"]
@@ -769,23 +798,23 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                 xlims = ax_gls[ii].get_xlim()
 
                 # Print the period axis
-                per_min = np.min(1 / glsps[key].freq)
-                freq_min = np.min(glsps[key].freq)
-                per_max = np.max(1 / glsps[key].freq)
-                freq_max = np.max(glsps[key].freq)
+                per_min = min(1 / glsps[key].freq)
+                freq_min = min(glsps[key].freq)
+                per_max = max(1 / glsps[key].freq)
+                freq_max = max(glsps[key].freq)
                 per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims]
                 if per_xlims[0] < 0:  # Sometimes the inferior xlims is negative and it messes up with the rest
                     per_xlims[0] = per_max
                 per_xlims = per_xlims[::-1]
                 if not(logscale):
                     ax_gls_twin[ii].plot([freq_min / day2sec * freq_fact, freq_max / day2sec * freq_fact],
-                                         [np.mean(glsps[key].power), np.mean(glsps[key].power)], "k", alpha=0)
+                                         [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
                 else:
-                    ax_gls_twin[ii].plot([per_min, per_max], [np.mean(glsps[key].power), np.mean(glsps[key].power)], "k", alpha=0)
+                    ax_gls_twin[ii].plot([per_min, per_max], [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
                     xlims_per = ax_gls_twin[ii].get_xlim()
                     ax_gls_twin[ii].set_xlim(xlims_per[::-1])
                 if not(logscale):
-                    per_decades = [10**(exp) for exp in list(range(int(np.floor(np.log10(per_min))), int(np.ceil(np.log10(per_max))) + 1))]
+                    per_decades = [10**(exp) for exp in list(range(int(floor(log10(per_min))), int(ceil(log10(per_max))) + 1))]
                     per_ticks_major = []
                     per_ticklabels_major = []
                     per_ticks_minor = []
@@ -804,7 +833,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
                     ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
                     if GLSP_kwargs.get('scientific_notation_P_axis', True):
-                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) for tick in per_ticklabels_major])
+                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) if tick != "" else "" for tick in per_ticklabels_major])
                     else:
                         ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
                     # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
@@ -836,7 +865,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval, load_datasets_and_mod
                         text_kwargs = dico_per.get("text_kwargs", {}).copy()
                         x_shift = text_kwargs.pop("x_shift", 0)
                         y_pos = text_kwargs.pop("y_pos", 0.9)
-                        label = str(text_kwargs.pop("label", np.format_float_positional(per, precision=3, unique=False, fractional=False, trim='k')))
+                        label = str(text_kwargs.pop("label", format_float_positional(per, precision=3, unique=False, fractional=False, trim='k')))
                         color = text_kwargs.pop("color", None)
                         if color is None:
                             color = lines_per.get_color()[0]
