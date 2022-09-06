@@ -5,50 +5,41 @@ Module to create plots specifically for radial velocity data
 
 @TODO:
 """
-import numpy as np
 from logging import getLogger
-
 from copy import copy
-from collections import defaultdict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
 from .misc import AandA_fontsize
-from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from .core_compute_load import compute_raw_models
+from .core_compute_load import is_valid_model_available as is_valid_model_available_core
+from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
 
-day2sec = 24 * 60 * 60
-
-# managers
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
-
-mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
-
 # logger
 logger = getLogger()
 
 
-remove_dict_def_TS = {'GP_dataNmodel': True, 'poly_inst_var': True, 'poly_sys_var': True, 'GP_residual': True}
-remove_dict_def_PF = {'GP_dataNmodel': True, 'poly_inst_var': True, 'poly_sys_var': True, 'GP_residual': True}
-add_dict_def_PF = {'GP_dataNmodel': False, 'poly_inst_var': False, 'poly_sys_var': False, 'GP_residual': False}
-add_dict_def_TS = {'GP_dataNmodel': False, 'poly_inst_var': False, 'poly_sys_var': False, 'GP_residual': False}
+# remove_dict_def_TS = {'GP_dataNmodel': True, 'poly_inst_var': True, 'poly_sys_var': True, 'GP_residual': True}
+# remove_dict_def_PF = {'GP_dataNmodel': True, 'poly_inst_var': True, 'poly_sys_var': True, 'GP_residual': True}
+# add_dict_def_PF = {'GP_dataNmodel': False, 'poly_inst_var': False, 'poly_sys_var': False, 'GP_residual': False}
+# add_dict_def_TS = {'GP_dataNmodel': False, 'poly_inst_var': False, 'poly_sys_var': False, 'GP_residual': False}
 
-# y_name = "RV"
+l_valid_model = ["model", "inst_var", "sys_var"]
 
-d_name_component_removed_to_print = {'poly_inst_var': "Poly Inst Var", 'poly_sys_var': "Poly Sys var",
+dict_model_false = {key: False for key in l_valid_model[1:]}
+dict_model_true = {key: True for key in l_valid_model[1:]}
+
+d_name_component_removed_to_print = {'inst_var': "Inst Var", 'sys_var': "Sys var",
                                      'GP_dataNmodel': "GP",
                                      }
 
 
 def create_IND_phasefolded_plots(fig, post_instance, df_fittedval, IND_subcat, datasim_kwargs=None,
-                                 planets=None,
+                                 planets=None, periods=None,
                                  datasetnames=None, row4datasetname=None,
                                  datasetnameformodel4row=None, npt_model=1000,
                                  phasefold_central_phase=0.,
@@ -149,16 +140,22 @@ def create_IND_phasefolded_plots(fig, post_instance, df_fittedval, IND_subcat, d
     IND_unit        : str
         String giving the unit of the INDs
     """
+    remove_dict = copy(dict_model_true)
+    remove_dict["GP_model"] = True
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                             load_datasets_and_models_func=load_datasets_and_models_IND,
-                             compute_and_plot_oversamp_model_func=compute_and_plot_model_IND,
-                             remove_dict={},
-                             add_dict={},
-                             remove_dict_def=remove_dict_def_PF,
-                             add_dict_def=add_dict_def_PF,
+                             compute_raw_models_func=compute_raw_models,
+                             remove_add_model_components_func=remove_add_model_components,
+                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                         'add_dict': dict_model_false
+                                                                         },
+                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                        'add_dict': dict_model_false
+                                                                        },
+                                                               },
+                             l_valid_model=l_valid_model,
                              y_name=IND_subcat, inst_cat=f'IND-{IND_subcat}',
                              d_name_component_removed_to_print=d_name_component_removed_to_print,
-                             datasim_kwargs=datasim_kwargs, planets=planets,
+                             datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
                              datasetnames=datasetnames, row4datasetname=row4datasetname,
                              datasetnameformodel4row=datasetnameformodel4row,
                              npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
@@ -170,7 +167,11 @@ def create_IND_phasefolded_plots(fig, post_instance, df_fittedval, IND_subcat, d
                              pl_kwargs=pl_kwargs, xlims=xlims, force_xlims=force_xlims, ylims=ylims,
                              rms_kwargs=rms_kwargs, legend_kwargs=legend_kwargs, show_datasetnames=show_datasetnames,
                              suptitle_kwargs=suptitle_kwargs,
-                             unit=IND_unit, fontsize=fontsize
+                             unit=IND_unit, fontsize=fontsize,
+                             get_key_compute_model_func=get_key_compute_model,
+                             is_valid_model_available_func=is_valid_model_available,
+                             kwargs_is_valid_model_available={'IND_subcat': IND_subcat},
+                             kwargs_get_key_compute_model={'IND_subcat': IND_subcat}
                              )
 
 
@@ -335,13 +336,19 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
         String giving the unit of the INDs
     """
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                         load_datasets_and_models_func=lambda *args, **kwargs: load_datasets_and_models_IND(IND_subcat=IND_subcat, *args, **kwargs),
-                         compute_and_plot_oversamp_model_func=compute_and_plot_model_IND,
                          y_name=IND_subcat, inst_cat=f'IND-{IND_subcat}',
+                         compute_raw_models_func=compute_raw_models,
+                         remove_add_model_components_func=remove_add_model_components,
+                         kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                     'add_dict': dict_model_false
+                                                                     },
+                                                           "data": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                                    'add_dict': dict_model_false
+                                                                    },
+                                                           },
+                         l_valid_model=l_valid_model,
                          d_name_component_removed_to_print=d_name_component_removed_to_print,
-                         remove_dict=remove_dict, remove_dict_def=remove_dict_def_TS,
-                         add_dict={}, add_dict_def=add_dict_def_TS,
-                         show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
+                         show_dict=show_dict, l_model_1_per_row=['model', 'poly_sys_var', 'GP_model'],
                          datasetnames4model4row=datasetnames4model4row,
                          datasim_kwargs=datasim_kwargs,
                          datasetnames=datasetnames,
@@ -351,341 +358,400 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
                          GLSP_kwargs=GLSP_kwargs,
                          suptitle_kwargs=suptitle_kwargs,
                          fontsize=fontsize,
+                         get_key_compute_model_func=get_key_compute_model,
+                         is_valid_model_available_func=is_valid_model_available,
+                         kwargs_is_valid_model_available={'IND_subcat': IND_subcat},
+                         kwargs_get_key_compute_model={'IND_subcat': IND_subcat}
                          )
 
 
-def load_datasets_and_models_IND(IND_subcat, datasetnames, post_instance, datasim_kwargs, df_fittedval,
-                                 amplitude_fact, remove_dict, add_dict, remove_dict_def, add_dict_def,
-                                 ):
-    """Load the dataset and models for later use by the other two function
+def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models):
     """
-    remove_dict_user = remove_dict
-    remove_dict = copy(remove_dict_def)
-    remove_dict.update(remove_dict_user)
+    """
+    # Remove components if needed
+    for key, do in remove_dict.items():
+        if do and ((key + extension + extension_raw) in models):
+            if key in ['sys_var', 'inst_var', 'GP_model']:
+                model -= models[key + extension + extension_raw]
+                if (model_wGP is not None) and (key != 'GP_model'):
+                    model_wGP -= models[key + extension + extension_raw]
+            else:
+                raise NotImplementedError(f"Remove from model is not implement for component {key}")
+    # Add components if needed
+    for key, do in add_dict.items():
+        if do and ((key + extension + extension_raw) in models):
+            if key in ['sys_var', 'inst_var', 'GP_model']:
+                model += models[key + extension + extension_raw]
+                if (model_wGP is not None) and (key != 'GP_model'):
+                    model_wGP += models[key + extension + extension_raw]
+            else:
+                raise NotImplementedError(f"Remove from model is not implement for component {key}")
 
-    add_dict_user = add_dict
-    add_dict = copy(add_dict_def)
-    add_dict.update(add_dict_user)
+    return model, model_wGP
 
-    dico_datasets = {}
-    dico_kwargs = {}
-    dico_nb_dstperinsts = defaultdict(lambda: 0)
-    times = {}
-    datas = {}
-    data_errs = {}
-    data_err_jitters = {}
-    data_err_worwojitters = {}
-    has_jitters = {}
-    dico_jitters = {}
-    models = {}
-    gp_preds = {}
-    gp_pred_vars = {}
-    poly_inst_vars = {}
-    poly_sys_vars = {}
-    residuals = {}
-    for datasetname in datasetnames:
-        ##########################################
-        # Load Data and instrument and noise model
-        ##########################################
-        dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
-        dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
-        times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
-        datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
-        data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
-        filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+
+def get_key_compute_model(key_model, **kwargs):
+    """
+    """
+    if key_model == "sys_var":
+        key_compute_model = f"{kwargs['IND_subcat']}_sys_var"
+    elif key_model == "inst_var":
+        key_compute_model = f"{kwargs['IND_subcat']}_inst_var"
+    else:
+        key_compute_model = get_key_compute_model_core(key_model=key_model)
+    return key_compute_model
+
+def is_valid_model_available(key_model, datasetname, post_instance, **kwargs):
+    """
+    """
+    if key_model == "sys_var":
+        poly_model = post_instance.model.instcat_models["IND"].get_modelclass_4_modelname(model_name='polynomial')
+        return ((poly_model.get_dico_config(param_container=post_instance.model, prefix=kwargs['IND_subcat'], notexist_ok=True, return_None_if_notexist=True) is not None) and
+                (poly_model.get_dico_config(param_container=post_instance.model, prefix=kwargs['IND_subcat'], notexist_ok=True, return_None_if_notexist=True)["do"])
+                )
+    elif key_model == "inst_var":
+        poly_model = post_instance.model.instcat_models["IND"].get_modelclass_4_modelname(model_name='polynomial')
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
-        noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-        dico_nb_dstperinsts[filename_info["inst_name"]] += 1
-
-        ##############################################
-        # Apply the jitter to the data error if needed
-        ##############################################
-        dico_jitters[datasetname] = {}
-        data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
-        has_jitters[datasetname] = noise_model.has_jitter
-        if has_jitters[datasetname]:
-            dico_jitters[datasetname]["type"] = noise_model.jitter_type
-            if inst_mod.jitter.free:
-                dico_jitters[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
-            else:
-                dico_jitters[datasetname]["value"] = inst_mod.jitter.value
-            if dico_jitters[datasetname]["type"] == "multi":
-                data_err_jitters[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
-            elif dico_jitters[datasetname]["type"] == "add":
-                data_err_jitters[datasetname] = np.sqrt(apply_jitter_add(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
-            else:
-                raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
-            data_err_worwojitters[datasetname] = data_err_jitters[datasetname].copy()
-        else:
-            data_err_worwojitters[datasetname] = data_errs[datasetname].copy()
-
-        ######################################################################
-        # Compute the polynomial variations (poly_sys_vars and poly_inst_vars)
-        ######################################################################
-        poly_model = post_instance.model.instcat_models["IND"].get_modelclass_4_modelname(model_name='polynomial')
-
-        ############################################################################################
-        ## Compute the polynomial variations for the system (sys_vars) to later remove from the data
-        ############################################################################################
-        if ((poly_model.get_dico_config(param_container=post_instance.model, prefix=IND_subcat, notexist_ok=True, return_None_if_notexist=True) is not None) and
-            (poly_model.get_dico_config(param_container=post_instance.model, prefix=IND_subcat, notexist_ok=True, return_None_if_notexist=True)["do"])
-            ):
-            model_poly_sys_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                              param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                              key_obj="poly_sys_var",
-                                                              datasim_kwargs=datasim_kwargs, include_gp=False
-                                                              )
-
-            if model_poly_sys_vars is not None:
-                poly_sys_vars[datasetname] = model_poly_sys_vars
-
-        #################################################################################################
-        ## Compute the polynomial variations for the isntruments (isntvars) to later remove from the data
-        #################################################################################################
-        if ((poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True) is not None) and
-            (poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True)["do"])
-            ):
-            model_poly_inst_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                                               param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                               key_obj="poly_inst_var",
-                                                               datasim_kwargs=datasim_kwargs, include_gp=False
-                                                               )
-
-            if model_poly_inst_vars is not None:
-                poly_inst_vars[datasetname] = model_poly_inst_vars
-
-        #######################################
-        # Compute the models and GP predictions
-        #######################################
-        (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
-                                         param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-                                         key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True
-                                         )
-        if model_wGP is not None:
-            gp_preds[datasetname] = gp_pred
-            gp_pred_vars[datasetname] = gp_pred_var
-
-        if (model_wGP is not None) and not(remove_dict['GP_dataNmodel']):
-            models[datasetname] = model_wGP
-        else:
-            models[datasetname] = model
-
-        #######################
-        # Compute the residuals
-        #######################
-        if (model_wGP is not None) and remove_dict['GP_residual']:
-            residuals[datasetname] = datas[datasetname] - model_wGP
-        else:
-            residuals[datasetname] = datas[datasetname] - model
-
-        ################################################################################
-        # Remove GP (if needed)
-        ################################################################################
-        if (model_wGP is not None) and remove_dict['GP_dataNmodel']:
-            datas[datasetname] -= gp_pred
-
-        ################################################################################
-        # Remove/Add poly_sys_vars (if needed)
-        ################################################################################
-        if datasetname in poly_sys_vars:
-            if remove_dict['poly_sys_var']:
-                datas[datasetname] -= poly_sys_vars[datasetname]
-                models[datasetname] -= poly_sys_vars[datasetname]
-            if add_dict['poly_sys_var']:
-                datas[datasetname] += poly_sys_vars[datasetname]
-                models[datasetname] += poly_sys_vars[datasetname]
-
-        ################################################################################
-        # Remove/Add poly_inst_vars (if needed)
-        ################################################################################
-        if datasetname in poly_inst_vars:
-            if remove_dict['poly_inst_var']:
-                datas[datasetname] -= poly_inst_vars[datasetname]
-                models[datasetname] -= poly_inst_vars[datasetname]
-            if add_dict['poly_inst_var']:
-                datas[datasetname] += poly_inst_vars[datasetname]
-                models[datasetname] += poly_inst_vars[datasetname]
-
-        ################################################################################
-        # Apply IND_fact
-        ################################################################################
-        datas[datasetname] *= amplitude_fact
-        data_errs[datasetname] *= amplitude_fact
-        data_err_worwojitters[datasetname] *= amplitude_fact
-        residuals[datasetname] *= amplitude_fact
-        models[datasetname] *= amplitude_fact
-        if model_wGP is not None:
-            gp_preds[datasetname] *= amplitude_fact
-            gp_pred_vars[datasetname] *= amplitude_fact**2
-        if has_jitters[datasetname]:
-            dico_jitters[datasetname]["value"] *= amplitude_fact
-            data_err_jitters[datasetname] *= amplitude_fact
-
-    d_remove_from_model = {'poly_sys_var': 'poly_sys_vars', 'poly_inst_var': 'poly_inst_vars',
-                           'GP_dataNmodel': 'gp_preds'
-                           }
-    d_remove_from_data = {'poly_sys_var': 'poly_sys_vars', 'poly_inst_var': 'poly_inst_vars',
-                          'GP_dataNmodel': 'gp_preds',
-                          }
-
-    return ({'dico_datasets': dico_datasets, 'dico_kwargs': dico_kwargs, 'dico_nb_dstperinsts': dico_nb_dstperinsts,
-             'times': times, 'datas': datas, 'data_errs': data_errs, 'data_err_jitters': data_err_jitters,
-             'data_err_worwojitters': data_err_worwojitters, 'has_jitters': has_jitters, 'dico_jitters': dico_jitters,
-             'models': models, 'gp_preds': gp_preds, 'gp_pred_vars': gp_pred_vars, 'poly_inst_vars': poly_inst_vars,
-             'poly_sys_vars': poly_sys_vars,
-             'residuals': residuals,
-             },
-            d_remove_from_model, d_remove_from_data, remove_dict, add_dict,
-            )
+        return ((poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True) is not None) and
+                (poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True)["do"])
+                )
+    else:
+        return is_valid_model_available_core(key_model=key_model, datasetname=datasetname, post_instance=post_instance)
 
 
-def compute_and_plot_model_IND(datasetname,
-                               post_instance, df_fittedval, key_compute_model,
-                               include_gp_model, datasim_kwargs,
-                               remove_dict, add_dict, amplitude_fact,
-                               tsim, fact_tsim_to_xsim=None,
-                               exptime_bin=None, supersamp_bin_model=None,
-                               plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True
-                               ):
-    """
-    """
-    remove_dict_user = remove_dict
-    remove_dict = copy({'poly_sys_var': False, 'poly_inst_var': False})
-    remove_dict.update(remove_dict_user)
-
-    add_dict_user = add_dict
-    add_dict = copy({'poly_sys_var': False, 'poly_inst_var': False})
-    add_dict.update(add_dict_user)
-
-    # # Define the time vector tsim at which the models will be evaluated
-    # tsim = np.linspace(*tlims_model, npt_model)
-    # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
-    # if xlims_model is not None:
-    #     xsim = np.linspace(*xlims_model, npt_model)
-    # else:
-    #     xsim = tsim
-
-    if exptime_bin is None:
-        exptime_bin = 0.
-
-    if fact_tsim_to_xsim is None:
-        fact_tsim_to_xsim = 1.
-
-    xsim = tsim * fact_tsim_to_xsim
-
-    key_pl_kwarg_user = key_pl_kwarg
-    models = {}
-    for binned in [False, True]:
-        if binned:
-            if show_binned_model and (exptime_bin > 0.):
-                exptime = exptime_bin / fact_tsim_to_xsim
-                extension = '_binned'
-            else:
-                continue
-        else:
-            exptime = 0.
-            key_pl_kwarg = key_pl_kwarg_user
-            extension = ''
-
-        # Compute the model
-        if include_gp_model:
-            (model, model_wGP, gp_pred, gp_pred_var
-             ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                             param=df_fittedval["value"].values,
-                                             l_param_name=list(df_fittedval.index),
-                                             key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                             include_gp=include_gp_model,
-                                             supersamp=supersamp_bin_model, exptime=exptime
-                                             )
-        else:
-            model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                param=df_fittedval["value"].values,
-                                                l_param_name=list(df_fittedval.index),
-                                                key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                                include_gp=include_gp_model,
-                                                supersamp=supersamp_bin_model, exptime=exptime
-                                                )
-            model_wGP = gp_pred = gp_pred_var = None
-
-        if model is None:
-            return models, pl_kwarg
-
-        # Remove/Add poly_sys_var if needed
-        if (remove_dict['poly_sys_var'] or add_dict['poly_sys_var']) and (datasetname in dico_output_load['poly_sys_vars']):
-            model_poly_sys_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                             param=df_fittedval["value"].values,
-                                                             l_param_name=list(df_fittedval.index),
-                                                             key_obj="sys_var", datasim_kwargs=datasim_kwargs,
-                                                             include_gp=False,
-                                                             supersamp=supersamp_bin_model, exptime=exptime
-                                                             )
-            if remove_dict['poly_sys_var']:
-                model -= model_poly_sys_var
-                if model_wGP is not None:
-                    model_wGP -= model_poly_sys_var
-            if add_dict['poly_sys_var']:
-                model += model_poly_sys_var
-                if model_wGP is not None:
-                    model_wGP += model_poly_sys_var
-        # Remove/Add poly_inst_var if needed
-        if (remove_dict['poly_inst_var'] or add_dict['poly_inst_var']) and (datasetname in dico_output_load['poly_inst_vars']):
-            model_poly_inst_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                              param=df_fittedval["value"].values,
-                                                              l_param_name=list(df_fittedval.index),
-                                                              key_obj="inst_var", datasim_kwargs=datasim_kwargs,
-                                                              include_gp=False,
-                                                              supersamp=supersamp_bin_model, exptime=exptime
-                                                              )
-            if remove_dict['poly_inst_var']:
-                model -= model_poly_inst_var
-                if model_wGP is not None:
-                    model_wGP -= model_poly_inst_var
-            if add_dict['poly_inst_var']:
-                model += model_poly_inst_var
-                if model_wGP is not None:
-                    model_wGP += model_poly_inst_var
-        # Multiply by IND fact
-        model *= amplitude_fact
-        models[key_compute_model + extension] = model
-        if model_wGP is not None:
-            model_wGP *= amplitude_fact
-            gp_pred *= amplitude_fact
-            gp_pred_var *= amplitude_fact**2
-            models['model_wGP' + extension] = model_wGP
-            models['GP' + extension] = gp_pred
-            models['GP_var' + extension] = gp_pred_var
-
-        # Plot the model
-        if plot:
-            key_pl_kwarg = key_pl_kwarg_user + extension
-            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
-            if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
-            if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
-            # Plot the GP
-            if model_wGP is not None:
-                key_GP = "GP" + extension
-                key_GP_err = "GP_err" + extension
-                if not("color" in pl_kwarg[datasetname][key_GP]):
-                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-                if not("color" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
-                if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
-                if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
-                if not(remove_dict["GP_dataNmodel"]):
-                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
-                    _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err],
-                                        )
-                else:
-                    _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err]
-                                        )
-    return pl_kwarg
+# def load_datasets_and_models_IND(IND_subcat, datasetnames, post_instance, datasim_kwargs, df_fittedval,
+#                                  amplitude_fact, remove_dict, add_dict, remove_dict_def, add_dict_def,
+#                                  ):
+#     """Load the dataset and models for later use by the other two function
+#     """
+#     remove_dict_user = remove_dict
+#     remove_dict = copy(remove_dict_def)
+#     remove_dict.update(remove_dict_user)
+#
+#     add_dict_user = add_dict
+#     add_dict = copy(add_dict_def)
+#     add_dict.update(add_dict_user)
+#
+#     dico_datasets = {}
+#     dico_kwargs = {}
+#     dico_nb_dstperinsts = defaultdict(lambda: 0)
+#     times = {}
+#     datas = {}
+#     data_errs = {}
+#     data_err_jitters = {}
+#     data_err_worwojitters = {}
+#     has_jitters = {}
+#     dico_jitters = {}
+#     models = {}
+#     gp_preds = {}
+#     gp_pred_vars = {}
+#     poly_inst_vars = {}
+#     poly_sys_vars = {}
+#     residuals = {}
+#     for datasetname in datasetnames:
+#         ##########################################
+#         # Load Data and instrument and noise model
+#         ##########################################
+#         dico_datasets[datasetname] = post_instance.dataset_db[datasetname]
+#         dico_kwargs[datasetname] = dico_datasets[datasetname].get_all_datasetkwargs()
+#         times[datasetname] = dico_datasets[datasetname].get_datasetkwarg("time")
+#         datas[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data")
+#         data_errs[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
+#         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
+#         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+#         inst_mod = post_instance.model.instruments[inst_mod_fullname]
+#         noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+#         dico_nb_dstperinsts[filename_info["inst_name"]] += 1
+#
+#         ##############################################
+#         # Apply the jitter to the data error if needed
+#         ##############################################
+#         dico_jitters[datasetname] = {}
+#         data_err_jitters[datasetname] = dico_datasets[datasetname].get_datasetkwarg("data_err")
+#         has_jitters[datasetname] = noise_model.has_jitter
+#         if has_jitters[datasetname]:
+#             dico_jitters[datasetname]["type"] = noise_model.jitter_type
+#             if inst_mod.jitter.free:
+#                 dico_jitters[datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
+#             else:
+#                 dico_jitters[datasetname]["value"] = inst_mod.jitter.value
+#             if dico_jitters[datasetname]["type"] == "multi":
+#                 data_err_jitters[datasetname] = np.sqrt(apply_jitter_multi(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
+#             elif dico_jitters[datasetname]["type"] == "add":
+#                 data_err_jitters[datasetname] = np.sqrt(apply_jitter_add(data_err_jitters[datasetname], dico_jitters[datasetname]["value"]))
+#             else:
+#                 raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+#             data_err_worwojitters[datasetname] = data_err_jitters[datasetname].copy()
+#         else:
+#             data_err_worwojitters[datasetname] = data_errs[datasetname].copy()
+#
+#         ######################################################################
+#         # Compute the polynomial variations (poly_sys_vars and poly_inst_vars)
+#         ######################################################################
+#         poly_model = post_instance.model.instcat_models["IND"].get_modelclass_4_modelname(model_name='polynomial')
+#
+#         ############################################################################################
+#         ## Compute the polynomial variations for the system (sys_vars) to later remove from the data
+#         ############################################################################################
+#         if ((poly_model.get_dico_config(param_container=post_instance.model, prefix=IND_subcat, notexist_ok=True, return_None_if_notexist=True) is not None) and
+#             (poly_model.get_dico_config(param_container=post_instance.model, prefix=IND_subcat, notexist_ok=True, return_None_if_notexist=True)["do"])
+#             ):
+#             model_poly_sys_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                               param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                               key_obj="poly_sys_var",
+#                                                               datasim_kwargs=datasim_kwargs, include_gp=False
+#                                                               )
+#
+#             if model_poly_sys_vars is not None:
+#                 poly_sys_vars[datasetname] = model_poly_sys_vars
+#
+#         #################################################################################################
+#         ## Compute the polynomial variations for the isntruments (isntvars) to later remove from the data
+#         #################################################################################################
+#         if ((poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True) is not None) and
+#             (poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True)["do"])
+#             ):
+#             model_poly_inst_vars = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                                                param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+#                                                                key_obj="poly_inst_var",
+#                                                                datasim_kwargs=datasim_kwargs, include_gp=False
+#                                                                )
+#
+#             if model_poly_inst_vars is not None:
+#                 poly_inst_vars[datasetname] = model_poly_inst_vars
+#
+#         #######################################
+#         # Compute the models and GP predictions
+#         #######################################
+#         (model, model_wGP, gp_pred, gp_pred_var
+#          ) = post_instance.compute_model(tsim=times[datasetname], dataset_name=datasetname,
+#                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
+#                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True
+#                                          )
+#         if model_wGP is not None:
+#             gp_preds[datasetname] = gp_pred
+#             gp_pred_vars[datasetname] = gp_pred_var
+#
+#         if (model_wGP is not None) and not(remove_dict['GP_dataNmodel']):
+#             models[datasetname] = model_wGP
+#         else:
+#             models[datasetname] = model
+#
+#         #######################
+#         # Compute the residuals
+#         #######################
+#         if (model_wGP is not None) and remove_dict['GP_residual']:
+#             residuals[datasetname] = datas[datasetname] - model_wGP
+#         else:
+#             residuals[datasetname] = datas[datasetname] - model
+#
+#         ################################################################################
+#         # Remove GP (if needed)
+#         ################################################################################
+#         if (model_wGP is not None) and remove_dict['GP_dataNmodel']:
+#             datas[datasetname] -= gp_pred
+#
+#         ################################################################################
+#         # Remove/Add poly_sys_vars (if needed)
+#         ################################################################################
+#         if datasetname in poly_sys_vars:
+#             if remove_dict['poly_sys_var']:
+#                 datas[datasetname] -= poly_sys_vars[datasetname]
+#                 models[datasetname] -= poly_sys_vars[datasetname]
+#             if add_dict['poly_sys_var']:
+#                 datas[datasetname] += poly_sys_vars[datasetname]
+#                 models[datasetname] += poly_sys_vars[datasetname]
+#
+#         ################################################################################
+#         # Remove/Add poly_inst_vars (if needed)
+#         ################################################################################
+#         if datasetname in poly_inst_vars:
+#             if remove_dict['poly_inst_var']:
+#                 datas[datasetname] -= poly_inst_vars[datasetname]
+#                 models[datasetname] -= poly_inst_vars[datasetname]
+#             if add_dict['poly_inst_var']:
+#                 datas[datasetname] += poly_inst_vars[datasetname]
+#                 models[datasetname] += poly_inst_vars[datasetname]
+#
+#         ################################################################################
+#         # Apply IND_fact
+#         ################################################################################
+#         datas[datasetname] *= amplitude_fact
+#         data_errs[datasetname] *= amplitude_fact
+#         data_err_worwojitters[datasetname] *= amplitude_fact
+#         residuals[datasetname] *= amplitude_fact
+#         models[datasetname] *= amplitude_fact
+#         if model_wGP is not None:
+#             gp_preds[datasetname] *= amplitude_fact
+#             gp_pred_vars[datasetname] *= amplitude_fact**2
+#         if has_jitters[datasetname]:
+#             dico_jitters[datasetname]["value"] *= amplitude_fact
+#             data_err_jitters[datasetname] *= amplitude_fact
+#
+#     d_remove_from_model = {'poly_sys_var': 'poly_sys_vars', 'poly_inst_var': 'poly_inst_vars',
+#                            'GP_dataNmodel': 'gp_preds'
+#                            }
+#     d_remove_from_data = {'poly_sys_var': 'poly_sys_vars', 'poly_inst_var': 'poly_inst_vars',
+#                           'GP_dataNmodel': 'gp_preds',
+#                           }
+#
+#     return ({'dico_datasets': dico_datasets, 'dico_kwargs': dico_kwargs, 'dico_nb_dstperinsts': dico_nb_dstperinsts,
+#              'times': times, 'datas': datas, 'data_errs': data_errs, 'data_err_jitters': data_err_jitters,
+#              'data_err_worwojitters': data_err_worwojitters, 'has_jitters': has_jitters, 'dico_jitters': dico_jitters,
+#              'models': models, 'gp_preds': gp_preds, 'gp_pred_vars': gp_pred_vars, 'poly_inst_vars': poly_inst_vars,
+#              'poly_sys_vars': poly_sys_vars,
+#              'residuals': residuals,
+#              },
+#             d_remove_from_model, d_remove_from_data, remove_dict, add_dict,
+#             )
+#
+#
+# def compute_and_plot_model_IND(datasetname,
+#                                post_instance, df_fittedval, key_compute_model,
+#                                include_gp_model, datasim_kwargs,
+#                                remove_dict, add_dict, amplitude_fact,
+#                                tsim, fact_tsim_to_xsim=None,
+#                                exptime_bin=None, supersamp_bin_model=None,
+#                                plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True
+#                                ):
+#     """
+#     """
+#     remove_dict_user = remove_dict
+#     remove_dict = copy({'poly_sys_var': False, 'poly_inst_var': False})
+#     remove_dict.update(remove_dict_user)
+#
+#     add_dict_user = add_dict
+#     add_dict = copy({'poly_sys_var': False, 'poly_inst_var': False})
+#     add_dict.update(add_dict_user)
+#
+#     # # Define the time vector tsim at which the models will be evaluated
+#     # tsim = np.linspace(*tlims_model, npt_model)
+#     # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
+#     # if xlims_model is not None:
+#     #     xsim = np.linspace(*xlims_model, npt_model)
+#     # else:
+#     #     xsim = tsim
+#
+#     if exptime_bin is None:
+#         exptime_bin = 0.
+#
+#     if fact_tsim_to_xsim is None:
+#         fact_tsim_to_xsim = 1.
+#
+#     xsim = tsim * fact_tsim_to_xsim
+#
+#     key_pl_kwarg_user = key_pl_kwarg
+#     models = {}
+#     for binned in [False, True]:
+#         if binned:
+#             if show_binned_model and (exptime_bin > 0.):
+#                 exptime = exptime_bin / fact_tsim_to_xsim
+#                 extension = '_binned'
+#             else:
+#                 continue
+#         else:
+#             exptime = 0.
+#             key_pl_kwarg = key_pl_kwarg_user
+#             extension = ''
+#
+#         # Compute the model
+#         if include_gp_model:
+#             (model, model_wGP, gp_pred, gp_pred_var
+#              ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                              param=df_fittedval["value"].values,
+#                                              l_param_name=list(df_fittedval.index),
+#                                              key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+#                                              include_gp=include_gp_model,
+#                                              supersamp=supersamp_bin_model, exptime=exptime
+#                                              )
+#         else:
+#             model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                                 param=df_fittedval["value"].values,
+#                                                 l_param_name=list(df_fittedval.index),
+#                                                 key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+#                                                 include_gp=include_gp_model,
+#                                                 supersamp=supersamp_bin_model, exptime=exptime
+#                                                 )
+#             model_wGP = gp_pred = gp_pred_var = None
+#
+#         if model is None:
+#             return models, pl_kwarg
+#
+#         # Remove/Add poly_sys_var if needed
+#         if (remove_dict['poly_sys_var'] or add_dict['poly_sys_var']) and (datasetname in dico_output_load['poly_sys_vars']):
+#             model_poly_sys_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                                              param=df_fittedval["value"].values,
+#                                                              l_param_name=list(df_fittedval.index),
+#                                                              key_obj="sys_var", datasim_kwargs=datasim_kwargs,
+#                                                              include_gp=False,
+#                                                              supersamp=supersamp_bin_model, exptime=exptime
+#                                                              )
+#             if remove_dict['poly_sys_var']:
+#                 model -= model_poly_sys_var
+#                 if model_wGP is not None:
+#                     model_wGP -= model_poly_sys_var
+#             if add_dict['poly_sys_var']:
+#                 model += model_poly_sys_var
+#                 if model_wGP is not None:
+#                     model_wGP += model_poly_sys_var
+#         # Remove/Add poly_inst_var if needed
+#         if (remove_dict['poly_inst_var'] or add_dict['poly_inst_var']) and (datasetname in dico_output_load['poly_inst_vars']):
+#             model_poly_inst_var = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+#                                                               param=df_fittedval["value"].values,
+#                                                               l_param_name=list(df_fittedval.index),
+#                                                               key_obj="inst_var", datasim_kwargs=datasim_kwargs,
+#                                                               include_gp=False,
+#                                                               supersamp=supersamp_bin_model, exptime=exptime
+#                                                               )
+#             if remove_dict['poly_inst_var']:
+#                 model -= model_poly_inst_var
+#                 if model_wGP is not None:
+#                     model_wGP -= model_poly_inst_var
+#             if add_dict['poly_inst_var']:
+#                 model += model_poly_inst_var
+#                 if model_wGP is not None:
+#                     model_wGP += model_poly_inst_var
+#         # Multiply by IND fact
+#         model *= amplitude_fact
+#         models[key_compute_model + extension] = model
+#         if model_wGP is not None:
+#             model_wGP *= amplitude_fact
+#             gp_pred *= amplitude_fact
+#             gp_pred_var *= amplitude_fact**2
+#             models['model_wGP' + extension] = model_wGP
+#             models['GP' + extension] = gp_pred
+#             models['GP_var' + extension] = gp_pred_var
+#
+#         # Plot the model
+#         if plot:
+#             key_pl_kwarg = key_pl_kwarg_user + extension
+#             ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
+#             if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
+#                 pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
+#             if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
+#                 pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+#             # Plot the GP
+#             if model_wGP is not None:
+#                 key_GP = "GP" + extension
+#                 key_GP_err = "GP_err" + extension
+#                 if not("color" in pl_kwarg[datasetname][key_GP]):
+#                     pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+#                 if not("color" in pl_kwarg[datasetname]["GP_err"]):
+#                     pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+#                 if not("alpha" in pl_kwarg[datasetname]["GP"]):
+#                     pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+#                 if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
+#                     pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
+#                 if not(remove_dict["GP_dataNmodel"]):
+#                     pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+#                     _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
+#                     _ = ax.fill_between(tsim, model_wGP - np.sqrt(gp_pred_var), model_wGP + np.sqrt(gp_pred_var),
+#                                         **pl_kwarg[datasetname][key_GP_err],
+#                                         )
+#                 else:
+#                     _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
+#                     _ = ax.fill_between(tsim, gp_pred - np.sqrt(gp_pred_var), gp_pred + np.sqrt(gp_pred_var),
+#                                         **pl_kwarg[datasetname][key_GP_err]
+#                                         )
+#     return pl_kwarg

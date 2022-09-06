@@ -49,7 +49,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                              fontsize=AandA_fontsize,
                              get_key_compute_model_func=get_key_compute_model,
                              is_valid_model_available_func=is_valid_model_available,
-                             kwargs_is_valid_model_available=None
+                             kwargs_is_valid_model_available=None,
+                             kwargs_get_key_compute_model=None,
                              ):
     """Produce a clean LC plot.
 
@@ -226,7 +227,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                   l_valid_model=l_valid_model,
                                   get_key_compute_model_func=get_key_compute_model_func,
                                   is_valid_model_available_func=is_valid_model_available_func,
-                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                   )
 
     # Do the suptitle
@@ -420,7 +422,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                                                l_valid_model=l_valid_model,
                                                                get_key_compute_model_func=get_key_compute_model_func,
                                                                is_valid_model_available_func=is_valid_model_available_func,
-                                                               kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                                               kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                               kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                                )
 
                 ################################################################################

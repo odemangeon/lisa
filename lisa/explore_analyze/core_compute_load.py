@@ -59,7 +59,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                            plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
                            models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
                            is_valid_model_available_func=is_valid_model_available,
-                           kwargs_is_valid_model_available=None
+                           kwargs_is_valid_model_available=None,
+                           kwargs_get_key_compute_model=None,
                            ):
     """
     Arguments
@@ -137,7 +138,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                              supersamp=supersamp_bin_model,
                                              get_key_compute_model_func=get_key_compute_model_func,
                                              is_valid_model_available_func=is_valid_model_available_func,
-                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                              )
 
             if model is None:
@@ -182,7 +184,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                    models=models, l_valid_model=l_valid_model,
                                                    get_key_compute_model_func=get_key_compute_model_func,
                                                    is_valid_model_available_func=is_valid_model_available_func,
-                                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                    )
 
         ##########################################
@@ -241,7 +244,8 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                              l_valid_model=None,
                              get_key_compute_model_func=get_key_compute_model,
                              is_valid_model_available_func=is_valid_model_available,
-                             kwargs_is_valid_model_available=None
+                             kwargs_is_valid_model_available=None,
+                             kwargs_get_key_compute_model=None,
                              ):
     """Load the dataset and models for later use by the other two function
     """
@@ -339,6 +343,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         get_key_compute_model_func=get_key_compute_model_func,
                                         is_valid_model_available_func=is_valid_model_available_func,
                                         kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                         **kwargs
                                         )
 
@@ -360,11 +365,13 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
                        df_fittedval, datasim_kwargs, include_gp_model, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
                        is_valid_model_available_func=is_valid_model_available,
-                       kwargs_is_valid_model_available=None
+                       kwargs_is_valid_model_available=None,
+                       kwargs_get_key_compute_model=None,
                        ):
     """
     """
     kwargs_is_valid_model_available = kwargs_is_valid_model_available if kwargs_is_valid_model_available is not None else {}
+    kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}
     if key_model in l_valid_model:
         if not(is_valid_model_available_func(key_model, datasetname, post_instance, **kwargs_is_valid_model_available)):
             model = model_wGP = gp_pred = gp_pred_var = None
@@ -381,7 +388,7 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
         model = datasim_docfunc_decorr_like.function(p_vect)
         model_wGP = gp_pred = gp_pred_var = None
     else:
-        key_compute_model = get_key_compute_model_func(key_model=key_model)
+        key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)
         if include_gp_model:
             (model, model_wGP, gp_pred, gp_pred_var
              ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,

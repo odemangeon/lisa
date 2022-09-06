@@ -54,7 +54,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                          fontsize=AandA_fontsize,
                          get_key_compute_model_func=get_key_compute_model,
                          is_valid_model_available_func=is_valid_model_available,
-                         kwargs_is_valid_model_available=None
+                         kwargs_is_valid_model_available=None,
+                         kwargs_get_key_compute_model=None
                          ):
     """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
 
@@ -247,7 +248,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                   l_valid_model=l_valid_model,
                                   get_key_compute_model_func=get_key_compute_model_func,
                                   is_valid_model_available_func=is_valid_model_available_func,
-                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model
                                   )
 
     # Do the suptitle
@@ -421,7 +423,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                     include_gp_model = True
                                 else:
                                     include_gp_model = False
-
                             (computed_models, pl_kwarg_final
                              ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
                                                         key_model=model,
@@ -447,7 +448,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                         l_valid_model=l_valid_model,
                                                         get_key_compute_model_func=get_key_compute_model_func,
                                                         is_valid_model_available_func=is_valid_model_available_func,
-                                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available
+                                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                         )
 
                     ###############
@@ -681,7 +683,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
     ######################################
     if GLSP_kwargs.get("do", True):
         # Variable that are always available
-        # import pdb; pdb.set_trace()
         all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
         idx_sort = argsort(all_time)
         all_data = concatenate([dico_load['datas'][dst] for dst in datasetnames])[idx_sort]

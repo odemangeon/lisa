@@ -347,9 +347,9 @@ class IND_InstCat_Model(Core_InstCat_Model):
             func_builder.add_to_body_text(text=f"{tab}return res",
                                           function_shortname=function_whole_shortname)
 
-        ###################################
-        # Execute the text of all functions
-        ###################################
+        #########################################
+        # Execute the text of the whole functions
+        #########################################
         # Create and fill the output dictionnary containing the datasimulators functions.
         # dico_docf = dict.fromkeys(text_def_func.keys(), None)
         dico_docf = {}
@@ -378,6 +378,13 @@ class IND_InstCat_Model(Core_InstCat_Model):
                                                            mand_kwargs_list=mand_kwargs,
                                                            opt_kwargs_dict=opt_kwargs,
                                                            )
+
+        ##################################
+        # Gather the rest of the functions
+        ##################################
+        for ind_cat, d_docfunc in d_d_docfunc_4_ind_cat.items():
+            dico_docf.update(d_docfunc)
+
         return dico_docf
 
         # ################################################################################################################################
