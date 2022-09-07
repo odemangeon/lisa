@@ -114,12 +114,13 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         if binned:
             if show_binned_model and (exptime_bin > 0.):
                 exptime = exptime_bin / fact_tsim_to_xsim
+                supersamp = supersamp_bin_model
                 extension = '_binned'
             else:
                 continue
         else:
             exptime = 0.
-            key_pl_kwarg = key_pl_kwarg_user
+            supersamp = 1.
             extension = ''
 
         ################################################
@@ -135,7 +136,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                              datasetname=datasetname, post_instance=post_instance,
                                              df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
                                              include_gp_model=include_gp_model, exptime=exptime,
-                                             supersamp=supersamp_bin_model,
+                                             supersamp=supersamp,
                                              get_key_compute_model_func=get_key_compute_model_func,
                                              is_valid_model_available_func=is_valid_model_available_func,
                                              kwargs_is_valid_model_available=kwargs_is_valid_model_available,
@@ -147,7 +148,11 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 return models, pl_kwarg
 
             # Apply the amplitude_fact
-            model *= amplitude_fact
+            if isinstance(model, dict):
+                for key in model.keys():
+                    model[key] *= amplitude_fact
+            else:
+                model *= amplitude_fact
             if model_wGP is not None:
                 model_wGP *= amplitude_fact
                 gp_pred *= amplitude_fact
@@ -166,6 +171,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 model_wGP = models[f'{key_model}_wGP' + extension + extension_raw]
                 gp_pred = models[f'GP_{key_model}' + extension + extension_raw]
                 gp_pred_var = models[f'GP_var_{key_model}' + extension + extension_raw]
+            else:
+                model_wGP = None
 
         ##################################
         # Compute the models to remove/add
@@ -174,19 +181,20 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         l_model_add = [key for key, do in add_dict.items() if do]
         for key_model_removeoradd in (l_model_remove + l_model_add):
             if key_model_removeoradd + extension + extension_raw not in models:
-                models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
-                                                   post_instance=post_instance, df_fittedval=df_fittedval,
-                                                   datasim_kwargs=datasim_kwargs, include_gp_model=False,
-                                                   amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                   remove_add_model_components_func=remove_add_model_components_func,
-                                                   exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                   plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
-                                                   models=models, l_valid_model=l_valid_model,
-                                                   get_key_compute_model_func=get_key_compute_model_func,
-                                                   is_valid_model_available_func=is_valid_model_available_func,
-                                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                   )
+                if remove_dict.get(key_model_removeoradd, False) or add_dict.get(key_model_removeoradd, False):
+                    models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
+                                                       post_instance=post_instance, df_fittedval=df_fittedval,
+                                                       datasim_kwargs=datasim_kwargs, include_gp_model=False,
+                                                       amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func,
+                                                       exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
+                                                       plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                       models=models, l_valid_model=l_valid_model,
+                                                       get_key_compute_model_func=get_key_compute_model_func,
+                                                       is_valid_model_available_func=is_valid_model_available_func,
+                                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                       )
 
         ##########################################
         # Remove/Add model components as requested
@@ -206,25 +214,29 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         # Plot the model
         if plot:
             key_pl_kwarg = key_pl_kwarg_user + extension
-            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg[datasetname][key_pl_kwarg])
-            if not("color" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["color"] = ebconts_lines_labels_model[0].get_color()
-            if not("alpha" in pl_kwarg[datasetname][key_pl_kwarg]):
-                pl_kwarg[datasetname][key_pl_kwarg]["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+            if key_pl_kwarg in pl_kwarg[datasetname]:
+                pl_kwarg_to_use = pl_kwarg[datasetname][key_pl_kwarg]
+            else:
+                pl_kwarg_to_use = {"fmt": '', "linestyle": "-", "label": key_pl_kwarg}
+            ebconts_lines_labels_model = ax.errorbar(xsim, model, **pl_kwarg_to_use)
+            if not("color" in pl_kwarg_to_use):
+                pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
+            if not("alpha" in pl_kwarg_to_use):
+                pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
             # Plot the GP
             if model_wGP is not None:
                 key_GP = "GP" + extension
                 key_GP_err = "GP_err" + extension
                 if not("color" in pl_kwarg[datasetname][key_GP]):
-                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg_to_use["color"]
                 if not("color" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg[datasetname][key_pl_kwarg]["color"]
+                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg_to_use["color"]
                 if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"]
+                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
                 if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg[datasetname][key_pl_kwarg]["alpha"] / 3
+                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
                 if not(remove_dict["GP_dataNmodel"]):
-                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg[datasetname][key_pl_kwarg]['label'] + " + GP"
+                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
                     _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
                     _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
                                         **pl_kwarg[datasetname][key_GP_err],
@@ -380,12 +392,14 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     if exptime is None:
         exptime = 0.
     if supersamp is None:
-        supersamp = 5
+        supersamp = 1.
 
     if key_model == 'decorrelation_likelihood':
         datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
         p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
         model = datasim_docfunc_decorr_like.function(p_vect)
+        if not(len(model) == len(tsim)):
+            model = None
         model_wGP = gp_pred = gp_pred_var = None
     else:
         key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)

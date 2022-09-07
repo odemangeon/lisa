@@ -536,8 +536,8 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
                                                          [model_or_data_removed_or_add_dict["add_dict"], model_or_data_removed_or_add_dict["remove_dict"]]
                                                          ):
                 text_remove_or_add = ""
-                for key_model, asked2remove in model_removed_or_add_dict["remove_dict"].items():
-                    if any([key_model in dico_models[dst_name] for dst_name in datasetnames]):
+                for key_model, asked2remove in remove_or_add_dict.items():
+                    if asked2remove and any([key_model in dico_models[dst_name] for dst_name in datasetnames]):
                         text_remove_or_add += f"{key_model}, "
                 if len(text_remove_or_add) > 0:
                     text_remove_or_add = text_remove_or_add[:-2]

@@ -7,13 +7,15 @@ Module to create plot specifically for light curve data
 """
 from logging import getLogger
 from copy import copy
+from numpy import ones_like
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
 from .misc import AandA_fontsize
-from .core_compute_load import compute_raw_models
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
+from .core_compute_load import compute_raw_models as compute_raw_models_core
+
 from ..posterior.core.model.core_model import Core_Model
 
 
@@ -23,14 +25,14 @@ key_whole = Core_Model.key_whole
 logger = getLogger()
 
 
-remove_dict_def_PF = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-                      'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
-add_dict_def_PF = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-                   'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
-remove_dict_def_TS = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-                      'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
-add_dict_def_TS = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-                   'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
+# remove_dict_def_PF = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
+#                       'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
+# add_dict_def_PF = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
+#                    'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
+# remove_dict_def_TS = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
+#                       'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
+# add_dict_def_TS = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
+#                    'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
 
 l_valid_model = ["model", "1", "contam", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
 
@@ -170,13 +172,16 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     remove_dict["GP_model"] = True
     remove_dict["contamination"] = remove_contamination
     remove_dict["1"] = remove1
+    remove_dict_model = copy(remove_dict)
+    remove_dict_model['decorrelation_likelihood'] = False
+    remove_dict_data = copy(remove_dict)
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                              compute_raw_models_func=compute_raw_models,
                              remove_add_model_components_func=remove_add_model_components,
-                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
+                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
                                                                          'add_dict': dict_model_false
                                                                          },
-                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict,
+                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
                                                                         'add_dict': dict_model_false
                                                                         },
                                                                },
@@ -203,6 +208,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None,
                             datasetnames=None,
                             remove_dict=None,
+                            kwargs_compute_model_4_key_model=None,
                             show_dict=None, datasetnames4model4row=None,
                             TS_kwargs=None, GLSP_kwargs=None,
                             create_axes_kwargs=None,
@@ -356,18 +362,24 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     LC_unit        : str
         String giving the unit of the LCs
     """
-    y_name = "$\Delta$F / F" if remove_dict.get("1", remove_dict_def_TS["1"]) else "(F + $\Delta$F) / F"
+    y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
+    remove_dict_model = copy(remove_dict)
+    remove_dict_model['decorrelation_likelihood'] = False
+    remove_dict_data = copy(remove_dict)
+    kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
+    kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
+                                                  'add_dict': dict_model_false
+                                                  },
+                                        "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
+                                                 'add_dict': dict_model_false
+                                                 },
+                                        }
+    kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                          y_name=y_name, inst_cat='LC',
                          compute_raw_models_func=compute_raw_models,
                          remove_add_model_components_func=remove_add_model_components,
-                         kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
-                                                                     'add_dict': dict_model_false
-                                                                     },
-                                                           "data": {'include_gp_model': True, "remove_dict": remove_dict,
-                                                                    'add_dict': dict_model_false
-                                                                    },
-                                                           },
+                         kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                          l_valid_model=l_valid_model,
                          d_name_component_removed_to_print=d_name_component_removed_to_print,
                          show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
@@ -391,51 +403,35 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
     # Remove components if needed
     for key, do in remove_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+            if key in ['1', 'stellar_var', 'inst_var', 'decorr_add_2_totalflux', 'decorrelation_likelihood', 'GP_model']:
                 model -= models[key + extension + extension_raw]
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP -= models[key + extension + extension_raw]
-            elif key in ['contamination', ]:
+            elif key in ['contamination', 'decorr_multiply_2_totalflux']:
                 model /= models[key + extension + extension_raw]
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP /= models[key + extension + extension_raw]
-            elif key in ['1', ]:
-                model -= 1
-                if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP -= 1
-            elif key == 'decorrelation':
-                for model_part in models[key + extension + extension_raw]:
-                    if model_part == "add_2_totalrv":
-                        model -= models[key + extension + extension_raw]['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP -= models[key + extension + extension_raw]['add_2_totalrv']
-                    else:
-                        logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+            # elif key in ['1', ]:
+            #     model -= 1
+            #     if (model_wGP is not None) and (key != 'GP_model'):
+            #         model_wGP -= 1
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
     # Add components if needed
     for key, do in add_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+            if key in ['1', 'stellar_var', 'inst_var', 'decorr_add_2_totalflux', 'decorrelation_likelihood', 'GP_model']:
                 model += models[key + extension + extension_raw]
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP += models[key + extension + extension_raw]
-            elif key in ['contamination', ]:
+            elif key in ['contamination', 'decorr_multiply_2_totalflux']:
                 model *= models[key + extension + extension_raw]
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP *= models[key + extension + extension_raw]
-            elif key in ['1', ]:
-                model += 1
-                if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP += 1
-            elif key == 'decorrelation':
-                for model_part in models[key + extension + extension_raw]:
-                    if model_part == "add_2_totalrv":
-                        model += models[key + extension + extension_raw]['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP += models[key + extension + extension_raw]['add_2_totalrv']
-                    else:
-                        logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
+            # elif key in ['1', ]:
+            #     model += 1
+            #     if (model_wGP is not None) and (key != 'GP_model'):
+            #         model_wGP += 1
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
 
@@ -473,6 +469,29 @@ def is_valid_model_available(key_model, datasetname, post_instance):
     else:
         return is_valid_model_available_core(key_model=key_model, datasetname=datasetname, post_instance=post_instance)
 
+
+def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
+                       df_fittedval, datasim_kwargs, include_gp_model, exptime, supersamp,
+                       get_key_compute_model_func=get_key_compute_model,
+                       is_valid_model_available_func=is_valid_model_available,
+                       kwargs_is_valid_model_available=None,
+                       kwargs_get_key_compute_model=None,
+                       ):
+    """
+    """
+    if key_model == "1":
+        model = ones_like(tsim)
+        model_wGP = gp_pred = gp_pred_var = None
+        return model, model_wGP, gp_pred, gp_pred_var
+    else:
+        return compute_raw_models_core(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
+                                       datasetname=datasetname, post_instance=post_instance,
+                                       df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs, include_gp_model=include_gp_model,
+                                       exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
+                                       is_valid_model_available_func=is_valid_model_available_func,
+                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                       )
 
 # def load_datasets_and_models_LC(datasetnames, post_instance, datasim_kwargs, df_fittedval,
 #                                 amplitude_fact, remove_dict, add_dict, remove_dict_def, add_dict_def

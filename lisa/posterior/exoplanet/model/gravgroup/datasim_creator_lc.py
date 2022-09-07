@@ -1916,14 +1916,24 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
         # Initialise the new function in function_builder
         #################################################
         # Extension for the shortname of the function that do the decorrelation only model
-        decorr_func_shortname = "decorr"
-        function_builder.add_new_function(shortname=decorr_func_shortname)
-        function_builder.set_function_fullname(full_name=f"LC_sim_{decorr_func_shortname}{ext_func_fullname}", shortname=decorr_func_shortname)
+        l_decorr_func_shortname = []
+        for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
+            if decorrelation_config[instmod.full_name]["do"]:
+                for model_part, config_decorr_instmod_modelpart in decorrelation_config[instmod.full_name]["what to decorrelate"].items():
+                    decorr_func_shortname = f"decorr_{model_part}"
+                    if not(function_builder.is_function(shortname=decorr_func_shortname)):
+                        function_builder.add_new_function(shortname=decorr_func_shortname)
+                        function_builder.set_function_fullname(full_name=f"LC_sim_{decorr_func_shortname}{ext_func_fullname}", shortname=decorr_func_shortname)
+                        l_decorr_func_shortname.append(decorr_func_shortname)
+        # decorr_func_shortname = "decorr"
+        # function_builder.add_new_function(shortname=decorr_func_shortname)
+        # function_builder.set_function_fullname(full_name=f"LC_sim_{decorr_func_shortname}{ext_func_fullname}", shortname=decorr_func_shortname)
 
         ########################################
         # Update the list of function to address
         ########################################
-        l_function_shortname += [decorr_func_shortname, ]
+        l_function_shortname += l_decorr_func_shortname
+        # l_function_shortname += [decorr_func_shortname, ]
 
         ################################
         # Do the Model for each function
@@ -1947,7 +1957,10 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
             # Do the Model for each function and each instrument
             ####################################################
             for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
-                returns[func_shortname].append({})
+                if func_shortname in l_decorr_func_shortname:
+                    returns[func_shortname].append("")
+                else:
+                    returns[func_shortname].append({})
                 if decorrelation_config[instmod.full_name]["do"]:
                     # List of the datasets associated with the instrument model
                     l_dataset_name_instmod = LCcat_model.get_l_datasetname(instmod_fullnames=instmod.full_name)
@@ -1958,21 +1971,17 @@ def get_decorrelation(multi, planets, l_inst_model, l_dataset, get_times_from_da
                                                                      model_part=model_part, time_arg_name=time_arg_name,
                                                                      function_builder=function_builder, function_shortname=func_shortname)
                         if text_decorr != "":
-                            returns[func_shortname][i_inputoutput][model_part] = text_decorr
+                            if func_shortname in l_decorr_func_shortname:
+                                returns[func_shortname][i_inputoutput] = text_decorr
+                            else:
+                                returns[func_shortname][i_inputoutput][model_part] = text_decorr
 
         ##########################################
         # Finalize the decorrelation only function
         ##########################################
-        for func_shortname in [decorr_func_shortname, ]:
-            return_text = ""
-            for dico_config_return_instmodel in returns.pop(func_shortname):
-                return_text += '{'
-                for model_part, text in dico_config_return_instmodel.items():
-                    return_text += f"'{model_part}': {text}, "
-                return_text += '}, '
-            return_text = return_text[:-2]
-
-            function_builder.add_to_body_text(text=f"{tab}return {return_text}", function_shortname=func_shortname)
+        for func_shortname in l_decorr_func_shortname:
+            l_return = [output_i if output_i != "" else 'None' for output_i in returns.pop(func_shortname)]
+            function_builder.add_to_body_text(text=f"{tab}return {', '.join(l_return)}", function_shortname=func_shortname)
 
     return returns
 

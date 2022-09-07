@@ -323,7 +323,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         one_binning_per_row = TS_kwargs.get("one_binning_per_row", False)
         exptime_bin = TS_kwargs.get("exptime_bin", 0.)
         binning_stat = TS_kwargs.get("binning_stat", "mean")
-        show_binned_model = TS_kwargs.get('show_binned_model', True)
         supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 10)
         time_fact = TS_kwargs.get('time_fact', 1.)
         time_unit = TS_kwargs.get('time_unit', 'days')
@@ -423,34 +422,66 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                     include_gp_model = True
                                 else:
                                     include_gp_model = False
-                            (computed_models, pl_kwarg_final
-                             ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
-                                                        key_model=model,
-                                                        datasetname=datasetname,
-                                                        post_instance=post_instance,
-                                                        df_fittedval=df_fittedval,
-                                                        datasim_kwargs=datasim_kwargs,
-                                                        include_gp_model=include_gp_model,
-                                                        amplitude_fact=amplitude_fact,
-                                                        compute_raw_models_func=compute_raw_models_func,
-                                                        remove_add_model_components_func=remove_add_model_components_func,
-                                                        key_pl_kwarg=model,
-                                                        remove_dict=kwargs_compute_model.get('remove_dict', {}),
-                                                        add_dict=kwargs_compute_model.get('add_dict', {}),
-                                                        exptime_bin=exptime_bin,
-                                                        supersamp_bin_model=supersamp_bin_model,
-                                                        fact_tsim_to_xsim=time_fact,
-                                                        xsim=None,
-                                                        plot=True, ax=axe_data,
-                                                        pl_kwarg=pl_kwarg_final,
-                                                        show_binned_model=show_binned_model,
-                                                        models=computed_models,
-                                                        l_valid_model=l_valid_model,
-                                                        get_key_compute_model_func=get_key_compute_model_func,
-                                                        is_valid_model_available_func=is_valid_model_available_func,
-                                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                        )
+                            # import pdb; pdb.set_trace()
+                            show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model, True)
+                            if model == "decorrelation_likelihood":
+                                (_, pl_kwarg_final
+                                 ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
+                                                            key_model=model,
+                                                            datasetname=datasetname,
+                                                            post_instance=post_instance,
+                                                            df_fittedval=df_fittedval,
+                                                            datasim_kwargs=datasim_kwargs,
+                                                            include_gp_model=include_gp_model,
+                                                            amplitude_fact=amplitude_fact,
+                                                            compute_raw_models_func=compute_raw_models_func,
+                                                            remove_add_model_components_func=remove_add_model_components_func,
+                                                            key_pl_kwarg=model,
+                                                            remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                            add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                            exptime_bin=0.,
+                                                            supersamp_bin_model=1.,
+                                                            fact_tsim_to_xsim=time_fact,
+                                                            xsim=None,
+                                                            plot=True, ax=axe_data,
+                                                            pl_kwarg=pl_kwarg_final,
+                                                            show_binned_model=False,
+                                                            models=None,
+                                                            l_valid_model=l_valid_model,
+                                                            get_key_compute_model_func=get_key_compute_model_func,
+                                                            is_valid_model_available_func=is_valid_model_available_func,
+                                                            kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                            kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                            )
+                            else:
+                                (computed_models, pl_kwarg_final
+                                 ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
+                                                            key_model=model,
+                                                            datasetname=datasetname,
+                                                            post_instance=post_instance,
+                                                            df_fittedval=df_fittedval,
+                                                            datasim_kwargs=datasim_kwargs,
+                                                            include_gp_model=include_gp_model,
+                                                            amplitude_fact=amplitude_fact,
+                                                            compute_raw_models_func=compute_raw_models_func,
+                                                            remove_add_model_components_func=remove_add_model_components_func,
+                                                            key_pl_kwarg=model,
+                                                            remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                            add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                            exptime_bin=exptime_bin,
+                                                            supersamp_bin_model=supersamp_bin_model,
+                                                            fact_tsim_to_xsim=time_fact,
+                                                            xsim=None,
+                                                            plot=True, ax=axe_data,
+                                                            pl_kwarg=pl_kwarg_final,
+                                                            show_binned_model=show_binned_model,
+                                                            models=computed_models,
+                                                            l_valid_model=l_valid_model,
+                                                            get_key_compute_model_func=get_key_compute_model_func,
+                                                            is_valid_model_available_func=is_valid_model_available_func,
+                                                            kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                            kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                            )
 
                     ###############
                     # Plot the data
