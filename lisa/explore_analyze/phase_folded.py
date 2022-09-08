@@ -210,7 +210,6 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                                          l_col_name=planets, l_type_spec=[tuple, list],
                                                          spec_def={'data': None, 'resi': None}
                                                          )
-
     # Make sure that legend_kwargs is well defined
     legend_kwargs = check_kwargs_by_column_and_row(kwargs_user=legend_kwargs, l_row_name=list(range(nb_rows)),
                                                    l_col_name=list(range(len(planets))), kwargs_def={'do': False},
@@ -562,7 +561,7 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                     points_pl_i_row = concatenate([points[datasetname] for datasetname in datasetnames4rowidx[i_row]])
                     et.auto_y_lims(points_pl_i_row, axe, pad=pad[data_or_resi])
                 else:
-                    axe.set_ylim(ylims)
+                    axe.set_ylim(ylims_to_use)
 
                 # Indicate outlier values that are off y-axis with an arrows for raw cadence
                 if indicate_y_outliers[data_or_resi]:
