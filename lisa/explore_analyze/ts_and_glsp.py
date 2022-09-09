@@ -682,7 +682,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                         points_pl_i_row = concatenate([points[datasetname] for datasetname in datasetnames4rowidx[i_row]])
                         et.auto_y_lims(points_pl_i_row, axe, pad=pad[data_or_resi])
                     else:
-                        axe.set_ylim(ylims)
+                        axe.set_ylim(ylims_to_use)
 
                     # Indicate outlier values that are off y-axis with an arrows for raw cadence
                     if indicate_y_outliers[data_or_resi]:
