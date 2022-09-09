@@ -528,25 +528,26 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
         suptitle_text = ""
         if suptitle_kwargs.get("show_system_name", suptitle_kwargs_default["show_system_name"]):
             suptitle_text = f"{suptitle_kwargs.get('system_name', post_instance.full_name)} system"
-        for model_or_data, model_or_data_removed_or_add_dict in zip(["model", "data"],
-                                                                    [model_removed_or_add_dict, data_remove_or_add_dict]
-                                                                    ):
-            text = ""
-            for add_or_remove, remove_or_add_dict in zip(["added", "removed"],
-                                                         [model_or_data_removed_or_add_dict["add_dict"], model_or_data_removed_or_add_dict["remove_dict"]]
-                                                         ):
-                text_remove_or_add = ""
-                for key_model, asked2remove in remove_or_add_dict.items():
-                    if asked2remove and any([key_model in dico_models[dst_name] for dst_name in datasetnames]):
-                        text_remove_or_add += f"{key_model}, "
-                if len(text_remove_or_add) > 0:
-                    text_remove_or_add = text_remove_or_add[:-2]
-                    text_remove_or_add += f" ({add_or_remove}); "
-                    text += text_remove_or_add
-            if len(text) > 0:
-                text = text[:-2]
-                text = f"{model_or_data}: " + text
-                suptitle_text += "\n" + text
+        if suptitle_kwargs.get("show_removed", suptitle_kwargs_default["show_system_name"]):
+            for model_or_data, model_or_data_removed_or_add_dict in zip(["model", "data"],
+                                                                        [model_removed_or_add_dict, data_remove_or_add_dict]
+                                                                        ):
+                text = ""
+                for add_or_remove, remove_or_add_dict in zip(["added", "removed"],
+                                                             [model_or_data_removed_or_add_dict["add_dict"], model_or_data_removed_or_add_dict["remove_dict"]]
+                                                             ):
+                    text_remove_or_add = ""
+                    for key_model, asked2remove in remove_or_add_dict.items():
+                        if asked2remove and any([key_model in dico_models[dst_name] for dst_name in datasetnames]):
+                            text_remove_or_add += f"{key_model}, "
+                    if len(text_remove_or_add) > 0:
+                        text_remove_or_add = text_remove_or_add[:-2]
+                        text_remove_or_add += f" ({add_or_remove}); "
+                        text += text_remove_or_add
+                if len(text) > 0:
+                    text = text[:-2]
+                    text = f"{model_or_data}: " + text
+                    suptitle_text += "\n" + text
 
         if suptitle_text != "":
             fig.suptitle(suptitle_text, fontsize=fontsize)
