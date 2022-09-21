@@ -125,6 +125,7 @@ phasecurve_model = {'b': {'do': True,
                                                                 },
                                                        'model': 'sincos'
                                                        },
+                                                'common_parameters': {'Rrat': True, 'P': True, 'tic': True, 'ecc_and_omega': True, 'inc': True}
                                                 }
                           }
                     }
@@ -155,7 +156,11 @@ occultation_model = {'b': {'do': False,
                                                 'LC_CHEOPS_instPC0': 'default_model',
                                                 'LC_CHEOPS_instPC1': 'default_model',
                                                 'LC_CHEOPS_instPC2': 'default_model'},
-                           'model_definitions': {'default_model': {'model': 'batman'}}}}
+                           'model_definitions': {'default_model': {'model': 'batman'},
+                                                 'common_parameters': {'Rrat': True, 'P': True, 'tic': True, 'ecc_and_omega': True, 'inc': True}
+                                                 }
+                           }
+                     }
 
 # Polynomial trends
 polynomial_model = {'A': {'do': False, 'order': 0, 'tref': None},
