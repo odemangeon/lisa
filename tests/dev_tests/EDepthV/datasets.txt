@@ -2,33 +2,6 @@
 # The first columns is the path to a dataset file
 # The second columns is the name of the instrument model used for this dataset
 # The third column is the noise model.
-LC_WASP-76_CHEOPS_0.txt	              instPC0	gaussian_jitter_add
-IND-ROLL_WASP-76_CHEOPS_0.txt	        inst	None
-IND-CX_WASP-76_CHEOPS_0.txt	          inst	None
-IND-CY_WASP-76_CHEOPS_0.txt	          inst	None
-IND-SMEAR_WASP-76_CHEOPS_0.txt	      inst	None
-IND-TF_WASP-76_CHEOPS_0.txt	          inst	None
-IND-BKG_WASP-76_CHEOPS_0.txt	        inst	None
-IND-DARK_WASP-76_CHEOPS_0.txt	        inst	None
-IND-CONTA_WASP-76_CHEOPS_0.txt	      inst	None
-LC_WASP-76_CHEOPS_1.txt	              instPC1	gaussian_jitter_add
-IND-ROLL_WASP-76_CHEOPS_1.txt	        inst	None
-IND-CX_WASP-76_CHEOPS_1.txt	          inst	None
-IND-CY_WASP-76_CHEOPS_1.txt	          inst	None
-IND-SMEAR_WASP-76_CHEOPS_1.txt	      inst	None
-IND-TF_WASP-76_CHEOPS_1.txt	          inst	None
-IND-BKG_WASP-76_CHEOPS_1.txt	        inst	None
-IND-DARK_WASP-76_CHEOPS_1.txt	        inst	None
-IND-CONTA_WASP-76_CHEOPS_1.txt	      inst	None
-LC_WASP-76_CHEOPS_2.txt	              instPC2	gaussian_jitter_add
-IND-ROLL_WASP-76_CHEOPS_2.txt	        inst  None
-IND-CX_WASP-76_CHEOPS_2.txt	          inst  None
-IND-CY_WASP-76_CHEOPS_2.txt	          inst  None
-IND-SMEAR_WASP-76_CHEOPS_2.txt	      inst  None
-IND-TF_WASP-76_CHEOPS_2.txt	          inst  None
-IND-BKG_WASP-76_CHEOPS_2.txt	        inst  None
-IND-DARK_WASP-76_CHEOPS_2.txt	        inst  None
-IND-CONTA_WASP-76_CHEOPS_2.txt	      inst  None
 LC_WASP-76_CHEOPS_100.txt	            inst0	gaussian_jitter_add
 IND-ROLL_WASP-76_CHEOPS_100.txt	      inst	None
 IND-CX_WASP-76_CHEOPS_100.txt	        inst	None
