@@ -357,6 +357,9 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                     elif model_comp_dict['model'] == "sincos":
+                        l_key_mandatory_pcmod = ['new_parameter', ]
+                        if not(set(l_key_mandatory_pcmod) == set(model_comp_dict.keys())):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name} should include {l_key_mandatory_pcmod}.")
                         l_arg_mand_sp = ["sincos", "factor_period", "flux_offset", 'phase_offset', 'occultation']
                         for key_harm, harm_dict in model_comp_dict['args'].items():
                             if "sincos" not in harm_dict:
