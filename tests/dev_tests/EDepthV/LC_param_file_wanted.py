@@ -111,6 +111,7 @@ phasecurve_model = {'b': {'do': True,
                                                                         'occultation': True
                                                                         },
                                                                },
+                                                      'new_parameter': {'amp': True, 'flux_offset': True, 'phase_offset': True},
                                                       'model': 'sincos'
                                                       },
                                                 '1': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
@@ -119,80 +120,9 @@ phasecurve_model = {'b': {'do': True,
                                                                         'occultation': True
                                                                         },
                                                                },
+                                                      'new_parameter': {'amp': True, 'flux_offset': '0', 'phase_offset': '0'},
                                                       'model': 'sincos'
                                                       },
-                                                '2': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '3': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '4': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '5': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '6': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '7': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '8': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '9': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
-                                                               },
-                                                      'model': 'sincos'
-                                                      },
-                                                '10': {'args': {"cos1": {"sincos": "cos", "factor_period": 1,
-                                                                         'flux_offset': 'param',
-                                                                         'phase_offset': 'param',
-                                                                         'occultation': True
-                                                                         },
-                                                               },
-                                                       'model': 'sincos'
-                                                       },
                                                 }
                           }
                     }

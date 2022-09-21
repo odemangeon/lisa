@@ -23,6 +23,9 @@ orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '',
                                             'LC_CHEOPS_inst18': '',
                                             'LC_CHEOPS_inst19': '',
                                             },
-                       'model_definitions': {'': {'model': 'batman'}, }
+                       'model_definitions': {'': {'model': 'batman',
+                                                  'new_parameter': {'P': True, 'tic': True, 'ecc_and_omega': True, 'inc': True}
+                                                  },
+                                             }
                        }
                  }
