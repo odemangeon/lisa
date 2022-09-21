@@ -105,22 +105,20 @@ phasecurve_model = {'b': {'do': True,
                                                'LC_CHEOPS_inst18': ['18'],
                                                'LC_CHEOPS_inst19': ['19'],
                                                },
-                          'model_definitions': {'0': {'args': {"cos1": {"sincos": "cos",
-                                                                        "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
+                          'model_definitions': {'0': {'args': {'sincos': 'cos',
+                                                               'factor_period': 1,
+                                                               'flux_offset': 'param',
+                                                               'phase_offset': 'param',
+                                                               'occultation': True
                                                                },
                                                       'new_parameter': {'amp': True, 'flux_offset': True, 'phase_offset': True},
                                                       'model': 'sincos'
                                                       },
-                                                '1': {'args': {"cos1": {"sincos": "cos",
-                                                                        "factor_period": 1,
-                                                                        'flux_offset': 'param',
-                                                                        'phase_offset': 'param',
-                                                                        'occultation': True
-                                                                        },
+                                                '1': {'args': {'sincos': 'cos',
+                                                               'factor_period': 1,
+                                                               'flux_offset': 'param',
+                                                               'phase_offset': 'param',
+                                                               'occultation': True
                                                                },
                                                       'new_parameter': {'amp': True, 'flux_offset': '0', 'phase_offset': '0'},
                                                       'model': 'sincos'
