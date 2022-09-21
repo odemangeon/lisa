@@ -47,12 +47,3 @@ IND-TF_WASP-76_CHEOPS_14.txt	          inst	None
 IND-BKG_WASP-76_CHEOPS_14.txt	          inst	None
 IND-DARK_WASP-76_CHEOPS_14.txt	        inst	None
 IND-CONTA_WASP-76_CHEOPS_14.txt	        inst	None
-LC_WASP-76_CHEOPS_15.txt	              inst5	gaussian_jitter_add
-IND-ROLL_WASP-76_CHEOPS_15.txt	        inst  None
-IND-CX_WASP-76_CHEOPS_15.txt	          inst  None
-IND-CY_WASP-76_CHEOPS_15.txt	          inst  None
-IND-SMEAR_WASP-76_CHEOPS_15.txt	        inst  None
-IND-TF_WASP-76_CHEOPS_15.txt	          inst  None
-IND-BKG_WASP-76_CHEOPS_15.txt	          inst  None
-IND-DARK_WASP-76_CHEOPS_15.txt	        inst  None
-IND-CONTA_WASP-76_CHEOPS_15.txt	        inst  None

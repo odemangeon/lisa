@@ -2,7 +2,8 @@
 # -*- coding:  utf-8 -*-
 
 # Orbital models
-orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst1': '',
+orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '',
+                                            'LC_CHEOPS_inst1': '',
                                             'LC_CHEOPS_inst2': '',
                                             'LC_CHEOPS_inst3': '',
                                             'LC_CHEOPS_inst4': '',
@@ -21,10 +22,7 @@ orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst1': '',
                                             'LC_CHEOPS_inst17': '',
                                             'LC_CHEOPS_inst18': '',
                                             'LC_CHEOPS_inst19': '',
-                                            'LC_CHEOPS_inst20': '',
                                             },
-                       'model_definitions': {'': {'model': 'batman'},
-                                             'common_parameters': {'P': True, 'tic': True, 'ecc_and_omega': True, 'inc': True}
-                                             }
+                       'model_definitions': {'': {'model': 'batman'}, }
                        }
                  }
