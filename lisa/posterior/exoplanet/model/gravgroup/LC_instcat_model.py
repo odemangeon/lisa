@@ -76,33 +76,26 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
     def __init__(self, model_instance):
         super(LC_InstCat_Model, self).__init__(model_instance=model_instance)
+        defaultmodel4instrument_dict = {instmod_obj.full_name: '' for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)}
         self.transit_model = {planet.get_name(): {"do": True,
-                                                  "model_definitions": {"default_model": {"model": "batman"}, },
-                                                  "model4instrument": {instmod_obj.full_name: "default_model"
-                                                                       for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
-                                                                       },
+                                                  "model4instrument": defaultmodel4instrument_dict.copy(),
+                                                  "model_definitions": {'': {"model": "batman"}, },
                                                   }
                               for planet in self.model_instance.planets.values()
                               }
         self.phasecurve_model = {planet.get_name(): {"do": False,
-                                                     "model_definitions": {"default_model": {"model": "spiderman",
-                                                                                             "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
-                                                                                                      "attributes": {}
-                                                                                                      },
-                                                                                             },
+                                                     "model_definitions": {'': {"model": "spiderman",
+                                                                                "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
+                                                                                         "attributes": {}
+                                                                                         },
+                                                                                },
                                                                            },
-                                                     "model4instrument": {instmod_obj.full_name: ["default_model", ]
-                                                                          for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
-                                                                          },
                                                      }
                                  for planet in self.model_instance.planets.values()
                                  }
         self.occultation_model = {planet.get_name(): {"do": False,
-                                                      "model_definitions": {"default_model": {"model": "batman"},
-                                                                            },
-                                                      "model4instrument": {instmod_obj.full_name: "default_model"
-                                                                           for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
-                                                                           }
+                                                      "model4instrument": defaultmodel4instrument_dict.copy(),
+                                                      "model_definitions": {'': {"model": "batman"}, },
                                                       }
                                   for planet in self.model_instance.planets.values()
                                   }
