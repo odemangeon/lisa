@@ -197,7 +197,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
                     raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}) the keys of transit_model {model_comp_name} should be {l_key_mandatory}.")
                 if model_comp_dict['model'] not in self._orbital_models:
                     raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available transit model.")
-                l_new_parameter_key = ['P', 'tic', 'ecc_and_omega', 'inc']
+                l_new_parameter_key = ['P', 'tic', 'ecc_and_omega', 'inc', 'aR']
                 if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
                     raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
                 for new_parameter_key in l_new_parameter_key:

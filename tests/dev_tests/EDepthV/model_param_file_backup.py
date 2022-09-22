@@ -28,7 +28,8 @@ orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '',
                                                   'new_parameter': {'P': True,
                                                                     'ecc_and_omega': True,
                                                                     'inc': True,
-                                                                    'tic': True
+                                                                    'tic': True,
+                                                                    'aR': True,
                                                                     }
                                                   }
                                              }

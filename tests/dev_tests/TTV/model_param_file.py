@@ -13,35 +13,40 @@ orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '0',
                                                    'new_parameter': {'P': True,
                                                                      'ecc_and_omega': True,
                                                                      'inc': True,
-                                                                     'tic': True
+                                                                     'tic': True,
+                                                                     'aR': True,
                                                                      }
                                                    },
                                              '1': {'model': 'batman',
                                                    'new_parameter': {'P': '0',
                                                                      'ecc_and_omega': '0',
                                                                      'inc': '0',
-                                                                     'tic': True
+                                                                     'tic': True,
+                                                                     'aR': '0',
                                                                      }
                                                    },
                                              '2': {'model': 'batman',
                                                    'new_parameter': {'P': '0',
                                                                      'ecc_and_omega': '0',
                                                                      'inc': '0',
-                                                                     'tic': True
+                                                                     'tic': True,
+                                                                     'aR': '0',
                                                                      }
                                                    },
                                              '3': {'model': 'batman',
                                                    'new_parameter': {'P': '0',
                                                                      'ecc_and_omega': '0',
                                                                      'inc': '0',
-                                                                     'tic': True
+                                                                     'tic': True,
+                                                                     'aR': '0',
                                                                      }
                                                    },
                                              '4': {'model': 'batman',
                                                    'new_parameter': {'P': '0',
                                                                      'ecc_and_omega': '0',
                                                                      'inc': '0',
-                                                                     'tic': True
+                                                                     'tic': True,
+                                                                     'aR': '0',
                                                                      }
                                                    },
                                              }
