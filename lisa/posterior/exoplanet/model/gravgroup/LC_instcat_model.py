@@ -350,15 +350,15 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["transit_model"][planet_name]["model_definitions"]):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['transit_model'][planet_name]['model_definitions'].keys())}).")
                 self.transit_model[planet_name] = dico_config["transit_model"][planet_name]
+            else:
+                self.transit_model[planet_name]['do'] = False
 
         # Check and load the phasecurve_model dictionary
         for planet in self.model_instance.planets.values():
             planet_name = planet.get_name()
             if dico_config["phasecurve_model"][planet_name]["do"]:
                 for model_comp_name, model_comp_dict in dico_config["phasecurve_model"][planet_name]["model_definitions"].items():
-                    l_key_mandatory = ["model", "args", 'orbital_model']
-                    if model_comp_dict['model'] == "sincos":
-                        l_key_mandatory += ['new_parameter', ]
+                    l_key_mandatory = ["model", "args", 'orbital_model', 'new_parameter']
                     if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name} should be {l_key_mandatory}.")
                     if model_comp_dict['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
@@ -371,10 +371,18 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                         if not("brightness_model" in model_comp_dict['args']['ModelParams_kwargs']):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args']['ModelParams_kwargs'] is missing the 'brightness_model' key")
+                        if model_comp_dict['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                            l_new_parameter_key = ['Rrat', 'a', 'u1', 'u2', 'x1', 'Tn', 'deltaT']
+                        else:
+                            l_new_parameter_key = []
                     elif model_comp_dict['model'] == "kelp":
                         l_arg_mand_sp = ["Model_kwargs", "brightness_model", "brightness_model_kwargs"]
                         if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
+                        if model_comp_dict['args']['brightness_model'] == 'thermal':
+                            l_new_parameter_key = ['Rrat', 'f', 'hotspotoffset', 'alpha', 'omegadrag', 'AB', 'c11']
+                        else:
+                            l_new_parameter_key = []
                     elif model_comp_dict['model'] == "sincos":
                         l_arg_mand_sp = ["sincos", "factor_period", "flux_offset", 'phase_offset', 'occultation']
                         if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
@@ -389,15 +397,20 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'phase_offset' should be a float or an int or be equal to 'param'.")
                         if not(isinstance(model_comp_dict['args']["occultation"], bool)):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'occultation' should be a boolean.")
-                        l_new_parameter_key = ['amp', 'flux_offset', 'phase_offset']
-                        if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
-                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
-                        for new_parameter_key in l_new_parameter_key:
-                            if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["phasecurve_model"][planet_name]["model_definitions"]):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['phasecurve_model'][planet_name]['model_definitions'].keys())}).")
+                        if model_comp_dict['args']['sincos'] is None:
+                            l_new_parameter_key = []
+                        else:
+                            l_new_parameter_key = ['amp', 'flux_offset', 'phase_offset']
                     else:
                         logger.warning(f"Checking the content of the phasecurve dictionary for the phasecurve model {model_comp_dict['model']} is not implemented.")
+                    if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
+                    for new_parameter_key in l_new_parameter_key:
+                        if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["phasecurve_model"][planet_name]["model_definitions"]):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['phasecurve_model'][planet_name]['model_definitions'].keys())}).")
                 self.phasecurve_model[planet_name] = dico_config["phasecurve_model"][planet_name]
+            else:
+                self.phasecurve_model[planet_name]['do'] = False
 
         # Check and load the occultation_model dictionary
         for planet in self.model_instance.planets.values():
@@ -411,7 +424,15 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the provided orbital model {model_comp_dict['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
                     if model_comp_dict['model'] not in self._occultation_models:
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available phasecurve model.")
+                    l_new_parameter_key = ['Frat', 'Rrat']
+                    if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
+                    for new_parameter_key in l_new_parameter_key:
+                        if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["occultation_model"][planet_name]["model_definitions"]):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['occultation_model'][planet_name]['model_definitions'].keys())}).")
                 self.occultation_model[planet_name] = dico_config["occultation_model"][planet_name]
+            else:
+                self.occultation_model[planet_name]['do'] = False
 
         # Check and load the polynomial models
         if "polynomial_model" in dico_config:
@@ -539,87 +560,164 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
         host_star = list(self.model_instance.paramcontainers["stars"].values())[0]
 
-        # Stellar density (orbit Multis parametrisation)
-        if parametrisation == "Multis":
-            host_star.rho.main = True
-            host_star.rho.unit = "Solar density"
-
-        # Stellar effective temperature (Phase curve if spiderman and zhang brightness model)
+        # Apply the parametrisation to the planets parameters and star parameters triggerd by the transit, phase curve or ocultation models
         for planet in self.model_instance.planets.values():
             planet_name = planet.get_name()
-            if self.phasecurve_model[planet_name]['do']:
-                for l_mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
-                    for mod_comp_name in l_mod_comp_name:
-                        pc_component_model = self.phasecurve_model[planet_name]['model_definitions'][mod_comp_name]
-                        if pc_component_model["model"] == 'spiderman':
-                            if pc_component_model['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
-                                host_star.Teff.main = True
-                        elif pc_component_model["model"] == 'kelp':
-                            stellar_spectrum = pc_component_model['args']['Model_kwargs'].get('stellar_spectrum', None)
-                            if (pc_component_model['args']['brightness_model'] == 'thermal') and (stellar_spectrum is None):
-                                host_star.Teff.main = True
+            # Transit_model
+            if self.transit_model[planet_name]['do']:
+                if parametrisation == "Multis":
+                    host_star.rho.main = True
+                    host_star.rho.unit = "Solar density"
+                l_orb_param_basename = ['P', 'tic', 'cosinc', 'ecosw', 'esinw']
+                l_orb_new_param_key = ['P', 'tic', 'inc', 'ecc_and_omega', 'ecc_and_omega']
+                l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets', 'w/o unit', 'w/o unit', 'w/o unit', ]
+                if parametrisation == "EXOFAST":
+                    l_orb_param_basename += ['aR']
+                    l_orb_new_param_key += ['aR']
+                    l_orb_param_unit += ['w/o unit']
+                l_mod_comp_name = list(set(self.transit_model[planet_name]["model4instrument"].values()))
+                l_tr_param_basename = ['Rrat', ]
+                l_tr_new_param_key = ['Rrat', ]
+                l_tr_param_unit = ['w/o unit', ]
+                for mod_comp_name in l_mod_comp_name:
+                    dico_config_tr_mod_comp = self.transit_model[planet_name]['model_definitions'][mod_comp_name]
+                    orb_model_name = dico_config_tr_mod_comp['orbital_model']
+                    dico_config_orb_mod_comp = self.model_instance.orbital_model[planet_name]['model_definitions'][orb_model_name]
+                    for (l_param_basename, l_new_param_key, l_param_unit, dico_config_mod, mod_name
+                         ) in zip([l_tr_param_basename, l_orb_param_basename],
+                                  [l_tr_new_param_key, l_orb_new_param_key],
+                                  [l_tr_param_unit, l_orb_param_unit],
+                                  [dico_config_tr_mod_comp, dico_config_orb_mod_comp],
+                                  [mod_comp_name, orb_model_name]
+                                  ):
+                        for param_basename, new_param_key, param_unit in zip(l_param_basename, l_new_param_key, l_param_unit):
+                            if (new_param_key is None) or (dico_config_mod['new_parameter'][new_param_key] is True):
+                                param_name = f"{param_basename}{mod_name}"
+                            else:
+                                param_name = f"{param_basename}{dico_config_mod['new_parameter'][new_param_key]}"
+                            if planet.has_parameter(name=param_name, return_error=False, kwargs_get_list_params=None, kwargs_get_name={'recursive': False, 'include_prefix': False}):
+                                param = planet.parameters[param_name]
+                            else:
+                                param = Parameter(name=param_name, name_prefix=planet.name, unit=param_unit)
+                                planet.add_parameter(param)
+                            param.main = True
 
-        # Apply the parametrisation to the planets parameters
-        for planet in self.model_instance.planets.values():
-            planet_name = planet.get_name()
-            planet.Rrat.main = True
-            planet.Rrat.unit = "w/o unit"
-            planet.cosinc.main = True  # Unit already defined in celestial_bodies
-            if parametrisation == "EXOFAST":
-                planet.aR.main = True  # Unit already defined in celestial_bodies
-            planet.P.main = True
-            planet.P.unit = "[time of the RV/LC data]"
-            planet.tic.main = True
-            planet.tic.unit = "[time of the RV/LC data]"
-            planet.ecosw.main = True  # Unit already defined in celestial_bodies
-            planet.esinw.main = True  # Unit already defined in celestial_bodies
+            # Phase curve model
             if self.phasecurve_model[planet_name]['do']:
-                for l_mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
-                    for mod_comp_name in l_mod_comp_name:
-                        if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
-                            if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
-                                planet.a.main = True
-                                planet.a.unit = "AU"
-                                planet.u1.main = True
-                                planet.u2.main = True
-                                planet.xi.main = True
-                                planet.Tn.main = True
-                                planet.deltaT.main = True
-                        elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
-                            if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
-                                planet.f.main = True  # greenhouse factor
-                                planet.hotspotoffset.main = True  # hotspot offset
-                                planet.hotspotoffset.unit = "radians"
-                                planet.alpha.main = True  # Dimensionless fluid number
-                                planet.omegadrag.main = True  # Dimensionless drag frequency
-                                planet.AB.main = True  # Bond albedo
-                                planet.c11.main = True  # m=1 l=1 Spherical harmonic coefficients
-                        elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'sincos':
-                            for sincos_comp_name, dico_sincos_comp in self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["args"].items():
-                                if dico_sincos_comp['sincos'] is None:
-                                    planet.add_parameter(Parameter(name=f"C{mod_comp_name}{sincos_comp_name}",
-                                                                   name_prefix=planet.name, main=True
-                                                                   )
-                                                         )
-                                else:  # 'sin' or 'cos'
-                                    planet.add_parameter(Parameter(name=f"A{mod_comp_name}{sincos_comp_name}",
-                                                                   name_prefix=planet.name, main=True
-                                                                   )
-                                                         )
-                                    if dico_sincos_comp['phase_offset'] == "param":
-                                        planet.add_parameter(Parameter(name=f"Phi{mod_comp_name}{sincos_comp_name}",
-                                                                       name_prefix=planet.name, main=True
-                                                                       )
-                                                             )
-                                    if dico_sincos_comp['flux_offset'] == "param":
-                                        planet.add_parameter(Parameter(name=f"Foffset{mod_comp_name}{sincos_comp_name}",
-                                                                       name_prefix=planet.name, main=True
-                                                                       )
-                                                             )
+                l_mod_comp_name = []
+                for l_mod_comp_name_instmod in self.phasecurve_model[planet_name]["model4instrument"].values():
+                    l_mod_comp_name += l_mod_comp_name_instmod
+                l_mod_comp_name = list(set(l_mod_comp_name))
+                for mod_comp_name in l_mod_comp_name:
+                    dico_config_pc_mod_comp = self.phasecurve_model[planet_name]['model_definitions'][mod_comp_name]
+                    orb_model_name = dico_config_pc_mod_comp['orbital_model']
+                    dico_config_orb_mod_comp = self.model_instance.orbital_model[planet_name]['model_definitions'][orb_model_name]
+                    if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'spiderman':
+                        if parametrisation == "Multis":
+                            host_star.rho.main = True
+                            host_star.rho.unit = "Solar density"
+                        if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['ModelParams_kwargs']['brightness_model'] == 'zhang':
+                            host_star.Teff.main = True
+                            l_orb_param_basename = ['P', 'tic', 'cosinc', 'ecosw', 'esinw']
+                            l_orb_new_param_key = ['P', 'tic', 'inc', 'ecc_and_omega', 'ecc_and_omega']
+                            l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets', 'w/o unit', 'w/o unit', 'w/o unit', ]
+                            if parametrisation == "EXOFAST":
+                                l_orb_param_basename += ['aR']
+                                l_orb_new_param_key += ['aR']
+                                l_orb_param_unit += ['w/o unit']
+                            l_pc_param_basename = ['Rrat', 'a', 'u1', 'u2', 'x1', 'Tn', 'deltaT']
+                            l_pc_new_param_key = ['Rrat', 'a', 'u1', 'u2', 'x1', 'Tn', 'deltaT']
+                            l_pc_param_unit = ['w/o unit', 'AU', 'w/o unit', 'w/o unit', 'w/o unit', 'K', 'K']
+                        else:
+                            raise NotImplementedError()
+                    elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'kelp':
+                        if parametrisation == "Multis":
+                            host_star.rho.main = True
+                            host_star.rho.unit = "Solar density"
+                        l_orb_param_basename = ['P', 'tic']
+                        l_orb_new_param_key = ['P', 'tic']
+                        l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets']
+                        if parametrisation == "EXOFAST":
+                            l_orb_param_basename += ['aR']
+                            l_orb_new_param_key += ['aR']
+                            l_orb_param_unit += ['w/o unit']
+                        if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['brightness_model'] == 'thermal':
+                            host_star.Teff.main = True
+                            l_pc_param_basename = ['Rrat', 'f', 'hotspotoffset', 'alpha', 'omegadrag', 'AB', 'c11']
+                            l_pc_new_param_key = ['Rrat', 'f', 'hotspotoffset', 'alpha', 'omegadrag', 'AB', 'c11']
+                            l_pc_param_unit = ['w/o unit', 'w/o unit', 'radians', 'w/o unit', 'w/o unit', 'w/o unit', 'w/o unit']
+                        else:
+                            raise NotImplementedError()
+                    elif self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'sincos':
+                        l_orb_param_basename = ['P', 'tic']
+                        l_orb_new_param_key = ['P', 'tic']
+                        l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets']
+                        if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]['args']['sincos'] is None:
+                            l_pc_param_basename = ['C']
+                            l_pc_new_param_key = [None]
+                            l_pc_param_unit = ['unit of LC data']
+                        else:
+                            l_pc_param_basename = ['A', 'Phi', 'Foffset']
+                            l_pc_new_param_key = ['amp', 'phase_offset', 'flux_offset']
+                            l_pc_param_unit = ['unit of LC data', 'radians', 'unit of LC data']
+                    else:
+                        raise NotImplementedError()
+                    for (l_param_basename, l_new_param_key, l_param_unit, dico_config_mod, mod_name
+                         ) in zip([l_pc_param_basename, l_orb_param_basename],
+                                  [l_pc_new_param_key, l_orb_new_param_key],
+                                  [l_pc_param_unit, l_orb_param_unit],
+                                  [dico_config_pc_mod_comp, dico_config_orb_mod_comp],
+                                  [mod_comp_name, orb_model_name]
+                                  ):
+                        for param_basename, new_param_key, param_unit in zip(l_param_basename, l_new_param_key, l_param_unit):
+                            if (new_param_key is None) or (dico_config_mod['new_parameter'][new_param_key] is True):
+                                param_name = f"{param_basename}{mod_name}"
+                            else:
+                                param_name = f"{param_basename}{dico_config_mod['new_parameter'][new_param_key]}"
+                            if planet.has_parameter(name=param_name, return_error=False, kwargs_get_list_params=None, kwargs_get_name={'recursive': False, 'include_prefix': False}):
+                                param = planet.parameters[param_name]
+                            else:
+                                param = Parameter(name=param_name, name_prefix=planet.name, unit=param_unit)
+                                planet.add_parameter(param)
+                            param.main = True
+            # Occultation model
             if self.occultation_model[planet_name]['do']:
-                for mod_comp_name in self.phasecurve_model[planet_name]["model4instrument"].values():
-                    if self.phasecurve_model[planet_name]["model_definitions"][mod_comp_name]["model"] == 'batman':
-                        planet.Frat.main = True
+                for mod_comp_name in l_mod_comp_name:
+                    dico_config_occ_mod_comp = self.occultation_model[planet_name]['model_definitions'][mod_comp_name]
+                    orb_model_name = dico_config_occ_mod_comp['orbital_model']
+                    dico_config_orb_mod_comp = self.model_instance.orbital_model[planet_name]['model_definitions'][orb_model_name]
+                    l_orb_param_basename = ['P', 'tic', 'cosinc', 'ecosw', 'esinw']
+                    l_orb_new_param_key = ['P', 'tic', 'inc', 'ecc_and_omega', 'ecc_and_omega']
+                    l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets', 'w/o unit', 'w/o unit', 'w/o unit', ]
+                    if parametrisation == "Multis":
+                        host_star.rho.main = True
+                        host_star.rho.unit = "Solar density"
+                    l_mod_comp_name = list(set(self.occultation_model[planet_name]["model4instrument"].values()))
+                    l_occ_param_basename = ['Frat', 'Rrat']
+                    l_occ_new_param_key = ['Frat', 'Rrat']
+                    l_occ_param_unit = ['w/o unit', 'w/o unit']
+                    if parametrisation == "EXOFAST":
+                        l_orb_param_basename += ['aR']
+                        l_orb_new_param_key += ['aR']
+                        l_orb_param_unit += ['w/o unit']
+                    for (l_param_basename, l_new_param_key, l_param_unit, dico_config_mod, mod_name
+                         ) in zip([l_occ_param_basename, l_orb_param_basename],
+                                  [l_occ_new_param_key, l_orb_new_param_key],
+                                  [l_occ_param_unit, l_orb_param_unit],
+                                  [dico_config_occ_mod_comp, dico_config_orb_mod_comp],
+                                  [mod_comp_name, orb_model_name]
+                                  ):
+                        for param_basename, new_param_key, param_unit in zip(l_param_basename, l_new_param_key, l_param_unit):
+                            if (new_param_key is None) or (dico_config_mod['new_parameter'][new_param_key] is True):
+                                param_name = f"{param_basename}{mod_name}"
+                            else:
+                                param_name = f"{param_basename}{dico_config_mod['new_parameter'][new_param_key]}"
+                            if planet.has_parameter(name=param_name, return_error=False, kwargs_get_list_params=None, kwargs_get_name={'recursive': False, 'include_prefix': False}):
+                                param = planet.parameters[param_name]
+                            else:
+                                param = Parameter(name=param_name, name_prefix=planet.name, unit=param_unit)
+                                planet.add_parameter(param)
+                            param.main = True
 
     def apply_limbdarkening_parametrisation(self, parametrisation):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""

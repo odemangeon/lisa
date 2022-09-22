@@ -27,6 +27,7 @@ from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrela
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from ....core.model.polynomial_model import set_dico_config, get_dico_config
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from ....core.parameter import Parameter
 from .....tools.miscellaneous import spacestring_like
 
 
@@ -182,7 +183,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
                 if dico_model[planet_name]['model'] not in self._rv_models:
                     raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] the model specifief '{dico_model[planet_name]['model']}' is not a valid keplerian model. Should be in {self._rv_models}")
                 # Load the rv_model for the planet
-                self.rv_model[planet_name] = dico_config["keplerian_rv_model"][planet_name]
+                self.rv_model[planet_name] = dico_model[planet_name]
 
         # Check and load the polynomial models
         if "polynomial_model" in dico_config:
@@ -295,15 +296,26 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         # Apply the parametrisation to the planets parameters
         for planet in self.model_instance.planets.values():
+            planet_name = planet.get_name()
+            l_orb_param_basename = ['P', 'tic', 'ecosw', 'esinw']
+            l_orb_new_param_key = ['P', 'tic', 'ecc_and_omega', 'ecc_and_omega']
+            l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets', 'w/o unit', 'w/o unit', ]
+            orb_model_name = self.rv_model[planet_name]['orbital_model']
+            dico_config_orb_mod_comp = self.model_instance.orbital_model[planet_name]['model_definitions'][orb_model_name]
+            for param_basename, new_param_key, param_unit in zip(l_orb_param_basename, l_orb_new_param_key, l_orb_param_unit):
+                if (new_param_key is None) or (dico_config_orb_mod_comp['new_parameter'][new_param_key] is True):
+                    param_name = f"{param_basename}{orb_model_name}"
+                else:
+                    param_name = f"{param_basename}{dico_config_orb_mod_comp['new_parameter'][new_param_key]}"
+                if planet.has_parameter(name=param_name, return_error=False, kwargs_get_list_params=None, kwargs_get_name={'recursive': False, 'include_prefix': False}):
+                    param = planet.parameters[param_name]
+                else:
+                    param = Parameter(name=param_name, name_prefix=planet.name, unit=param_unit)
+                    planet.add_parameter(param)
+                param.main = True
             # planet_name = planet.get_name()
             planet.K.main = True
             planet.K.unit = "[amplitude of the RV data]"
-            planet.P.main = True
-            planet.P.unit = "[time of the RV/LC data]"
-            planet.tic.main = True
-            planet.tic.unit = "[time of the RV/LC data]"
-            planet.ecosw.main = True  # Unit already defined in celestial_bodies
-            planet.esinw.main = True  # Unit already defined in celestial_bodies
 
     def apply_instmodel_parametrisation(self, parametrisation):
         """Apply the parametrisation to an instrument model object.

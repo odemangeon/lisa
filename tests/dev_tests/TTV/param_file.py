@@ -188,48 +188,76 @@ A = {'rho': {'duplicate': None,
      }
 
 # planets
-b = {'P': {'duplicate': None,
-           'free': True,
-           'value': None,  # unit: [time of the RV/LC data]
-           'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
-                     'joint_prior_ref': None
-                     }
-           },
-     'cosinc': {'duplicate': None,
+b = {'Rrat': {'duplicate': None,
+              'free': True,
+              'value': None,  # unit: None
+              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                        'joint_prior_ref': None
+                        }
+              },
+     'P0': {'duplicate': None,
+            'free': True,
+            'value': None,  # unit: time unit of LC/RV datasets
+            'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                      'joint_prior_ref': None
+                      }
+            },
+     'tic0': {'duplicate': None,
+              'free': True,
+              'value': None,  # unit: time unit of LC/RV datasets
+              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                        'joint_prior_ref': None
+                        }
+              },
+     'cosinc0': {'duplicate': None,
+                 'free': True,
+                 'value': None,  # unit: w/o unit
+                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                           'joint_prior_ref': None
+                           }
+                 },
+     'ecosw0': {'duplicate': None,
                 'free': True,
                 'value': None,  # unit: w/o unit
                 'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
                           'joint_prior_ref': None
                           }
                 },
-     'tic': {'duplicate': None,
-             'free': True,
-             'value': None,  # unit: [time of the RV/LC data]
-             'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
-                       'joint_prior_ref': None
-                       }
-             },
-     'Rrat': {'duplicate': None,
+     'esinw0': {'duplicate': None,
+                'free': True,
+                'value': None,  # unit: w/o unit
+                'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                          'joint_prior_ref': None
+                          }
+                },
+     'tic2': {'duplicate': None,
               'free': True,
-              'value': None,  # unit: w/o unit
+              'value': None,  # unit: time unit of LC/RV datasets
               'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
                         'joint_prior_ref': None
                         }
               },
-     'ecosw': {'duplicate': None,
-               'free': True,
-               'value': None,  # unit: w/o unit
-               'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
-                         'joint_prior_ref': None
-                         }
-               },
-     'esinw': {'duplicate': None,
-               'free': True,
-               'value': None,  # unit: w/o unit
-               'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
-                         'joint_prior_ref': None
-                         }
-               },
+     'tic1': {'duplicate': None,
+              'free': True,
+              'value': None,  # unit: time unit of LC/RV datasets
+              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                        'joint_prior_ref': None
+                        }
+              },
+     'tic4': {'duplicate': None,
+              'free': True,
+              'value': None,  # unit: time unit of LC/RV datasets
+              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                        'joint_prior_ref': None
+                        }
+              },
+     'tic3': {'duplicate': None,
+              'free': True,
+              'value': None,  # unit: time unit of LC/RV datasets
+              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+                        'joint_prior_ref': None
+                        }
+              },
      }
 
 # LDs
