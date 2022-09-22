@@ -122,12 +122,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '2': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -135,12 +135,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '3': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -148,12 +148,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '4': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -161,12 +161,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '5': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -174,12 +174,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '6': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -187,12 +187,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '7': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -200,12 +200,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '8': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -213,12 +213,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '9': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -226,12 +226,12 @@ phasecurve_model = {'b': {'do': True,
                                                                'phase_offset': 'param',
                                                                'sincos': 'cos'
                                                                },
-                                                               'model': 'sincos',
-                                                               'new_parameter': {'amp': True,
-                                                                                 'flux_offset': '',
-                                                                                 'phase_offset': ''
-                                                                                 },
-                                                               'orbital_model': ''
+                                                      'model': 'sincos',
+                                                      'new_parameter': {'amp': True,
+                                                                        'flux_offset': '',
+                                                                        'phase_offset': ''
+                                                                        },
+                                                      'orbital_model': ''
                                                       },
                                                 '10': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -239,130 +239,130 @@ phasecurve_model = {'b': {'do': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '11': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '12': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '13': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '14': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '15': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '16': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '17': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '18': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 '19': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
                                                                 'occultation': True,
                                                                 'phase_offset': 'param',
                                                                 'sincos': 'cos'
                                                                 },
-                                                                'model': 'sincos',
-                                                                'new_parameter': {'amp': True,
-                                                                                  'flux_offset': '',
-                                                                                  'phase_offset': ''
-                                                                                  },
-                                                                'orbital_model': ''
-                                                      },
+                                                       'model': 'sincos',
+                                                       'new_parameter': {'amp': True,
+                                                                         'flux_offset': '',
+                                                                         'phase_offset': ''
+                                                                         },
+                                                       'orbital_model': ''
+                                                       },
                                                 }
                           }
                     }
@@ -1282,733 +1282,733 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                            }
                                                 },
                             'LC_CHEOPS_inst10': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                     'quantity': 'raw',
-                                                                     'spline_type': 'SmoothBivariateSpline',
-                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                     'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
-                                                                                                                  },
-                                                                                        }
-                                                                     },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                      'quantity': 'raw',
+                                                                      'spline_type': 'SmoothBivariateSpline',
+                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                      'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
+                                                                                                                   },
+                                                                                         }
+                                                                      },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_110': 'IND-BKG_WASP-76_CHEOPS_110', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_110': 'IND-BKG_WASP-76_CHEOPS_110', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_110': 'IND-TF_WASP-76_CHEOPS_110', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_110': 'IND-TF_WASP-76_CHEOPS_110', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst11': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                     'quantity': 'raw',
-                                                                     'spline_type': 'SmoothBivariateSpline',
-                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                     'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
-                                                                                                                  },
-                                                                                        }
-                                                                     },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                      'quantity': 'raw',
+                                                                      'spline_type': 'SmoothBivariateSpline',
+                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                      'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
+                                                                                                                   },
+                                                                                         }
+                                                                      },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_111': 'IND-BKG_WASP-76_CHEOPS_111', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_111': 'IND-BKG_WASP-76_CHEOPS_111', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_111': 'IND-TF_WASP-76_CHEOPS_111', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_111': 'IND-TF_WASP-76_CHEOPS_111', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst12': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                     'quantity': 'raw',
-                                                                     'spline_type': 'SmoothBivariateSpline',
-                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                     'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
-                                                                                                                  },
-                                                                                        }
-                                                                     },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                      'quantity': 'raw',
+                                                                      'spline_type': 'SmoothBivariateSpline',
+                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                      'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
+                                                                                                                   },
+                                                                                         }
+                                                                      },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_112': 'IND-BKG_WASP-76_CHEOPS_112', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_112': 'IND-BKG_WASP-76_CHEOPS_112', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_112': 'IND-TF_WASP-76_CHEOPS_112', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_112': 'IND-TF_WASP-76_CHEOPS_112', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst13': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                     'quantity': 'raw',
-                                                                     'spline_type': 'SmoothBivariateSpline',
-                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                     'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
-                                                                                                                  },
-                                                                                        }
-                                                                     },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                      'quantity': 'raw',
+                                                                      'spline_type': 'SmoothBivariateSpline',
+                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                      'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
+                                                                                                                   },
+                                                                                         }
+                                                                      },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_113': 'IND-BKG_WASP-76_CHEOPS_113', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_113': 'IND-BKG_WASP-76_CHEOPS_113', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_113': 'IND-TF_WASP-76_CHEOPS_113', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_113': 'IND-TF_WASP-76_CHEOPS_113', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst14': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                     'quantity': 'raw',
-                                                                     'spline_type': 'SmoothBivariateSpline',
-                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                     'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
-                                                                                                                  },
-                                                                                        'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
-                                                                                                                  'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
-                                                                                                                  },
-                                                                                        }
-                                                                     },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                      'quantity': 'raw',
+                                                                      'spline_type': 'SmoothBivariateSpline',
+                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                      'match datasets': {'LC_WASP-76_CHEOPS_102': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_102',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_102'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_103': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_103',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_103'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_104': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_104',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_104'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_105': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_105',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_105'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_106': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_106',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_106'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_107': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_107',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_107'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_108': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_108',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_108'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_109': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_109',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_109'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_110': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_110',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_110'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_111': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_111',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_111'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_112': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_112',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_112'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_113': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_113',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_113'
+                                                                                                                   },
+                                                                                         'LC_WASP-76_CHEOPS_114': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_114',
+                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_114'
+                                                                                                                   },
+                                                                                         }
+                                                                      },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_114': 'IND-BKG_WASP-76_CHEOPS_114', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_114': 'IND-BKG_WASP-76_CHEOPS_114', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_114': 'IND-TF_WASP-76_CHEOPS_114', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_114': 'IND-TF_WASP-76_CHEOPS_114', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst15': {'do': True,
-                                                'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                      'quantity': 'raw',
-                                                                      'spline_type': 'SmoothBivariateSpline',
-                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                      'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
-                                                                                                                   },
-                                                                                         }
-                                                                      },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                       'quantity': 'raw',
+                                                                       'spline_type': 'SmoothBivariateSpline',
+                                                                       'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                       'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
+                                                                                                                    },
+                                                                                          }
+                                                                       },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_115': 'IND-BKG_WASP-76_CHEOPS_115', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_115': 'IND-BKG_WASP-76_CHEOPS_115', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_115': 'IND-TF_WASP-76_CHEOPS_115', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_115': 'IND-TF_WASP-76_CHEOPS_115', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst16': {'do': True,
-                                                'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                      'quantity': 'raw',
-                                                                      'spline_type': 'SmoothBivariateSpline',
-                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                      'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
-                                                                                                                   },
-                                                                                         }
-                                                                      },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                       'quantity': 'raw',
+                                                                       'spline_type': 'SmoothBivariateSpline',
+                                                                       'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                       'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
+                                                                                                                    },
+                                                                                          }
+                                                                       },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_116': 'IND-BKG_WASP-76_CHEOPS_116', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_116': 'IND-BKG_WASP-76_CHEOPS_116', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_116': 'IND-TF_WASP-76_CHEOPS_116', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_116': 'IND-TF_WASP-76_CHEOPS_116', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst17': {'do': True,
-                                                'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                      'quantity': 'raw',
-                                                                      'spline_type': 'SmoothBivariateSpline',
-                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                      'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
-                                                                                                                   },
-                                                                                         }
-                                                                      },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                       'quantity': 'raw',
+                                                                       'spline_type': 'SmoothBivariateSpline',
+                                                                       'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                       'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
+                                                                                                                    },
+                                                                                          }
+                                                                       },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_117': 'IND-BKG_WASP-76_CHEOPS_117', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_117': 'IND-BKG_WASP-76_CHEOPS_117', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_117': 'IND-TF_WASP-76_CHEOPS_117', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_117': 'IND-TF_WASP-76_CHEOPS_117', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst18': {'do': True,
-                                                'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                      'quantity': 'raw',
-                                                                      'spline_type': 'SmoothBivariateSpline',
-                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                      'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
-                                                                                                                   },
-                                                                                         }
-                                                                      },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                       'quantity': 'raw',
+                                                                       'spline_type': 'SmoothBivariateSpline',
+                                                                       'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                       'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
+                                                                                                                    },
+                                                                                          }
+                                                                       },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_118': 'IND-BKG_WASP-76_CHEOPS_118', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_118': 'IND-BKG_WASP-76_CHEOPS_118', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_118': 'IND-TF_WASP-76_CHEOPS_118', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_118': 'IND-TF_WASP-76_CHEOPS_118', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             'LC_CHEOPS_inst19': {'do': True,
-                                                'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
-                                                'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
-                                                                      'quantity': 'raw',
-                                                                      'spline_type': 'SmoothBivariateSpline',
-                                                                      'spline_kwargs': {'kx': 3, 'ky': 3},
-                                                                      'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
-                                                                                                                   },
-                                                                                         'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
-                                                                                                                   'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
-                                                                                                                   },
-                                                                                         }
-                                                                      },
-                                                             },
-                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                 'order': [('bispline', 'XY15'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                 'bispline': {'XY15': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                       'quantity': 'raw',
+                                                                       'spline_type': 'SmoothBivariateSpline',
+                                                                       'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                       'match datasets': {'LC_WASP-76_CHEOPS_115': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_115',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_115'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_116': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_116',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_116'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_117': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_117',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_117'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_118': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_118',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_118'
+                                                                                                                    },
+                                                                                          'LC_WASP-76_CHEOPS_119': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_119',
+                                                                                                                    'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_119'
+                                                                                                                    },
+                                                                                          }
+                                                                       },
+                                                              },
+                                                 'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                     'spline_type': 'UnivariateSpline',
+                                                                                     'spline_kwargs': {'k': 3, },
+                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
+                                                                                                        'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
+                                                                                                        'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
+                                                                                                        'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
+                                                                                                        'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
+                                                                                                        'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
+                                                                                                        'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
+                                                                                                        'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
+                                                                                                        'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
+                                                                                                        'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
+                                                                                                        'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
+                                                                                                        'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
+                                                                                                        'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
+                                                                                                        'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
+                                                                                                        'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
+                                                                                                        'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
+                                                                                                        'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
+                                                                                                        'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
+                                                                                                        'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
+                                                                                                        'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
+                                                                                                        }
+                                                                                     },
+                                                            'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
                                                                                     'spline_type': 'UnivariateSpline',
                                                                                     'spline_kwargs': {'k': 3, },
-                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100',
-                                                                                                       'LC_WASP-76_CHEOPS_101': 'IND-ROLL_WASP-76_CHEOPS_101',
-                                                                                                       'LC_WASP-76_CHEOPS_102': 'IND-ROLL_WASP-76_CHEOPS_102',
-                                                                                                       'LC_WASP-76_CHEOPS_103': 'IND-ROLL_WASP-76_CHEOPS_103',
-                                                                                                       'LC_WASP-76_CHEOPS_104': 'IND-ROLL_WASP-76_CHEOPS_104',
-                                                                                                       'LC_WASP-76_CHEOPS_105': 'IND-ROLL_WASP-76_CHEOPS_105',
-                                                                                                       'LC_WASP-76_CHEOPS_106': 'IND-ROLL_WASP-76_CHEOPS_106',
-                                                                                                       'LC_WASP-76_CHEOPS_107': 'IND-ROLL_WASP-76_CHEOPS_107',
-                                                                                                       'LC_WASP-76_CHEOPS_108': 'IND-ROLL_WASP-76_CHEOPS_108',
-                                                                                                       'LC_WASP-76_CHEOPS_109': 'IND-ROLL_WASP-76_CHEOPS_109',
-                                                                                                       'LC_WASP-76_CHEOPS_110': 'IND-ROLL_WASP-76_CHEOPS_110',
-                                                                                                       'LC_WASP-76_CHEOPS_111': 'IND-ROLL_WASP-76_CHEOPS_111',
-                                                                                                       'LC_WASP-76_CHEOPS_112': 'IND-ROLL_WASP-76_CHEOPS_112',
-                                                                                                       'LC_WASP-76_CHEOPS_113': 'IND-ROLL_WASP-76_CHEOPS_113',
-                                                                                                       'LC_WASP-76_CHEOPS_114': 'IND-ROLL_WASP-76_CHEOPS_114',
-                                                                                                       'LC_WASP-76_CHEOPS_115': 'IND-ROLL_WASP-76_CHEOPS_115',
-                                                                                                       'LC_WASP-76_CHEOPS_116': 'IND-ROLL_WASP-76_CHEOPS_116',
-                                                                                                       'LC_WASP-76_CHEOPS_117': 'IND-ROLL_WASP-76_CHEOPS_117',
-                                                                                                       'LC_WASP-76_CHEOPS_118': 'IND-ROLL_WASP-76_CHEOPS_118',
-                                                                                                       'LC_WASP-76_CHEOPS_119': 'IND-ROLL_WASP-76_CHEOPS_119',
-                                                                                                       }
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_119': 'IND-BKG_WASP-76_CHEOPS_119', }
                                                                                     },
-                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                            'IND-TF_CHEOPS_inst': {'quantity': 'raw',
                                                                                    'spline_type': 'UnivariateSpline',
                                                                                    'spline_kwargs': {'k': 3, },
-                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_119': 'IND-BKG_WASP-76_CHEOPS_119', }
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_119': 'IND-TF_WASP-76_CHEOPS_119', }
                                                                                    },
-                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
-                                                                                  'spline_type': 'UnivariateSpline',
-                                                                                  'spline_kwargs': {'k': 3, },
-                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_119': 'IND-TF_WASP-76_CHEOPS_119', }
-                                                                                  },
-                                                           }
-                                                },
+                                                            }
+                                                 },
                             }
