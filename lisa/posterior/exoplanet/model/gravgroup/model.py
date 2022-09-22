@@ -27,6 +27,8 @@ from logging import getLogger
 # from os.path import isfile, join
 from string import ascii_lowercase
 from string import ascii_uppercase
+from textwrap import dedent
+from pprint import pformat
 
 from .LC_instcat_model import LC_InstCat_Model
 from .RV_instcat_model import RV_InstCat_Model
@@ -38,6 +40,8 @@ from ...likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, Ste
 from ....core.model.core_model import Core_Model, create_key, load_key
 from ....core.model.indicator_model.IND_instcat_model import IND_InstCat_Model
 from ....core.likelihood.jitter_noise_model import JitterNoiseModelInterface
+from .....tools.miscellaneous import spacestring_like
+
 
 # from pdb import set_trace
 
@@ -55,6 +59,12 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
     ## Set of possible instrument categories (Used by Core_Model._check_dataset_instcat)
     # __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat, IND_inst_cat}
     __instcat_model_classes__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
+
+    ## Does the model requires a model parametrisation file
+    __has_model_paramfile__ = True
+
+    # Available orbital models
+    _orbital_models = ["batman", ]
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
@@ -101,8 +111,24 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
         # Fill the handlers4noisecatparamfile dictionary
         self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
                                                                   load_key: self.load_SANM_param_file}
+
         # Finish the initialisation
         Core_Model.finish_init(self)
+
+        # Define the orbital_model dictionnary which will define the orbital model to use for the
+        # RV and LC instrument models
+        defaultmodel4instrument_dict = {}
+        for InstCat_Model in [LC_InstCat_Model, RV_InstCat_Model]:
+            if InstCat_Model.inst_cat in self.inst_categories:
+                defaultmodel4instrument_dict.update({instmod_obj.full_name: '' for instmod_obj in self.get_instmodel_objs(inst_fullcat=InstCat_Model.inst_cat)})
+        self.orbital_model = {planet.get_name(): {"model4instrument": defaultmodel4instrument_dict.copy(),
+                                                  "model_definitions": {'': {'model': 'batman',
+                                                                             'new_parameter': {'P': True, 'tic': True, 'ecc_and_omega': True, 'inc': True}
+                                                                             },
+                                                                        },
+                                                  }
+                              for planet in self.planets.values()
+                              }
 
     @property
     def init_kwargs(self):
@@ -112,6 +138,77 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
         dico["planets"] = self.nb_planets
         # dico["parametrisation"] = self.parametrisation
         return dico
+
+    ##############################################
+    ## Dealing with the model parametrisation file
+    ##############################################
+
+    def get_model_paramfile_section(self):
+        """Return the text for the model parametrisation file.
+
+        If you set has_model_paramfile in the Subclass, you need to overwrite this method
+        """
+        text = """
+        # Orbital models
+        orbital_model = {orbital_model}
+        """
+        text = dedent(text)  # Remove undesired indentation
+
+        # Create some of the easy content of the file
+        tab_orbmod = spacestring_like("orbital_model = ")
+        #
+        # Fill the whole text_LC_param string
+        text = text.format(orbital_model=pformat(self.orbital_model, compact=True).replace("\n", f"\n{tab_orbmod}"))
+
+        return text
+
+    def load_config_model(self, dico_config):
+        """Load the content of the model parametrisation file.
+
+        If you set has_model_paramfile in the Subclass, you need to overwrite this method
+        """
+        dict_name = "orbital_model"
+
+        if dict_name not in dico_config:
+            raise ValueError(f"In file {self.paramfile_model}: Missing {dict_name} dictionary.")
+        dico_model = dico_config[dict_name]
+        for planet in self.planets.values():
+            planet_name = planet.get_name()
+            # Check that there is a key for each planet
+            if planet_name not in dico_model:
+                raise ValueError(f"In file {self.paramfile_model}: Dictionary {dict_name} is missing a key for planet {planet_name}.")
+            # Check that there is the required keys in each planet dictionary
+            for key in ["model_definitions", "model4instrument"]:
+                if key not in dico_model[planet_name]:
+                    raise ValueError(f"In file {self.paramfile_model}: Dictionary {dict_name}[{planet_name}] is missing the '{key}' key.")
+            # Check that the name of all the LC and RV instruments are all there and associated to an existing model
+            l_model = list(dico_model[planet_name]["model_definitions"].keys())
+            for InstCat_Model in [LC_InstCat_Model, RV_InstCat_Model]:
+                if InstCat_Model.inst_cat in self.inst_categories:
+                    for inst_mod_obj in self.get_instmodel_objs(inst_fullcat=InstCat_Model.inst_cat):
+                        if inst_mod_obj.full_name not in dico_model[planet_name]["model4instrument"]:
+                            raise ValueError(f"In file {self.paramfile_model}: Dictionary {dict_name}['{planet_name}']['model4instrument'] is missing the '{inst_mod_obj.full_name}' key.")
+                        if dico_model[planet_name]["model4instrument"][inst_mod_obj.full_name] not in l_model:
+                            raise ValueError(f"In file {self.paramfile_model}: In {dict_name} for planet {planet_name}, {inst_mod_obj.full_name} is associated to model {dico_model[planet_name]['model4instrument'][inst_mod_obj.full_name]} which is not defined in {dict_name}['{planet_name}']['model_definitions'].")
+            # Check the different model defined are correct
+            for model_comp_name, model_comp_dict in dico_model[planet_name]["model_definitions"].items():
+                l_key_mandatory = ["model", "new_parameter"]
+                if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
+                    raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}) the keys of transit_model {model_comp_name} should be {l_key_mandatory}.")
+                if model_comp_dict['model'] not in self._orbital_models:
+                    raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available transit model.")
+                l_new_parameter_key = ['P', 'tic', 'ecc_and_omega', 'inc']
+                if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
+                    raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
+                for new_parameter_key in l_new_parameter_key:
+                    if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_model[planet_name]["model_definitions"]):
+                        raise ValueError(f"In file {self.paramfile_model}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_model[planet_name]['model_definitions'].keys())}).")
+            # Load the orbital model configuration for the planet
+            self.orbital_model[planet_name] = dico_model[planet_name]
+
+    ##########################################
+    ## Dealing with Stars and planet instances
+    ##########################################
 
     def add_a_star(self, name=None, kwargs_getname_4_storename={"include_prefix": False, "code_version": True},
                    kwargs_getname_4_codename={"include_prefix": False, "code_version": True}):

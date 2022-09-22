@@ -77,17 +77,24 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def __init__(self, model_instance):
         super(LC_InstCat_Model, self).__init__(model_instance=model_instance)
         defaultmodel4instrument_dict = {instmod_obj.full_name: '' for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)}
+        defaultlistmodel4instrument_dict = {instmod_obj.full_name: ['', ] for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)}
         self.transit_model = {planet.get_name(): {"do": True,
                                                   "model4instrument": defaultmodel4instrument_dict.copy(),
-                                                  "model_definitions": {'': {"model": "batman"}, },
+                                                  "model_definitions": {'': {"model": "batman", 'orbital_model': '', 'new_parameter': {'Rrat': True}, }, },
                                                   }
                               for planet in self.model_instance.planets.values()
                               }
         self.phasecurve_model = {planet.get_name(): {"do": False,
-                                                     "model_definitions": {'': {"model": "spiderman",
-                                                                                "args": {"ModelParams_kwargs": {"brightness_model": "zhang", },
-                                                                                         "attributes": {}
+                                                     "model4instrument": defaultlistmodel4instrument_dict.copy(),
+                                                     "model_definitions": {'': {"model": "sincos",
+                                                                                "args": {'sincos': 'cos',
+                                                                                         'factor_period': 1,
+                                                                                         'flux_offset': 'param',
+                                                                                         'phase_offset': 'param',
+                                                                                         'occultation': True
                                                                                          },
+                                                                                'orbital_model': '',
+                                                                                'new_parameter': {'amp': True, 'flux_offset': True, 'phase_offset': True},
                                                                                 },
                                                                            },
                                                      }
@@ -95,7 +102,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                                  }
         self.occultation_model = {planet.get_name(): {"do": False,
                                                       "model4instrument": defaultmodel4instrument_dict.copy(),
-                                                      "model_definitions": {'': {"model": "batman"}, },
+                                                      "model_definitions": {'': {"model": "batman", 'orbital_model': '', }, },
                                                       }
                                   for planet in self.model_instance.planets.values()
                                   }
@@ -329,11 +336,19 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             planet_name = planet.get_name()
             if dico_config["transit_model"][planet_name]["do"]:
                 for model_comp_name, model_comp_dict in dico_config["transit_model"][planet_name]["model_definitions"].items():
-                    l_key_mandatory = ["model", ]
+                    l_key_mandatory = ['model', 'orbital_model', 'new_parameter']
                     if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of transit_model {model_comp_name} should be {l_key_mandatory}.")
+                    if model_comp_dict['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the provided orbital model {model_comp_dict['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
                     if model_comp_dict['model'] not in self._transit_models:
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available transit model.")
+                    l_new_parameter_key = ['Rrat', ]
+                    if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
+                    for new_parameter_key in l_new_parameter_key:
+                        if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["transit_model"][planet_name]["model_definitions"]):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['transit_model'][planet_name]['model_definitions'].keys())}).")
                 self.transit_model[planet_name] = dico_config["transit_model"][planet_name]
 
         # Check and load the phasecurve_model dictionary
@@ -341,9 +356,13 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             planet_name = planet.get_name()
             if dico_config["phasecurve_model"][planet_name]["do"]:
                 for model_comp_name, model_comp_dict in dico_config["phasecurve_model"][planet_name]["model_definitions"].items():
-                    l_key_mandatory = ["model", "args"]
+                    l_key_mandatory = ["model", "args", 'orbital_model']
+                    if model_comp_dict['model'] == "sincos":
+                        l_key_mandatory += ['new_parameter', ]
                     if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name} should be {l_key_mandatory}.")
+                    if model_comp_dict['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the provided orbital model {model_comp_dict['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
                     if model_comp_dict['model'] not in self._phasecurve_models:
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available phasecurve model.")
                     if model_comp_dict['model'] == "spiderman":
@@ -357,25 +376,25 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
                             raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
                     elif model_comp_dict['model'] == "sincos":
-                        l_key_mandatory_pcmod = ['new_parameter', ]
-                        if not(set(l_key_mandatory_pcmod) == set(model_comp_dict.keys())):
-                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name} should include {l_key_mandatory_pcmod}.")
                         l_arg_mand_sp = ["sincos", "factor_period", "flux_offset", 'phase_offset', 'occultation']
-                        for key_harm, harm_dict in model_comp_dict['args'].items():
-                            if "sincos" not in harm_dict:
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) 'sincos' is a mandatory key of phasecurve_model {model_comp_name}['args'] (comp {key_harm}).")
-                            if (harm_dict["sincos"] is not None) and not(set(l_arg_mand_sp) == set(harm_dict.keys())):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] (comp {key_harm}) should be {l_arg_mand_sp}.")
-                            if not(harm_dict["sincos"] in [None, 'sin', 'cos']):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'] comp {key_harm}, 'sincos' should be in [None, 'sin', 'cos'].")
-                            if not(isinstance(harm_dict["factor_period"], float) or isinstance(harm_dict["factor_period"], int)):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'] comp {key_harm}, 'factor_period' should be a float or an int.")
-                            if not(harm_dict["flux_offset"] in ['zero', 'semi-amplitude', 'param']):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'] comp {key_harm}, 'average' should be in ['zero', 'semi-amplitude'].")
-                            if not(isinstance(harm_dict["phase_offset"], float) or isinstance(harm_dict["phase_offset"], int) or (harm_dict["phase_offset"] == 'param')):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'] comp {key_harm}, 'phase_offset' should be a float or an int or be equal to 'param'.")
-                            if not(isinstance(harm_dict["occultation"], bool)):
-                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'] comp {key_harm}, 'occultation' should be a boolean.")
+                        if not(set(l_arg_mand_sp) == set(model_comp_dict['args'].keys())):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of phasecurve_model {model_comp_name}['args'] should be {l_arg_mand_sp}.")
+                        if not(model_comp_dict['args']["sincos"] in [None, 'sin', 'cos']):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'sincos' should be in [None, 'sin', 'cos'].")
+                        if not(isinstance(model_comp_dict['args']["factor_period"], float) or isinstance(model_comp_dict['args']["factor_period"], int)):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'factor_period' should be a float or an int.")
+                        if not(model_comp_dict['args']["flux_offset"] in ['zero', 'semi-amplitude', 'param']):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'average' should be in ['zero', 'semi-amplitude'].")
+                        if not(isinstance(model_comp_dict['args']["phase_offset"], float) or isinstance(model_comp_dict['args']["phase_offset"], int) or (model_comp_dict['args']["phase_offset"] == 'param')):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'phase_offset' should be a float or an int or be equal to 'param'.")
+                        if not(isinstance(model_comp_dict['args']["occultation"], bool)):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) phasecurve_model {model_comp_name}['args'], 'occultation' should be a boolean.")
+                        l_new_parameter_key = ['amp', 'flux_offset', 'phase_offset']
+                        if not(set(l_new_parameter_key) == set(model_comp_dict['new_parameter'].keys())):
+                            raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the keys of the 'new_parameter' dictionary should be {l_new_parameter_key}.")
+                        for new_parameter_key in l_new_parameter_key:
+                            if (model_comp_dict['new_parameter'][new_parameter_key] is not True) and (model_comp_dict['new_parameter'][new_parameter_key] not in dico_config["phasecurve_model"][planet_name]["model_definitions"]):
+                                raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the value of {new_parameter_key} in the 'new_parameter' dictionary should be True or the name of another model (current model names are {list(dico_config['phasecurve_model'][planet_name]['model_definitions'].keys())}).")
                     else:
                         logger.warning(f"Checking the content of the phasecurve dictionary for the phasecurve model {model_comp_dict['model']} is not implemented.")
                 self.phasecurve_model[planet_name] = dico_config["phasecurve_model"][planet_name]
@@ -385,9 +404,11 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             planet_name = planet.get_name()
             if dico_config["occultation_model"][planet_name]["do"]:
                 for model_comp_name, model_comp_dict in dico_config["occultation_model"][planet_name]["model_definitions"].items():
-                    l_key_mandatory = ["model", ]
+                    l_key_mandatory = ["model", 'orbital_model']
                     if not(set(l_key_mandatory) == set(model_comp_dict.keys())):
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}) the keys of occultation_model {model_comp_name} should be {l_key_mandatory}.")
+                    if model_comp_dict['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
+                        raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) the provided orbital model {model_comp_dict['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
                     if model_comp_dict['model'] not in self._occultation_models:
                         raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, model {model_comp_name}) {model_comp_dict['model']} is not an available phasecurve model.")
                 self.occultation_model[planet_name] = dico_config["occultation_model"][planet_name]

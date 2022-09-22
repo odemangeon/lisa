@@ -18,9 +18,7 @@ from ..gravgroup.limb_darkening import Manager_LD  # , CoreLD
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ...dataset_and_instrument.rv import RV_inst_cat
 
-
 # from pdb import set_trace
-
 
 ## Logger object
 logger = getLogger()
@@ -34,6 +32,9 @@ class GravGroupDyn(GravGroupDyn_Parametrisation, GravGroup):  # GravGroupDyn_Par
 
     ## Model category string
     __category__ = "GravitionalGroupsDynamic"
+
+    ## Does the model requires a model parametrisation file
+    __has_model_paramfile__ = False
 
     ## Set of possible instrument categories
     __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat}

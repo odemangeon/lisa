@@ -55,7 +55,8 @@ class RV_InstCat_Model(Core_InstCat_Model):
     def __init__(self, model_instance):
         super(RV_InstCat_Model, self).__init__(model_instance=model_instance)
         self.rv_model = {planet.get_name(): {"do": True,
-                                             "model": "radvel"
+                                             "model": "radvel",
+                                             'orbital_model': '',
                                              }
                          for planet in self.model_instance.planets.values()
                          }
@@ -171,11 +172,16 @@ class RV_InstCat_Model(Core_InstCat_Model):
                     raise ValueError(f"In file {self.paramfile_instcat}: {dict_name}[{planet_name}]['do'] has to be a boolean.")
             if dico_model[planet_name]['do']:
                 # Check that there is a key each planet dictionary
-                key = "model"
-                if key not in dico_model[planet_name]:
-                    raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the '{key}' key.")
+                l_key_mandatory = ['model', 'orbital_model']
+                for key in l_key_mandatory:
+                    if key not in dico_model[planet_name]:
+                        raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the '{key}' key.")
                 # Check and load the rv_model dictionary
-                # TODO?: Make checks on the content of each model in 'model_definitions'
+                if dico_model[planet_name]['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
+                    raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, keplerian model) the provided orbital model {dico_model[planet_name]['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
+                if dico_model[planet_name]['model'] not in self._rv_models:
+                    raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] the model specifief '{dico_model[planet_name]['model']}' is not a valid keplerian model. Should be in {self._rv_models}")
+                # Load the rv_model for the planet
                 self.rv_model[planet_name] = dico_config["keplerian_rv_model"][planet_name]
 
         # Check and load the polynomial models
