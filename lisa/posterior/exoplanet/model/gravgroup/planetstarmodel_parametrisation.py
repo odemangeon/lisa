@@ -46,12 +46,13 @@ class Core_PlanetStarModels_1model4allinst(metaclass=MandatoryReadOnlyAttr):
         self._models_config = self._init_model_config(default_do=default_do)
         self._define_default_model(default_model_category=default_model_category)
 
-    def __str__(self):
+    @property
+    def dict2print(self):
         """Used to print the content in the parametrisation file."""
-        dict2print = deepcopy(self._models_config)
+        dict2print = self._models_config.copy()
         for planet_name in dict2print:
             dict2print[planet_name]['model'] = dict2print[planet_name]['model'].dict2print
-        return pformat(dict2print, compact=True)
+        return dict2print
 
     def load_config(self, dico_config):
         """Load the content of the configuration dictionary read from the parametrisation file
@@ -247,13 +248,14 @@ class Core_PlanetStarModels_lmodel1inst(Core_PlanetStarModels_1model4allinst):
                                                                 orbital_models=orbital_models, default_do=default_do
                                                                 )
 
-    def __str__(self):
+    @property
+    def dict2print(self):
         """Used to print the content in the parametrisation file."""
-        dict2print = deepcopy(self._models_config)
+        dict2print = self._models_config.copy()
         for planet_name in dict2print:
             for model_name in dict2print[planet_name]['model_definitions']:
                 dict2print[planet_name]['model_definitions'][model_name] = dict2print[planet_name]['model_definitions'][model_name].dict2print
-        return pformat(dict2print, compact=True)
+        return dict2print
 
     def load_config(self, dico_config):
         """Load the content of the configuration dictionary read from the parameter file

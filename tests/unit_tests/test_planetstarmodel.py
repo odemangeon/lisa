@@ -8,6 +8,7 @@ from logging import getLogger, StreamHandler, Formatter
 from logging import DEBUG, INFO
 from sys import stdout
 import importlib
+from pprint import pformat
 
 from lisa.posterior.exoplanet.model.celestial_bodies import Planet, Star
 
@@ -201,7 +202,7 @@ class TestMethods(TestCase):
                                        )
         logger.info("test_creation_done")
         print(f"orbital_models.__repr__ = {orbital_models!r}")
-        print(f"orbital_models = {orbital_models}")
+        print(f"orbital_models = {pformat(orbital_models, compact=True)}")
         logger.info("Check of the __repr__ and __str__ done")
         self.assertTrue(orbital_models.get_do(planet_name="b"))
         self.assertTrue(orbital_models.get_do(planet_name="c"))
@@ -223,6 +224,8 @@ class TestMethods(TestCase):
             self.assertTrue(self.l_planet[i_planet].esinw.main)
             self.assertTrue(self.l_planet[i_planet].cosinc.main)
             logger.info(f"Check that the param are main for the planet {i_planet} model OrbitalModelBatman param use_aR False Done.")
+        parametersb = orbital_model_planetb.get_parameters(inst_model_fullname='LC_CHEOPS_inst0', object_category=None)
+        logger.info("Check the get_parameters function runs without error Done.")
         orbital_models.load_config(dico_config=self.dico_config_orbital_models)
         logger.info("Check the load_config function runs without error Done.")
         orbital_model_planetb1 = orbital_models.get_model(planet_name="b", inst_model_fullname='LC_CHEOPS_inst1')
@@ -246,7 +249,7 @@ class TestMethods(TestCase):
         keplerian_models = RVKeplerianModels(l_planet=self.l_planet, host_star=self.host_star, orbital_models=orbital_models)
         logger.info("test_creation_done")
         print(f"keplerian_models.__repr__ = {keplerian_models!r}")
-        print(f"keplerian_models = {keplerian_models}")
+        print(f"keplerian_models = {pformat(keplerian_models, compact=True)}")
         logger.info("Check of the __repr__ and __str__ done")
         self.assertTrue(keplerian_models.get_do(planet_name="b"))
         self.assertTrue(keplerian_models.get_do(planet_name="c"))
@@ -279,6 +282,9 @@ class TestMethods(TestCase):
         self.assertTrue(self.l_planet[1].esinw.main)
         self.assertFalse(self.l_planet[1].cosinc.main)
         logger.info(f"Check that the param are main for the planet {1} model RVKeplerianModelRadvel Done.")
+        parametersb = keplerian_model_planetb.get_parameters(inst_model_fullname='RV_ESPRESSO_inst', object_category=None)
+        print(parametersb)
+        logger.info("Check the get_parameters function runs without error Done.")
         keplerian_models.load_config(dico_config=self.dico_config_rvkeplerian_models)
         keplerian_model_planetb = keplerian_models.get_model(planet_name="b")
         keplerian_model_planetb.create_parameters_and_set_main(inst_model_fullname='RV_ESPRESSO_inst')
@@ -314,7 +320,7 @@ class TestMethods(TestCase):
                                        )
         logger.info("test_creation_done")
         print(f"transit_models.__repr__ = {transit_models!r}")
-        print(f"transit_models = {transit_models}")
+        print(f"transit_models = {pformat(transit_models, compact=True)}")
         logger.info("Check of the __repr__ and __str__ done")
         self.assertTrue(transit_models.get_do(planet_name="b"))
         self.assertTrue(transit_models.get_do(planet_name="c"))
@@ -387,7 +393,7 @@ class TestMethods(TestCase):
                                                )
         logger.info("test_creation_done")
         print(f"occultation_models.__repr__ = {occultation_models!r}")
-        print(f"occultation_models = {occultation_models}")
+        print(f"occultation_models = {pformat(occultation_models, compact=True)}")
         logger.info("Check of the __repr__ and __str__ done")
         self.assertFalse(occultation_models.get_do(planet_name="b"))
         self.assertFalse(occultation_models.get_do(planet_name="c"))
@@ -466,7 +472,7 @@ class TestMethods(TestCase):
                                              )
         logger.info("test_creation_done")
         print(f"phasecurve_models.__repr__ = {phasecurve_models!r}")
-        print(f"phasecurve_models = {phasecurve_models}")
+        print(f"phasecurve_models = {pformat(phasecurve_models, compact=True)}")
         logger.info("Check of the __repr__ and __str__ done")
         self.assertFalse(phasecurve_models.get_do(planet_name="b"))
         self.assertFalse(phasecurve_models.get_do(planet_name="c"))

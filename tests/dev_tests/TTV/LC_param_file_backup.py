@@ -6,30 +6,25 @@
 # Which model do you want to use for the transit ?
 transit_model = {'b': {'do': True,
                        'model4instrument': {'LC_CHEOPS_inst0': '',
-                                            'LC_CHEOPS_inst1': '1',
-                                            'LC_CHEOPS_inst2': '2',
-                                            'LC_CHEOPS_inst3': '3',
-                                            'LC_CHEOPS_inst4': '4'},
-                       'model_definitions': {'': {'model': 'batman', 'orbital_model': '0', 'new_parameter': {'Rrat': True}, },
-                                             '1': {'model': 'batman', 'orbital_model': '1', 'new_parameter': {'Rrat': '0'}, },
-                                             '2': {'model': 'batman', 'orbital_model': '2', 'new_parameter': {'Rrat': '0'}, },
-                                             '3': {'model': 'batman', 'orbital_model': '3', 'new_parameter': {'Rrat': '0'}, },
-                                             '4': {'model': 'batman', 'orbital_model': '4', 'new_parameter': {'Rrat': '0'}, },
-                                             }
-                       }
-                 }
+                                            'LC_CHEOPS_inst1': '',
+                                            'LC_CHEOPS_inst2': '',
+                                            'LC_CHEOPS_inst3': '',
+                                            'LC_CHEOPS_inst4': ''},
+                       'model_definitions': {'': {'category': 'batman',
+                                                  'param_extensions': {'planet': {'Rrat': ''},
+                                                                       'star': {}}}}}}
 
 # Limb-darkening.
 # Associate LC instrument models with LD param containers.
 # Available limb-darkening models are:
 # ['quadratic', 'nonlinear', 'exponential', 'logarithmic', 'squareroot', 'linear', 'uniform', 'custom']
-LDs = {'A': {'LC_CHEOPS_inst0': 'default',
-             'LC_CHEOPS_inst1': 'default',
-             'LC_CHEOPS_inst2': 'default',
-             'LC_CHEOPS_inst3': 'default',
-             'LC_CHEOPS_inst4': 'default',
+LDs = {'A': {'LC_CHEOPS_inst0': 'LD',
+             'LC_CHEOPS_inst1': 'LD',
+             'LC_CHEOPS_inst2': 'LD',
+             'LC_CHEOPS_inst3': 'LD',
+             'LC_CHEOPS_inst4': 'LD',
 
-             'LD_models': {'default': 'quadratic'}
+             'LD_models': {'LD': 'nonlinear'}
              }
        }
 
@@ -43,10 +38,21 @@ SuperSamps = {'LC_CHEOPS_inst0': {'supersamp': 1, 'exptime': 0.02043402778},
 
 # Which model do you want to use for the phase curve ?
 phasecurve_model = {'b': {'do': False,
-                          'model_definitions': {'': {'args': {'ModelParams_kwargs': {'brightness_model': 'zhang'},
-                                                              'attributes': {}},
-                                                     'model': 'spiderman',
-                                                     'orbital_model': ''}}}}
+                          'model4instrument': {'LC_CHEOPS_inst0': [''],
+                                               'LC_CHEOPS_inst1': [''],
+                                               'LC_CHEOPS_inst2': [''],
+                                               'LC_CHEOPS_inst3': [''],
+                                               'LC_CHEOPS_inst4': ['']},
+                          'model_definitions': {'': {'args': {'factor_period': 1,
+                                                              'flux_offset': 'param',
+                                                              'occultation': True,
+                                                              'phase_offset': 'param',
+                                                              'sincos': 'cos'},
+                                                     'category': 'sincos',
+                                                     'param_extensions': {'planet': {'A': '',
+                                                                                     'Foffset': '',
+                                                                                     'Phi': ''},
+                                                                          'star': {}}}}}}
 
 # Which model do you want to use for the occultation ?
 # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
@@ -56,7 +62,10 @@ occultation_model = {'b': {'do': False,
                                                 'LC_CHEOPS_inst2': '',
                                                 'LC_CHEOPS_inst3': '',
                                                 'LC_CHEOPS_inst4': ''},
-                           'model_definitions': {'': {'model': 'batman', 'orbital_model': ''}}}}
+                           'model_definitions': {'': {'category': 'batman',
+                                                      'param_extensions': {'planet': {'Frat': '',
+                                                                                      'Rrat': ''},
+                                                                           'star': {}}}}}}
 
 # Polynomial trends
 polynomial_model = {'A': {'do': False, 'order': 0, 'tref': None},
@@ -103,8 +112,188 @@ decorrelation_model = {'LC_CHEOPS_inst0': {'do': False,
                        'LC_CHEOPS_inst4': {'do': False,
                                            'what to decorrelate': {'add_2_totalflux': {'linear': {}},
                                                                    'multiply_2_totalflux': {'linear': {}}}}}
-decorrelation_likelihood = {'LC_CHEOPS_inst0': {'bispline': {}, 'do': False, 'order': [], 'spline': {}},
-                            'LC_CHEOPS_inst1': {'bispline': {}, 'do': False, 'order': [], 'spline': {}},
-                            'LC_CHEOPS_inst2': {'bispline': {}, 'do': False, 'order': [], 'spline': {}},
-                            'LC_CHEOPS_inst3': {'bispline': {}, 'do': False, 'order': [], 'spline': {}},
-                            'LC_CHEOPS_inst4': {'bispline': {}, 'do': False, 'order': [], 'spline': {}}}
+decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True, 'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                'bispline': {'XY0': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                     'quantity': 'raw',
+                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                     'match datasets': {'LC_WASP-76_CHEOPS_10': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_10',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_10'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_11': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_11',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_11'
+                                                                                                                 },
+                                                                                        }
+                                                                     },
+                                                             },
+                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                    'spline_type': 'UnivariateSpline',
+                                                                                    'spline_kwargs': {'k': 3, },
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-ROLL_WASP-76_CHEOPS_10',
+                                                                                                       'LC_WASP-76_CHEOPS_11': 'IND-ROLL_WASP-76_CHEOPS_11',
+                                                                                                       'LC_WASP-76_CHEOPS_12': 'IND-ROLL_WASP-76_CHEOPS_12',
+                                                                                                       'LC_WASP-76_CHEOPS_13': 'IND-ROLL_WASP-76_CHEOPS_13',
+                                                                                                       'LC_WASP-76_CHEOPS_14': 'IND-ROLL_WASP-76_CHEOPS_14',
+                                                                                                       }
+                                                                                    },
+                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                                                   'spline_type': 'UnivariateSpline',
+                                                                                   'spline_kwargs': {'k': 3, },
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-BKG_WASP-76_CHEOPS_10', }
+                                                                                   },
+                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
+                                                                                  'spline_type': 'UnivariateSpline',
+                                                                                  'spline_kwargs': {'k': 3, },
+                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-TF_WASP-76_CHEOPS_10', }
+                                                                                  },
+                                                           }},
+                            'LC_CHEOPS_inst1': {'do': True, 'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                'bispline': {'XY0': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                     'quantity': 'raw',
+                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                     'match datasets': {'LC_WASP-76_CHEOPS_10': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_10',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_10'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_11': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_11',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_11'
+                                                                                                                 },
+                                                                                        }
+                                                                     },
+                                                             },
+                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                    'spline_type': 'UnivariateSpline',
+                                                                                    'spline_kwargs': {'k': 3, },
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-ROLL_WASP-76_CHEOPS_10',
+                                                                                                       'LC_WASP-76_CHEOPS_11': 'IND-ROLL_WASP-76_CHEOPS_11',
+                                                                                                       'LC_WASP-76_CHEOPS_12': 'IND-ROLL_WASP-76_CHEOPS_12',
+                                                                                                       'LC_WASP-76_CHEOPS_13': 'IND-ROLL_WASP-76_CHEOPS_13',
+                                                                                                       'LC_WASP-76_CHEOPS_14': 'IND-ROLL_WASP-76_CHEOPS_14',
+                                                                                                       }
+                                                                                    },
+                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                                                   'spline_type': 'UnivariateSpline',
+                                                                                   'spline_kwargs': {'k': 3, },
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_11': 'IND-BKG_WASP-76_CHEOPS_11', }
+                                                                                   },
+                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
+                                                                                  'spline_type': 'UnivariateSpline',
+                                                                                  'spline_kwargs': {'k': 3, },
+                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_11': 'IND-TF_WASP-76_CHEOPS_11', }
+                                                                                  },
+                                                           }},
+                            'LC_CHEOPS_inst2': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                     'quantity': 'raw',
+                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                     'match datasets': {'LC_WASP-76_CHEOPS_12': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_12',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_12'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_13': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_13',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_13'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_14': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_14',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_14'
+                                                                                                                 },
+                                                                                        }
+                                                                     },
+                                                             },
+                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                    'spline_type': 'UnivariateSpline',
+                                                                                    'spline_kwargs': {'k': 3, },
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-ROLL_WASP-76_CHEOPS_10',
+                                                                                                       'LC_WASP-76_CHEOPS_11': 'IND-ROLL_WASP-76_CHEOPS_11',
+                                                                                                       'LC_WASP-76_CHEOPS_12': 'IND-ROLL_WASP-76_CHEOPS_12',
+                                                                                                       'LC_WASP-76_CHEOPS_13': 'IND-ROLL_WASP-76_CHEOPS_13',
+                                                                                                       'LC_WASP-76_CHEOPS_14': 'IND-ROLL_WASP-76_CHEOPS_14',
+                                                                                                       }
+                                                                                    },
+                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                                                   'spline_type': 'UnivariateSpline',
+                                                                                   'spline_kwargs': {'k': 3, },
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_12': 'IND-BKG_WASP-76_CHEOPS_12', }
+                                                                                   },
+                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
+                                                                                  'spline_type': 'UnivariateSpline',
+                                                                                  'spline_kwargs': {'k': 3, },
+                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_12': 'IND-TF_WASP-76_CHEOPS_12', }
+                                                                                  },
+                                                           }},
+                            'LC_CHEOPS_inst3': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                     'quantity': 'raw',
+                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                     'match datasets': {'LC_WASP-76_CHEOPS_12': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_12',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_12'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_13': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_13',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_13'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_14': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_14',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_14'
+                                                                                                                 },
+                                                                                        }
+                                                                     },
+                                                             },
+                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                    'spline_type': 'UnivariateSpline',
+                                                                                    'spline_kwargs': {'k': 3, },
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-ROLL_WASP-76_CHEOPS_10',
+                                                                                                       'LC_WASP-76_CHEOPS_11': 'IND-ROLL_WASP-76_CHEOPS_11',
+                                                                                                       'LC_WASP-76_CHEOPS_12': 'IND-ROLL_WASP-76_CHEOPS_12',
+                                                                                                       'LC_WASP-76_CHEOPS_13': 'IND-ROLL_WASP-76_CHEOPS_13',
+                                                                                                       'LC_WASP-76_CHEOPS_14': 'IND-ROLL_WASP-76_CHEOPS_14',
+                                                                                                       }
+                                                                                    },
+                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                                                   'spline_type': 'UnivariateSpline',
+                                                                                   'spline_kwargs': {'k': 3, },
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_13': 'IND-BKG_WASP-76_CHEOPS_13', }
+                                                                                   },
+                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
+                                                                                  'spline_type': 'UnivariateSpline',
+                                                                                  'spline_kwargs': {'k': 3, },
+                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_13': 'IND-TF_WASP-76_CHEOPS_13', }
+                                                                                  },
+                                                           }},
+                            'LC_CHEOPS_inst4': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
+                                                                     'quantity': 'raw',
+                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                     'match datasets': {'LC_WASP-76_CHEOPS_12': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_12',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_12'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_13': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_13',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_13'
+                                                                                                                 },
+                                                                                        'LC_WASP-76_CHEOPS_14': {'IND-CX_CHEOPS_inst': 'IND-CX_WASP-76_CHEOPS_14',
+                                                                                                                 'IND-CY_CHEOPS_inst': 'IND-CY_WASP-76_CHEOPS_14'
+                                                                                                                 },
+                                                                                        }
+                                                                     },
+                                                             },
+                                                'spline': {'IND-ROLL_CHEOPS_inst': {'quantity': 'raw',
+                                                                                    'spline_type': 'UnivariateSpline',
+                                                                                    'spline_kwargs': {'k': 3, },
+                                                                                    'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-ROLL_WASP-76_CHEOPS_10',
+                                                                                                       'LC_WASP-76_CHEOPS_11': 'IND-ROLL_WASP-76_CHEOPS_11',
+                                                                                                       'LC_WASP-76_CHEOPS_12': 'IND-ROLL_WASP-76_CHEOPS_12',
+                                                                                                       'LC_WASP-76_CHEOPS_13': 'IND-ROLL_WASP-76_CHEOPS_13',
+                                                                                                       'LC_WASP-76_CHEOPS_14': 'IND-ROLL_WASP-76_CHEOPS_14',
+                                                                                                       }
+                                                                                    },
+                                                           'IND-BKG_CHEOPS_inst': {'quantity': 'raw',
+                                                                                   'spline_type': 'UnivariateSpline',
+                                                                                   'spline_kwargs': {'k': 3, },
+                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_14': 'IND-BKG_WASP-76_CHEOPS_14', }
+                                                                                   },
+                                                           'IND-TF_CHEOPS_inst': {'quantity': 'raw',
+                                                                                  'spline_type': 'UnivariateSpline',
+                                                                                  'spline_kwargs': {'k': 3, },
+                                                                                  'match datasets': {'LC_WASP-76_CHEOPS_14': 'IND-TF_WASP-76_CHEOPS_14', }
+                                                                                  },
+                                                           }},
+                            }

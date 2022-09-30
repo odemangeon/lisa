@@ -112,10 +112,27 @@ class Core_PlanetStarModel(metaclass=MandatoryReadOnlyAttr):
             parameters[obj_cat] = {}
             l_param_basename = self._get_l_parameter_basename(inst_model_fullname=inst_model_fullname, object_category=obj_cat)
             for param_basename in l_param_basename:
-                parameters[param_basename] = self._get_parameter(param_basename=param_basename, inst_model_fullname=inst_model_fullname,
-                                                                 object_category=obj_cat
-                                                                 )
+                parameters[obj_cat][param_basename] = self._get_parameter(param_basename=param_basename, inst_model_fullname=inst_model_fullname,
+                                                                          object_category=obj_cat
+                                                                          )
         return parameters
+
+    def get_orbital_model(self, inst_model_fullname):
+        """Get the OrbitalModel instance associated to the instrument model
+
+        This function will be used when producing the datasimulator to get the proper parameters
+
+        Arguments
+        ---------
+        inst_model_fullname : str
+
+        Return
+        ------
+        orbital_model : Subclass of Core_PlanetStarModel (OrbitalModel)
+        """
+        if not(self.with_orbital_models):
+            raise ValueError("The model does not possible orbital models")
+        return self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
 
     #################################################################
     # Functions required directly or indirectly be the main functions
@@ -240,6 +257,7 @@ class Core_PlanetStarModel(metaclass=MandatoryReadOnlyAttr):
 
     def _get_parameter(self, param_basename, inst_model_fullname, object_category):
         """Return the parameter"""
+        object_category = self._find_object_category(param_basename=param_basename, inst_model_fullname=inst_model_fullname)
         if param_basename not in self._get_l_parameter_basename(inst_model_fullname=inst_model_fullname, object_category=object_category):
             raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for instrument model {inst_model_fullname} and object category {object_category} ")
         if object_category in ['planet', 'star']:

@@ -27,7 +27,7 @@ transit_model = {'b': {'do': False,
                                             'LC_CHEOPS_inst9': ''},
                        'model_definitions': {'': {'model': 'batman',
                                                   'new_parameter': {'Rrat': True},
-                                                  'orbital_model': ''}}}}
+                                                  }}}}
 
 # Limb-darkening.
 # Associate LC instrument models with LD param containers.
@@ -114,7 +114,6 @@ phasecurve_model = {'b': {'do': True,
                                                      'new_parameter': {'amp': True,
                                                                        'flux_offset': True,
                                                                        'phase_offset': True},
-                                                     'orbital_model': ''
                                                      },
                                                 '1': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -127,7 +126,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '2': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -140,7 +138,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '3': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -153,7 +150,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '4': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -166,7 +162,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '5': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -179,7 +174,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '6': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -192,7 +186,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '7': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -205,7 +198,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '8': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -218,7 +210,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '9': {'args': {'factor_period': 1,
                                                                'flux_offset': 'zero',
@@ -231,7 +222,6 @@ phasecurve_model = {'b': {'do': True,
                                                                         'flux_offset': '',
                                                                         'phase_offset': ''
                                                                         },
-                                                      'orbital_model': ''
                                                       },
                                                 '10': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -244,7 +234,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '11': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -257,7 +246,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '12': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -270,7 +258,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '13': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -283,7 +270,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '14': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -296,7 +282,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '15': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -309,7 +294,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '16': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -322,7 +306,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '17': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -335,7 +318,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '18': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -348,7 +330,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 '19': {'args': {'factor_period': 1,
                                                                 'flux_offset': 'zero',
@@ -361,7 +342,6 @@ phasecurve_model = {'b': {'do': True,
                                                                          'flux_offset': '',
                                                                          'phase_offset': ''
                                                                          },
-                                                       'orbital_model': ''
                                                        },
                                                 }
                           }
@@ -390,7 +370,7 @@ occultation_model = {'b': {'do': False,
                                                 'LC_CHEOPS_inst7': '',
                                                 'LC_CHEOPS_inst8': '',
                                                 'LC_CHEOPS_inst9': ''},
-                           'model_definitions': {'': {'model': 'batman', 'orbital_model': ''}}}}
+                           'model_definitions': {'': {'model': 'batman'}}}}
 
 # Polynomial trends
 polynomial_model = {'A': {'do': False, 'order': 0, 'tref': None},

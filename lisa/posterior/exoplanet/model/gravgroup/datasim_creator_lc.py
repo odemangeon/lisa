@@ -740,7 +740,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     ##############################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if transit_model[planet_name]['do']:
+        if transit_model.get_do(planet_name=planet_name):
             ########################################################################
             # Define the functions to populate and initialise entries in the outputs
             ########################################################################
@@ -783,17 +783,17 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
             # Add the parameters required for the model for all instruments
             ###############################################################
             # Add rhostar if needed
-            if parametrisation == "Multis":
-                for func_shortname in l_function_shortname_4_planet:
-                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-
-            # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
-            l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-            if parametrisation != "Multis":
-                l_param.append(planet.aR)
-            for param in l_param:
-                for func_shortname in l_function_shortname_4_planet:
-                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+            # if parametrisation == "Multis":
+            #     for func_shortname in l_function_shortname_4_planet:
+            #         function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+            #
+            # # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
+            # l_param = [planet.Rrat, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
+            # if parametrisation != "Multis":
+            #     l_param.append(planet.aR)
+            # for param in l_param:
+            #     for func_shortname in l_function_shortname_4_planet:
+            #         function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
 
             ####################################################################
             # Do the Model for each planet and each instrument and each function
@@ -806,13 +806,12 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                     ####################################################################################
                     # Get the transit model implementation definition for the planet and the instrument
                     ####################################################################################
-                    model_definition_name = transit_model[planet_name]['model4instrument'][instmod.full_name]
-                    transit_model_pl_inst = transit_model[planet_name]['model_definitions'][model_definition_name]
+                    model_definition = transit_model.get_model(planet_name=planet_name, inst_model_fullname=instmod.full_name)
 
                     ##############
                     # Batman model
                     ##############
-                    if transit_model_pl_inst["model"] == "batman":
+                    if model_definition.category == "batman":
                         if not(batman_imported):
                             raise ValueError("Batman doesn't seems to be installed. The import failed.")
 
@@ -823,7 +822,9 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                             if not(function_builder.is_parameter(parameter=param, function_shortname=func_shortname)):
                                 function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
 
-                        text_transit, _ = do_batman_transit_occultation_models(function_builder=function_builder, function_shortname=func_shortname,
+                        text_transit, _ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                               function_shortname=func_shortname,
+                                                                               model_definition=model_definition,
                                                                                planet=planet, star=star,
                                                                                inst_model_obj=instmod, dataset=dst,
                                                                                parametrisation=parametrisation,
@@ -849,7 +850,8 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                     #################
                     # Pytransit model
                     #################
-                    elif transit_model_pl_inst["model"] == "pytransit":
+                    elif model_definition.category == "pytransit":
+                        orbital_model = model_definition.get_orbital_model(inst_model_fullname=instmod_fullname)
                         if not(pytransit_imported):
                             raise ValueError("pytransit doesn't seems to be installed. The import failed.")
                         ## Add the limb darkening parameters
@@ -876,7 +878,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                             function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = acos({cosinc})\n", function_shortname=func_shortname)
                             function_builder.add_to_done_in_text(name=f"inc_{planet_name}", function_shortname=func_shortname)
                         period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                        if parametrisation == "Multis":
+                        if not(orbital_model.use_aR):
                             if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
                                 rhostar = function_builder.get_text_4_parameter(parameter=star.rhostar, function_shortname=func_shortname)
                                 function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
@@ -884,7 +886,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                                 function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, degrees(omega_{planet_name}))\n", function_shortname=func_shortname)
                                 function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
                         # Get the text for the remaining planet parameters
-                        if parametrisation == "Multis":
+                        if not(orbital_model.use_aR):
                             aR = f"aR_{planet_name}\n"
                         else:
                             aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
@@ -920,14 +922,14 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                     # No other model for now
                     ########################
                     else:
-                        raise ValueError(f"Transit model {transit_model_pl_inst['model']} is not recognized.")
+                        raise ValueError(f"Transit model {model_definition.category} is not recognized.")
 
     ############################################
     # Finalize the planets transit only function
     ############################################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if transit_model[planet_name]['do']:
+        if transit_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_tr_only}"
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
@@ -1020,7 +1022,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
     ##############################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if phasecurve_model[planet_name]['do']:
+        if phasecurve_model.get_do(planet_name=planet_name):
             ########################################################################
             # Define the functions to populate and initialise entries in the outputs
             ########################################################################
@@ -1532,7 +1534,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
         ###############################################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if phasecurve_model[planet_name]['do']:
+        if phasecurve_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_pc_only}"
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
@@ -1615,7 +1617,7 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
     ##############################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if occultation_model[planet_name]['do']:
+        if occultation_model.get_do(planet_name=planet_name):
             ########################################################################
             # Define the functions to populate and initialise entries in the outputs
             ########################################################################
@@ -1720,7 +1722,7 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
     ############################################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if occultation_model[planet_name]['do']:
+        if occultation_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_occ_only}"
             get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
                           tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
@@ -1982,7 +1984,7 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                                       function_shortname=function_shortname)
 
 
-def do_batman_transit_occultation_models(function_builder, function_shortname, planet, star,
+def do_batman_transit_occultation_models(function_builder, function_shortname, planet, star, model_definition,
                                          inst_model_obj, dataset, parametrisation,
                                          get_times_from_datasets, time_arg_name, SSE4instmodfname,
                                          do_transit, do_occultation,
@@ -1996,6 +1998,15 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
 
     planet_name = planet.get_name()
     instmod_fullname = inst_model_obj.full_name
+
+    # make sure that all the required parameters are added to the function in the function_builder
+    parameters = model_definition.get_parameters(inst_model_fullname=instmod_fullname, object_category=None)
+    for object_category in parameters:
+        for param in parameters[object_category].values():
+            function_builder.add_parameter(parameter=param, function_shortname=function_shortname, exist_ok=True)
+
+    # get the orbital_model
+    orbital_model = model_definition.get_orbital_model(inst_model_fullname=instmod_fullname)
 
     ## If it doesn't already exists, create a batman TransitParams instance for the occultation
     if not(function_builder.is_in_ldict(variable_name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)):
@@ -2050,13 +2061,13 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
 
     ## preambule: Update the parameter values in the TransitParams object
     if not(function_builder.is_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)):
-        period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=function_shortname)
-        tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=function_shortname)
+        period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=function_shortname)
+        tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=function_shortname)
         ## preambule: define ecc, omega, inc if needed
         # WARNING eccentricity is just taken into account in the timing of the occulation, not the shape of the PC.
-        ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=function_shortname)
-        esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=function_shortname)
-        cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=function_shortname)
+        ecosw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['ecosw'], function_shortname=function_shortname)
+        esinw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['esinw'], function_shortname=function_shortname)
+        cosinc = function_builder.get_text_4_parameter(parameter=parameters['orbit']['cosinc'], function_shortname=function_shortname)
         if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)):
             function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=function_shortname, exist_ok=True)
             function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=function_shortname)
@@ -2071,15 +2082,15 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
             function_builder.add_to_body_text(text=f"{tab}inc_{planet_name}_deg = degrees(acos({cosinc}))\n", function_shortname=function_shortname)
             function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=function_shortname)
         ## preambule: define aR if needed in the preambule and get the text
-        if parametrisation == "Multis":
+        if not(orbital_model.use_aR):
             if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)):
-                rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=function_shortname)
+                rhostar = function_builder.get_text_4_parameter(parameter=parameters['orbit']['rho'], function_shortname=function_shortname)
                 function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=function_shortname, exist_ok=True)
                 function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=function_shortname)
                 function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)
             aR = f"aR_{planet_name}\n"
         else:
-            aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=function_shortname)
+            aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=function_shortname)
 
         # Update the transit params instance if it's not already done
         function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=function_shortname)
@@ -2091,7 +2102,7 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
         function_builder.add_to_done_in_text(name=f"params_{planet_name}_{instmod_fullname}", function_shortname=function_shortname)
 
     if (f"params_{planet_name}_{instmod_fullname}" not in rp_updates[function_shortname]):
-        Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
+        Rrat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Rrat'], function_shortname=function_shortname)
         function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=function_shortname)
         rp_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
 
@@ -2176,7 +2187,7 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                 if params_bat.t_secondary is None:  # You need params_bat.t_secondary to be different than None for the TransitModel creation
                     params_bat.t_secondary = params_bat.t0 + params_bat.per / 2  # Doing this here will change the content of the variable in ldict. So that's fine.
                 function_builder.add_to_body_text(text=f"{tab}m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params=params_{planet_name}_{instmod_fullname}, t={time_vect}, transittype='secondary'{supersamp_text})\n", function_shortname=function_shortname)
-                tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=function_shortname)
+                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=function_shortname)
                 function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=function_shortname)  # This is necessary, because the init of TransitModel modifies the params instance (which is not a good idea in my opinion, but batman is not my code)
                 function_builder.add_to_done_in_text(name=f"m_bat_occ_pc_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
 
@@ -2187,7 +2198,7 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
 
     if do_occultation and (f"params_{planet_name}_{instmod_fullname}" not in fp_updates[function_shortname]):
         if not(normalize_occultation):
-            Frat = function_builder.get_text_4_parameter(parameter=planet.Frat, function_shortname=function_shortname)
+            Frat = function_builder.get_text_4_parameter(parameter=parameters['orbit']['Frat'], function_shortname=function_shortname)
             function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.fp = {Frat}\n", function_shortname=function_shortname)
         fp_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
 

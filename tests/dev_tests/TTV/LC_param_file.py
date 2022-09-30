@@ -6,34 +6,13 @@
 # Which model do you want to use for the transit ?
 transit_model = {'b': {'do': True,
                        'model4instrument': {'LC_CHEOPS_inst0': '',
-                                            'LC_CHEOPS_inst1': '1',
-                                            'LC_CHEOPS_inst2': '2',
-                                            'LC_CHEOPS_inst3': '3',
-                                            'LC_CHEOPS_inst4': '4'
-                                            },
-                       'model_definitions': {'': {'model': 'batman',
-                                                  'new_parameter': {'Rrat': True},
-                                                  'orbital_model': '0'
-                                                  },
-                                             '1': {'model': 'batman',
-                                                   'new_parameter': {'Rrat': ''},
-                                                   'orbital_model': '1'
-                                                   },
-                                             '2': {'model': 'batman',
-                                                   'new_parameter': {'Rrat': ''},
-                                                   'orbital_model': '2'
-                                                   },
-                                             '3': {'model': 'batman',
-                                                   'new_parameter': {'Rrat': ''},
-                                                   'orbital_model': '3'
-                                                   },
-                                             '4': {'model': 'batman',
-                                                   'new_parameter': {'Rrat': ''},
-                                                   'orbital_model': '4'
-                                                   },
-                                             }
-                       }
-                 }
+                                            'LC_CHEOPS_inst1': '',
+                                            'LC_CHEOPS_inst2': '',
+                                            'LC_CHEOPS_inst3': '',
+                                            'LC_CHEOPS_inst4': ''},
+                       'model_definitions': {'': {'category': 'batman',
+                                                  'param_extensions': {'planet': {'Rrat': ''},
+                                                                       'star': {}}}}}}
 
 # Limb-darkening.
 # Associate LC instrument models with LD param containers.
@@ -59,22 +38,21 @@ SuperSamps = {'LC_CHEOPS_inst0': {'supersamp': 1, 'exptime': 0.02043402778},
 
 # Which model do you want to use for the phase curve ?
 phasecurve_model = {'b': {'do': False,
-                          'model4instrument': {'LC_CHEOPS_inst0': '',
-                                               'LC_CHEOPS_inst1': '',
-                                               'LC_CHEOPS_inst2': '',
-                                               'LC_CHEOPS_inst3': '',
-                                               'LC_CHEOPS_inst4': ''
-                                               },
+                          'model4instrument': {'LC_CHEOPS_inst0': [''],
+                                               'LC_CHEOPS_inst1': [''],
+                                               'LC_CHEOPS_inst2': [''],
+                                               'LC_CHEOPS_inst3': [''],
+                                               'LC_CHEOPS_inst4': ['']},
                           'model_definitions': {'': {'args': {'factor_period': 1,
                                                               'flux_offset': 'param',
                                                               'occultation': True,
                                                               'phase_offset': 'param',
                                                               'sincos': 'cos'},
-                                                     'model': 'sincos',
-                                                     'new_parameter': {'amp': True,
-                                                                       'flux_offset': True,
-                                                                       'phase_offset': True},
-                                                     'orbital_model': ''}}}}
+                                                     'category': 'sincos',
+                                                     'param_extensions': {'planet': {'A': '',
+                                                                                     'Foffset': '',
+                                                                                     'Phi': ''},
+                                                                          'star': {}}}}}}
 
 # Which model do you want to use for the occultation ?
 # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
@@ -84,7 +62,10 @@ occultation_model = {'b': {'do': False,
                                                 'LC_CHEOPS_inst2': '',
                                                 'LC_CHEOPS_inst3': '',
                                                 'LC_CHEOPS_inst4': ''},
-                           'model_definitions': {'': {'model': 'batman', 'orbital_model': ''}}}}
+                           'model_definitions': {'': {'category': 'batman',
+                                                      'param_extensions': {'planet': {'Frat': '',
+                                                                                      'Rrat': ''},
+                                                                           'star': {}}}}}}
 
 # Polynomial trends
 polynomial_model = {'A': {'do': False, 'order': 0, 'tref': None},
@@ -131,8 +112,7 @@ decorrelation_model = {'LC_CHEOPS_inst0': {'do': False,
                        'LC_CHEOPS_inst4': {'do': False,
                                            'what to decorrelate': {'add_2_totalflux': {'linear': {}},
                                                                    'multiply_2_totalflux': {'linear': {}}}}}
-decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
-                                                'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True, 'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
                                                 'bispline': {'XY0': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
                                                                      'quantity': 'raw',
                                                                      'spline_type': 'SmoothBivariateSpline',
@@ -166,10 +146,8 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                                                   'spline_kwargs': {'k': 3, },
                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_10': 'IND-TF_WASP-76_CHEOPS_10', }
                                                                                   },
-                                                           }
-                                                },
-                            'LC_CHEOPS_inst1': {'do': True,
-                                                'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                           }},
+                            'LC_CHEOPS_inst1': {'do': True, 'order': [('bispline', 'XY0'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
                                                 'bispline': {'XY0': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
                                                                      'quantity': 'raw',
                                                                      'spline_type': 'SmoothBivariateSpline',
@@ -203,10 +181,8 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                                                   'spline_kwargs': {'k': 3, },
                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_11': 'IND-TF_WASP-76_CHEOPS_11', }
                                                                                   },
-                                                           }
-                                                },
-                            'LC_CHEOPS_inst2': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                           }},
+                            'LC_CHEOPS_inst2': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
                                                                      'quantity': 'raw',
                                                                      'spline_type': 'SmoothBivariateSpline',
@@ -243,10 +219,8 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                                                   'spline_kwargs': {'k': 3, },
                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_12': 'IND-TF_WASP-76_CHEOPS_12', }
                                                                                   },
-                                                           }
-                                                },
-                            'LC_CHEOPS_inst3': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                           }},
+                            'LC_CHEOPS_inst3': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
                                                                      'quantity': 'raw',
                                                                      'spline_type': 'SmoothBivariateSpline',
@@ -283,10 +257,8 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                                                   'spline_kwargs': {'k': 3, },
                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_13': 'IND-TF_WASP-76_CHEOPS_13', }
                                                                                   },
-                                                           }
-                                                },
-                            'LC_CHEOPS_inst4': {'do': True,
-                                                'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
+                                                           }},
+                            'LC_CHEOPS_inst4': {'do': True, 'order': [('bispline', 'XY2'), ('spline', 'IND-BKG_CHEOPS_inst'), ('spline', 'IND-TF_CHEOPS_inst'), ('spline', 'IND-ROLL_CHEOPS_inst'), ],
                                                 'bispline': {'XY2': {'IND instument models': ['IND-CX_CHEOPS_inst', 'IND-CY_CHEOPS_inst'],
                                                                      'quantity': 'raw',
                                                                      'spline_type': 'SmoothBivariateSpline',
@@ -323,6 +295,5 @@ decorrelation_likelihood = {'LC_CHEOPS_inst0': {'do': True,
                                                                                   'spline_kwargs': {'k': 3, },
                                                                                   'match datasets': {'LC_WASP-76_CHEOPS_14': 'IND-TF_WASP-76_CHEOPS_14', }
                                                                                   },
-                                                           }
-                                                },
+                                                           }},
                             }
