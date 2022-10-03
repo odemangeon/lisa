@@ -4,7 +4,8 @@
 # Parameters
 
 # Orbital models
-orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '',
+orbital_model = {'b': {'do': True,
+                       'model4instrument': {'LC_CHEOPS_inst0': '',
                                             'LC_CHEOPS_inst1': '',
                                             'LC_CHEOPS_inst10': '',
                                             'LC_CHEOPS_inst11': '',
@@ -24,14 +25,14 @@ orbital_model = {'b': {'model4instrument': {'LC_CHEOPS_inst0': '',
                                             'LC_CHEOPS_inst7': '',
                                             'LC_CHEOPS_inst8': '',
                                             'LC_CHEOPS_inst9': ''},
-                       'model_definitions': {'': {'model': 'batman',
-                                                  'new_parameter': {'P': True,
-                                                                    'ecc_and_omega': True,
-                                                                    'inc': True,
-                                                                    'tic': True,
-                                                                    'aR': True,
-                                                                    }
-                                                  }
-                                             }
-                       }
-                 }
+                       'model_definitions': {'': {'category': 'batman',
+                                                  'param_extensions': {'planet': {'P': '',
+                                                                                  'cosinc': '',
+                                                                                  'ecosw': '',
+                                                                                  'esinw': '',
+                                                                                  'tic': ''},
+                                                                       'star': {'rho': ''}},
+                                                  'parametrisation': {'ew_format': 'ecosw-esinw',
+                                                                      'inc_format': 'cosinc',
+                                                                      'use_aR': False,
+                                                                      'use_tic': True}}}}}

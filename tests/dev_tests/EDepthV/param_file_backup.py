@@ -453,7 +453,7 @@ LC = {'CHEOPS': {'inst0': {'contam': {'duplicate': None,
 
 # instruments IND-ROLL
 INDROLL = {'CHEOPS': {'inst': {},
-                      'Dataset': {100: 'inst', 101: 'inst', 102: 'inst', 103: 'inst', 104: 'inst', 105: 'inst', 106: 'inst', 107: 'inst', 108: 'inst', 109: 'inst', 110: 'inst', 111: 'inst', 112: 'inst', 113: 'inst', 114: 'inst', 115: 'inst', 116: 'inst', 117: 'inst', 118: 'inst', 119: 'inst', },
+                      'Dataset': {100: 'inst', 101: 'inst', 102: 'inst', 103: 'inst', 104: 'inst', 105: 'inst', 106: 'inst', 107: 'inst', 108: 'inst', 109: 'inst', 110: 'inst', 111: 'inst', 112: 'inst', 113: 'inst', 114: 'inst', 115: 'inst', 116: 'inst', 117: 'inst', 118: 'inst', 119: 'inst', 0: 'inst', 1: 'inst', 2: 'inst'},
                       },
 
            }
@@ -539,13 +539,6 @@ b = {'P': {'duplicate': None,
                        'joint_prior_ref': None
                        }
              },
-     'Rrat': {'duplicate': None,
-              'free': True,
-              'value': None,  # unit: None
-              'prior': {'category': 'normal', 'args': {'mu': np.sqrt(11780e-6), 'sigma': 1000e-6},
-                        'joint_prior_ref': None
-                        }
-              },
      'ecosw': {'duplicate': None,
                'free': True,
                'value': None,  # unit: w/o unit
@@ -668,7 +661,7 @@ b = {'P': {'duplicate': None,
      'A13': {'duplicate': None,
              'free': True,
              'value': None,  # unit: None
-             'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 500e-6},
+             'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
                        'joint_prior_ref': None
                        }
              },

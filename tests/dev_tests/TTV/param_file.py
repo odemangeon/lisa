@@ -226,7 +226,7 @@ b = {'P': {'duplicate': None,
      'tic0': {'duplicate': None,
               'free': True,
               'value': None,  # unit: None
-              'prior': {'category': 'uniform', 'args': {'vmin': 0.0, 'vmax': 1.0},
+              'prior': {'category': 'normal', 'args': {'mu': 859.81968, 'sigma': 1 / 24, 'sigma_lims': [3, 3]},
                         'joint_prior_ref': None
                         }
               },

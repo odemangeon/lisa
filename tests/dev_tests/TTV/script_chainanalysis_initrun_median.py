@@ -76,7 +76,7 @@ thin_RP = 100  # thining factor for the traces plots
 # The idea for this step is to remove the chains whose acceptance fraction is too low compared to the rest.
 # To use with caution !
 # All chain whose acceptance fraction is < quantile_AFS - sig_fact_AFS * MAD(Acceptance fraction of all chains) will be removed
-do_AFS = True  # Do the acceptance fraction selection
+do_AFS = False  # Do the acceptance fraction selection
 sig_fact_AFS = 5  # Sigma clipping value.
 quantile_AFS = 75  # Quantile of the acceptance fraction of all chains that you want to use as reference
 verbose_AFS = 1  # More outputs on screen
@@ -89,7 +89,7 @@ thin_AFS = 100  # Thining factor for the trace plots
 # To use with caution !
 # The value of the lnposterior obtianed by each chain will be the quantile (quantile_walker_LPS) of the posterior values of the chain.
 # Then all chain whose lnposterior is < quantile_LPS(quantile_walkers_LPS) - sig_fact_LPS * MAD(quantile_walkers_LPS) will be removed
-do_LPS = True  # Do the ln posterior selection
+do_LPS = False  # Do the ln posterior selection
 sig_fact_LPS = 5  # Sigma clipping value.
 quantile_LPS = 100  # Quantile of the quantile_walker_LPS of all chains that you want to use as reference
 quantile_walker_LPS = 100  # Each walker get as representation lnposterior value the quantile_walker_LPS quantile of it lnposterior chain
@@ -123,7 +123,7 @@ do_hist_after_geweke = True  # Do the histogram of the lnposterior
 extra_burnin_4_hist_after_geweke = 0  # apply an an extra burnin to the values identified by the geweke algorithm before doing the lnposterior histogram
 sigma_clip_hist_after_geweke = 5  # Sigma clipping for the histogram of the lnposterior
 apply_min_burnin = True  # Will apply a given burnin to all chains even if you did the geweke selection first
-min_burnin = 9000  # Valeu of the burnin to use
+min_burnin = 7000  # Valeu of the burnin to use
 thin_GS = 100  # Thining factor for the trace plots
 
 # Parameter based walker selection
