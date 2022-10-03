@@ -1016,6 +1016,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
     t_sec_updates = defaultdict(list)
     # Init the list that will indicate that fp has been set to 1 in the batman TransitParams instances used for the occultation
     fp_updates = defaultdict(list)
+    rp_updates = defaultdict(list)
 
     ##############################
     # Do the Model for each planet
@@ -1071,160 +1072,136 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                     ########################################################################################
                     # Get the phase curve model impletmentation definition for the planet and the instrument
                     ########################################################################################
-                    l_pc_model_comp_pl_inst = phasecurve_model[planet_name]['model4instrument'][instmod.full_name]
+                    l_model_def = phasecurve_model.get_l_model(planet_name=planet_name, inst_model_fullname=instmod.full_name)
 
                     # For each component of the phasec curve model
-                    for component_name in l_pc_model_comp_pl_inst:
-                        pc_component_model = phasecurve_model[planet_name]['model_definitions'][component_name]
+                    for pc_component_model in l_model_def:
+                        component_name = pc_component_model.model_name
 
-                        ##################
-                        # Spiderman models
-                        ##################
-                        if pc_component_model["model"] == "spiderman":
+                        ###########################################
+                        # Add the parameters required for the model
+                        ###########################################
+                        # make sure that all the required parameters are added to the function in the function_builder
+                        parameters = pc_component_model.get_parameters(inst_model_fullname=instmod_fullname, object_category=None)
+                        for object_category in parameters:
+                            for param in parameters[object_category].values():
+                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+
+                        ########################################
+                        # Spiderman model with Zhang Thermal map
+                        ########################################
+                        if pc_component_model.category == "spiderman-zhang":
                             if not(spiderman_imported):
                                 raise ValueError("spiderman doesn't seems to be installed. The import failed.")
-                            brightness_model = pc_component_model["args"]["ModelParams_kwargs"]["brightness_model"]
+
                             # Add the lightcurve_kwargs to ldict
-                            if ('lightcurve_kwargs' in pc_component_model["args"]) and (len(pc_component_model["args"]['lightcurve_kwargs']) > 0):
+                            if len(pc_component_model.pc_component_model) > 0:
                                 if not(function_builder.is_in_ldict(variable_name=f"{component_name}_lightcurve_kwargs", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model["args"]['lightcurve_kwargs'],
+                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model.pc_component_model.copy(),
                                                                            function_shortname=func_shortname, exist_ok=True)
                                 lightcurve_kwargs = f", **{component_name}_lightcurve_kwargs"
                             else:
                                 lightcurve_kwargs = ""
 
-                            ####################################
-                            # Brightness model Zhang Thermal map
-                            ####################################
-                            if (brightness_model == "zhang"):
-                                ###########################################
-                                # Add the parameters required for the model
-                                ###########################################
-                                # Stellar parameters: Teff and rhostar if needed
-                                function_builder.add_parameter(parameter=star.Teff, function_shortname=func_shortname, exist_ok=True)
+                            ####################################################################
+                            # Writing the preambule and return (First preambules, after returns)
+                            ####################################################################
+                            ## Creation of the TransitParams instances and add them to the ldicts
+                            if not(function_builder.is_in_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                params_spider = ModelParams(**pc_component_model["args"]["ModelParams_kwargs"])
+                                function_builder.add_variable_to_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}",
+                                                                       variable_content=params_spider, function_shortname=func_shortname, exist_ok=False)
+                            ## preambule: define ecc, omega, inc, aR if needed in the preambule and get text for orbital parameters
+                            if not(function_builder.is_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                                ecosw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['ecosw'], function_shortname=func_shortname)
+                                esinw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['esinw'], function_shortname=func_shortname)
+                                cosinc = function_builder.get_text_4_parameter(parameter=parameters['orbit']['cosinc'], function_shortname=func_shortname)
+                                if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
+                                    function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
+                                    function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
+                                    function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
+                                if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
+                                    function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
+                                    function_builder.add_to_body_text(text=f"{tab}omega_{planet_name} = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=func_shortname)
+                                    function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
+                                if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
+                                    function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
+                                    function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
+                                    function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
+                                    function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
                                 if parametrisation == "Multis":
-                                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-                                # Create the planetary model parameters that are model independent
-                                l_param = [planet.a, planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-                                if parametrisation != "Multis":
-                                    l_param.append(planet.aR)
-                                for param in l_param:
-                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-                                # Create the planetary model parameters that are model dependent
-                                # TODO: Actually have different parameters for different model components.
-                                l_param = [planet.u1, planet.u2, planet.xi, planet.deltaT, planet.Tn, planet.Rrat]
-                                for param in l_param:
-                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-
-                                ####################################################################
-                                # Writing the preambule and return (First preambules, after returns)
-                                ####################################################################
-                                ## Creation of the TransitParams instances and add them to the ldicts
-                                if not(function_builder.is_in_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    params_spider = ModelParams(**pc_component_model["args"]["ModelParams_kwargs"])
-                                    function_builder.add_variable_to_ldict(variable_name=f"param_spiderman_{planet_name}_{instmod_fullname}",
-                                                                           variable_content=params_spider, function_shortname=func_shortname, exist_ok=False)
-                                ## preambule: define ecc, omega, inc, aR if needed in the preambule and get text for orbital parameters
-                                if not(function_builder.is_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                                    ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                                    esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                                    cosinc = function_builder.get_text_4_parameter(parameter=planet.cosinc, function_shortname=func_shortname)
-                                    if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
-                                        function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
-                                        function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
-                                        function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)
-                                    if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)):
-                                        function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=func_shortname, exist_ok=True)
-                                        function_builder.add_to_body_text(text=f"{tab}omega_{planet_name} = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=func_shortname)
-                                        function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=func_shortname)
-                                    if not(function_builder.is_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)):
-                                        function_builder.add_variable_to_ldict(variable_name="degrees", variable_content=degrees, function_shortname=func_shortname, exist_ok=True)
-                                        function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
-                                        function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
-                                        function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
-                                    if parametrisation == "Multis":
-                                        if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
-                                            rhostar = function_builder.get_text_4_parameter(parameter=star.rho, function_shortname=func_shortname)
-                                            function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
-                                            function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n", function_shortname=func_shortname)
-                                            function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
-                                    ## preambule: Update the parameter values in the TransitParams object
-                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                                    Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                                    a_au = function_builder.get_text_4_parameter(parameter=planet.a, function_shortname=func_shortname)
-                                    u1 = function_builder.get_text_4_parameter(parameter=planet.u1, function_shortname=func_shortname)
-                                    u2 = function_builder.get_text_4_parameter(parameter=planet.u2, function_shortname=func_shortname)
-                                    xi = function_builder.get_text_4_parameter(parameter=planet.xi, function_shortname=func_shortname)
-                                    Tn = function_builder.get_text_4_parameter(parameter=planet.Tn, function_shortname=func_shortname)
-                                    deltaT = function_builder.get_text_4_parameter(parameter=planet.deltaT, function_shortname=func_shortname)
-                                    Teff = function_builder.get_text_4_parameter(parameter=star.Teff, function_shortname=func_shortname)
-                                    if parametrisation == "Multis":
-                                        aR = f"aR_{planet_name}\n"
-                                    else:
-                                        aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a_abs = {a_au}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u1 = {u1}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u2 = {u2}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.xi = {xi}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_n = {Tn}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.delta_T = {deltaT}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_s = {Teff}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l1  = {pc_component_model['args']['attributes']['l1']}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l2 = {pc_component_model['args']['attributes']['l2']}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.n_layers = {pc_component_model['args']['attributes'].get('n_layers', 5)}\n", function_shortname=func_shortname)
-                                    if "filter" in pc_component_model["args"]["attributes"]:
-                                        function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.filter = '{pc_component_model['args']['attributes']['filter']}'\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
-
-                                ####################################################
-                                # Produce the text for the phase curve model returns
-                                ####################################################
-                                if multi:
-                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                    if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
+                                        rhostar = function_builder.get_text_4_parameter(parameter=parameters['orbit']['rho'], function_shortname=func_shortname)
+                                        function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
+                                        function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name})\n", function_shortname=func_shortname)
+                                        function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)
+                                ## preambule: Update the parameter values in the TransitParams object
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                                Rrat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Rrat'], function_shortname=func_shortname)
+                                a_au = function_builder.get_text_4_parameter(parameter=parameters['planet']['a'], function_shortname=func_shortname)
+                                u1 = function_builder.get_text_4_parameter(parameter=parameters['planet']['u1'], function_shortname=func_shortname)
+                                u2 = function_builder.get_text_4_parameter(parameter=parameters['planet']['u2'], function_shortname=func_shortname)
+                                xi = function_builder.get_text_4_parameter(parameter=parameters['planet']['xi'], function_shortname=func_shortname)
+                                Tn = function_builder.get_text_4_parameter(parameter=parameters['planet']['Tn'], function_shortname=func_shortname)
+                                deltaT = function_builder.get_text_4_parameter(parameter=parameters['planet']['delta_T'], function_shortname=func_shortname)
+                                Teff = function_builder.get_text_4_parameter(parameter=parameters['star']['Teff'], function_shortname=func_shortname)
+                                if parametrisation == "Multis":
+                                    aR = f"aR_{planet_name}\n"
                                 else:
-                                    time_vect = f"{time_arg_name}"
-                                if get_times_from_datasets:
-                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    if supersamp > 1:
-                                        logger.warning("Currently the spiderman model doesn't include supersampling !")
-                                if returns[func_shortname][i_inputoutput] == "":
-                                    pre_text = ""
-                                else:
-                                    pre_text = " + "
-                                returns[func_shortname][i_inputoutput] = f"{pre_text}param_spiderman_{planet_name}_{instmod_fullname}.lightcurve({time_vect}{lightcurve_kwargs}) - 1 "
+                                    aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.t0 = {tic}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.per = {period}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a_abs = {a_au}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.rp = {Rrat}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.inc = inc_{planet_name}_deg\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.ecc = ecc_{planet_name}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.w = omega_{planet_name}_deg\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u1 = {u1}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.p_u2 = {u2}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.xi = {xi}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_n = {Tn}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.delta_T = {deltaT}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.T_s = {Teff}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.a = {aR}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l1  = {pc_component_model['args']['attributes']['l1']}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.l2 = {pc_component_model['args']['attributes']['l2']}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.n_layers = {pc_component_model['args']['attributes'].get('n_layers', 5)}\n", function_shortname=func_shortname)
+                                if "filter" in pc_component_model["args"]["attributes"]:
+                                    function_builder.add_to_body_text(text=f"{tab}param_spiderman_{planet_name}_{instmod_fullname}.filter = '{pc_component_model['args']['attributes']['filter']}'\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"param_spiderman_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
 
-                            ##################################
-                            # No other brightnee model for now
-                            ##################################
+                            ####################################################
+                            # Produce the text for the phase curve model returns
+                            ####################################################
+                            if multi:
+                                time_vect = f"{time_arg_name}[{i_inputoutput}]"
                             else:
-                                raise NotImplementedError(f"brightness_model {brightness_model} of spiderman is not implemented.")
+                                time_vect = f"{time_arg_name}"
+                            if get_times_from_datasets:
+                                supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                if supersamp > 1:
+                                    logger.warning("Currently the spiderman model doesn't include supersampling !")
+                            if returns[func_shortname][i_inputoutput] == "":
+                                pre_text = ""
+                            else:
+                                pre_text = " + "
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}param_spiderman_{planet_name}_{instmod_fullname}.lightcurve({time_vect}{lightcurve_kwargs}) - 1 "
 
                         #########################
                         # Lambertian sphere model
                         #########################
-                        elif (pc_component_model["model"] == "lambertian"):
+                        elif pc_component_model.category == "lambertian":
                             ################
                             # Add parameters
                             ################
+
                             # Orbital Period
-                            function_builder.add_parameter(parameter=planet.P, function_shortname=func_shortname, exist_ok=True)
-                            period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
+                            period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
                             # Time of inferior conjunction
-                            function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
-                            tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
+                            tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
                             # Amplitude
-                            amp_param = planet.get_parameter("Alamb", return_error=False, kwargs_get_list_params={'main': True},
-                                                             kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
-                            function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
-                            amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
+                            amp = function_builder.get_text_4_parameter(parameter=parameters['orbit']['A'], function_shortname=func_shortname)
                             ###################################
                             # Add sin, cos, pi and abs to ldict
                             ###################################
@@ -1267,180 +1244,11 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                         #######################
                         # Sine and Cosine model
                         #######################
-                        elif (pc_component_model["model"] == "sincos") or (pc_component_model["model"] == "ellipsoidal") or (pc_component_model["model"] == "doppler"):
-                            if pc_component_model["model"] in ["ellipsoidal", "beaming"]:
-                                if pc_component_model["model"] == "beaming":
-                                    sincos_components = {"": {"sincos": "sin", "factor_period": 1, "flux_offset": 0., 'phase_offset': 0.}}
-                                else:  # pc_component_model["model"] == "ellipsoidal"
-                                    sincos_components = {"": {"sincos": "cos", "factor_period": 1. / 2., "flux_offset": 0., 'phase_offset': pi}}
-                            else:
-                                sincos_components = pc_component_model["args"]
-                            for sincos_comp_name, sincos_comp_dict in sincos_components.items():
-                                if sincos_comp_dict["occultation"]:
-                                    # Add required parameters for the Batman occultation model
-                                    if parametrisation == "Multis":
-                                        function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-                                    # Create the planetary model parameters that are model independent
-                                    l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-                                    if parametrisation != "Multis":
-                                        l_param.append(planet.aR)
-                                    for param in l_param:
-                                        function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-
-                                    _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
-                                                                                       function_shortname=func_shortname,
-                                                                                       planet=planet, star=star, inst_model_obj=instmod,
-                                                                                       dataset=dst, parametrisation=parametrisation,
-                                                                                       get_times_from_datasets=get_times_from_datasets,
-                                                                                       time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
-                                                                                       do_transit=False, do_occultation=True,
-                                                                                       l_dataset=l_dataset, multi=multi,
-                                                                                       i_inputoutput=i_inputoutput,
-                                                                                       normalize_occultation=True,
-                                                                                       fp_updates=fp_updates, t_sec_updates=t_sec_updates
-                                                                                       )
-                                    text_occ = f" * ({text_occ})"
-                                else:
-                                    text_occ = ""
-
-                                if sincos_comp_dict["sincos"] is None:
-                                    ################
-                                    # Add parameters
-                                    ################
-                                    constant_param = planet.get_parameter(f"C{component_name}{sincos_comp_name}",
-                                                                          return_error=False, kwargs_get_list_params={'main': True},
-                                                                          kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
-                                    function_builder.add_parameter(parameter=constant_param, function_shortname=func_shortname, exist_ok=True)
-                                    constant = function_builder.get_text_4_parameter(parameter=constant_param, function_shortname=func_shortname)
-                                    if returns[func_shortname][i_inputoutput] == "":
-                                        pre_text = ""
-                                    else:
-                                        pre_text = " + "
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{constant}{text_occ}"
-                                else:
-                                    ################
-                                    # Add parameters
-                                    ################
-                                    # Orbital Period
-                                    function_builder.add_parameter(parameter=planet.P, function_shortname=func_shortname, exist_ok=True)
-                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                                    # Time of inferior conjunction
-                                    function_builder.add_parameter(parameter=planet.tic, function_shortname=func_shortname, exist_ok=True)
-                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                                    # Amplitude
-                                    amp_param = planet.get_parameter(f"A{component_name}{sincos_comp_name}",
-                                                                     return_error=False, kwargs_get_list_params={'main': True},
-                                                                     kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
-                                    function_builder.add_parameter(parameter=amp_param, function_shortname=func_shortname, exist_ok=True)
-                                    amp = function_builder.get_text_4_parameter(parameter=amp_param, function_shortname=func_shortname)
-                                    # Phase Offset
-                                    if sincos_comp_dict.get("phase_offset", 0) == "param":
-                                        phi_param = planet.get_parameter(f"Phi{component_name}{sincos_comp_name}",
-                                                                         return_error=False, kwargs_get_list_params={'main': True},
-                                                                         kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
-                                        function_builder.add_parameter(parameter=phi_param, function_shortname=func_shortname, exist_ok=True)
-                                        phi = function_builder.get_text_4_parameter(parameter=phi_param, function_shortname=func_shortname)
-                                    else:
-                                        phi = f"{sincos_comp_dict.get('phase_offset', 0)}"
-                                    # flux offset
-                                    if sincos_comp_dict.get("flux_offset", 0) == "param":
-                                        flux_offset_param = planet.get_parameter(f"Foffset{component_name}{sincos_comp_name}",
-                                                                                 return_error=False, kwargs_get_list_params={'main': True},
-                                                                                 kwargs_get_name={"recursive": False, 'include_prefix': False, 'force_no_duplicate': False})
-                                        function_builder.add_parameter(parameter=flux_offset_param, function_shortname=func_shortname, exist_ok=True)
-                                        flux_offset = function_builder.get_text_4_parameter(parameter=flux_offset_param, function_shortname=func_shortname)
-                                    # Add sin or cos and pi to ldict
-                                    function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
-                                                                           function_shortname=func_shortname, exist_ok=True)
-                                    if sincos_comp_dict["sincos"] == 'sin':
-                                        function_builder.add_variable_to_ldict(variable_name="sin", variable_content=sin,
-                                                                               function_shortname=func_shortname, exist_ok=True)
-                                    else:  # It has to be cos
-                                        function_builder.add_variable_to_ldict(variable_name="cos", variable_content=cos,
-                                                                               function_shortname=func_shortname, exist_ok=True)
-                                    ####################################################
-                                    # Produce the text for the phase curve model returns
-                                    ####################################################
-                                    if multi:
-                                        time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                    else:
-                                        time_vect = f"{time_arg_name}"
-                                    if get_times_from_datasets:
-                                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                        if supersamp > 1:
-                                            logger.warning("Currently the sincos model doesn't include supersampling !")
-                                    if returns[func_shortname][i_inputoutput] == "":
-                                        pre_text = ""
-                                    else:
-                                        pre_text = " + "
-                                    if sincos_comp_dict["flux_offset"] == "zero":
-                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi}){text_occ}"
-                                    elif sincos_comp_dict["flux_offset"] == "semi-amplitude":
-                                        returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})){text_occ}"
-                                    else:  # it has to be 'param'
-                                        returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2 * (1 + {sincos_comp_dict['sincos']}(2 * pi / {period} / {sincos_comp_dict['factor_period']} * ({time_vect} - {tic}) + {phi})) + {flux_offset}){text_occ}"
-
-                        #############
-                        # Kelp models
-                        #############
-                        elif pc_component_model["model"] == "kelp":
-                            if not(kelp_imported):
-                                raise ValueError("Kelp doesn't seems to be installed. The import failed.")
-                            brightness_model = pc_component_model["args"]["brightness_model"]
-
-                            ####################################
-                            # Thermal model using the spherical harmonics
-                            ####################################
-                            if (brightness_model == "thermal"):
-                                ###########################################
-                                # Add the parameters required for the model
-                                ###########################################
-                                # Stellar parameters: Teff and rhostar if needed
-                                stellar_spectrum = pc_component_model['args']['Model_kwargs'].get('stellar_spectrum', None)
-                                if stellar_spectrum is None:
-                                    function_builder.add_parameter(parameter=star.Teff, function_shortname=func_shortname, exist_ok=True)
-                                if parametrisation == "Multis":
-                                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-                                # Create the planetary model parameters that are model independent
-                                l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-                                if parametrisation != "Multis":
-                                    l_param.append(planet.aR)
-                                for param in l_param:
-                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-                                # Create the planetary model parameters that are model dependent
-                                # TODO: Actually have different parameters for different model components.
-                                l_param = [planet.f, planet.Rrat, planet.alpha, planet.omegadrag, planet.AB, planet.c11, planet.hotspotoffset]
-                                for param in l_param:
-                                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-
-                                #######################
-                                # Create the Kelp Model
-                                #######################
-                                ## Create the kelp Model object model_kelp_{planet_name}_{instmod_fullname} and put in ldict
-                                if not(function_builder.is_in_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    l_max = pc_component_model['args']['Model_kwargs'].get('l_max', 1)
-                                    if l_max == 1:
-                                        C_ml = [[0],
-                                                [0, 0.1, 0]]
-                                    else:
-                                        raise ValueError("For now only lmax = 1 is implemented in Kelp model")
-                                    if stellar_spectrum is None:
-                                        model_kelp_pl_inst = Model(hotspot_offset=0, alpha=0.6, omega_drag=4.5,
-                                                                   A_B=0, C_ml=C_ml, lmax=1, a_rs=5, rp_a=0.02,
-                                                                   T_s=5777, filt=pc_component_model['args']['Model_kwargs'].get('filt', None)
-                                                                   )
-                                    else:
-                                        model_kelp_pl_inst = Model(hotspot_offset=0, alpha=0.6, omega_drag=4.5,
-                                                                   A_B=0, C_ml=C_ml, lmax=1, a_rs=5, rp_a=0.02,
-                                                                   T_s=pc_component_model['args']['Model_kwargs']['T_s'],
-                                                                   filt=pc_component_model['args']['Model_kwargs'].get('filt', None),
-                                                                   stellar_spectrum=stellar_spectrum
-                                                                   )
-                                    function_builder.add_variable_to_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}",
-                                                                           variable_content=model_kelp_pl_inst, function_shortname=func_shortname, exist_ok=False)
-
+                        elif (pc_component_model.category == "sincos") or (pc_component_model.category == "ellipsoidal") or (pc_component_model.category == "beaming"):
+                            if pc_component_model.occultation:
                                 _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
                                                                                    function_shortname=func_shortname,
+                                                                                   model_definition=pc_component_model,
                                                                                    planet=planet, star=star, inst_model_obj=instmod,
                                                                                    dataset=dst, parametrisation=parametrisation,
                                                                                    get_times_from_datasets=get_times_from_datasets,
@@ -1449,85 +1257,209 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                                                                    l_dataset=l_dataset, multi=multi,
                                                                                    i_inputoutput=i_inputoutput,
                                                                                    normalize_occultation=True,
-                                                                                   fp_updates=fp_updates, t_sec_updates=t_sec_updates,
+                                                                                   rp_updates=rp_updates,
+                                                                                   fp_updates=fp_updates, t_sec_updates=t_sec_updates
                                                                                    )
+                                text_occ = f" * ({text_occ})"
+                            else:
+                                text_occ = ""
 
-                                ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
-                                if parametrisation == "Multis":
-                                    aR = f"aR_{planet_name}\n"
-                                else:
-                                    aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
-                                    Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
-                                c11 = function_builder.get_text_4_parameter(parameter=planet.c11, function_shortname=func_shortname)
-                                hotspotoffset = function_builder.get_text_4_parameter(parameter=planet.hotspotoffset, function_shortname=func_shortname)
-                                alpha = function_builder.get_text_4_parameter(parameter=planet.alpha, function_shortname=func_shortname)
-                                omegadrag = function_builder.get_text_4_parameter(parameter=planet.omegadrag, function_shortname=func_shortname)
-                                AB = function_builder.get_text_4_parameter(parameter=planet.AB, function_shortname=func_shortname)
-                                if stellar_spectrum is None:
-                                    Teff = function_builder.get_text_4_parameter(parameter=star.Teff, function_shortname=func_shortname)
-
-                                ## Update the parameters of the kelp model and planet
-                                if not(function_builder.is_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
-                                    if stellar_spectrum is None:
-                                        function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.T_s = {Teff}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.A_B = {AB}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.omega_drag = {omegadrag}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.alpha = {alpha}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.hotspot_offset = {hotspotoffset}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.C_ml[1][1] = {c11}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.rp_a = rpa_{planet_name}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.a_rs = {aR}\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
-
-                                ####################################################
-                                # Produce the text for the phase curve model returns
-                                ####################################################
-                                ## Compute the orbital phase and idx_sort (orbital phase 0 means secondary eclipse)
-                                if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                    if multi:
-                                        time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                    else:
-                                        time_vect = f"{time_arg_name}"
-                                    if get_times_from_datasets:
-                                        supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                        if supersamp > 1:
-                                            logger.warning("Currently the kelp model doesn't include supersampling !")
-                                    period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                                    tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                                    function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                                if not(function_builder.is_done_in_text(name=f"idxdesortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                    function_builder.add_to_body_text(text=f"{tab}idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                    function_builder.add_to_done_in_text(name=f"idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-
+                            if pc_component_model.sincos is None:
+                                ################
+                                # Add parameters
+                                ################
+                                constant = function_builder.get_text_4_parameter(parameter=parameters['planet']['C'], function_shortname=func_shortname)
                                 if returns[func_shortname][i_inputoutput] == "":
                                     pre_text = ""
                                 else:
                                     pre_text = " + "
-                                f = function_builder.get_text_4_parameter(parameter=planet.f, function_shortname=func_shortname)
-                                returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, check_sorted=False).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
-
-                            ###################################
-                            # No other brightness model for now
-                            ###################################
+                                returns[func_shortname][i_inputoutput] += f"{pre_text}{constant}{text_occ}"
                             else:
-                                raise NotImplementedError(f"brightness_model {brightness_model} of kelp is not implemented.")
+                                ################
+                                # Add parameters
+                                ################
+                                # Orbital Period
+                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                                # Time of inferior conjunction
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                                # Amplitude
+                                amp = function_builder.get_text_4_parameter(parameter=parameters['planet']['A'], function_shortname=func_shortname)
+                                # Phase Offset
+                                if pc_component_model.phase_offset == "param":
+                                    phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['Phi'], function_shortname=func_shortname)
+                                else:
+                                    phi = f"{pc_component_model.phase_offset}"
+                                # flux offset
+                                if pc_component_model.flux_offset == "param":
+                                    flux_offset = function_builder.get_text_4_parameter(parameter=parameters['planet']['Foffset'], function_shortname=func_shortname)
+                                # Add sin or cos and pi to ldict
+                                function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
+                                                                       function_shortname=func_shortname, exist_ok=True)
+                                if pc_component_model.sincos == 'sin':
+                                    function_builder.add_variable_to_ldict(variable_name="sin", variable_content=sin,
+                                                                           function_shortname=func_shortname, exist_ok=True)
+                                else:  # It has to be cos
+                                    function_builder.add_variable_to_ldict(variable_name="cos", variable_content=cos,
+                                                                           function_shortname=func_shortname, exist_ok=True)
+                                ####################################################
+                                # Produce the text for the phase curve model returns
+                                ####################################################
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                if get_times_from_datasets:
+                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    if supersamp > 1:
+                                        logger.warning("Currently the sincos model doesn't include supersampling !")
+                                if returns[func_shortname][i_inputoutput] == "":
+                                    pre_text = ""
+                                else:
+                                    pre_text = " + "
+                                if pc_component_model.flux_offset == "zero":
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi}){text_occ}"
+                                elif pc_component_model.flux_offset == "semi-amplitude":
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})){text_occ}"
+                                else:  # it has to be 'param'
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})) + {flux_offset}){text_occ}"
+
+                        #############
+                        # Kelp models
+                        #############
+                        elif pc_component_model.category == "kelp-thermal":
+                            if not(kelp_imported):
+                                raise ValueError("Kelp doesn't seems to be installed. The import failed.")
+
+                            ###########################################
+                            # Add the parameters required for the model
+                            ###########################################
+                            # Stellar parameters: Teff and rhostar if needed
+                            stellar_spectrum = pc_component_model.Model_kwargs.get('stellar_spectrum', None)
+                            if stellar_spectrum is None:
+                                function_builder.add_parameter(parameter=star.Teff, function_shortname=func_shortname, exist_ok=True)
+                            if parametrisation == "Multis":
+                                function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+                            # Create the planetary model parameters that are model independent
+                            l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
+                            if parametrisation != "Multis":
+                                l_param.append(planet.aR)
+                            for param in l_param:
+                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+                            # Create the planetary model parameters that are model dependent
+                            # TODO: Actually have different parameters for different model components.
+                            l_param = [planet.f, planet.Rrat, planet.alpha, planet.omegadrag, planet.AB, planet.c11, planet.hotspotoffset]
+                            for param in l_param:
+                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+
+                            #######################
+                            # Create the Kelp Model
+                            #######################
+                            ## Create the kelp Model object model_kelp_{planet_name}_{instmod_fullname} and put in ldict
+                            if not(function_builder.is_in_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                l_max = pc_component_model.Model_kwargs.get('l_max', 1)
+                                if l_max == 1:
+                                    C_ml = [[0],
+                                            [0, 0.1, 0]]
+                                else:
+                                    raise ValueError("For now only lmax = 1 is implemented in Kelp model")
+                                if stellar_spectrum is None:
+                                    model_kelp_pl_inst = Model(hotspot_offset=0, alpha=0.6, omega_drag=4.5,
+                                                               A_B=0, C_ml=C_ml, lmax=1, a_rs=5, rp_a=0.02,
+                                                               T_s=5777, filt=pc_component_model.Model_kwargs.get('filt', None)
+                                                               )
+                                else:
+                                    model_kelp_pl_inst = Model(hotspot_offset=0, alpha=0.6, omega_drag=4.5,
+                                                               A_B=0, C_ml=C_ml, lmax=1, a_rs=5, rp_a=0.02,
+                                                               T_s=pc_component_model.Model_kwargs['T_s'],
+                                                               filt=pc_component_model.Model_kwargs.get('filt', None),
+                                                               stellar_spectrum=stellar_spectrum
+                                                               )
+                                function_builder.add_variable_to_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}",
+                                                                       variable_content=model_kelp_pl_inst, function_shortname=func_shortname, exist_ok=False)
+
+                            _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                               function_shortname=func_shortname,
+                                                                               planet=planet, star=star, inst_model_obj=instmod,
+                                                                               dataset=dst, parametrisation=parametrisation,
+                                                                               get_times_from_datasets=get_times_from_datasets,
+                                                                               time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                               do_transit=False, do_occultation=True,
+                                                                               l_dataset=l_dataset, multi=multi,
+                                                                               i_inputoutput=i_inputoutput,
+                                                                               normalize_occultation=True,
+                                                                               fp_updates=fp_updates, t_sec_updates=t_sec_updates,
+                                                                               )
+
+                            ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
+                            if parametrisation == "Multis":
+                                aR = f"aR_{planet_name}\n"
+                            else:
+                                aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
+                                Rrat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Rrat'], function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
+                            c11 = function_builder.get_text_4_parameter(parameter=parameters['planet']['c11'], function_shortname=func_shortname)
+                            hotspotoffset = function_builder.get_text_4_parameter(parameter=parameters['planet']['hotspotoffset'], function_shortname=func_shortname)
+                            alpha = function_builder.get_text_4_parameter(parameter=parameters['planet']['alpha'], function_shortname=func_shortname)
+                            omegadrag = function_builder.get_text_4_parameter(parameter=parameters['planet']['omegadrag'], function_shortname=func_shortname)
+                            AB = function_builder.get_text_4_parameter(parameter=parameters['planet']['AB'], function_shortname=func_shortname)
+                            if stellar_spectrum is None:
+                                Teff = function_builder.get_text_4_parameter(parameter=parameters['star']['Teff'], function_shortname=func_shortname)
+
+                            ## Update the parameters of the kelp model and planet
+                            if not(function_builder.is_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                if stellar_spectrum is None:
+                                    function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.T_s = {Teff}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.A_B = {AB}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.omega_drag = {omegadrag}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.alpha = {alpha}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.hotspot_offset = {hotspotoffset}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.C_ml[1][1] = {c11}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.rp_a = rpa_{planet_name}\n", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}model_kelp_{planet_name}_{instmod_fullname}.a_rs = {aR}\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)
+
+                            ####################################################
+                            # Produce the text for the phase curve model returns
+                            ####################################################
+                            ## Compute the orbital phase and idx_sort (orbital phase 0 means secondary eclipse)
+                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                if get_times_from_datasets:
+                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    if supersamp > 1:
+                                        logger.warning("Currently the kelp model doesn't include supersampling !")
+                                period = function_builder.get_text_4_parameter(parameter=parameters['planet']['P'], function_shortname=func_shortname)
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['planet']['tic'], function_shortname=func_shortname)
+                                function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxdesortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+
+                            if returns[func_shortname][i_inputoutput] == "":
+                                pre_text = ""
+                            else:
+                                pre_text = " + "
+                            f = function_builder.get_text_4_parameter(parameter=parameters['planet']['f'], function_shortname=func_shortname)
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, check_sorted=False).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
 
                         ########################
                         # No other model for now
                         ########################
                         else:
-                            raise NotImplementedError(f"phasecurve model {pc_component_model['model']} is not implemented.")
+                            raise NotImplementedError(f"phasecurve model {pc_component_model.category} is not implemented.")
 
         ###############################################
         # Finalize the planets phasecurve only function
@@ -1660,17 +1592,17 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
             # Add the parameters required for the model for all instruments
             ###############################################################
             # Add rhostar if needed
-            if parametrisation == "Multis":
-                for func_shortname in l_function_shortname_4_planet:
-                    function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-
-            # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
-            l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic, planet.Frat]
-            if parametrisation != "Multis":
-                l_param.append(planet.aR)
-            for param in l_param:
-                for func_shortname in l_function_shortname_4_planet:
-                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+            # if parametrisation == "Multis":
+            #     for func_shortname in l_function_shortname_4_planet:
+            #         function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
+            #
+            # # Add the planet parameters: Rrat, ecosw, esinw, cosinc, P, tic and aR if needed
+            # l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic, planet.Frat]
+            # if parametrisation != "Multis":
+            #     l_param.append(planet.aR)
+            # for param in l_param:
+            #     for func_shortname in l_function_shortname_4_planet:
+            #         function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
 
             ####################################################################
             # Do the Model for each planet and each instrument and each function
@@ -1681,18 +1613,18 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
                     ####################################################################################
                     # Get the transit model implementation definition for the planet and the instrument
                     ####################################################################################
-                    model_definition_name = occultation_model[planet_name]['model4instrument'][instmod.full_name]
-                    occ_model_pl_inst = occultation_model[planet_name]['model_definitions'][model_definition_name]
+                    model_definition = occultation_model.get_model(planet_name=planet_name, inst_model_fullname=instmod.full_name)
 
                     ##############
                     # Batman model
                     ##############
-                    if occ_model_pl_inst["model"] == "batman":
+                    if model_definition.category == "batman":
                         if not(batman_imported):
                             raise ValueError("Batman doesn't seems to be installed. The import failed.")
 
                         _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
                                                                            function_shortname=func_shortname,
+                                                                           model_definition=model_definition,
                                                                            planet=planet, star=star, inst_model_obj=instmod,
                                                                            dataset=dst, parametrisation=parametrisation,
                                                                            get_times_from_datasets=get_times_from_datasets,
@@ -1715,7 +1647,7 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
                     # No other model for now
                     ########################
                     else:
-                        raise ValueError(f"Occulation model {occ_model_pl_inst['model']} is not recognized.")
+                        raise ValueError(f"Occulation model {model_definition.category} is not recognized.")
 
     ############################################
     # Finalize the planets transit only function

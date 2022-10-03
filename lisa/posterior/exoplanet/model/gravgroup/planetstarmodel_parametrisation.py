@@ -253,6 +253,8 @@ class Core_PlanetStarModels_lmodel1inst(Core_PlanetStarModels_1model4allinst):
         """Used to print the content in the parametrisation file."""
         dict2print = self._models_config.copy()
         for planet_name in dict2print:
+            dict2print[planet_name] = dict2print[planet_name].copy()
+            dict2print[planet_name]['model_definitions'] = dict2print[planet_name]['model_definitions'].copy()
             for model_name in dict2print[planet_name]['model_definitions']:
                 dict2print[planet_name]['model_definitions'][model_name] = dict2print[planet_name]['model_definitions'][model_name].dict2print
         return dict2print

@@ -610,7 +610,7 @@ class PhaseCurveModelSinCos(Core_PlanetStarModel):
             if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] == 'param')):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'flux_offset' should be a number or 'param' (got {args['flux_offset']})")
             self.args['flux_offset'] = args['flux_offset']
-            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] == 'param')):
+            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param', 'semi-amplitude'])):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' should be a number or 'param' (got {args['phase_offset']})")
             self.args['phase_offset'] = args['phase_offset']
             if not(isinstance(args['occultation'], bool)):
@@ -623,6 +623,8 @@ class PhaseCurveModelSinCos(Core_PlanetStarModel):
             return ['C']
         else:
             l_param_basename = ['A']
+            if self.occultation:
+                l_param_basename.append('Rrat')
             if self.flux_offset == 'param':
                 l_param_basename.append('Foffset')
             if self.phase_offset == 'param':
@@ -726,6 +728,10 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
         return self.args['brightness_model_kwargs']
 
     @property
+    def brightness_model(self):
+        return self.args['brightness_model']
+
+    @property
     def stellar_spectrum(self):
         return self.args['Model_kwargs']['stellar_spectrum']
 
@@ -809,6 +815,14 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
                                                             orbital_models=orbital_models, dico_config_model=dico_config_model,
                                                             )
 
+    @property
+    def brightness_model(self):
+        return self.args['ModelParams_kwargs']['brightness_model']
+
+    @property
+    def lightcurve_kwargs(self):
+        return self.argss['lightcurve_kwargs']
+
     ###################################################
     # Functions directly required by the main functions
     ###################################################
@@ -817,7 +831,7 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
         """ """
         self.args.update({'ModelParams_kwargs': {'brightness_model': 'zhang', 'stellar_model': None},
                           'attributes': {"filter": None, "l1": None, "l2": None, "n_layers": 5},
-                          'lightcurve_kwargs': {'stellar_grid': None}
+                          'lightcurve_kwargs': {}
                           }
                          )
         super(PhaseCurveModelSpidermanZhang, self)._set_args(args=args)
@@ -865,7 +879,7 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
 
     def _get_l_parameter_basename_planet(self):
         """Return the list of orbital parameter basenames."""
-        return ['Rrat', 'xi', 'T_n', 'delta_T']
+        return ['Rrat', 'xi', 'T_n', 'delta_T', 'a', 'u1', 'u2']
 
     def _get_l_parameter_basename_star(self):
         """Return the list of orbital parameter basenames."""
@@ -873,7 +887,7 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
 
     def _get_l_parameter_basename_orbit(self, inst_model_fullname=None):
         """Return the list of orbital parameter basenames."""
-        l_required_orbital_param_type = ['P', 'tic', 'ew', 'inc', 'aR']['P', 'tic']
+        l_required_orbital_param_type = ['P', 'tic', 'ew', 'inc', 'aR']
         orbital_model = self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
         return orbital_model._get_l_parameter_basename(l_required_orbital_param_type=l_required_orbital_param_type,
                                                        inst_model_fullname=inst_model_fullname, object_category=None
