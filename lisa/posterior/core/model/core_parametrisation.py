@@ -36,13 +36,13 @@ class Core_Parametrisation(object):
         """
         return self.__applyparametrisation4noisemodel
 
-    def set_parametrisation(self, parametrisation, **kwargs):
+    def set_parametrisation(self, **kwargs):
         """Choose the parametrisation to use and apply it.
 
         :param str parametrisation: Name of the parametrisation to use
         keyword arguments associated to the parametrisation chosen
         """
-        self.parametrisation = parametrisation
+        # self.parametrisation = parametrisation
         # Check that the instrument category of all the datasets is as expected otherwise raise a
         # warning
         self._check_dataset_instcat()  # self._check_dataset_instcat is defined in Core_Model
