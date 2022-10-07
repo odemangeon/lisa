@@ -221,15 +221,19 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # the transit and phase curve only function already receive the conditions in the get_transit and get_phasecurve functions
     for func_shortname in [function_whole_shortname, ]:
         l_planet = list(planets.values())
-        get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=l_planet, parametrisation=parametrisation,
-                      tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
-                      function_shortname=func_shortname)
+        get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=l_planet, tab=tab, time_vec_name=time_vec,
+                      l_time_vec_name=l_time_vec, function_builder=func_builder, function_shortname=func_shortname,
+                      transit_model=transit_model, occultation_model=occultation_model,
+                      phasecurve_model=phasecurve_model,
+                      )
 
     for planet in planets.values():
         func_shortname = f"{get_function_planet_shortname(planet)}"
-        get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
-                      tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
-                      function_shortname=func_shortname)
+        get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], tab=tab, time_vec_name=time_vec,
+                      l_time_vec_name=l_time_vec, function_builder=func_builder, function_shortname=func_shortname,
+                      transit_model=transit_model, occultation_model=occultation_model,
+                      phasecurve_model=phasecurve_model,
+                      )
 
     ###########################
     # Produce the decorrelation
@@ -568,8 +572,9 @@ def get_LD_parcont_and_param(l_inst_model, ldmodel4instmodfname, star, l_planet_
     return dico_l_LD_parcont_name, dico_l_LD_parcont, dico_l_LD_param_list
 
 
-def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_name, l_time_vec_name,
-                  function_builder, function_shortname):
+def get_condition(multi, l_inst_model, l_planet, tab, time_vec_name, l_time_vec_name, function_builder,
+                  function_shortname, transit_model=None, occultation_model=None, phasecurve_model=None
+                  ):
     """
     Return the text related to the condition to test if the planet goes into the star
 
@@ -581,8 +586,6 @@ def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_
         Checked list of Instrument_Model instance(s).
     l_planet                : List of Planets
         List of Planet instance providing the planets treated in the function
-    parametrisation         : str
-        string refering to the parametrisation to use
     tab                     : str
         String providing the space to put in front of each new line
     time_vec_name           : str
@@ -593,31 +596,85 @@ def get_condition(multi, l_inst_model, l_planet, parametrisation, tab, time_vec_
         Function builder instance
     function_shortname      : str
         Short name of the function being built
+    transit_model        :
+    occultation_model    :
     """
     error_return = get_catchederror_return(multi=multi, l_inst_model=l_inst_model, time_vec_name=time_vec_name,
                                            l_time_vec_name=l_time_vec_name, function_builder=function_builder,
                                            function_shortname=function_shortname)
-    more_than_1_planet = len(l_planet) > 1
-    for planet in l_planet:
-        planet_name = planet.get_name()
-        # In all functions currently considered aR should already exists, but the best would be
-        # to check and only do the condition if it doesn or if there is already the ingredients to
-        # compute it
-        if parametrisation == "Multis":
-            aR = f"aR_{planet_name}"
+    l_orbital_model = []
+    l_Rrat = []
+    l_model_name = []
+    l_planet_name = []
+    for models in [transit_model, occultation_model, phasecurve_model]:
+        for planet in l_planet:
+            planet_name = planet.get_name()
+            if (models is not None) and models.get_do(planet_name=planet_name):
+                for inst_model_obj in l_inst_model:
+                    instmod_fullname = inst_model_obj.full_name
+                    if models == phasecurve_model:
+                        l_model_definition = models.get_l_model(planet_name=planet_name, inst_model_fullname=instmod_fullname)
+                    else:
+                        l_model_definition = [models.get_model(planet_name=planet_name, inst_model_fullname=instmod_fullname), ]
+                    for model_definition in l_model_definition:
+                        orbital_model = model_definition.get_orbital_model(inst_model_fullname=instmod_fullname)
+                        parameters = model_definition.get_parameters(inst_model_fullname=instmod_fullname, object_category=None)
+                        add = orbital_model not in l_orbital_model
+                        if not(add):
+                            add = True
+                            for idx, orb_mod in enumerate(l_orbital_model):
+                                if orb_mod is orbital_model:
+                                    if parameters['planet']['Rrat'] is l_Rrat[idx]:
+                                        add = False
+                                        break
+                        if add:
+                            l_orbital_model.append(orbital_model)
+                            l_Rrat.append(parameters['planet']['Rrat'])
+                            l_model_name.append(model_definition.model_name)
+                            l_planet_name.append(planet_name)
+    l_condition = []
+    for orbital_model, Rrat, model_name, planet_name in zip(l_orbital_model, l_Rrat, l_model_name, l_planet_name):
+        if not(orbital_model.use_aR):
+            if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)):
+                rhostar = function_builder.get_text_4_parameter(parameter=parameters['star']['rho'], function_shortname=function_shortname)
+                period = function_builder.get_text_4_parameter(parameter=parameters['star']['rho'], function_shortname=function_shortname)
+                function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=function_shortname, exist_ok=True)
+                if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)) or not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)):
+                    ecosw = function_builder.get_text_4_parameter(parameter=parameters['planet']['ecosw'], function_shortname=function_shortname)
+                    esinw = function_builder.get_text_4_parameter(parameter=parameters['planet']['esinw'], function_shortname=function_shortname)
+                    if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)):
+                        function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=function_shortname, exist_ok=True)
+                        function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=function_shortname)
+                        function_builder.add_to_done_in_text(name=f"ecc_{planet_name}", function_shortname=function_shortname)
+                    if not(function_builder.is_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)):
+                        function_builder.add_variable_to_ldict(variable_name="getomega_deg_fast", variable_content=getomega_deg_fast, function_shortname=function_shortname, exist_ok=True)
+                        function_builder.add_to_body_text(text=f"{tab}omega_{planet_name}_deg = getomega_deg_fast({ecosw}, {esinw})\n", function_shortname=function_shortname)
+                        function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=function_shortname)
+                function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)
+            aR = f"aR_{planet_name}\n"
         else:
-            aR = function_builder.get_text_4_parameter(parameter=planet.aR, function_shortname=function_shortname)
-        if function_builder.is_parameter(parameter=planet.Rrat, function_shortname=function_shortname):
-            Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
-            function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat}))\n", function_shortname=function_shortname)
-        else:
-            function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=function_shortname)
-    if more_than_1_planet:
-        condition_text = " or ".join([f"condition_{planet.get_name()}" for planet in l_planet])
+            aR = function_builder.get_text_4_parameter(parameter=parameters['planet']['aR'], function_shortname=function_shortname)
+        # if function_builder.is_parameter(parameter=parameters['planet']['Rrat'], function_shortname=function_shortname):
+        #     Rrat = function_builder.get_text_4_parameter(parameter=planet.Rrat, function_shortname=function_shortname)
+        #     function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat}))\n", function_shortname=function_shortname)
+        # else:
+        #     function_builder.add_to_body_text(text=f"{tab}condition_{planet_name} = ({aR} < (1.5 / (1 - ecc_{planet_name})))\n", function_shortname=function_shortname)
+        Rrat_text = function_builder.get_text_4_parameter(parameter=Rrat, function_shortname=function_shortname)
+        condition_name = f"condition_{planet_name}"
+        if model_name != '':
+            condition_name += f"_{model_name}"
+        function_builder.add_to_body_text(text=f"{tab}{condition_name} = ({aR} < ((1.5 / (1 - ecc_{planet_name})) + {Rrat_text}))\n", function_shortname=function_shortname)
+        l_condition.append(condition_name)
+    if len(l_condition) > 1:
+        condition_text = " or ".join(l_condition)
+    elif len(l_condition) == 1:
+        condition_text = l_condition[0]
     else:
-        condition_text = f"condition_{planet_name}"
-    function_builder.add_to_body_text(text=f"{tab}if {condition_text}:\n", function_shortname=function_shortname)
-    function_builder.add_to_body_text(text=f"{tab}    return {error_return}\n", function_shortname=function_shortname)
+        condition_text = None
+    if condition_text is not None:
+        function_builder.add_to_body_text(text=f"{tab}if {condition_text}:\n", function_shortname=function_shortname)
+        function_builder.add_to_body_text(text=f"{tab}    return {error_return}\n", function_shortname=function_shortname)
 
 
 def get_catchederror_return(multi, l_inst_model, time_vec_name, l_time_vec_name, function_builder, function_shortname):
@@ -931,9 +988,11 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
         planet_name = planet.get_name()
         if transit_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_tr_only}"
-            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
-                          tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
-                          function_shortname=func_shortname)
+            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], tab=tab, time_vec_name=time_vec_name,
+                          l_time_vec_name=l_time_vec_name, function_builder=function_builder, function_shortname=func_shortname,
+                          transit_model=transit_model, occultation_model=None,
+                          phasecurve_model=None,
+                          )
             function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=f"{', '.join(returns.pop(func_shortname))}",
                                                                           returns_except=get_catchederror_return(multi=multi,
                                                                                                                  l_inst_model=l_inst_model,
@@ -1468,9 +1527,10 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
         planet_name = planet.get_name()
         if phasecurve_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_pc_only}"
-            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
-                          tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
-                          function_shortname=func_shortname)
+            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], tab=tab, time_vec_name=time_vec_name,
+                          l_time_vec_name=l_time_vec_name, function_builder=function_builder, function_shortname=func_shortname,
+                          transit_model=None, occultation_model=None, phasecurve_model=phasecurve_model,
+                          )
             function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}", function_shortname=func_shortname)
 
     return returns
@@ -1656,9 +1716,11 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
         planet_name = planet.get_name()
         if occultation_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_occ_only}"
-            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], parametrisation=parametrisation,
-                          tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, function_builder=function_builder,
-                          function_shortname=func_shortname)
+            get_condition(multi=multi, l_inst_model=l_inst_model, l_planet=[planet, ], tab=tab, time_vec_name=time_vec_name,
+                          l_time_vec_name=l_time_vec_name, function_builder=function_builder, function_shortname=func_shortname,
+                          transit_model=None, occultation_model=occultation_model,
+                          phasecurve_model=None
+                          )
             function_builder.add_to_body_text(text=template_return.format(tab=tab, returns=f"{', '.join(returns.pop(func_shortname))}",
                                                                           returns_except=get_catchederror_return(multi=multi,
                                                                                                                  l_inst_model=l_inst_model,
