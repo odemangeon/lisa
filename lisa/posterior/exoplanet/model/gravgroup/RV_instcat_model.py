@@ -19,6 +19,7 @@ from pprint import pformat
 # from os.path import basename
 # import os
 
+from .planetstarmodel_parametrisation import RVKeplerianModels
 from .datasim_creator_rv import create_datasimulator_RV
 from ..decorrelation.linear_decorrelation import LinearDecorrelation
 from ...dataset_and_instrument.rv import RV_inst_cat
@@ -55,12 +56,10 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
     def __init__(self, model_instance):
         super(RV_InstCat_Model, self).__init__(model_instance=model_instance)
-        self.rv_model = {planet.get_name(): {"do": True,
-                                             "model": "radvel",
-                                             'orbital_model': '',
-                                             }
-                         for planet in self.model_instance.planets.values()
-                         }
+        self.keplerian_rv_model = RVKeplerianModels(l_planet=[planet for planet in self.model_instance.planets.values()],
+                                                    host_star=self.model_instance.stars[list(self.model_instance.stars.keys())[0]],
+                                                    orbital_models=self.model_instance.orbital_model
+                                                    )
         # # Initialise the dictionary giving the RV zero point RV_references
         # self.__RV_references = dict.fromkeys(model_instance.get_inst_names(inst_fullcat=RV_inst_cat), None)
         # logger.debug("RV instruments names: {}".format(list(self.__RV_references.keys())))
@@ -110,7 +109,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
             Else it is an input of the datasimulator function produced.
         """
         return create_datasimulator_RV(star=list(self.model_instance.stars.values())[0], planets=self.model_instance.planets,
-                                       rv_model=self.rv_model, dataset_db=self.model_instance.dataset_db,
+                                       keplerian_rv_model=self.keplerian_rv_model, dataset_db=self.model_instance.dataset_db,
                                        RVcat_model=self, inst_models=inst_models, datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets
                                        )
@@ -147,7 +146,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         # Fill the whole text_LC_param string
         text_RV_param = text_RV_param.format(object_name=self.model_instance.get_name(),
-                                             keprv_model=pformat(self.rv_model, compact=True).replace("\n", f"\n{tab_keprvmod}"),
+                                             keprv_model=pformat(self.keplerian_rv_model.dict2print, compact=True).replace("\n", f"\n{tab_keprvmod}"),
                                              poly_models=pformat(dico_poly, compact=True).replace("\n", f"\n{tab_poly}"),
                                              )
 
@@ -155,35 +154,14 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary"""
-        # Check the rv_model
-        dict_name = "keplerian_rv_model"
-        if dict_name not in dico_config:
-            raise ValueError(f"In file {self.paramfile_instcat}: Missing {dict_name} dictionary.")
-        dico_model = dico_config[dict_name]
-        for planet in self.model_instance.planets.values():
-            planet_name = planet.get_name()
-            # Check that there is a key for each planet
-            if planet_name not in dico_model:
-                raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name} is missing a key for planet {planet_name}.")
-            # Check that there is a 'do' key with a boolean value for each planet dictionary
-            if 'do' not in dico_model[planet_name]:
-                raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the 'do' key.")
-            else:
-                if not(isinstance(dico_model[planet_name]["do"], bool)):
-                    raise ValueError(f"In file {self.paramfile_instcat}: {dict_name}[{planet_name}]['do'] has to be a boolean.")
-            if dico_model[planet_name]['do']:
-                # Check that there is a key each planet dictionary
-                l_key_mandatory = ['model', 'orbital_model']
-                for key in l_key_mandatory:
-                    if key not in dico_model[planet_name]:
-                        raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] is missing the '{key}' key.")
-                # Check and load the rv_model dictionary
-                if dico_model[planet_name]['orbital_model'] not in self.model_instance.orbital_model[planet_name]['model_definitions'].keys():
-                    raise ValueError(f"In file {self.paramfile_instcat}: (Planet {planet_name}, keplerian model) the provided orbital model {dico_model[planet_name]['orbital_model']} is not an available orbital model. Should be in {list(self.model_instance.orbital_model[planet_name]['model_definitions'].keys())}")
-                if dico_model[planet_name]['model'] not in self._rv_models:
-                    raise ValueError(f"In file {self.paramfile_instcat}: Dictionary {dict_name}[{planet_name}] the model specifief '{dico_model[planet_name]['model']}' is not a valid keplerian model. Should be in {self._rv_models}")
-                # Load the rv_model for the planet
-                self.rv_model[planet_name] = dico_model[planet_name]
+        # Check the keplerian_rv_model
+        l_dico_model_name = ["keplerian_rv_model", ]
+        l_config_model_instance = [self.keplerian_rv_model, ]
+        for dict_name, config_model_instance in zip(l_dico_model_name, l_config_model_instance):
+            if dict_name not in dico_config:
+                raise ValueError(f"In file {self.paramfile_instcat}: Missing {dict_name} dictionary.")
+            dico_model = dico_config[dict_name]
+            config_model_instance.load_config(dico_config=dico_model)
 
         # Check and load the polynomial models
         if "polynomial_model" in dico_config:
@@ -294,28 +272,23 @@ class RV_InstCat_Model(Core_InstCat_Model):
         for star in self.model_instance.stars.values():
             star.apply_polymodel_parametrisation(inst_cat=RV_inst_cat)
 
+        ##############################################################################
+        # Apply the parametrisation for the RV keplerian models
+        ##############################################################################
+        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=RV_inst_cat)
+        l_inst_model_fullname = []
+        for inst_fullcat_i in l_inst_fullcat:
+            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=inst_fullcat_i):
+                l_inst_model_fullname.append(inst_model.full_name)
+
         # Apply the parametrisation to the planets parameters
         for planet in self.model_instance.planets.values():
             planet_name = planet.get_name()
-            l_orb_param_basename = ['P', 'tic', 'ecosw', 'esinw']
-            l_orb_new_param_key = ['P', 'tic', 'ecc_and_omega', 'ecc_and_omega']
-            l_orb_param_unit = ['time unit of LC/RV datasets', 'time unit of LC/RV datasets', 'w/o unit', 'w/o unit', ]
-            orb_model_name = self.rv_model[planet_name]['orbital_model']
-            dico_config_orb_mod_comp = self.model_instance.orbital_model[planet_name]['model_definitions'][orb_model_name]
-            for param_basename, new_param_key, param_unit in zip(l_orb_param_basename, l_orb_new_param_key, l_orb_param_unit):
-                if (new_param_key is None) or (dico_config_orb_mod_comp['new_parameter'][new_param_key] is True):
-                    param_name = f"{param_basename}{orb_model_name}"
-                else:
-                    param_name = f"{param_basename}{dico_config_orb_mod_comp['new_parameter'][new_param_key]}"
-                if planet.has_parameter(name=param_name, return_error=False, kwargs_get_list_params=None, kwargs_get_name={'recursive': False, 'include_prefix': False}):
-                    param = planet.parameters[param_name]
-                else:
-                    param = Parameter(name=param_name, name_prefix=planet.name, unit=param_unit)
-                    planet.add_parameter(param)
-                param.main = True
-            # planet_name = planet.get_name()
-            planet.K.main = True
-            planet.K.unit = "[amplitude of the RV data]"
+            # RV keplerian model
+            if self.keplerian_rv_model.get_do(planet_name=planet_name):
+                for inst_model_fullname in l_inst_model_fullname:
+                    model = self.keplerian_rv_model.get_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname)
+                    model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
     def apply_instmodel_parametrisation(self):
         """Apply the parametrisation to an instrument model object.

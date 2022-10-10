@@ -28,7 +28,7 @@ logger = getLogger()
 tab = "    "
 
 
-def create_datasimulator_RV(star, planets, rv_model, dataset_db, RVcat_model, inst_models, datasets,
+def create_datasimulator_RV(star, planets, keplerian_rv_model, dataset_db, RVcat_model, inst_models, datasets,
                             get_times_from_datasets
                             ):
     """Return a radial velocity datasimulator functions.
@@ -105,7 +105,7 @@ def create_datasimulator_RV(star, planets, rv_model, dataset_db, RVcat_model, in
     # Produce Keplerian models
     ##########################
     returns_keplerian = get_RV_keplerian(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset,
-                                         get_times_from_datasets=get_times_from_datasets, rv_model=rv_model,
+                                         get_times_from_datasets=get_times_from_datasets, keplerian_rv_model=keplerian_rv_model,
                                          planets=planets, time_vec_name=time_vec, l_time_vec_name=l_time_vec,
                                          function_builder=func_builder, ext_func_fullname=func_full_name_MultiOrDst_ext)
 
@@ -693,7 +693,7 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
     # return returns
 
 
-def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv_model, planets,
+def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, keplerian_rv_model, planets,
                      time_vec_name, l_time_vec_name, function_builder, ext_func_fullname):
     """Provide the text for the rv keplerian part of the RV model text (preambule and return).
 
@@ -719,7 +719,7 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
     ##############################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if rv_model[planet_name]['do']:
+        if keplerian_rv_model.get_do(planet_name=planet_name):
             ########################################################################
             # Define the functions to populate and initialise entries in the outputs
             ########################################################################
@@ -758,14 +758,10 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
                     for i_inputoutput in range(len(l_inst_model)):
                         returns[func_shortname].append("")
 
-            ###############################################################
-            # Add the parameters required for the model for all instruments
-            ###############################################################
-            # Add the planet parameters: K, ecosw, esinw, P, tic
-            l_param = [planet.K, planet.ecosw, planet.esinw, planet.P, planet.tic]
-            for param in l_param:
-                for func_shortname in l_function_shortname_4_planet:
-                    function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
+            ###########################################
+            # Get the keplerian RV model
+            ###########################################
+            rv_model = keplerian_rv_model.get_model(planet_name=planet_name)
 
             ####################################################################
             # Do the Model for each planet and each instrument and each function
@@ -773,18 +769,28 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, rv
             for func_shortname in l_function_shortname_4_planet:
 
                 for i_inputoutput, (instmod, dst) in enumerate(zip(l_inst_model, l_dataset)):
+                    instmod_fullname = instmod.full_name
+
+                    ###########################################
+                    # Add the parameters required for the model
+                    ###########################################
+                    # make sure that all the required parameters are added to the function in the function_builder
+                    parameters = rv_model.get_parameters(inst_model_fullname=instmod_fullname, object_category=None)
+                    for object_category in parameters:
+                        for param in parameters[object_category].values():
+                            function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
 
                     ##############
                     # Radvel model
                     ##############
-                    if rv_model[planet_name]["model"] == "radvel":
+                    if rv_model.category == "radvel":
                         ## writing the preambule and return (First preambules after returns)
                         ## preambule: Get the parameter values
-                        period = function_builder.get_text_4_parameter(parameter=planet.P, function_shortname=func_shortname)
-                        ecosw = function_builder.get_text_4_parameter(parameter=planet.ecosw, function_shortname=func_shortname)
-                        esinw = function_builder.get_text_4_parameter(parameter=planet.esinw, function_shortname=func_shortname)
-                        tic = function_builder.get_text_4_parameter(parameter=planet.tic, function_shortname=func_shortname)
-                        K = function_builder.get_text_4_parameter(parameter=planet.K, function_shortname=func_shortname)
+                        period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                        ecosw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['ecosw'], function_shortname=func_shortname)
+                        esinw = function_builder.get_text_4_parameter(parameter=parameters['orbit']['esinw'], function_shortname=func_shortname)
+                        tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                        K = function_builder.get_text_4_parameter(parameter=parameters['planet']['K'], function_shortname=func_shortname)
                         if not(function_builder.is_done_in_text(name=f"ecc_{planet_name}", function_shortname=func_shortname)):
                             function_builder.add_variable_to_ldict(variable_name="sqrt", variable_content=sqrt, function_shortname=func_shortname, exist_ok=True)
                             function_builder.add_to_body_text(text=f"{tab}ecc_{planet_name} = sqrt({ecosw} * {ecosw} + {esinw} * {esinw})\n", function_shortname=func_shortname)
