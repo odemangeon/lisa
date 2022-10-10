@@ -273,18 +273,18 @@ class RV_InstCat_Model(Core_InstCat_Model):
                         break
         return require
 
-    def apply_parametrisation(self, parametrisation, **kwargs):
+    def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation for the instrument category
 
         This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
         # Apply the parametrisation to the star and planets parameters
-        self.apply_star_planet_parametrisation(parametrisation=parametrisation)
+        self.apply_star_planet_parametrisation()
 
         # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation(parametrisation=parametrisation)
+        self.apply_instmodel_parametrisation()
 
-    def apply_star_planet_parametrisation(self, parametrisation):
+    def apply_star_planet_parametrisation(self):
         """Apply the parametrisation to the star and planet objects.
         """
         ##################################################
@@ -317,7 +317,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
             planet.K.main = True
             planet.K.unit = "[amplitude of the RV data]"
 
-    def apply_instmodel_parametrisation(self, parametrisation):
+    def apply_instmodel_parametrisation(self):
         """Apply the parametrisation to an instrument model object.
 
         This parametrisation should not include the decorrelation

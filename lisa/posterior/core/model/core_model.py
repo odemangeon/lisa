@@ -122,7 +122,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Initialise parametrisation related attributes
         self.init_parametrisation_attributes()
         # Initialise parameterisation
-        self.parametrisation
+        # self.parametrisation
 
         # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
         # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)

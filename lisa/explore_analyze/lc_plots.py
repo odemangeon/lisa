@@ -8,6 +8,7 @@ Module to create plot specifically for light curve data
 from logging import getLogger
 from copy import copy
 from numpy import ones_like
+from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
@@ -34,7 +35,7 @@ logger = getLogger()
 # add_dict_def_TS = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
 #                    'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
 
-l_valid_model = ["model", "1", "contam", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
+l_valid_model = ["model", "1", "contamination", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
 
 dict_model_false = {key: False for key in l_valid_model[1:]}
 dict_model_true = {key: True for key in l_valid_model[1:]}
@@ -168,23 +169,36 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         String giving the unit of the LCs
     """
     y_name = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
-    remove_dict = copy(dict_model_true)
-    remove_dict["GP_model"] = True
-    remove_dict["contamination"] = remove_contamination
-    remove_dict["1"] = remove1
-    remove_dict_model = copy(remove_dict)
-    remove_dict_model['decorrelation_likelihood'] = False
-    remove_dict_data = copy(remove_dict)
+    remove_dict_model = OrderedDict()
+    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, remove_contamination, remove_contamination, False, remove1]
+                            ):
+        remove_dict_model[key] = default
+    remove_dict_data = OrderedDict()
+    for key, default in zip(["decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, remove_contamination, remove_contamination, False, remove1]
+                            ):
+        remove_dict_data[key] = default
+    remove_dict_data_err = OrderedDict()
+    for key in ["contamination", ]:
+        remove_dict_data_err[key] = remove_dict_data[key]
+    # remove_dict_model = copy(remove_dict)
+    # remove_dict_model['decorrelation_likelihood'] = False
+    # remove_dict_data = copy(remove_dict)
+    kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
+                                                  'add_dict': dict_model_false
+                                                  },
+                                        "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
+                                                 'add_dict': dict_model_false
+                                                 },
+                                        "data_err": {'include_gp_model': False, "remove_dict": remove_dict_data_err,
+                                                     'add_dict': dict_model_false
+                                                     },
+                                        }
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                              compute_raw_models_func=compute_raw_models,
                              remove_add_model_components_func=remove_add_model_components,
-                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
-                                                                         'add_dict': dict_model_false
-                                                                         },
-                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
-                                                                        'add_dict': dict_model_false
-                                                                        },
-                                                               },
+                             kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                              l_valid_model=l_valid_model,
                              y_name=y_name, inst_cat='LC', d_name_component_removed_to_print=d_name_component_removed_to_print,
                              datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
@@ -363,9 +377,22 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         String giving the unit of the LCs
     """
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
-    remove_dict_model = copy(remove_dict)
-    remove_dict_model['decorrelation_likelihood'] = False
-    remove_dict_data = copy(remove_dict)
+    remove_dict_model = OrderedDict()
+    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, True]
+                            ):
+        remove_dict_model[key] = remove_dict.get(key, default)
+    remove_dict_data = OrderedDict()
+    for key, default in zip(["decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, False, True]
+                            ):
+        remove_dict_data[key] = remove_dict.get(key, default)
+    remove_dict_data_err = OrderedDict()
+    for key in ["contamination", ]:
+        remove_dict_data_err[key] = remove_dict_data[key]
+    # remove_dict_model = copy(remove_dict)
+    # remove_dict_model['decorrelation_likelihood'] = False
+    # remove_dict_data = copy(remove_dict)
     kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
     kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false
@@ -373,6 +400,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                         "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
                                                  'add_dict': dict_model_false
                                                  },
+                                        "data_err": {'include_gp_model': False, "remove_dict": remove_dict_data_err,
+                                                     'add_dict': dict_model_false
+                                                     },
                                         }
     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
     create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
@@ -397,7 +427,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                          )
 
 
-def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models):
+def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
     """
     """
     # Remove components if needed
@@ -408,9 +438,9 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP -= models[key + extension + extension_raw]
             elif key in ['contamination', 'decorr_multiply_2_totalflux']:
-                model /= models[key + extension + extension_raw]
+                model /= models[key + extension + extension_raw] / amplitude_fact
                 if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP /= models[key + extension + extension_raw]
+                    model_wGP /= models[key + extension + extension_raw] / amplitude_fact
             # elif key in ['1', ]:
             #     model -= 1
             #     if (model_wGP is not None) and (key != 'GP_model'):
@@ -425,9 +455,9 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
                 if (model_wGP is not None) and (key != 'GP_model'):
                     model_wGP += models[key + extension + extension_raw]
             elif key in ['contamination', 'decorr_multiply_2_totalflux']:
-                model *= models[key + extension + extension_raw]
+                model *= models[key + extension + extension_raw] / amplitude_fact
                 if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP *= models[key + extension + extension_raw]
+                    model_wGP *= models[key + extension + extension_raw] / amplitude_fact
             # elif key in ['1', ]:
             #     model += 1
             #     if (model_wGP is not None) and (key != 'GP_model'):

@@ -68,7 +68,7 @@ tab = "    "
 template_return = dedent(template_return)
 
 
-def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
+def create_datasimulator_LC(star, planets, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
                             phasecurve_model, occultation_model,
                             dataset_db, LCcat_model,
                             inst_models, datasets, get_times_from_datasets,
@@ -85,8 +85,6 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     planets                     : dict of Planets
         Dictionary of Planet instance providing the planets in the system
         Format: {"planet name": Planet instance}
-    parametrisation             : str
-        string refering to the parametrisation to use
     ldmodel4instmodfname        : dict of dict of str
         Dictionary giving Limd darkening model to use for each instrument model and for each star
         Format: {"<instrument_model_name>: {"<star_name>": "<LD_model_name>"}
@@ -184,7 +182,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     ########################
     returns_tr = get_transit(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                              transit_model=transit_model, ldmodel4instmodfname=ldmodel4instmodfname, LDs=LDs,
-                             parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
+                             SSE4instmodfname=SSE4instmodfname, star=star, planets=planets,
                              tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
                              ext_func_fullname=func_full_name_MultiOrDst_ext,
                              )
@@ -193,7 +191,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # Produce phase curve models
     ############################
     returns_pc = get_phasecurve(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
-                                phasecurve_model=phasecurve_model, parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname,
+                                phasecurve_model=phasecurve_model, SSE4instmodfname=SSE4instmodfname,
                                 star=star, planets=planets,
                                 tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
                                 ext_func_fullname=func_full_name_MultiOrDst_ext,
@@ -203,7 +201,7 @@ def create_datasimulator_LC(star, planets, parametrisation, ldmodel4instmodfname
     # Produce phase curve models
     ############################
     returns_occ = get_occultation(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
-                                  occultation_model=occultation_model, parametrisation=parametrisation, SSE4instmodfname=SSE4instmodfname,
+                                  occultation_model=occultation_model, SSE4instmodfname=SSE4instmodfname,
                                   star=star, planets=planets,
                                   tab=tab, time_vec_name=time_vec, l_time_vec_name=l_time_vec, function_builder=func_builder,
                                   ext_func_fullname=func_full_name_MultiOrDst_ext,
@@ -714,7 +712,7 @@ def get_catchederror_return(multi, l_inst_model, time_vec_name, l_time_vec_name,
 
 
 def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit_model,
-                ldmodel4instmodfname, LDs, parametrisation, SSE4instmodfname, star, planets, tab,
+                ldmodel4instmodfname, LDs, SSE4instmodfname, star, planets, tab,
                 time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
                 ):
     """Provide the text for the transit part of the LC model text (preambule and return).
@@ -749,8 +747,6 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
     LDs                         : dict of CoreLD
         Dictionary of subclasses of CoreLD instances providing the different limb-darkening models
         Format: {f"<star_name>_<LD model name>"": CoreLD_subclass instance, }
-    parametrisation             : str
-        string refering to the parametrisation to use
     SSE4instmodfname            : dict of dict of str int and float
         Dictionary giving the supersampling factor and the exposure time to use for each instrument model
         Format: {"instrument model name": {'supersamp': int_supersampling_factor, 'exptime': float_exposure_time}}
@@ -884,7 +880,6 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
                                                                                model_definition=model_definition,
                                                                                planet=planet, star=star,
                                                                                inst_model_obj=instmod, dataset=dst,
-                                                                               parametrisation=parametrisation,
                                                                                get_times_from_datasets=get_times_from_datasets,
                                                                                time_arg_name=time_arg_name,
                                                                                SSE4instmodfname=SSE4instmodfname,
@@ -1006,7 +1001,7 @@ def get_transit(multi, l_inst_model, l_dataset, get_times_from_datasets, transit
 
 
 def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phasecurve_model,
-                   parametrisation, SSE4instmodfname, star, planets, tab,
+                   SSE4instmodfname, star, planets, tab,
                    time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
                    ):
     """Provide the text for the phase curve part of the LC model text (preambule and return).
@@ -1132,6 +1127,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                     # Get the phase curve model impletmentation definition for the planet and the instrument
                     ########################################################################################
                     l_model_def = phasecurve_model.get_l_model(planet_name=planet_name, inst_model_fullname=instmod.full_name)
+                    orbital_model = phasecurve_model.orbital_models.get_model(planet_name=planet_name, inst_model_fullname=instmod.full_name)
 
                     # For each component of the phasec curve model
                     for pc_component_model in l_model_def:
@@ -1189,7 +1185,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     function_builder.add_variable_to_ldict(variable_name="acos", variable_content=acos, function_shortname=func_shortname, exist_ok=True)
                                     function_builder.add_to_body_text(text=f"{tab}inc_{planet_name} = degrees(acos({cosinc}))\n", function_shortname=func_shortname)
                                     function_builder.add_to_done_in_text(name=f"inc_{planet_name}_deg", function_shortname=func_shortname)
-                                if parametrisation == "Multis":
+                                if not(orbital_model.use_aR):
                                     if not(function_builder.is_done_in_text(name=f"aR_{planet_name}", function_shortname=func_shortname)):
                                         rhostar = function_builder.get_text_4_parameter(parameter=parameters['orbit']['rho'], function_shortname=func_shortname)
                                         function_builder.add_variable_to_ldict(variable_name="getaoverr", variable_content=getaoverr, function_shortname=func_shortname, exist_ok=True)
@@ -1205,7 +1201,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 Tn = function_builder.get_text_4_parameter(parameter=parameters['planet']['Tn'], function_shortname=func_shortname)
                                 deltaT = function_builder.get_text_4_parameter(parameter=parameters['planet']['delta_T'], function_shortname=func_shortname)
                                 Teff = function_builder.get_text_4_parameter(parameter=parameters['star']['Teff'], function_shortname=func_shortname)
-                                if parametrisation == "Multis":
+                                if not(orbital_model.use_aR):
                                     aR = f"aR_{planet_name}\n"
                                 else:
                                     aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
@@ -1309,7 +1305,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                                                                    function_shortname=func_shortname,
                                                                                    model_definition=pc_component_model,
                                                                                    planet=planet, star=star, inst_model_obj=instmod,
-                                                                                   dataset=dst, parametrisation=parametrisation,
+                                                                                   dataset=dst,
                                                                                    get_times_from_datasets=get_times_from_datasets,
                                                                                    time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
                                                                                    do_transit=False, do_occultation=True,
@@ -1389,32 +1385,12 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             if not(kelp_imported):
                                 raise ValueError("Kelp doesn't seems to be installed. The import failed.")
 
-                            ###########################################
-                            # Add the parameters required for the model
-                            ###########################################
-                            # Stellar parameters: Teff and rhostar if needed
-                            stellar_spectrum = pc_component_model.Model_kwargs.get('stellar_spectrum', None)
-                            if stellar_spectrum is None:
-                                function_builder.add_parameter(parameter=star.Teff, function_shortname=func_shortname, exist_ok=True)
-                            if parametrisation == "Multis":
-                                function_builder.add_parameter(parameter=star.rho, function_shortname=func_shortname, exist_ok=True)
-                            # Create the planetary model parameters that are model independent
-                            l_param = [planet.ecosw, planet.esinw, planet.cosinc, planet.P, planet.tic]
-                            if parametrisation != "Multis":
-                                l_param.append(planet.aR)
-                            for param in l_param:
-                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-                            # Create the planetary model parameters that are model dependent
-                            # TODO: Actually have different parameters for different model components.
-                            l_param = [planet.f, planet.Rrat, planet.alpha, planet.omegadrag, planet.AB, planet.c11, planet.hotspotoffset]
-                            for param in l_param:
-                                function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
-
                             #######################
                             # Create the Kelp Model
                             #######################
                             ## Create the kelp Model object model_kelp_{planet_name}_{instmod_fullname} and put in ldict
                             if not(function_builder.is_in_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                stellar_spectrum = pc_component_model.Model_kwargs.get('stellar_spectrum', None)
                                 l_max = pc_component_model.Model_kwargs.get('l_max', 1)
                                 if l_max == 1:
                                     C_ml = [[0],
@@ -1439,7 +1415,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
                                                                                function_shortname=func_shortname,
                                                                                planet=planet, star=star, inst_model_obj=instmod,
-                                                                               dataset=dst, parametrisation=parametrisation,
+                                                                               dataset=dst,
                                                                                get_times_from_datasets=get_times_from_datasets,
                                                                                time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
                                                                                do_transit=False, do_occultation=True,
@@ -1450,7 +1426,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                                                                )
 
                             ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
-                            if parametrisation == "Multis":
+                            if not(orbital_model.use_aR):
                                 aR = f"aR_{planet_name}\n"
                             else:
                                 aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
@@ -1537,7 +1513,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
 
 
 def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occultation_model,
-                    parametrisation, SSE4instmodfname, star, planets, tab,
+                    SSE4instmodfname, star, planets, tab,
                     time_vec_name, l_time_vec_name, function_builder, ext_func_fullname
                     ):
     """Provide the text for the occultation curve part of the LC model text (preambule and return).
@@ -1686,7 +1662,7 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
                                                                            function_shortname=func_shortname,
                                                                            model_definition=model_definition,
                                                                            planet=planet, star=star, inst_model_obj=instmod,
-                                                                           dataset=dst, parametrisation=parametrisation,
+                                                                           dataset=dst,
                                                                            get_times_from_datasets=get_times_from_datasets,
                                                                            time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
                                                                            do_transit=False, do_occultation=True,
@@ -1979,7 +1955,7 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
 
 
 def do_batman_transit_occultation_models(function_builder, function_shortname, planet, star, model_definition,
-                                         inst_model_obj, dataset, parametrisation,
+                                         inst_model_obj, dataset,
                                          get_times_from_datasets, time_arg_name, SSE4instmodfname,
                                          do_transit, do_occultation,
                                          l_dataset, multi, i_inputoutput=None,

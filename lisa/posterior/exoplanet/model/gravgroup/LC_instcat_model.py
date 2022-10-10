@@ -162,7 +162,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         """
         return create_datasimulator_LC(star=list(self.model_instance.stars.values())[0],
                                        planets=self.model_instance.planets,
-                                       parametrisation=self.model_instance.parametrisation,
                                        ldmodel4instmodfname=self.ldmodel4instmodfname,
                                        LDs=self.LDs,
                                        transit_model=self.transit_model,
@@ -420,21 +419,21 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         break
         return require
 
-    def apply_parametrisation(self, parametrisation, **kwargs):
+    def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation for the instrument category
 
         This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
         # Apply the parametrisation to the star and planets parameters
-        self.apply_star_planet_parametrisation(parametrisation=parametrisation)
+        self.apply_star_planet_parametrisation()
 
         # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation(parametrisation=parametrisation)
+        self.apply_instmodel_parametrisation()
 
         # If needed apply the limbdarkening coefficient parametrisation
-        self.apply_limbdarkening_parametrisation(parametrisation=parametrisation)
+        self.apply_limbdarkening_parametrisation()
 
-    def apply_star_planet_parametrisation(self, parametrisation):
+    def apply_star_planet_parametrisation(self):
         """Apply the parametrisation to the star and planet objects.
         """
         ############################################################
@@ -473,14 +472,14 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     for model in self.phasecurve_model.get_l_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname):
                         model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
-    def apply_limbdarkening_parametrisation(self, parametrisation):
+    def apply_limbdarkening_parametrisation(self):
         """Make all the parameters of all the Limb Darkening param containers main parameters."""
         if LC_inst_cat in set(self.model_instance.dataset_db.inst_categories):
             for LD_parcont in self.get_list_LD_parconts():
                 for param in LD_parcont.get_list_params(no_duplicate=True):
                     param.main = True
 
-    def apply_instmodel_parametrisation(self, parametrisation):
+    def apply_instmodel_parametrisation(self):
         """Apply the parametrisation to an instrument model object.
         """
         # # instrumental variation parametrisation

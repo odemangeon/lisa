@@ -1,7 +1,7 @@
 from copy import copy
 from numpy import zeros_like, sqrt
 from logging import getLogger
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -69,16 +69,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         Previously computed models for the same input (not the same key_model, but the same tsim, datasetname)
     """
     # Make sure that remove_dict and add_dict have all necessary keys
-    if l_valid_model is None:
-        l_valid_model = ['model']
-    l_valid_model_bis = copy(l_valid_model)
-    l_valid_model_bis.remove('model')
-    remove_dict_user = remove_dict if (remove_dict is not None) else {}
-    remove_dict = {key: False for key in l_valid_model_bis}
-    remove_dict.update(remove_dict_user)
-    add_dict_user = add_dict if (add_dict is not None) else {}
-    add_dict = {key: False for key in l_valid_model_bis}
-    add_dict.update(add_dict_user)
+    if remove_dict is None:
+        remove_dict = OrderedDict()
+    if add_dict is None:
+        add_dict = OrderedDict()
 
     # Init models if not provided
     if models is None:
@@ -128,7 +122,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         ################################################
         if (key_model + extension + extension_raw) not in models:
             if key_model == 'data':
-                model = zeros_like(tsim)
+                model = post_instance.dataset_db[datasetname].get_data()
+                model_wGP = gp_pred = gp_pred_var = None
+            elif key_model == 'data_err':
+                model = post_instance.dataset_db[datasetname].get_data_err()
                 model_wGP = gp_pred = gp_pred_var = None
             else:
                 (model, model_wGP, gp_pred, gp_pred_var
@@ -199,9 +196,13 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         ##########################################
         # Remove/Add model components as requested
         ##########################################
+        # if key_model == "data_err":
+        #     import pdb; pdb.set_trace()
+
         model, model_wGP = remove_add_model_components_func(model=model, model_wGP=model_wGP, remove_dict=remove_dict,
                                                             add_dict=add_dict, extension=extension,
-                                                            extension_raw=extension_raw, models=models
+                                                            extension_raw=extension_raw, models=models,
+                                                            amplitude_fact=amplitude_fact
                                                             )
 
         # Fill computed model into output (models)
@@ -335,10 +336,10 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             else:
                 kwargs_compute_model_4_key_model[key_model].update(kwargs_compute_model_4_key_model_user[key_model])
         # Make sure that kwargs_compute_model_4_key_model has the "data" key
-        if "data" not in kwargs_compute_model_4_key_model:
-            kwargs_compute_model_4_key_model["data"] = {'remove_dict': kwargs_compute_model_4_key_model['model']['remove_dict'],
-                                                        'add_dict': kwargs_compute_model_4_key_model['model']['add_dict']
-                                                        }
+        # if "data" not in kwargs_compute_model_4_key_model:
+        #     kwargs_compute_model_4_key_model["data"] = {'remove_dict': kwargs_compute_model_4_key_model['model']['remove_dict'],
+        #                                                 'add_dict': kwargs_compute_model_4_key_model['model']['add_dict']
+        #                                                 }
         for key_model, kwargs in kwargs_compute_model_4_key_model.items():
             if 'include_gp_model' not in kwargs:
                 kwargs['include_gp_model'] = True if key_model == 'model' else False
@@ -368,7 +369,14 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         # Remove components from the data
         #################################
         if "data" in dico_outputs['models'][datasetname]:
-            dico_outputs['datas'][datasetname] += dico_outputs['models'][datasetname]["data"]
+            # import pdb; pdb.set_trace()
+            dico_outputs['datas'][datasetname] = dico_outputs['models'][datasetname]["data"]
+        if "data_err" in dico_outputs['models'][datasetname]:
+            # import pdb; pdb.set_trace()
+            coeff_err = dico_outputs['models'][datasetname]["data_err"] / dico_outputs['data_errs'][datasetname]
+            dico_outputs['data_errs'][datasetname] *= coeff_err
+            dico_outputs['data_err_jitters'][datasetname] *= coeff_err
+            dico_outputs['data_err_worwojitters'][datasetname] *= coeff_err
 
     return dico_outputs, kwargs_compute_model_4_key_model
 
