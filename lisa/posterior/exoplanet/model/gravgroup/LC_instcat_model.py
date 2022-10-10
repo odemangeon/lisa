@@ -451,8 +451,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
             for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=inst_fullcat_i):
                 l_inst_model_fullname.append(inst_model.full_name)
 
-        host_star = list(self.model_instance.paramcontainers["stars"].values())[0]
-
         # Apply the parametrisation to the planets parameters and star parameters triggerd by the transit, phase curve or ocultation models
         for planet in self.model_instance.planets.values():
             planet_name = planet.get_name()
