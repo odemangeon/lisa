@@ -26,9 +26,7 @@ from ...dataset_and_instrument.rv import RV_inst_cat
 from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
 from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from ....core.model.core_instcat_model import Core_InstCat_Model
-from ....core.model.polynomial_model import set_dico_config, get_dico_config
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ....core.parameter import Parameter
 from .....tools.miscellaneous import spacestring_like
 
 

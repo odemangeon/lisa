@@ -1,6 +1,3 @@
-from pprint import pformat
-from copy import deepcopy
-
 from .....tools.metaclasses import MandatoryReadOnlyAttr
 from .planetstarmodel import (spiderman_imported, kelp_imported,
                               OrbitalModelBatman,

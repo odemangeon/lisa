@@ -28,8 +28,6 @@ from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrela
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
-from ....core.model.polynomial_model import set_dico_config, get_dico_config
-from ....core.parameter import Parameter
 from .....tools.miscellaneous import spacestring_like
 
 
