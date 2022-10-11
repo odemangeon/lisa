@@ -14,7 +14,6 @@ from numbers import Number
 from astropy.units import NamedUnit
 
 from lisa.tools.name import Named
-from lisa.tools.miscellaneous import spacestring_like
 from .prior.parameter_prior import Parameter_Prior
 
 
