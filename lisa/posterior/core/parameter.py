@@ -229,32 +229,43 @@ class Parameter(Named_Parameter, Parameter_Prior):
         else:
             return self.duplicate.paramfile_info
 
-    def get_paramfile_section(self, text_tab="", texttab_1tline=True,
-                              entete_symb=" = ", quote_name=False):
-        """Return the text to include in the parameter_file for this parameter.
+    # def get_paramfile_section(self, text_tab="", texttab_1tline=True,
+    #                           entete_symb=" = ", quote_name=False):
+    #     """Return the text to include in the parameter_file for this parameter.
+    #
+    #     :param str text_tab : text giving the tabulation that needs to be added to this the text to
+    #         obtain the good alignment in the input file.
+    #     """
+    #     if quote_name:
+    #         entete = f"'{self.get_name(recursive=False, include_prefix=False, code_version=False)}'{entete_symb}" + "{"
+    #     else:
+    #         entete = f"{self.get_name(recursive=False, include_prefix=False, code_version=False)}{entete_symb}" + "{"
+    #     space_entete_param = spacestring_like(entete)
+    #     text = ""
+    #     # First is the name of the parameter
+    #     if texttab_1tline:
+    #         text += text_tab
+    #     text += entete
+    #     # Duplicate key
+    #     text += f"'duplicate': {self.duplicate},\n"
+    #     # Free key
+    #     text += text_tab + space_entete_param + f"'free': {self.free},\n"
+    #     # Value key
+    #     text += text_tab + space_entete_param + f"'value': {self.value},  # unit: {self.unit}\n"
+    #     # Finally the prior info
+    #     text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
+    #     return text
 
-        :param str text_tab : text giving the tabulation that needs to be added to this the text to
-            obtain the good alignment in the input file.
+    def get_paramfile_dict(self):
         """
-        if quote_name:
-            entete = f"'{self.get_name(recursive=False, include_prefix=False, code_version=False)}'{entete_symb}" + "{"
-        else:
-            entete = f"{self.get_name(recursive=False, include_prefix=False, code_version=False)}{entete_symb}" + "{"
-        space_entete_param = spacestring_like(entete)
-        text = ""
-        # First is the name of the parameter
-        if texttab_1tline:
-            text += text_tab
-        text += entete
-        # Duplicate key
-        text += f"'duplicate': {self.duplicate},\n"
-        # Free key
-        text += text_tab + space_entete_param + f"'free': {self.free},\n"
-        # Value key
-        text += text_tab + space_entete_param + f"'value': {self.value},  # unit: {self.unit}\n"
-        # Finally the prior info
-        text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
-        return text
+        """
+        dico_param_file = {}
+        dico_param_file['duplicate'] = self.duplicate
+        dico_param_file['free'] = self.free
+        dico_param_file['value'] = self.value
+        dico_param_file['unit'] = self.unit
+        dico_param_file['prior'] = Parameter_Prior.get_paramfile_dict(self)
+        return dico_param_file
 
     def load_config(self, dico_config, model_instance, **kwargs_prior):
         """Load the configuration specified by the parameter dictionnary.

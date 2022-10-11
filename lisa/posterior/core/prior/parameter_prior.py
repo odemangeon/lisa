@@ -187,22 +187,31 @@ class Parameter_Prior(object):
         else:
             raise ValueError("prior_category should be a str.")
 
-    def get_paramfile_section(self, text_tab=""):
-        """Return the text to include in the parameter file related to the prior of the Parameter.
+    # def get_paramfile_section(self, text_tab=""):
+    #     """Return the text to include in the parameter file related to the prior of the Parameter.
+    #
+    #     :param str text_tab : text giving the tabulation that needs to be added to this the text to
+    #         obtain the good alignment in the input file.
+    #     """
+    #     # Third and last key is for the priors
+    #     entete_prior = "'prior': {"
+    #     space_entete_prior = spacestring_like(entete_prior)
+    #     # Classical marginal prior keys
+    #     text = text_tab + entete_prior + "'category': '{}', 'args': {},\n".format(self.prior_category, self.prior_args)
+    #     # Joint prior keys (for later use, not implemented yet in what follows)
+    #     text += (text_tab + space_entete_prior + "'joint_prior_ref': None\n")
+    #     text += text_tab + space_entete_prior + "}\n"
+    #     text += text_tab + "},\n"
+    #     return text
 
-        :param str text_tab : text giving the tabulation that needs to be added to this the text to
-            obtain the good alignment in the input file.
+    def get_paramfile_dict(self):
         """
-        # Third and last key is for the priors
-        entete_prior = "'prior': {"
-        space_entete_prior = spacestring_like(entete_prior)
-        # Classical marginal prior keys
-        text = text_tab + entete_prior + "'category': '{}', 'args': {},\n".format(self.prior_category, self.prior_args)
-        # Joint prior keys (for later use, not implemented yet in what follows)
-        text += (text_tab + space_entete_prior + "'joint_prior_ref': None\n")
-        text += text_tab + space_entete_prior + "}\n"
-        text += text_tab + "},\n"
-        return text
+        """
+        dico_param_file = {}
+        dico_param_file['category'] = self.prior_category
+        dico_param_file['args'] = self.prior_args
+        dico_param_file['joint_prior_ref'] = self.joint_prior_ref
+        return dico_param_file
 
     def load_config(self, dico_config, available_joint_priors={}, load_setup=False):
         """Load the configuration specified by the parameter dictionnary.

@@ -17,6 +17,7 @@ from os import getcwd
 from os.path import isfile, join, basename
 from collections import defaultdict  # OrderedDict
 from numpy import array, ones
+from pprint import pformat
 # from copy import deepcopy
 
 from .datasimulator import DatasimulatorCreator
@@ -38,6 +39,8 @@ from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.default_folders_data_run import RunFolder
+from ....tools.miscellaneous import spacestring_like
+
 # from ....tools.miscellaneous import spacestring_like
 
 
@@ -183,7 +186,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             if inscat_model.has_instcat_paramfile:
                 dico["paramfile4instcat"][inst_cat] = inscat_model.paramfile_instcat
         dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
-        dico["kwargs_parametrisation"] = self.parametrisation_kwargs
         return dico
 
     def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat, kwargs_parametrisation):
@@ -623,13 +625,20 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         text = ""
         # For each paramcontainer in the param container database. Produce the param file section.
         for parcont_type in self.paramcont_categories:
-            text += "{}# {}\n".format(text_tab, parcont_type)
+            text += "\n{}# {}\n".format(text_tab, parcont_type)
             # Instruments Param containers are a special case
             if parcont_type != instmod_cat:
                 for parcont in self.paramcontainers[parcont_type].values():
-                    text += parcont.get_paramfile_section(text_tab=text_tab,
-                                                          entete_symb=entete_symb,
-                                                          quote_name=quote_name)
+                    # text += parcont.get_paramfile_section(text_tab=text_tab,
+                    #                                       entete_symb=entete_symb,
+                    #                                       quote_name=quote_name)
+                    if quote_name:
+                        entete = f"'{parcont.code_name}'{entete_symb}"
+                    else:
+                        entete = f"{parcont.code_name}{entete_symb}"
+                    text += entete
+                    space_entete_param = spacestring_like(entete)
+                    text += pformat(parcont.get_paramfile_dict(), compact=True).replace("\n", f"\n{text_tab + space_entete_param}")
                     text += "\n\n"
             else:
                 text += self.instruments.get_paramfile_section(model_instance=self, text_tab=text_tab,
@@ -637,9 +646,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Produce the param file section for the parameter of the model which are not in
         # any specific paramcontainer
         text += "# {}\n\n".format(self.category)
-        text += super(Core_Model, self).get_paramfile_section(text_tab=text_tab, texttab_1tline=False,
-                                                              entete_symb=" = ", quote_name=False,
-                                                              recursive=False)
+        entete = f"{self.code_name} = "
+        text += entete
+        space_entete_param = spacestring_like(entete)
+        text += pformat(super(Core_Model, self).get_paramfile_dict(), compact=True).replace("\n", f"\n{text_tab + space_entete_param}")
+        # text += super(Core_Model, self).get_paramfile_section(text_tab=text_tab, texttab_1tline=False,
+        #                                                       entete_symb=" = ", quote_name=False,
+        #                                                       recursive=False)
         # Produce the text to introduce the joint paramaters distribution section
         text += "\n" + self.get_paramfile_section_jointprior()
 
