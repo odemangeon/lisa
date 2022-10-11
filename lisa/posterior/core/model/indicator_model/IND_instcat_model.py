@@ -888,18 +888,18 @@ class IND_InstCat_Model(Core_InstCat_Model):
     #     """
     #     self.params_indicator_models[self._polynomial_method_name] = dict_model
 
-    def apply_parametrisation(self, parametrisation, **kwargs):
+    def apply_parametrisation(self, **kwargs):
         """Apply the parametrisation for the instrument category
 
         This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
         # Apply the parametrisation to the star and planets parameters
-        self.apply_system_parametrisation(parametrisation=parametrisation)
+        self.apply_system_parametrisation()
 
         # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation(parametrisation=parametrisation)
+        self.apply_instmodel_parametrisation()
 
-    def apply_system_parametrisation(self, parametrisation):
+    def apply_system_parametrisation(self):
         """
         """
         for ind_cat in self.indicator_subcategories:
@@ -908,7 +908,7 @@ class IND_InstCat_Model(Core_InstCat_Model):
                                             instrument_per_instrument=False, prefix=ind_cat
                                             )
 
-    def apply_instmodel_parametrisation(self, parametrisation):
+    def apply_instmodel_parametrisation(self):
         """
         """
         for indinst_fullcat in self.indicator_fullcategories:
