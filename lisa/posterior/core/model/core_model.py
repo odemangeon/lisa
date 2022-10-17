@@ -188,7 +188,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
         return dico
 
-    def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat, kwargs_parametrisation):
+    def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat):
         """load the parameter file."""
         if self.hasrun_folder:
             param_file_model = join(self.run_folder, param_file_model)
@@ -214,7 +214,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         self.load_parameter_file_model()
         self.load_instcat_paramfile()
         self.load_noisemodcat_paramfile()
-        self.set_parametrisation(**kwargs_parametrisation)
+        self.set_parametrisation()
         self.update_paramfile_info()
         self.load_parameter_file()
 
