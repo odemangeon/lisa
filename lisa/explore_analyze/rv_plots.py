@@ -6,7 +6,7 @@ Module to create plots specifically for radial velocity data
 @TODO:
 """
 from logging import getLogger
-from copy import copy
+from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
@@ -150,18 +150,37 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     RV_unit        : str
         String giving the unit of the RVs
     """
-    remove_dict = copy(dict_model_true)
-    remove_dict["GP_model"] = True
+    remove_dict_model = OrderedDict()
+    for key, default in zip(["GP_model", "decorrelation", "inst_var", "stellar_var"],
+                            [True, True, True, True]
+                            ):
+        remove_dict_model[key] = default
+    remove_dict_data = OrderedDict()
+    for key, default in zip(["GP_model", "decorrelation_likelihood", "decorrelation", "inst_var", "stellar_var"],
+                            [True, True, True, True, True]
+                            ):
+        remove_dict_data[key] = default
+    remove_dict_data_err = OrderedDict()
+    for key in ["contamination", ]:
+        remove_dict_data_err[key] = remove_dict_data[key]
+    # remove_dict_model = copy(remove_dict)
+    # remove_dict_model['decorrelation_likelihood'] = False
+    # remove_dict_data = copy(remove_dict)
+    kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
+                                                  'add_dict': dict_model_false
+                                                  },
+                                        "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
+                                                 'add_dict': dict_model_false
+                                                 },
+                                        "data_err": {'include_gp_model': False, "remove_dict": remove_dict_data_err,
+                                                     'add_dict': dict_model_false
+                                                     },
+                                        }
+
     create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                              compute_raw_models_func=compute_raw_models,
                              remove_add_model_components_func=remove_add_model_components,
-                             kwargs_compute_model_4_key_model={"model": {'include_gp_model': True, "remove_dict": remove_dict,
-                                                                         'add_dict': dict_model_false
-                                                                         },
-                                                               "data": {'include_gp_model': True, "remove_dict": remove_dict,
-                                                                        'add_dict': dict_model_false
-                                                                        },
-                                                               },
+                             kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                              l_valid_model=l_valid_model,
                              y_name=y_name, inst_cat='RV',
                              d_name_component_removed_to_print=d_name_component_removed_to_print,

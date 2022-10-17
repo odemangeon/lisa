@@ -6,7 +6,6 @@ Module to create plot specifically for light curve data
 @TODO:
 """
 from logging import getLogger
-from copy import copy
 from numpy import ones_like
 from collections import OrderedDict
 
@@ -170,13 +169,13 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     """
     y_name = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
-    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [True, remove_contamination, remove_contamination, True, remove1]
+    for key, default in zip(["GP_model", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [True, True, remove_contamination, remove_contamination, True, remove1]
                             ):
         remove_dict_model[key] = default
     remove_dict_data = OrderedDict()
-    for key, default in zip(["decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [True, True, remove_contamination, remove_contamination, True, remove1]
+    for key, default in zip(["GP_model", "decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [True, True, True, remove_contamination, remove_contamination, True, remove1]
                             ):
         remove_dict_data[key] = default
     remove_dict_data_err = OrderedDict()
