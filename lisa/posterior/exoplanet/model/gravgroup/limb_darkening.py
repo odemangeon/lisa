@@ -95,6 +95,11 @@ class CoreLD(Core_ParamContainer):
         """Return the list of all parameters."""
         return [self.parameters[paramname] for paramname in self.__get_list_all_paramnames()]
 
+    def apply_parametrisation(self):
+        """Set all LD parameters to main."""
+        for param in self.get_list_params(no_duplicate=True):
+            param.main = True
+
 
 class LinearLD(CoreLD):
     """docstring for LinearLD."""
