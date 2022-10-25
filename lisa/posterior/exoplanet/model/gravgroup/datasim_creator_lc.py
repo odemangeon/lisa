@@ -1577,8 +1577,9 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
 
     # Init the list that will indicate that t_secondary has been updated in the batman TransitParams instances used for the occultation
     t_sec_updates = defaultdict(list)
-    # Init the list that will indicate that fp has been set to 1 in the batman TransitParams instances used for the occultation
+    # Init the list that will indicate that fp and rp has been set to 1 in the batman TransitParams instances used for the occultation
     fp_updates = defaultdict(list)
+    rp_updates = defaultdict(list)
 
     ##############################
     # Do the Model for each planet
@@ -1669,7 +1670,8 @@ def get_occultation(multi, l_inst_model, l_dataset, get_times_from_datasets, occ
                                                                            l_dataset=l_dataset, multi=multi,
                                                                            i_inputoutput=i_inputoutput,
                                                                            normalize_occultation=False,
-                                                                           fp_updates=fp_updates, t_sec_updates=t_sec_updates
+                                                                           fp_updates=fp_updates, rp_updates=rp_updates,
+                                                                           t_sec_updates=t_sec_updates
                                                                            )
 
                         ## writing the returns
@@ -2168,7 +2170,7 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
 
     if do_occultation and (f"params_{planet_name}_{instmod_fullname}" not in fp_updates[function_shortname]):
         if not(normalize_occultation):
-            Frat = function_builder.get_text_4_parameter(parameter=parameters['orbit']['Frat'], function_shortname=function_shortname)
+            Frat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Frat'], function_shortname=function_shortname)
             function_builder.add_to_body_text(text=f"{tab}params_{planet_name}_{instmod_fullname}.fp = {Frat}\n", function_shortname=function_shortname)
         fp_updates[function_shortname].append(f"params_{planet_name}_{instmod_fullname}")
 
