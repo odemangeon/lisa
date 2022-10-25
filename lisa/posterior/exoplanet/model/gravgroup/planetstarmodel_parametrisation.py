@@ -445,7 +445,7 @@ class Core_PlanetStarModels_1model1inst(Core_PlanetStarModels_lmodel1inst):
                                                                 )
 
     def get_model(self, planet_name, inst_model_fullname):
-        """Get the do for the model.
+        """Get the model for a given planet name and a given instrument model full name.
 
         If do is True it means that the model should be done. To be used by the datasimulator creator functions
 
