@@ -360,11 +360,6 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         **kwargs
                                         )
 
-        #######################
-        # Compute the residuals
-        #######################
-        dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model' + extension_raw]
-
         #################################
         # Remove components from the data
         #################################
@@ -377,6 +372,11 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
             dico_outputs['data_errs'][datasetname] *= coeff_err
             dico_outputs['data_err_jitters'][datasetname] *= coeff_err
             dico_outputs['data_err_worwojitters'][datasetname] *= coeff_err
+
+        #######################
+        # Compute the residuals
+        #######################
+        dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model']
 
     return dico_outputs, kwargs_compute_model_4_key_model
 
