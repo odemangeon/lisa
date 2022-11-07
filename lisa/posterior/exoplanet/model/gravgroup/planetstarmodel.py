@@ -607,8 +607,8 @@ class PhaseCurveModelSinCos(Core_PlanetStarModel):
             if not(isinstance(args['factor_period'], Number)) or (args['factor_period'] < 0):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'factor_period' should be a positive number (got {args['factor_period']})")
             self.args['factor_period'] = args['factor_period']
-            if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] == 'param')):
-                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'flux_offset' should be a number or 'param' (got {args['flux_offset']})")
+            if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] in ['param', 'zero', 'semi-amplitude'])):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'flux_offset' should be a number or 'param' or 'zero' or 'semi-amplitude' (got {args['flux_offset']})")
             self.args['flux_offset'] = args['flux_offset']
             if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param', 'semi-amplitude'])):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' should be a number or 'param' (got {args['phase_offset']})")

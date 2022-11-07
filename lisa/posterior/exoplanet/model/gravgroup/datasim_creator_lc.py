@@ -19,6 +19,8 @@ from textwrap import dedent
 from math import acos, degrees, sqrt
 from numpy import ones_like, inf, mean, pi, sin, cos, abs, argsort
 from collections import defaultdict
+from numbers import Number
+
 
 try:
     from batman import TransitModel, TransitParams
@@ -1347,6 +1349,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 # flux offset
                                 if pc_component_model.flux_offset == "param":
                                     flux_offset = function_builder.get_text_4_parameter(parameter=parameters['planet']['Foffset'], function_shortname=func_shortname)
+                                elif isinstance(pc_component_model.flux_offset, Number):
+                                    flux_offset = f"{pc_component_model.flux_offset}"
                                 # Add sin or cos and pi to ldict
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi,
                                                                        function_shortname=func_shortname, exist_ok=True)
