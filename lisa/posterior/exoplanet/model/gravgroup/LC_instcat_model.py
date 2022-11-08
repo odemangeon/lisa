@@ -456,7 +456,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     model = self.transit_model.get_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname)
                     model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
                     # Add the Limd darkening parameters
-                    LD_models = self.ldmodel4instmodfname[inst_model.full_name]
+                    LD_models = self.ldmodel4instmodfname[inst_model_fullname]
                     LD_model = self.LDs[f"{star.get_name()}_{LD_models[star.get_name()]}"]
                     if LD_model not in l_apply_param_LD_done:
                         LD_model.apply_parametrisation()
