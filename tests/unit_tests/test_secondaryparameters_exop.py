@@ -13,6 +13,9 @@ from pprint import pformat
 from numpy.random import random
 
 from lisa.tools.chain_interpreter import ChainsInterpret
+from lisa.posterior.exoplanet.model.gravgroup.model import GravGroup
+from lisa.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
+
 
 import lisa.posterior.exoplanet.exploration_analysis_tools.secondary_parameters
 
@@ -46,14 +49,14 @@ class TestMethods(TestCase):
 
         self.chainI = ChainsInterpret(input_array=random(size=(n_walker, n_iteration, n_dim)), param_names=param_names)
 
+        dataset_db = DatasetDatabase(object_name="WASP-76")
+        self.model = GravGroup(name="WASP-76", dataset_db=dataset_db, instmodel4dataset=None, l_instmod_fullnames=[], stars=1, planets=2, run_folder=None)
+
     def test_get_secondary_chains(self):
         logger.info("\n\nSTART test_get_secondary_chains")
-        chainIsec = get_secondary_chains(chainI_main=self.chainI, sec_params=sp, star_kwargs=None, planet_kwargs=None)
+        chainIsec = get_secondary_chains(chainI_main=self.chainI, sec_params=sp, model=self.model)
         print(f"list of secondary paramters computed: {chainIsec.param_names}\nchainIsec.shape = {chainIsec.shape}\nchainIsec = {chainIsec}")
         logger.info("test run without error. Done")
-
-
-
 
 
 if __name__ == '__main__':

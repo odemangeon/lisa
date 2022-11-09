@@ -2,7 +2,7 @@
 """
 from collections import Counter
 from numbers import Number
-from numpy import ndarray, stack, arcsin, sqrt, rad2deg, random, pi
+from numpy import ndarray, stack, arcsin, sqrt, rad2deg, random, pi, ones
 
 from ..model import convert as cv
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
@@ -14,7 +14,7 @@ from logging import getLogger
 logger = getLogger()
 
 
-def get_secondary_chains(chainI_main, sec_params, star_kwargs=None, planet_kwargs=None):
+def get_secondary_chains(chainI_main, sec_params, model):
     """Return ChainInterpret instance with the computed chain of the secondary parameters.
 
     Arguments
@@ -38,6 +38,14 @@ def get_secondary_chains(chainI_main, sec_params, star_kwargs=None, planet_kwarg
             for param_name in dico_sec_par['l_param_name']:
                 if param_name in chainI_main.param_names:
                     l_chains_param.append(chainI_main[..., param_name])
+                elif param_name in model.get_list_paramnames(main=True, free=False, recursive=True,
+                                                             no_duplicate=True, recursive_naming=True, include_prefix=True
+                                                             ):
+                    param = model.get_parameter(name=param_name, notexist_ok=False, return_error=False,
+                                                kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': True},
+                                                kwargs_get_name={'recursive': True, 'include_prefix': True}
+                                                )
+                    l_chains_param.append(ones(chainI_main.shape[:-1]) * param.value)
                 else:
                     raise ValueError(f"Parameter {param_name} is not found anywhere")
         else:
