@@ -4,7 +4,7 @@
 # Light-curve parametrisation file of WASP-76
 
 # Which model do you want to use for the transit ?
-transit_model = {'b': {'do': True,
+transit_model = {'b': {'do': False,
                        'model4instrument': {'LC_CHEOPS_inst0': ''},
                        'model_definitions': {'': {'category': 'batman',
                                                   'param_extensions': {'planet': {'Rrat': ''},
@@ -41,7 +41,7 @@ phasecurve_model = {'b': {'do': False,
 
 # Which model do you want to use for the occultation ?
 # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
-occultation_model = {'b': {'do': False,
+occultation_model = {'b': {'do': True,
                            'model4instrument': {'LC_CHEOPS_inst0': ''},
                            'model_definitions': {'': {'category': 'batman',
                                                       'param_extensions': {'planet': {'Frat': '',
@@ -77,4 +77,20 @@ polynomial_model = {'A': {'do': False, 'order': 0, 'tref': None},
 decorrelation_model = {'LC_CHEOPS_inst0': {'do': False,
                                            'what to decorrelate': {'add_2_totalflux': {'linear': {}},
                                                                    'multiply_2_totalflux': {'linear': {}}}}}
-decorrelation_likelihood = {'do': False, 'model_definitions': {}, 'order_models': []}
+decorrelation_likelihood = {'do': True,
+                            'order_models': ['ROLL', 'XY'],
+                            'model_definitions': {'ROLL': {'category': 'spline',
+                                                           'spline_type': 'UnivariateSpline',
+                                                           'spline_kwargs': {'k': 3},
+                                                           'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100'}
+                                                           },
+                                                  'XY': {'category': 'bispline',
+                                                         'spline_type': 'SmoothBivariateSpline',
+                                                         'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                         'match datasets': {'LC_WASP-76_CHEOPS_100': {'X': 'IND-CX_WASP-76_CHEOPS_100',
+                                                                                                      'Y': 'IND-CY_WASP-76_CHEOPS_100',
+                                                                                                      }
+                                                                            }
+                                                         }
+                                                  }
+                            }

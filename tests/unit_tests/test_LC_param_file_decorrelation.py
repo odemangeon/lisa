@@ -80,8 +80,8 @@ class TestMethods(TestCase):
         self.LC_instcat_model = self.post_instance.model.instcat_models['LC']
         print(self.post_instance.model.dataset_db)
 
-    def test_get_text_decorrelation_likelihood_model(self):
-        logger.info("\n\nSTART get_text_4_instcat_param_file")
+    def test_get_and_set_decorrelation_likelihood_model_config(self):
+        logger.info("\n\nSTART test_get_and_set_decorrelation_likelihood_model_config")
         self.assertTrue(self.LC_instcat_model.decorrelation_likelihood_config == {'do': False, 'order_models': [], 'model_definitions': {}})
         logger.info("Initialise decorrelation_likelihood_config Done")
         self.post_instance.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite='y', answer_create='create')
@@ -108,6 +108,7 @@ class TestMethods(TestCase):
         logger.info("Run load_config_decorrelation_likelihood without error Done")
         self.assertTrue(self.LC_instcat_model.decorrelation_likelihood_config == dico_config_decorr_like[self.LC_instcat_model._decorr_likelihood_dict_name])
         logger.info("Run load_config_decorrelation_likelihood successfully Done")
+        logger.info("\n\nFINISHED test_get_and_set_decorrelation_likelihood_model_config")
 
 
 if __name__ == '__main__':

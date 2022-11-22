@@ -254,11 +254,11 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
+        # Apply the Core_InstCat_Model.apply_parametrisation
+        super(RV_InstCat_Model, self).apply_parametrisation()
+
         # Apply the parametrisation to the star and planets parameters
         self.apply_star_planet_parametrisation()
-
-        # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation()
 
     def apply_star_planet_parametrisation(self):
         """Apply the parametrisation to the star and planet objects.
@@ -288,27 +288,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
                     model = self.keplerian_rv_model.get_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname)
                     model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
-    def apply_instmodel_parametrisation(self):
-        """Apply the parametrisation to an instrument model object.
-
-        This parametrisation should not include the decorrelation
-
-        Arguments
-        ---------
-        inst_mod_obj : Instrument_Model
-            Instrument_Model instance providing the instrument model to be parametrised.
-        """
-        # instrumental variation parametrisation
-        # For I have not implemented how the use can define inst_var for RVs but once it's done
-        # It only needs to be provided here
-        # inst_mod_obj.init_inst_var_parameters(with_inst_var=False, inst_var_order=1)
-        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=RV_inst_cat)
-        for inst_fullcat_i in l_inst_fullcat:
-            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=RV_inst_cat):
-                inst_model.apply_parametrisation()
-                self.apply_instmod_parametrisation_decorrelation(inst_mod_obj=inst_model)
-
-    def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
+    def apply_instmod_parametrisation_decorrelation_models(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
 
         Arguments
@@ -323,8 +303,3 @@ class RV_InstCat_Model(Core_InstCat_Model):
                     DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
                                                      model_part=model_part,
                                                      decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
-        # Decorrelation likelihood
-        if self.do_decorrelate_likelihood_instmod(instmod_fullname=inst_mod_obj.full_name):
-            for DecorModel in self.l_decorrelation_likelihood_class:
-                DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
-                                                 decorrelation_config_inst_decorr=self.decorrelation_likelihood_config[inst_mod_obj.full_name][DecorModel.category])

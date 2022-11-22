@@ -424,16 +424,16 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         break
         return require
 
-    def apply_parametrisation(self, **kwargs):
+    def apply_parametrisation(self):
         """Apply the parametrisation for the instrument category
 
         This method is called by Core_Parametrisation.apply_instcat_parameterisation
         """
+        # Apply the Core_InstCat_Model.apply_parametrisation
+        super(LC_InstCat_Model, self).apply_parametrisation()
+
         # Apply the parametrisation to the star and planets parameters
         self.apply_star_planet_parametrisation()
-
-        # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation()
 
     def apply_star_planet_parametrisation(self):
         """Apply the parametrisation to the star and planet objects.
@@ -479,21 +479,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     for model in self.phasecurve_model.get_l_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname):
                         model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
-    def apply_instmodel_parametrisation(self):
-        """Apply the parametrisation to an instrument model object.
-        """
-        # # instrumental variation parametrisation
-        # inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
-        #                                       inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
-        # # The initialisation of the instrumental contamination is already made in the instrument model
-        # # See exoplanet.dataset_and_instrument.lc.LC_Instrument.__params_model__
-        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=LC_inst_cat)
-        for inst_fullcat_i in l_inst_fullcat:
-            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=inst_fullcat_i):
-                inst_model.apply_parametrisation()
-                self.apply_instmod_parametrisation_decorrelation(inst_mod_obj=inst_model)
-
-    def apply_instmod_parametrisation_decorrelation(self, inst_mod_obj):
+    def apply_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
 
         Arguments
@@ -508,8 +494,3 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
                                                      model_part=model_part,
                                                      decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
-        # Decorrelation likelihood
-        if self.do_decorrelate_likelihood_instmod(instmod_fullname=inst_mod_obj.full_name):
-            for DecorModel in self.l_decorrelation_likelihood_class:
-                DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
-                                                 decorrelation_config_inst_decorr=self.decorrelation_likelihood_config[inst_mod_obj.full_name][DecorModel.category])

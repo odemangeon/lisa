@@ -42,7 +42,7 @@ logger = getLogger()
 
 class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
 
-    __mandatorymeths__ = ["datasim_creator", "create_instcat_paramfile", "load_instcat_paramfile"]
+    __mandatorymeths__ = ["datasim_creator", "create_instcat_paramfile", "load_instcat_paramfile", ]
     # datasim_creator: Methods that creates the datasimulator functions
     #   The inputs of this method need to be (inst_models, datasets=None)
     # create_instcat_paramfile: Methods to create the param file specific to the instrument category
@@ -566,7 +566,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
             decorr_cat_class.load_text_decorr_paramfile(model_name=model_name,
                                                         config_model_paramfile=dico_config_model,
                                                         config_model_storage=self.decorrelation_likelihood_config["model_definitions"][model_name],
-                                                        model_instance=self.model_instance, 
+                                                        model_instance=self.model_instance,
                                                         )
             self.decorrelation_likelihood_config["order_models"].append(model_name)
 
@@ -807,3 +807,58 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
             else:
                 res.extend(self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname))
         return res
+
+    def apply_parametrisation(self, **kwargs):
+        """Apply the parametrisation for the instrument category
+
+        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        """
+        # Apply the parametrisation to the instrument models parameters
+        self.apply_instmodel_parametrisation()
+
+        # Apply likelihood decorrelation parametrisation
+        self.apply_decorrelation_likelihood_parameterisation()
+
+    def apply_instmodel_parametrisation(self):
+        """Apply the parametrisation to an instrument model object.
+
+        This method is called by Core_InstCat_Model.apply_parameterisation
+        """
+        # # instrumental variation parametrisation
+        # inst_mod_obj.init_inst_var_parameters(with_inst_var=self.model_instance.parametrisation_kwargs.get("with_inst_var", False),
+        #                                       inst_var_order=self.model_instance.parametrisation_kwargs.get("inst_var_order", None))
+        # # The initialisation of the instrumental contamination is already made in the instrument model
+        # # See exoplanet.dataset_and_instrument.lc.LC_Instrument.__params_model__
+        l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=self.inst_cat)
+        for inst_fullcat_i in l_inst_fullcat:
+            for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=inst_fullcat_i):
+                inst_model.apply_parametrisation()
+                self.apply_instmod_parametrisation_decorrelation_model(inst_mod_obj=inst_model)
+
+    def apply_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
+        """Apply the parametrisation for the decorrelation to an instrument model object.
+
+        This method is called by Core_InstCat_Model.apply_instmodel_parametrisation
+
+        Arguments
+        ---------
+        inst_mod_obj : Instrument_Model
+            Instrument_Model instance providing the instrument model to be parametrised.
+        """
+        # Decorrelation model
+        if self.do_decorrelate_model_instmod(instmod_fullname=inst_mod_obj.full_name):
+            for DecorModel in self.l_decorrelation_model_class:
+                DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
+                                                 decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name][DecorModel.category]
+                                                 )
+
+    def apply_decorrelation_likelihood_parameterisation(self):
+        """Apply the parametrisation for the decorrelation models
+
+        This method is called by Core_InstCat_Model.apply_parameterisation
+        """
+        # Decorrelation likelihood
+        if self.do_decorrelate_likelihood:
+            for model_name in self.order_models_decorrelate_likelihood:
+                DecorClass = self.get_decorrelation_likelihood_class(category=self.get_decorrelation_likelihood_model_category(model_name=model_name))
+                DecorClass.apply_parametrisation(decorr_model_config=self.get_decorrelation_likelihood_model_config(model_name=model_name))

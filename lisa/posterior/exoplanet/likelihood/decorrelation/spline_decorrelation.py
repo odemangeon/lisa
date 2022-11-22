@@ -90,7 +90,7 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         config_model_storage.update(deepcopy(config_model_paramfile))
 
     @classmethod
-    def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr):
+    def apply_parametrisation(cls, decorr_model_config):
         """Apply the parametrisation for the decorrelation to an instrument model.
 
         This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation.
@@ -98,19 +98,8 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
 
         Arguments
         ---------
-        inst_mod_obj                        : Instrument_Model instance
-            Instrument model object to which you want to apply the parametrisation associated to the
-            decorrelation model
-        decorrelation_config_inst_decorr    : dict
-            Dictionary where the decorrelation configuration is stored for the instrument model inst_mod_obj
-            and the current decorrelation method.
-            Structure:
-               key0: do
-               value0: bool, say if the decorelation should be performed
-               Keyn: decorrelation model name
-               valuen: dict, parameters of the decorrelation model
-        model_part                          : str
-            String giving the model part concerned
+        decorr_model_config    : dict
+            Dictionary where the decorrelation configuration is stored for the model
         """
         pass
 
