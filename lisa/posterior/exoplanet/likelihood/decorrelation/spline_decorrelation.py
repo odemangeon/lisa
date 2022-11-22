@@ -63,7 +63,12 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         """
         quantity = config_model_paramfile.get('quantity', 'raw')
         spline_type = config_model_paramfile.get("spline_type", "UnivariateSpline")
-        spline_kwargs = config_model_paramfile["spline_kwargs"]
+        if 'spline_kwargs' in config_model_paramfile:
+            spline_kwargs = config_model_paramfile["spline_kwargs"]
+        else:
+            raise ValueError(f"Decorrelation likelihood model definition {model_name}: missing mandatory "
+                             "key 'spline_kwargs' which must contain a dict with the kwargs to pass to the spline function"
+                             )
         # Check that the "quantity" value is valid
         if quantity not in cls.__allowed_quantity_strs__:
             raise ValueError(f"'quantity' for the configuration of the spline likelihood decorrelation "
@@ -75,14 +80,14 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         # Check the match datasets values (keys have been checked in Core_InstCat_Model.load_config_decorrelation)
         for dataset_name, ind_dataset_name in config_model_paramfile['match datasets'].items():
             # Check that ind_dataset is the name of an existing dataset
-            if model_instance.dataset_db.isavailable_dataset(dataset=ind_dataset_name):
+            if not(model_instance.dataset_db.isavailable_dataset(dataset=ind_dataset_name)):
                 raise ValueError(f"Decorrelation likelihood model definition {model_name}: "
                                  f"Indicator dataset {ind_dataset_name} associated to dataset {dataset_name} "
                                  "is not an existing dataset."
                                  )
         # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
         # Store the decorrelation configuration
-        config_model_storage = deepcopy(config_model_paramfile)
+        config_model_storage.update(deepcopy(config_model_paramfile))
 
     @classmethod
     def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr):

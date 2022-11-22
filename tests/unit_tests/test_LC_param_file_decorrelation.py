@@ -70,19 +70,44 @@ class TestMethods(TestCase):
     def setUp(self):
         object_name = "WASP-76"
         self.run_folder = "./run_folder_tmp"
+        os.makedirs(self.run_folder, exist_ok=True)
+        delete_content_folder(self.run_folder)
         self.post_instance = Posterior(object_name=object_name)
         self.post_instance.dataset_db.data_folder = "./input_files"
-        self.post_instance.dataset_db.run_folder = self.run_folder
+        self.post_instance.run_folder = self.run_folder
         self.post_instance.load_datasetsfile(path_datasets_file="./input_files/dataset_decorrelation.txt")
         self.post_instance.define_model(category="GravitionalGroups", stars=1, planets=1)
+        self.LC_instcat_model = self.post_instance.model.instcat_models['LC']
+        print(self.post_instance.model.dataset_db)
 
     def test_get_text_decorrelation_likelihood_model(self):
-        delete_content_folder(self.run_folder)
         logger.info("\n\nSTART get_text_4_instcat_param_file")
-        self.assertTrue(self.post_instance.model.instcat_models['LC'].decorrelation_likelihood_config == {'do': False, 'order_models': [], 'model_definitions': {}})
-        logger.info("Test initialise decorrelation_likelihood_config Done")
-        import pdb; pdb.set_trace()
-        self.post_instance.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite="y", answer_create=True)
+        self.assertTrue(self.LC_instcat_model.decorrelation_likelihood_config == {'do': False, 'order_models': [], 'model_definitions': {}})
+        logger.info("Initialise decorrelation_likelihood_config Done")
+        self.post_instance.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite='y', answer_create='create')
+        logger.info("Create LC_param_file (and IND_param_file) Done")
+        dico_config_decorr_like = {self.LC_instcat_model._decorr_likelihood_dict_name: {'do': True,
+                                                                                        'order_models': ['ROLL', 'XY'],
+                                                                                        'model_definitions': {'ROLL': {'category': 'spline',
+                                                                                                                       'spline_type': 'UnivariateSpline',
+                                                                                                                       'spline_kwargs': {'k': 3},
+                                                                                                                       'match datasets': {'LC_WASP-76_CHEOPS_100': 'IND-ROLL_WASP-76_CHEOPS_100'}
+                                                                                                                       },
+                                                                                                              'XY': {'category': 'bispline',
+                                                                                                                     'spline_type': 'SmoothBivariateSpline',
+                                                                                                                     'spline_kwargs': {'kx': 3, 'ky': 3},
+                                                                                                                     'match datasets': {'LC_WASP-76_CHEOPS_100': {'X': 'IND-CX_WASP-76_CHEOPS_100',
+                                                                                                                                                                  'Y': 'IND-CY_WASP-76_CHEOPS_100',
+                                                                                                                                                                  }
+                                                                                                                                        }
+                                                                                                                     }
+                                                                                                              }
+                                                                                        }
+                                   }
+        self.LC_instcat_model.load_config_decorrelation_likelihood(dico_config=dico_config_decorr_like)
+        logger.info("Run load_config_decorrelation_likelihood without error Done")
+        self.assertTrue(self.LC_instcat_model.decorrelation_likelihood_config == dico_config_decorr_like[self.LC_instcat_model._decorr_likelihood_dict_name])
+        logger.info("Run load_config_decorrelation_likelihood successfully Done")
 
 
 if __name__ == '__main__':

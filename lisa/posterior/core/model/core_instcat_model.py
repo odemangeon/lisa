@@ -563,8 +563,10 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                     raise ValueError(f"Decorrelation likelihood model definition {model_name}: Dataset {dataset_name} is not an existing dataset.")
             decorr_cat_class = self.get_decorrelation_likelihood_class(category=dico_config_model['category'])
             self.decorrelation_likelihood_config["model_definitions"][model_name] = {}
-            decorr_cat_class.load_text_decorr_paramfile(config_model_paramfile=dico_config_model,
+            decorr_cat_class.load_text_decorr_paramfile(model_name=model_name,
+                                                        config_model_paramfile=dico_config_model,
                                                         config_model_storage=self.decorrelation_likelihood_config["model_definitions"][model_name],
+                                                        model_instance=self.model_instance, 
                                                         )
             self.decorrelation_likelihood_config["order_models"].append(model_name)
 
