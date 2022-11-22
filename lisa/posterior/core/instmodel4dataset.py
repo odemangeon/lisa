@@ -31,37 +31,19 @@ class Instmodel4Dataset(LockableDict):
 
     Dictionary with keys being dataset_names and values inst_model extensions
 
-    1. To define Instmodel4Dataset, you should provide either instmodel4dataset or
-       list_datasetnames not both. If both raise an error
-    2. If none of the 2 provided the instmodel4dataset attribute is not define. Log that.
-    3. If instmodel4dataset provided, check that no lock argument (that would be redundant with the
-       Lock in instmodel4dataset) is provided and set it to the instmodel4dataset attribute
-    4. If list_datasetnames provided, we create a new LockableDict to be set to instmodel4dataset
-       and update it with the datasets provided.
+    Arguments
+    ---------
+    list_datasetnames   : list of string
+    list_instmodels     : list of string
+        List of instrument model name (extension, not full name)
+    lock                :
     """
     def __init__(self, list_datasetnames=None, list_instmodels=None, lock=None):
+        """Check if None is really a possibility for list_datasetnames and if it should be for list_instmodels
+        """
         super(Instmodel4Dataset, self).__init__(ordered=True, lock=lock)
         if list_datasetnames is not None:
             self.update(list_datasetnames, list_instmodels)
-
-    # The idea behind commenting it is that maybe I can used the inherited update method.
-    # def update_content_instmodel4dataset(self, instmodel4dataset):
-    #     """
-    #     1. Check that the proposed instmodel4dataset is a LockableDict
-    #     2.
-    #     """
-    #     if not isinstance(instmodel4dataset, LockableDict):  # 1
-    #         raise ValueError("instmodel4dataset has  to be LockableDict subclass instance. You "
-    #                          "tried to assign a {}.".format(type(instmodel4dataset)))
-    #     if not self.isdefined_instmodel4dataset:
-    #         self.instmodel4dataset = LockableDict(lock=self.get_Lock_instance())
-    #     for key, value in instmodel4dataset:
-    #         self.instmodel4dataset[key] = value
-
-    # @property
-    # def isdefined_instmodel4dataset(self):
-    #     """Return True if a instmodel4dataset is defined."""
-    #     return hasattr(self, "instmodel4dataset")
 
     def name_instmodels_used(self, inst_name=None, sortby_instname=False, inst_fullcat=None, sortby_instfullcat=None):
         """Return the full names instrument models used by the model."""
