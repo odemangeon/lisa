@@ -406,7 +406,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             dict_answer_create = answer_create
             def_answer_create = dict_answer_create.get("def", None)
         else:
-            raise ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
+            raise ValueError("answer_overwrite should be None, 'create', 'error' or a dictionary of the previous ones.")
         for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
             instcat_model = self.get_instcat_model(inst_cat)
             if instcat_model.has_instcat_paramfile:
