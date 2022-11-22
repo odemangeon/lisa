@@ -176,9 +176,16 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def create_text_instcat_paramfile_model(self, model_instance):
         """Create text for parameter file for the light-curve parametrisation.
 
-        Arguments
+        Argument
         ---------
-        model_instance  :
+        model_instance  : Subclass of Core_Model
+
+        Return
+        ------
+        text    : str
+            Text to be put in the instrument category specific instrument file
+            This is only the part that is specific to this category.
+            Text associated to the decorrelation should not be included.
         """
         text = """
         # Light-curve parametrisation file of {object_name}

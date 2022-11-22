@@ -9,6 +9,7 @@ from scipy.interpolate import LSQUnivariateSpline  # This should allow to specif
 from numpy import concatenate, argsort, linspace, mean
 from matplotlib.pyplot import subplots
 from textwrap import dedent
+from copy import deepcopy
 
 from ....core.likelihood.core_decorrelation_likelihood import Core_DecorrelationLikelihood
 from .....tools.name import check_name_code
@@ -24,7 +25,7 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
 
     # Mandatory attributes from Core_DecorrelationModel
     __category__ = "spline"
-    __format_config_dict__ = "{'quantity': 'raw', 'spline_type': 'UnivariateSpline', 'spline_kwargs': {}}"
+    __format_config_dict__ = "{'category': 'spline', 'spline_type': 'UnivariateSpline' or 'LSQUnivariateSpline', 'spline_kwargs': {'k': 3}, 'match datasets': {<dataset name>: <indicator dataset name>}}"
     __allowed_quantity_strs__ = ['raw', ]
 
     ##  List of keys (string) giving the dataset kwargs of the indicators dataset required for
@@ -44,56 +45,44 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
 
     # Mandatory method from Core_DecorrelationModel
     @classmethod
-    def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr):
+    def load_text_decorr_paramfile(cls, model_name, config_model_paramfile, config_model_storage, model_instance):
         """load the parametrisation for the decorrelation of one instrument model from the inst cat param file.
 
         This function is used by Core_InstCat_Model.load_config_decorrelation
-        This function checks that the inputs provided are valid and store them in decorrelation_config_inst_decorr
+        This function checks that the inputs provided are valid and store them in config_model_storage
 
         Arguments
         ---------
-        inst_mod_obj                                : Core_InstrumentModel
-            Instrument model object of which you want to load the decorrelation parameterisation
-        decorrelation_config_inst_decorr_paramfile  : dict
-            Dictionary providing the configuration of the decorrelation for the instrument model inst_mod_obj
-            and the current decorrelation method.
-        decorrelation_config_inst_decorr            : dict
-            Dictionary where the decorrelation configuration is stored for the instrument model inst_mod_obj
-            and the current decorrelation method.
-            Structure:
-               key0: do
-               value0: bool, say if the decorelation should be performed
-               Keyn: decorrelation model name
-               valuen: dict, parameters of the decorrelation model
+        model_name              : str
+            Name of the likelihood decorrelation model being loaded
+        config_model_paramfile  : dict
+            Dictionary providing the configuration one the decorrelation likelihood model
+        config_model_storage    : dict
+            Dictionary where the decorrelation likelihood model configuration will be stored.
+        model_instance          : Subclass of Core_Model
         """
-        super(SplineDecorrelation, cls).load_text_decorr_paramfile(inst_mod_obj=inst_mod_obj,
-                                                                   decorrelation_config_inst_decorr_paramfile=decorrelation_config_inst_decorr_paramfile,
-                                                                   decorrelation_config_inst_decorr=decorrelation_config_inst_decorr,
-                                                                   skip_load=True)
-        for inst_mod_obj_decorr_var_name in decorrelation_config_inst_decorr_paramfile.keys():
-            # Check that the "quantity" and "spline_kwargs" are in the dictionary
-            if not(all([key in decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name] for key in ["quantity", 'spline_type', "spline_kwargs"]])):
-                raise ValueError(f"The dictionary for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {inst_mod_obj_decorr_var_name} must include the keys 'quantity', 'spline_type' and 'spline_kwargs'.")
-            quantity = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]["quantity"]
-            spline_type = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name].get("spline_type", "UnivariateSpline")
-            spline_kwargs = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]["spline_kwargs"]
-            # Check that the "quantity" value is valid
-            if quantity not in cls.__allowed_quantity_strs__:
-                raise ValueError(f"'quantity' for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {inst_mod_obj_decorr_var_name} must be in {cls.__allowed_quantity_strs__}.")
-            # If quantity is raw, check that "match datasets" is in the dictionary
-            if quantity == "raw":
-                if "match datasets" not in decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]:
-                    raise ValueError(f"Since quantity is {quantity}, the dictionary for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
-                                     f" with {inst_mod_obj_decorr_var_name} must include the key 'match datasets'.")
-            # Check spline_type
-            if spline_type not in ["UnivariateSpline", "LSQUnivariateSpline"]:
-                raise ValueError(f"Spline_type for the decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {inst_mod_obj_decorr_var_name} is invalid. Must be in ['UnivariateSpline', 'LSQUnivariateSpline'] got {spline_type}.")
-            # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
-            # Store the decorrelation configuration
-            decorrelation_config_inst_decorr[inst_mod_obj_decorr_var_name] = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]
+        quantity = config_model_paramfile.get('quantity', 'raw')
+        spline_type = config_model_paramfile.get("spline_type", "UnivariateSpline")
+        spline_kwargs = config_model_paramfile["spline_kwargs"]
+        # Check that the "quantity" value is valid
+        if quantity not in cls.__allowed_quantity_strs__:
+            raise ValueError(f"'quantity' for the configuration of the spline likelihood decorrelation "
+                             f"model {model_name} must be in {cls.__allowed_quantity_strs__}.")
+        # Check spline_type
+        if spline_type not in ["UnivariateSpline", "LSQUnivariateSpline"]:
+            raise ValueError(f"Spline_type for the spline likelihood decorrelation model {model_name} is invalid. "
+                             f"Must be in ['UnivariateSpline', 'LSQUnivariateSpline'] got {spline_type}.")
+        # Check the match datasets values (keys have been checked in Core_InstCat_Model.load_config_decorrelation)
+        for dataset_name, ind_dataset_name in config_model_paramfile['match datasets'].items():
+            # Check that ind_dataset is the name of an existing dataset
+            if model_instance.dataset_db.isavailable_dataset(dataset=ind_dataset_name):
+                raise ValueError(f"Decorrelation likelihood model definition {model_name}: "
+                                 f"Indicator dataset {ind_dataset_name} associated to dataset {dataset_name} "
+                                 "is not an existing dataset."
+                                 )
+        # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
+        # Store the decorrelation configuration
+        config_model_storage = deepcopy(config_model_paramfile)
 
     @classmethod
     def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr):

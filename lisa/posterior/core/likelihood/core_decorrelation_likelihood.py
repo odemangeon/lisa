@@ -9,6 +9,7 @@ modify this module than I will need to implement a decorrelation method manager.
 """
 from logging import getLogger
 from collections import defaultdict
+from copy import deepcopy
 
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 # from ....tools.miscellaneous import spacestring_like
@@ -46,39 +47,27 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
     #  variable using a given decorrelation category
 
     @classmethod
-    def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr,
-                                   skip_load=False):
+    def load_text_decorr_paramfile(cls, model_name, config_model_paramfile, config_model_storage, model_instance):
         """load the parametrisation for the decorrelation of the instrument model from the inst cat param file.
 
-        Method which load the dictionary written in an instrument category
-        specific paramfile and which contains the parameterisation of the decorrelation models for each
-        for each instrument model of the category.
+        Method which load the dictionary written in an instrument category  specific paramfile and which
+        contains the parameterisation of the decorrelation models for an likelihood decorrelation model
 
         This function is used by Core_InstCat_Model.load_config_decorrelation
-        It is advised to overload this function in the child Core_DecorrelationModel class to at make
-        some additional checks on the content of decorrelation_config_inst_decorr_paramfile.
+        It is advised to overload this function in the child Core_DecorrelationLikelihood class to make
+        some additional checks on the specific content required by the likelihood decorrelation model
 
         Arguments
         ---------
-        inst_mod_obj                                : Core_InstrumentModel
-            Instrument model object of which you want to load the decorrelation parameterisation
-        decorrelation_config_inst_decorr_paramfile  : dict
-            Dictionary providing the configuration of the decorrelation for the instrument model inst_mod_obj
-            and the current decorrelation method.
-            The expected format is
-        decorrelation_config_inst_decorr            : dict
-            Dictionary where the decorrelation configuration is stored for the instrument model inst_mod_obj
-            and the current decorrelation method.
-        skip_load                                   : bool
-            If True the function will not load into decorrelation_config_inst_decorr. This option is to
-            be used when you are overloading this function to performed the loading in the overloading function
-            while keeping the checl
+        model_name              : str
+            Name of the likelihood decorrelation model being loaded
+        config_model_paramfile  : dict
+            Dictionary providing the configuration one the decorrelation likelihood model
+        config_model_storage    : dict
+            Dictionary where the decorrelation likelihood model configuration will be stored.
+        model_instance          : Subclass of Core_Model
         """
-        # Check that each instrument model object of the decorrelation variable exists
-        for inst_mod_obj_decorr_var_name in decorrelation_config_inst_decorr_paramfile.keys():
-            inst_mod_obj_decorr_var_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=inst_mod_obj_decorr_var_name, raise_error=True)
-        if not(skip_load):
-            decorrelation_config_inst_decorr = decorrelation_config_inst_decorr_paramfile
+        config_model_storage = deepcopy(config_model_paramfile)
 
     @classmethod
     def get_required_dataset(cls, decorr_config_instmod_decorr_cat, dico_decorr_instmod_decorr_cat, decorr_name,

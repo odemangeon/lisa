@@ -10,6 +10,7 @@ from numpy import concatenate, linspace, mean, meshgrid  # argsort
 from matplotlib.pyplot import subplots, axes
 from textwrap import dedent
 from collections import defaultdict
+from copy import deepcopy
 
 from ....core.likelihood.core_decorrelation_likelihood import Core_DecorrelationLikelihood
 from .....tools.name import check_name_code
@@ -25,7 +26,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
 
     # Mandatory attributes from Core_DecorrelationModel
     __category__ = "bispline"
-    __format_config_dict__ = "{'IND instument models': [], 'quantity': 'raw', 'spline_type': 'SmoothBivariateSpline', 'spline_kwargs': {'k': 3}, 'match datasets': {}, }"
+    __format_config_dict__ = "{'category': 'bispline', 'spline_type': 'SmoothBivariateSpline' or 'LSQBivariateSpline', 'spline_kwargs': {'kx': 3, 'ky': 3}, 'match datasets': {<dataset name>: {'X': <indicator dataset name>, 'Y':<indicator dataset name>}}"
     __allowed_quantity_strs__ = ['raw', ]
 
     ##  List of keys (string) giving the dataset kwargs of the indicators dataset required for
@@ -45,7 +46,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
 
     # Mandatory method from Core_DecorrelationModel
     @classmethod
-    def load_text_decorr_paramfile(cls, inst_mod_obj, decorrelation_config_inst_decorr_paramfile, decorrelation_config_inst_decorr):
+    def load_text_decorr_paramfile(cls, model_name, config_model_paramfile, config_model_storage, model_instance):
         """load the parametrisation for the decorrelation of one instrument model from the inst cat param file.
 
         This function is used by Core_InstCat_Model.load_config_decorrelation
@@ -53,44 +54,66 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
 
         Arguments
         ---------
-        inst_mod_obj                                : Core_InstrumentModel
-            Instrument model object of which you want to load the decorrelation parameterisation
-        decorrelation_config_inst_decorr_paramfile  : dict
-            Dictionary providing the configuration of the decorrelation for the instrument model inst_mod_obj
-            and the current decorrelation method.
-        decorrelation_config_inst_decorr            : dict
-            Dictionary where the decorrelation configuration is stored for the instrument model inst_mod_obj
-            and the current decorrelation method.
-            Structure:
-               key0: do
-               value0: bool, say if the decorelation should be performed
-               Keyn: decorrelation model name
-               valuen: dict, parameters of the decorrelation model
+        model_name              : str
+            Name of the likelihood decorrelation model being loaded
+        config_model_paramfile  : dict
+            Dictionary providing the configuration one the decorrelation likelihood model
+        config_model_storage    : dict
+            Dictionary where the decorrelation likelihood model configuration will be stored.
+        model_instance          : Subclass of Core_Model
         """
-        for bispline_decorr_name in decorrelation_config_inst_decorr_paramfile.keys():
-            # Check that the "quantity" and "spline_kwargs" are in the dictionary
-            if not(all([key in decorrelation_config_inst_decorr_paramfile[bispline_decorr_name] for key in ['IND instument models', 'quantity', 'spline_type', 'spline_kwargs', 'match datasets']])):
-                raise ValueError(f"The dictionary for the configuration of the bispline decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {bispline_decorr_name} must include the keys 'quantity', 'spline_type' and 'spline_kwargs'.")
-            quantity = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["quantity"]
-            spline_type = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["spline_type"]
-            spline_kwargs = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["spline_kwargs"]
-            l_indinstmodel_fullname = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]['IND instument models']
-            # Check that the "quantity" value is valid
-            if quantity not in cls.__allowed_quantity_strs__:
-                raise ValueError(f"'quantity' for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {bispline_decorr_name} must be in {cls.__allowed_quantity_strs__}.")
-            # Check spline_type
-            if spline_type not in ["SmoothBivariateSpline", "LSQBivariateSpline"]:
-                raise ValueError(f"Spline_type for the decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {bispline_decorr_name} is invalid. Must be in ['SmoothBivariateSpline', 'LSQBivariateSpline'] got {spline_type}.")
-            # Check l_indinstmodel_fullname
-            if len(l_indinstmodel_fullname) != 2:
-                raise ValueError(f"'IND instument models' for the decorrelation of {inst_mod_obj.full_name}"
-                                 f" with {bispline_decorr_name} should contain two elements.")
-            # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
-            # Store the decorrelation configuration
-            decorrelation_config_inst_decorr[bispline_decorr_name] = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]
+        quantity = config_model_paramfile.get('quantity', 'raw')
+        spline_type = config_model_paramfile.get("spline_type", "UnivariateSpline")
+        spline_kwargs = config_model_paramfile["spline_kwargs"]
+        # Check that the "quantity" value is valid
+        if quantity not in cls.__allowed_quantity_strs__:
+            raise ValueError(f"'quantity' for the configuration of the spline likelihood decorrelation "
+                             f"model {model_name} must be in {cls.__allowed_quantity_strs__}.")
+        # Check spline_type
+        if spline_type not in ["UnivariateSpline", "LSQUnivariateSpline"]:
+            raise ValueError(f"Spline_type for the spline likelihood decorrelation model {model_name} is invalid. "
+                             f"Must be in ['UnivariateSpline', 'LSQUnivariateSpline'] got {spline_type}.")
+        # Check the match datasets values (keys have been checked in Core_InstCat_Model.load_config_decorrelation)
+        for dataset_name, xy_ind_dataset_names in config_model_paramfile['match datasets'].items():
+            # Check that for each dataset na
+            for xy, xy_dataset_name in xy_ind_dataset_names.items():
+                if xy not in ['X', 'Y']:
+                    raise ValueError(f"Decorrelation likelihood model definition {model_name}: In 'match datasets', "
+                                     f"dataset {dataset_name} should be associated to a dictionary with to keys 'X' and 'Y'.")
+                # Check that ind_dataset is the name of an existing dataset
+                if model_instance.dataset_db.isavailable_dataset(dataset=xy_dataset_name):
+                    raise ValueError(f"Decorrelation likelihood model definition {model_name}: "
+                                     f"The indicator dataset {xy_dataset_name} associated to dataset {dataset_name} "
+                                     f"{xy} keys is not an existing dataset."
+                                     )
+        # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
+        # Store the decorrelation configuration
+        config_model_storage = deepcopy(config_model_paramfile)
+
+        # for bispline_decorr_name in decorrelation_config_inst_decorr_paramfile.keys():
+        #     # Check that the "quantity" and "spline_kwargs" are in the dictionary
+        #     if not(all([key in decorrelation_config_inst_decorr_paramfile[bispline_decorr_name] for key in ['IND instument models', 'quantity', 'spline_type', 'spline_kwargs', 'match datasets']])):
+        #         raise ValueError(f"The dictionary for the configuration of the bispline decorrelation of {inst_mod_obj.full_name}"
+        #                          f" with {bispline_decorr_name} must include the keys 'quantity', 'spline_type' and 'spline_kwargs'.")
+        #     quantity = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["quantity"]
+        #     spline_type = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["spline_type"]
+        #     spline_kwargs = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]["spline_kwargs"]
+        #     l_indinstmodel_fullname = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]['IND instument models']
+        #     # Check that the "quantity" value is valid
+        #     if quantity not in cls.__allowed_quantity_strs__:
+        #         raise ValueError(f"'quantity' for the configuration of the spline decorrelation of {inst_mod_obj.full_name}"
+        #                          f" with {bispline_decorr_name} must be in {cls.__allowed_quantity_strs__}.")
+        #     # Check spline_type
+        #     if spline_type not in ["SmoothBivariateSpline", "LSQBivariateSpline"]:
+        #         raise ValueError(f"Spline_type for the decorrelation of {inst_mod_obj.full_name}"
+        #                          f" with {bispline_decorr_name} is invalid. Must be in ['SmoothBivariateSpline', 'LSQBivariateSpline'] got {spline_type}.")
+        #     # Check l_indinstmodel_fullname
+        #     if len(l_indinstmodel_fullname) != 2:
+        #         raise ValueError(f"'IND instument models' for the decorrelation of {inst_mod_obj.full_name}"
+        #                          f" with {bispline_decorr_name} should contain two elements.")
+        #     # TODO: Check content of spline_kwargs which will be passed to scipy.interpolate.UnivariateSpline
+        #     # Store the decorrelation configuration
+        #     decorrelation_config_inst_decorr[bispline_decorr_name] = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]
 
     @classmethod
     def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr):
