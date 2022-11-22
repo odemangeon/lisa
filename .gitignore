@@ -21,6 +21,7 @@ uml/
 test
 tests/dev_tests/TTV/outputs
 tests/dev_tests/EdepthV/outputs
+tests/dev_tests/splindec/outputs
 
 # Susana's stuff
 
