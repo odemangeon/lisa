@@ -80,6 +80,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                  l_instmod_fullnames=[]):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
+        TODO: instmodel4dataset and l_instmod_fullnames seems redundant
+
         :param string name: Name of the Core_Model
         :param DatasetDatabase dataset_db: DatasetDatabase giving the dataset to be modeled.
         :param string/None run_folder: Folder to use as run folder. For more info check run_folder
@@ -404,7 +406,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             dict_answer_create = answer_create
             def_answer_create = dict_answer_create.get("def", None)
         else:
-            ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
+            raise ValueError("answer_overwrite should be None, y, n or a dictionary of the previous ones.")
         for inst_cat in self.inst_categories:  # self.inst_categories comes from InstrumentContainerInterface
             instcat_model = self.get_instcat_model(inst_cat)
             if instcat_model.has_instcat_paramfile:
