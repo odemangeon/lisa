@@ -125,7 +125,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
                              "".format(dataset))
         if inst_fullcat in self:
             if inst_name in self[inst_fullcat]:
-                if number in self[inst_fullcat][inst_name]:
+                if str(number) in self[inst_fullcat][inst_name]:
                     return True
         else:
             return False
