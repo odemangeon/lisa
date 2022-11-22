@@ -413,7 +413,8 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                 file_path, reply = self._choose_parameter_file_path(default_paramfile_name=instcat_model.default_paramfile_name,
                                                                     paramfile_name=paramfile_path.get(inst_cat, None),
                                                                     answer_overwrite=dict_answer_overwrite.get(inst_cat, def_answer_overwrite),
-                                                                    answer_create=dict_answer_create.get(inst_cat, def_answer_create))
+                                                                    answer_create=dict_answer_create.get(inst_cat, def_answer_create)
+                                                                    )
                 if reply == "y":
                     instcat_model.create_instcat_paramfile(file_path=file_path)
                 else:
