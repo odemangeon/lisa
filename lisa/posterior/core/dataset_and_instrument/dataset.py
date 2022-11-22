@@ -71,7 +71,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         if filename_info["number"] is None:
             self.__number = 0
         else:
-            self.__number = int(filename_info["number"])
+            self.__number = filename_info["number"]
         # 5.
         self._rm_dataset_content()
         self.__extra_column_names = []
@@ -174,31 +174,39 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
             - number : give the number of the data file if there is several data files of the
                 same object observed with the same instrument
         """
-        if cls.instrument_subclass.has_subcategories:
-            filename_format = "instcat-instsubcat_target_instrument(_number).*"
+        has_instrument_subclass = hasattr(cls, 'instrument_subclass')
+        if has_instrument_subclass:
+            if cls.instrument_subclass.has_subcategories:
+                filename_format_err_msg = "instcat-instsubcat_target_instrument(_number).*"
+            else:
+                filename_format_err_msg = "instcat_target_instrument(_number).*"
         else:
-            filename_format = "instcat_target_instrument(_number).*"
+            filename_format_err_msg = "instcat-instsubcat_target_instrument(_number).* or instcat_target_instrument(_number).*"
         cuts = data_file_name.split("_")   # List of fields that were separated by "_"
         cuts[-1] = cuts[-1].split(".")[0]  # Remove the extension
         cuts_cat = cuts[0].split("-")
         format_error = False
         if len(cuts) < 3 or len(cuts) > 4:
             format_error = True
-        if cls.instrument_subclass.has_subcategories:
-            if len(cuts_cat) != 2:
-                format_error = True
+        if has_instrument_subclass:
+            if cls.instrument_subclass.has_subcategories:
+                if len(cuts_cat) != 2:
+                    format_error = True
+            else:
+                if len(cuts_cat) != 1:
+                    format_error = True
         else:
-            if len(cuts_cat) != 1:
+            if len(cuts_cat) < 1 or len(cuts_cat) > 2:
                 format_error = True
         if format_error:
             if raise_error:
-                raise ValueError(f"Data file name not recognized. Should be in the format {filename_format}. Got {data_file_name}")
+                raise ValueError(f"Data file name not recognized. Should be in the format {filename_format_err_msg}. Got {data_file_name}")
             else:
                 return None
         result = {"object": cuts[1],
                   "inst_cat": cuts_cat[0],
                   "inst_name": cuts[2]}
-        if cls.instrument_subclass.has_subcategories:
+        if len(cuts_cat) == 2:
             result["inst_subcat"] = cuts_cat[-1]
             result["inst_fullcat"] = f"{result['inst_cat']}-{result['inst_subcat']}"
         else:
