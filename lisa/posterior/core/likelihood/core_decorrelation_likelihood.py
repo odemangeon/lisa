@@ -8,7 +8,6 @@ TODO:
 modify this module than I will need to implement a decorrelation method manager.
 """
 from logging import getLogger
-from collections import defaultdict
 from copy import deepcopy
 
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
