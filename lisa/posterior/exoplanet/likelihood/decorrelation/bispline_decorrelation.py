@@ -294,22 +294,13 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
 
         return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
 
-    @classmethod
-    def defdic_decorr_func(cls):
-        def def_dic():
-            return {"l_idx_simdata": [],
-                    "l_datasetkwargs_req": [],
-                    "l_inddataset_name_4_indinstmod_fullname": defaultdict(list),
-                    "l_inddataset_name": [],
-                    "l_inddatasetkwargs_req": [],
-                    }
-        return def_dic
-
-    @classmethod
-    def defdic_decorr_func(cls):
-        return {"l_idx_simdata": [],
-                "l_datasetkwargs_req": [],
-                "l_inddataset_name_4_indinstmod_fullname": defaultdict(list),
-                "l_inddataset_name": [],
-                "l_inddatasetkwargs_req": [],
-                }
+    # @classmethod
+    # def defdic_decorr_func(cls):
+    #     def def_dic():
+    #         return {"l_idx_simdata": [],
+    #                 "l_datasetkwargs_req": [],
+    #                 "l_inddataset_name_4_indinstmod_fullname": defaultdict(list),
+    #                 "l_inddataset_name": [],
+    #                 "l_inddatasetkwargs_req": [],
+    #                 }
+    #     return def_dic
