@@ -104,83 +104,113 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         pass
 
     @classmethod
-    def create_decorrelation_likelihood(cls, function_builder, l_function_shortname, inst_model_obj,
-                                        decorr_name, dico_decorr, dico_decorr_config, l_dataset_name_4_instmod,
-                                        l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs,
-                                        datasim_has_multioutputs, plot_functionshortname=None):
-        """Create the likelihood decorrelation for a given instrument model and a given indicator model.
+    def create_decorrelation_likelihood(cls, function_builder, l_function_shortname, inst_cat, model_name,
+                                        dico_config, l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs,
+                                        datasim_has_multioutputs, plot_functionshortname=None
+                                        ):
+        """Create the text for the likelihood decorrelation for a given decorrelation model of a given
+        instrument category.
+
+        This function add the necessary variables to the functions ldict and create the texts but
+        doesn't add the text to the body of the function (this is done in Core_Likelihood._create_lnlikelihood)
+
+        This function is called by Core_InstCat_Model.create_decorrelation_likelihood
 
         Arguments
         ---------
-        function_builder            :
-        l_function_shortname        :
-        inst_model_obj              :
-        decorr_name                 :
-        dico_decorr                 :
-        dico_decorr_config          :
-        l_dataset_name_4_instmod    :
-        l_dataset_name              :
-        l_paramsfullname_likelihood :
-        dataset_kwargs              :
-        inddataset_kwargs           :
-        datasim_has_multioutputs    :
-        plot_functionshortname      :
+        function_builder            : FunctionBuilder
+        l_function_shortname        : list of str
+            List of function shortnames
+        inst_cat                    : str
+            Instrument category associated to the decorrelation model (decorr_model_name) being done
+        decorr_model_name           : str
+            Name of the decorrelation model
+        dico_config                 : dict
+            Configuration dictionary for the model being done
+        l_dataset_name              : list of str
+            List of all dataset names corresponding to the outputs of the datasim function used by the
+            likelihood.
+        dataset_kwargs              : dict
+        inddataset_kwargs           : dict
+        l_paramsfullname_likelihood : list of str
+            list of the current parameter full names of the likelihood function. This function adds
+            the likelihood decorrelation parameter if there is any.
+        datasim_has_multioutputs    : bool
+            True if the datasim function used by the likelihood has multiplue outputs
+        plot_functionshortname      : str
+            Short name of the plotting function
 
         Return
         ------
-        decorrtext_4_dataset        :
-        l_paramsfullname_likelihood  :
+        simdata_decorr_text         : str
+            Text that modify the simulated data according to the decorrelation model.
+        l_decorr_output_text        : list of str
+            List of text providing the decorrelation model component for each dataset in l_dataset_name.
+            If there is no decorrelation model for a dataset the element in the list is None.
+        decorr_body_text            : str
+            Text that compute the spline functions for the decorrelation model.
+        plotdecorr_body_text        : str
+            Text for the plotting function which show the spline fit of the residuals.
+        l_paramsfullname_likelihood : list of str
+            Updated list of parameter full names of the likelihood function. This function adds the
+            likelihood decorrelation parameter if there is any.
         """
-        decorr_name = check_name_code(decorr_name)
+        model_name = check_name_code(model_name)
         if len(l_function_shortname) == 0:
             raise ValueError("l_function_shortname should not be empty !")
-        spline_type = dico_decorr_config.get("spline_type", "UnivariateSpline")
-        x_vect = concatenate([inddataset_kwargs[inddataset_name]['data'] for inddataset_name in dico_decorr["l_inddataset_name"]])
-        text_all_indval = f"concatenate([inddataset_kwargs[inddataset_name]['data'] for inddataset_name in l_inddataset_name_{inst_model_obj.full_code_name}_{decorr_name}])[idx_sort_{inst_model_obj.full_code_name}_{decorr_name}]"
+        spline_type = dico_config["spline_type"]
+        l_dataset_name_decorr_model = dico_config["match datasets"].keys()
+        l_inddataset_name_decorr_model = [dico_config["match datasets"][dataset_name] for dataset_name in l_dataset_name_decorr_model]
+        l_inddataset_name_decorr_model_name = f"l_inddataset_name_{inst_cat}_{model_name}"
+        x_vect = concatenate([inddataset_kwargs[inddataset_name]['data'] for inddataset_name in l_inddataset_name_decorr_model])
         idx_sort_x_vect = argsort(x_vect)
+        x_vect = x_vect[idx_sort_x_vect]
+        x_vect_name = f"indvector_{inst_cat}_{model_name}"
+        idx_sort_x_vect_name = f"idx_sort_{inst_cat}_{model_name}"
+        l_idx_simdata = [l_dataset_name.index(dataset_name_decorr_model) for dataset_name_decorr_model in l_dataset_name_decorr_model]
+        l_idx_simdata_name = f"l_idx_simdata_{inst_cat}_{model_name}"
         if datasim_has_multioutputs:
-            text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data[idx] for idx in {dico_decorr['l_idx_simdata']}])[idx_sort_{inst_model_obj.full_code_name}_{decorr_name}]"
+            text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data[idx] for idx in {l_idx_simdata_name}])[{idx_sort_x_vect_name}]"
         else:
-            text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data for idx in {dico_decorr['l_idx_simdata']}])[idx_sort_{inst_model_obj.full_code_name}_{decorr_name}]"
+            text_all_resi = f"concatenate([dataset_kwargs[l_dataset_name[idx]]['data'] - sim_data for idx in {l_idx_simdata_name}])[{idx_sort_x_vect_name}]"
         decorr_body_text = f"all_resi = {text_all_resi}\n"
-        decorr_body_text += f"sp_{inst_model_obj.full_code_name}_{decorr_name} = {spline_type}(x={text_all_indval}, y=all_resi - mean(all_resi), **spline_kargs_{inst_model_obj.full_code_name}_{decorr_name})\n"
+        spline_kwargs = dico_config['spline_kwargs']
+        spline_kwargs_name = f"spline_kargs_{inst_cat}_{model_name}"
+        spline_object_name = f"sp_{inst_cat}_{model_name}"
+        decorr_body_text += f"{spline_object_name} = {spline_type}(x={x_vect_name}, y=all_resi - mean(all_resi), **{spline_kwargs_name})\n"
+        simdata_decorr_text = f"for idx_sim_data, ind_dataset_name in zip({l_idx_simdata_name}, {l_inddataset_name_decorr_model_name}):\n"
+        simdata_decorr_text += f"    sim_data[idx_sim_data] += {spline_object_name}(inddataset_kwargs[ind_dataset_name]['data'])\n"
+        l_decorr_output_text = [None for dataset_name in l_dataset_name]
+        for idx_sim_data, ind_dataset_name in zip(l_idx_simdata, l_inddataset_name_decorr_model):
+            l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs['{ind_dataset_name}']['data'])"
         for function_shortname in l_function_shortname:
-            # You need to store in ldict spline_kargs_{ind_inst_model_fullname.strip('-')}
-            function_builder.add_variable_to_ldict(variable_name="mean", variable_content=mean, function_shortname=function_shortname, exist_ok=True, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name=x_vect_name, variable_content=x_vect, function_shortname=function_shortname, exist_ok=True, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name=idx_sort_x_vect_name, variable_content=idx_sort_x_vect, function_shortname=function_shortname, exist_ok=False, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name=l_idx_simdata_name, variable_content=l_idx_simdata, function_shortname=function_shortname, exist_ok=False, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="concatenate", variable_content=concatenate, function_shortname=function_shortname, exist_ok=True, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name="mean", variable_content=mean, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="l_dataset_name", variable_content=l_dataset_name, function_shortname=function_shortname, exist_ok=True, overwrite=False)
-            function_builder.add_variable_to_ldict(variable_name=f"spline_kargs_{inst_model_obj.full_code_name}_{decorr_name}", variable_content=dico_decorr_config['spline_kwargs'], function_shortname=function_shortname, exist_ok=False, overwrite=False)
-            function_builder.add_variable_to_ldict(variable_name=f"l_inddataset_name_{inst_model_obj.full_code_name}_{decorr_name}", variable_content=dico_decorr["l_inddataset_name"], function_shortname=function_shortname, exist_ok=False, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name=spline_kwargs_name, variable_content=spline_kwargs, function_shortname=function_shortname, exist_ok=False, overwrite=False)
             if spline_type == "UnivariateSpline":
                 function_builder.add_variable_to_ldict(variable_name="UnivariateSpline", variable_content=UnivariateSpline, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             elif spline_type == "LSQUnivariateSpline":
                 function_builder.add_variable_to_ldict(variable_name="LSQUnivariateSpline", variable_content=LSQUnivariateSpline, function_shortname=function_shortname, exist_ok=True, overwrite=False)
-            function_builder.add_variable_to_ldict(variable_name=f"idx_sort_{inst_model_obj.full_code_name}_{decorr_name}", variable_content=idx_sort_x_vect, function_shortname=function_shortname, exist_ok=False, overwrite=False)
-            # function_builder.add_to_body_text(f"{tab}sp_{inst_model_obj.full_code_name}_{decorr_name} = {spline_type}(x={text_all_indval}, y={text_all_resi}, **spline_kargs_{inst_model_obj.full_code_name}_{decorr_name})\n", function_shortname=function_shortname)
+            function_builder.add_variable_to_ldict(variable_name=l_inddataset_name_decorr_model_name, variable_content=l_inddataset_name_decorr_model, function_shortname=function_shortname, exist_ok=True, overwrite=False)
         if plot_functionshortname in l_function_shortname:
             function_builder.add_variable_to_ldict(variable_name="subplots", variable_content=subplots, function_shortname=plot_functionshortname, exist_ok=True)
             function_builder.add_variable_to_ldict(variable_name="linspace", variable_content=linspace, function_shortname=plot_functionshortname, exist_ok=True)
             function_builder.add_optional_argument(argument_name="npt_spline", default_value=100, function_shortname=plot_functionshortname, exist_ok=True)
+            x_plotmodel_name = f"x_{inst_cat}_{model_name}"
             plotdecorr_body_text = f"""
             {{tab}}fig, ax = subplots()
-            {{tab}}x_{inst_model_obj.full_code_name}_{decorr_name} = linspace(min({text_all_indval}), max({text_all_indval}), npt_spline)
-            {{tab}}ax.plot({text_all_indval}, {text_all_resi}, '.', label='residuals')
-            {{tab}}ax.plot(x_{inst_model_obj.full_code_name}_{decorr_name}, sp_{inst_model_obj.full_code_name}_{decorr_name}(x_{inst_model_obj.full_code_name}_{decorr_name}), label='spline fit')
-            {{tab}}ax.set_xlabel('{decorr_name}')
-            {{tab}}ax.set_ylabel('{inst_model_obj.full_code_name}')
+            {{tab}}{x_plotmodel_name} = linspace(min({x_vect_name}), max({x_vect_name}), npt_spline)
+            {{tab}}ax.plot({x_vect_name}, {text_all_resi}, '.', label='residuals')
+            {{tab}}ax.plot({x_plotmodel_name}, {spline_object_name}({x_plotmodel_name}), label='spline {inst_cat} {model_name}')
+            {{tab}}ax.set_xlabel('indicators {model_name}')
+            {{tab}}ax.set_ylabel('residuals {model_name}')
             {{tab}}ax.grid(b=True, which='both', axis='y', alpha=0.5)
             {{tab}}ax.legend()
             """
             plotdecorr_body_text = dedent(plotdecorr_body_text)
             plotdecorr_body_text = plotdecorr_body_text.format(tab=tab)
-            # function_builder.add_to_body_text(f"{tab}fig, ax = subplots()\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(f"{tab}x_{inst_model_obj.full_code_name}_{decorr_name} = linspace(min({text_all_indval}), max({text_all_indval}), npt_spline)\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(text=f"{tab}ax.plot({text_all_indval}, {text_all_resi}, '.', label='residuals')\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(text=f"{tab}ax.plot(x_{inst_model_obj.full_code_name}_{decorr_name}, sp_{inst_model_obj.full_code_name}_{decorr_name}(x_{inst_model_obj.full_code_name}_{decorr_name}), label='spline fit')\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(text=f"{tab}ax.set_xlabel('{decorr_name}')\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(text=f"{tab}ax.set_ylabel('{inst_model_obj.full_code_name}')\n", function_shortname=function_shortname)
-            # function_builder.add_to_body_text(text=f"{tab}ax.legend()\n", function_shortname=function_shortname)
-        simdata_decorr_4_dataset = {dst_name: "" for dst_name in l_dataset_name_4_instmod}
-        for dataset_name in l_dataset_name_4_instmod:
-            simdata_decorr_4_dataset[dataset_name] = f"sp_{inst_model_obj.full_code_name}_{decorr_name}(inddataset_kwargs['{dico_decorr_config['match datasets'][dataset_name]}']['data'])"
-        return simdata_decorr_4_dataset, decorr_body_text, plotdecorr_body_text, l_paramsfullname_likelihood
+        return simdata_decorr_text, l_decorr_output_text, decorr_body_text, plotdecorr_body_text, l_paramsfullname_likelihood

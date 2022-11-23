@@ -21,7 +21,7 @@ uml/
 test
 tests/dev_tests/TTV/outputs
 tests/dev_tests/EdepthV/outputs
-tests/dev_tests/splindec/outputs
+tests/dev_tests/splinedec/outputs
 tests/unit_tests/run_folder_tmp
 
 

@@ -12,7 +12,7 @@ The objective of this module is to define the class LikelihoodCreator.
     -
 """
 from logging import getLogger
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from copy import copy
 # import matplotlib.pyplot as pl
 
@@ -109,8 +109,8 @@ class LikelihoodCreator(object):
                                       "simulator for which the dataset is not included")
 
         (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
-         dico_noisemodel, dico_decorr_4_instmod, noisemodel_names_list
-         ) = self._get_required_dataset(datasim_docfunc=datasim_docfunc)
+         dico_noisemodel, d_l_model_decorr_name_4_inst_cat
+         ) = self._get_required_dataset_for_noisemodel_and_decorrmodel(datasim_docfunc=datasim_docfunc)
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
 
         # Create the datasimulator that simulate all the dataset object required
@@ -136,7 +136,7 @@ class LikelihoodCreator(object):
         func_shortname_decorr = "decorr"
         func_shortname_plotdecorr = "plotdecorr"
         l_func_shortname_decorr = [func_shortname_decorr, func_shortname_plotdecorr]
-        if len(dico_decorr_4_instmod) > 0:
+        if len(d_l_model_decorr_name_4_inst_cat) > 0:
             for func_shortname in l_func_shortname_decorr:
                 l_func_shortname.append(func_shortname)
                 func_builder.add_new_function(shortname=func_shortname, parameters=parameters,
@@ -181,7 +181,7 @@ class LikelihoodCreator(object):
             for datasetkwarg in l_datasetkwarg:
                 inddataset_kwargs[inddataset_name][datasetkwarg] = dataset_obj.get_datasetkwarg(datasetkwarg)
 
-        if len(dico_decorr_4_instmod) > 0:
+        if len(d_l_model_decorr_name_4_inst_cat) > 0:
             for func_shortname in l_func_shortname:
                 func_builder.add_variable_to_ldict(variable_name="inddataset_kwargs", variable_content=inddataset_kwargs,
                                                    function_shortname=func_shortname, exist_ok=False)
@@ -217,58 +217,66 @@ class LikelihoodCreator(object):
                                                function_shortname=func_shortname_lnlike, exist_ok=False)
 
         # Update the parameters required taking into account the parameter of the decorrelation model
-        # Also for each instrument model create the functions of the decorrelation and the functions to format
-        # the sim_data, the params vector, the dataset_kwargs and the inddataset_kwargs
-        for inst_mod_fullname, dico in dico_decorr_4_instmod.items():
-            instmod_obj = self.instruments[inst_mod_fullname]
-            instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
-            (dico["simdata_decorr_4_dataset_4_indinstmod"], dico["decorr_body_text_4_decorrcat_4_indinstmod"],
-             dico["plotdecorr_body_text_4_decorrcat_4_indinstmod"], l_paramsfullname_likelihood
-             ) = instcat_mod_inst.create_decorrelation_likelihood(function_builder=func_builder,
-                                                                  l_function_shortname=l_func_shortname,
-                                                                  inst_model_obj=instmod_obj,
-                                                                  dico_decorr_instmod=dico,
-                                                                  l_dataset_name=l_dataset_name,
-                                                                  l_paramsfullname_likelihood=l_paramsfullname_likelihood,
-                                                                  dataset_kwargs=dataset_kwargs,
-                                                                  inddataset_kwargs=inddataset_kwargs,
-                                                                  datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
-                                                                  plot_functionshortname=func_shortname_plotdecorr
-                                                                  )
+        # Also for each instrument category create the text of for the implementation of decorrelation
+        # modeled: Production of the spline function, modification of the sim data, plot function
+        d_decorr_elements_4_instcat_4_decorr_model = {inst_cat: {} for inst_cat in d_l_model_decorr_name_4_inst_cat.keys()}
+        for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
+            instcat_mod_class = self.instcat_models[inst_cat]
+            (d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text, l_paramsfullname_likelihood
+             ) = instcat_mod_class.create_decorrelation_likelihood(function_builder=func_builder,
+                                                                   l_function_shortname=l_func_shortname,
+                                                                   l_decorr_model_name=l_decorr_model_name,
+                                                                   l_dataset_name=l_dataset_name,
+                                                                   dataset_kwargs=dataset_kwargs,
+                                                                   inddataset_kwargs=inddataset_kwargs,
+                                                                   l_paramsfullname_likelihood=l_paramsfullname_likelihood,
+                                                                   datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
+                                                                   plot_functionshortname=func_shortname_plotdecorr
+                                                                   )
+            for decorr_model_name in d_simdata_decorr_text:
+                d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name] = {}
+                d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["sim_data_decorr_text"] = d_simdata_decorr_text[decorr_model_name]
+                d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["l_decorr_output_text"] = d_l_decorr_output_text[decorr_model_name]
+                d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["decorr_body_text"] = d_decorr_body_text[decorr_model_name]
+                d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["plotdecorr_body_text"] = d_plotdecorr_body_text[decorr_model_name]
 
-        # Text that add the decorrelation to sim data
-        if len(dico_decorr_4_instmod) > 0:
-            return_decorr = []
-            for ii, (inst_mod_fullname, dataset_name) in enumerate(zip(datasim_docfunc.inst_model_fullnames_list, datasim_docfunc.dataset_names_list)):
-                return_decorr.append("")
-                for func_shortname in l_func_shortname:
-                    if inst_mod_fullname in dico_decorr_4_instmod:
-                        for decorr_cat, ind_instmod_fullname in dico_decorr_4_instmod[inst_mod_fullname]["order"]:
-                            decorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['decorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
-                            nb_rc = decorr_body_text.count('\n')
-                            if decorr_body_text.endswith('\n'):
-                                nb_rc -= 1
-                            if nb_rc > 0:
-                                decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}', nb_rc)
-                            func_builder.add_to_body_text(text=f"{tab}{decorr_body_text}\n", function_shortname=func_shortname)
-                            if func_shortname == func_shortname_plotdecorr:
-                                plotdecorr_body_text = dico_decorr_4_instmod[inst_mod_fullname]['plotdecorr_body_text_4_decorrcat_4_indinstmod'][decorr_cat][ind_instmod_fullname]
-                                func_builder.add_to_body_text(text=f"{tab}{plotdecorr_body_text}\n", function_shortname=func_shortname)
-                            simdata_decorr = dico_decorr_4_instmod[inst_mod_fullname]['simdata_decorr_4_dataset_4_indinstmod'][dataset_name][ind_instmod_fullname]
-                            if datasim_all_dst_doc_func.multi_output:
-                                func_builder.add_to_body_text(text=f"{tab}sim_data[{ii}] += {simdata_decorr}\n", function_shortname=func_shortname)
-                            else:
-                                func_builder.add_to_body_text(text=f"{tab}sim_data += {simdata_decorr}\n", function_shortname=func_shortname)
-                            if func_shortname == func_shortname_decorr:
-                                if return_decorr[ii] == "":
-                                    return_decorr[ii] += f"{simdata_decorr}"
-                                else:
-                                    return_decorr[ii] += f" + {simdata_decorr}"
+        # Add the text of the decorrelation model, the addition to the sim data and the text of the plot
+        if len(d_l_model_decorr_name_4_inst_cat) > 0:
+            return_decorr = ["" for ii in range(datasim_docfunc.noutput)]
+            for func_shortname in l_func_shortname:
+                for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
+                    for decorr_model_name in l_decorr_model_name:
+                        decorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["decorr_body_text"]
+                        nb_rc = decorr_body_text.count('\n')
+                        if decorr_body_text.endswith('\n'):
+                            nb_rc -= 1
+                        if nb_rc > 0:
+                            decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab}{decorr_body_text}\n", function_shortname=func_shortname)
+                        if func_shortname == func_shortname_plotdecorr:
+                            plotdecorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["plotdecorr_body_text"]
+                            func_builder.add_to_body_text(text=f"{tab}{plotdecorr_body_text}\n", function_shortname=func_shortname)
+                        simdata_decorr = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["sim_data_decorr_text"]
+                        nb_rc = simdata_decorr.count('\n')
+                        if simdata_decorr.endswith('\n'):
+                            nb_rc -= 1
+                        if nb_rc > 0:
+                            simdata_decorr = simdata_decorr.replace('\n', f'\n{tab}', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab}{simdata_decorr}\n", function_shortname=func_shortname)
+                        if func_shortname == func_shortname_decorr:
+                            l_decorr_output_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["l_decorr_output_text"]
+                            for ii in range(datasim_docfunc.noutput):
+                                decorr_output = l_decorr_output_text[ii]
+                                if decorr_output is not None:
+                                    if return_decorr[ii] == "":
+                                        return_decorr[ii] += f"{decorr_output}"
+                                    else:
+                                        return_decorr[ii] += f" + {decorr_output}"
+            for ii in range(datasim_docfunc.noutput):
                 if return_decorr[ii] == "":
                     return_decorr[ii] = None
             if not(datasim_docfunc.multi_output):
                 return_decorr = return_decorr[0]
-
             func_builder.add_to_body_text(text=f"{tab}return {return_decorr}\n", function_shortname=func_shortname_decorr)
             func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
 
@@ -301,7 +309,7 @@ class LikelihoodCreator(object):
                                                  param_model_names_list=params_like,
                                                  params_model_vect_name=par_vec_name, inst_cats_list=datasim_docfunc.inst_cats_list,
                                                  inst_model_fullnames_list=datasim_docfunc.inst_model_fullnames_list, dataset_names_list=datasim_docfunc.dataset_names_list,
-                                                 noisemodel_names_list=noisemodel_names_list, include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
+                                                 noisemodel_names_list=list(dico_noisemodel.keys()), include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
                                                  mand_kwargs_list=mand_kwargs,  # datasim.mand_kwargs_list[1:],  # to exclude the params_model_vect_name
                                                  opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
                                                  )
@@ -400,17 +408,50 @@ class LikelihoodCreator(object):
             db_lnlike.lock()
         return db_lnlike
 
-    def _get_required_dataset(self, datasim_docfunc):
-        """
+    def _get_required_dataset_for_noisemodel_and_decorrmodel(self, datasim_docfunc):
+        """Get the datasets (simulated and indicators) required by the likelihood computation, along
+        with the dataset kwargs required.
+
+        Argument
+        --------
+        datasim_docfunc : DatasimDocFunc
+            Datasimulator Documented function of the datasimulator from a likelihood function is being
+            made
+
+        Returns
+        -------
+        l_dataset_obj                               : list of Dataset
+            list of all dataset object required to produce the likelihood (this doesn't include the dataset
+            used as indicators for the decorrelation), but due to the decorrelation model it can include
+            more datasets than the ones used by datasim_docfunc. This list will be used to produce a
+            new DatasimDocFunc object.
+        d_required_datasetkwargkeys_4_dataset       : dict of list of str
+            Dictionary providing for each dataset in l_dataset_obj (represented by its name) the list
+            keys of the dataset kwargs required by the likelihood computation
+        d_required_datasetkwargkeys_4_inddataset    : dict of list of str
+            Dictionary providing for each indicator dataset required by the likelihood computation
+            (represented by its name) the list keys of the dataset kwargs required.
+        dico_noisemodel                             : OrderedDict
+            Dictionary providing the different noise model used and their associated datasets.
+            structure is:
+                1. Key: (str) Noise model category
+                   Value: Dict
+                     2.1. Key = 'l_idx_simdata'
+                          Value: (List of int) List of the index of the required dataset sim data in the
+                                 output of new datasim function that will be created based on l_dataset_obj
+                     2.2. Key = "l_datasetkwargs_req"
+                          Value: (List of str) List of the dataset keyword arguments required for the
+                                 dataset (the same one than the corresponding one in l_idx_simdata) for
+                                 the noise model likelihood computation.
+        d_l_model_decorr_name_4_inst_cat            : dict of list of str
+            Dictionary which provides for each instrument category required for the likelihood computation
+            the list of required decorrelation model names (can be different than, a subset of the list
+            present in the inst cat param file depending on the datasets required by the likelihood).
         """
         ## Deal with the noise_model/likelihood
         # Get list of dataset objects required by datasim_doc_func
         l_dataset_name = datasim_docfunc.dataset_names_list
-        # l_dataset_name_noduplicate = list(set(l_dataset_name))
         l_dataset_obj = [self.dataset_db[dataset_name] for dataset_name in l_dataset_name]
-        # l_dataset_obj_noduplicate = [self.dataset_db[dataset_name] for dataset_name in l_dataset_obj]
-
-        noisemodel_names_list = []
 
         # Create a dictionary that regroups all the info related to the likelihood function of each noise model
         def defdic_noisemod_func():
@@ -418,7 +459,7 @@ class LikelihoodCreator(object):
                     "l_datasetkwargs_req": [],
                     }
 
-        dico_noisemodel = {}
+        dico_noisemodel = OrderedDict()
 
         # Create d_required_datasetkwargkeys_4_dataset: The list of required kwargs keys for each dataset
         # in l_dataset_obj.
@@ -429,7 +470,6 @@ class LikelihoodCreator(object):
             instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
             instmod_obj = self.instruments[instmod_fullname]
             noisemod_cat = instmod_obj.noise_model
-            noisemodel_names_list.append(noisemod_cat)
             dataset_name = datasim_docfunc.dataset_names_list[ii]
             if noisemod_cat not in dico_noisemodel:
                 dico_noisemodel[noisemod_cat] = defdic_noisemod_func()
@@ -446,37 +486,53 @@ class LikelihoodCreator(object):
         ## Deal with the decorrelation
         # Update this list with the list of dataset objects required by the decorrelation and at the same time
         # get the list of dataset object required for the decorrelation of each instrument model
-        d_l_dataset_obj_4_instmod_obj_decorr = {}
+        d_l_model_decorr_name_4_inst_cat = {}
         l_dataset_obj_decorr = []
-        l_instmod_obj = []
-        for instmod_obj_fullname in datasim_docfunc.inst_model_fullnames_list:
-            if instmod_obj_fullname not in (d_l_dataset_obj_4_instmod_obj_decorr):
-                instmod_obj = self.instruments[instmod_obj_fullname]
-                instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
-                if instcat_mod_inst.require_likelihood_decorrelation(instmod_fullname=instmod_obj_fullname):
-                    l_instmod_obj.append(instmod_obj)
-                    d_l_dataset_obj_4_instmod_obj_decorr[instmod_obj_fullname] = instcat_mod_inst.get_l_dataset_obj_4_decorrelation(instmod_obj=instmod_obj)
-                    l_dataset_obj_decorr += d_l_dataset_obj_4_instmod_obj_decorr[instmod_obj_fullname]
+        for ii in range(datasim_docfunc.noutput):
+            instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
+            instmod_obj = self.instruments[instmod_fullname]
+            instcat_mod_class = self.instcat_models[instmod_obj.instrument.category]
+            dataset_name = datasim_docfunc.dataset_names_list[ii]
+            if instcat_mod_class.do_decorrelate_likelihood:
+                for model_decorr_name in instcat_mod_class.order_models_decorrelate_likelihood:
+                    if dataset_name in instcat_mod_class.get_decorrelation_likelihood_model_dataset_names(model_name=model_decorr_name):
+                        if instcat_mod_class.inst_cat not in d_l_model_decorr_name_4_inst_cat:
+                            d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat] = []
+                        if model_decorr_name not in d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat]:
+                            d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat].append(model_decorr_name)
+                            l_dataset_obj_of_model_decorr = instcat_mod_class.get_decorrelation_likelihood_model_dataset_objs(model_name=model_decorr_name)
+                            l_dataset_obj_decorr += l_dataset_obj_of_model_decorr
         l_dataset_obj = l_dataset_obj + list(set(l_dataset_obj_decorr) - set(l_dataset_obj))
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
-
-        dico_decorr_4_instmod = {}
 
         # Create d_required_datasetkwargkeys_4_inddataset: The list of required kwargs keys for each
         # indicator dataset
         d_required_datasetkwargkeys_4_inddataset = defaultdict(list)
 
-        for ii in range(datasim_docfunc.noutput):
-            instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
-            instmod_obj = self.instruments[instmod_fullname]
-            instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
-            dataset_name = datasim_docfunc.dataset_names_list[ii]
-            if instcat_mod_inst.require_likelihood_decorrelation(instmod_fullname=instmod_fullname):
-                (d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset, dico_decorr_4_instmod
-                 ) = instcat_mod_inst._get_required_dataset(d_required_datasetkwargkeys_4_dataset,
-                                                            d_required_datasetkwargkeys_4_inddataset,
-                                                            dico_decorr_4_instmod, l_dataset_name, instmod_fullname,
-                                                            dataset_name)
+        for inst_cat in d_l_model_decorr_name_4_inst_cat.keys():
+            instcat_mod_class = self.instcat_models[inst_cat]
+            for model_decorr_name in d_l_model_decorr_name_4_inst_cat[inst_cat]:
+                (d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
+                 ) = instcat_mod_class._get_required_dataset(decorr_model_name=model_decorr_name,
+                                                             d_required_datasetkwargkeys_4_dataset=d_required_datasetkwargkeys_4_dataset,
+                                                             d_required_datasetkwargkeys_4_inddataset=d_required_datasetkwargkeys_4_inddataset,
+                                                             l_dataset_name=l_dataset_name
+                                                             )
+
+        # for ii in range(datasim_docfunc.noutput):
+        #     instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
+        #     instmod_obj = self.instruments[instmod_fullname]
+        #     instcat_mod_inst = self.instcat_models[instmod_obj.instrument.category]
+        #     dataset_name = datasim_docfunc.dataset_names_list[ii]
+        #     if instcat_mod_inst.require_likelihood_decorrelation(dataset_name=dataset_name):
+        #         (d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset, dico_decorr_model_name_4_inst_cat
+        #          ) = instcat_mod_inst._get_required_dataset(d_required_datasetkwargkeys_4_dataset,
+        #                                                     d_required_datasetkwargkeys_4_inddataset,
+        #                                                     dico_decorr_model_name_4_inst_cat,
+        #                                                     l_dataset_name,
+        #                                                     instmod_fullname,
+        #                                                     dataset_name)
 
         return (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
-                dico_noisemodel, dico_decorr_4_instmod, noisemodel_names_list)
+                dico_noisemodel, d_l_model_decorr_name_4_inst_cat
+                )

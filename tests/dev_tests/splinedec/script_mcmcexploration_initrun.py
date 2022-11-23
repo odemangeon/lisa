@@ -57,7 +57,7 @@ extension_analysis = ""
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
+                        fh_lvl=DEBUG, fh_file=join(output_folders["log"], f"{obj_name}.log"))
 
 logger.info("########\nMCMC EXPLORATION")
 

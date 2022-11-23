@@ -70,45 +70,72 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
         config_model_storage = deepcopy(config_model_paramfile)
 
     @classmethod
-    def get_required_dataset(cls, decorr_config_instmod_decorr_cat, dico_decorr_instmod_decorr_cat, decorr_name,
-                             d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
+    def get_required_dataset(cls, match_datasets, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
                              l_dataset_name
                              ):
-        """Fill the dictionary dico_decorr_instmod_decorr_cat, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
+        """Fill the dictionary d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
+        for a given likelihood decorrelation model.
 
-        This function is called by instcat model class
+        The only necessary input from this decorrelation model configuration is the 'match datasets'
+        info.
+
+        d_required_datasetkwargkeys_4_dataset provides the required simulated datasets and their dataset keys
+        d_required_datasetkwargkeys_4_inddataset provides the required indicator datasets and their dataset keys
+
+        This function is called by Core_InstCat_Model._get_required_dataset
 
         Arguments
         ---------
-        decorr_config_instmod_decorr_cat            :
-        dico_decorr_instmod_decorr_cat              :
-        decorr_name                                 :
+        match_datasets                              :
         d_required_datasetkwargkeys_4_dataset       :
         d_required_datasetkwargkeys_4_inddataset    :
         l_dataset_name                              :
 
         Returns
         -------
-        dico_decorr_instmod_decorr_cat              :
         d_required_datasetkwargkeys_4_dataset       :
         d_required_datasetkwargkeys_4_inddataset    :
         """
-        decorr_config = decorr_config_instmod_decorr_cat[decorr_name]
-        if cls.category not in dico_decorr_instmod_decorr_cat:
-            dico_decorr_instmod_decorr_cat[cls.category] = defaultdict(cls.defdic_decorr_func)
-        for dataset_name, ind_dataset_name in decorr_config["match datasets"].items():
-            dico_decorr_instmod_decorr_cat[cls.category][decorr_name]["l_idx_simdata"].append(l_dataset_name.index(dataset_name))
-            dico_decorr_instmod_decorr_cat[cls.category][decorr_name]["l_datasetkwargs_req"].append(cls.l_required_datasetkwarg_keys)
+        for dataset_name, ind_dataset_name in match_datasets.items():
             for datasetkwarg in cls.l_required_datasetkwarg_keys:
                 if datasetkwarg not in d_required_datasetkwargkeys_4_dataset[dataset_name]:
                     d_required_datasetkwargkeys_4_dataset[dataset_name].append(datasetkwarg)
-            dico_decorr_instmod_decorr_cat[cls.category][decorr_name]["l_inddataset_name"].append(ind_dataset_name)
-            dico_decorr_instmod_decorr_cat[cls.category][decorr_name]["l_inddatasetkwargs_req"].append(cls.l_required_inddatasetkwarg_keys)
             for datasetkwarg in cls.l_required_inddatasetkwarg_keys:
                 if datasetkwarg not in d_required_datasetkwargkeys_4_inddataset[ind_dataset_name]:
                     d_required_datasetkwargkeys_4_inddataset[ind_dataset_name].append(datasetkwarg)
 
-        return dico_decorr_instmod_decorr_cat, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
+        return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
+
+    # @classmethod
+    # def get_likelihood_elements(cls, match_datasets, l_dataset_name):
+    #     """Return the elements required to build the likelihood decorrelation of a given decorrelation
+    #     model.
+    #
+    #     The only necessary input from this decorrelation model configuration is the 'match datasets'
+    #     info.
+    #
+    #     This function is called by
+    #
+    #     Arguments
+    #     ---------
+    #     match_datasets      : dict
+    #         Dictionary that match the simulated datasets names to the indicator datasets names used for
+    #         the likelihood decorrelation model
+    #     l_dataset_name      : list of str
+    #         list of datasets name in the final datasimulator used in the likelihood computation
+    #
+    #     Returns
+    #     -------
+    #     d_likelihood_element    : dict
+    #
+    #     """
+    #     d_likelihood_element = cls.defdic_decorr_func()
+    #     for dataset_name, ind_dataset_name in match_datasets.items():
+    #         d_likelihood_element["l_idx_simdata"].append(l_dataset_name.index(dataset_name))
+    #         d_likelihood_element["l_datasetkwargs_req"].append(cls.l_required_datasetkwarg_keys)
+    #         d_likelihood_element["l_inddataset_name"].append(ind_dataset_name)
+    #         d_likelihood_element["l_inddatasetkwargs_req"].append(cls.l_required_inddatasetkwarg_keys)
+    #     return d_likelihood_element
 
     @classmethod
     def defdic_decorr_func(cls):
