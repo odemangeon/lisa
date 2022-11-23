@@ -652,7 +652,7 @@ def get_condition(multi, l_inst_model, l_planet, tab, time_vec_name, l_time_vec_
                         function_builder.add_to_done_in_text(name=f"omega_{planet_name}_deg", function_shortname=function_shortname)
                 function_builder.add_to_body_text(text=f"{tab}aR_{planet_name} = getaoverr({period}, {rhostar}, ecc_{planet_name}, omega_{planet_name}_deg)\n", function_shortname=function_shortname)
                 function_builder.add_to_done_in_text(name=f"aR_{planet_name}", function_shortname=function_shortname)
-            aR = f"aR_{planet_name}\n"
+            aR = f"aR_{planet_name}"
         else:
             aR = function_builder.get_text_4_parameter(parameter=parameters['planet']['aR'], function_shortname=function_shortname)
         # if function_builder.is_parameter(parameter=parameters['planet']['Rrat'], function_shortname=function_shortname):
