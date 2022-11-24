@@ -42,7 +42,7 @@ xtol_preminimization = 1e-12
 # emcee parameters
 nwalker_fact = 4
 nsteps_MCMC = 10000
-save_to_file = False
+save_to_file = True
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
 # Distribution for the choice of initial parameter values. For now you can only specify gaussian distributions

@@ -69,20 +69,22 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width * 2, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-row4datasetname = {f"LC_{obj_name}_CHEOPS_{100 + ii}": 0 for ii in range(20)}
-for ii in range(15, 20):
-    row4datasetname[f"LC_{obj_name}_CHEOPS_{100 + ii}"] = 1
-row4datasetname.update({f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)})
-for ii in range(2, 3):
-    row4datasetname[f"LC_{obj_name}_CHEOPS_{ii}"] = 1
-row4datasetname.update({f"LC_{obj_name}_CHEOPS_{10 + ii}": 0 for ii in range(6)})
-for ii in range(2, 5):
-    row4datasetname[f"LC_{obj_name}_CHEOPS_{10 + ii}"] = 1
-row4datasetname[f"LC_{obj_name}_CHEOPS_{15}"] = 2
-pl_kwargs = {f"LC_{obj_name}_CHEOPS_{100 + ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(20)}
-pl_kwargs.update({f"LC_{obj_name}_CHEOPS_{ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(3)})
-pl_kwargs.update({f"LC_{obj_name}_CHEOPS_{10 + ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(6)})
-pl_kwargs[f"LC_{obj_name}_CHEOPS_100"]['data']['label'] = "CHEOPS"
+# row4datasetname = {f"LC_{obj_name}_CHEOPS_{100 + ii}": 0 for ii in range(20)}
+# for ii in range(15, 20):
+#     row4datasetname[f"LC_{obj_name}_CHEOPS_{100 + ii}"] = 1
+# row4datasetname.update({f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)})
+# for ii in range(2, 3):
+#     row4datasetname[f"LC_{obj_name}_CHEOPS_{ii}"] = 1
+# row4datasetname.update({f"LC_{obj_name}_CHEOPS_{10 + ii}": 0 for ii in range(6)})
+# for ii in range(2, 5):
+#     row4datasetname[f"LC_{obj_name}_CHEOPS_{10 + ii}"] = 1
+# row4datasetname[f"LC_{obj_name}_CHEOPS_{15}"] = 2
+# pl_kwargs = {f"LC_{obj_name}_CHEOPS_{100 + ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(20)}
+# pl_kwargs.update({f"LC_{obj_name}_CHEOPS_{ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(3)})
+# pl_kwargs.update({f"LC_{obj_name}_CHEOPS_{10 + ii}": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': None}, } for ii in range(6)})
+# pl_kwargs[f"LC_{obj_name}_CHEOPS_100"]['data']['label'] = "CHEOPS"
+row4datasetname = None
+pl_kwargs = None
 
 create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                         datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
@@ -90,7 +92,7 @@ create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fi
                                      'decorrelation_likelihood': True,
                                      },
                         kwargs_compute_model_4_key_model=None,
-                        show_dict={'inst_var': False, 'decorrelation_likelihood': False,
+                        show_dict={'inst_var': False, 'decorrelation_likelihood': True,
                                    },
                         datasetnames4model4row=None,
                         create_axes_kwargs={'main_gridspec': {"left": 0.1, "right": 0.9}, },
