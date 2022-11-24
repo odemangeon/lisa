@@ -216,7 +216,9 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
         decorr_body_text += f"{spline_object_name} = {spline_type}(x={x_vect_name}, y={y_vect_name} ,z=all_resi - mean(all_resi), **{spline_kwargs_name})\n"
         l_decorr_output_text = [None for dataset_name in l_dataset_name]
         simdata_decorr_text = f"for idx_sim_data, x_ind_dataset_name, y_ind_dataset_name in zip({l_idx_simdata_name}, {l_x_inddataset_name_decorr_model_name}, {l_y_inddataset_name_decorr_model_name}):\n"
-        simdata_decorr_text += f"    sim_data[idx_sim_data] += {spline_object_name}(inddataset_kwargs[x_ind_dataset_name]['data'], inddataset_kwargs[y_ind_dataset_name]['data'], grid=False)\n"
+        simdata_decorr_text += f"    sim_data_decorr = {spline_object_name}(inddataset_kwargs[x_ind_dataset_name]['data'], inddataset_kwargs[y_ind_dataset_name]['data'], grid=False)\n"
+        simdata_decorr_text += "    if isfinite(sim_data_decorr).all():\n"
+        simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
         for idx_sim_data, x_inddataset_name, y_inddataset_name in zip(l_idx_simdata, l_x_inddataset_name_decorr_model_name, l_y_inddataset_name_decorr_model_name):
             l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs[{x_inddataset_name}]['data'], inddataset_kwargs[{y_inddataset_name}]['data'], grid=False)"
         for function_shortname in l_function_shortname:
@@ -242,15 +244,15 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             x_plotmodel_name = f"x_{inst_cat}_{model_name}"
             y_plotmodel_name = f"y_{inst_cat}_{model_name}"
             plotdecorr_body_text = f"""
-            {{tab}}fig, ax = subplots()
-            {{tab}}ax = axes(projection='3d')
-            {{tab}}{x_plotmodel_name} = linspace(min({x_vect_name}), max({x_vect_name}), npt_spline)
-            {{tab}}{y_plotmodel_name} = linspace(min({y_vect_name}), max({y_vect_name}), npt_spline)
-            {{tab}}ax.scatter3D({x_vect_name}, {y_vect_name}, {text_all_resi}, c={text_all_resi}, cmap='Greens')
-            {{tab}}ax.contour3D(*meshgrid({x_plotmodel_name}, {y_plotmodel_name}), {spline_object_name}({x_plotmodel_name}, {y_plotmodel_name}, grid=True), 50, cmap='binary')
-            {{tab}}ax.set_xlabel('indicators x {model_name}')
-            {{tab}}ax.set_ylabel('indicators y {model_name}')
-            {{tab}}ax.set_zlabel('residuals {model_name}')
+            fig, ax = subplots()
+            ax = axes(projection='3d')
+            {x_plotmodel_name} = linspace(min({x_vect_name}), max({x_vect_name}), npt_spline)
+            {y_plotmodel_name} = linspace(min({y_vect_name}), max({y_vect_name}), npt_spline)
+            ax.scatter3D({x_vect_name}, {y_vect_name}, {text_all_resi}, c={text_all_resi}, cmap='Greens')
+            ax.contour3D(*meshgrid({x_plotmodel_name}, {y_plotmodel_name}), {spline_object_name}({x_plotmodel_name}, {y_plotmodel_name}, grid=True), 50, cmap='binary')
+            ax.set_xlabel('indicators x {model_name}')
+            ax.set_ylabel('indicators y {model_name}')
+            ax.set_zlabel('residuals {model_name}')
             """
             plotdecorr_body_text = dedent(plotdecorr_body_text)
             plotdecorr_body_text = plotdecorr_body_text.format(tab=tab)

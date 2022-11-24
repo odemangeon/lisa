@@ -179,7 +179,9 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         spline_object_name = f"sp_{inst_cat}_{model_name}"
         decorr_body_text += f"{spline_object_name} = {spline_type}(x={x_vect_name}, y=all_resi - mean(all_resi), **{spline_kwargs_name})\n"
         simdata_decorr_text = f"for idx_sim_data, ind_dataset_name in zip({l_idx_simdata_name}, {l_inddataset_name_decorr_model_name}):\n"
-        simdata_decorr_text += f"    sim_data[idx_sim_data] += {spline_object_name}(inddataset_kwargs[ind_dataset_name]['data'])\n"
+        simdata_decorr_text += f"    sim_data_decorr = {spline_object_name}(inddataset_kwargs[ind_dataset_name]['data'])\n"
+        simdata_decorr_text += "    if isfinite(sim_data_decorr).all():\n"
+        simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
         l_decorr_output_text = [None for dataset_name in l_dataset_name]
         for idx_sim_data, ind_dataset_name in zip(l_idx_simdata, l_inddataset_name_decorr_model):
             l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs['{ind_dataset_name}']['data'])"
@@ -202,15 +204,14 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
             function_builder.add_optional_argument(argument_name="npt_spline", default_value=100, function_shortname=plot_functionshortname, exist_ok=True)
             x_plotmodel_name = f"x_{inst_cat}_{model_name}"
             plotdecorr_body_text = f"""
-            {{tab}}fig, ax = subplots()
-            {{tab}}{x_plotmodel_name} = linspace(min({x_vect_name}), max({x_vect_name}), npt_spline)
-            {{tab}}ax.plot({x_vect_name}, {text_all_resi}, '.', label='residuals')
-            {{tab}}ax.plot({x_plotmodel_name}, {spline_object_name}({x_plotmodel_name}), label='spline {inst_cat} {model_name}')
-            {{tab}}ax.set_xlabel('indicators {model_name}')
-            {{tab}}ax.set_ylabel('residuals {model_name}')
-            {{tab}}ax.grid(b=True, which='both', axis='y', alpha=0.5)
-            {{tab}}ax.legend()
+            fig, ax = subplots()
+            {x_plotmodel_name} = linspace(min({x_vect_name}), max({x_vect_name}), npt_spline)
+            ax.plot({x_vect_name}, {text_all_resi}, '.', label='residuals')
+            ax.plot({x_plotmodel_name}, {spline_object_name}({x_plotmodel_name}), label='spline {inst_cat} {model_name}')
+            ax.set_xlabel('indicators {model_name}')
+            ax.set_ylabel('residuals {model_name}')
+            ax.grid(b=True, which='both', axis='y', alpha=0.5)
+            ax.legend()
             """
             plotdecorr_body_text = dedent(plotdecorr_body_text)
-            plotdecorr_body_text = plotdecorr_body_text.format(tab=tab)
         return simdata_decorr_text, l_decorr_output_text, decorr_body_text, plotdecorr_body_text, l_paramsfullname_likelihood

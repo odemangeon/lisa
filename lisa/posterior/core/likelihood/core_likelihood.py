@@ -14,6 +14,7 @@ The objective of this module is to define the class LikelihoodCreator.
 from logging import getLogger
 from collections import defaultdict, OrderedDict
 from copy import copy
+from numpy import logical_not, isfinite
 # import matplotlib.pyplot as pl
 
 from .manager_noise_model import Manager_NoiseModel
@@ -244,6 +245,10 @@ class LikelihoodCreator(object):
         if len(d_l_model_decorr_name_4_inst_cat) > 0:
             return_decorr = ["" for ii in range(datasim_docfunc.noutput)]
             for func_shortname in l_func_shortname:
+                # Only compute the spline decorrelation if sim_data is finite
+                func_builder.add_to_body_text(text=f"{tab}if logical_not(isfinite(sim_data)).any():\n", function_shortname=func_shortname)
+                func_builder.add_variable_to_ldict(variable_name='logical_not', variable_content=logical_not, function_shortname=func_shortname, exist_ok=True, overwrite=False)
+                func_builder.add_variable_to_ldict(variable_name='isfinite', variable_content=isfinite, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
                     for decorr_model_name in l_decorr_model_name:
                         decorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["decorr_body_text"]
@@ -251,18 +256,23 @@ class LikelihoodCreator(object):
                         if decorr_body_text.endswith('\n'):
                             nb_rc -= 1
                         if nb_rc > 0:
-                            decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}', nb_rc)
-                        func_builder.add_to_body_text(text=f"{tab}{decorr_body_text}\n", function_shortname=func_shortname)
+                            decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}    ', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab}    {decorr_body_text}\n", function_shortname=func_shortname)
                         if func_shortname == func_shortname_plotdecorr:
                             plotdecorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["plotdecorr_body_text"]
-                            func_builder.add_to_body_text(text=f"{tab}{plotdecorr_body_text}\n", function_shortname=func_shortname)
+                            nb_rc = plotdecorr_body_text.count('\n')
+                            if plotdecorr_body_text.endswith('\n'):
+                                nb_rc -= 1
+                            if nb_rc > 0:
+                                plotdecorr_body_text = plotdecorr_body_text.replace('\n', f'\n{tab}    ', nb_rc)
+                            func_builder.add_to_body_text(text=f"{tab}    {plotdecorr_body_text}\n", function_shortname=func_shortname)
                         simdata_decorr = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["sim_data_decorr_text"]
                         nb_rc = simdata_decorr.count('\n')
                         if simdata_decorr.endswith('\n'):
                             nb_rc -= 1
                         if nb_rc > 0:
-                            simdata_decorr = simdata_decorr.replace('\n', f'\n{tab}', nb_rc)
-                        func_builder.add_to_body_text(text=f"{tab}{simdata_decorr}\n", function_shortname=func_shortname)
+                            simdata_decorr = simdata_decorr.replace('\n', f'\n{tab}    ', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab}    {simdata_decorr}\n", function_shortname=func_shortname)
                         if func_shortname == func_shortname_decorr:
                             l_decorr_output_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["l_decorr_output_text"]
                             for ii in range(datasim_docfunc.noutput):
@@ -277,7 +287,14 @@ class LikelihoodCreator(object):
                     return_decorr[ii] = None
             if not(datasim_docfunc.multi_output):
                 return_decorr = return_decorr[0]
-            func_builder.add_to_body_text(text=f"{tab}return {return_decorr}\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab}    return {return_decorr}\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_decorr)
+            if not(datasim_docfunc.multi_output):
+                func_builder.add_to_body_text(text=f"{tab}    return {None}\n", function_shortname=func_shortname_decorr)
+            else:
+                func_builder.add_to_body_text(text=f"{tab}    return {[None for ii in range(datasim_docfunc.noutput)]}\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_plotdecorr)
+            func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite. No plot can be made.')\n", function_shortname=func_shortname_plotdecorr)
             func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
 
         l_noisemodel_cat = list(dico_noisemodel.keys())
