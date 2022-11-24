@@ -285,7 +285,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
             # RV keplerian model
             if self.keplerian_rv_model.get_do(planet_name=planet_name):
                 for inst_model_fullname in l_inst_model_fullname:
-                    model = self.keplerian_rv_model.get_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname)
+                    model = self.keplerian_rv_model.get_model(planet_name=planet_name)
                     model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
     def apply_instmodel_parametrisation(self):
