@@ -14,7 +14,7 @@ The objective of this module is to define the class LikelihoodCreator.
 from logging import getLogger
 from collections import defaultdict, OrderedDict
 from copy import copy
-from numpy import logical_not, isfinite
+from numpy import logical_not, isfinite, all
 # import matplotlib.pyplot as pl
 
 from .manager_noise_model import Manager_NoiseModel
@@ -110,7 +110,7 @@ class LikelihoodCreator(object):
                                       "simulator for which the dataset is not included")
 
         (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
-         dico_noisemodel, d_l_model_decorr_name_4_inst_cat
+         dico_noisemodel, d_l_model_decorr_name_4_inst_cat, noisemodel_names_list
          ) = self._get_required_dataset_for_noisemodel_and_decorrmodel(datasim_docfunc=datasim_docfunc)
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
 
@@ -246,9 +246,13 @@ class LikelihoodCreator(object):
             return_decorr = ["" for ii in range(datasim_docfunc.noutput)]
             for func_shortname in l_func_shortname:
                 # Only compute the spline decorrelation if sim_data is finite
-                func_builder.add_to_body_text(text=f"{tab}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
+                if datasim_all_dst_doc_func.multi_output:
+                    func_builder.add_to_body_text(text=f"{tab}if all([isfinite(sim_data_i).all() for sim_data_i in sim_data]):\n", function_shortname=func_shortname)
+                else:
+                    func_builder.add_to_body_text(text=f"{tab}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
                 func_builder.add_variable_to_ldict(variable_name='logical_not', variable_content=logical_not, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 func_builder.add_variable_to_ldict(variable_name='isfinite', variable_content=isfinite, function_shortname=func_shortname, exist_ok=True, overwrite=False)
+                func_builder.add_variable_to_ldict(variable_name='all', variable_content=all, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
                     for decorr_model_name in l_decorr_model_name:
                         decorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["decorr_body_text"]
@@ -326,7 +330,7 @@ class LikelihoodCreator(object):
                                                  param_model_names_list=params_like,
                                                  params_model_vect_name=par_vec_name, inst_cats_list=datasim_docfunc.inst_cats_list,
                                                  inst_model_fullnames_list=datasim_docfunc.inst_model_fullnames_list, dataset_names_list=datasim_docfunc.dataset_names_list,
-                                                 noisemodel_names_list=list(dico_noisemodel.keys()), include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
+                                                 noisemodel_names_list=noisemodel_names_list, include_dataset_kwarg=datasim_docfunc.include_dataset_kwarg,
                                                  mand_kwargs_list=mand_kwargs,  # datasim.mand_kwargs_list[1:],  # to exclude the params_model_vect_name
                                                  opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
                                                  )
@@ -464,6 +468,9 @@ class LikelihoodCreator(object):
             Dictionary which provides for each instrument category required for the likelihood computation
             the list of required decorrelation model names (can be different than, a subset of the list
             present in the inst cat param file depending on the datasets required by the likelihood).
+        noisemodel_names_list                       : list of str
+            List of the model noise model category for each output of the datasimulator (This is later used
+            by _create_lnlikelihood to create the LikelihoodPosteriorDocfunc )
         """
         ## Deal with the noise_model/likelihood
         # Get list of dataset objects required by datasim_doc_func
@@ -477,6 +484,7 @@ class LikelihoodCreator(object):
                     }
 
         dico_noisemodel = OrderedDict()
+        noisemodel_names_list = []
 
         # Create d_required_datasetkwargkeys_4_dataset: The list of required kwargs keys for each dataset
         # in l_dataset_obj.
@@ -487,6 +495,7 @@ class LikelihoodCreator(object):
             instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
             instmod_obj = self.instruments[instmod_fullname]
             noisemod_cat = instmod_obj.noise_model
+            noisemodel_names_list.append(noisemod_cat)
             dataset_name = datasim_docfunc.dataset_names_list[ii]
             if noisemod_cat not in dico_noisemodel:
                 dico_noisemodel[noisemod_cat] = defdic_noisemod_func()
@@ -551,5 +560,5 @@ class LikelihoodCreator(object):
         #                                                     dataset_name)
 
         return (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
-                dico_noisemodel, d_l_model_decorr_name_4_inst_cat
+                dico_noisemodel, d_l_model_decorr_name_4_inst_cat, noisemodel_names_list
                 )

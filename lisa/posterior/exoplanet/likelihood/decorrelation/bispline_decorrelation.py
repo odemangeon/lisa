@@ -6,7 +6,7 @@ Decorrelation model module.
 from logging import getLogger
 from scipy.interpolate import SmoothBivariateSpline
 from scipy.interpolate import LSQBivariateSpline  # This should allow to specify the knots
-from numpy import concatenate, linspace, mean, meshgrid  # argsort
+from numpy import concatenate, linspace, mean, meshgrid, isfinite
 from matplotlib.pyplot import subplots, axes
 from textwrap import dedent
 from collections import defaultdict
@@ -230,6 +230,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             function_builder.add_variable_to_ldict(variable_name=l_idx_simdata_name, variable_content=l_idx_simdata, function_shortname=function_shortname, exist_ok=False, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="concatenate", variable_content=concatenate, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="mean", variable_content=mean, function_shortname=function_shortname, exist_ok=True, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name="isfinite", variable_content=isfinite, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name="l_dataset_name", variable_content=l_dataset_name, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name=spline_kwargs_name, variable_content=spline_kwargs, function_shortname=function_shortname, exist_ok=False, overwrite=False)
             if spline_type == "SmoothBivariateSpline":
