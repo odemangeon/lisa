@@ -246,7 +246,7 @@ class LikelihoodCreator(object):
             return_decorr = ["" for ii in range(datasim_docfunc.noutput)]
             for func_shortname in l_func_shortname:
                 # Only compute the spline decorrelation if sim_data is finite
-                func_builder.add_to_body_text(text=f"{tab}if logical_not(isfinite(sim_data)).any():\n", function_shortname=func_shortname)
+                func_builder.add_to_body_text(text=f"{tab}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
                 func_builder.add_variable_to_ldict(variable_name='logical_not', variable_content=logical_not, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 func_builder.add_variable_to_ldict(variable_name='isfinite', variable_content=isfinite, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():

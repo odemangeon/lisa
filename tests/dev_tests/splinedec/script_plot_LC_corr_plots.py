@@ -32,7 +32,7 @@ default_figwidth = AandA_width
 default_figheight_factor = 0.75
 
 # Define the object name
-obj_name = "WASP-14"
+obj_name = "WASP-76"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
@@ -43,25 +43,25 @@ datasetnames = None
 indicator_datasetnames_4_datasetnames = {f"LC_{obj_name}_CHEOPS_{id_visit}": [f'IND-ROLL_{obj_name}_CHEOPS_{id_visit}',
                                                                               f'IND-CX_{obj_name}_CHEOPS_{id_visit}',
                                                                               f'IND-CY_{obj_name}_CHEOPS_{id_visit}',
-                                                                              f'IND-SMEAR_{obj_name}_CHEOPS_{id_visit}',
+                                                                            #   f'IND-SMEAR_{obj_name}_CHEOPS_{id_visit}',
                                                                               f'IND-TF_{obj_name}_CHEOPS_{id_visit}',
                                                                               f'IND-BKG_{obj_name}_CHEOPS_{id_visit}',
-                                                                              f'IND-DARK_{obj_name}_CHEOPS_{id_visit}',
-                                                                              f'IND-CONTA_{obj_name}_CHEOPS_{id_visit}'
+                                                                            #   f'IND-DARK_{obj_name}_CHEOPS_{id_visit}',
+                                                                            #   f'IND-CONTA_{obj_name}_CHEOPS_{id_visit}'
                                                                               ]
-                                         for id_visit in [1, 2, 3, 4, 5, 6, 7, 8, 101, 102]
+                                         for id_visit in [100, ]
                                          }
 
 binning_kwargs = {}
-for id_visit in [1, 2, 3, 4, 5, 6, 7, 8, 101, 102]:
+for id_visit in [100, ]:
     binning_kwargs_id_visit = {f'IND-ROLL_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
                                f'IND-CX_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
                                f'IND-CY_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
-                               f'IND-SMEAR_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
+                            #    f'IND-SMEAR_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
                                f'IND-TF_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
                                f'IND-BKG_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
-                               f'IND-DARK_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
-                               f'IND-CONTA_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
+                            #    f'IND-DARK_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
+                            #    f'IND-CONTA_{obj_name}_CHEOPS_{id_visit}': {'statistic': 'mean', 'bins': "blocks"},
                                }
     binning_kwargs.update(binning_kwargs_id_visit)
 

@@ -404,7 +404,7 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
 
     if key_model == 'decorrelation_likelihood':
         datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-        p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list]
+        p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list].array
         model = datasim_docfunc_decorr_like.function(p_vect)
         if not(len(model) == len(tsim)):
             model = None

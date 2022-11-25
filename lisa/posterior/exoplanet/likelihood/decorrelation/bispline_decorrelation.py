@@ -218,9 +218,12 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
         simdata_decorr_text = f"for idx_sim_data, x_ind_dataset_name, y_ind_dataset_name in zip({l_idx_simdata_name}, {l_x_inddataset_name_decorr_model_name}, {l_y_inddataset_name_decorr_model_name}):\n"
         simdata_decorr_text += f"    sim_data_decorr = {spline_object_name}(inddataset_kwargs[x_ind_dataset_name]['data'], inddataset_kwargs[y_ind_dataset_name]['data'], grid=False)\n"
         simdata_decorr_text += "    if isfinite(sim_data_decorr).all():\n"
-        simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
-        for idx_sim_data, x_inddataset_name, y_inddataset_name in zip(l_idx_simdata, l_x_inddataset_name_decorr_model_name, l_y_inddataset_name_decorr_model_name):
-            l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs[{x_inddataset_name}]['data'], inddataset_kwargs[{y_inddataset_name}]['data'], grid=False)"
+        if datasim_has_multioutputs:
+            simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
+        else:
+            simdata_decorr_text += "        sim_data += sim_data_decorr\n"
+        for idx_sim_data, x_inddataset_name, y_inddataset_name in zip(l_idx_simdata, l_x_inddataset_name_decorr_model, l_y_inddataset_name_decorr_model):
+            l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs['{x_inddataset_name}']['data'], inddataset_kwargs['{y_inddataset_name}']['data'], grid=False)"
         for function_shortname in l_function_shortname:
             function_builder.add_variable_to_ldict(variable_name=x_vect_name, variable_content=x_vect, function_shortname=function_shortname, exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name=y_vect_name, variable_content=y_vect, function_shortname=function_shortname, exist_ok=True, overwrite=False)

@@ -181,7 +181,10 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         simdata_decorr_text = f"for idx_sim_data, ind_dataset_name in zip({l_idx_simdata_name}, {l_inddataset_name_decorr_model_name}):\n"
         simdata_decorr_text += f"    sim_data_decorr = {spline_object_name}(inddataset_kwargs[ind_dataset_name]['data'])\n"
         simdata_decorr_text += "    if isfinite(sim_data_decorr).all():\n"
-        simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
+        if datasim_has_multioutputs:
+            simdata_decorr_text += "        sim_data[idx_sim_data] += sim_data_decorr\n"
+        else:
+            simdata_decorr_text += "        sim_data += sim_data_decorr\n"
         l_decorr_output_text = [None for dataset_name in l_dataset_name]
         for idx_sim_data, ind_dataset_name in zip(l_idx_simdata, l_inddataset_name_decorr_model):
             l_decorr_output_text[idx_sim_data] = f"{spline_object_name}(inddataset_kwargs['{ind_dataset_name}']['data'])"
