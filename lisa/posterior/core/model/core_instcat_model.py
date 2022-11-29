@@ -531,7 +531,7 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         self.decorrelation_likelihood_config["do"] = dico_config_decorr_like["do"]
         # Check that all models in order_models are specified in model_definitions
         if not(set(dico_config_decorr_like['order_models']).issubset(set(dico_config_decorr_like['model_definitions'].keys()))):
-            raise ValueError("All likelihood decorrelation model names in 'order_models' have to be specified in 'model_definitions'")
+            raise ValueError(f"All likelihood decorrelation model names in 'order_models' have to be specified in 'model_definitions'. You didn't define models {set(dico_config_decorr_like['order_models']) - set(dico_config_decorr_like['model_definitions'].keys())}")
         # Init the content of order_models and model_definitions
         self.decorrelation_likelihood_config["order_models"] = []
         self.decorrelation_likelihood_config["model_definitions"] = {}
