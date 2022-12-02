@@ -517,12 +517,11 @@ if do_MComp:
 
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
-    chainIsec, l_param_name_sec = sp.get_secondary_chains(post_instance.model, chainI,
-                                                          star_kwargs=star_kwargs,
-                                                          units=units, units_dict=units_dict
-                                                          )
+    from secondary_parameters import sp as sec_params
 
-    l_param_chainIsec = l_param_name_sec + [lnprobability_name]
+    chainIsec = sp.get_secondary_chains(chainI_main=chainI, sec_params=sec_params, model=post_instance.model)
+
+    l_param_chainIsec = chainIsec.param_names + [lnprobability_name, ]
     chainIsec = ChainsInterpret(np.dstack((chainIsec, lnprobability)), l_param_chainIsec)
 
     if omega_0to360:
