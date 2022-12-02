@@ -1372,6 +1372,59 @@ def getABredist_vect_stellspec(hotspot_offset, c11, a_rs, rp_a, f, filt, T_s, st
     return np.array(A_B_inf), np.array(redist)
 
 
+def getFrat_sincos(A, Foffset):
+    """Compute the Eclipse depth in the sincos phase curve model 
+
+    The units of A, Foffset must be the same and Frat will have the same unit
+
+    Arguments
+    ---------
+    A       : np.array
+        Amplitude of the cosine/sine function
+    Foffset : np.array or str
+        Flux offset for the cosine/sine function
+        if str should be 'zero' or 'semi-amplitude'
+
+    Return
+    ------
+    Frat    : np.array  
+    """
+    if Foffset == 'zero':
+        Frat = A / 2
+    elif Foffset == 'semi-amplitude':
+        Frat = A
+    else:
+        Frat = Foffset + A
+
+    return Frat
+
+def getPhioffset_sincos(Phi, sincos):
+    """Compute the Eclipse depth in the sincos phase curve model 
+
+    The units of A, Foffset must be the same and Frat will have the same unit
+
+    Arguments
+    ---------
+    Phi     : np.array
+        Phase offset of the cos/sin function (compared to the Tic) in radians
+    sincos  : str
+        'sin', a sine function as been used. 'cos', a cosine.
+
+    Return
+    ------
+    Phioffset   : np.array  
+        Bright spot offset in degrees
+    """
+    if sincos == 'sin':
+        Phioffset = Phi - np.pi / 2
+    elif sincos == 'cos':
+        Phioffset = Phi - np.pi
+    else:
+        raise ValueError(f"sincos can be either 'sin' or 'sin', got {sincos}")
+
+    return np.rad2deg(Phioffset)
+
+
 # if __name__ == "__main__":
 #     ipython = get_ipython()
 #     print("Time it for getecc(0.1, 0.2)")
