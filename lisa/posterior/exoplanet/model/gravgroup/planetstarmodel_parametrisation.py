@@ -279,7 +279,10 @@ class Core_PlanetStarModels_lmodel1inst(Core_PlanetStarModels_1model4allinst):
                                    dico_config_model=dico_config_model_planet, overwrite=True
                                    )
             if set(dico_config_planet['model4instrument'].keys()) != set(self.l_inst_model_fullname):
-                raise ValueError(f"The list of instrument model name in dico_config[{planet_name}]['model4instrument'] doesn't match the expected list ({self.l_inst_model_fullname})")
+                raise ValueError(f"The list of instrument model name in dico_config[{planet_name}]['model4instrument'] doesn't match the expected list.\n"
+                                 f"The following keys of dico_config[{planet_name}]['model4instrument'] are not expected: {set(dico_config_planet['model4instrument'].keys()) - set(self.l_inst_model_fullname)}\n"
+                                 f"The following keys of dico_config[{planet_name}]['model4instrument'] expected but not present: {set(self.l_inst_model_fullname) - set(dico_config_planet['model4instrument'].keys())}\n"
+                                 )
             for inst_model_fullname, model_names in dico_config_planet['model4instrument'].items():
                 self._set_model_names_4_inst_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname, model_names=model_names)
 
