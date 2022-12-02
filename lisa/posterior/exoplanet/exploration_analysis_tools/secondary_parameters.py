@@ -46,6 +46,8 @@ def get_secondary_chains(chainI_main, sec_params, model):
                                                 kwargs_get_name={'recursive': True, 'include_prefix': True}
                                                 )
                     l_chains_param.append(ones(chainI_main.shape[:-1]) * param.value)
+                elif param_name in sec_par_chains:
+                    l_chains_param.append(sec_par_chains[param_name])
                 else:
                     raise ValueError(f"Parameter {param_name} is not found anywhere")
         else:
