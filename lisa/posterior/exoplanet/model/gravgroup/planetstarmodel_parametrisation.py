@@ -492,7 +492,7 @@ class Core_PlanetStarModels_1model1inst(Core_PlanetStarModels_lmodel1inst):
         """Set the model_name for a given instrument model
         """
         if not(model_names in self._get_l_available_model_name(planet_name=planet_name)):
-            raise ValueError(f"dico_config[{planet_name}]['model4instrument'][{inst_model_fullname}] should be an available model name ({self.l_available_model_name})")
+            raise ValueError(f"{model_names} from dico_config[{planet_name}]['model4instrument'][{inst_model_fullname}] is not an available model name ({self._get_l_available_model_name(planet_name=planet_name)})")
         self._models_config[planet_name]["model4instrument"][inst_model_fullname] = model_names
 
     def _get_model_name(self, planet_name, inst_model_fullname):
