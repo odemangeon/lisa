@@ -649,13 +649,10 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Produce the param file section for the parameter of the model which are not in
         # any specific paramcontainer
         text += "# {}\n\n".format(self.category)
-        entete = f"{self.code_name} = "
+        entete = f"sys_{self.code_name} = "
         text += entete
         space_entete_param = spacestring_like(entete)
         text += pformat(super(Core_Model, self).get_paramfile_dict(), compact=True).replace("\n", f"\n{text_tab + space_entete_param}")
-        # text += super(Core_Model, self).get_paramfile_section(text_tab=text_tab, texttab_1tline=False,
-        #                                                       entete_symb=" = ", quote_name=False,
-        #                                                       recursive=False)
         # Produce the text to introduce the joint paramaters distribution section
         text += "\n" + self.get_paramfile_section_jointprior()
 
@@ -716,7 +713,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
                                              model_instance=self,
                                              available_joint_priors=self.joint_prior_container)
             else:  # For the model parameters (those who do no belong in any param container)
-                super(Core_Model, self).load_config(dico_config=dico_config[self.code_name], model_instance=self,
+                super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
                                                     available_joint_priors=self.joint_prior_container)
 
     @property
@@ -759,7 +756,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # If the file needs to be created
         if reply == "y":
             with open(param_file_path, 'w') as f:
-                f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
                 f.write("# Parametrisation file of {}\n".format(self.get_name()))
                 f.write("import numpy as np\n\n")
                 f.write("# Parameters\n")
