@@ -11,7 +11,8 @@ from text.
 @TODO:
     -
 """
-from collections import Iterable, OrderedDict
+from collections.abc import Iterable
+from collections import OrderedDict
 from copy import copy
 from logging import getLogger
 

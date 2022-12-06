@@ -11,7 +11,8 @@ The objective of this package is to provides the class LockableDict
     -
 """
 from logging import getLogger
-from collections import MutableMapping, OrderedDict
+from collections.abc import MutableMapping
+from collections import OrderedDict
 from copy import copy
 
 
