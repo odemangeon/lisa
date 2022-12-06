@@ -15,7 +15,7 @@ jitter parameters or the GP parameters) and provide the way the likelihood is co
     -
 """
 from logging import getLogger
-from collections import Iterable
+from collections.abc import Iterable
 from numpy import sum as npsum
 from numpy import log as nplog
 

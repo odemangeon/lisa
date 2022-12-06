@@ -12,7 +12,7 @@ import numpy as np
 from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argsort  # , unravel_index
 from numpy import nanpercentile, newaxis, concatenate, std, atleast_1d
 from numbers import Number
-from collections import Iterable
+from collections.abc import Iterable
 from statsmodels.stats.weightstats import DescrStatsW
 from copy import copy
 

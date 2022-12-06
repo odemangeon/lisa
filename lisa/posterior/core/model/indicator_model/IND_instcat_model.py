@@ -7,7 +7,8 @@ from logging import getLogger
 from textwrap import dedent
 from pprint import pformat
 
-from collections import Iterable, defaultdict
+from collections.abcs import Iterable
+from collections import defaultdict
 
 from .datasim_creator_ind import create_datasimulator_IND, template_function_whole_shortname_ind_cat
 from .polynomial_model import PolynomialIndicatorModel

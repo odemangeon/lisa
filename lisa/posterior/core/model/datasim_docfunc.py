@@ -4,7 +4,7 @@
 datasimulator documented function module.
 """
 from pandas import DataFrame
-from collections import Iterable
+from collections.abc import Iterable
 
 from ....tools.function_w_doc import DocFunction
 

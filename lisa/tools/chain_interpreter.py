@@ -7,7 +7,8 @@ The objective of this module is to provide the ChainInterpret class which is a c
 includes the knowledge of which chain correspond to which parameter name.
 """
 import numpy as np
-from collections import Iterable, Counter
+from collections.abc import Iterable
+from collections import Counter
 
 
 class ChainsInterpret(np.ndarray):
