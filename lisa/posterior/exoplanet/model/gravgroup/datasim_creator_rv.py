@@ -826,7 +826,7 @@ def get_RV_keplerian(multi, l_inst_model, l_dataset, get_times_from_datasets, ke
     ############################################
     for planet in planets.values():
         planet_name = planet.get_name()
-        if rv_model[planet_name]['do']:
+        if keplerian_rv_model.get_do(planet_name=planet_name):
             func_shortname = f"{get_function_planet_shortname(planet)}{ext_func_keprv_only}"
             function_builder.add_to_body_text(text=f"{tab}return {', '.join(returns.pop(func_shortname))}",
                                               function_shortname=func_shortname)
