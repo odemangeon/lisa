@@ -379,8 +379,12 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                          )
 
 
-def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models):
+def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
     """
+    Arguments
+    ---------
+    amplitude_fact  : float
+        Not used but required for the standardisation of this function. It is used in lc_plots.remove_add_model_components
     """
     # Remove components if needed
     for key, do in remove_dict.items():
