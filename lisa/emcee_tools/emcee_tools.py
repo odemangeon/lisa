@@ -2133,7 +2133,10 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_explora
         makedirs(folder, exist_ok=True)
 
     # Save chain in a pickle
-    pickle_stuff(sampler.chain, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
+    nwalker, nstep, ndim = sampler.chain.shape
+    if (sampler.chain.size * sampler.chain.itemsize) > 4294967295:  # 4GB
+        nstep = int(np.floor(4294967295 / sampler.chain.itemsize / ndim / nwalker))
+    pickle_stuff(sampler.chain[:, -nstep:, :], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
 
     # Save lnprobability in a pickle
     pickle_stuff(sampler.lnprobability, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
