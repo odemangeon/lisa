@@ -2134,8 +2134,8 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_explora
 
     # Save chain in a pickle
     nwalker, nstep, ndim = sampler.chain.shape
-    if (sampler.chain.size * sampler.chain.itemsize) > 4294967295:  # 4GB
-        nstep = int(np.floor(4294967295 / sampler.chain.itemsize / ndim / nwalker))
+    if (sampler.chain.size * sampler.chain.itemsize) > 4e9:  # 4GB
+        nstep = int(np.floor(4e9 / sampler.chain.itemsize / ndim / nwalker))
     pickle_stuff(sampler.chain[:, -nstep:, :], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
 
     # Save lnprobability in a pickle
