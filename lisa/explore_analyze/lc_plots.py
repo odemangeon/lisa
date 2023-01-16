@@ -169,7 +169,7 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     """
     y_name = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+    for key, default in zip(["GP_model","decorrelation", "inst_var", "contamination", "stellar_var", "1"],
                             [True, True, True, remove_contamination, True, remove1]
                             ):
         remove_dict_model[key] = default
@@ -181,9 +181,6 @@ def create_LC_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
     remove_dict_data_err = OrderedDict()
     for key in ["contamination", ]:
         remove_dict_data_err[key] = remove_dict_data[key]
-    # remove_dict_model = copy(remove_dict)
-    # remove_dict_model['decorrelation_likelihood'] = False
-    # remove_dict_data = copy(remove_dict)
     kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false
                                                   },
@@ -377,21 +374,18 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     """
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
-    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [False, False, False, False, True]
+    for key, default in zip(["GP_model", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, False, True]
                             ):
         remove_dict_model[key] = remove_dict.get(key, default)
     remove_dict_data = OrderedDict()
-    for key, default in zip(["decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [False, False, False, False, False, True]
+    for key, default in zip(["GP_model", "decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, False, False, True]
                             ):
         remove_dict_data[key] = remove_dict.get(key, default)
     remove_dict_data_err = OrderedDict()
     for key in ["contamination", ]:
         remove_dict_data_err[key] = remove_dict_data[key]
-    # remove_dict_model = copy(remove_dict)
-    # remove_dict_model['decorrelation_likelihood'] = False
-    # remove_dict_data = copy(remove_dict)
     kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
     kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false

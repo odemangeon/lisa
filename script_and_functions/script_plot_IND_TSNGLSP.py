@@ -66,35 +66,35 @@ if "df_fittedval" not in globals():
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
                                                                                     folder=output_folders["pickles_analyze"])
 
-fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=True)
+fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_IND_TSNGLSP_plots(fig=fig,
-                         post_instance=post_instance, df_fittedval=df_fittedval,
+create_IND_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                          datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
                          IND_subcat="FWHM",
                          remove_dict={'inst_var': True, 'sys_var': False,
-                                      'GP_dataNmodel': False, 'GP_residual': True},
-                         show_dict={'inst_var': False, 'sys_var': True},
+                                      'GP_model': False},
+                         show_dict={'inst_var': False, 'sys_var': True, 'GP_model': True,},
+                        #  datasetnames4model4row={'sys_var': {0: f"IND-LOGRHK_{obj_name}_HARPS_0"}},
                          TS_kwargs={"do": True,
-                                    "npt_model": 100000,
+                                    "npt_model": 50000,
                                     # "exptime_bin": 1,
                                     # "binning_stat": 'median',
                                     # "show_binned_model": True,
                                     # "one_binning_per_row": True,
-                                    'row4datasetname': {f"IND-FWHM_{obj_name}_HARPS_2": 0, f"IND-FWHM_{obj_name}_HARPS_3": 0},
-                                    "one_binning_per_row": True,
-                                    "pl_kwargs": {f"IND-FWHM_{obj_name}_HARPS_2": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS0"},
-                                                                                   'model': {"color": "k", "linewidth": 0.5},
-                                                                                   },  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                                  f"IND-FWHM_{obj_name}_HARPS_3": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "HARPS1"}, },
-                                                  },
+                                    # 'row4datasetname': {f"IND-FWHM_{obj_name}_HARPS_2": 0, f"IND-FWHM_{obj_name}_HARPS_3": 0},
+                                    # "one_binning_per_row": True,
+                                    # "pl_kwargs": {f"IND-FWHM_{obj_name}_HARPS_2": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS0"},
+                                    #                                                'model': {"color": "k", "linewidth": 0.5},
+                                    #                                                },  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                                    #               f"IND-FWHM_{obj_name}_HARPS_3": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "HARPS1"}, },
+                                    #               },
                                     "t_unit": "BJD - 2,400,000",
                                     # "t_lims_zoom": (58000, 59000),
                                     # 'pad_data': (0.5, 0.5),
                                     # "pad_resi": (0.1, -0.2),
-                                    'axeswithsharex_kwargs': {"hspace": 0.1}
+                                    # 'axeswithsharex_kwargs': {"hspace": 0.1}
                                     },
-                         GLSP_kwargs={"do": True,
+                         GLSP_kwargs={"do": False,
                                       "period_range": (0.1, 5000),
                                       "freq_fact": 1e6,
                                       "freq_unit": "$\mu$Hz",

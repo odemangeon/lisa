@@ -236,7 +236,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                     pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
                 if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
                     pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                if not(remove_dict["GP_dataNmodel"]):
+                if not(remove_dict.get("GP_model", False)):
                     pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
                     _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
                     _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
@@ -376,7 +376,10 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         #######################
         # Compute the residuals
         #######################
-        dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model']
+        if kwargs_compute_model_4_key_model['model']['include_gp_model'] and not(kwargs_compute_model_4_key_model['data']['remove_dict'].get('GP_model', False)) and ('model_wGP' in dico_outputs['models'][datasetname]):
+            dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model_wGP']
+        else:
+            dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model']
 
     return dico_outputs, kwargs_compute_model_4_key_model
 

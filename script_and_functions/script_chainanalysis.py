@@ -487,7 +487,7 @@ if do_corner:
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner, :],
            labels=l_param_chainI, truths=fitted_values)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"corner{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"corner{extension_outputs}.png"))
     else:
         pl.show()
     pl.close("all")
@@ -597,7 +597,7 @@ if do_SecParam:
         corner(sec_flatchain_to_plot[::sampling_corner_sec], labels=[l_param_chainIsec[ii] for ii in idx_corner_plot],
                truths=fitted_values_sec[idx_corner_plot])
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")

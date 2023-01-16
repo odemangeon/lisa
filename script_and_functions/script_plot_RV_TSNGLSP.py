@@ -70,10 +70,10 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
 create_RV_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                         datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
                         remove_dict={'inst_var': True, 'stellar_var': False, 'decorrelation': True,
-                                     'decorrelation_likelihood': True, 'GP_dataNmodel': False, 'GP_residual': True
+                                     'decorrelation_likelihood': True, 'GP_model': False,
                                      },
-                        show_dict={'inst_var': True, 'stellar_var': True, 'decorrelation': True,
-                                   'decorrelation_likelihood': True,
+                        show_dict={'inst_var': False, 'stellar_var': True, 'decorrelation': True,
+                                   'decorrelation_likelihood': True, 'GP_model': True,
                                    },
                         datasetnames4model4row=None,
                         TS_kwargs={"do": True,
