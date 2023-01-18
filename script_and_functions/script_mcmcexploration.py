@@ -40,6 +40,7 @@ xtol_preminimization = 1e-12
 # emcee parameters
 nwalker_fact = 4
 nsteps_MCMC = 50000
+check_convergence_every = 1000
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
@@ -179,7 +180,7 @@ else:
 logger.info("22. Perform MCMC exploration")
 sampler = et.explore(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, p0=p1, nsteps=nsteps_MCMC, kwargs_prob_fn=kwargs_post,
                      save_to_file=save_to_file, filename=f"{obj_name}_chain.h5", file_folder=output_folders["dats"],
-                     check_convergence_every=1000, ntau=100, tol=0.01, l_param_name=l_param_name)
+                     check_convergence_every=check_convergence_every, ntau=100, tol=0.01, l_param_name=l_param_name)
 et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
 
 chain = sampler.chain
