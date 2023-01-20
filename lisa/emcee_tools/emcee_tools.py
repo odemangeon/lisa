@@ -2139,7 +2139,7 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_explora
     pickle_stuff(sampler.chain[:, -nstep:, :], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["chain"], extension_exploration)))
 
     # Save lnprobability in a pickle
-    pickle_stuff(sampler.lnprobability, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
+    pickle_stuff(sampler.lnprobability[:, -nstep:], join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["lnpost"], extension_exploration)))
 
     # Save acceptance_fraction in a pickle
     pickle_stuff(sampler.acceptance_fraction, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["acceptfrac"], extension_exploration)))
