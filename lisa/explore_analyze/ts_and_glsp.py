@@ -200,13 +200,16 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
     unit        : str
         String giving the unit of the data
 
-    Returns:
-    times       : dict of array
-        Dictionary that provides the time array for each dataset name
-    datas       : dict of array
-        Dictionary that provides the data (with the component requested removed) for each dataset name
-    data_errs   : dict of array
-        Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
+    Returns
+    -------
+    d_outputs   : dict of dict 
+        Keys are
+            times       : dict of array
+                Dictionary that provides the time array for each dataset name
+            datas       : dict of array
+                Dictionary that provides the data (with the component requested removed) for each dataset name
+            data_errs   : dict of array
+                Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
     """
     ##############################################
     # Setup figure structure and common parameters
@@ -953,5 +956,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     ax_gls[-1].set_ylabel("Relative Amplitude")
                 labelleft = True if jj == 0 else False
                 ax_gls[-1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
+        
+        ##################
+        # Fill the outputs
+        ##################
+        d_outputs = {}
+        for key in ['times', 'datas', 'data_errs']:
+            d_outputs[key] = dico_load[key]
 
-    return dico_load["times"], dico_load["datas"], dico_load["data_errs"]
+    return d_outputs

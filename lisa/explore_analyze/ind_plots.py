@@ -350,12 +350,14 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
 
     Returns
     -------
-    times       : dict of array
-        Dictionary that provides the time array for each dataset name
-    datas       : dict of array
-        Dictionary that provides the data (with the component requested removed) for each dataset name
-    data_errs   : dict of array
-        Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
+    d_outputs   : dict of dict 
+        Keys are
+            times       : dict of array
+                Dictionary that provides the time array for each dataset name
+            datas       : dict of array
+                Dictionary that provides the data (with the component requested removed) for each dataset name
+            data_errs   : dict of array
+                Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
     """
     remove_dict_model = OrderedDict()
     for key, default in zip(["GP_model", "inst_var", "sys_var"],

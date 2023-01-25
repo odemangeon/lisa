@@ -71,7 +71,7 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(times, datas, data_errs
+(d_outputs
  ) = create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                              datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
                              remove_dict={'1': True, 'inst_var': True, 'stellar_var': True, 'contamination': True,
@@ -142,4 +142,4 @@ pl.show()
 if save_reduced_data:
     # Save chain in a pickle
     with open(os.path.join(output_folders["pickles_analyze"], "LC_reduceddata{extension_analysis}.pkl"), "wb") as fpickle:
-        dill.dump({"times": times, "datas": datas, "data_errs": data_errs}, fpickle)
+        dill.dump(d_outputs, fpickle)

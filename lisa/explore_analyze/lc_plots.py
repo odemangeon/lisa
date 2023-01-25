@@ -374,12 +374,14 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
     Returns
     -------
-    times       : dict of array
-        Dictionary that provides the time array for each dataset name
-    datas       : dict of array
-        Dictionary that provides the data (with the component requested removed) for each dataset name
-    data_errs   : dict of array
-        Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
+    d_outputs   : dict of dict 
+        Keys are
+            times       : dict of array
+                Dictionary that provides the time array for each dataset name
+            datas       : dict of array
+                Dictionary that provides the data (with the component requested removed) for each dataset name
+            data_errs   : dict of array
+                Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
     """
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
