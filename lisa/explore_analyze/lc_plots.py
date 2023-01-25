@@ -371,6 +371,15 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         Factor to apply to the LC
     LC_unit        : str
         String giving the unit of the LCs
+
+    Returns
+    -------
+    times       : dict of array
+        Dictionary that provides the time array for each dataset name
+    datas       : dict of array
+        Dictionary that provides the data (with the component requested removed) for each dataset name
+    data_errs   : dict of array
+        Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
     """
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
@@ -398,26 +407,26 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                                      },
                                         }
     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
-    create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                         y_name=y_name, inst_cat='LC',
-                         compute_raw_models_func=compute_raw_models,
-                         remove_add_model_components_func=remove_add_model_components,
-                         kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                         l_valid_model=l_valid_model,
-                         d_name_component_removed_to_print=d_name_component_removed_to_print,
-                         show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
-                         datasetnames4model4row=datasetnames4model4row,
-                         datasim_kwargs=datasim_kwargs,
-                         datasetnames=datasetnames,
-                         amplitude_fact=LC_fact, unit=LC_unit,
-                         create_axes_kwargs=create_axes_kwargs,
-                         TS_kwargs=TS_kwargs,
-                         GLSP_kwargs=GLSP_kwargs,
-                         suptitle_kwargs=suptitle_kwargs,
-                         fontsize=fontsize,
-                         get_key_compute_model_func=get_key_compute_model,
-                         is_valid_model_available_func=is_valid_model_available,
-                         )
+    return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                                y_name=y_name, inst_cat='LC',
+                                compute_raw_models_func=compute_raw_models,
+                                remove_add_model_components_func=remove_add_model_components,
+                                kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                l_valid_model=l_valid_model,
+                                d_name_component_removed_to_print=d_name_component_removed_to_print,
+                                show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
+                                datasetnames4model4row=datasetnames4model4row,
+                                datasim_kwargs=datasim_kwargs,
+                                datasetnames=datasetnames,
+                                amplitude_fact=LC_fact, unit=LC_unit,
+                                create_axes_kwargs=create_axes_kwargs,
+                                TS_kwargs=TS_kwargs,
+                                GLSP_kwargs=GLSP_kwargs,
+                                suptitle_kwargs=suptitle_kwargs,
+                                fontsize=fontsize,
+                                get_key_compute_model_func=get_key_compute_model,
+                                is_valid_model_available_func=is_valid_model_available,
+                                )
 
 
 def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):

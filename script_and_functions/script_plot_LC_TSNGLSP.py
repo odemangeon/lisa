@@ -3,6 +3,9 @@ modelsNresiduals
 """
 import matplotlib.pyplot as pl
 import os
+import dill
+
+# import matplotlib
 
 from os.path import join
 from logging import DEBUG, INFO
@@ -49,6 +52,8 @@ output_folders = get_def_output_folders(run_folder=run_folder)
 
 extension_analysis = "_initrun_median"
 
+save_reduced_data = True
+
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
@@ -66,68 +71,75 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                        datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
-                        remove_dict={'1': True, 'inst_var': True, 'stellar_var': True, 'contamination': True,
-                                     'decorrelation': True, 'decorrelation_likelihood': True,
-                                     'GP_dataNmodel': False, 'GP_residual': True
-                                     },
-                        show_dict={'inst_var': False, 'stellar_var': False, 'decorrelation': False,
-                                   'decorrelation_likelihood': False,
-                                   },
-                        datasetnames4model4row=None,
-                        TS_kwargs={"do": True,
-                                   "npt_model": 10000,
-                                   "exptime_bin": 20 / 60 / 24,
-                                   "binning_stat": 'median',
-                                   "show_binned_model": True,
-                                   "one_binning_per_row": True,
-                                   # 'row4datasetname': {f"LC_{obj_name}_TESS_0": 0, f"LC_{obj_name}_TESS_1": 0, f"LC_{obj_name}_TESS_2": 0},
-                                   # "pl_kwargs": {f"LC_{obj_name}_TESS_0": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS0"},
-                                   #                                         'model': {"color": "k", "linewidth": 0.5},
-                                   #                                         },
-                                   #               f"LC_{obj_name}_TESS_1": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS1"}, },
-                                   #               f"LC_{obj_name}_TESS_2": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS2"}, },
-                                   #               },
-                                   "t_unit": "BJD - 2,400,000",
-                                   # "t_lims_zoom": (2170.5, 2171.5),
-                                   # 'ylims': {"data": {"all": (-1000, 1000), }, },
-                                   'indicate_y_outliers': {"data": False, "resi": False}
-                                   },
-                        GLSP_kwargs={"do": False,
-                                     "period_range": (1e-2, 500),
-                                     "freq_fact": 1e6,
-                                     "freq_unit": "$\mu$Hz",
-                                     "freq_lims": (0, 400),
-                                     "freq_lims_zoom": (0, 14),
-                                     'show_inst_var': False,
-                                     'show_decorrelation': True,
-                                     'periods': {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
-                                                                                                "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}},
-                                                 98.7 / 60 / 24: {"vlines_kwargs": {"color": "C4", "linestyle": "dashed"},
-                                                                  "text_kwargs": {"label": 'P$_{CHEOPS}$', 'y_pos': 0.85, 'x_shift': 0.05}},
-                                                 },
-                                     'fap': {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
-                                                   "text_kwargs": {"y_shift": 0.08}},
-                                             1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"},
-                                                 "text_kwargs": {"y_shift": 0.}},
-                                             10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
-                                                  "text_kwargs": {"y_shift": -0.08}},
-                                             },
-                                     'period_no_ticklabels': [10, ],
-                                     'gridspec_kwargs': {"wspace": 0.05},
-                                     'axeswithsharex_kwargs': {"hspace": 0.1},
-                                     # 'legend_param': {'data': {'loc': 'upper center'},
-                                     #                  'model': {'loc': 'upper center'},
-                                     #                  'resi': {'loc': 'upper center'},
-                                     #                  'WF': {'loc': 'upper center'},
-                                     #                  },
-                                     },
-                        suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
-                        LC_fact=1e6,  # 1
-                        LC_unit="ppm",  # "wo unit"
-                        )
+(times, datas, data_errs
+ ) = create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                             datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
+                             remove_dict={'1': True, 'inst_var': True, 'stellar_var': True, 'contamination': True,
+                                          'decorrelation': True, 'decorrelation_likelihood': True,
+                                          'GP_dataNmodel': False, 'GP_residual': True
+                                          },
+                             show_dict={'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+                                        'decorrelation_likelihood': False,
+                                        },
+                             datasetnames4model4row=None,
+                             TS_kwargs={"do": True,
+                                        "npt_model": 10000,
+                                        "exptime_bin": 20 / 60 / 24,
+                                        "binning_stat": 'median',
+                                        "show_binned_model": True,
+                                        "one_binning_per_row": True,
+                                        # 'row4datasetname': {f"LC_{obj_name}_TESS_0": 0, f"LC_{obj_name}_TESS_1": 0, f"LC_{obj_name}_TESS_2": 0},
+                                        # "pl_kwargs": {f"LC_{obj_name}_TESS_0": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS0"},
+                                        #                                         'model': {"color": "k", "linewidth": 0.5},
+                                        #                                         },
+                                        #               f"LC_{obj_name}_TESS_1": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS1"}, },
+                                        #               f"LC_{obj_name}_TESS_2": {'data': {'fmt': '.', 'color': 'k', 'alpha': 0.05, 'label': "TESS2"}, },
+                                        #               },
+                                        "t_unit": "BJD - 2,400,000",
+                                        # "t_lims_zoom": (2170.5, 2171.5),
+                                        # 'ylims': {"data": {"all": (-1000, 1000), }, },
+                                        'indicate_y_outliers': {"data": False, "resi": False}
+                                        },
+                             GLSP_kwargs={"do": False,
+                                          "period_range": (1e-2, 500),
+                                          "freq_fact": 1e6,
+                                          "freq_unit": "$\mu$Hz",
+                                          "freq_lims": (0, 400),
+                                          "freq_lims_zoom": (0, 14),
+                                          'show_inst_var': False,
+                                          'show_decorrelation': True,
+                                          'periods': {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
+                                                                                                     "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}},
+                                                      98.7 / 60 / 24: {"vlines_kwargs": {"color": "C4", "linestyle": "dashed"},
+                                                                       "text_kwargs": {"label": 'P$_{CHEOPS}$', 'y_pos': 0.85, 'x_shift': 0.05}},
+                                                      },
+                                          'fap': {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
+                                                        "text_kwargs": {"y_shift": 0.08}},
+                                                  1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"},
+                                                      "text_kwargs": {"y_shift": 0.}},
+                                                  10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
+                                                       "text_kwargs": {"y_shift": -0.08}},
+                                                  },
+                                          'period_no_ticklabels': [10, ],
+                                          'gridspec_kwargs': {"wspace": 0.05},
+                                          'axeswithsharex_kwargs': {"hspace": 0.1},
+                                          # 'legend_param': {'data': {'loc': 'upper center'},
+                                          #                  'model': {'loc': 'upper center'},
+                                          #                  'resi': {'loc': 'upper center'},
+                                          #                  'WF': {'loc': 'upper center'},
+                                          #                  },
+                                          },
+                             suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
+                             LC_fact=1e6,  # 1
+                             LC_unit="ppm",  # "wo unit"
+                             )
 
 pl.show()
+
 # pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_GLSP_plot{extension_analysis}_paper.pdf"))
 # pl.close("all")
+
+if save_reduced_data:
+    # Save chain in a pickle
+    with open(os.path.join(output_folders["pickles_analyze"], "LC_reduceddata{extension_analysis}.pkl"), "wb") as fpickle:
+        dill.dump({"times": times, "datas": datas, "data_errs": data_errs}, fpickle)

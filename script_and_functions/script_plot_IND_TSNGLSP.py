@@ -3,8 +3,9 @@ modelsNresiduals
 """
 import matplotlib.pyplot as pl
 import os
+import dill
 
-import matplotlib
+# import matplotlib
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
@@ -32,11 +33,11 @@ default_figheight_factor = 0.6
 
 AandA_fontsize = 8
 
-matplotlib.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False})
+# matplotlib.rcParams.update({
+#     "pgf.texsystem": "pdflatex",
+#     'font.family': 'serif',
+#     'text.usetex': True,
+#     'pgf.rcfonts': False})
 
 # Define the object name
 obj_name = "TOI402"
@@ -50,6 +51,8 @@ run_folder = os.getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
 extension_analysis = "_initrun_median"
+
+save_reduced_data = True
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -68,63 +71,69 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_IND_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                         datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
-                         IND_subcat="FWHM",
-                         remove_dict={'inst_var': True, 'sys_var': False,
-                                      'GP_model': False},
-                         show_dict={'inst_var': False, 'sys_var': True, 'GP_model': True,},
-                        #  datasetnames4model4row={'sys_var': {0: f"IND-LOGRHK_{obj_name}_HARPS_0"}},
-                         TS_kwargs={"do": True,
-                                    "npt_model": 50000,
-                                    # "exptime_bin": 1,
-                                    # "binning_stat": 'median',
-                                    # "show_binned_model": True,
-                                    # "one_binning_per_row": True,
-                                    # 'row4datasetname': {f"IND-FWHM_{obj_name}_HARPS_2": 0, f"IND-FWHM_{obj_name}_HARPS_3": 0},
-                                    # "one_binning_per_row": True,
-                                    # "pl_kwargs": {f"IND-FWHM_{obj_name}_HARPS_2": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS0"},
-                                    #                                                'model': {"color": "k", "linewidth": 0.5},
-                                    #                                                },  # 'ms': 14, 'mew': 1, "elinewidth": 5
-                                    #               f"IND-FWHM_{obj_name}_HARPS_3": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "HARPS1"}, },
-                                    #               },
-                                    "t_unit": "BJD - 2,400,000",
-                                    # "t_lims_zoom": (58000, 59000),
-                                    # 'pad_data': (0.5, 0.5),
-                                    # "pad_resi": (0.1, -0.2),
-                                    # 'axeswithsharex_kwargs': {"hspace": 0.1}
-                                    },
-                         GLSP_kwargs={"do": False,
-                                      "period_range": (0.1, 5000),
-                                      "freq_fact": 1e6,
-                                      "freq_unit": "$\mu$Hz",
-                                      "freq_lims": (0, 14),
-                                      "freq_lims_zoom": (0, 1e6 / (100 * 24 * 60 * 60)),
-                                      'periods': {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
-                                                                                                 "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}},
-                                                  },
-                                      'fap': {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
-                                                    "text_kwargs": {"y_shift": 0.08}},
-                                              1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"},
-                                                  "text_kwargs": {"y_shift": 0.}},
-                                              10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
-                                                   "text_kwargs": {"y_shift": -0.08}},
-                                              },
-                                      # 'period_no_ticklabels': [100, 10],
-                                      # 'gridspec_kwargs': {"wspace": 0.05},
-                                      # 'axeswithsharex_kwargs': {"hspace": 0.1},
-                                      # 'legend_param': {'data': {'loc': 'upper center'},
-                                      #                  'model': {'loc': 'upper center'},
-                                      #                  'resi': {'loc': 'upper center'},
-                                      #                  'WF': {'loc': 'upper center'},
-                                      #                  },
-                                      },
-                         create_axes_kwargs=None,
-                         suptitle_kwargs=None,
-                         IND_fact=1.,  # 1e3,  # Put the RV in m/s they are originally in km/s
-                         IND_unit="km/s",
-                         )
+(times, datas, data_errs
+ ) = create_IND_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                              datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
+                              IND_subcat="FWHM",
+                              remove_dict={'inst_var': True, 'sys_var': False,
+                                           'GP_model': False},
+                              show_dict={'inst_var': False, 'sys_var': True, 'GP_model': True,},
+                             #  datasetnames4model4row={'sys_var': {0: f"IND-LOGRHK_{obj_name}_HARPS_0"}},
+                              TS_kwargs={"do": True,
+                                         "npt_model": 50000,
+                                         # "exptime_bin": 1,
+                                         # "binning_stat": 'median',
+                                         # "show_binned_model": True,
+                                         # "one_binning_per_row": True,
+                                         # 'row4datasetname': {f"IND-FWHM_{obj_name}_HARPS_2": 0, f"IND-FWHM_{obj_name}_HARPS_3": 0},
+                                         # "one_binning_per_row": True,
+                                         # "pl_kwargs": {f"IND-FWHM_{obj_name}_HARPS_2": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS0"},
+                                         #                                                'model': {"color": "k", "linewidth": 0.5},
+                                         #                                                },  # 'ms': 14, 'mew': 1, "elinewidth": 5
+                                         #               f"IND-FWHM_{obj_name}_HARPS_3": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'ms': 4, 'alpha': 1., 'label': "HARPS1"}, },
+                                         #               },
+                                         "t_unit": "BJD - 2,400,000",
+                                         # "t_lims_zoom": (58000, 59000),
+                                         # 'pad_data': (0.5, 0.5),
+                                         # "pad_resi": (0.1, -0.2),
+                                         # 'axeswithsharex_kwargs': {"hspace": 0.1}
+                                         },
+                              GLSP_kwargs={"do": False,
+                                           "period_range": (0.1, 5000),
+                                           "freq_fact": 1e6,
+                                           "freq_unit": "$\mu$Hz",
+                                           "freq_lims": (0, 14),
+                                           "freq_lims_zoom": (0, 1e6 / (100 * 24 * 60 * 60)),
+                                           'periods': {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
+                                                                                                      "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}},
+                                                       },
+                                           'fap': {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
+                                                         "text_kwargs": {"y_shift": 0.08}},
+                                                   1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"},
+                                                       "text_kwargs": {"y_shift": 0.}},
+                                                   10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
+                                                        "text_kwargs": {"y_shift": -0.08}},
+                                                   },
+                                           # 'period_no_ticklabels': [100, 10],
+                                           # 'gridspec_kwargs': {"wspace": 0.05},
+                                           # 'axeswithsharex_kwargs': {"hspace": 0.1},
+                                           # 'legend_param': {'data': {'loc': 'upper center'},
+                                           #                  'model': {'loc': 'upper center'},
+                                           #                  'resi': {'loc': 'upper center'},
+                                           #                  'WF': {'loc': 'upper center'},
+                                           #                  },
+                                           },
+                              create_axes_kwargs=None,
+                              suptitle_kwargs=None,
+                              IND_fact=1.,  # 1e3,  # Put the RV in m/s they are originally in km/s
+                              IND_unit="km/s",
+                              )
 
 pl.show()
 # pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_GLSP_plot{extension_analysis}_paper.pdf"))
 # pl.close("all")
+
+if save_reduced_data:
+    # Save chain in a pickle
+    with open(os.path.join(output_folders["pickles_analyze"], "IND_reduceddata{extension_analysis}.pkl"), "wb") as fpickle:
+        dill.dump({"times": times, "datas": datas, "data_errs": data_errs}, fpickle)
