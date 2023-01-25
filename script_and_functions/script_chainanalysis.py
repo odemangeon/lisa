@@ -216,7 +216,7 @@ if do_RP:
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, thin=thin_RP)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_raw{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -226,7 +226,7 @@ if do_RP:
         ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the RAW lnprobability")
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"lnpost_hist_raw{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"lnpost_hist_raw{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -236,14 +236,14 @@ if do_AFS:
     l_walker_AFS, _ = et.acceptancefraction_selection(acceptance_fraction, sig_fact=sig_fact_AFS, quantile=quantile_AFS,
                                                       verbose=verbose_AFS, plot=plot_hist_AF)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"hist_accept_frac{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"hist_accept_frac{extension_outputs}.png"))
     else:
         pl.show()
     pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_AFS, thin=thin_AFS)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac_select{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -253,7 +253,7 @@ if do_AFS:
         ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low acceptance chains")
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"lnpost_hist_accefrac_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"lnpost_hist_accefrac_select{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -267,14 +267,14 @@ if do_LPS:
                                                quantile_walker=quantile_walker_LPS, verbose=verbose_LPS,
                                                plot=plot_hist_Post)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select_{quantile_walker_LPS}-{quantile_LPS}{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"hist_lnpost_select_{quantile_walker_LPS}-{quantile_LPS}{extension_outputs}.png"))
     else:
         pl.show()
     pl.close("all")
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_LPS, thin=thin_LPS)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_lnpost_select{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -284,7 +284,7 @@ if do_LPS:
         ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior chains")
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"lnpost_hist_lnpost_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"lnpost_hist_lnpost_select{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -301,7 +301,7 @@ if do_AFSLPSP:
     if do_traces:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker, thin=thin_AFSLPSP)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_accfrac&lnpost_select{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -311,7 +311,7 @@ if do_AFSLPSP:
         ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains")
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"lnpost_hist_accfrac&lnpost_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"lnpost_hist_accfrac&lnpost_select{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -368,7 +368,7 @@ if do_GS:
         et.geweke_plot(zscores, first_steps=l_first_i_step, l_param_name=l_param_chainI, geweke_thres=geweke_thres,
                        plot_height=2, plot_width=8)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"geweke_plot{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"geweke_plot{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -376,7 +376,7 @@ if do_GS:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin, thin=thin_GS)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -391,7 +391,7 @@ if do_GS:
         ax, did_log10, nb_point_sigma_clip = hist_lnprob(lnprob_val, n_bins=n_bins, sigma_clip=sigma_clip_hist_after_geweke)
         ax.set_title(f"Histogram of the last {hist_perc}% of the lnprobability clean from low posterior and acceptance chains and burnin")
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"lnpost_hist_geweke_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"lnpost_hist_geweke_select{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
@@ -400,7 +400,7 @@ if do_GS:
         et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                        l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -416,7 +416,7 @@ else:
             et.plot_chains(chainI, lnprobability, l_param_chainI, l_walker=l_walker_conv,
                            l_burnin=l_burnin, suppress_burnin=True, thin=thin_GS)
             if save_plots:
-                pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.pdf"))
+                pl.savefig(join(output_folders["plots"], f"traces_geweke_select_burnsupress{extension_outputs}.png"))
             else:
                 pl.show()
 
@@ -450,7 +450,7 @@ if do_PS:
         ax.set_title("Histogram of the selection criteria satisfaction")
         ax.legend()
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"hist_param_selection{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"hist_param_selection{extension_outputs}.png"))
     logger.info(f"Number of selected walker: {len(l_walker_PS)}/{len(l_walker_conv)}")
 else:
     l_walker_PS = l_walker_conv
@@ -485,7 +485,7 @@ if do_corner:
     corner(et.get_clean_flatchain(chainI, l_walker=l_walker_PS, l_burnin=l_burnin_PS)[::sampling_corner, :],
            labels=l_param_chainI, truths=fitted_values)
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"corner{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"corner{extension_outputs}.png"))
     else:
         pl.show()
     pl.close("all")
@@ -508,7 +508,7 @@ if do_MComp:
     if save_modelsNresiduals:
         et.pickle_stuff(modelsNresiduals, join(output_folders["pickles_analyze"], "{}{}{}.pk".format(obj_name, "_modelsNresiduals", extension_outputs)))
     if save_plots:
-        pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.pdf"))
+        pl.savefig(join(output_folders["plots"], f"data_comparison{extension_outputs}.png"))
     else:
         pl.show()
     pl.close("all")
@@ -534,7 +534,7 @@ if do_SecParam:
     if do_traces:
         et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, thin=thin_SecParam)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_raw{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -543,7 +543,7 @@ if do_SecParam:
     if do_traces:
         et.plot_chains(chainIsec, lnprobability, l_param_chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, thin=thin_SecParam)
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"traces_secondary_geweke_select{extension_outputs}.png"))
         else:
             pl.show()
     pl.close("all")
@@ -595,7 +595,7 @@ if do_SecParam:
         corner(sec_flatchain_to_plot[::sampling_corner_sec], labels=[l_param_chainIsec[ii] for ii in idx_corner_plot],
                truths=fitted_values_sec[idx_corner_plot])
         if save_plots:
-            pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.pdf"))
+            pl.savefig(join(output_folders["plots"], f"corner_sec{extension_outputs}.png"))
         else:
             pl.show()
         pl.close("all")
