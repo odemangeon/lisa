@@ -346,9 +346,9 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     dico_outputs                        : dict
     kwargs_compute_model_4_key_model    : dict
     """
-    dico_outputs = {'dico_datasets': {},
+    dico_outputs = {# 'dico_datasets': {},
                     'dico_kwargs': {},
-                    'dico_nb_dstperinsts': defaultdict(lambda: 0),
+                    'dico_nb_dstperinsts': {},
                     'times': {},
                     'datas': {},
                     'data_errs': {},
@@ -363,29 +363,31 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         ##########################################
         # Load Data and instrument and noise model
         ##########################################
-        dico_outputs['dico_datasets'][datasetname] = post_instance.dataset_db[datasetname]
-        dico_outputs['dico_kwargs'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_all_datasetkwargs()
-        dico_outputs['times'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("time")
-        dico_outputs['datas'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data")
-        dico_outputs['data_errs'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data_err")
+        # dico_outputs['dico_datasets'][datasetname] = copy(post_instance.dataset_db[datasetname])
+        dico_outputs['dico_kwargs'][datasetname] = copy(post_instance.dataset_db[datasetname].get_all_datasetkwargs())
+        dico_outputs['times'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("time"))
+        dico_outputs['datas'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data"))
+        dico_outputs['data_errs'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data_err"))
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
         noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+        if filename_info["inst_name"] not in dico_outputs['dico_nb_dstperinsts']:
+            dico_outputs['dico_nb_dstperinsts'][filename_info["inst_name"]] = 0
         dico_outputs['dico_nb_dstperinsts'][filename_info["inst_name"]] += 1
 
         ##############################################
         # Apply the jitter to the data error if needed
         ##############################################
         dico_outputs['dico_jitters'][datasetname] = {}
-        dico_outputs['data_err_jitters'][datasetname] = dico_outputs['dico_datasets'][datasetname].get_datasetkwarg("data_err")
-        dico_outputs['has_jitters'][datasetname] = noise_model.has_jitter
+        dico_outputs['data_err_jitters'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data_err"))
+        dico_outputs['has_jitters'][datasetname] = copy(noise_model.has_jitter)
         if dico_outputs['has_jitters'][datasetname]:
-            dico_outputs['dico_jitters'][datasetname]["type"] = noise_model.jitter_type
+            dico_outputs['dico_jitters'][datasetname]["type"] = copy(noise_model.jitter_type)
             if inst_mod.jitter.free:
-                dico_outputs['dico_jitters'][datasetname]["value"] = df_fittedval.loc[inst_mod.jitter.full_name]["value"]
+                dico_outputs['dico_jitters'][datasetname]["value"] = copy(df_fittedval.loc[inst_mod.jitter.full_name]["value"])
             else:
-                dico_outputs['dico_jitters'][datasetname]["value"] = inst_mod.jitter.value
+                dico_outputs['dico_jitters'][datasetname]["value"] = copy(inst_mod.jitter.value)
             if dico_outputs['dico_jitters'][datasetname]["type"] == "multi":
                 dico_outputs['data_err_jitters'][datasetname] = sqrt(apply_jitter_multi(dico_outputs['data_err_jitters'][datasetname], dico_outputs['dico_jitters'][datasetname]["value"]))
             elif dico_outputs['dico_jitters'][datasetname]["type"] == "add":
