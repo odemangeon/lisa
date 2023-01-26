@@ -343,7 +343,6 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
 
             # Define the bins
             if exptime_bin > 0.:
-                # bin_size = exptime_bin if show_time_from_tic else exptime_bin / Per / time_fact
                 bin_size_unit = f" {time_unit}" if show_time_from_tic else "orb. phase"
                 update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
                                     bin_size_unit=bin_size_unit, one_binning_per_row=one_binning_per_row,
@@ -386,7 +385,7 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                 # Add the data for this planet to dico_load
                 if f'datas_{planet_name}' not in dico_load:
                     dico_load[f'datas_{planet_name}'] = {}
-                dico_load[f'datas_{planet_name}'][datasetname] = data_pl[datasetname]
+                dico_load[f'datas_{planet_name}'][datasetname] = data_pl[datasetname].copy()
 
                 ###############
                 # Plot the data
