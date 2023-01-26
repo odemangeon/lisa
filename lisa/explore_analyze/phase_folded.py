@@ -384,6 +384,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                         data_pl[datasetname] = data_pl[datasetname] - model_pl_only
 
                 # Add the data for this planet to dico_load
+                if f'datas_{planet_name}' not in dico_load:
+                    dico_load[f'datas_{planet_name}'] = {}
                 dico_load[f'datas_{planet_name}'][datasetname] = data_pl[datasetname]
 
                 ###############
@@ -420,7 +422,7 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                 # Compute and plot the oversampled models
                 #########################################
                 if (datasetnameformodel4row[i_row] == datasetname) or (datasetnameformodel4row[i_row] == 'all'):
-                    computed_models[planet_name][datasetname]['tsim'] = linspace(tmin_model, tmax_model, npt_model),
+                    computed_models[planet_name][datasetname]['tsim'] = linspace(tmin_model, tmax_model, npt_model)
                     computed_models[planet_name][datasetname]['xsim'] = linspace(x_min_data, x_max_data, npt_model)
                     (computed_models[planet_name][datasetname], pl_kwarg_final
                      ) = compute_and_plot_model(tsim=computed_models[planet_name][datasetname]['tsim'],

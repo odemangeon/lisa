@@ -1,18 +1,17 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
-Script to produce pretty plots of RV data
+Script to produce pretty plots of phase folded RV time series
 
 @TODO:
 """
-
 import os
-import matplotlib
 import matplotlib.pyplot as pl
 import dill
 
-from logging import DEBUG, INFO
+# import matplotlib
+
+from os import getcwd
 from os.path import join
+from logging import DEBUG, INFO
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -30,29 +29,60 @@ default_figheight_factor = 0.75
 
 AandA_fontsize = 8
 
-matplotlib.rcParams.update({
-    "pgf.texsystem": "pdflatex",
-    'font.family': 'serif',
-    'text.usetex': True,
-    'pgf.rcfonts': False})
+# matplotlib.rcParams.update({
+#     "pgf.texsystem": "pdflatex",
+#     'font.family': 'serif',
+#     'text.usetex': True,
+#     'pgf.rcfonts': False})
 
-# Define the object name
+##########################
+# Parameters of the script
+##########################
 obj_name = "target_name"
 
-run_folder = os.getcwd()
+run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
-
-# Define dataset names to be loaded
-datasetnames = None
-
-planets = None
-
-kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
 extension_analysis = "_initrun_median"
 
 save_outputs = True
 save_plot = False
+
+planets = None  # e.g. ['b', ]
+
+kwargs_datasim = {}  # Kwargs for the datasim functions
+
+remove1 = True
+remove_contamination = True
+
+datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
+
+row4datasetname = None  # e. g. {f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)} 
+
+pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
+
+show_time_from_tic = False
+time_fact = None
+time_unit = None
+
+exptime_bin = 1 / 15
+binning_stat = "mean"
+supersamp_bin_model = 10
+show_binned_model = True
+
+xlims = None
+force_xlims = False
+ylims = None  # e.g. {"data": {"all": (-250, 500)}, "resi": {"all": (-375, 375)}} 
+
+RV_fact = 1e3
+RV_unit = 'm/s'
+
+# These were the most commonly changed parameters.
+# There are extra parameters which can be changed in the create_LC_phasefolded_plots below
+
+#########################
+# Execution of the script
+#########################
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -72,34 +102,31 @@ if "df_fittedval" not in globals():
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
 (dico_load, computed_models
- ) = create_RV_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                                 planets=planets, datasetnames=datasetnames,
+ ) = create_RV_phasefolded_plots(fig=fig, post_instance=post_instance,
+                                 df_fittedval=df_fittedval,
                                  datasim_kwargs=kwargs_datasim,
-                                 # row4datasetname={f"RV_{obj_name}_HARPS_0": 0,
-                                 #                  f"RV_{obj_name}_HARPS_1": 0,
-                                 #                  f"RV_{obj_name}_PFS_0": 0,
-                                 #                  },
-                                 exptime_bin=1 / 15, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
-                                 show_time_from_tic=False,  # time_fact=24, time_unit="h",
+                                 planets=planets, periods=None,
+                                 datasetnames=datasetnames,
+                                 row4datasetname=row4datasetname,
+                                 datasetnameformodel4row=None,
+                                 npt_model=1000,
+                                 phasefold_central_phase=0.,
+                                 show_time_from_tic=show_time_from_tic, time_fact=time_fact, time_unit=time_unit,
+                                 exptime_bin=exptime_bin, binning_stat=binning_stat, supersamp_bin_model=supersamp_bin_model, show_binned_model=show_binned_model,
+                                 one_binning_per_row=True,
                                  sharey=True,
                                  create_axes_kwargs=None,
                                  pad=None,
-                                 indicate_y_outliers=None,
-                                 one_binning_per_row=True,
-                                 # pl_kwargs={f"RV_{obj_name}_HARPS_0": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'alpha': 1., 'label': "HARPS0"}, },
-                                 #            f"RV_{obj_name}_HARPS_1": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS1"}, },
-                                 #            f"RV_{obj_name}_PFS_0": {'data': {'fmt': 'o', 'color': 'C2', 'mfc': 'white', 'alpha': 1., 'label': "PFS"}, },
-                                 #            "model": {"color": "C2", "linewidth": 0.75},
-                                 #            "model_binned": {"color": "C4"},
-                                 #            "data_binned": {"color": "C3"}
-                                 #            },
-                                 xlims=None, force_xlims=False, ylims=None,
+                                 indicate_y_outliers={"data": False, "resi": False},
+                                 pl_kwargs=pl_kwargs,
+                                 xlims=xlims, force_xlims=force_xlims,
+                                 ylims=ylims,
                                  rms_kwargs={'do': True, 'format': '.2f'},
                                  legend_kwargs=None,
                                  show_datasetnames=True,
                                  suptitle_kwargs=None,
-                                 RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
-                                 RV_unit="m/s",
+                                 RV_fact=RV_fact,
+                                 RV_unit=RV_unit,
                                  fontsize=AandA_fontsize,
                                  )
 
@@ -111,5 +138,5 @@ else:
 
 if save_outputs:
     # Save chain in a pickle
-    with open(os.path.join(output_folders["pickles_analyze"], f"RV_tsnglsp_ouputs_{extension_analysis}.pkl"), "wb") as fpickle:
+    with open(os.path.join(output_folders["pickles_analyze"], f"RV_tsnglsp_ouputs{extension_analysis}.pkl"), "wb") as fpickle:
         dill.dump((dico_load, computed_models), fpickle)
