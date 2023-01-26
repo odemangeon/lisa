@@ -88,7 +88,6 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
         It True the contamination of the light curve is removed. If there is contamination, you should always have
         remove_inst_var and remove contamination to True, inst_var depends strongly in contamination, so any other
         thing would not make sense.
-
     remove_GP_data           : Boolean
         If True the GP model is remove from the data for the plot.
     remove_GP_residual       : Boolean
@@ -153,6 +152,13 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
     LC_unit        : str or None
         String giving the unit of the LCs
+
+    Returns
+    -------
+    dico_load       : dict
+        Output of the function core_compute_load.load_datasets_and_models
+    computed_models : dict
+        Outputs of the compute_and_plot_model function calls
     """
     ##############################################
     # Setup figure structure and common parameters
@@ -243,6 +249,9 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                        bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
                        nb_rows=nb_rows, alpha_def_data=0.1, color_def_data="k", show_error_data_def=False)
 
+    # Init the outputs
+    computed_models = {}
+
     #################################
     # Main row loop: For each row ...
     #################################
@@ -262,6 +271,12 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
         # Main planet loop: For each planet ...
         #######################################
         for i_pl, planet_name in enumerate(planets):
+
+            ####################################
+            # Init the outputs per period/planet
+            ####################################
+            if planet_name not in computed_models:
+                computed_models[planet_name] = {}
 
             #####################################
             # Format ticks, set labels and titles
@@ -348,6 +363,8 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
             text_rms = OrderedDict()
             text_rms_binned = OrderedDict()
             for datasetname in datasetnames4rowidx[i_row]:
+                # Init computed_models[planet_name] for the dataset
+                computed_models[planet_name][datasetname] = {}
 
                 ################################################################################
                 # Compute the data for the planet (removing the contribution from other planets)
@@ -365,6 +382,9 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                                                     )
                         model_pl_only *= amplitude_fact
                         data_pl[datasetname] = data_pl[datasetname] - model_pl_only
+
+                # Add the data for this planet to dico_load
+                dico_load[f'datas_{planet_name}'][datasetname] = data_pl[datasetname]
 
                 ###############
                 # Plot the data
@@ -400,30 +420,33 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                 # Compute and plot the oversampled models
                 #########################################
                 if (datasetnameformodel4row[i_row] == datasetname) or (datasetnameformodel4row[i_row] == 'all'):
-                    _, pl_kwarg_final = compute_and_plot_model(tsim=linspace(tmin_model, tmax_model, npt_model),
-                                                               key_model=planet_name,
-                                                               datasetname=datasetname, post_instance=post_instance,
-                                                               df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                                               include_gp_model=False, amplitude_fact=amplitude_fact,
-                                                               compute_raw_models_func=compute_raw_models_func,
-                                                               remove_add_model_components_func=remove_add_model_components_func,
-                                                               key_pl_kwarg="model",
-                                                               remove_dict={},
-                                                               add_dict={},
-                                                               exptime_bin=exptime_bin,
-                                                               supersamp_bin_model=supersamp_bin_model,
-                                                               fact_tsim_to_xsim=(time_fact if show_time_from_tic else 1 / Per),
-                                                               xsim=linspace(x_min_data, x_max_data, npt_model),
-                                                               plot=True, ax=axes_data[i_row][i_pl],
-                                                               pl_kwarg=pl_kwarg_final,
-                                                               show_binned_model=show_binned_model,
-                                                               models=None,
-                                                               l_valid_model=l_valid_model,
-                                                               get_key_compute_model_func=get_key_compute_model_func,
-                                                               is_valid_model_available_func=is_valid_model_available_func,
-                                                               kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                                               kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                               )
+                    computed_models[planet_name][datasetname]['tsim'] = linspace(tmin_model, tmax_model, npt_model),
+                    computed_models[planet_name][datasetname]['xsim'] = linspace(x_min_data, x_max_data, npt_model)
+                    (computed_models[planet_name][datasetname], pl_kwarg_final
+                     ) = compute_and_plot_model(tsim=computed_models[planet_name][datasetname]['tsim'],
+                                                key_model=planet_name,
+                                                datasetname=datasetname, post_instance=post_instance,
+                                                df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                include_gp_model=False, amplitude_fact=amplitude_fact,
+                                                compute_raw_models_func=compute_raw_models_func,
+                                                remove_add_model_components_func=remove_add_model_components_func,
+                                                key_pl_kwarg="model",
+                                                remove_dict={},
+                                                add_dict={},
+                                                exptime_bin=exptime_bin,
+                                                supersamp_bin_model=supersamp_bin_model,
+                                                fact_tsim_to_xsim=(time_fact if show_time_from_tic else 1 / Per),  # I think this is useless since xsim superseeds it
+                                                xsim=computed_models[planet_name][datasetname]['xsim'],
+                                                plot=True, ax=axes_data[i_row][i_pl],
+                                                pl_kwarg=pl_kwarg_final,
+                                                show_binned_model=show_binned_model,
+                                                models=computed_models[planet_name][datasetname],
+                                                l_valid_model=l_valid_model,
+                                                get_key_compute_model_func=get_key_compute_model_func,
+                                                is_valid_model_available_func=is_valid_model_available_func,
+                                                kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                )
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is False
@@ -580,3 +603,5 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
             # Set the legend if needed
             ##########################
             set_legend(ax=axes_data[i_row][i_pl], legend_kwargs=legend_kwargs[i_pl][i_row], fontsize=fontsize)
+
+    return dico_load, computed_models

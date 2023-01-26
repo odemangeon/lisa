@@ -9,6 +9,7 @@ Script to produce pretty plots of RV data
 import os
 import matplotlib
 import matplotlib.pyplot as pl
+import dill
 
 from logging import DEBUG, INFO
 from os.path import join
@@ -50,6 +51,9 @@ kwargs_datasim = {}  # RVdrift_tref_name: 56040.0
 
 extension_analysis = "_initrun_median"
 
+save_outputs = True
+save_plot = False
+
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
@@ -67,36 +71,45 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-create_RV_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                            planets=planets, datasetnames=datasetnames,
-                            datasim_kwargs=kwargs_datasim,
-                            # row4datasetname={f"RV_{obj_name}_HARPS_0": 0,
-                            #                  f"RV_{obj_name}_HARPS_1": 0,
-                            #                  f"RV_{obj_name}_PFS_0": 0,
-                            #                  },
-                            exptime_bin=1 / 15, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
-                            show_time_from_tic=False,  # time_fact=24, time_unit="h",
-                            sharey=True,
-                            create_axes_kwargs=None,
-                            pad=None,
-                            indicate_y_outliers=None,
-                            one_binning_per_row=True,
-                            # pl_kwargs={f"RV_{obj_name}_HARPS_0": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'alpha': 1., 'label': "HARPS0"}, },
-                            #            f"RV_{obj_name}_HARPS_1": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS1"}, },
-                            #            f"RV_{obj_name}_PFS_0": {'data': {'fmt': 'o', 'color': 'C2', 'mfc': 'white', 'alpha': 1., 'label': "PFS"}, },
-                            #            "model": {"color": "C2", "linewidth": 0.75},
-                            #            "model_binned": {"color": "C4"},
-                            #            "data_binned": {"color": "C3"}
-                            #            },
-                            xlims=None, force_xlims=False, ylims=None,
-                            rms_kwargs={'do': True, 'format': '.2f'},
-                            legend_kwargs=None,
-                            show_datasetnames=True,
-                            suptitle_kwargs=None,
-                            RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
-                            RV_unit="m/s",
-                            fontsize=AandA_fontsize,
-                            )
-pl.show()
-# pl.savefig(os.path.join(output_folders["plots"], f"RV_phasefolded_plot{extension_analysis}_paper.pdf"))
-# pl.close("all")
+(dico_load, computed_models
+ ) = create_RV_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                                 planets=planets, datasetnames=datasetnames,
+                                 datasim_kwargs=kwargs_datasim,
+                                 # row4datasetname={f"RV_{obj_name}_HARPS_0": 0,
+                                 #                  f"RV_{obj_name}_HARPS_1": 0,
+                                 #                  f"RV_{obj_name}_PFS_0": 0,
+                                 #                  },
+                                 exptime_bin=1 / 15, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
+                                 show_time_from_tic=False,  # time_fact=24, time_unit="h",
+                                 sharey=True,
+                                 create_axes_kwargs=None,
+                                 pad=None,
+                                 indicate_y_outliers=None,
+                                 one_binning_per_row=True,
+                                 # pl_kwargs={f"RV_{obj_name}_HARPS_0": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'C1', 'alpha': 1., 'label': "HARPS0"}, },
+                                 #            f"RV_{obj_name}_HARPS_1": {'data': {'fmt': 'o', 'color': 'C1', 'mfc': 'white', 'alpha': 1., 'label': "HARPS1"}, },
+                                 #            f"RV_{obj_name}_PFS_0": {'data': {'fmt': 'o', 'color': 'C2', 'mfc': 'white', 'alpha': 1., 'label': "PFS"}, },
+                                 #            "model": {"color": "C2", "linewidth": 0.75},
+                                 #            "model_binned": {"color": "C4"},
+                                 #            "data_binned": {"color": "C3"}
+                                 #            },
+                                 xlims=None, force_xlims=False, ylims=None,
+                                 rms_kwargs={'do': True, 'format': '.2f'},
+                                 legend_kwargs=None,
+                                 show_datasetnames=True,
+                                 suptitle_kwargs=None,
+                                 RV_fact=1e3,  # 1e3,  # Put the RV in m/s they are originally in km/s
+                                 RV_unit="m/s",
+                                 fontsize=AandA_fontsize,
+                                 )
+
+if save_plot:
+    pl.savefig(os.path.join(output_folders["plots"], f"RV_phasefolded_plot{extension_analysis}_paper.pdf"))
+    pl.close("all")
+else:
+    pl.show()
+
+if save_outputs:
+    # Save chain in a pickle
+    with open(os.path.join(output_folders["pickles_analyze"], f"RV_tsnglsp_ouputs_{extension_analysis}.pkl"), "wb") as fpickle:
+        dill.dump((dico_load, computed_models), fpickle)

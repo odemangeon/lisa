@@ -26,7 +26,19 @@ logger = getLogger()
 
 
 def get_key_compute_model(key_model):
-    """
+    """Get the correct key for the compute_raw_models function.
+
+    Sometimes it's more convenient to use a more explicit key to designate a model in the user interface,
+    but better to use a shorter version in the code. This function convert the explicit key into the shorter
+    one when it is needed.
+
+    Argument
+    --------
+    key_model           : str
+
+    Return
+    ------
+    key_compute_model   : str
     """
     if key_model == "decorrelation":
         key_compute_model = "decorr"
@@ -38,7 +50,17 @@ def get_key_compute_model(key_model):
 
 
 def is_valid_model_available(key_model, datasetname, post_instance):
-    """
+    """Return True is key_model corresponds to an existing model for the dataset in the posterior instance.
+
+    Arguments
+    ---------
+    key_model           : str
+    datasetname         : str
+    post_instance       : Posterior
+
+    Return
+    ------
+    valid   : bool
     """
     if key_model == "model":
         return True
@@ -62,11 +84,55 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                            kwargs_is_valid_model_available=None,
                            kwargs_get_key_compute_model=None,
                            ):
-    """
+    """Compute and/or plot a model.
+
     Arguments
     ---------
-    models : dict
-        Previously computed models for the same input (not the same key_model, but the same tsim, datasetname)
+    tsim                                : array
+        Time at which the model should be computed
+    key_model                           : str
+        Key of the model to compute. This will be passed directly to compute_raw_models_func
+    datasetname                         : str
+    post_instance                       : Posterior
+    df_fittedval                        : DataFrame
+        DataFrame containing the values of the parameters of the model to compute. 
+        The indexes are the parameter names and there must be one column called 'value'
+    datasim_kwargs                      : dict 
+        Kwargs to pass to the datasimulator function
+    include_gp_model                    : bool
+    amplitude_fact                      : float
+    compute_raw_models_func             : function
+    remove_add_model_components_func    : function
+    remove_dict                         : dict of bool
+        Dictionary which says which component should be removed from the model being computed (key_model).
+        Keys should be valid model keys (str) and the value is True to removed this model to the model being computed.
+    add_dict                            : dict of bool
+        Dictionary which says which component should be added from the model being computed (key_model)
+        Keys should be valid model keys (str) and the value is True to add this model to the model being computed.
+    exptime_bin                         : float
+    supersamp_bin_model                 : int
+    fact_tsim_to_xsim                   : float
+        Factor to multiply to tsim to obtain xsim if it is not provided
+    xsim                                : array
+        x valuess corresponding to the values in tsim for the plot. Superseeds fact_tsim_to_xsim
+    plot                                : bool                  
+    ax                                  : Axe
+    pl_kwarg                            : dict
+    key_pl_kwarg                        : str
+    show_binned_model                   : bool
+    models                              : dict of array
+        Dictionary cointaining the models previously computed to avoid having to recompute the same model multiple times.
+        Keys are valid model keys (str) and values are array of the model evaluated at tsim
+    l_valid_model                       : list of str
+    get_key_compute_model_func          : func
+    is_valid_model_available_func       : func
+    kwargs_is_valid_model_available     : dict
+    kwargs_get_key_compute_model        : dict
+
+    Returns
+    -------
+    models                              : dict
+    pl_kwarg                            : dict
     """
     # Make sure that remove_dict and add_dict have all necessary keys
     if remove_dict is None:
@@ -196,9 +262,6 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         ##########################################
         # Remove/Add model components as requested
         ##########################################
-        # if key_model == "data_err":
-        #     import pdb; pdb.set_trace()
-
         model, model_wGP = remove_add_model_components_func(model=model, model_wGP=model_wGP, remove_dict=remove_dict,
                                                             add_dict=add_dict, extension=extension,
                                                             extension_raw=extension_raw, models=models,
@@ -260,7 +323,28 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                              kwargs_is_valid_model_available=None,
                              kwargs_get_key_compute_model=None,
                              ):
-    """Load the dataset and models for later use by the other two function
+    """Load the dataset and models for later use by the other two functions ts_and_glsp.create_TSNGLSP_plots and phase_folded.create_phasefolded_plots
+
+    Arguments
+    ---------
+    datasetnames                        : str
+    post_instance                       : Posterior
+    datasim_kwargs                      : dict
+    df_fittedval                        : DataFrame
+    amplitude_fact                      : float
+    compute_raw_models_func             : function
+    remove_add_model_components_func    : function
+    kwargs_compute_model_4_key_model    : dict
+    l_valid_model                       : list of str
+    get_key_compute_model_func          : function
+    is_valid_model_available_func       : function
+    kwargs_is_valid_model_available     : dict
+    kwargs_get_key_compute_model        : dict
+
+    Return
+    ------
+    dico_outputs                        : dict
+    kwargs_compute_model_4_key_model    : dict
     """
     dico_outputs = {'dico_datasets': {},
                     'dico_kwargs': {},
@@ -392,6 +476,29 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
                        kwargs_get_key_compute_model=None,
                        ):
     """
+    Arguments
+    ---------
+    tsim                                : array
+    key_model                           : str
+    l_valid_model                       : list of str
+    datasetname                         : str
+    post_instance                       : Posterior
+    df_fittedval                        : DataFrame
+    datasim_kwargs                      : dict
+    include_gp_model                    : bool
+    exptime                             : float
+    supersamp                           : int
+    get_key_compute_model_func          : function
+    is_valid_model_available_func       : function
+    kwargs_is_valid_model_available     : dict
+    kwargs_get_key_compute_model        : dict
+
+    Returns
+    -------
+    model       : array
+    model_wGP   : array
+    gp_pred     : array
+    gp_pred_var : array
     """
     kwargs_is_valid_model_available = kwargs_is_valid_model_available if kwargs_is_valid_model_available is not None else {}
     kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}

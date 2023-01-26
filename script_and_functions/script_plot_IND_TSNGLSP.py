@@ -42,6 +42,8 @@ AandA_fontsize = 8
 # Define the object name
 obj_name = "TOI402"
 
+IND_subcat = "FWHM"
+
 # Define dataset names to be loaded
 datasetnames = None  # [f'RV_{obj_name}_SOPHIEp_0', f'RV_{obj_name}_SOPHIE_0', f'RV_{obj_name}_ELODIE_0', ]  #
 
@@ -53,6 +55,7 @@ output_folders = get_def_output_folders(run_folder=run_folder)
 extension_analysis = "_initrun_median"
 
 save_reduced_data = True
+save_plot = False
 
 ## logger
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
@@ -71,10 +74,10 @@ if "df_fittedval" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(d_outputs
+(dico_load, computed_models
  ) = create_IND_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                               datasetnames=datasetnames, datasim_kwargs=kwargs_datasim,
-                              IND_subcat="FWHM",
+                              IND_subcat=IND_subcat,
                               remove_dict={'inst_var': True, 'sys_var': False,
                                            'GP_model': False},
                               show_dict={'inst_var': False, 'sys_var': True, 'GP_model': True,},
@@ -129,11 +132,13 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                               IND_unit="km/s",
                               )
 
-pl.show()
-# pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_GLSP_plot{extension_analysis}_paper.pdf"))
-# pl.close("all")
+if save_plot:
+    pl.savefig(os.path.join(output_folders["plots"], f"IND-{IND_subcat}_TS_GLSP_plot{extension_analysis}_paper.pdf"))
+    pl.close("all")
+else:
+    pl.show()
 
 if save_reduced_data:
     # Save chain in a pickle
-    with open(os.path.join(output_folders["pickles_analyze"], "IND_reduceddata{extension_analysis}.pkl"), "wb") as fpickle:
-        dill.dump(d_outputs, fpickle)
+    with open(os.path.join(output_folders["pickles_analyze"], f"IND-{IND_subcat}_tsnglsp_ouputs_{extension_analysis}.pkl"), "wb") as fpickle:
+        dill.dump((dico_load, computed_models), fpickle)

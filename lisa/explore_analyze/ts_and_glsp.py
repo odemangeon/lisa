@@ -202,14 +202,10 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
 
     Returns
     -------
-    d_outputs   : dict of dict 
-        Keys are
-            times       : dict of array
-                Dictionary that provides the time array for each dataset name
-            datas       : dict of array
-                Dictionary that provides the data (with the component requested removed) for each dataset name
-            data_errs   : dict of array
-                Dictionary that provides the errors on the data (with the component requested removed) for each dataset name
+    dico_load       : dict  
+        Output of the function core_compute_load.load_datasets_and_models
+    computed_models : dict
+        Outputs of the compute_and_plot_model function calls
     """
     ##############################################
     # Setup figure structure and common parameters
@@ -353,6 +349,11 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                             bin_size_unit=f" {time_unit}", one_binning_per_row=one_binning_per_row,
                             nb_rows=nb_rows)
 
+        #################################
+        # Init the output computed_models
+        #################################
+        computed_models = {}
+
         #############################################################
         # Make the data and residuals plots (full and zoomed if needed)
         #############################################################
@@ -404,10 +405,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                 axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
 
                 for datasetname in datasetnames4rowidx[i_row]:
-                    ###################
+                    # Init computed_models for this dataset
+                    computed_models[datasetname] = {}
+
+                    ####################
                     # Compute the models
-                    ###################
-                    computed_models = {}
+                    ####################
                     for model, show_model in show_dict.items():
                         if model == "GP_model":
                             continue
@@ -436,7 +439,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                             # import pdb; pdb.set_trace()
                             show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model, True)
                             if model == "decorrelation_likelihood":
-                                (_, pl_kwarg_final
+                                computed_models[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
+                                (models_decorr_like, pl_kwarg_final
                                  ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
                                                             key_model=model,
                                                             datasetname=datasetname,
@@ -464,9 +468,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
+                                computed_models[datasetname]["decorr_like"] = models_decorr_like["decorr_like"]
                             else:
-                                (computed_models, pl_kwarg_final
-                                 ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
+                                computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
+                                computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
+                                (computed_models[datasetname], pl_kwarg_final
+                                 ) = compute_and_plot_model(tsim=computed_models[datasetname]["tsim"],
                                                             key_model=model,
                                                             datasetname=datasetname,
                                                             post_instance=post_instance,
@@ -486,7 +493,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             plot=True, ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             show_binned_model=show_binned_model,
-                                                            models=computed_models,
+                                                            models=computed_models[datasetname],
                                                             l_valid_model=l_valid_model,
                                                             get_key_compute_model_func=get_key_compute_model_func,
                                                             is_valid_model_available_func=is_valid_model_available_func,
@@ -956,12 +963,5 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     ax_gls[-1].set_ylabel("Relative Amplitude")
                 labelleft = True if jj == 0 else False
                 ax_gls[-1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
-        
-        ##################
-        # Fill the outputs
-        ##################
-        d_outputs = {}
-        for key in ['times', 'datas', 'data_errs']:
-            d_outputs[key] = dico_load[key]
 
-    return d_outputs
+    return dico_load, computed_models
