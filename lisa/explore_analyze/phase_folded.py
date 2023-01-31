@@ -5,6 +5,7 @@ Module to create phase folded plots
 
 @TODO:
 """
+from matplotlib.pyplot import figure
 from numpy import (linspace, inf, min, max, arange, std, logical_and, zeros, where, sqrt, sum, power,
                    nan, nanstd, concatenate, ones_like, nansum
                    )
@@ -18,7 +19,7 @@ from scipy.stats import binned_statistic
 from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetname, check_datasetnameformodel4row,
                    check_spec_by_column_or_row, check_spec_for_data_or_resi_by_column_or_row, do_suptitle,
                    get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_binned_label,
-                   print_rms, set_legend
+                   print_rms, set_legend, AandA_full_width, default_figheight_factor
                    )
 from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
                                 is_valid_model_available
@@ -26,7 +27,7 @@ from .core_compute_load import (load_datasets_and_models, compute_and_plot_model
 from ..emcee_tools import emcee_tools as et
 
 
-def create_phasefolded_plots(fig, post_instance, df_fittedval,
+def create_phasefolded_plots(post_instance, df_fittedval,
                              compute_raw_models_func, remove_add_model_components_func,
                              kwargs_compute_model_4_key_model, l_valid_model,
                              y_name, inst_cat,
@@ -46,18 +47,19 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                              legend_kwargs=None,
                              show_datasetnames=True,
                              suptitle_kwargs=None,
+                             show_title_labels_ticklabels=None,
                              fontsize=AandA_fontsize,
                              get_key_compute_model_func=get_key_compute_model,
                              is_valid_model_available_func=is_valid_model_available,
                              kwargs_is_valid_model_available=None,
                              kwargs_get_key_compute_model=None,
+                             fig=None, 
+                             gs=None,
                              ):
     """Produce a clean LC plot.
 
     Arguments
     ---------
-    fig                 :
-        Figure instance (provided by the styler)
     post_instance       : Posterior instance
     df_fittedval        : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
@@ -146,12 +148,21 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
             'rms_format'    :
                 (Default: '.0f') Format that will be used to format the rms values
     legend_kwargs  : dict
+        Dictionary of kwargs that will be passed to check_kwargs_by_column_and_row in arg kwargs_user to be properly define for each
+        column (planet name) and each row (index of the row) and then passed to set_legend for each column and each row.
     show_datasetnames  : bool
         If True, show the datasetnames in the corner of the plots
     suptitle_kwargs : dict
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
+    show_title_labels_ticklabels : dict of bool
+        Defines whether or not to show the title, xlabel, ylabel, xticklabels, yticklabels.
     LC_unit        : str or None
         String giving the unit of the LCs
+    fig            : Figure
+        Figure instance (provided by the styler)
+    gs             : GridSpec
+        If provided should have been made from fig, meaning that it doesn't make sense to provide gs without providing fig.
+        It should be a Gridspec with ncols=1 and nrows according to row4datasetname
 
     Returns
     -------
@@ -163,6 +174,10 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
+    # Create figure if needed
+    if fig is None:
+        fig = figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor))
+
     # Make sure that create_axes_kwargs is well defined
     create_axes_kwargs_user = create_axes_kwargs if create_axes_kwargs is not None else {}
     create_axes_kwargs = {'main_gridspec': {}, 'add_axeswithsharex': {"height_ratios": (3, 1)}, 'gs_from_sps': {}}
@@ -193,8 +208,13 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
     datasetnameformodel4row = check_datasetnameformodel4row(datasetnameformodel4row=datasetnameformodel4row, datasetnames4rowidx=datasetnames4rowidx)
 
     # Create the GridSpec
-    gs = GridSpec(figure=fig, nrows=nb_rows, ncols=1, **create_axes_kwargs['main_gridspec'])
-
+    gs_provided = not(gs is None)
+    if not(gs_provided):
+        gs = GridSpec(figure=fig, nrows=nb_rows, ncols=1, **create_axes_kwargs['main_gridspec'])
+    else:
+        if nb_rows > 1:
+            raise ValueError("You can only provide gs if there is only one row requireds")
+        
     # If no planet name is provided get all the available LC datasets and get all the planets in the model
     all_planets = list(post_instance.model.planets.keys())
     all_planets.sort()
@@ -221,6 +241,10 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                                                    l_col_name=list(range(len(planets))), kwargs_def={'do': False},
                                                    kwargs_init={0: {0: {'do': True}}}
                                                    )
+    
+    # Make sure that show_title_labels_ticklabels is well define
+    if show_title_labels_ticklabels is None:
+        show_title_labels_ticklabels = {}
 
     # Load the defined datasets and check how many dataset there is by instrument.
     (dico_load, kwargs_compute_model_4_key_model
@@ -261,8 +285,12 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
         ######################################################
         # Create one pair (data, residuals) of axes per planet
         ######################################################
+        if gs_provided:
+            subplotspec = gs
+        else:
+            subplotspec=gs[i_row]
         (axes_data[i_row], axes_resi[i_row]
-         ) = et.add_twoaxeswithsharex_perplanet(subplotspec=gs[i_row], nplanet=nplanet, fig=fig, sharey=sharey,
+         ) = et.add_twoaxeswithsharex_perplanet(subplotspec=subplotspec, nplanet=nplanet, fig=fig, sharey=sharey,
                                                 gs_from_sps_kw=create_axes_kwargs['gs_from_sps'],
                                                 add_axeswithsharex_kw=create_axes_kwargs['add_axeswithsharex']
                                                 )
@@ -297,20 +325,27 @@ def create_phasefolded_plots(fig, post_instance, df_fittedval,
                 axes_data[i_row][i_pl].tick_params(axis="both", labelleft=False)
                 axes_resi[i_row][i_pl].tick_params(axis="both", labelleft=False)
             # Set title with planet name on the first row
-            if i_row == 0:
+            if (i_row == 0) and show_title_labels_ticklabels.get('title', True):
                 axes_data[i_row][i_pl].set_title("{} {}".format("Planet", planet_name), fontsize=fontsize)
             # Set x label for the last row
-            if i_row == nb_rows - 1:
+            if (i_row == nb_rows - 1) and show_title_labels_ticklabels.get('xlabel', True):
                 if show_time_from_tic:
                     axes_resi[i_row][i_pl].set_xlabel(f"Time from mid-transit [{time_unit}]", fontsize=fontsize)
                 else:
                     axes_resi[i_row][i_pl].set_xlabel("Orbital phase", fontsize=fontsize)
             # Set y labels on the first column and align them, also set the Anchor boxes
-            if i_pl == 0:
+            if (i_pl == 0) and show_title_labels_ticklabels.get('ylabel', True):
                 ylabel_data = f"{y_name} [{unit}]" if unit is not None else f"{y_name}"
                 ylabel_resi = f"O - C [{unit}]" if unit is not None else "O - C"
                 axes_data[i_row][i_pl].set_ylabel(ylabel_data, fontsize=fontsize)
                 axes_resi[i_row][i_pl].set_ylabel(ylabel_resi, fontsize=fontsize)
+            # Hide tick labels if needed
+            if not(show_title_labels_ticklabels.get('xticklabels', True)):
+                axes_data[i_row][i_pl].xaxis.set_tick_params(labelbottom=False)
+                axes_resi[i_row][i_pl].xaxis.set_tick_params(labelbottom=False)
+            if not(show_title_labels_ticklabels.get('yticklabels', True)):
+                axes_data[i_row][i_pl].yaxis.set_tick_params(labelleft=False)
+                axes_resi[i_row][i_pl].yaxis.set_tick_params(labelleft=False)
 
             ####################################################################################################
             # Compute the x_values (time or phase depending on show_time_from_tic) associated to the time values

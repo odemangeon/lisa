@@ -44,7 +44,7 @@ d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Ste
                                      }
 
 
-def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs=None,
+def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None,
                                 planets=None, periods=None,
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
@@ -59,9 +59,12 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                 legend_kwargs=None,
                                 show_datasetnames=True,
                                 suptitle_kwargs=None,
+                                show_title_labels_ticklabels=None,
                                 RV_fact=1.,
                                 RV_unit="$km/s$",
                                 fontsize=AandA_fontsize,
+                                fig=None,
+                                gs=None,
                                 ):
     """Produce clean RV phase folded plots of a system.
 
@@ -70,8 +73,6 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
 
     Arguments
     ---------
-    fig           :
-        Figure instance (provided by the styler)
     post_instance : Posterior instance
     df_fittedval  : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
@@ -145,8 +146,15 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
         If True, show the datasetnames in the corner of the plots
     suptitle_kwargs : dict
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
+    show_title_labels_ticklabels : dict of bool
+        Defines whether or not to show the title, xlabel, ylabel, xticklabels, yticklabels.
     RV_unit        : str
         String giving the unit of the RVs
+    fig            : Figure
+        Figure instance
+    gs             : GridSpec
+        If provided should have been made from fig, meaning that it doesn't make sense to provide gs without providing fig.
+        It should be a Gridspec with ncols=1 and nrows according to row4datasetname
     """
     remove_dict_model = OrderedDict()
     for key, default in zip(["GP_model","decorrelation", "inst_var", "stellar_var"],
@@ -169,7 +177,7 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                                      'add_dict': dict_model_false
                                                      },
                                         }
-    return create_phasefolded_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+    return create_phasefolded_plots(post_instance=post_instance, df_fittedval=df_fittedval,
                                     compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
@@ -187,9 +195,10 @@ def create_RV_phasefolded_plots(fig, post_instance, df_fittedval, datasim_kwargs
                                     sharey=sharey, create_axes_kwargs=create_axes_kwargs, pad=pad, indicate_y_outliers=indicate_y_outliers,
                                     pl_kwargs=pl_kwargs, xlims=xlims, force_xlims=force_xlims, ylims=ylims,
                                     rms_kwargs=rms_kwargs, legend_kwargs=legend_kwargs, show_datasetnames=show_datasetnames,
-                                    suptitle_kwargs=suptitle_kwargs,
+                                    suptitle_kwargs=suptitle_kwargs, show_title_labels_ticklabels=show_title_labels_ticklabels,
                                     unit=RV_unit, fontsize=fontsize,
                                     is_valid_model_available_func=is_valid_model_available,
+                                    fig=fig, gs=gs
                                     )
 
 

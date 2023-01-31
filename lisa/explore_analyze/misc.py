@@ -9,6 +9,13 @@ from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.model.core_model import Core_Model
 
 
+### for the A&A article class
+AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
+AandA_full_width = 7.2712643025  # in inches = \hsize = 523.53 pt
+
+default_figwidth = AandA_width
+default_figheight_factor = 0.75
+
 AandA_fontsize = 8
 
 key_whole = Core_Model.key_whole
@@ -223,22 +230,23 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
 
     Arguments
     ---------
-    kwargs_user :
-    l_row_name  :
-    l_col_name  :
-    kwargs_def  :
-    kwargs_init :
+    kwargs_user : dict
+        kwargs define by the user when running the plotting function keys can be 'all' or in l_col_name or l_row_name.
+    l_row_name  : list of key
+        list of row key
+    l_col_name  : list of key
+        list of column key
+    kwargs_def  : dict
+        kwargs that will be attributed by default to all column and row at first. This will be altered by kwargs_init and then kwargs_user,
+        if they are provided
+    kwargs_init : dict
+        kwargs to alter the kwargs of some column and rows after kwargs_def is applied. This served as a more complex default behavior than
+        affecting kwargs_def to everything.
 
     Returns
     -------
     kwargs  :
     """
-    if kwargs_user is None:
-        pass
-    elif isinstance(kwargs_user, dict):
-        for key in kwargs_user:
-            if key == 'all':
-                kwargs_def = kwargs_user['all']
     kwargs = {col_name: {i_row: copy(kwargs_def) for i_row in l_row_name} for col_name in l_col_name}
     if kwargs_init is not None:
         for col_name in kwargs_init:
@@ -247,6 +255,10 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
     if kwargs_user is None:
         pass
     elif isinstance(kwargs_user, dict):
+        if 'all' in kwargs_user:
+            for col_name in kwargs:
+                for i_row in kwargs[col_name]:
+                    kwargs[col_name][i_row].update(kwargs_user['all'])
         for key in kwargs_user:
             if key == 'all':
                 pass
