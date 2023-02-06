@@ -725,7 +725,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                 ##########################
                 # Set the legend if needed
                 ##########################
-                set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize=fontsize)
+                set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
 
     ######################################
     # Generalized Lomb-Scargle Periodogram
