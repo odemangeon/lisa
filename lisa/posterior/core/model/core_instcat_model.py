@@ -17,7 +17,7 @@ methods and attributes to model a data of a given insttument category.
     - The load_config_decorrelation
 """
 from textwrap import dedent
-from collections import Iterable
+from collections.abc import Iterable
 from os import getcwd, chdir
 from logging import getLogger
 from pprint import pformat

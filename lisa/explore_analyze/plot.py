@@ -1,6 +1,6 @@
 from matplotlib.pyplot import subplots
 from numpy import sign, log10, logspace, isfinite, where, median, delete
-from scipy.stats import median_absolute_deviation as mad
+from scipy.stats import median_abs_deviation as mad
 
 
 def hist_lnprob(lnprobability, n_bins=None, sigma_clip=5, ax=None, **hist_kwargs):

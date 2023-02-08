@@ -11,7 +11,8 @@ creator function.
 @TODO:
     -
 """
-from collections import defaultdict, Iterable
+from collections import defaultdict
+from collections.abc import Iterable
 
 from ..dataset_and_instrument.instrument import Instrument_Model
 from ..dataset_and_instrument.dataset import Core_Dataset
