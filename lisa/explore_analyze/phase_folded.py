@@ -473,7 +473,7 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                                                 supersamp_bin_model=supersamp_bin_model,
                                                 fact_tsim_to_xsim=(time_fact if show_time_from_tic else 1 / Per),  # I think this is useless since xsim superseeds it
                                                 xsim=computed_models[planet_name][datasetname]['xsim'],
-                                                plot=True, ax=axes_data[i_row][i_pl],
+                                                plot=True, plot_GP=False, plot_model_wGP=False, ax=axes_data[i_row][i_pl],
                                                 pl_kwarg=pl_kwarg_final,
                                                 show_binned_model=show_binned_model,
                                                 models=computed_models[planet_name][datasetname],

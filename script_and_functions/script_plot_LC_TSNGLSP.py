@@ -55,7 +55,6 @@ extension_analysis = "_initrun_median"
 ## Load logger and df_fittedval if required
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
-
 if "df_fittedval" not in globals():
     logger.info("Loading df_fittedval from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
@@ -72,9 +71,12 @@ save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
-remove_dict = {'inst_var': True, 'stellar_var': True}  # Possible keys are '1', 'contamination', 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP_model'
+remove_dict = {'1': True, 'contamination': False, 'inst_var': True, 'stellar_var': False, 'decorrelation': False,
+               'decorrelation_likelihood': False, 'GP_model': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model'
 
-show_dict = {'stellar_var': False}  # Possible keys are 'contamination', 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP_model'
+show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+             'decorrelation_likelihood': False, 'GP_model': False, 'model_wGP': True, 
+             }  # Possible keys are 'contamination', 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model', 'model_wGP'
 
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
@@ -93,7 +95,7 @@ t_unit = 'BJD - 2,400,000'
 exptime_bin = 20 / 60
 binning_stat = "mean"
 supersamp_bin_model = 10
-show_binned_model = True
+show_binned_model = {"model": True}
 
 tlims = None
 force_xlims = False

@@ -267,7 +267,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
 
     # Make sure the show_dict is well define
     show_dict_user = show_dict if show_dict is not None else {}
-    show_dict = {"model": True, "GP_model": True}
+    show_dict = {"model": True, "model_wGP": True}
     show_dict.update(show_dict_user)
 
     #############
@@ -412,7 +412,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     # Compute the models
                     ####################
                     for model, show_model in show_dict.items():
-                        if model == "GP_model":
+                        if model.startswith("GP_") or model.endswith("_wGP"):
                             continue
                         if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')):
                             if datasetname4model4row[model][i_row] == 'all':
@@ -458,7 +458,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             supersamp_bin_model=1.,
                                                             fact_tsim_to_xsim=time_fact,
                                                             xsim=None,
-                                                            plot=True, ax=axe_data,
+                                                            plot=True, plot_GP=False, plot_model_wGP=False, ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             show_binned_model=False,
                                                             models=None,
@@ -490,7 +490,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             supersamp_bin_model=supersamp_bin_model,
                                                             fact_tsim_to_xsim=time_fact,
                                                             xsim=None,
-                                                            plot=True, ax=axe_data,
+                                                            plot=True, plot_GP=show_dict.get(f"GP_{model}", False), plot_model_wGP=show_dict.get(f"{model}_wGP", include_gp_model), 
+                                                            ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             show_binned_model=show_binned_model,
                                                             models=computed_models[datasetname],

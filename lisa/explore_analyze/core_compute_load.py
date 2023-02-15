@@ -78,7 +78,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                            include_gp_model, amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
                            remove_dict=None, add_dict=None,
                            exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None,
-                           plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                           plot=True, plot_GP=False, plot_model_wGP=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
                            models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
                            is_valid_model_available_func=is_valid_model_available,
                            kwargs_is_valid_model_available=None,
@@ -115,7 +115,9 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         Factor to multiply to tsim to obtain xsim if it is not provided
     xsim                                : array
         x valuess corresponding to the values in tsim for the plot. Superseeds fact_tsim_to_xsim
-    plot                                : bool                  
+    plot                                : bool
+    plot_GP                             : bool
+    plot_model_wGP                      : bool                  
     ax                                  : Axe
     pl_kwarg                            : dict
     key_pl_kwarg                        : str
@@ -251,7 +253,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                        amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
                                                        remove_add_model_components_func=remove_add_model_components_func,
                                                        exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                       plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                       plot=False, plot_GP=False, plot_model_wGP=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
                                                        models=models, l_valid_model=l_valid_model,
                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                        is_valid_model_available_func=is_valid_model_available_func,
@@ -288,7 +290,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             if not("alpha" in pl_kwarg_to_use):
                 pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
             # Plot the GP
-            if model_wGP is not None:
+            if (model_wGP is not None) and (plot_GP or plot_model_wGP):
                 key_GP = "GP" + extension
                 key_GP_err = "GP_err" + extension
                 if not("color" in pl_kwarg[datasetname][key_GP]):
@@ -299,13 +301,13 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                     pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
                 if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
                     pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                if not(remove_dict.get("GP_model", False)):
+                if plot_model_wGP:
                     pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
                     _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
                     _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
                                         **pl_kwarg[datasetname][key_GP_err],
                                         )
-                else:
+                if plot_GP:
                     _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
                     _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
                                         **pl_kwarg[datasetname][key_GP_err]
@@ -436,7 +438,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         compute_raw_models_func=compute_raw_models_func,
                                         remove_add_model_components_func=remove_add_model_components_func,
                                         exptime_bin=None, supersamp_bin_model=None,
-                                        fact_tsim_to_xsim=None, plot=False, ax=None, pl_kwarg=None,
+                                        fact_tsim_to_xsim=None, plot=False, plot_GP=False, plot_model_wGP=False, ax=None, pl_kwarg=None,
                                         key_pl_kwarg=None, show_binned_model=True, models=dico_outputs['models'][datasetname],
                                         l_valid_model=l_valid_model,
                                         get_key_compute_model_func=get_key_compute_model_func,

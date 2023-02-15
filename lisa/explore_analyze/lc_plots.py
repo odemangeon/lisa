@@ -177,8 +177,8 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
     """
     y_name = "$\Delta$F / F" if remove1 else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model","decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [True, True, True, remove_contamination, True, remove1]
+    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [True, True, remove_contamination, True, remove1]
                             ):
         remove_dict_model[key] = default
     remove_dict_data = OrderedDict()
@@ -390,8 +390,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     """
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-                            [False, False, False, False, False, True]
+    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, True]
                             ):
         remove_dict_model[key] = remove_dict.get(key, default)
     remove_dict_data = OrderedDict()

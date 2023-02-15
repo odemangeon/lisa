@@ -140,8 +140,8 @@ def create_IND_phasefolded_plots(fig, post_instance, df_fittedval, IND_subcat, d
         String giving the unit of the INDs
     """
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model", "inst_var", "sys_var"],
-                            [True, True, True, ]
+    for key, default in zip(["inst_var", "sys_var"],
+                            [True, True, ]
                             ):
         remove_dict_model[key] = default
     remove_dict_data = OrderedDict()
@@ -356,8 +356,8 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
         Outputs of the compute_and_plot_model function calls
     """
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model", "inst_var", "sys_var"],
-                            [False, False, False]
+    for key, default in zip(["inst_var", "sys_var"],
+                            [False, False]
                             ):
         remove_dict_model[key] = remove_dict.get(key, default)
     remove_dict_data = OrderedDict()

@@ -157,8 +157,8 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
         It should be a Gridspec with ncols=1 and nrows according to row4datasetname
     """
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model","decorrelation", "inst_var", "stellar_var"],
-                            [True, True, True, True]
+    for key, default in zip(["decorrelation", "inst_var", "stellar_var"],
+                            [True, True, True]
                             ):
         remove_dict_model[key] = default
     remove_dict_data = OrderedDict()
@@ -360,8 +360,8 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         Outputs of the compute_and_plot_model function calls
     """
     remove_dict_model = OrderedDict()
-    for key, default in zip(["GP_model", "decorrelation", "inst_var", "stellar_var"],
-                            [False, False, False, False]
+    for key, default in zip(["decorrelation", "inst_var", "stellar_var"],  # WARNING don't put 'GP_model' here the GP model should not be removed from the model as it's not part of it
+                            [False, False, False]
                             ):
         remove_dict_model[key] = remove_dict.get(key, default)
     remove_dict_data = OrderedDict()

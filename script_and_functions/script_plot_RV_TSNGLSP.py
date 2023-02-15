@@ -18,7 +18,7 @@ import lisa.posterior.core.posterior as cpost
 import lisa.tools.mylogger as ml
 
 from lisa.explore_analyze.misc import get_def_output_folders
-from lisa.explore_analyze.lc_plots import create_RV_TSNGLSP_plots
+from lisa.explore_analyze.rv_plots import create_RV_TSNGLSP_plots
 
 # import sys
 # path_pyGLS = "/Users/olivier/Softwares/PyGLS"
@@ -52,10 +52,9 @@ output_folders = get_def_output_folders(run_folder=run_folder)
 extension_analysis = "_initrun_median"
 
 ################################
-## Load df_fittedval if required
+## Load logger and df_fittedval if required
 logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
                         fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
-                        
 if "df_fittedval" not in globals():
     logger.info("Loading df_fittedval from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
@@ -72,9 +71,12 @@ save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
-remove_dict = {'inst_var': True, 'stellar_var': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP_model'
+remove_dict = {'inst_var': True, 'stellar_var': False, 'decorrelation': False,
+               'decorrelation_likelihood': False, 'GP_model': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model'
 
-show_dict = {'stellar_var': False}  # Possible keys are 'contamination', 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP_model'
+show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+             'decorrelation_likelihood': False, 'GP_model': False, 'model_wGP': True, 
+             }  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model', 'model_wGP'
 
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
@@ -90,10 +92,10 @@ row4datasetname = None  # e. g. {f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range
 pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
 
 t_unit = 'BJD - 2,400,000'
-exptime_bin = 20 / 60
+exptime_bin = 0
 binning_stat = "mean"
 supersamp_bin_model = 10
-show_binned_model = True
+show_binned_model = {"model": False}
 
 tlims = None
 force_xlims = False
@@ -164,7 +166,7 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                                         # 't_lims_zoom": (2170.5, 2171.5),
                                         'ylims': ylims,
                                         'indicate_y_outliers': {"data": False, "resi": False}
-                                                  },
+                                        },
                              GLSP_kwargs={"do": do_GLSP,
                                           "period_range": period_range,
                                           "freq_fact": freq_fact,
