@@ -104,12 +104,12 @@ ylims = None  # e.g. {"data": {"all": (-250, 500)}, "resi": {"all": (-375, 375)}
 # GLSP parameters
 do_GLSP = False
 
-period_range = (1e-2, 500)
+period_range = (1e-1, 200)
 
 freq_fact = 1e6
 freq_unit = "$\mu$Hz"
 
-freq_lims = (0, 400)
+freq_lims = (0, 120)
 
 periods = {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
                                                           "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
@@ -125,7 +125,7 @@ fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dot
        10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"},
             "text_kwargs": {"y_shift": -0.08}
             },
-       },
+       }
 
 # These were the most commonly changed parameters.
 # There are extra parameters which can be changed in the create_LC_phasefolded_plots below
@@ -170,8 +170,6 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                                           "freq_unit": freq_unit,
                                           "freq_lims": freq_lims,
                                           # "freq_lims_zoom": (0, 14),
-                                          'show_inst_var': False,
-                                          'show_decorrelation': True,
                                           'periods': periods,
                                           'fap': fap,
                                           # 'period_no_ticklabels': [10, ],
@@ -196,5 +194,12 @@ else:
 
 if save_outputs:
     # Save chain in a pickle
+    if os.path.isfile(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl")):
+        with open(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl"), "rb") as fpickle:
+            _, computed_models_old = dill.load(fpickle)
+    else:
+        computed_models_old = None
+    if computed_models is None:
+        computed_models = computed_models_old
     with open(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl"), "wb") as fpickle:
         dill.dump((dico_load, computed_models), fpickle)

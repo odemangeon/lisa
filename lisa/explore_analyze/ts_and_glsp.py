@@ -735,6 +735,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         # Variable that are always available
         all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
         idx_sort = argsort(all_time)
+        all_time = all_time[idx_sort]
         all_data = concatenate([dico_load['datas'][dst] for dst in datasetnames])[idx_sort]
         if GLSP_kwargs.get("use_jitter", True):
             all_data_err = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
@@ -746,13 +747,47 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                       "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
                       "resi": {"time": all_time, "data": all_resi, "err": all_data_err, 'label': "residuals"},
                       }
-        l_gls_key = ["data", "model", "resi"]
-        # Add the GP
-        # Add the inst vars
-        # Add the stellar vars
-        # Add the decorrelation model
-        # Add the decorrelation lieklihood
-
+        l_l_WF_key_model = [["data", "model", "resi"], ]
+        l_gls_key = ["data", "model"]
+        # Add component from the show model dict
+        l_extra_key = [key_model for key_model in show_dict if show_dict[key_model]]
+        if "model" in l_extra_key:
+            l_extra_key.remove("model")
+        for key_model in l_extra_key:
+            model_time = []
+            model_value = []
+            model_value_err = []
+            for dst in datasetnames:
+                if key_model in dico_load['models'][dst]:
+                    # Then the model exist for this dataset
+                    model_value.append(dico_load['models'][dst][key_model])
+                    model_time.append(dico_load['times'][dst])
+                    if GLSP_kwargs.get("use_jitter", True):
+                        model_value_err.append(dico_load['data_err_jitters'][dst])
+                    else:
+                        model_value_err.append(dico_load['data_errs'][dst])
+            if len(model_value) > 0:
+                gls_inputs[key_model] = {}
+                gls_inputs[key_model]["time"] = concatenate(model_time)
+                idx_sort = argsort(gls_inputs[key_model]["time"])
+                gls_inputs[key_model]["time"] = gls_inputs[key_model]["time"][idx_sort]
+                gls_inputs[key_model]["data"] = concatenate(model_value)[idx_sort]
+                gls_inputs[key_model]["err"] = concatenate(model_value_err)[idx_sort]
+                gls_inputs[key_model]["label"] = key_model
+                for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
+                    if (gls_inputs[key_model]["time"] == gls_inputs[l_WF_key_model[0]]["time"]).all():
+                        l_WF_key_model.append(key_model)
+                        found_times_axis = True
+                        break
+                    else:
+                        found_times_axis = False
+                if not(found_times_axis):
+                    l_l_WF_key_model.append([key_model, ])
+                l_gls_key.append(key_model)
+                
+        # Add the residuals
+        l_gls_key.append("resi")
+ 
         # model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=l_datasetname_RVrefglobal[0],
         #                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
         #                                                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True)
@@ -781,7 +816,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
 
         glsps = {}
         for ii, key in enumerate(l_gls_key):
-            glsps[key] = Gls((all_time, gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
+            glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
 
         ###############################
         # Create additional axe if zoom
@@ -801,7 +836,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         # Create additional axes for data, model, etc...
         ################################################
         show_WF = GLSP_kwargs.get("show_WF", True)
-        nb_axes = len(l_gls_key) + int(show_WF)
+        nb_axes = len(l_gls_key) + int(show_WF) * len(l_l_WF_key_model)
         freq_fact = GLSP_kwargs.get("freq_fact", 1e6)
         freq_unit = GLSP_kwargs.get("freq_unit", '$\mu$Hz')
         logscale = GLSP_kwargs.get("logscale", False)
@@ -958,11 +993,14 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
             ax_gls_twin[0].set_xlabel("Period [days]", fontsize=fontsize)
 
             if GLSP_kwargs.get("show_WF", True):
-                ax_gls[-1].plot(glsps[key].freq / day2sec * freq_fact, glsps[key].wf, '-', color="k", label="WF", linewidth=GLSP_kwargs.get("lw ", 1.))
-                if jj == 0:
-                    ax_gls[-1].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get("WF", {}))
-                    ax_gls[-1].set_ylabel("Relative Amplitude")
-                labelleft = True if jj == 0 else False
-                ax_gls[-1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
-
-    return dico_load, computed_models
+                for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
+                    ax_gls[-i_WF - 1].plot(glsps[l_WF_key_model[0]].freq / day2sec * freq_fact, glsps[l_WF_key_model[0]].wf, '-', color="k", label=f"WF {l_WF_key_model}", linewidth=GLSP_kwargs.get("lw ", 1.))
+                    if jj == 0:
+                        ax_gls[-i_WF - 1].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get("WF", {}))
+                        ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
+                    labelleft = True if jj == 0 else False
+                    ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
+    if TS_kwargs['do']:
+        return dico_load, computed_models
+    else:
+        return dico_load, None
