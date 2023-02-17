@@ -49,6 +49,8 @@ save_outputs = True
 save_plot = False
 
 planets = None  # e.g. ['b', ]
+periods = None  # e.g. [46., ]
+periods_remove_or_add_dict = None # e.g. {46.: {'add_dict': {'GP_model': True}}}
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
@@ -105,7 +107,8 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
  ) = create_RV_phasefolded_plots(fig=fig, post_instance=post_instance,
                                  df_fittedval=df_fittedval,
                                  datasim_kwargs=kwargs_datasim,
-                                 planets=planets, periods=None,
+                                 planets=planets, periods=periods,
+                                 periods_remove_or_add_dict=periods_remove_or_add_dict,
                                  datasetnames=datasetnames,
                                  row4datasetname=row4datasetname,
                                  datasetnameformodel4row=None,

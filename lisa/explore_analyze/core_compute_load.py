@@ -195,6 +195,9 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             elif key_model == 'data_err':
                 model = post_instance.dataset_db[datasetname].get_data_err()
                 model_wGP = gp_pred = gp_pred_var = None
+            elif key_model.startswith('zeros'):
+                model = zeros_like(tsim)
+                model_wGP = gp_pred = gp_pred_var = None
             else:
                 (model, model_wGP, gp_pred, gp_pred_var
                  ) = compute_raw_models_func(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
@@ -523,6 +526,28 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
         if not(len(model) == len(tsim)):
             model = None
         model_wGP = gp_pred = gp_pred_var = None
+    elif key_model.startswith("GP"):
+        key_compute_model = key_model[2:]
+        (model, model_wGP, gp_pred, gp_pred_var
+         ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                         param=df_fittedval["value"].values,
+                                         l_param_name=list(df_fittedval.index),
+                                         key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+                                         include_gp=True,
+                                         supersamp=supersamp, exptime=exptime
+                                         )
+        return gp_pred, None, None, None
+    elif key_model.endswith("_wGP"):
+        key_compute_model = key_model[:-4]
+        (model, model_wGP, gp_pred, gp_pred_var
+         ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                         param=df_fittedval["value"].values,
+                                         l_param_name=list(df_fittedval.index),
+                                         key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+                                         include_gp=True,
+                                         supersamp=supersamp, exptime=exptime
+                                         )
+        return model_wGP, None, None, None
     else:
         key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)
         if include_gp_model:

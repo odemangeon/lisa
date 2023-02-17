@@ -45,7 +45,7 @@ d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Ste
 
 
 def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None,
-                                planets=None, periods=None,
+                                planets=None, periods=None, periods_remove_or_add_dict=None,
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
                                 phasefold_central_phase=0.,
@@ -81,7 +81,12 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
     planets : list_of_str or None
         List of the names of the planets for which you want a phase pholded curve. If None all planets are used
     periods             : list of floats
-        TODO !
+        Period at which you want to phase fold (which are not planet orbital periods)
+    periods_remove_or_add_dict : dict of dict
+        Dictionary which keys the should be elements of periods.
+        The values associated to each period should be a dictionary with up to two keys 'add_dict' and 'remove_dict'.
+        The value associated with these two keys will be passed as the add_dict and remove_dict to the compute_and_plot_model
+        if you want to add or remove components to the data when phase-folding at the given period.
     datasetnames  : list of String
         List providing the datasets to load and use
     row4datasetname    : dict of int
@@ -185,6 +190,7 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     y_name=y_name, inst_cat='RV',
                                     d_name_component_removed_to_print=d_name_component_removed_to_print,
                                     datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
+                                    periods_remove_or_add_dict=periods_remove_or_add_dict,
                                     datasetnames=datasetnames, row4datasetname=row4datasetname,
                                     datasetnameformodel4row=datasetnameformodel4row,
                                     npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
