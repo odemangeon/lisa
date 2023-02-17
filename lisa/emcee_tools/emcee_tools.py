@@ -1780,7 +1780,7 @@ def lnposterior_selection(lnprobability, sig_fact=3., quantile=75, quantile_walk
     nb_rejected = lnprobability.shape[0] - len(l_selected_walker)
     if verbose == 1:
         logger.info("Number of rejected walkers: {}/{}".format(nb_rejected, lnprobability.shape[0]))
-    return l_selected_walker, nb_rejected
+    return l_selected_walker, walkers_percentile_lnposterior[l_selected_walker]
 
 
 def get_fitted_values(chainI, method="MAP", l_param_name=None, l_walker=None, l_burnin=None, iterations_indexes=None,
@@ -1999,22 +1999,25 @@ def geweke_multi(chains, first=0.1, last=0.5, intervals=20, l_walker=None):
 
 
 def geweke_plot(zscores, first_steps=None, l_param_name=None, geweke_thres=2,
-                plot_height=2, plot_width=8, **kwargs_tl):
+                plot_height=1.5, plot_width=6, ncols=2, **kwargs_tl):
     ndim = zscores.shape[-1]
     nwalker = zscores.shape[0]
-    fig, ax = subplots(nrows=ndim, sharex=True, squeeze=True,
-                       figsize=(plot_width, ndim * plot_height))
+    nrows = ndim // ncols 
+    if (ndim % ncols) > 0:
+        nrows += 1
+    fig, ax = subplots(ncols=ncols, nrows=nrows, sharex=True, squeeze=True, figsize=(ncols * plot_width, nrows * plot_height))
     l_param_name = __get_default_l_param_name(l_param_name=l_param_name, ndim=ndim)
     first_steps = __get_default_first_steps(first_steps=first_steps, intervals=zscores.shape[1])
     xmin = min(first_steps)
     xmax = max(first_steps)
-    for i in range(ndim):
-        ax[i].set_title(l_param_name[i])
+    for idx in range(ndim):
+        indexes = np.unravel_index(indices=idx, shape=(nrows, ncols))
+        ax[indexes].set_title(l_param_name[idx])
         for k in range(nwalker):
-            ax[i].plot(first_steps, zscores[k, :, i], alpha=0.5)
-
-        ax[i].hlines([-geweke_thres, geweke_thres], xmin, xmax, linestyles="dashed")
-    ax[ndim - 1].set_xlabel("iteration")
+            ax[indexes].plot(first_steps, zscores[k, :, idx], alpha=0.5)
+        ax[indexes].hlines([-geweke_thres, geweke_thres], xmin, xmax, linestyles="dashed")
+    for i_col in range(ncols):
+        ax[-1, i_col].set_xlabel("iteration")
     fig.tight_layout(**kwargs_tl)
 
 
