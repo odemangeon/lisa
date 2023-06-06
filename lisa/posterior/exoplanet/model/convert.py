@@ -1399,14 +1399,12 @@ def getFrat_sincos(A, Foffset):
     return Frat
 
 def getPhioffset_sincos(Phi, sincos):
-    """Compute the Eclipse depth in the sincos phase curve model 
-
-    The units of A, Foffset must be the same and Frat will have the same unit
+    """Compute the bright spot offset in the sincos phase curve model 
 
     Arguments
     ---------
     Phi     : np.array
-        Phase offset of the cos/sin function (compared to the Tic) in radians
+        Phase bright spot offset of the cos/sin function (compared to the Tic) in radians
     sincos  : str
         'sin', a sine function as been used. 'cos', a cosine.
 
@@ -1423,6 +1421,23 @@ def getPhioffset_sincos(Phi, sincos):
         raise ValueError(f"sincos can be either 'sin' or 'sin', got {sincos}")
 
     return np.rad2deg(Phioffset)
+
+def getPhioffset_kelpthermal(hotspot_offset):
+    """Compute the Eclipse depth in the sincos phase curve model 
+
+    The units of A, Foffset must be the same and Frat will have the same unit
+
+    Arguments
+    ---------
+    hotspot_offset  : np.array
+        Phase offset of the kelp model (compared to the Tsc) in radians
+
+    Return
+    ------
+    Phioffset   : np.array  
+        Bright spot offset in degrees
+    """
+    return np.rad2deg(hotspot_offset)
 
 
 # if __name__ == "__main__":

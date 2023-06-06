@@ -724,12 +724,8 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
         return self.args['Model_kwargs']
 
     @property
-    def brightness_model_kwargs(self):
-        return self.args['brightness_model_kwargs']
-
-    @property
-    def brightness_model(self):
-        return self.args['brightness_model']
+    def pc_kwargs(self):
+        return self.args['pc_kwargs']
 
     @property
     def stellar_spectrum(self):
@@ -742,14 +738,13 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
     def _set_args(self, args=None):
         """ """
         self.args.update({'Model_kwargs': {'lmax': 1, 'filt': None, 'stellar_spectrum': None, 'T_s': None},
-                          'brightness_model_kwargs': {'n_theta': 20, 'n_phi': 200, 'cython': True, 'quad': False, 'check_sorted': True},
-                          'brightness_model': 'thermal',
+                          'pc_kwargs': {'n_theta': 20, 'n_phi': 200, 'cython': True, 'quad': False, 'check_sorted': True},
                           }
                          )
         super(PhaseCurveModelKelpThermal, self)._set_args(args=args)
         if args is not None:
             for key in args:
-                if key not in ['Model_kwargs', 'brightness_model_kwargs']:
+                if key not in ['Model_kwargs', 'pc_kwargs']:
                     raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args dictionary in kelp-thermal model definition can only have the following keys {['Model_kwargs', 'brightness_model_kwargs']} (got {key}).")
             for key in ['filt', 'T_s']:
                 if key not in args['Model_kwargs']:
@@ -770,16 +765,16 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
                 else:
                     raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: Valid keys for args['Model_kwargs'] are {['lmax', 'filt', 'stellar_spectrum', 'T_s']} (got {key})")
                 self.args['Model_kwargs'][key] = args['Model_kwargs'][key]
-            for key in args['brightness_model_kwargs']:
+            for key in args['pc_kwargs']:
                 if key in ['n_theta', 'n_phi']:
-                    if not(isinstance(args['brightness_model_kwargs'][key], int) and (args['brightness_model_kwargs'][key] > 0)):
-                        raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args['brightness_model_kwargs']['{key}'] should be a strictly positive int (got {args['brightness_model_kwargs'][key]})")
+                    if not(isinstance(args['pc_kwargs'][key], int) and (args['pc_kwargs'][key] > 0)):
+                        raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args['pc_kwargs']['{key}'] should be a strictly positive int (got {args['pc_kwargs'][key]})")
                 elif key in ['check_sorted', 'quad', 'cython']:
-                    if not(isinstance(args['brightness_model_kwargs'][key], bool)):
-                        raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args['brightness_model_kwargs']['{key}'] should be a boolean (got {args['brightness_model_kwargs'][key]})")
+                    if not(isinstance(args['pc_kwargs'][key], bool)):
+                        raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args['pc_kwargs']['{key}'] should be a boolean (got {args['pc_kwargs'][key]})")
                 else:
-                    raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: Valid keys for args['brightness_model_kwargs'] are {['n_theta', 'n_phi', 'cython', 'quad', 'check_sorted']} (got {key})")
-                self.args['brightness_model_kwargs'][key] = args['brightness_model_kwargs'][key]
+                    raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: Valid keys for args['pc_kwargs'] are {['n_theta', 'n_phi', 'cython', 'quad', 'check_sorted']} (got {key})")
+                self.args['pc_kwargs'][key] = args['pc_kwargs'][key]
 
     def _get_l_parameter_basename_planet(self):
         """Return the list of orbital parameter basenames."""

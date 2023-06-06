@@ -1249,10 +1249,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                         # Lambertian sphere model
                         #########################
                         elif pc_component_model.category == "lambertian":
-                            ################
-                            # Add parameters
-                            ################
-
+                            #########################
+                            # Get text for parameters
+                            #########################
                             # Orbital Period
                             period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
                             # Time of inferior conjunction
@@ -1416,8 +1415,16 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 function_builder.add_variable_to_ldict(variable_name=f"model_kelp_{planet_name}_{instmod_fullname}",
                                                                        variable_content=model_kelp_pl_inst, function_shortname=func_shortname, exist_ok=False)
 
+                            ## Create the brightness_model_kwargs dictionary which contains the non-physical parameters for the computation of the phase curve 
+                            # that will be passed to model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve and put in ldict
+                            if not(function_builder.is_in_ldict(variable_name=f"kelp_pc_kwargs_{planet_name}_{instmod_fullname}", function_shortname=func_shortname)):
+                                kelp_pc_kwargs_pl_inst = pc_component_model.pc_kwargs.copy()
+                                function_builder.add_variable_to_ldict(variable_name=f"kelp_pc_kwargs_{planet_name}_{instmod_fullname}",
+                                                                       variable_content=kelp_pc_kwargs_pl_inst, function_shortname=func_shortname, exist_ok=False)
+                            ## Do the text for the occultation
                             _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
                                                                                function_shortname=func_shortname,
+                                                                               model_definition=pc_component_model,
                                                                                planet=planet, star=star, inst_model_obj=instmod,
                                                                                dataset=dst,
                                                                                get_times_from_datasets=get_times_from_datasets,
@@ -1426,6 +1433,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                                                                l_dataset=l_dataset, multi=multi,
                                                                                i_inputoutput=i_inputoutput,
                                                                                normalize_occultation=True,
+                                                                               rp_updates=rp_updates,
                                                                                fp_updates=fp_updates, t_sec_updates=t_sec_updates,
                                                                                )
 
@@ -1472,8 +1480,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                     supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
                                     if supersamp > 1:
                                         logger.warning("Currently the kelp model doesn't include supersampling !")
-                                period = function_builder.get_text_4_parameter(parameter=parameters['planet']['P'], function_shortname=func_shortname)
-                                tic = function_builder.get_text_4_parameter(parameter=parameters['planet']['tic'], function_shortname=func_shortname)
+                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
@@ -1492,7 +1500,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             else:
                                 pre_text = " + "
                             f = function_builder.get_text_4_parameter(parameter=parameters['planet']['f'], function_shortname=func_shortname)
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, check_sorted=False).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
 
                         ########################
                         # No other model for now
