@@ -468,7 +468,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
-                                computed_models[datasetname]["decorr_like"] = models_decorr_like["decorr_like"]
+                                computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                             else:
                                 computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
                                 computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
