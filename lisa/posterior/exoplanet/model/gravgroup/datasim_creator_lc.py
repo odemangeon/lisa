@@ -17,7 +17,7 @@ from logging import getLogger
 from textwrap import dedent
 # from copy import deepcopy, copy
 from math import acos, degrees, sqrt
-from numpy import ones_like, inf, mean, pi, sin, cos, abs, argsort
+from numpy import ones_like, inf, mean, pi, sin, cos, abs, argsort, exp
 from collections import defaultdict
 from numbers import Number
 
@@ -1501,6 +1501,82 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 pre_text = " + "
                             f = function_builder.get_text_4_parameter(parameter=parameters['planet']['f'], function_shortname=func_shortname)
                             returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+
+                        #################
+                        # Gaussian models
+                        #################
+                        elif pc_component_model.category == "gaussian":
+                            if pc_component_model.occultation:
+                                _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                                   function_shortname=func_shortname,
+                                                                                   model_definition=pc_component_model,
+                                                                                   planet=planet, star=star, inst_model_obj=instmod,
+                                                                                   dataset=dst,
+                                                                                   get_times_from_datasets=get_times_from_datasets,
+                                                                                   time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                                   do_transit=False, do_occultation=True,
+                                                                                   l_dataset=l_dataset, multi=multi,
+                                                                                   i_inputoutput=i_inputoutput,
+                                                                                   normalize_occultation=True,
+                                                                                   rp_updates=rp_updates,
+                                                                                   fp_updates=fp_updates, t_sec_updates=t_sec_updates
+                                                                                   )
+                                text_occ = f" * ({text_occ})"
+                            else:
+                                text_occ = ""
+
+                            ################
+                            # Add parameters
+                            ################
+                            # Orbital Period
+                            period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                            # Time of inferior conjunction
+                            tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                            # Amplitude
+                            amp = function_builder.get_text_4_parameter(parameter=parameters['planet']['A'], function_shortname=func_shortname)
+                            # Width
+                            sigma_phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['sigmaphi'], function_shortname=func_shortname)
+                            # Phase Offset
+                            if pc_component_model.phase_offset == "param":
+                                phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['Phi'], function_shortname=func_shortname)
+                            else:
+                                phi = f"{pc_component_model.phase_offset}"
+
+                            # flux offset
+                            if pc_component_model.flux_offset == "param":
+                                flux_offset = function_builder.get_text_4_parameter(parameter=parameters['planet']['Foffset'], function_shortname=func_shortname)
+                            elif isinstance(pc_component_model.flux_offset, Number):
+                                flux_offset = f"{pc_component_model.flux_offset}"
+                            elif pc_component_model.flux_offset == "zero":
+                                flux_offset = 0
+                            # Add gauss to ldict
+                            def gauss(x, Foffset, A, phi, sigmaphi):
+                                return Foffset + A * exp(-(x - phi) ** 2 / (2 * sigmaphi ** 2))
+                            function_builder.add_variable_to_ldict(variable_name="gauss", variable_content=gauss, function_shortname=func_shortname, exist_ok=True)
+                            ####################################################
+                            # Produce the text for the phase curve model returns
+                            ####################################################
+                            ### TODO: This is only a copy paste from sin-cos
+                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                if get_times_from_datasets:
+                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    if supersamp > 1:
+                                        logger.warning("Currently the gaussian model doesn't include supersampling !")
+                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                                function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if returns[func_shortname][i_inputoutput] == "":
+                                pre_text = ""
+                            else:
+                                pre_text = " + "
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}gauss(x=orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}, Foffset={flux_offsets}, A={amp}, phi={phi}, sigmaphi={sigma_phi}){text_occ}"
 
                         ########################
                         # No other model for now

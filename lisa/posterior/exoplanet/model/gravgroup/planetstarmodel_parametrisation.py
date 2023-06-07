@@ -6,6 +6,7 @@ from .planetstarmodel import (spiderman_imported, kelp_imported,
                               OccultationModelBatman,
                               PhaseCurveModelSinCos, PhaseCurveModelBeaming, PhaseCurveModelEllipsoidal,
                               PhaseCurveModelLambertian, PhaseCurveModelKelpThermal, PhaseCurveModelSpidermanZhang,
+                              PhaseCurveModelGauss,
                               )
 
 
@@ -610,7 +611,7 @@ class PhaseCurveModels(Core_PlanetStarModels_lmodel1inst):
     host_star                       : Star
     orbitalmodel_instance           : OrbitalModels
     """
-    __l_model_class__ = [PhaseCurveModelSinCos, PhaseCurveModelLambertian, PhaseCurveModelEllipsoidal, PhaseCurveModelBeaming]
+    __l_model_class__ = [PhaseCurveModelSinCos, PhaseCurveModelLambertian, PhaseCurveModelEllipsoidal, PhaseCurveModelBeaming, PhaseCurveModelGauss]
     if spiderman_imported:
         __l_model_class__.append(PhaseCurveModelSpidermanZhang)
     if kelp_imported:

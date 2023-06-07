@@ -610,7 +610,7 @@ class PhaseCurveModelSinCos(Core_PlanetStarModel):
             if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] in ['param', 'zero', 'semi-amplitude'])):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'flux_offset' should be a number or 'param' or 'zero' or 'semi-amplitude' (got {args['flux_offset']})")
             self.args['flux_offset'] = args['flux_offset']
-            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param', 'semi-amplitude'])):
+            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param', ])):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' should be a number or 'param' (got {args['phase_offset']})")
             self.args['phase_offset'] = args['phase_offset']
             if not(isinstance(args['occultation'], bool)):
@@ -704,6 +704,76 @@ class PhaseCurveModelBeaming(PhaseCurveModelSinCos):
                          )
         super(PhaseCurveModelEllipsoidal, self)._set_args(args=args)
 
+
+class PhaseCurveModelGauss(Core_PlanetStarModel):
+    """docstring for PhaseCurveModelGauss."""
+
+    __category__ = "gaussian"
+
+    ################
+    # Main functions
+    ################
+
+    def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
+        super(PhaseCurveModelGauss, self).__init__(model_name=model_name, planet=planet, host_star=host_star,
+                                                   orbital_models=orbital_models, dico_config_model=dico_config_model,
+                                                   )
+
+    @property
+    def flux_offset(self):
+        return self.args['flux_offset']
+
+    @property
+    def phase_offset(self):
+        return self.args['phase_offset']
+
+    @property
+    def occultation(self):
+        return self.args['occultation']
+
+    ###################################################
+    # Functions directly required by the main functions
+    ###################################################
+
+    def _set_args(self, args=None):
+        """ """
+        self.args.update({'flux_offset': 'param', 'phase_offset': 'param', 'occultation': True})
+        super(PhaseCurveModelGauss, self)._set_args(args=args)
+        if args is not None:
+            if set(args.keys()) != set(['flux_offset', 'phase_offset', 'occultation']):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: gaussian model definition needs to include an args key which contains a dictionary with the following keys: {['flux_offset', 'phase_offset', 'occultation']}")
+            if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] in ['param', 'zero'])):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'flux_offset' should be a number or 'param' or 'zero' (got {args['flux_offset']})")
+            self.args['flux_offset'] = args['flux_offset']
+            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param'])):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' should be a number or 'param' (got {args['phase_offset']})")
+            self.args['phase_offset'] = args['phase_offset']
+            if not(isinstance(args['occultation'], bool)):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'occultation' should be a boolean (got {args['occultation']})")
+            self.args['occultation'] = args['occultation']
+
+    def _get_l_parameter_basename_planet(self):
+        """Return the list of orbital parameter basenames."""
+        l_param_basename = ['A', 'sigmaPhi']
+        if self.occultation:
+            l_param_basename.append('Rrat')
+        if self.flux_offset == 'param':
+            l_param_basename.append('Foffset')
+        if self.phase_offset == 'param':
+            l_param_basename.append('Phi')
+        return l_param_basename
+
+    def _get_l_parameter_basename_orbit(self, inst_model_fullname=None):
+        """Return the list of orbital parameter basenames."""
+        if self.occultation:
+            l_required_orbital_param_type = ['P', 'tic', 'ew', 'inc', 'aR']
+        else:
+            l_required_orbital_param_type = ['P', 'tic']
+        orbital_model = self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
+        return orbital_model._get_l_parameter_basename(l_required_orbital_param_type=l_required_orbital_param_type,
+                                                       inst_model_fullname=inst_model_fullname, object_category=None
+                                                       )
+    
 
 class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
     """docstring for PhaseCurveModelKelpThermal."""
