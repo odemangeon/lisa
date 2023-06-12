@@ -1535,7 +1535,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             # Amplitude
                             amp = function_builder.get_text_4_parameter(parameter=parameters['planet']['A'], function_shortname=func_shortname)
                             # Width
-                            sigma_phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['sigmaphi'], function_shortname=func_shortname)
+                            sigma_phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['sigmaPhi'], function_shortname=func_shortname)
                             # Phase Offset
                             if pc_component_model.phase_offset == "param":
                                 phi = function_builder.get_text_4_parameter(parameter=parameters['planet']['Phi'], function_shortname=func_shortname)
@@ -1551,7 +1551,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 flux_offset = 0
                             # Add gauss to ldict
                             def gauss(x, Foffset, A, phi, sigmaphi):
-                                return Foffset + A * exp(-(x - phi) ** 2 / (2 * sigmaphi ** 2))
+                                return Foffset + A * exp(-(x - phi)** 2 / (2 * sigmaphi ** 2))
                             function_builder.add_variable_to_ldict(variable_name="gauss", variable_content=gauss, function_shortname=func_shortname, exist_ok=True)
                             ####################################################
                             # Produce the text for the phase curve model returns
@@ -1576,7 +1576,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] += f"{pre_text}gauss(x=orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}, Foffset={flux_offsets}, A={amp}, phi={phi}, sigmaphi={sigma_phi}){text_occ}"
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}gauss(x=orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}, Foffset={flux_offset}, A={amp}, phi={phi}, sigmaphi={sigma_phi}){text_occ}"
 
                         ########################
                         # No other model for now
