@@ -1099,7 +1099,7 @@ def gettic_4_Mref_fast(M_ref, P, ecc, omega, t_ref=0.0):
         return t_ref + P + deltat
     else:
         return t_ref + deltat
-
+    
 
 def getMref_4_tic(tic, P, ecc, omega, t_ref=0.0):
     """Compute the mean anomaly at a given reference time from a time of inferior conjection.
@@ -1268,7 +1268,7 @@ def getrp_a(Rrat, aR):
     return Rrat / aR
 
 
-def getTdaynigh_vect_stellspec(hotspot_offset, c11, a_rs, rp_a, f, filt, T_s, stellar_spectrum, alpha=0.6, omegadrag=4.5, A_B=0):
+def getTdaynight_vect_stellspec(hotspot_offset, c11, a_rs, rp_a, f, filt, T_s, stellar_spectrum, alpha=0.6, omegadrag=4.5, A_B=0):
     """Compute the integrated dayside and nightside temperature from the kelp thermal model
 
     This function is really slow. It take ~10h for 80 000 iterations
