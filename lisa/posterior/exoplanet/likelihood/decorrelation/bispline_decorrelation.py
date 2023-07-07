@@ -3,7 +3,7 @@
 """
 Decorrelation model module.
 """
-from logging import getLogger
+from loguru import logger
 from scipy.interpolate import SmoothBivariateSpline
 from scipy.interpolate import LSQBivariateSpline  # This should allow to specify the knots
 from numpy import concatenate, linspace, mean, meshgrid, isfinite
@@ -15,8 +15,6 @@ from copy import deepcopy
 from ....core.likelihood.core_decorrelation_likelihood import Core_DecorrelationLikelihood
 from .....tools.name import check_name_code
 
-## Logger object
-logger = getLogger()
 
 tab = "    "
 

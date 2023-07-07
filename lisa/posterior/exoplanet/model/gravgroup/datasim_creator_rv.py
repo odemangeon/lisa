@@ -3,7 +3,7 @@
 """
 Datasim creator RV module.
 """
-from logging import getLogger
+from loguru import logger
 from math import sqrt
 
 from radvel.kepler import rv_drive
@@ -19,9 +19,6 @@ from ....core.model.polynomial_model import get_polymodel
 from .....tools.function_from_text_toolbox import FunctionBuilder
 from .....posterior.exoplanet.model.convert import gettp_fast, getomega_fast
 
-
-## Logger object
-logger = getLogger()
 
 # RVdrift_tref_name = f"{time_ref}_RVdrift"
 

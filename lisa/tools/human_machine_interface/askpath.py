@@ -4,13 +4,10 @@ Created on June 6 2018
 
 @author: olivierdemangeon
 """
-import logging
+from loguru import logger
 import readline  # When readline module was loaded, input() will use it to provide elaborate line editing and history features.
 
 from os.path import isfile, isdir
-
-## logger
-logger = logging.getLogger()
 
 
 def ask_exisiting_path(intitule_question, exit_answer="", file_or_dir="both"):

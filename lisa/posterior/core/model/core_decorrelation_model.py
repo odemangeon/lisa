@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Decorrelation model module.
 
@@ -7,15 +5,12 @@ TODO:
 - If I want several decorrelation methods beside the Linear Decorrelation and do not want to have to
 modify this module than I will need to implement a decorrelation method manager.
 """
-from logging import getLogger
+from loguru import logger
 
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 from ....tools.miscellaneous import spacestring_like
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 
-
-## Logger object
-logger = getLogger()
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()

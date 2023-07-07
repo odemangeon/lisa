@@ -27,14 +27,11 @@ classes.
 @TODO:
     - UT __Mgr.create_dataset
 """
-from logging import getLogger
+from loguru import logger
 from os.path import exists
 from numpy import logical_xor
 from ....software_parameters import setupfile_dataset_inst
 from ....tools.miscellaneous import get_filename_from_file_path
-
-## Logger
-logger = getLogger()
 
 
 class Manager_Inst_Dataset(object):

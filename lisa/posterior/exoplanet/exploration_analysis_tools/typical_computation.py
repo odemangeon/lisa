@@ -1,9 +1,8 @@
 """Typical secondary parameter computations
 """
+from loguru import logger
+
 from ..model import convert as cv
-
-
-logger = getLogger()
 
 
 def get_secondary_chains(model, chaininterpret, path_file_sec_param, star_kwargs=None, planet_kwargs=None):

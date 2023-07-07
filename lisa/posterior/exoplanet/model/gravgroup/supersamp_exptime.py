@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Supersampling factor and exposure time module.
 """

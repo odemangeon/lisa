@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Core_Prior functions module.
 
@@ -9,15 +7,11 @@ and Manager_Prior.
 Note: Manager_Prior was initially in a separate module but I had to put the class here, because I am
 using the manager in the __init__ of Core_JointPrior_Function.
 """
-from logging import getLogger
+from loguru import logger
 from numpy import logical_xor  # logical_not
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr, MandatoryMethods
 from ....software_parameters import setupfile_prior
-
-
-## logger object
-logger = getLogger()
 
 
 class Metaclass_PriorFunction(MandatoryReadOnlyAttr, MandatoryMethods):

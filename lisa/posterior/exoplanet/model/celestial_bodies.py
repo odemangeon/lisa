@@ -7,17 +7,14 @@ The objective of this module is to define the CelestialBody, Star and Planet cla
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
+
 from numpy import rad2deg, arcsin, sqrt, pi
 
 from ...core.parameter import Parameter
 from ...core.paramcontainer import Core_ParamContainer
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
 from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
-
-
-## Logger object
-logger = getLogger()
 
 
 class CelestialBody(Core_ParamContainer):

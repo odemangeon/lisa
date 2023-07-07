@@ -1,7 +1,7 @@
 """
 Interface class to handle prior in the Parameter class
 """
-from logging import getLogger
+from loguru import logger
 
 from .core_prior import Manager_Prior
 
@@ -9,8 +9,6 @@ from .core_prior import Manager_Prior
 manager = Manager_Prior()
 manager.load_setup()
 
-## Logger object
-logger = getLogger()
 
 ## Joint prior category String
 # joint_prior_cat = "joint"

@@ -5,7 +5,7 @@ Module to create plot specifically for light curve data
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 from numpy import ones_like
 from collections import OrderedDict
 
@@ -20,9 +20,6 @@ from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-# logger
-logger = getLogger()
 
 
 # remove_dict_def_PF = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,

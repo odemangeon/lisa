@@ -7,15 +7,12 @@ Provide toolbox with miscellaneous tools.
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 from os.path import basename, splitext, expanduser
 import os
 
 from .human_machine_interface.QCM import QCM_utilisateur
 from .human_machine_interface.askpath import ask_exisiting_path
-
-## Logger object
-logger = getLogger()
 
 
 def spacestring_like(string):

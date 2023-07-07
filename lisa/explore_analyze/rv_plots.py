@@ -3,7 +3,7 @@ Module to create plots specifically for radial velocity data
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
@@ -15,10 +15,6 @@ from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-# logger
-logger = getLogger()
-
 
 # remove_dict_def_TS = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
 #                       'inst_var': True, 'stellar_var': True, 'GP_residual': True}

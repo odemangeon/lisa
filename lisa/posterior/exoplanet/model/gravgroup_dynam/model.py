@@ -9,7 +9,7 @@ data.
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 
 from .parametrisation_gravgroupdynam import GravGroupDyn_Parametrisation
 from .datasim_creator_rebound import create_datasimulator_rebound
@@ -20,8 +20,6 @@ from ...dataset_and_instrument.rv import RV_inst_cat
 
 # from pdb import set_trace
 
-## Logger object
-logger = getLogger()
 
 ## Manager Limb Darkening models
 mgr_LD = Manager_LD()

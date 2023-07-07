@@ -10,7 +10,7 @@ The objective of this package is to provide tools to read the datafile.
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from re import split
 from collections import OrderedDict
 
@@ -19,9 +19,6 @@ from .database_instlevelsanddataset import DatabaseInstLvlDataset
 from ...tools.miscellaneous import get_filename_from_file_path
 from ...tools.lockable_dict import LockableDict
 from .likelihood.manager_noise_model import Manager_NoiseModel
-
-## Logger object
-logger = getLogger()
 
 mgr_noisemodel = Manager_NoiseModel()
 mgr_noisemodel.load_setup()

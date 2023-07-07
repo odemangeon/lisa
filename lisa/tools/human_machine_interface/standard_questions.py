@@ -2,10 +2,7 @@
 """
 Module with functions allowing to ask standard questions
 """
-import logging
-
-## logger
-logger = logging.getLogger()
+from loguru import logger
 
 
 def Ask4Number(intitule_question, default_value=None):

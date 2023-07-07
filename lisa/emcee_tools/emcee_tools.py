@@ -6,7 +6,7 @@ emcee tools module.
 The objective of this module is to provide a toolbox for the exploitation and visualisation of emcee
 results.
 """
-from logging import getLogger, INFO
+from loguru import logger
 from matplotlib.pyplot import subplots, figure, Subplot, Axes  # , figure, plot, show
 import numpy as np
 from numpy import linspace, median, where, array, argmax, ones, nan, sqrt, argsort  # , unravel_index
@@ -49,10 +49,6 @@ from ..explore_analyze.plot import hist_lnprob
 # from scipy.stats import mode
 
 # from ipdb import set_trace
-
-
-## Logger Object
-logger = getLogger(__name__)
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()

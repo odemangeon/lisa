@@ -10,11 +10,7 @@ The objective of this package is to provides a class for  documented functions.
 @TODO:
     -
 """
-from logging import getLogger
-
-
-## logger object
-logger = getLogger()
+from loguru import logger
 
 
 class DocFunction(object):

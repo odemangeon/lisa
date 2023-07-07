@@ -5,7 +5,7 @@ parametrisation module
 
 The Objective of this file is to define the different type of parametrisation available.
 """
-from logging import getLogger
+from loguru import logger
 from collections import Counter
 
 from numpy import pi
@@ -15,10 +15,6 @@ from ..gravgroup.parametrisation_gravgroup import GravGroup_Parametrisation
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ...dataset_and_instrument.rv import RV_inst_cat
 from ....core.parameter import Parameter
-
-
-## Logger Object
-logger = getLogger()
 
 
 class GravGroupDyn_Parametrisation(GravGroup_Parametrisation):

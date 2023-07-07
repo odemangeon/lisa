@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 core_noise_model module.
 
@@ -14,16 +12,12 @@ jitter parameters or the GP parameters) and provide the way the likelihood is co
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from collections.abc import Iterable
 from numpy import sum as npsum
 from numpy import log as nplog
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr
-
-
-## Logger
-logger = getLogger()
 
 
 class Metaclass_NoiseModel(MandatoryReadOnlyAttr):

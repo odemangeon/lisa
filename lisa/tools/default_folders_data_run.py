@@ -9,15 +9,11 @@ Provide the data_folder and run_folder interfaces Class.
     - Enforce the definition of a object_name property for subclasses of RunFolder and DataFolder
     - The two Classes are exact duplicates of one another. Make one Superclass and twosubclasses
 """
-from logging import getLogger
+from loguru import logger
 
 from .miscellaneous import define_folder_withdefault, look4file_withdeffolder
 from ..software_parameters import input_run_folder
 from ..software_parameters import input_data_folder
-
-
-## Logger object
-logger = getLogger()
 
 
 class RunFolder(object):

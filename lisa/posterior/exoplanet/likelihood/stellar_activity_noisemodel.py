@@ -12,7 +12,7 @@ model the residuals.
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
 from numpy import concatenate, sqrt
@@ -33,9 +33,6 @@ from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.function_from_text_toolbox import FunctionBuilder
 # from ....tools.function_w_doc import DocFunction
 
-
-## logger object
-logger = getLogger()
 
 stelact_GP_noisemodel = "stellar_activity"
 

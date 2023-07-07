@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 manager_model module.
 
@@ -19,12 +17,9 @@ The objective of this module is to manage the subclasses of the Core_Model class
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from ....software_parameters import setupfile_model
 from .core_model import Core_Model
-
-## Logger
-logger = getLogger()
 
 
 class Manager_Model(object):

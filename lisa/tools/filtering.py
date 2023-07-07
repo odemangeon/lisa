@@ -6,13 +6,10 @@
 
 Miscellaneous filtering utilities.
 """
+from loguru import logger
 import numpy as np
 from scipy.signal import medfilt
 from scipy.signal import savgol_filter
-from logging import getLogger
-
-
-logger = getLogger()
 
 
 def MedianFilter(x, kernel_size=5):

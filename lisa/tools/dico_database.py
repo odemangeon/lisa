@@ -10,14 +10,10 @@ The objective of this package is to provides a toolbox to manipulate dico_datase
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from collections import defaultdict
 from copy import deepcopy, copy
 from .lockable_dict import LockableDict
-
-
-## logger object
-logger = getLogger()
 
 
 def init_result(sortby_lvl1key=False, sortby_lvl2key=False, sortby_lvl3key=False,

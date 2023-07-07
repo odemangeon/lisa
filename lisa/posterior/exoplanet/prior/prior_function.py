@@ -2,7 +2,7 @@
 Prior functions module.
 """
 from __future__ import division
-from logging import getLogger
+from loguru import logger
 from textwrap import dedent
 
 from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp  # logical_or
@@ -13,10 +13,6 @@ from ....posterior.exoplanet.model.convert import getecc_plb_4_handk_fast, getec
 from ....posterior.exoplanet.model.convert import gethplus, gethminus, getkplus, getkminus, getaoverr, getaoverr_circular
 from ....tools.function_w_doc import DocFunction
 from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
-
-
-## logger object
-logger = getLogger()
 
 
 #################

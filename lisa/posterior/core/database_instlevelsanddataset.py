@@ -10,17 +10,13 @@ The objective of this package is to provides the class
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 
 from .dataset_and_instrument.dataset import Core_Dataset
 from .instmodel4dataset import Instmodel4DatasetAttr
 from ...tools.lockable_dict import LockableAttr, Lock
 from ...tools.database_with_instrument_level import DatabaseInstLevel
 # from ...tools.miscellaneous import interpret_data_filename
-
-
-## logger object
-logger = getLogger()
 
 
 def check_lockargs(use_samelock=True, lock_dataset=None, lock_database=None):

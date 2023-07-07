@@ -12,14 +12,11 @@ The instrument levels are instrument category, instrument name, instrument model
     - Perhaps had a check existance attribute to the database that will prevent to automatically
       create a new entry when it doesn't exists.
 """
-from logging import getLogger
+from loguru import logger
 
 from .name import Named
 from .dico_database import Nesteddict_wfixellvlnb
 
-
-## Logger object
-logger = getLogger()
 
 __kwargs_names = ["inst_model", "inst_name", "inst_fullcat", "instmod_fullname"]
 

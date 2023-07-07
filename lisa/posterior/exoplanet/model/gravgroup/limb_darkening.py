@@ -9,14 +9,10 @@ available for different transit models.
 @TODO:
 """
 
-from logging import getLogger
+from loguru import logger
 
 from ....core.parameter import Parameter
 from ....core.paramcontainer import Core_ParamContainer
-
-
-## Logger object
-logger = getLogger()
 
 
 class CoreLD(Core_ParamContainer):

@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 datasimulator module.
 
@@ -9,7 +7,7 @@ your datasimulator.
 @TODO:
     - implement boolean argument used_instmodel_only in create_datasimulators
 """
-from logging import getLogger
+from loguru import logger
 from collections import defaultdict, OrderedDict
 from copy import copy
 
@@ -19,9 +17,6 @@ from ..database_instlevelsanddataset import DatabaseInstLvlDataset
 from ..dataset_and_instrument.indicator import IND_inst_cat  # , IND_Instrument
 from ....tools.function_from_text_toolbox import key_param, key_mand_kwargs, key_opt_kwargs
 
-
-## logger object
-logger = getLogger()
 
 ## Root of all the function for the creation of datasimulators
 root_name_func_datsim = "_create_datasimulator"

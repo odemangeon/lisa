@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Gravitational group (gravgroup) module.
 
@@ -23,7 +21,7 @@ It could be:
     - Implement subgravgroups in GravGroup
     - Transform the attributes transit_model, rv_model and ld_model into set and get properties
 """
-from logging import getLogger
+from loguru import logger
 # from os.path import isfile, join
 from string import ascii_lowercase
 from string import ascii_uppercase
@@ -45,9 +43,6 @@ from .....tools.miscellaneous import spacestring_like
 
 
 # from pdb import set_trace
-
-## Logger object
-logger = getLogger()
 
 
 class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarActivityNoiseModelInterface,

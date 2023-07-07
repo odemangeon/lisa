@@ -8,17 +8,13 @@ The objective of this module is to define the Parameter class.
 TODO:
     - Change the value.setter to check if value is within the prior
 """
-from logging import getLogger
+from loguru import logger
 from numbers import Number
 
 from astropy.units import NamedUnit
 
 from lisa.tools.name import Named
 from .prior.parameter_prior import Parameter_Prior
-
-
-## Logger Object
-logger = getLogger()
 
 
 # TODO: Add the possibility to add a description of the parameter.

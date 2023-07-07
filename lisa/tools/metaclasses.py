@@ -7,10 +7,7 @@ Provide the MandatoryReadOnlyAttr, MandatoryMethods and CategorisedType metaclas
 
 @TODO:
 """
-from logging import getLogger
-
-## Logger object
-logger = getLogger()
+from loguru import logger
 
 
 def getinstattr(attrname):

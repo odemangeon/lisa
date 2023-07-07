@@ -6,15 +6,12 @@ Core_ParamContainer module.
 The objective of this module is to define the Core_ParamContainer class wich is an object defined by
 a set of parameters. It could be a Planet or a Star for exoplanet models
 """
-from logging import getLogger
+from loguru import logger
 from collections import OrderedDict
 
 from ...tools.metaclasses import MandatoryReadOnlyAttr
 from ...tools.name import Named  # , check_getname_kwargs
 from .parameter import Parameter
-
-## Logger Object
-logger = getLogger()
 
 
 key_params_fileinfo = "Param names"

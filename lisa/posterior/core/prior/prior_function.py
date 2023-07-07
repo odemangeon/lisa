@@ -29,7 +29,7 @@ Additions to this modules:
 @TODO:
 """
 from __future__ import division
-from logging import getLogger
+from loguru import logger
 
 from textwrap import dedent
 import math as mt
@@ -45,8 +45,6 @@ from ....tools.function_w_doc import DocFunction
 # from .core.prior.manager_prior import Manager_Prior
 
 
-## logger object
-logger = getLogger()
 ## manager object
 # manager = Manager_Prior()
 # manager.load_setup() ## Cannot be done otherwise there is an import loop

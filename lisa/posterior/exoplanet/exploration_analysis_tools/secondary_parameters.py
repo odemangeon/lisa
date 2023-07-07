@@ -1,5 +1,6 @@
 """Module to compute the secondary parameters chains.
 """
+from loguru import logger
 from collections import Counter
 from numbers import Number
 from numpy import ndarray, stack, arcsin, sqrt, rad2deg, random, pi, ones
@@ -8,10 +9,6 @@ from ..model import convert as cv
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.human_machine_interface.standard_questions import Ask4Number, Ask4PositiveNumber
 from ....tools.chain_interpreter import ChainsInterpret
-from logging import getLogger
-
-
-logger = getLogger()
 
 
 def get_secondary_chains(chainI_main, sec_params, model):

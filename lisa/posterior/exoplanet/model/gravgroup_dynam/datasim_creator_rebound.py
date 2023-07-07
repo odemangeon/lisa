@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Datasim creator rebound module.
 
@@ -7,11 +5,12 @@ TODO:
 - I am change get_ootvar by get_instvar but just the name of the function the inputs/outputs are not
 correct.
 """
+from loguru import logger
+
 import numpy as np
 
 import rebound
 
-from logging import getLogger
 from textwrap import dedent
 from collections import defaultdict
 
@@ -34,9 +33,6 @@ from .....tools.function_from_text_toolbox import (init_arglist_paramnb_argument
                                                    par_vec_name, add_argskwargs_argument,
                                                    add_nonparam_argument)
 from .....tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-
-## Logger object
-logger = getLogger()
 
 
 # TODO: Implement Np parametrisation.

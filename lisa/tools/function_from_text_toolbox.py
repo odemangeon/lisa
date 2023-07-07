@@ -11,13 +11,12 @@ from text.
 @TODO:
     -
 """
+from loguru import logger
 from collections.abc import Iterable
 from collections import OrderedDict
 from copy import copy
-from logging import getLogger
 
 from ..posterior.core.model import par_vec_name
-logger = getLogger()
 
 ## Keys for the parameter and the keywords arguments in the arg_list dictionary
 key_param = "param"

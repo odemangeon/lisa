@@ -13,7 +13,7 @@ So all the code handling this configuration is untested and probably bugged at t
 - I am not sure that some of the comments are still valid. So I need to check if this comment are still valid or not.
 Search for TODO_CHECK_THIS_COMMENT which I put in front each one of these comments.
 """
-from logging import getLogger
+from loguru import logger
 from textwrap import dedent
 # from copy import deepcopy, copy
 from math import acos, degrees, sqrt
@@ -54,10 +54,6 @@ from ....core.model.datasimulator_timeseries_toolbox import add_time_argument, t
 from ....core.model.polynomial_model import get_polymodel
 from .....tools.function_from_text_toolbox import FunctionBuilder  # , argskwargs
 from .....posterior.exoplanet.model.convert import getaoverr, getomega_fast, getomega_deg_fast
-
-
-## Logger object
-logger = getLogger()
 
 
 template_return = """

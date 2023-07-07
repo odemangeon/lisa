@@ -13,7 +13,7 @@ for the GravGroup class
     - self.stars is used here but it's only define in GravGroup that makes the code a bit difficult to
     understand and follow. Is there a solution ? same thing for self.paramfile4instcat and self._ext_plonly
 """
-from logging import getLogger
+from loguru import logger
 from textwrap import dedent
 from collections import OrderedDict
 from pprint import pformat
@@ -30,9 +30,6 @@ from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_I
 from ....core.model.core_instcat_model import Core_InstCat_Model
 from .....tools.miscellaneous import spacestring_like
 
-
-## Logger object
-logger = getLogger()
 
 mgr_LD = Manager_LD()
 mgr_inst_dst = Manager_Inst_Dataset()

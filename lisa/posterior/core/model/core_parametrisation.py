@@ -1,14 +1,9 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 parametrisation module
 
 The Objective of this module is to provide the Core_Parametrisation class.
 """
-from logging import getLogger
-
-## Logger Object
-logger = getLogger()
+from loguru import logger
 
 
 class Core_Parametrisation(object):

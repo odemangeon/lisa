@@ -7,17 +7,13 @@ The objective of this package is to provides the LC_Instrument and LC_Dataset cl
 
 @TODO:
 """
-import logging
-
+from loguru import logger
 from ...core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from ...core.dataset_and_instrument.instrument import Core_Instrument
 # from ...core.parameter import Parameter
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
 from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
 
-
-## Logger
-logger = logging.getLogger()
 
 ## LC instrument category
 LC_inst_cat = "LC"

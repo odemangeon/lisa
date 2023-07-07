@@ -10,14 +10,10 @@ The objective of this package is to provides the class LockableDict
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from collections.abc import MutableMapping
 from collections import OrderedDict
 from copy import copy
-
-
-## logger object
-logger = getLogger()
 
 func_name_getinstance_lock = "get_Lock_instance"
 

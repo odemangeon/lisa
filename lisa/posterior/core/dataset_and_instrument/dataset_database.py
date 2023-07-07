@@ -8,7 +8,7 @@ The DatasetDatabase class define a database to store and query the datasets cons
 The DatasetDbAttr class is an interface class created to provide the dataset_db property to the
 lisa.posterior.core.posterior.Posterior class. This property is a DatasetDatabase instance.
 """
-from logging import getLogger
+from loguru import logger
 # from os.path import join, isfile
 # from re import split
 
@@ -19,9 +19,6 @@ from ....tools.dico_database import Nesteddict_wfixellvlnb, init_result, add_obj
 from ....tools.database_with_instrument_level import check_instfullcat
 from ....tools.default_folders_data_run import RunFolder, DataFolder
 # from ....tools.miscellaneous import interpret_data_filename
-
-## Logger object
-logger = getLogger()
 
 manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()

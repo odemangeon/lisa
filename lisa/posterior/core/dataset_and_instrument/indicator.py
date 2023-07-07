@@ -7,7 +7,7 @@ The objective of this package is to provides the IND_Instrument and IND_Dataset 
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 
 from .dataset import Core_DatasetTimeSeries
 from .instrument import Core_Instrument
@@ -15,9 +15,6 @@ from .instrument import Core_Instrument
 # from ..model.polynomial_model import get_dico_config, set_dico_config
 # from ..model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
 
-
-## Logger
-logger = getLogger()
 
 ## IND instrument category
 IND_inst_cat = "IND"

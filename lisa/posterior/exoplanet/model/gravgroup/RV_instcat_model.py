@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 RV_instcat_model module.
 
@@ -13,7 +11,7 @@ for the GravGroup class.
     - self.stars is used here but it's only define in GravGroup that makes the code a bit difficult to
     understand and follow. Is there a solution ? same thing for self.paramfile4instcat
 """
-from logging import getLogger
+from loguru import logger
 from textwrap import dedent
 from pprint import pformat
 # from os.path import basename
@@ -29,9 +27,6 @@ from ....core.model.core_instcat_model import Core_InstCat_Model
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .....tools.miscellaneous import spacestring_like
 
-
-## Logger object
-logger = getLogger()
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()

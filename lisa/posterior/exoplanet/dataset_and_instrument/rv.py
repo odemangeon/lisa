@@ -7,7 +7,7 @@ The objective of this package is to provides the RV_Instrument and RV_Dataset cl
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 
 from ...core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from ...core.dataset_and_instrument.instrument import Core_Instrument
@@ -15,9 +15,6 @@ from ...core.dataset_and_instrument.instrument import Core_Instrument
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
 from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
 
-
-## Logger
-logger = getLogger()
 
 ## RV instrument category
 RV_inst_cat = "RV"

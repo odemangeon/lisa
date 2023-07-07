@@ -12,7 +12,7 @@ to store information about the isntrument used to measurement the data stored in
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 from numpy import logical_xor
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
@@ -24,9 +24,6 @@ from ....tools.name import Named
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 # from ....tools.miscellaneous import spacestring_like
 
-
-## Logger object
-logger = getLogger()
 
 ## Instrument manager
 manager_inst = Manager_Inst_Dataset()

@@ -18,6 +18,8 @@ physical values
     include the call to SI parameters from scipy
     for now not done because I didn't find all the values I wanted.
 """
+from loguru import logger
+
 import numpy as np
 import math
 # import math
@@ -27,14 +29,11 @@ import math
 
 import astropy.constants as cst
 import astropy.units as uu
-from logging import getLogger
 from scipy.optimize import fsolve
 
 # from IPython import get_ipython
 from numpy import pi
 
-
-logger = getLogger()
 
 # http://maia.usno.navy.mil/NSFA/IAU2009_consts.html  SI
 spyr = 3.155815e7

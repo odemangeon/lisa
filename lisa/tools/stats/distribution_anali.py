@@ -17,14 +17,11 @@ if centre is given it is used for the limits otherwise the rob_mon is used and r
 @version 1.0
 @todo:
 """
-from logging import getLogger
+from loguru import logger
 from lisa.tools.stats.loc_scale_estimator import rob_mom
 import numpy as np
 from statsmodels.stats.weightstats import DescrStatsW
 from copy import copy
-
-
-logger = getLogger()
 
 
 def getconfi(distri, level, weights=None, centre=None, l_param_name=None):

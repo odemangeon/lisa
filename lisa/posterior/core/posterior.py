@@ -20,7 +20,7 @@ The objective of this package is to provides the core Posterior class.
     - add_model, rm_model
     - get_lnprior, get_lnlike, get_lnpost
 """
-from logging import getLogger
+from loguru import logger
 from numpy import inf, isfinite, ones_like
 from dill import dump, load
 from os.path import join
@@ -42,9 +42,6 @@ from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
 from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-
-
-logger = getLogger()
 
 manager_model = Manager_Model()
 manager_model.load_setup()

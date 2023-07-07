@@ -11,16 +11,12 @@ The objective of this package is to provides the core Instmodel4Dataset class.
 @TODO:
     -
 """
-from logging import getLogger
-# from collections import defaultdict
+from loguru import logger
 from copy import copy
 
 from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ...tools.dico_database import init_result, add_obj_in_result
 from ...tools.lockable_dict import LockableDict, Lock
-
-## Logger
-logger = getLogger()
 
 ## Instrument and Dataset manager
 mgr_inst_dst = Manager_Inst_Dataset()

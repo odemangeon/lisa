@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 noise_model module.
 
@@ -11,7 +9,7 @@ The objective of this module is to define the Core_NoiseModel Class and the stan
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from numpy import sum as npsum
 from numpy import log as nplog
 from numpy import pi
@@ -20,9 +18,6 @@ from math import exp
 from .core_noise_model import GaussianNoiseModel
 from ...core.parameter import Parameter
 
-
-## Logger
-logger = getLogger()
 
 jitter_name = "jitter"
 

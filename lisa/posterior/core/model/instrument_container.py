@@ -1,12 +1,10 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 instrument container module.
 
 The objective of this module is to provide the interface InstrumentContainerInterface. It upgrades
 a ParamContainerDatabase with the possibility to handle an instruments database.
 """
-from logging import getLogger
+from loguru import logger
 from pprint import pformat
 
 from .paramcontainers_database import SpecificParamContainerCategory
@@ -15,9 +13,6 @@ from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dat
 from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args
 from ....tools.miscellaneous import spacestring_like
 
-
-## Logger object
-logger = getLogger()
 
 mgr_inst_dst = Manager_Inst_Dataset()
 

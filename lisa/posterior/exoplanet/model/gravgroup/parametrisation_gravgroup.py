@@ -5,17 +5,13 @@ parametrisation module
 
 The Objective of this file is to define the different type of parametrisation available.
 """
-from logging import getLogger
+from loguru import logger
 
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ...dataset_and_instrument.rv import RV_inst_cat
 from ....core.model.core_parametrisation import Core_Parametrisation
 from ....core.dataset_and_instrument.indicator import IND_inst_cat
 from ....core.parameter import Parameter
-
-
-## Logger Object
-logger = getLogger()
 
 
 # TODO: At one point, it might be usefull to make a Core_Parametrisation class

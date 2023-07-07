@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 core_model module.
 
@@ -12,7 +10,7 @@ The objective of this package is to provides the core Core_Model class.
     - See if it's possible to put or at least partially put get_paramfile_section,
     update_paramfile_info, load_config in paramcontainers_database
 """
-from logging import getLogger
+from loguru import logger
 from os import getcwd
 from os.path import isfile, join, basename
 from collections import defaultdict  # OrderedDict
@@ -43,9 +41,6 @@ from ....tools.miscellaneous import spacestring_like
 
 # from ....tools.miscellaneous import spacestring_like
 
-
-## Logger
-logger = getLogger()
 
 manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()

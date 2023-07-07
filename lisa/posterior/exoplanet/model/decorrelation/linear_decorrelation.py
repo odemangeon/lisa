@@ -3,17 +3,13 @@
 """
 Decorrelation model module.
 """
+from loguru import logger
 import numpy as np
-from logging import getLogger
 from scipy.interpolate import interp1d
 
 from ....core.model.core_decorrelation_model import Core_DecorrelationModel
 from ....core.parameter import Parameter
 from .....tools.name import check_name
-
-
-## Logger object
-logger = getLogger()
 
 
 def scale_and_interpolate(t, x, scale=None):

@@ -11,17 +11,13 @@ The objective of this module is to define the class DatabaseFunc.
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr, DatabaseInstLvlDataset
 from ...tools.name import Named
 from ...tools.lockable_dict import LockableDict
 # from ...tools.miscellaneous import interpret_data_filename
-
-
-## logger object
-logger = getLogger()
 
 
 class DatabaseFunc(Named, Instmodel4DatasetAttr, DstDbLockAttr):

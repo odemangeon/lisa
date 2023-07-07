@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 core_instcat_model module.
 
@@ -16,10 +14,10 @@ methods and attributes to model a data of a given insttument category.
     be made indicator by indicator
     - The load_config_decorrelation
 """
+from loguru import logger
 from textwrap import dedent
 from collections.abc import Iterable
 from os import getcwd, chdir
-from logging import getLogger
 from pprint import pformat
 from os.path import basename
 
@@ -34,10 +32,6 @@ from ....tools.miscellaneous import spacestring_like
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
-
-
-## Logger object
-logger = getLogger()
 
 
 class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):

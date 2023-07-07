@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 model_prior module.
 
@@ -11,7 +9,7 @@ The objective of this module is to define the Model_Prior class which will gener
 @TODO:
     -
 """
-from logging import getLogger
+from loguru import logger
 from collections import OrderedDict
 from textwrap import dedent
 
@@ -22,8 +20,6 @@ from .prior_docfunc import PriorDocFunc
 from ....tools.miscellaneous import spacestring_like
 
 
-## logger object
-logger = getLogger()
 ## manager object
 manager = Manager_Prior()
 manager.load_setup()

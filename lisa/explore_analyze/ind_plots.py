@@ -3,7 +3,7 @@ Module to create plots specifically for radial velocity data
 
 @TODO:
 """
-from logging import getLogger
+from loguru import logger
 from collections import OrderedDict
 from copy import copy
 
@@ -17,9 +17,6 @@ from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-# logger
-logger = getLogger()
 
 
 # remove_dict_def_TS = {'GP_dataNmodel': True, 'poly_inst_var': True, 'poly_sys_var': True, 'GP_residual': True}

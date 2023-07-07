@@ -1,6 +1,6 @@
+from loguru import logger
 from copy import copy
 from numpy import zeros_like, sqrt
-from logging import getLogger
 from collections import defaultdict, OrderedDict
 
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
@@ -20,9 +20,6 @@ mgr_noisemodel.load_setup()
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
-
-# logger
-logger = getLogger()
 
 
 def get_key_compute_model(key_model):

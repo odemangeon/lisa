@@ -9,11 +9,8 @@ Provide the Name interface Class.
     - See if it's not better to do a try catch in hasnameprefix instead of using the hasattr
       function as in default_folders_data_run.
 """
-from logging import getLogger
+from loguru import logger
 from copy import deepcopy
-
-## Logger object
-logger = getLogger()
 
 
 def check_name_for_prohibitedchar(name, prohibitedchars="", verbose=0):

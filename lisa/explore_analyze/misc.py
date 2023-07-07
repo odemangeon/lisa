@@ -1,4 +1,4 @@
-from logging import getLogger
+from loguru import logger
 from os import getcwd, makedirs
 from os.path import join
 from copy import deepcopy, copy
@@ -19,9 +19,6 @@ default_figheight_factor = 0.75
 AandA_fontsize = 8
 
 key_whole = Core_Model.key_whole
-
-# logger
-logger = getLogger()
 
 # managers
 mgr_noisemodel = Manager_NoiseModel()

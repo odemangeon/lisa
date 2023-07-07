@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 paramcontainer_database module.
 
@@ -10,13 +8,10 @@ The objective of this module is to manage the Paramcontainers database.
 @TODO:
     - update nb_of_paramcontainers to properly take into account the instruments
 """
-from logging import getLogger
+from loguru import logger
 from collections import OrderedDict
 
 from ..paramcontainer import Core_ParamContainer
-
-## Logger
-logger = getLogger()
 
 
 class ParamContainerDatabase(object):

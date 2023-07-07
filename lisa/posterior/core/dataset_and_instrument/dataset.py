@@ -6,9 +6,9 @@ dataset module.
 The objective of this package is to provides the core Dataset class to store
 and manipulate the data.
 """
+from loguru import logger
 import matplotlib.pyplot as pl
 
-from logging import getLogger
 from sys import exc_info
 from pandas import read_table
 from numpy import asarray, percentile
@@ -17,10 +17,6 @@ from copy import copy
 from ....tools.miscellaneous import get_filename_from_file_path
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.name import check_name_code
-
-
-## Logger
-logger = getLogger()
 
 
 class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
