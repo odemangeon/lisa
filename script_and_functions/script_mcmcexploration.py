@@ -3,7 +3,7 @@ Script template to perform an MCMC exploration.
 
 @TODO:
 """
-from logging import DEBUG, INFO
+from loguru import logger
 from math import ceil
 from os import getcwd
 from os.path import join
@@ -18,7 +18,6 @@ from numpy import zeros_like
 
 import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
-import lisa.tools.mylogger as ml
 from lisa.explore_analyze.misc import get_def_output_folders
 
 ## Definition of the parameters
@@ -54,9 +53,8 @@ init_distrib = {}
 load_from_pickle = False
 extension_analysis = ""
 
-## logger
-logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
+# logger
+sinkid_file_explore = logger.add(join(output_folders['log'], 'exploration.log'), level='DEBUG')
 
 logger.info("########\nMCMC EXPLORATION")
 

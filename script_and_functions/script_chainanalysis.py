@@ -5,7 +5,7 @@ Script template to analysis the chains obtained during the MCMC exploration
 """
 import gc
 
-from logging import DEBUG, INFO
+from loguru import logger
 from os import getcwd
 from os.path import join
 from unittest import TestCase
@@ -27,7 +27,6 @@ import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.exoplanet.exploration_analysis_tools.secondary_parameters as sp
 import lisa.tools.stats.distribution_anali as da
-import lisa.tools.mylogger as ml
 
 from lisa.tools.chain_interpreter import ChainsInterpret
 from lisa.explore_analyze.misc import get_def_output_folders
@@ -183,8 +182,9 @@ only_bestfit_bic = True
 ##########################
 
 ## logger
-logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
+if 'sinkid_file_explore' in globals():
+    logger.remove(sinkid_file_explore)
+sinkid_file_analyze = logger.add(join(output_folders['log'], 'analyze.log'), level='DEBUG')
 
 # Set matplotlib rcparams to the default value to avoid issues with plots
 matplotlib.rcParams.update(matplotlib.rcParamsDefault)

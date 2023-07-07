@@ -3,20 +3,19 @@ Script to produce pretty plots of IND time series
 
 @TODO:
 """
+from loguru import logger
+
 import os
 import matplotlib.pyplot as pl
-import os
 import dill
 
 # import matplotlib
 
 from os import getcwd
 from os.path import join
-from logging import DEBUG, INFO
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
-import lisa.tools.mylogger as ml
 
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_IND_TSNGLSP_plots
@@ -54,11 +53,16 @@ output_folders = get_def_output_folders(run_folder=run_folder)
 
 extension_analysis = "_initrun_median"
 
+#########
+## logger
+if 'sinkid_file_explore' in globals():
+    logger.remove(sinkid_file_explore)
+if 'sinkid_file_analyze' in globals():
+    logger.remove(sinkid_file_analyze)
+sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
+
 ################################
 ## Load df_fittedval if required
-logger = ml.init_logger(with_ch=True, with_fh=True, logger_lvl=DEBUG, ch_lvl=INFO,
-                        fh_lvl=INFO, fh_file=join(output_folders["log"], f"{obj_name}.log"))
-
 if "df_fittedval" not in globals():
     logger.info("Loading df_fittedval from pickle")
     fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(obj_name, extension_analysis=extension_analysis,
