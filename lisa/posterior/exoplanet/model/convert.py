@@ -1439,6 +1439,23 @@ def getPhioffset_kelpthermal(hotspot_offset):
     """
     return np.rad2deg(hotspot_offset)
 
+def getPhioffset_gaussian(Phi):
+    """Compute the Eclipse depth in the sincos phase curve model 
+
+    The units of A, Foffset must be the same and Frat will have the same unit
+
+    Arguments
+    ---------
+    Phi     : np.array
+        Phase bright spot offset of the gaussian function (compared to the Tsc) in radians
+
+    Return
+    ------
+    Phioffset   : np.array  
+        Bright spot offset in degrees
+    """
+    return np.rad2deg(Phi)
+
 
 # if __name__ == "__main__":
 #     ipython = get_ipython()
