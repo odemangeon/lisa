@@ -184,7 +184,9 @@ only_bestfit_bic = True
 ## logger
 if 'sinkid_file_explore' in globals():
     logger.remove(sinkid_file_explore)
-sinkid_file_analyze = logger.add(join(output_folders['log'], 'analyze.log'), level='DEBUG')
+    del sinkid_file_explore
+if 'sinkid_file_analyze' not in globals():
+    sinkid_file_analyze = logger.add(join(output_folders['log'], 'analyze.log'), level='DEBUG')
 
 # Set matplotlib rcparams to the default value to avoid issues with plots
 matplotlib.rcParams.update(matplotlib.rcParamsDefault)

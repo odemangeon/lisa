@@ -20,8 +20,11 @@ import lisa.posterior.core.posterior as cpost
 import lisa.emcee_tools.emcee_tools as et
 from lisa.explore_analyze.misc import get_def_output_folders
 
+###############################
 ## Definition of the parameters
+###############################
 obj_name = "target_name"  # Change
+
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
 nb_planet = 1
@@ -53,8 +56,13 @@ init_distrib = {}
 load_from_pickle = False
 extension_analysis = ""
 
-# logger
-sinkid_file_explore = logger.add(join(output_folders['log'], 'exploration.log'), level='DEBUG')
+##########################
+## Execution of the script
+##########################
+
+## logger
+if 'sinkid_file_explore' not in globals():
+    sinkid_file_explore = logger.add(join(output_folders['log'], 'exploration.log'), level='DEBUG')
 
 logger.info("########\nMCMC EXPLORATION")
 

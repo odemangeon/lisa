@@ -57,9 +57,12 @@ extension_analysis = "_initrun_median"
 ## logger
 if 'sinkid_file_explore' in globals():
     logger.remove(sinkid_file_explore)
+    del sinkid_file_explore
 if 'sinkid_file_analyze' in globals():
     logger.remove(sinkid_file_analyze)
-sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
+    del sinkid_file_analyze
+if 'sinkid_file_plot' not in globals():
+    sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
 
 ################################
 ## Load df_fittedval if required
