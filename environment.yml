@@ -33,6 +33,7 @@ dependencies:
   - bidict
   - docutils
   - mendeleev
+  - loguru
   - pip
   - pip:
     - radvel
