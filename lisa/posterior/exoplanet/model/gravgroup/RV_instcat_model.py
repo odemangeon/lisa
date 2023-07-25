@@ -158,9 +158,18 @@ class RV_InstCat_Model(Core_InstCat_Model):
 
         # Check and load the polynomial models
         if "polynomial_model" in dico_config:
+            # Check that all the keys in dico_config["polynomial_model"] are valid (star namnes or LC instruments name)
+            l_valid_keys = list(self.model_instance.stars.keys())
+            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+                l_valid_keys.append(instmod_obj.full_name)
+            if len(set(dico_config["polynomial_model"].keys()) - set(l_valid_keys)) > 0:
+                raise ValueError(f"Some keys of the polynomial_model dictionary are not valid: {set(dico_config['polynomial_model'].keys()) - set(l_valid_keys)}.\n"
+                                 f"Valid keys are star short names or RV instrument model full names ({l_valid_keys})")
+            # Load polynomial model for star if provided.
             for star_name, star in self.model_instance.stars.items():
                 if star_name in dico_config["polynomial_model"]:
                     star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config["polynomial_model"][star_name])
+            # Load polynomial model for RV instruments if provided.
             for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
                 if instmod_obj.full_name in dico_config["polynomial_model"]:
                     instmod_obj.set_dico_config_polymodel(dico_config=dico_config["polynomial_model"][instmod_obj.full_name])  # Defined in lisa.posterior.exoplanet.dataset_and_instrument.rv.Instrument_RV and accessed through lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model.__getattr__

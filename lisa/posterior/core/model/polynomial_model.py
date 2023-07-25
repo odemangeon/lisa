@@ -237,6 +237,10 @@ def apply_polymodel_parametrisation(param_container, name_coeff_const, func_para
 def get_dico_config(param_container, prefix=None, notexist_ok=False, return_None_if_notexist=False):
     """Get the dictionary that configures the polynomial model for the parameter container
 
+    This dictionary is set has an attribute of the param_container instance. Its name is defined via the function
+    create_attributename. If the attribute is not present, the function will either raise an error or return the
+    default dictionary.
+
     Arguments
     ---------
     param_container : ParamContainer
@@ -280,7 +284,10 @@ def create_attributename(prefix=None):
 
 
 def set_dico_config(param_container, prefix=None, dico_config=None):
-    """Get the dictionary that configures the polynomial model for the parameter container
+    """Set the dictionary that configures the polynomial model for the parameter container
+
+    This dictionary is set has an attribute of the param_container instance. Its name is defined via the function
+    create_attributename.
 
     Arguments
     ---------
@@ -291,14 +298,18 @@ def set_dico_config(param_container, prefix=None, dico_config=None):
     dico_config     : dict
         Updates that you might want to do to the dico that configure the polynomial model
     """
+    # Get the current configuration or initialise it to the default one.
     current_dico_config = get_dico_config(param_container=param_container, prefix=prefix, notexist_ok=True)
     if current_dico_config is None:
         current_dico_config = default_dico.copy()
+    # If a new config is provide update the current configuration with the new one
     if dico_config is not None:
         current_dico_config.update(dico_config)
+    # Check that the necessary parameters are provided and have correct values
     assert isinstance(current_dico_config["order"], int) and (current_dico_config["order"] >= 0)
     assert isinstance(current_dico_config["do"], bool)
     if current_dico_config["tref"] is not None:
         assert isinstance(current_dico_config["tref"], Number)
+    # Set the dictionary as an attribute of the param_container instance
     attribute_name = create_attributename(prefix=prefix)
     setattr(param_container, attribute_name, current_dico_config)
