@@ -11,7 +11,6 @@ Rely on python3.7. Python package dependencies:
 - astropy
 - scipy
 - rebound
-- PIL*
 - batman
 - numpy
 - dill
@@ -25,6 +24,8 @@ Rely on python3.7. Python package dependencies:
 - tqdm
 - PyAstronomy
 - statsmodels
+- loguru
+- pyGLS
 
 *indicates packages that are not mandatory or not fully supported
 
