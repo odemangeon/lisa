@@ -2468,7 +2468,7 @@ def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
                     arrowprops=dict(arrowstyle="-|>", color=color2use, **kwargs))
 
 
-def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iterations_indexes=None, kwargs_corner=None):
+def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, sampling=None, iterations_indexes=None, kwargs_corner=None):
     """Make a corner plot with only the parameters specified.
 
     Arguments
@@ -2481,8 +2481,10 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iteration
         list of valid walkers
     l_burnin       : Iterable of Int
         List of indexes of the first iteration to consider for each walker
+    sampling        : Int
+        If not know this is using in order to reduce the weight of the plot by only printing one every sampling iteration.
     iterations_indexes : dict
-        If provided, it superseeds l_walker and l_burnin and this dictionary specifies the iterations
+        If provided, it superseeds l_walker, l_burnin and sampling and this dictionary specifies the iterations
         that needs to be considered. The format of this dictionary is:
         first key: 'indexes_walker', values: Iterable giving the index of the walker for each iteration to consider
         second key: 'indexes_iter_walker', values: Iterable giving the index of the iteration within the walker specified by 'indexes_walker' for each iteration to consider
@@ -2497,7 +2499,14 @@ def corner(chaininterpret, l_param_name, l_walker=None, l_burnin=None, iteration
             clean_flat_chains = get_clean_flatchain(chaininterpret[..., l_param_name], l_walker=l_walker, l_burnin=l_burnin, iterations_indexes=iterations_indexes)
         else:
             clean_flat_chains = chaininterpret[..., l_param_name]
-    corner_dfm(clean_flat_chains, labels=l_param_name, **kwargs_corner)
+    kwargs_corner_copy = kwargs_corner.copy()
+    labels = kwargs_corner_copy.pop("labels", None)
+    if labels is None:
+        labels = l_param_name
+    if (sampling is None) or (iterations_indexes is not None):
+        corner_dfm(clean_flat_chains, labels=labels, **kwargs_corner_copy)
+    else:
+        corner_dfm(clean_flat_chains[::sampling], labels=labels, **kwargs_corner_copy)
 
 
 def compute_bic(post_instance, df_fittedval, chaininterpret, l_walker=None, l_burnin=None, only_bestfit_bic=False, datasim_kwargs={}):
