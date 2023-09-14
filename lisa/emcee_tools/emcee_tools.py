@@ -216,7 +216,7 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
     if logger is None:
         tqdm_out = None
     else:
-        tqdm_out = TqdmToLogger(logger, level=INFO)
+        tqdm_out = TqdmToLogger(logger)
     with tqdm(total=nsteps, file=tqdm_out) as pbar:
         previous_i = -1
         for i, result in enumerate(sampler.sample(p0, iterations=nsteps, storechain=True)):
