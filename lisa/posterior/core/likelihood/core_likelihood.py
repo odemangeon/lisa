@@ -155,6 +155,7 @@ class LikelihoodCreator(object):
             func_builder.add_variable_to_ldict(variable_name="l_idx_param_dtsim", variable_content=l_idx_param_dtsim, function_shortname=func_shortname, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name="datasim_func_alldst", variable_content=datasim_all_dst_doc_func.function, function_shortname=func_shortname, exist_ok=False)
             func_builder.add_to_body_text(text=f"{tab}sim_data = datasim_func_alldst({par_vec_name}[l_idx_param_dtsim]{additional_args_text})\n", function_shortname=func_shortname)
+            # func_builder.add_to_body_text(text=f"{tab}import numpy as np\n{tab}for data in sim_data:\n{tab}    print(np.isfinite(data).all())\n{tab}import pdb; pdb.set_trace()\n", function_shortname=func_shortname)
 
         # Create the dataset_kwargs dictionary
         dataset_kwargs = defaultdict(dict)
