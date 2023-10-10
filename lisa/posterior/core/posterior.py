@@ -223,9 +223,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                 with open(file_path, 'x') as fdatasets:
                     header = """
                     # Datasets file: List below all the files you want to use for this run
-                    # The first columns is the path to a dataset file
-                    # The second columns is the name of the instrument model used for this dataset
-                    # The third column is the noise model.
+                    # Provide one dataset file per line
                     """
                     header = dedent(header[1:-1])
                     fdatasets.write(header)
