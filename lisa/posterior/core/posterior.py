@@ -181,8 +181,20 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         """Return the model."""
         return self.__model
 
-    def load_datasetsfile(self, path_datasets_file):
+    def load_datasetsfile(self, path_datasets_file=None):
+        """Function load the datasets file
+
+        The datasets file lists the dataset to model.
+
+        Arguments
+        ---------
+        path_datasets_file: None or str
+            If None the function will offer the possibility to create a default datasets file
+            It str, should be the path to an existing datasets file.
+        """
+        # Look for the datasets file to check if it exists
         file_path = self.look4runfile(file_path=path_datasets_file)
+        # If doesn't exists offer the possibility to create a default one
         if file_path is None:
             logger.info("{} doesn't exist.".format(path_datasets_file))
             answers_list_yn = ['y', 'n']
@@ -218,7 +230,9 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                     header = dedent(header[1:-1])
                     fdatasets.write(header)
                 input("Modifiy the dataset file")
+        # Load the datasets file into the datasetsfile database
         self.datasetsfile_db.load(file_path)
+        # Add the datasets in the dataset database
         self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
 
     def define_model(self, category, load_setup=False, **kwargs):
