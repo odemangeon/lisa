@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 posterior module.
 
@@ -24,9 +22,12 @@ from loguru import logger
 from numpy import inf, isfinite, ones_like
 from dill import dump, load
 from os.path import join
+from os import getcwd, chdir
 from textwrap import dedent
-from copy import copy
+from copy import copy, deepcopy
+from pprint import pformat
 
+from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from .instmodel4dataset import Instmodel4DatasetAttr
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
@@ -41,12 +42,17 @@ from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
+from ...tools.human_machine_interface.standard_questions import ask4CreationDefaultFile
 from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
+from ...tools.miscellaneous import spacestring_like, get_filename_from_file_path
+
 
 manager_model = Manager_Model()
 manager_model.load_setup()
 manager_noisemodel = Manager_NoiseModel()
 manager_noisemodel.load_setup()
+manager_inst_dst = Manager_Inst_Dataset()
+manager_inst_dst.load_setup()
 
 alldtst_key = DatabaseFunc._alldtst_key
 
@@ -123,8 +129,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         # Initialize instmodel4dataset attribute and assign it dataset_lock
         Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())
         # Initialize datasetfile attribute and assign it instmodel4dataset,
-        DatasetsFileDbAttr.__init__(self, object_name=self.object_name,
-                                    instmodel4dataset=self.instmodel4dataset)
+        DatasetsFileDbAttr.__init__(self, object_name=self.object_name, lock=self.get_dataset_Lock_instance())
         # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
         # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
@@ -197,41 +202,72 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         # If doesn't exists offer the possibility to create a default one
         if file_path is None:
             logger.info("{} doesn't exist.".format(path_datasets_file))
-            answers_list_yn = ['y', 'n']
-            question = ("File {} doesn't exist. Do you want to create it ? {}\n"
-                        "".format(path_datasets_file, answers_list_yn))
-            reply = QCM_utilisateur(question, answers_list_yn)
-            if reply == "y":
-
-                answers_list_create = ["absolute", "error"]
-                question = ("File {} doesn't exists. Do you want to\nCreate it at the 'absolute' "
-                            "path: {}".format(path_datasets_file, path_datasets_file))
-                if self.hasrun_folder:
-                    answers_list_create.append("run_folder")
-                    run_folder_path = join(self.run_folder, path_datasets_file)
-                    question += "\nCreate it at the 'run_folder' path: {}".format(run_folder_path)
-                question += ("\nNot create it and raise an 'error' ? {}\n"
-                             "".format(answers_list_create))
-                reply2 = QCM_utilisateur(question, answers_list_create)
-                if reply2 == 'absolute':
-                    file_path = path_datasets_file
-                elif reply2 == "run_folder":
-                    file_path = join(self.run_folder, path_datasets_file)
-                else:
-                    raise ValueError("File {} doesn't exist and the user doesn't want to create it."
-                                     "".format(path_datasets_file))
-                with open(file_path, 'x') as fdatasets:
-                    header = """
-                    # Datasets file: List below all the files you want to use for this run
-                    # Provide one dataset file per line
-                    """
-                    header = dedent(header[1:-1])
-                    fdatasets.write(header)
-                input("Modifiy the dataset file")
+            file_path = ask4CreationDefaultFile(path_file=path_datasets_file, default_file_content="# Datasets file: List below all the files you want to use for this run\n# Provide one dataset file per line\n",
+                                                default_folder=self.run_folder)
+            input("Modifiy the dataset file")
         # Load the datasets file into the datasetsfile database
         self.datasetsfile_db.load(file_path)
         # Add the datasets in the dataset database
-        self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.dataset_filepaths)
+        self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.l_dataset_file_path)
+
+    def load_instrumentmodelsfile(self, path_instrument_models_file=None):
+        """Function load the instrument models file
+
+        The instrument models file define which datasets will be modelled by which instrument model
+
+        Arguments
+        ---------
+        path_instrument_models_file: None or str
+            If None the function will offer the possibility to create a default instrument models file
+            It str, should be the path to an existing datasets file.
+        """
+        # Look for the instrument models file to check if it exists
+        file_path = self.look4runfile(file_path=path_instrument_models_file)
+        # If doesn't exists offer the possibility to create a default one
+        if file_path is None:
+            logger.info("{} doesn't exist.".format(path_instrument_models_file))
+            # Create the text for the file
+            default_file_content = "# Define which instrument model you want to use for each dataset\n# By default each instrument is modeled by one instrument model which is used for all the datasets of this instrument"
+            default_file_content = "# This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.\n"
+            default_file_content = "# If you want to model one dataset of an instrument with a different instrument model from the others change 'inst' into whatever else you want (for example 'inst0')\n"
+            dico = self.datasetsfile_db.get_datasetnbs(inst_name=None, inst_fullcat=None,
+                                                       sortby_instname=True, sortby_instfullcat=True)
+            for inst_fullcat in dico:
+                for inst_name in dico[inst_fullcat]:
+                    l_dst_nb = dico[inst_fullcat][inst_name]
+                    dico[inst_fullcat][inst_name] = {dst_nb: "inst" for dst_nb in l_dst_nb}
+                header_instfullcat = f"{inst_fullcat} = "
+                tab_instfullcat = spacestring_like(header_instfullcat)
+                default_file_content += "{inst_fullcat} = {dico}\n".format(inst_fullcat=inst_fullcat, 
+                                                                           dico=pformat(dict(deepcopy(dico[inst_fullcat])), compact=True).replace('\n', f'\n{tab_instfullcat}')
+                                                                           )
+            file_path = ask4CreationDefaultFile(path_file=path_instrument_models_file, default_file_content=default_file_content,
+                                                default_folder=self.run_folder)
+            input("Modifiy the dataset file")
+        # Read the instrument models file
+        cwd = getcwd()
+        chdir(self.run_folder)
+        with open(file_path) as ff:
+            exec(ff.read())
+        chdir(cwd)
+        dico = locals().copy()
+        for var_name in ["self", "cwd", "ff", "file_path"]:
+            dico.pop(var_name)
+        logger.debug(f"Instrument model file ({file_path}) parameter file read.\nContent of the parameter file: {dico.keys()}")
+        # Load the instrument models file into the datasetsfile database
+        l_inst_model_shortname = []
+        l_dataset_fullname = []
+        for dataset_file_path in self.datasetsfile_db.l_dataset_file_path:
+            dataset_filename = get_filename_from_file_path(dataset_file_path)
+            dataset_name = manager_inst_dst.dataset_name_from_file_name(dataset_filename)
+            l_dataset_fullname.append(dataset_name)
+            # Extract, instrument category, instrument name, ... from the dataset filename
+            dataset_info = manager_inst_dst.interpret_data_filename(dataset_filename)
+            inst_fullcat = dataset_info["inst_fullcat"]
+            inst_name = dataset_info["inst_name"]
+            dst_nb = dataset_info["number"]
+            l_inst_model_shortname.append(dico[inst_fullcat][inst_name][dst_nb])
+        self.instmodel4dataset.update(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname)
 
     def define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.
