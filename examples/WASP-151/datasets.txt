@@ -1,9 +1,10 @@
 # Datasets file: List below all the files you want to use for this run
-LC_WASP-151_K2.txt            default     gaussian_jitter_add
-LC_WASP-151_EulerCam.txt      default     gaussian_jitter_add
-LC_WASP-151_EulerCam_1.txt    default     gaussian_jitter_add
-LC_WASP-151_IAC80.txt         default0    gaussian_jitter_add
-LC_WASP-151_IAC80_1.txt       default1    gaussian_jitter_add
-LC_WASP-151_TRAPPIST.txt      default     gaussian_jitter_add
-RV_WASP-151_SOPHIE.txt        default     gaussian_jitter_add
-RV_WASP-151_CORALIE.txt       default     gaussian_jitter_add
+# Provide one dataset file per line
+LC_WASP-151_K2.txt
+LC_WASP-151_EulerCam.txt
+LC_WASP-151_EulerCam_1.txt
+LC_WASP-151_IAC80.txt
+LC_WASP-151_IAC80_1.txt
+LC_WASP-151_TRAPPIST.txt
+RV_WASP-151_SOPHIE.txt
+RV_WASP-151_CORALIE.txt
