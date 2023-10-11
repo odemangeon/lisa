@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on June 6 2018
 
@@ -8,7 +7,6 @@ from loguru import logger
 import readline  # When readline module was loaded, input() will use it to provide elaborate line editing and history features.
 
 from os.path import isfile, isdir
-
 
 def ask_exisiting_path(intitule_question, exit_answer="", file_or_dir="both"):
     """Ask for a path.
