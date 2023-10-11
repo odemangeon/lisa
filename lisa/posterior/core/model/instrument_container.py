@@ -10,7 +10,7 @@ from pprint import pformat
 from .paramcontainers_database import SpecificParamContainerCategory
 from ..dataset_and_instrument.instrument import instrument_model_category, Core_Instrument
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args
+from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args_instruments
 from ....tools.miscellaneous import spacestring_like
 
 
