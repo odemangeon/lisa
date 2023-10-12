@@ -5,7 +5,6 @@ from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.model.core_model import Core_Model
 
 
@@ -19,10 +18,6 @@ default_figheight_factor = 0.75
 AandA_fontsize = 8
 
 key_whole = Core_Model.key_whole
-
-# managers
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
 
 # Formatter for the Ticks major of the period axis
 sf = ScalarFormatter(useOffset=False, useMathText=True)

@@ -41,9 +41,21 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
     Methods
     -------
-    apply_parametrisation: Create and set to main the parameters required by the noise model
+    # Interfaces
+    apply_parametrisation: Create and set to main the parameters required by the noise model.
         This function is called by the Core_Model.set_noisemodels method
     check_parametrisation: Check that the parameters required by the noise model exists and set to main
+        This function is called by ?
+    create_lnlikelihood_and_formatinputs: Provide the required input to compute the likelihood
+        This function is called by ?
+    create_gpsimulator_and_formatinputs: This function should only exists if there is a GP (cls.has_GP).
+        It provides the required input to create a GP simulator is the noise model
+        includes one.
+        This function is called by ?
+    apply_jitter: This function should only exists if there is a jitter param (cls.has_jitter)
+        It provides the function that update the error bars according to the jitter value and jitter model
+    # Internal 
+    The rest of the methods
     """
 
     __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
@@ -136,7 +148,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls.get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
+        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls._get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
 
         def f_format_param(param_likelihood):
             return param_likelihood[l_idx_param_noisemod]
@@ -196,7 +208,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             raise ValueError("This noise model doesn't include a GP, you should not call this method for this noise model.")
 
     @classmethod
-    def get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
+    def _get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
@@ -229,7 +241,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_idx_param_noisemod    : list_of_int
             List of the index of the noise model parameters in the updated list of parameters (l_params_new).
         """
-        raise NotImplementedError("You need to ovewrite the get_prefilledlnlike method for your "
+        raise NotImplementedError("You need to ovewrite the _get_prefilledlnlike method for your "
                                   "noise model.")
 
     @classmethod
@@ -255,7 +267,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
                              param_obj):
         """Update the list of parameters of the lnlike and the noise model adding the parameter if necessary.
 
-        This is a convenience function to be used in the subclass and especially in the get_prefilledlnlike methods to properly update the list of parameters.
+        This is a convenience function to be used in the subclass and especially in the _get_prefilledlnlike methods to properly update the list of parameters.
 
         Arguments
         ---------
@@ -296,76 +308,3 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
             l_idx_param_noisemod_new = l_idx_param_noisemod
             l_params_noisemod_new = l_params_noisemod
         return l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
-
-    @classmethod
-    def apply_jitter(cls, data_err):
-        """Apply jitter to the data error bar.
-
-        But default this function doesn't do anything, if your noise model include jitter model
-        and thus a modification of the error bars, you should overwrite this method.
-
-        :param array_float data_err: data error array
-        :return array_float res: new variance
-        """
-        return data_err**2
-
-
-class GaussianNoiseModel(Core_Noise_Model):
-    """docstring for GaussianNoiseModel."""
-
-    __category__ = "gaussian"
-    __has_GP__ = False
-    __has_jitter__ = False
-
-    @classmethod
-    def apply_parametrisation(cls, **kwargs):
-        """For this noise model there is no additional parameter required.
-
-        However this method needs to exist because the model will call it. kwargs is only to accept
-        the template function call as define in Core_Noise_Model.
-        """
-        pass
-
-    @classmethod
-    def check_parametrisation(cls, model_instance, instmod_fullname):
-        """For this noise model there is no additional parameter required.
-
-        So nothing to check
-        """
-        pass
-
-    @classmethod
-    def get_prefilledlnlike(cls, l_params, **kwargs):
-        """Return a ln likelihood function prefilled with the fixed parameters.
-
-        As there is no parameter for this noise model, it doesn't need a l_instmod_obj or a
-        model_instance argument. But as it might be privided one automatically, I put the keyword
-        arguments **kwargs.
-
-        :param list_of_string l_params: Current list of parameters full names.
-        :return function prefilled_lnlike: Prefilled ln likelohood function with as input parameters
-            model the simulated data (array), param_noisemod the free parameters value for the noise
-            model, the list of dataset kwargs and returns the ln posterior value
-        :return list_of_string l_params_new: Updated list of parameters full names.
-        :return list_of_int l_idx_param_noisemod: List of the index of the noise model parameters in
-            the updated list of parameters (l_params_new).
-        """
-        def lnlike(sim_data, param_noisemodel, datasets_kwargs):
-            res = 0
-            for ii, datakwargs in enumerate(datasets_kwargs):
-                inv_sigma2 = 1.0 / (datakwargs["data_err"]**2)
-                res += (-0.5 * (npsum((datakwargs["data"] - sim_data[ii])**2 * inv_sigma2 -
-                                nplog(inv_sigma2))))
-            return res
-
-        return lnlike, l_params, []
-
-    # @classmethod
-    # def get_necessary_datakwargs(cls, dataset):
-    #     """Return the data kwargs necessary for the computation of the likelihood.
-    #
-    #     :param Dataset dataset: Dataset instance.
-    #     :return dict datakwargs: dict with keys= datakwargs type (eg. "t"), value= value(s) of this
-    #         datakwarg for this dataset.
-    #     """
-    #     return {"data": dataset.get_data(), "data_err": dataset.get_data_err()}

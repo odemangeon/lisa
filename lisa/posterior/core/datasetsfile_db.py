@@ -18,10 +18,7 @@ from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Data
 from ...tools.miscellaneous import get_filename_from_file_path
 from ...tools.lockable_dict import LockableDict
 from ...tools.database_with_instrument_level import DatabaseDatasetLevel
-from .likelihood.manager_noise_model import Manager_NoiseModel
 
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
@@ -120,6 +117,7 @@ class DatasetsFileDb(DatabaseDatasetLevel):
 
         # Store the datasetsfile path into the read only datasetsfile_path property
         self.__datasetsfile_path = datasetsfile_path
+
 
 class DatasetsFileDbAttr(object):
     """docstring for DataSets."""

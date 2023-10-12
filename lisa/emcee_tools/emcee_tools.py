@@ -41,9 +41,9 @@ from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
 # from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.jitter_noise_model import jitter_name
+from ..posterior.core.likelihood.gaussian_noisemodel import jitter_name
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
-from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from ..posterior.core.likelihood.gaussian_noisemodel import apply_jitter_multi, apply_jitter_add
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode

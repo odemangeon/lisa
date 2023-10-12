@@ -35,26 +35,27 @@ from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..celestial_bodies import Star, Planet
 # from ...dataset_and_instrument.lc import LC_inst_cat
 # from ...dataset_and_instrument.rv import RV_inst_cat
-from ...likelihood.stellar_activity_noisemodel import stelact_GP_noisemodel, StellarActivityNoiseModelInterface
+from ...likelihood.GP1D_noisemodel import GP1D_Noise_Model
 from ....core.model.core_model import Core_Model, create_key, load_key
 from ....core.model.indicator_model.IND_instcat_model import IND_InstCat_Model
-from ....core.likelihood.jitter_noise_model import JitterNoiseModelInterface
+from ....core.likelihood.gaussian_noisemodel import Gaussian_Noise_Model
 from .....tools.miscellaneous import spacestring_like
 
 
 # from pdb import set_trace
 
 
-class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarActivityNoiseModelInterface,
-                Core_Model):  # LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model GravGroup_Parametrisation has to be before Core_Model to overriding Core_Parametrisation
+class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisation has to be before Core_Model to override Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string
     __category__ = "GravitionalGroups"
 
     ## Set of possible instrument categories (Used by Core_Model._check_dataset_instcat)
-    # __possible_inst_categories__ = {LC_inst_cat, RV_inst_cat, IND_inst_cat}
     __instcat_model_classes__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
+
+    ## Set of possible noise model categories
+    __noise_model_classes__ = [Gaussian_Noise_Model, GP1D_Noise_Model]
 
     ## Does the model requires a model parametrisation file
     __has_model_paramfile__ = True
@@ -64,8 +65,7 @@ class GravGroup(GravGroup_Parametrisation, JitterNoiseModelInterface, StellarAct
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
-    def __init__(self, name, dataset_db, instmodel4dataset=None, l_instmod_fullnames=[],
-                 stars=None, planets=None, run_folder=None):
+    def __init__(self, name, instmodel4dataset, dataset_db, nb_stars, nb_planets, run_folder):
         """docstring GravGroup init method."""
         Core_Model.__init__(self=self, name=name, dataset_db=dataset_db, run_folder=run_folder,
                             instmodel4dataset=instmodel4dataset, l_instmod_fullnames=l_instmod_fullnames)

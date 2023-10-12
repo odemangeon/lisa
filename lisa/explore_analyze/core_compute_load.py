@@ -5,7 +5,7 @@ from collections import defaultdict, OrderedDict
 
 from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.jitter_noise_model import apply_jitter_multi, apply_jitter_add
+from ..posterior.core.likelihood.gaussian_noisemodel import apply_jitter_multi, apply_jitter_add
 from ..posterior.core.model.core_model import Core_Model
 
 # Key for the whole model
