@@ -26,7 +26,7 @@ from os.path import basename
 from ..dataset_and_instrument.rv import RV_inst_cat
 from ..dataset_and_instrument.lc import LC_inst_cat
 from ...core.parameter import Parameter
-from ...core.likelihood.jitter_noise_model import jitter_name, GaussianNoiseModel_wjitteradd
+from ...core.likelihood.gaussian_noisemodel import jitter_name, Gaussian_Noise_Model
 from ...core.dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
@@ -34,14 +34,14 @@ from ....tools.function_from_text_toolbox import FunctionBuilder
 # from ....tools.function_w_doc import DocFunction
 
 
-stelact_GP_noisemodel = "stellar_activity"
-
 amp = "amp"
 tau = "tau"
 gamma = "gamma"
 logperiod = "lnperiod"
 
 param_noisemod_name = "param_noisemod"
+
+GP1D_noisemodel_cat = "GP1D"
 
 
 def get_stelact_GP_param_name(param_GP_name, stelact_mod_name):
@@ -62,10 +62,10 @@ def get_stelact_GP_param_name(param_GP_name, stelact_mod_name):
     return f"{param_GP_name}{stelact_mod_name}"
 
 
-class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
+class GP1D_Noise_Model(Gaussian_Noise_Model):
     """docstring for StellarActNoiseModel."""
 
-    __category__ = stelact_GP_noisemodel
+    __category__ = "GP1D"
     __has_GP__ = True
     __has_jitter__ = True
 
@@ -805,8 +805,8 @@ class StellarActNoiseModel(GaussianNoiseModel_wjitteradd):
     #     return l_idx_param
 
 
-class StellarActivityNoiseModelInterface(object):
-    """docstring for StellarActivityNoiseModelInterface."""
+class GP1DNoiseModelInterface(object):
+    """docstring for GP1DNoiseModelInterface."""
 
     # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
     __name_modelstelact_4_instmodfullname = "model_4_instmodfullname"
@@ -819,10 +819,10 @@ class StellarActivityNoiseModelInterface(object):
         self.__modelSA_def = {}
 
         # Update the applyparametrisation4noisemodel dictionary
-        self.applyparametrisation4noisemodel[stelact_GP_noisemodel] = self.apply_parametrisation_stelact_noisemod  # applyparametrisation4noisemodel is created in Core_Parametrisation
+        self.applyparametrisation4noisemodel[GP1D_noisemodel_cat] = self.apply_parametrisation_stelact_noisemod  # applyparametrisation4noisemodel is created in Core_Parametrisation
 
         # Update the _same_GP_kernel_function dictionary
-        self._same_GP_kernel_function[stelact_GP_noisemodel] = self._get_same_GP_kernel_instmodel_stelact_noisemodel
+        self._same_GP_kernel_function[GP1D_noisemodel_cat] = self._get_same_GP_kernel_instmodel_stelact_noisemodel
 
     @property
     def modelstelactname_4_instmodfullname(self):
@@ -832,7 +832,7 @@ class StellarActivityNoiseModelInterface(object):
         values : String giving the name of the stellar activity noise model to use.
         """
         for inst_mod_obj in self.inst_model_objects:
-            if inst_mod_obj.noise_model == stelact_GP_noisemodel:
+            if inst_mod_obj.noise_model == GP1D_noisemodel_cat:
                 inst_mod_fullname = inst_mod_obj.get_name(include_prefix=True, recursive=True)
                 if inst_mod_fullname not in self.__modelSAname_4_instmodfullname:
                     self.__modelSAname_4_instmodfullname[inst_mod_fullname] = self.__def_stellar_activity_noisemod_name
@@ -862,7 +862,7 @@ class StellarActivityNoiseModelInterface(object):
     @property
     def isdefined_SANMparamfile(self):
         """Return True is the attribute param_file has been defined."""
-        return self.isdefined_paramfile_noisemod(stelact_GP_noisemodel)  # isdefined_paramfile_noisemod is defined in Core_Model
+        return self.isdefined_paramfile_noisemod(GP1D_noisemodel_cat)  # isdefined_paramfile_noisemod is defined in Core_Model
 
     def create_SANM_param_file(self, paramfile_name=None, answer_overwrite=None, answer_create=None):
         """Create the parameter file for the definition of the stellar activity noise model.
@@ -891,12 +891,12 @@ class StellarActivityNoiseModelInterface(object):
             logger.info("Parameter file for the stellar activity noise model created at path: {}".format(file_path))
         else:
             logger.info("Parameter file for the stellar activity noise model already existing and not overwritten: {}".format(file_path))
-        self.paramfile4noisemodcat[stelact_GP_noisemodel] = basename(file_path)  # paramfile4noisemodcat is from Core_Model
+        self.paramfile4noisemodcat[GP1D_noisemodel_cat] = basename(file_path)  # paramfile4noisemodcat is from Core_Model
 
     def read_SANM_param_file(self):
         """Read the content of the Stellar activity noise model parameter file."""
         if self.isdefined_SANMparamfile:
-            paramfile_noisemod = self.paramfile4noisemodcat[stelact_GP_noisemodel]
+            paramfile_noisemod = self.paramfile4noisemodcat[GP1D_noisemodel_cat]
             cwd = os.getcwd()
             os.chdir(self.run_folder)
             dico = {}
@@ -954,8 +954,8 @@ class StellarActivityNoiseModelInterface(object):
             if inconsistency and (rep == "n"):
                 raise ValueError(f"The content of the stellar activity parameter file is not valid. Here is the list of detected errors: {error_list}")
             elif inconsistency and (rep == "y"):
-                self.create_SANM_param_file(paramfile_name=self.paramfile4noisemodcat[stelact_GP_noisemodel], answer_overwrite="y", answer_create=None)
-                input("Modify the SANM specific paramerisation file: {}".format(self.paramfile4noisemodcat[stelact_GP_noisemodel]))
+                self.create_SANM_param_file(paramfile_name=self.paramfile4noisemodcat[GP1D_noisemodel_cat], answer_overwrite="y", answer_create=None)
+                input("Modify the SANM specific paramerisation file: {}".format(self.paramfile4noisemodcat[GP1D_noisemodel_cat]))
 
     def __create_text_modelstelactname_4_instmodfullname(self, text_tab="", entete_symb=" = "):
         """Create the string giving the model_4_instfullcat dictionary for the parameter file.

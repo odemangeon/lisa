@@ -38,6 +38,7 @@ from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
+from ..exoplanet.model.gravgroup.model import GravGroup
 from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
@@ -57,7 +58,7 @@ manager_inst_dst.load_setup()
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLockAttr,
+class Posterior(Named, RunFolder, DstDbLockAttr,
                 DatasetsFileDbAttr):
     """Posterior is the main class of lisa.
 
@@ -106,30 +107,37 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
     >>> post_instance.get_lnposteriors()  # Create the lnposterior functions.
     """
 
+    __model_classes = [GravGroup, ]
+
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
 
-    def __init__(self, object_name, run_folder=None):
+    def __init__(self, object_name, model_category, model_kwargs, data_folder=None, run_folder=None):
         """Init method for the Posterior class.
 
-        :param str object_name : Name of the object studied.
-        :param str/None run_folder: Path to the run folder
+        Arguments
+        ---------
+        object_name     : str
+            Name of the object studied.
+        model_category  : str
+            Category of the model that you want to use
+        model_kwargs    : dict
+            Dictionary providing the arguments required for the initialization of the model.
+            The required content of this dictionary depends on the model category chosen.
+        data_folder     : str
+            Specify the folder where the data can be found
+        run_folder      : str
+            Specify the folder where the run files are/will be located
+        param str/None run_folder: Path to the run folder
         """
         # Initialise the model attribute
-        self.__model = None
+        # self.__model = None
         # Define the name of the object studied
         Named.__init__(self, name=object_name)
         # Define two locks: dataset_lock and database_lock
         DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
-        # Initialize the dataset database attribute and assign it dataset_lock
-        DatasetDbAttr.__init__(self,
-                               dataset_db=DatasetDatabase(self.get_name(),
-                                                          lock=self.get_dataset_Lock_instance()))
-        # Initialize the run_folder attribute
-        RunFolder.__init__(self, run_folder=run_folder)
-        # Initialize instmodel4dataset attribute and assign it dataset_lock
-        Instmodel4DatasetAttr.__init__(self, lock=self.get_dataset_Lock_instance())
-        # Initialize datasetfile attribute and assign it instmodel4dataset,
-        DatasetsFileDbAttr.__init__(self, object_name=self.object_name, lock=self.get_dataset_Lock_instance())
+        # Initialize the model
+        Model_Class = self.get_ModelClass(model_category=model_category)
+        self.__model = Model_Class(name=object_name, **model_kwargs)
         # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
         # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
@@ -153,6 +161,101 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())
+        
+
+    def configure_posterior(self, path_datasets_file, cluster=False):
+        """Configure the whole posterior from the list of dataset files to analyse.
+
+        The datasets file contains the list of datasets to model.
+        It's a simple text file with the path to each dataset (1 per line).
+
+        Argument
+        --------
+        datasets_file   : str
+            Path to the dataset file
+        cluster         : bool
+            Whether or not you are running the code on a cluster where interactions with the
+            user is not possible. In this case, you need to have all the configurations files
+            already defined.
+        """
+        self._load_datasetsfile(path_datasets_file=path_datasets_file)
+        logger.info("Define the instrument models.")
+        self._load_instrumentmodelsfile("instrument_models.py")  # Change if needed by the name you gave or want to give to your dataset file.
+
+        logger.info("Define the noise models.")
+        self._load_noisemodelsfile("noise_models.py")  # Change if needed by the name you gave or want to give to your dataset file.  
+
+        logger.info("5. Create model specific parameter file")
+        if cluster:
+            self.model.create_model_paramfile(paramfile=None, answer_overwrite="n", answer_create=None)
+        else:
+            self.model.create_model_paramfile(paramfile=None)  # paramfile=None the names are automatically chosen.
+
+            input("If there are a model specific paramerisation file please check it")
+
+        logger.info("6. Load model specific parameter file")
+        self.model.load_parameter_file_model()
+
+        logger.info("7. Create inst_cat specific parameter file")
+        if cluster:
+            self.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite="n", answer_create=None)
+        else:
+            self.model.create_instcat_paramfiles(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
+
+            input("If there are any inst_cat specific paramerisation file please check them")
+
+        logger.info("8. Load inst_cat specific parameter file")
+        self.model.load_instcat_paramfile()
+
+        logger.info("9. Create noise model specific parameter file")
+        if cluster:
+            self.model.create_noisemodcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
+        else:
+            self.model.create_noisemodcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
+
+            if len(self.model.paramfile4noisemodcat) > 0:
+                input("Modifiy the noise model specific paramerisation file: {}".format(self.model.paramfile4noisemodcat))
+
+        logger.info("10. Load noise model category specific parameter file")
+        self.model.load_noisemodcat_paramfile()
+
+        logger.info("11. Set parametrisation of the model")
+        self.model.set_parametrisation()
+
+        logger.info("12. Create and modify the paramerisation file")
+        if cluster:
+            self.model.create_parameter_file("param_file.py", answer_overwrite="n", answer_create=None)
+        else:
+            self.model.create_parameter_file("param_file.py")
+
+            input("Modifiy the paramerisation file")
+
+        logger.info("13. Load the paramerisation file")
+        self.model.load_parameter_file()
+
+    ##########################
+    ## Deadling with the model
+    ##########################
+    
+    @property
+    def possible_model_categories(self):
+        """Set of model categories available.
+        """
+        return set([Model_Class.category for Model_Class in self.__model_classes])
+    
+    @property
+    def get_ModelClass(self, model_category):
+        """Set of model categories available.
+        """
+        for Model_Class in self.__model_classes:
+            if Model_Class.category == model_category:
+                return Model_Class
+        raise ValueError(f"There is no Core_Model Subclass corresponding to the model category"
+                         f" {model_category} provided.")
+
+    ####################################
+    ## Convenience function for the user
+    ####################################
 
     @property
     def object_name(self):
@@ -186,7 +289,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         """Return the model."""
         return self.__model
 
-    def load_datasetsfile(self, path_datasets_file=None):
+    def _load_datasetsfile(self, path_datasets_file=None):
         """Function load the datasets file
 
         The datasets file lists the dataset to model.
@@ -210,8 +313,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         # Add the datasets in the dataset database
         self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.l_dataset_file_path)
 
-    def load_instrumentmodelsfile(self, path_instrument_models_file=None):
-        """Function load the instrument models file
+    def _load_instrumentmodelsfile(self, path_instrument_models_file=None):
+        """Load the instrument models file
 
         The instrument models file define which datasets will be modelled by which instrument model
 
@@ -219,7 +322,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         ---------
         path_instrument_models_file: None or str
             If None the function will offer the possibility to create a default instrument models file
-            It str, should be the path to an existing datasets file.
+            It str, should be the path to an existing isntrument model file.
         """
         # Look for the instrument models file to check if it exists
         file_path = self.look4runfile(file_path=path_instrument_models_file)
@@ -228,8 +331,8 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             logger.info("{} doesn't exist.".format(path_instrument_models_file))
             # Create the text for the file
             default_file_content = "# Define which instrument model you want to use for each dataset\n# By default each instrument is modeled by one instrument model which is used for all the datasets of this instrument"
-            default_file_content = "# This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.\n"
-            default_file_content = "# If you want to model one dataset of an instrument with a different instrument model from the others change 'inst' into whatever else you want (for example 'inst0')\n"
+            default_file_content += "# This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.\n"
+            default_file_content += "# If you want to model one dataset of an instrument with a different instrument model from the others change 'inst' into whatever else you want (for example 'inst0')\n"
             dico = self.datasetsfile_db.get_datasetnbs(inst_name=None, inst_fullcat=None,
                                                        sortby_instname=True, sortby_instfullcat=True)
             for inst_fullcat in dico:
@@ -243,7 +346,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
                                                                            )
             file_path = ask4CreationDefaultFile(path_file=path_instrument_models_file, default_file_content=default_file_content,
                                                 default_folder=self.run_folder)
-            input("Modifiy the dataset file")
+            input("Modifiy the instrument model file")
         # Read the instrument models file
         cwd = getcwd()
         chdir(self.run_folder)
@@ -251,7 +354,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             exec(ff.read())
         chdir(cwd)
         dico = locals().copy()
-        for var_name in ["self", "cwd", "ff", "file_path"]:
+        for var_name in ["self", "cwd", "ff", "file_path", "path_instrument_models_file"]:
             dico.pop(var_name)
         logger.debug(f"Instrument model file ({file_path}) parameter file read.\nContent of the parameter file: {dico.keys()}")
         # Load the instrument models file into the datasetsfile database
@@ -269,7 +372,66 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
             l_inst_model_shortname.append(dico[inst_fullcat][inst_name][dst_nb])
         self.instmodel4dataset.update(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname)
 
-    def define_model(self, category, load_setup=False, **kwargs):
+    def _load_noisemodelsfile(self, path_noise_models_file=None):
+        """Load the noise models file
+
+        The noise models file define which noise model will be used by which instrument model
+
+        Argument
+        --------
+        path_noise_models_file: None or str
+            If None the function will offer the possibility to create a default instrument models file
+            It str, should be the path to an existing noise model file.
+
+        Return
+        ------
+        noisemod4instmodfullname: dict of NoiseModel instance
+
+        """
+        # Look for the noise models file to check if it exists
+        file_path = self.look4runfile(file_path=path_noise_models_file)
+        # If doesn't exists offer the possibility to create a default one
+        if file_path is None:
+            logger.info("{} doesn't exist.".format(path_noise_models_file))
+            # Create the text for the file
+            default_file_content = "# Define which noise model you want to use for each instrument model\n# By default the gaussian noise model is used for all the instrument models"
+            default_file_content += "# This is imposed by the fact that below all instrument models have 'gaussian' as entry.\n"
+            default_file_content += "# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].\n"
+            default_file_content += "# If you want to change the noise model used for a given instrument model, just change the value of its key.\n"
+            dico = self.instmodel4dataset.name_instmodels_used(sortby_instname=True, sortby_instfullcat=True, return_fullname=False)
+            for inst_fullcat in dico:
+                for inst_name in dico[inst_fullcat]:
+                    l_instmod_shortname = dico[inst_fullcat][inst_name]
+                    dico[inst_fullcat][inst_name] = {instmod_shortname: "gaussian" for instmod_shortname in l_instmod_shortname}
+                header_instfullcat = f"{inst_fullcat} = "
+                tab_instfullcat = spacestring_like(header_instfullcat)
+                default_file_content += "{inst_fullcat} = {dico}\n".format(inst_fullcat=inst_fullcat, 
+                                                                           dico=pformat(dict(deepcopy(dico[inst_fullcat])), compact=True).replace('\n', f'\n{tab_instfullcat}')
+                                                                           )
+            file_path = ask4CreationDefaultFile(path_file=path_noise_models_file, default_file_content=default_file_content,
+                                                default_folder=self.run_folder)
+            input("Modifiy the noise model file")
+        # Read the instrument models file
+        cwd = getcwd()
+        chdir(self.run_folder)
+        with open(file_path) as ff:
+            exec(ff.read())
+        chdir(cwd)
+        dico = locals().copy()
+        for var_name in ["self", "cwd", "ff", "file_path", "path_noise_models_file"]:
+            dico.pop(var_name)
+        logger.debug(f"Noise model file ({file_path}) parameter file read.\nContent of the parameter file: {dico.keys()}")
+        # Create noisemodcat4instmodfullname. Dict with the keys being instrument model full names and values being noise model subclasses 
+        l_inst_model_fullname = []
+        l_noisemodel_subclass = [] 
+        for inst_fullcat in self.datasetsfile_db.inst_fullcategories:
+            for inst_name in dico[inst_fullcat]:
+                for instmod_shortname in dico[inst_fullcat][inst_name]:
+                    l_noisemodel_subclass.append(manager_noisemodel.get_noisemodel_subclass(dico[inst_fullcat][inst_name][instmod_shortname]))
+                    l_inst_model_fullname.append(f"{inst_fullcat}_{inst_name}_{instmod_shortname}")
+        return {instmod_fullname: noisemod_subclass for instmod_fullname, noisemod_subclass in zip(l_inst_model_fullname, l_noisemodel_subclass)}
+
+    def _define_model(self, category, load_setup=False, **kwargs):
         """Set/Initialize the model.
 
         :param str category: String which refers to an available Core_Model Subclass that has been
@@ -299,7 +461,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         self.lock()
         logger.info("Model defined with name {} !".format(self.model.get_name()))
 
-    def lock(self):
+    def _lock(self):
         """Lock the dataset_db and update instmodel4dataset attributes.
         """
         list_datasetnames = self.dataset_db.get_datasetnames()
@@ -316,7 +478,7 @@ class Posterior(DatasetDbAttr, Named, RunFolder, Instmodel4DatasetAttr, DstDbLoc
         # Lock everything
         super(Posterior, self).dataset_lock()  # 7.
 
-    def unlock(self):
+    def _unlock(self):
         """Unlock the dataset_db."""
         super(Posterior, self).unlock()
 

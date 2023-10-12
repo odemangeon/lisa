@@ -63,7 +63,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "instcat_model_classes", 'has_model_paramfile']
+    __mandatoryattrs__ = ["category", "instcat_model_classes", "noise_model_classes",'has_model_paramfile']
     # category: String which designate the model (for example: "GravitionalGroups"). To choose the
     #   model to be used, the user will use this string.
     # instcat_model_classes: List of InstCat_Model Classes implemented for the Model
@@ -71,17 +71,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
 
-    def __init__(self, name, dataset_db, run_folder=None, instmodel4dataset=None,
-                 l_instmod_fullnames=[]):
+    def __init__(self, name):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
-        TODO: instmodel4dataset and l_instmod_fullnames seems redundant
-
-        :param string name: Name of the Core_Model
-        :param DatasetDatabase dataset_db: DatasetDatabase giving the dataset to be modeled.
-        :param string/None run_folder: Folder to use as run folder. For more info check run_folder
-        :param Instmodel4Dataset/None instmodel4dataset:
-        :param list_of_string l_instmod_fullnames: list of instrument model full names
+        Argument
+        --------
+        name    : str
+            Name of the object studied by the model
         """
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
@@ -155,6 +151,13 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Now load the available InstCat_Models and do the __init__
         for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
+                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
+                self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
+                self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
+
+        # Now load the available Noise_Models and do the __init__
+        for Noise_Model in self.noise_model_classes:
+            if Noise_Model.category in self.noisemodelcat4instmodfullname:
                 self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
                 self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
                 self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
@@ -436,6 +439,34 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
             inst_mod_info = manager_inst.interpret_instmod_fullname(instmod_fullname=instmod_fullname)
             inst = manager_inst.get_inst(inst_name=inst_mod_info["inst_name"], inst_fullcat=inst_mod_info["inst_fullcategory"])
             self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
+
+    ############################
+    ## Dealing with noise models
+    ############################
+
+    @property
+    def possible_noise_model_categories(self):
+        """Set of instrument categories handled by the model.
+        """
+        return set([Noise_Model.category for Noise_Model in self.noise_model_classes])
+    
+    def get_NoiseModelClass(self, noise_model_category):
+        """Return the Core_InstCat_Model subclass corresponding to the instrument category provided
+
+        Arguments
+        ---------
+        noise_model_category    : str
+            String giving the category of nnoise model for which you want the Model class
+
+        Returns
+        -------
+        Noise_Model   : Core_Noise_Model Subclass
+            Class of the Model for the noise category provided
+        """
+        for Noise_Model in self.noise_model_classes:
+            if Noise_Model.inst_cat == noise_model_category:
+                return Noise_Model
+        raise ValueError(f"There is no Core_Noise_Model Subclass corresponding to the noise category {noise_model_category} in this model.")
 
     ##########################
     ## Dealing with Parameters

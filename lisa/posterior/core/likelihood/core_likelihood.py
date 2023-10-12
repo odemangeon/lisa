@@ -71,7 +71,7 @@ class LikelihoodCreator(object):
 
         This function "only" assemble the likelihood function from the datasimulator function and
         the "raw" lnlikelihood functions built from the noise models associated to the datasim
-        function and provided in the dico_noisemodel argument.
+        function and provided in the dico_noisemodel output of _get_required_dataset_for_noisemodel_and_decorrmodel.
 
         It sums the lnlikelihood for each noise_model involved.
         Each lnlikelihood for each noise model is computed like this:

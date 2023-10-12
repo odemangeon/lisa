@@ -1,22 +1,10 @@
 #!/usr/bin/python
 # -*- coding:  utf-8 -*-
 import lisa.posterior.core.likelihood.manager_noise_model as mgr
-import lisa.posterior.core.likelihood.jitter_noise_model as jnm
-import lisa.posterior.core.likelihood.core_noise_model as cnm
-import lisa.posterior.exoplanet.likelihood.stellar_activity_noisemodel as sanm
+import lisa.posterior.core.likelihood.gaussian_noisemodel as gauss
+import lisa.posterior.exoplanet.likelihood.GP1D_noisemodel as gp1d
 
 manager = mgr.Manager_NoiseModel()
 
-manager.add_available_noisemodel(cnm.GaussianNoiseModel)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wdfmjitter)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjittermulti)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjittermultilog)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjittermultiBaluev)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjittermultiBaluevlog)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteradd)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteraddlog)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteraddfrac)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteraddfraclog)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteraddfracBaluev)
-manager.add_available_noisemodel(jnm.GaussianNoiseModel_wjitteraddfracBaluevlog)
-manager.add_available_noisemodel(sanm.StellarActNoiseModel)
+manager.add_available_noisemodel(gauss.GaussianNoiseModel)
+manager.add_available_noisemodel(gp1d.GP1DNoiseModel)
