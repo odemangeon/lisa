@@ -60,7 +60,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # attribute like this:
     # __category__ = "ModelCategory"
     # It then be read as self.category
-    __mandatoryattrs__ = ["category", "instcat_model_classes", "noise_model_classes",'has_model_paramfile']
+    __mandatoryattrs__ = ["category", "instcat_model_classes", "noise_model_classes", 'has_model_paramfile']
     # category: String which designate the model (for example: "GravitionalGroups"). To choose the
     #   model to be used, the user will use this string.
     # instcat_model_classes: List of InstCat_Model Classes implemented for the Model
@@ -68,9 +68,15 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
 
-    def __init__(self, name, lock=None):
+    ###########################################
+    ## Methods for interface with other modules
+    ###########################################
+
+    def __init__(self, name, model_kwargs=None, lock=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
+        This function should be use in the __init__ function of Subclass of this class
+        
         Argument
         --------
         name    : str
@@ -116,6 +122,18 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             self.paramfile_model = None
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
+
+    @property
+    def model_kwargs(self):
+        """This property contains the model_kwargs of this model. A dictionary of arguments to initialise the models.
+
+        This function shoudl be overridden in the sub classes
+        """
+        return None
+
+    ##################
+    ## Methods to sort
+    ##################
 
     def finish_init(self):
         """Finish the initialisation of the core components of the model.

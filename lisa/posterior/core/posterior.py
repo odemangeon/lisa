@@ -107,6 +107,12 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
 
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
 
+    _d_varname_configfile = {"datasets": "l_dataset"}
+
+    #############################
+    ## Methods for user interface
+    #############################
+
     def __init__(self, object_name, model_category, model_kwargs, data_folder=None, run_folder=None):
         """Init method for the Posterior class.
 
@@ -123,19 +129,20 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
             Specify the folder where the data can be found
         run_folder      : str
             Specify the folder where the run files are/will be located
-        param str/None run_folder: Path to the run folder
         """
         # Initialise the model attribute
         # self.__model = None
         # Define the name of the object studied
         Named.__init__(self, name=object_name)
+        # Initialize run_folder
+        RunFolder.__init__(self, run_folder=run_folder)
         # Define two locks: dataset_lock and database_lock
         DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
         # Initialize the dataset database attribute and assign it dataset_lock
         DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(),
                                                                 lock=self.get_dataset_Lock_instance()))
         # Initialize the model
-        Model_Class = self.get_ModelClass(model_category=model_category)
+        Model_Class = self._get_ModelClass(model_category=model_category)
         self.__model = Model_Class(name=object_name, lock=self.get_dataset_Lock_instance(), **model_kwargs)
         # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
         # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
@@ -161,23 +168,31 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())
         
+    def configure_posterior(self, path_config_file=None, cluster=False):
+        """Configure the whole posterior using the configuration file.
 
-    def configure_posterior(self, path_datasets_file, cluster=False):
-        """Configure the whole posterior from the list of dataset files to analyse.
-
-        The datasets file contains the list of datasets to model.
-        It's a simple text file with the path to each dataset (1 per line).
+        The configuration file contains all the configuration for the analysis
+        - The list of dataset to analyze
+        - All the model configuration
+        - All the likelihood configuration
+        - The priors of the parameter
 
         Argument
         --------
-        datasets_file   : str
-            Path to the dataset file
+        path_config_file   : str
+            Path to the configuration file
         cluster         : bool
             Whether or not you are running the code on a cluster where interactions with the
             user is not possible. In this case, you need to have all the configurations files
             already defined.
         """
-        self._load_datasetsfile(path_datasets_file=path_datasets_file)
+        logger.info(f"Reading configuration file ({path_config_file}).")
+        self.__config_file, dico_config_file = self._read_configfile(path_config_file=path_config_file)
+        logger.info(f"Adding dataset files.")
+        if self._d_varname_configfile["datasets"] not in dico_config_file:
+            raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile['datasets']} which should contain the list of datasets to analyse.")
+        # I am here, the line below doesn't raise errors but doesn't seem to be working
+        self.dataset_db._add_datasets_from_listdatasetpath(dico_config_file[self._d_varname_configfile['datasets']])
         logger.info("Define the instrument models.")
         self._load_instrumentmodelsfile("instrument_models.py")  # Change if needed by the name you gave or want to give to your dataset file.
 
@@ -232,17 +247,16 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         logger.info("13. Load the paramerisation file")
         self.model.load_parameter_file()
 
-    ##########################
-    ## Deadling with the model
-    ##########################
-    
+    ############################################################
+    ## Methods and properties used by the user interface methods
+    ############################################################
+
     @property
-    def possible_model_categories(self):
-        """Set of model categories available.
-        """
-        return set([Model_Class.category for Model_Class in self.__model_classes])
+    def model(self):
+        """Return the model."""
+        return self.__model
     
-    def get_ModelClass(self, model_category):
+    def _get_ModelClass(self, model_category):
         """Set of model categories available.
         """
         for Model_Class in self.__model_classes:
@@ -250,6 +264,38 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
                 return Model_Class
         raise ValueError(f"There is no Core_Model Subclass corresponding to the model category"
                          f" {model_category} provided.")
+    
+    def _read_configfile(self, path_config_file=None):
+        """Function that reads the config file
+
+        Arguments
+        ---------
+        path_config_file: None or str
+            If None the function will offer the possibility to create a default datasets file
+            It str, should be the path to an existing datasets file.
+        """
+        # Look for the datasets file to check if it exists
+        file_path = self.look4runfile(file_path=path_config_file)
+        # If doesn't exists offer the possibility to create a default one
+        if file_path is None:
+            logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
+            default_file_content = f"# Configuration file for analysis of {self.get_name()} with model {self.model.category}.\n"
+            default_file_content += f"# The argument for the initialisation of the model are {self.model.model_kwargs}\n\n"
+            default_file_content += f"###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n{self._d_varname_configfile['datasets']} = []\n"
+            file_path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
+            input(f"DATASETS: Modifiy the configuration file ({file_path}) to indicate which dataset files you want to analyse. Then press ENTER.")
+        # Read the content of the config file
+        cwd = getcwd()
+        chdir(self.run_folder)
+        with open(file_path) as ff:
+            exec(ff.read())
+        chdir(cwd)
+        dico = locals().copy()
+        for var_name in ["self", "cwd", "ff", "path_config_file", "file_path", 'default_file_content']:
+            if var_name in dico:
+                dico.pop(var_name)
+        logger.debug(f"Content (just the name of the variables) of the config file (located at {file_path}):\n{list(dico.keys())}")
+        return file_path, dico
 
     ####################################
     ## Convenience function for the user
@@ -259,6 +305,18 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     def object_name(self):
         """Return the name of the object studied."""
         return self.get_name()
+
+    @property
+    def possible_model_categories(self):
+        """Set of model categories available.
+        """
+        return set([Model_Class.category for Model_Class in self.__model_classes])
+    
+    @property
+    def config_file(self):
+        """Path to the config file
+        """
+        return self.__config_file
 
     # @property
     # def run_folder(self):
@@ -281,11 +339,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     #         self.dataset_db.run_folder = self.run_folder
     #         if self.isdefined_model:
     #             self.model.run_folder = self.run_folder
-
-    @property
-    def model(self):
-        """Return the model."""
-        return self.__model
 
     def _load_datasetsfile(self, path_datasets_file=None):
         """Function load the datasets file

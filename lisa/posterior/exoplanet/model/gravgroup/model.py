@@ -65,6 +65,10 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
+    ###########################################
+    ## Methods for interface with other modules
+    ###########################################
+
     def __init__(self, name, stars, planets, lock=None):
         """docstring GravGroup init method."""
         Core_Model.__init__(self=self, name=name, lock=lock)
@@ -113,6 +117,18 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
 
         # Finish the initialisation
         # Core_Model.finish_init(self)
+
+    @property
+    def model_kwargs(self):
+        """This property contains the model_kwargs of this model. A dictionary of arguments to initialise the models.
+
+        This function shoudl be overridden in the sub classes
+        """
+        return {"stars": len(self.stars), "planets": len(self.planets)}
+
+    ##########
+    ## To sort
+    ##########
 
     @property
     def init_kwargs(self):
