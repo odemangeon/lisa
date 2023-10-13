@@ -70,7 +70,7 @@ post_instance = cpost.Posterior(object_name=obj_name, model_category=model_categ
                                 data_folder=data_folder, run_folder=run_folder)
 
 logger.info("2. Define the posterior.")
-post_instance.configure_posterior(path_datasets_file="datasets.txt")  # Change if needed by the name you gave or want to give to your dataset file.
+post_instance.configure_posterior(path_config_file="config_file.py")  # Change if needed by the name you gave or want to give to your dataset file.
 
 logger.info("14. Create datasimulator functions")
 test = post_instance.get_datasimulators()
