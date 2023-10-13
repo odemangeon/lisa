@@ -65,14 +65,9 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
 
     _ext_plonly = "_only"  # Extension used by the datasimulator creator for the planet only datasimulator (withou the instrument nor the star)
 
-    def __init__(self, name, instmodel4dataset, dataset_db, nb_stars, nb_planets, run_folder):
+    def __init__(self, name, stars, planets, lock=None):
         """docstring GravGroup init method."""
-        Core_Model.__init__(self=self, name=name, dataset_db=dataset_db, run_folder=run_folder,
-                            instmodel4dataset=instmodel4dataset, l_instmod_fullnames=l_instmod_fullnames)
-
-        # Init the noise models interfaces
-        JitterNoiseModelInterface.__init__(self=self)
-        StellarActivityNoiseModelInterface.__init__(self=self)
+        Core_Model.__init__(self=self, name=name, lock=lock)
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
         if isinstance(stars, int):
@@ -104,24 +99,20 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
 
-        # Fill the handlers4noisecatparamfile dictionary
-        self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
-                                                                  load_key: self.load_SANM_param_file
-                                                                  }
+        # # Fill the handlers4noisecatparamfile dictionary
+        # self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
+        #                                                           load_key: self.load_SANM_param_file
+        #                                                           }
 
-        # Define the orbital_model dictionnary which will define the orbital model to use for the
+        # Initialise the orbital_model dictionnary which will define the orbital model to use for the
         # RV and LC instrument models
-        l_inst_model_fullname = []
-        for InstCat_Model in [LC_InstCat_Model, RV_InstCat_Model]:
-            if InstCat_Model.inst_cat in self.inst_categories:
-                l_inst_model_fullname += [instmod_obj.full_name for instmod_obj in self.get_instmodel_objs(inst_fullcat=InstCat_Model.inst_cat)]
         self.orbital_model = OrbitalModels(l_planet=[planet for planet in self.planets.values()],
                                            host_star=self.stars[list(self.stars.keys())[0]],
-                                           l_inst_model_fullname=l_inst_model_fullname
+                                           l_inst_model_fullname=[]
                                            )
 
         # Finish the initialisation
-        Core_Model.finish_init(self)
+        # Core_Model.finish_init(self)
 
     @property
     def init_kwargs(self):

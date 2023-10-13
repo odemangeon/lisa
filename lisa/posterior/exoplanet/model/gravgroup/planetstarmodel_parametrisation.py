@@ -531,7 +531,7 @@ class OrbitalModels(Core_PlanetStarModels_1model1inst):
 
     __l_model_class__ = [OrbitalModelBatman, ]
 
-    def __init__(self, l_planet, host_star, l_inst_model_fullname):
+    def __init__(self, l_planet, host_star, l_inst_model_fullname=[]):
         default_model_category = 'batman'
         super(OrbitalModels, self).__init__(l_planet=l_planet, host_star=host_star, l_inst_model_fullname=l_inst_model_fullname,
                                             default_model_category=default_model_category,

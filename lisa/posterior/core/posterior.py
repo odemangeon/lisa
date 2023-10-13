@@ -34,7 +34,6 @@ from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbA
 from .model import par_vec_name
 from .model.manager_model import Manager_Model
 from .model.datasimulator_timeseries_toolbox import time_vec
-from .likelihood.manager_noise_model import Manager_NoiseModel
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .datasetsfile_db import DatasetsFileDbAttr
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
@@ -50,16 +49,13 @@ from ...tools.miscellaneous import spacestring_like, get_filename_from_file_path
 
 manager_model = Manager_Model()
 manager_model.load_setup()
-manager_noisemodel = Manager_NoiseModel()
-manager_noisemodel.load_setup()
 manager_inst_dst = Manager_Inst_Dataset()
 manager_inst_dst.load_setup()
 
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(Named, RunFolder, DstDbLockAttr,
-                DatasetsFileDbAttr):
+class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     """Posterior is the main class of lisa.
 
     It allows to define the datasets that you want to analyse, the model that you want to use to analyse
@@ -135,28 +131,31 @@ class Posterior(Named, RunFolder, DstDbLockAttr,
         Named.__init__(self, name=object_name)
         # Define two locks: dataset_lock and database_lock
         DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
+        # Initialize the dataset database attribute and assign it dataset_lock
+        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(),
+                                                                lock=self.get_dataset_Lock_instance()))
         # Initialize the model
         Model_Class = self.get_ModelClass(model_category=model_category)
-        self.__model = Model_Class(name=object_name, **model_kwargs)
+        self.__model = Model_Class(name=object_name, lock=self.get_dataset_Lock_instance(), **model_kwargs)
         # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
         # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
         self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
-                                         instmodel4dataset=self.instmodel4dataset,
+                                         instmodel4dataset=self.model.instmodel4dataset,
                                          instordered=False, use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
                                          lock_database=self.get_database_Lock_instance())
         self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
-                                        instmodel4dataset=self.instmodel4dataset,
+                                        instmodel4dataset=self.model.instmodel4dataset,
                                         instordered=False, use_samelock=self.samelock,
                                         lock_dataset=self.get_dataset_Lock_instance(),
                                         lock_database=self.get_database_Lock_instance())
         self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
-                                        instmodel4dataset=self.instmodel4dataset,
+                                        instmodel4dataset=self.model.instmodel4dataset,
                                         instordered=False, use_samelock=self.samelock,
                                         lock_dataset=self.get_dataset_Lock_instance(),
                                         lock_database=self.get_database_Lock_instance())
         self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
-                                         instmodel4dataset=self.instmodel4dataset,
+                                         instmodel4dataset=self.model.instmodel4dataset,
                                          database_name=self.object_name, instordered=False,
                                          use_samelock=self.samelock,
                                          lock_dataset=self.get_dataset_Lock_instance(),
@@ -243,7 +242,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr,
         """
         return set([Model_Class.category for Model_Class in self.__model_classes])
     
-    @property
     def get_ModelClass(self, model_category):
         """Set of model categories available.
         """
@@ -262,27 +260,27 @@ class Posterior(Named, RunFolder, DstDbLockAttr,
         """Return the name of the object studied."""
         return self.get_name()
 
-    @property
-    def run_folder(self):
-        """The run_folder is the folder where the program will look for config files and put
-        outputs. It can be provided in two ways:
-            - Via the folder defined in software_parameters: In this case the run_folder is
-              automatically define as "input_run_folder/object_name". To use this you should assign
-              "default"
-            - Via the run_folder argument: You can provide any folder here via the run_folder
-              argument.
-        If not defined, return None.
-        """
-        return super(Posterior, self).run_folder
+    # @property
+    # def run_folder(self):
+    #     """The run_folder is the folder where the program will look for config files and put
+    #     outputs. It can be provided in two ways:
+    #         - Via the folder defined in software_parameters: In this case the run_folder is
+    #           automatically define as "input_run_folder/object_name". To use this you should assign
+    #           "default"
+    #         - Via the run_folder argument: You can provide any folder here via the run_folder
+    #           argument.
+    #     If not defined, return None.
+    #     """
+    #     return super(Posterior, self).run_folder
 
-    @run_folder.setter
-    def run_folder(self, run_folder="default"):
-        """Set the run_folder attribute."""
-        super(Posterior, self.__class__).run_folder.fset(self, run_folder)
-        if self.hasrun_folder:
-            self.dataset_db.run_folder = self.run_folder
-            if self.isdefined_model:
-                self.model.run_folder = self.run_folder
+    # @run_folder.setter
+    # def run_folder(self, run_folder="default"):
+    #     """Set the run_folder attribute."""
+    #     super(Posterior, self.__class__).run_folder.fset(self, run_folder)
+    #     if self.hasrun_folder:
+    #         self.dataset_db.run_folder = self.run_folder
+    #         if self.isdefined_model:
+    #             self.model.run_folder = self.run_folder
 
     @property
     def model(self):

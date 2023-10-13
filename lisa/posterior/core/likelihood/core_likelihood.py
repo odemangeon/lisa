@@ -15,7 +15,6 @@ from copy import copy
 from numpy import logical_not, isfinite, all
 # import matplotlib.pyplot as pl
 
-from .manager_noise_model import Manager_NoiseModel
 from ..likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
 from ..model.datasim_docfunc import DatasimDocFunc
 from ..database_func import DatabaseInstLvlDataset
@@ -23,9 +22,6 @@ from ....tools.function_from_text_toolbox import FunctionBuilder
 from ..model import par_vec_name
 from .. import function_whole_shortname
 
-
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
 
 tab = "    "
 

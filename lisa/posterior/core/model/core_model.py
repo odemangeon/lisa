@@ -31,7 +31,6 @@ from ..dataset_and_instrument.instrument import instrument_model_category as ins
 # from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
 # from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..likelihood.core_likelihood import LikelihoodCreator
-from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ..prior.model_prior import Model_Prior, joint_prior_name
 from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -46,14 +45,12 @@ manager_inst = Manager_Inst_Dataset()
 manager_inst.load_setup()
 manager_prior = Manager_Prior()
 manager_prior.load_setup()
-manager_noisemodel = Manager_NoiseModel()
-manager_noisemodel.load_setup()
 
 create_key = "create"
 load_key = "load"
 
 
-class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, InstrumentContainerInterface,
+class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
                  Core_Parametrisation, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
@@ -71,7 +68,7 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
     ## Key to use in DatabaseFunc for the function that will concern the whole object to model
     key_whole = "whole"
 
-    def __init__(self, name):
+    def __init__(self, name, lock=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         Argument
@@ -82,31 +79,18 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         # Core_Model is a Core_ParamContainer, so set the model name and init through
         # Core_ParamContainer init method
         Core_ParamContainer.__init__(self, name)
-        # Model needs to access the datasets so give model the dataset_db attribute
-        DatasetDbAttr.__init__(self, dataset_db)
-        if not(self.isdefined_datasetdb):
-            raise ValueError("You need to provide a DatasetDatabase to create a model !")
-        # Intialise the run_folder property
-        RunFolder.__init__(self, run_folder=run_folder)
         # Core Model is also a ParamContainer Database, so initialise it
         ParamContainerDatabase.__init__(self)
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
         # Initialise the attributes related to the Prior
         Model_Prior.__init__(self, self.paramfile_info)  # self.paramfile_info comes from Core_ParamContainer
-        # Initialise the instrument models
-        self.init_instmodels(l_instmod_fullnames=l_instmod_fullnames)
-        # If no instmodel4dataset provided create it and then initialise the instmodel4dataset of
-        # the model
-        if instmodel4dataset is None:  # 6.
-            instmodel4dataset = Instmodel4Dataset(list_datasetnames=(self.dataset_db.
-                                                                     get_datasetnames()))
+        # Init the instmodel4dataset
+        instmodel4dataset = Instmodel4Dataset(list_datasetnames=None, list_instmodels=None, lock=lock)
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
-                                       lock="instmodel4dataset")
-
+                                       lock="instmodel4dataset")        
         # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
         # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
-
         def __def_dict_noisemodhandlers():
             return {create_key: None, load_key: None}
         self.__handlers4noisecatparamfile = defaultdict(__def_dict_noisemodhandlers)
@@ -117,9 +101,6 @@ class Core_Model(Core_ParamContainer, DatasetDbAttr, Model_Prior, RunFolder, Ins
         self._same_GP_kernel_function = {}
         # Initialise parametrisation related attributes
         self.init_parametrisation_attributes()
-        # Initialise parameterisation
-        # self.parametrisation
-
         # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
         # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)
         self.__datasimcreatorname4instcat = {}

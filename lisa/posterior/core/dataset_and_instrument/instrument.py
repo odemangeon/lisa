@@ -19,15 +19,10 @@ from .manager_dataset_instrument import Manager_Inst_Dataset
 # from .dataset import Core_Dataset
 from ..paramcontainer import Core_ParamContainer
 from ..parameter import Parameter
-from ..likelihood.manager_noise_model import Manager_NoiseModel
 from ....tools.name import Named
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 # from ....tools.miscellaneous import spacestring_like
 
-
-## Instrument manager
-manager_inst = Manager_Inst_Dataset()
-manager_noisemodel = Manager_NoiseModel()
 
 instrument_model_category = "instruments"
 
