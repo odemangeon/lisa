@@ -27,7 +27,7 @@ obj_name = "WASP-151"  # Change
 
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 model_category = "GravitionalGroups"
-model_kwargs = {"nb_star": 1, "nb_planet": 1}
+model_kwargs = {"stars": 1, "planets": 1}
 
 data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
 run_folder = getcwd()

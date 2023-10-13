@@ -5,12 +5,15 @@ __pycache__/
 
 # Temp/auto saved files
 #*#
+.gitignore
 
 # Common stuff
 lisa/software_parameters.py
 examples/WASP-151/outputs/
 examples/K2-19/outputs/
 list_imported_modules.txt
+*_backup.txt
+*_backup.py
 
 # Olivier's stuff
 setenv_lisa.bash
@@ -22,7 +25,6 @@ tests/dev_tests/TTV/outputs
 tests/dev_tests/EdepthV/outputs
 tests/dev_tests/splinedec/outputs
 tests/unit_tests/run_folder_tmp
-examples/*/*_backup.py
 
 # Susana's stuff
 
