@@ -139,7 +139,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         # Define two locks: dataset_lock and database_lock
         DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
         # Initialize the dataset database attribute and assign it dataset_lock
-        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(),
+        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(), data_folder=data_folder,
                                                                 lock=self.get_dataset_Lock_instance()))
         # Initialize the model
         Model_Class = self._get_ModelClass(model_category=model_category)
@@ -186,17 +186,13 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
             user is not possible. In this case, you need to have all the configurations files
             already defined.
         """
-        logger.info(f"Reading configuration file ({path_config_file}).")
-        self.__config_file, dico_config_file = self._read_configfile(path_config_file=path_config_file)
-        logger.info(f"Adding dataset files.")
-        if self._d_varname_configfile["datasets"] not in dico_config_file:
-            raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile['datasets']} which should contain the list of datasets to analyse.")
-        # I am here, the line below doesn't raise errors but doesn't seem to be working
-        self.dataset_db._add_datasets_from_listdatasetpath(dico_config_file[self._d_varname_configfile['datasets']])
-        logger.info("Define the instrument models.")
+        logger.info(f"Load dataset files.")
+        self._load_config(config2load='datasets', path_config_file=path_config_file)
+       
+        logger.info("Load the instrument models definition.")
         self._load_instrumentmodelsfile("instrument_models.py")  # Change if needed by the name you gave or want to give to your dataset file.
 
-        logger.info("Define the noise models.")
+        logger.info("Load the noise models for instrument model definition.")
         self._load_noisemodelsfile("noise_models.py")  # Change if needed by the name you gave or want to give to your dataset file.  
 
         logger.info("5. Create model specific parameter file")
@@ -256,6 +252,11 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         """Return the model."""
         return self.__model
     
+    @property
+    def _config_categories(self):
+        """Return the list of existing configuration categories."""
+        return ['datasets', ]
+    
     def _get_ModelClass(self, model_category):
         """Set of model categories available.
         """
@@ -279,8 +280,8 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         # If doesn't exists offer the possibility to create a default one
         if file_path is None:
             logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
-            default_file_content = f"# Configuration file for analysis of {self.get_name()} with model {self.model.category}.\n"
-            default_file_content += f"# The argument for the initialisation of the model are {self.model.model_kwargs}\n\n"
+            default_file_content = f"# Configuration file for the analysis of {self.get_name()} with the {self.model.category} model.\n"
+            default_file_content += f"# The model keyword arguments provided for the initialisation of the model are {self.model.model_kwargs}\n\n"
             default_file_content += f"###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n{self._d_varname_configfile['datasets']} = []\n"
             file_path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
             input(f"DATASETS: Modifiy the configuration file ({file_path}) to indicate which dataset files you want to analyse. Then press ENTER.")
@@ -296,6 +297,42 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
                 dico.pop(var_name)
         logger.debug(f"Content (just the name of the variables) of the config file (located at {file_path}):\n{list(dico.keys())}")
         return file_path, dico
+    
+    def _load_config(self, config2load, path_config_file=None):
+        """Function that reads the config file
+
+        Arguments
+        ---------
+        config2load         : str
+            Specify the config to load. Possible values are 'datasets'
+        path_config_file    : None or str
+            If None the function will offer the possibility to create a default datasets file
+            It str, should be the path to an existing datasets file.
+        """
+        if config2load not in self._config_categories:
+            raise ValueError(f"{config2load} is not an existing configuration category {self._config_categories}")
+        self.__config_file, dico_config_file = self._read_configfile(path_config_file=path_config_file)
+        if self._d_varname_configfile[config2load] not in dico_config_file:
+            # If the variable where the configuration of the category is supposed to be done is not defined in the config file
+            # Propose to add it with the default configuration
+            # I AM HERE
+            reply = askadd2configfile(path_file=self.__config_file, default_folder=self.run_folder)
+            # If the reply is no raise an error
+            if reply == 'n':
+                raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile['datasets']}.")
+            # If the reply is yes add it to the config_file and ask the user to check the content.
+            else:
+                if config2load == 'datasets':
+                    raise NotImplementedError 
+            # Need to do an if for each config category which calls the function that adds the default config for each category
+        # Check the content of the configuration variable.
+        # Need to do an if for each config category which calls the function that check the config for each category
+        if config2load == 'datasets':
+            raise NotImplementedError   # Maybe just check that it's a list of str, the existence of the dataset file is going to be checked when loading them.
+        # Load the configuration 
+        # Need to do an if for each config category which calls the function that loads the config for each category
+        if config2load == 'datasets':
+            self.dataset_db._add_datasets_from_listdatasetpath(dico_config_file[self._d_varname_configfile['datasets']])
 
     ####################################
     ## Convenience function for the user
