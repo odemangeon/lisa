@@ -54,20 +54,18 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
             return super(Nesteddict_defgetitem, self).__missing__(key, cls)
 
 
-class DatasetDatabase(Nesteddict_defgetitem, Named, RunFolder, DataFolder):
+class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
     """Database which contains all the datasets used for the analysis.
 
     In standard use you are not supposed to handle this class directly. Datasets should be added
     throught the dataset file, using the lisa.posterior.core.posterior.Posterior.load_datasetsfile
     method.
     """
-    def __init__(self, object_name, lock=None):
+    def __init__(self, object_name, data_folder=None, lock=None):
         # Initialise the name of the datatabase
         Named.__init__(self, name=object_name)
-        # Initialise the run folder
-        RunFolder.__init__(self, run_folder=None)
         # Initialise the dataset folder
-        DataFolder.__init__(self, data_folder=None)
+        DataFolder.__init__(self, data_folder=data_folder)
         # Initialise the database (Nesteddict_defgetitem)
         Nesteddict_defgetitem.__init__(self, nb_lvl=3, lock=lock, ordered=True)
 
