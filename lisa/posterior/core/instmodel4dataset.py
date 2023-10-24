@@ -224,14 +224,14 @@ class Instmodel4DatasetAttr(object):
                               sortby_lvl3key=sortby_instmodel)
         return result
 
-    def name_instmodels_used(self, inst_name=None, sortby_instname=False, return_fullname=True):
+    def name_instmodels_used(self, inst_name=None, inst_fullcat=None, sortby_instname=False, sortby_instfullcat=False, return_fullname=True):
         """Return a dict which for each instrument name give the instrument models to use.
 
         TODO: Add inst_full_cat because it will not work properly right now.
 
         For more details see instmodel4dataset.name_instmodels_used
         """
-        return self.instmodel4dataset.name_instmodels_used(inst_name=inst_name, sortby_instname=sortby_instname, return_fullname=return_fullname)
+        return self.instmodel4dataset.name_instmodels_used(inst_name=inst_name, inst_fullcat=inst_fullcat, sortby_instname=sortby_instname, sortby_instfullcat=sortby_instfullcat, return_fullname=return_fullname)
 
     def get_instmod_fullname(self, dataset_name):
         """Return the full name of the instrument model used for the specified dataset.
