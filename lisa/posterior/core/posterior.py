@@ -107,8 +107,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
 
     msg_err_datasetdb_notlocked = "You can't use this function if the dataset_db is not frozen."
 
-    _d_varname_configfile = {"datasets": "l_dataset"}
-
     #############################
     ## Methods for user interface
     #############################
@@ -186,15 +184,25 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
             user is not possible. In this case, you need to have all the configurations files
             already defined.
         """
-        logger.info(f"Load dataset files.")
-        self._load_config(config2load='datasets', path_config_file=path_config_file)
-       
-        logger.info("Load the instrument models definition.")
-        self._load_instrumentmodelsfile("instrument_models.py")  # Change if needed by the name you gave or want to give to your dataset file.
+        logger.info(f"Look for configuration file.")
+        self.__config_file = self.look4runfile(file_path=path_config_file)
+        # If doesn't exists offer the possibility to create a default one
+        if self.__config_file is None:
+            logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
+            default_file_content = f"# Configuration file for the analysis of {self.get_name()} with the {self.model.category} model.\n"
+            default_file_content += f"# The model keyword arguments provided for the initialisation of the model are {self.model.model_kwargs}\n\n"
+            self.__config_file = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
+
+        logger.info(f"Load datasets.")
+        self._load_config(config2load='datasets')
+
+        logger.info(f"Load instrument models definition.")
+        self._load_config(config2load='instmoddef')
 
         logger.info("Load the noise models for instrument model definition.")
-        self._load_noisemodelsfile("noise_models.py")  # Change if needed by the name you gave or want to give to your dataset file.  
+        self._load_config(config2load='noisemoddef')
 
+        # I AM here. 
         logger.info("5. Create model specific parameter file")
         if cluster:
             self.model.create_model_paramfile(paramfile=None, answer_overwrite="n", answer_create=None)
@@ -247,15 +255,150 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     ## Methods and properties used by the user interface methods
     ############################################################
 
-    @property
-    def model(self):
-        """Return the model."""
-        return self.__model
+    # Methods for the datasets part of the config file
+    ##################################################
+
+    def __add_default_config_var_datasets(self, file):
+        file.write("###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n")
+        file.write(f"l_dataset = []\n")    
+
+    def __config_var_exist_datasets(self, dico_config_file):
+        return 'l_dataset' in dico_config_file    
+
+    def __load_config_var_content_datasets(self, dico_config_file):
+        datasets_var = dico_config_file['l_dataset']
+        # Check that the content is valid
+        assert isinstance(datasets_var, list)
+        assert all([isinstance(dst, str) for dst in datasets_var])
+        # Load it
+        self.dataset_db._add_datasets_from_listdatasetpath(dico_config_file['l_dataset'])
+
+    # Methods for the instrument model definition part of the config file
+    #####################################################################
+    def __add_default_config_var_instmoddef(self, file):
+        file.write("\n##############################\n## Instrument model definition\n##############################\n"
+                   "# Define which instrument model you want to use for each dataset\n"
+                   "# By default each instrument is modeled by one instrument model which is used for all the datasets of this instrument\n"
+                   "# This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.\n"
+                   "# If you want to model one dataset of an instrument with a different instrument model from the others change 'inst' into whatever else you want (for example 'inst0').\n"
+                   )
+        dico = self.dataset_db.get_datasetnbs(inst_name=None, inst_fullcat=None, sortby_instname=True, sortby_instfullcat=True)
+        instmoddef = {}
+        for inst_fullcat in dico:
+            for inst_name in dico[inst_fullcat]:
+                l_dst_nb = dico[inst_fullcat][inst_name]
+                dico[inst_fullcat][inst_name] = {dst_nb: "inst" for dst_nb in l_dst_nb}
+            instmoddef[inst_fullcat] = dict(dico[inst_fullcat])
+        tab_instmoddef = spacestring_like('d_inst_model_def' + " = ")
+        file.write("{instmoddef} = {content}\n".format(instmoddef='d_inst_model_def',
+                                                       content=pformat(instmoddef, compact=True).replace('\n', f'\n{tab_instmoddef}')
+                                                       )
+                   )
+        
+    def __config_var_exist_instmoddef(self, dico_config_file):
+        return 'd_inst_model_def' in dico_config_file
+
+    def __load_config_var_content_instmoddef(self, dico_config_file):
+        instmoddef_var = dico_config_file['d_inst_model_def']
+        # Check that the content is valid
+        assert isinstance(instmoddef_var, dict)
+        assert set(instmoddef_var.keys()) == set(self.dataset_db.inst_fullcategories)
+        for inst_fullcat in instmoddef_var:
+            assert isinstance(instmoddef_var[inst_fullcat], dict)
+            assert set(instmoddef_var[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))
+            for inst_name in instmoddef_var[inst_fullcat]:
+                assert isinstance(instmoddef_var[inst_fullcat][inst_name], dict)
+                assert set(instmoddef_var[inst_fullcat][inst_name].keys()) == set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))
+                for dst_nb in instmoddef_var[inst_fullcat][inst_name]:
+                    assert isinstance(instmoddef_var[inst_fullcat][inst_name][dst_nb], str)
+        # Load it
+        l_inst_model_shortname = []
+        l_dataset_fullname = []
+        for dataset in self.dataset_db.get_datasets(inst_name=None, inst_fullcat=None, sortby_instcat=False,
+                                                    sortby_instname=False, sortby_nb=False):
+            dataset_name = manager_inst_dst.dataset_name_from_file_name(dataset.filename)
+            l_dataset_fullname.append(dataset_name)
+            # Extract, instrument category, instrument name, ... from the dataset filename
+            dataset_info = manager_inst_dst.interpret_data_filename(dataset.filename)
+            inst_fullcat = dataset_info["inst_fullcat"]
+            inst_name = dataset_info["inst_name"]
+            dst_nb = dataset_info["number"]
+            l_inst_model_shortname.append(instmoddef_var[inst_fullcat][inst_name][str(dst_nb)])
+        self.model.instmodel4dataset.update(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname)
+        # Create the instrument model
+        dico_instmodel_used = self.model.name_instmodels_used(inst_name=None, sortby_instname=True, inst_fullcat=None, sortby_instfullcat=True, return_fullname=False)
+        for inst_fullcat in dico_instmodel_used:
+            for inst_name in dico_instmodel_used[inst_fullcat]:
+                for inst_mod in dico_instmodel_used[inst_fullcat][inst_name]:
+                    inst = manager_inst_dst.get_inst(inst_name=inst_name, inst_fullcat=inst_fullcat)
+                    self.model.add_an_instrument_model(inst, name=inst_mod)
+
+    # Methods for the noise model definition part of the config file
+    ################################################################
+    def __add_default_config_var_noisemoddef(self, file):
+        file.write("\n#########################\n## Noise model definition\n#########################\n"
+                   "# Define which noise model you want to use for each instrument model\n"
+                   "# By default the gaussian noise model is used for all the instrument models\n"
+                   "# This is imposed by the fact that below all instrument models have 'gaussian' as entry.\n"
+                   "# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].\n"
+                   "# If you want to change the noise model used for a given instrument model, just change the value of its key.\n"
+                   )
+        dico = self.model.instmodel4dataset.name_instmodels_used(sortby_instname=True, sortby_instfullcat=True, return_fullname=False)
+        noisemoddef = {}
+        for inst_fullcat in dico:
+            for inst_name in dico[inst_fullcat]:
+                l_instmod_shortname = dico[inst_fullcat][inst_name]
+                dico[inst_fullcat][inst_name] = {instmod_shortname: "gaussian" for instmod_shortname in l_instmod_shortname}
+            noisemoddef[inst_fullcat] = dict(dico[inst_fullcat])
+        tab_noisemoddef = spacestring_like('d_noise_model_def' + " = ")
+        file.write("{var} = {content}\n".format(var='d_noise_model_def',
+                                                content=pformat(noisemoddef, compact=True).replace('\n', f'\n{tab_noisemoddef}')
+                                                )
+                   )
+        
+    def __config_var_exist_noisemoddef(self, dico_config_file):
+        return 'd_noise_model_def' in dico_config_file
+
+    def __load_config_var_content_noisemoddef(self, dico_config_file):
+        noisemoddef = dico_config_file['d_noise_model_def']
+        # Check that the content is valid
+        assert isinstance(noisemoddef, dict)
+        assert set(noisemoddef.keys()) == set(self.dataset_db.inst_fullcategories)
+        for inst_fullcat in noisemoddef:
+            assert isinstance(noisemoddef[inst_fullcat], dict)
+            assert set(noisemoddef[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))
+            for inst_name in noisemoddef[inst_fullcat]:
+                assert isinstance(noisemoddef[inst_fullcat][inst_name], dict)
+                assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.model.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
+                for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
+                    assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.model.possible_noise_model_categories
+
+        # Load it
+        for inst_fullcat in noisemoddef:
+            for inst_name in noisemoddef[inst_fullcat]:
+                for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
+                    inst_mod_obj = self.model.instruments[inst_fullcat][inst_name][instmod_shortname]
+                    inst_mod_obj.noise_model = self.model.get_NoiseModelClass(noise_model_category=noisemoddef[inst_fullcat][inst_name][instmod_shortname])
+
+    # Other methods and properties
+    ##############################
+    _add_default_config_var = {'datasets': __add_default_config_var_datasets, 
+                               'instmoddef': __add_default_config_var_instmoddef,
+                               'noisemoddef': __add_default_config_var_noisemoddef,
+                               }
+    _check_config_var_exists = {'datasets': __config_var_exist_datasets, 
+                                'instmoddef': __config_var_exist_instmoddef,
+                                'noisemoddef': __config_var_exist_noisemoddef,
+                                }
+    _load_config_var_content = {'datasets': __load_config_var_content_datasets, 
+                                'instmoddef': __load_config_var_content_instmoddef,
+                                'noisemoddef': __load_config_var_content_noisemoddef,
+                                }
     
     @property
     def _config_categories(self):
         """Return the list of existing configuration categories."""
-        return ['datasets', ]
+        return list(self._add_default_config_var.keys())
     
     def _get_ModelClass(self, model_category):
         """Set of model categories available.
@@ -266,7 +409,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         raise ValueError(f"There is no Core_Model Subclass corresponding to the model category"
                          f" {model_category} provided.")
     
-    def _read_configfile(self, path_config_file=None):
+    def _read_configfile(self):
         """Function that reads the config file
 
         Arguments
@@ -275,64 +418,64 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
             If None the function will offer the possibility to create a default datasets file
             It str, should be the path to an existing datasets file.
         """
-        # Look for the datasets file to check if it exists
-        file_path = self.look4runfile(file_path=path_config_file)
-        # If doesn't exists offer the possibility to create a default one
-        if file_path is None:
-            logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
-            default_file_content = f"# Configuration file for the analysis of {self.get_name()} with the {self.model.category} model.\n"
-            default_file_content += f"# The model keyword arguments provided for the initialisation of the model are {self.model.model_kwargs}\n\n"
-            default_file_content += f"###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n{self._d_varname_configfile['datasets']} = []\n"
-            file_path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
-            input(f"DATASETS: Modifiy the configuration file ({file_path}) to indicate which dataset files you want to analyse. Then press ENTER.")
         # Read the content of the config file
         cwd = getcwd()
         chdir(self.run_folder)
-        with open(file_path) as ff:
+        with open(self.__config_file) as ff:
             exec(ff.read())
         chdir(cwd)
         dico = locals().copy()
         for var_name in ["self", "cwd", "ff", "path_config_file", "file_path", 'default_file_content']:
             if var_name in dico:
                 dico.pop(var_name)
-        logger.debug(f"Content (just the name of the variables) of the config file (located at {file_path}):\n{list(dico.keys())}")
-        return file_path, dico
+        logger.debug(f"Content (just the name of the variables) of the config file (located at {self.__config_file}):\n{list(dico.keys())}")
+        return dico
     
-    def _load_config(self, config2load, path_config_file=None):
+    def _load_config(self, config2load):
         """Function that reads the config file
 
         Arguments
         ---------
         config2load         : str
-            Specify the config to load. Possible values are 'datasets'
+            Specify the config to load. Possible values are provided by self._config_categories
         path_config_file    : None or str
             If None the function will offer the possibility to create a default datasets file
             It str, should be the path to an existing datasets file.
         """
         if config2load not in self._config_categories:
             raise ValueError(f"{config2load} is not an existing configuration category {self._config_categories}")
-        self.__config_file, dico_config_file = self._read_configfile(path_config_file=path_config_file)
-        if self._d_varname_configfile[config2load] not in dico_config_file:
+        dico_config_file = self._read_configfile()
+        if not(self._check_config_var_exists[config2load](self=self, dico_config_file=dico_config_file)):
             # If the variable where the configuration of the category is supposed to be done is not defined in the config file
             # Propose to add it with the default configuration
             # I AM HERE
-            reply = askadd2configfile(path_file=self.__config_file, default_folder=self.run_folder)
+            reply = self._askadd2configfile(config2load=config2load)
             # If the reply is no raise an error
             if reply == 'n':
-                raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile['datasets']}.")
+                raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile[config2load]}.")
             # If the reply is yes add it to the config_file and ask the user to check the content.
             else:
-                if config2load == 'datasets':
-                    raise NotImplementedError 
-            # Need to do an if for each config category which calls the function that adds the default config for each category
-        # Check the content of the configuration variable.
-        # Need to do an if for each config category which calls the function that check the config for each category
-        if config2load == 'datasets':
-            raise NotImplementedError   # Maybe just check that it's a list of str, the existence of the dataset file is going to be checked when loading them.
-        # Load the configuration 
-        # Need to do an if for each config category which calls the function that loads the config for each category
-        if config2load == 'datasets':
-            self.dataset_db._add_datasets_from_listdatasetpath(dico_config_file[self._d_varname_configfile['datasets']])
+                # Look for the config file to check if it exists
+                file_path = self.look4runfile(file_path=self.__config_file)
+                with open(file_path, "+a") as ff:
+                    self._add_default_config_var[config2load](self=self, file=ff)
+                input(f"{config2load}: Default configuration variable(s) was/were added to the configuration file ({self.__config_file}).\n"
+                      "Modify it/them to your needs and then press ENTER.\n")
+                dico_config_file = self._read_configfile()
+        # Check the content of the configuration variable and load it
+        self._load_config_var_content[config2load](self=self, dico_config_file=dico_config_file)            
+
+    def _askadd2configfile(self, config2load):
+        """ Ask the use if he wants to add a missing configuration variable to the config file.
+
+        Arguments
+        ---------
+        config2load : 
+            Specify the config to load. Possible values are provided by self._config_categories
+        """
+        intitule_question = f"The variable(s) for the {config2load} configuration is/are missing from the config file. Do you want to add it/them ?\n"
+        return QCM_utilisateur(intitule_question=intitule_question, l_reponses_possibles=['y', 'n'])
+            
 
     ####################################
     ## Convenience function for the user
@@ -350,10 +493,16 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         return set([Model_Class.category for Model_Class in self.__model_classes])
     
     @property
+    def model(self):
+        """Return the model."""
+        return self.__model
+    
+    @property
     def config_file(self):
         """Path to the config file
         """
         return self.__config_file
+
 
     # @property
     # def run_folder(self):
@@ -376,89 +525,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     #         self.dataset_db.run_folder = self.run_folder
     #         if self.isdefined_model:
     #             self.model.run_folder = self.run_folder
-
-    def _load_datasetsfile(self, path_datasets_file=None):
-        """Function load the datasets file
-
-        The datasets file lists the dataset to model.
-
-        Arguments
-        ---------
-        path_datasets_file: None or str
-            If None the function will offer the possibility to create a default datasets file
-            It str, should be the path to an existing datasets file.
-        """
-        # Look for the datasets file to check if it exists
-        file_path = self.look4runfile(file_path=path_datasets_file)
-        # If doesn't exists offer the possibility to create a default one
-        if file_path is None:
-            logger.info("{} doesn't exist.".format(path_datasets_file))
-            file_path = ask4CreationDefaultFile(path_file=path_datasets_file, default_file_content="# Datasets file: List below all the files you want to use for this run\n# Provide one dataset file per line\n",
-                                                default_folder=self.run_folder)
-            input("Modifiy the dataset file")
-        # Load the datasets file into the datasetsfile database
-        self.datasetsfile_db.load(file_path)
-        # Add the datasets in the dataset database
-        self.dataset_db._add_datasets_from_listdatasetpath(self.datasetsfile_db.l_dataset_file_path)
-
-    def _load_instrumentmodelsfile(self, path_instrument_models_file=None):
-        """Load the instrument models file
-
-        The instrument models file define which datasets will be modelled by which instrument model
-
-        Arguments
-        ---------
-        path_instrument_models_file: None or str
-            If None the function will offer the possibility to create a default instrument models file
-            It str, should be the path to an existing isntrument model file.
-        """
-        # Look for the instrument models file to check if it exists
-        file_path = self.look4runfile(file_path=path_instrument_models_file)
-        # If doesn't exists offer the possibility to create a default one
-        if file_path is None:
-            logger.info("{} doesn't exist.".format(path_instrument_models_file))
-            # Create the text for the file
-            default_file_content = "# Define which instrument model you want to use for each dataset\n# By default each instrument is modeled by one instrument model which is used for all the datasets of this instrument"
-            default_file_content += "# This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.\n"
-            default_file_content += "# If you want to model one dataset of an instrument with a different instrument model from the others change 'inst' into whatever else you want (for example 'inst0')\n"
-            dico = self.datasetsfile_db.get_datasetnbs(inst_name=None, inst_fullcat=None,
-                                                       sortby_instname=True, sortby_instfullcat=True)
-            for inst_fullcat in dico:
-                for inst_name in dico[inst_fullcat]:
-                    l_dst_nb = dico[inst_fullcat][inst_name]
-                    dico[inst_fullcat][inst_name] = {dst_nb: "inst" for dst_nb in l_dst_nb}
-                header_instfullcat = f"{inst_fullcat} = "
-                tab_instfullcat = spacestring_like(header_instfullcat)
-                default_file_content += "{inst_fullcat} = {dico}\n".format(inst_fullcat=inst_fullcat, 
-                                                                           dico=pformat(dict(deepcopy(dico[inst_fullcat])), compact=True).replace('\n', f'\n{tab_instfullcat}')
-                                                                           )
-            file_path = ask4CreationDefaultFile(path_file=path_instrument_models_file, default_file_content=default_file_content,
-                                                default_folder=self.run_folder)
-            input("Modifiy the instrument model file")
-        # Read the instrument models file
-        cwd = getcwd()
-        chdir(self.run_folder)
-        with open(file_path) as ff:
-            exec(ff.read())
-        chdir(cwd)
-        dico = locals().copy()
-        for var_name in ["self", "cwd", "ff", "file_path", "path_instrument_models_file"]:
-            dico.pop(var_name)
-        logger.debug(f"Instrument model file ({file_path}) parameter file read.\nContent of the parameter file: {dico.keys()}")
-        # Load the instrument models file into the datasetsfile database
-        l_inst_model_shortname = []
-        l_dataset_fullname = []
-        for dataset_file_path in self.datasetsfile_db.l_dataset_file_path:
-            dataset_filename = get_filename_from_file_path(dataset_file_path)
-            dataset_name = manager_inst_dst.dataset_name_from_file_name(dataset_filename)
-            l_dataset_fullname.append(dataset_name)
-            # Extract, instrument category, instrument name, ... from the dataset filename
-            dataset_info = manager_inst_dst.interpret_data_filename(dataset_filename)
-            inst_fullcat = dataset_info["inst_fullcat"]
-            inst_name = dataset_info["inst_name"]
-            dst_nb = dataset_info["number"]
-            l_inst_model_shortname.append(dico[inst_fullcat][inst_name][dst_nb])
-        self.instmodel4dataset.update(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname)
 
     def _load_noisemodelsfile(self, path_noise_models_file=None):
         """Load the noise models file

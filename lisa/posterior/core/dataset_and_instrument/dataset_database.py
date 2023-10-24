@@ -259,14 +259,14 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
         return result
 
     def get_datasetnbs(self, inst_name=None, inst_fullcat=None,
-                       sortby_instcat=False, sortby_instname=False):
+                       sortby_instfullcat=False, sortby_instname=False):
         """Return the number(s) of the datasets int the database.
 
         :param str/None inst_name: Name of the instrument associated to the datasets of which you want
             the numbers. If None, all available instrument names are considered.
         :param str/None inst_fullcat: Full Category of instrument(s) associated to the dataset(s) of which you want
             the numbers. If None, all available instrument categories are considered.
-        :param bool sortby_instcat: Specify the format of the output. If true, all instrument categories
+        :param bool sortby_instfullcat: Specify the format of the output. If true, all instrument categories
             matching the request will be merged in the same list. If False, all instrument categories
             matching the request will have there own key in a dictionary.
         :param bool sortby_instname: Specify the format of the output. If true, all instrument names
@@ -278,7 +278,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
         """
         inst_fullcat, inst_name = check_instfullcat(self, inst_name=inst_name, inst_fullcat=inst_fullcat)
         return self.get_lvl3_keys(level1_key=inst_fullcat, level2_key=inst_name,
-                                  sortby_lvl1key=sortby_instcat, sortby_lvl2key=sortby_instname)
+                                  sortby_lvl1key=sortby_instfullcat, sortby_lvl2key=sortby_instname)
 
     def get_datasetnames(self, inst_name=None, inst_fullcat=None,
                          sortby_instcat=False, sortby_instname=False):

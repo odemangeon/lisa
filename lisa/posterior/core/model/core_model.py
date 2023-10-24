@@ -428,17 +428,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             if instcat_model.has_instcat_paramfile:
                 instcat_model.load_instcat_paramfile()
 
-    #################################
-    ## Dealing with instrument models
-    #################################
-
-    def init_instmodels(self, l_instmod_fullnames):
-        """Create the instrument models."""
-        for instmod_fullname in l_instmod_fullnames:
-            inst_mod_info = manager_inst.interpret_instmod_fullname(instmod_fullname=instmod_fullname)
-            inst = manager_inst.get_inst(inst_name=inst_mod_info["inst_name"], inst_fullcat=inst_mod_info["inst_fullcategory"])
-            self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
-
     ############################
     ## Dealing with noise models
     ############################
@@ -463,7 +452,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             Class of the Model for the noise category provided
         """
         for Noise_Model in self.noise_model_classes:
-            if Noise_Model.inst_cat == noise_model_category:
+            if Noise_Model.category == noise_model_category:
                 return Noise_Model
         raise ValueError(f"There is no Core_Noise_Model Subclass corresponding to the noise category {noise_model_category} in this model.")
 
@@ -911,18 +900,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             Noise model category for which you want to know if the specific param file is defined.
         """
         return self.paramfile4noisemodcat.get(noisemod_cat, None) is not None
-
-    def set_noisemodels(self, noisemod4instmodfullname):
-        """Set noise models attributes of the instrument models.
-
-        Arguments
-        ---------
-        noisemod4instmodfullname: dict,
-            Give the noise model name associated to the instrument model full name
-        """
-        logger.debug("noisemod4instmodfullname: {}".format(noisemod4instmodfullname))
-        for instmod_fullname, noise_model in noisemod4instmodfullname.items():
-            self.instruments[instmod_fullname].noise_model = noise_model
 
     # TODO: Doesn't seems to be used. what seems to be used is get_noisemod4instmodfullname from datasetfile_db
     def get_noisemodandinstmod4dataset(self):

@@ -106,8 +106,8 @@ class InstrumentContainerInterface(object):
 
     def rm_an_instrument_model(self, inst_model, inst_name, inst_fullcat, **kwargs):
         """Remove an instrument model to the paramcontainers of this model."""
-        inst_model, inst_name, inst_fullcat = check_args(inst_model=inst_model, inst_name=inst_name,
-                                                         inst_fullcat=inst_fullcat, **kwargs)
+        inst_model, inst_name, inst_fullcat = check_args_instruments(inst_model=inst_model, inst_name=inst_name,
+                                                                     inst_fullcat=inst_fullcat, **kwargs)
         self.instruments[inst_fullcat][inst_name].pop(inst_model)
 
     def get_instmodel_objs(self, inst_model=None, inst_name=None, inst_fullcat=None,
@@ -266,46 +266,6 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
                     number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
                     model_name = model_instance.instmodel4dataset[datasetname]
                     dico_inst_fullcat[inst_name][string4datasetdico][number] = model_name
-            # if quote_name:
-            #     entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}" + "{"
-            # else:
-            #     entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}" + "{"
-            # text += f"{text_tab}{entete_inst_fullcat}"
-            # extra_tab = spacestring_like(entete_inst_fullcat)
-            # first_instrument_name = True
-            # for inst_name in self[inst_fullcat]:
-            #     entete_inst_name = f"'{inst_name}': " + "{"
-            #     if first_instrument_name:
-            #         text += entete_inst_name
-            #         first_instrument_name = False
-            #     else:
-            #         text += text_tab + extra_tab + entete_inst_name
-            #     extra_tab2 = spacestring_like(entete_inst_name)
-            #     texttab_1tline = False
-            #     for inst_model in self[inst_fullcat][inst_name].values():
-            #         text += inst_model.get_paramfile_section(text_tab=text_tab + extra_tab + extra_tab2,
-            #                                                  texttab_1tline=texttab_1tline,
-            #                                                  entete_symb=": ",
-            #                                                  quote_name=True)
-            #         texttab_1tline = True
-            #         text += ",\n"
-            #     text_instmod4dataset = ""
-            #     for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
-            #         number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
-            #         model_name = model_instance.instmodel4dataset[datasetname]
-            #         text_instmod4dataset += "{}: '{}', ".format(number, model_name)
-            #     text += (f"{text_tab + extra_tab + extra_tab2}'{string4datasetdico}': {{{text_instmod4dataset}}},"
-            #              )
-            #     if hasattr(inst_subclass, "_get_inst_paramfilesection"):
-            #         text += "\n\n"
-            #         func = getattr(inst_subclass, "_get_inst_paramfilesection")
-            #         text += func(text_tab=text_tab + extra_tab + extra_tab2, model_instance=model_instance,
-            #                      inst_name=inst_name)
-            #     text += f"\n{text_tab + extra_tab + extra_tab2}}},\n"
-            # if hasattr(inst_subclass, "_get_instcat_paramfilesection"):
-            #     func = getattr(inst_subclass, "_get_instcat_paramfilesection")
-            #     text += func(text_tab=text_tab + extra_tab, model_instance=model_instance)
-            # text += f"\n{text_tab + extra_tab}" + "}\n\n"
             text += pformat(dico_inst_fullcat, compact=True).replace("\n", f"\n{text_tab + extra_tab}")
         return text
 

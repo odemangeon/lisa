@@ -85,10 +85,6 @@ class Instrument_Model(Core_ParamContainer):
     @noise_model.setter
     def noise_model(self, nm):
         """Set the noise model category to use for this instrument model."""
-        available_noisemodels = manager_noisemodel.get_available_noisemodels()
-        if nm not in available_noisemodels and nm is not None:
-            raise ValueError("{} is not an available noise model: {}"
-                             "".format(nm, available_noisemodels))
         self.__noise_model = nm
 
     @property
