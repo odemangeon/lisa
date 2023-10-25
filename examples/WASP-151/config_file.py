@@ -1,5 +1,4 @@
-# Configuration file for the analysis of WASP-151 with the GravitionalGroups model.
-# The model keyword arguments provided for the initialisation of the model are {'stars': 1, 'planets': 1}
+# Configuration file for the analysis of WASP-151.
 
 ###########
 ## Datasets
@@ -16,9 +15,9 @@ l_dataset = ["LC_WASP-151_K2.txt",
              "RV_WASP-151_CORALIE.txt",
              ]
 
-###########################
+##############################
 ## Instrument model definition
-###########################
+##############################
 # Define which instrument model you want to use for each dataset
 # By default each instrument is modeled by one instrument model which is used for all the datasets of this instrument
 # This is imposed by the fact that below all datasets have the same instrument model short name 'inst'.
@@ -29,9 +28,17 @@ d_inst_model_def = {'LC': {'EulerCam': {'0': 'inst0', '1': 'inst1'},
                            'TRAPPIST': {'0': 'inst'}},
                     'RV': {'CORALIE': {'0': 'inst'}, 'SOPHIE': {'0': 'inst'}}}
 
-###########################
+####################################
+## Model category definition
+####################################
+# Define the model category and the parameters of the model that are specfic to the model category.
+
+# Available model categories are ['GravitionalGroups', 'GravitionalGroupsDynamic']
+model_category = 'GravitionalGroups'
+
+#########################
 ## Noise model definition
-###########################
+#########################
 # Define which noise model you want to use for each instrument model
 # By default the gaussian noise model is used for all the instrument models
 # This is imposed by the fact that below all instrument models have 'gaussian' as entry.
