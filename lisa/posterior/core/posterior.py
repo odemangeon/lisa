@@ -26,9 +26,11 @@ from os import getcwd, chdir
 from textwrap import dedent
 from copy import copy, deepcopy
 from pprint import pformat
+from collections import OrderedDict
 
+from .config_file import ConfigFileAttr
 from .dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from .instmodel4dataset import Instmodel4DatasetAttr
+from .instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model import par_vec_name
@@ -41,7 +43,6 @@ from ..exoplanet.model.gravgroup.model import GravGroup
 from ...tools.name import Named
 from ...tools.default_folders_data_run import RunFolder
 from ...tools.function_w_doc import DocFunction
-from ...tools.human_machine_interface.QCM import QCM_utilisateur
 from ...tools.human_machine_interface.standard_questions import ask4CreationDefaultFile
 from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
 from ...tools.miscellaneous import spacestring_like, get_filename_from_file_path
@@ -55,7 +56,7 @@ manager_inst_dst.load_setup()
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
+class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileAttr):
     """Posterior is the main class of lisa.
 
     It allows to define the datasets that you want to analyse, the model that you want to use to analyse
@@ -111,7 +112,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     ## Methods for user interface
     #############################
 
-    def __init__(self, object_name, model_category, model_kwargs, data_folder=None, run_folder=None):
+    def __init__(self, object_name, data_folder=None, run_folder=None):
         """Init method for the Posterior class.
 
         Arguments
@@ -139,32 +140,31 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         # Initialize the dataset database attribute and assign it dataset_lock
         DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(), data_folder=data_folder,
                                                                 lock=self.get_dataset_Lock_instance()))
-        # Initialize the model
-        Model_Class = self._get_ModelClass(model_category=model_category)
-        self.__model = Model_Class(name=object_name, lock=self.get_dataset_Lock_instance(), **model_kwargs)
-        # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
-        # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
-        self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
-                                         instmodel4dataset=self.model.instmodel4dataset,
-                                         instordered=False, use_samelock=self.samelock,
-                                         lock_dataset=self.get_dataset_Lock_instance(),
-                                         lock_database=self.get_database_Lock_instance())
-        self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
-                                        instmodel4dataset=self.model.instmodel4dataset,
-                                        instordered=False, use_samelock=self.samelock,
-                                        lock_dataset=self.get_dataset_Lock_instance(),
-                                        lock_database=self.get_database_Lock_instance())
-        self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
-                                        instmodel4dataset=self.model.instmodel4dataset,
-                                        instordered=False, use_samelock=self.samelock,
-                                        lock_dataset=self.get_dataset_Lock_instance(),
-                                        lock_database=self.get_database_Lock_instance())
-        self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
-                                         instmodel4dataset=self.model.instmodel4dataset,
-                                         database_name=self.object_name, instordered=False,
-                                         use_samelock=self.samelock,
-                                         lock_dataset=self.get_dataset_Lock_instance(),
-                                         lock_database=self.get_database_Lock_instance())
+        # Initialize the configuration file attribute
+        ConfigFileAttr.__init__(self)
+        # # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
+        # # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
+        # self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
+        #                                  instmodel4dataset=self.model.instmodel4dataset,
+        #                                  instordered=False, use_samelock=self.samelock,
+        #                                  lock_dataset=self.get_dataset_Lock_instance(),
+        #                                  lock_database=self.get_database_Lock_instance())
+        # self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
+        #                                 instmodel4dataset=self.model.instmodel4dataset,
+        #                                 instordered=False, use_samelock=self.samelock,
+        #                                 lock_dataset=self.get_dataset_Lock_instance(),
+        #                                 lock_database=self.get_database_Lock_instance())
+        # self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
+        #                                 instmodel4dataset=self.model.instmodel4dataset,
+        #                                 instordered=False, use_samelock=self.samelock,
+        #                                 lock_dataset=self.get_dataset_Lock_instance(),
+        #                                 lock_database=self.get_database_Lock_instance())
+        # self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
+        #                                  instmodel4dataset=self.model.instmodel4dataset,
+        #                                  database_name=self.object_name, instordered=False,
+        #                                  use_samelock=self.samelock,
+        #                                  lock_dataset=self.get_dataset_Lock_instance(),
+        #                                  lock_database=self.get_database_Lock_instance())
         
     def configure_posterior(self, path_config_file=None, cluster=False):
         """Configure the whole posterior using the configuration file.
@@ -189,20 +189,24 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
         # If doesn't exists offer the possibility to create a default one
         if self.__config_file is None:
             logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
-            default_file_content = f"# Configuration file for the analysis of {self.get_name()} with the {self.model.category} model.\n"
-            default_file_content += f"# The model keyword arguments provided for the initialisation of the model are {self.model.model_kwargs}\n\n"
+            default_file_content = f"# Configuration file for the analysis of {self.get_name()}.\n"
             self.__config_file = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
 
         logger.info(f"Load datasets.")
         self._load_config(config2load='datasets')
 
         logger.info(f"Load instrument models definition.")
-        self._load_config(config2load='instmoddef')
+        instmodel4dataset = self._load_config(config2load='instmoddef')
+
+        logger.info("Load model category definition.")
+        self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset)
+
+        logger.info("Load model category specific parametrisation.")
+        self._load_config_model(config2load='catparam')
 
         logger.info("Load the noise models for instrument model definition.")
         self._load_config(config2load='noisemoddef')
 
-        # I AM here. 
         logger.info("5. Create model specific parameter file")
         if cluster:
             self.model.create_model_paramfile(paramfile=None, answer_overwrite="n", answer_create=None)
@@ -259,13 +263,13 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     ##################################################
 
     def __add_default_config_var_datasets(self, file):
-        file.write("###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n")
+        file.write("\n###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n")
         file.write(f"l_dataset = []\n")    
 
     def __config_var_exist_datasets(self, dico_config_file):
         return 'l_dataset' in dico_config_file    
 
-    def __load_config_var_content_datasets(self, dico_config_file):
+    def __load_config_var_content_datasets(self, dico_config_file, **kwargs):
         datasets_var = dico_config_file['l_dataset']
         # Check that the content is valid
         assert isinstance(datasets_var, list)
@@ -298,7 +302,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     def __config_var_exist_instmoddef(self, dico_config_file):
         return 'd_inst_model_def' in dico_config_file
 
-    def __load_config_var_content_instmoddef(self, dico_config_file):
+    def __load_config_var_content_instmoddef(self, dico_config_file, **kwargs):
         instmoddef_var = dico_config_file['d_inst_model_def']
         # Check that the content is valid
         assert isinstance(instmoddef_var, dict)
@@ -324,14 +328,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
             inst_name = dataset_info["inst_name"]
             dst_nb = dataset_info["number"]
             l_inst_model_shortname.append(instmoddef_var[inst_fullcat][inst_name][str(dst_nb)])
-        self.model.instmodel4dataset.update(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname)
-        # Create the instrument model
-        dico_instmodel_used = self.model.name_instmodels_used(inst_name=None, sortby_instname=True, inst_fullcat=None, sortby_instfullcat=True, return_fullname=False)
-        for inst_fullcat in dico_instmodel_used:
-            for inst_name in dico_instmodel_used[inst_fullcat]:
-                for inst_mod in dico_instmodel_used[inst_fullcat][inst_name]:
-                    inst = manager_inst_dst.get_inst(inst_name=inst_name, inst_fullcat=inst_fullcat)
-                    self.model.add_an_instrument_model(inst, name=inst_mod)
+        return Instmodel4Dataset(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname, lock=self.get_dataset_Lock_instance())
 
     # Methods for the noise model definition part of the config file
     ################################################################
@@ -359,7 +356,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     def __config_var_exist_noisemoddef(self, dico_config_file):
         return 'd_noise_model_def' in dico_config_file
 
-    def __load_config_var_content_noisemoddef(self, dico_config_file):
+    def __load_config_var_content_noisemoddef(self, dico_config_file, **kwargs):
         noisemoddef = dico_config_file['d_noise_model_def']
         # Check that the content is valid
         assert isinstance(noisemoddef, dict)
@@ -372,33 +369,80 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
                 assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.model.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
                 for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
                     assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.model.possible_noise_model_categories
-
         # Load it
         for inst_fullcat in noisemoddef:
             for inst_name in noisemoddef[inst_fullcat]:
                 for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
                     inst_mod_obj = self.model.instruments[inst_fullcat][inst_name][instmod_shortname]
                     inst_mod_obj.noise_model = self.model.get_NoiseModelClass(noise_model_category=noisemoddef[inst_fullcat][inst_name][instmod_shortname])
+    
+    # Methods for the model category definition part of the config file
+    ###################################################################
+    def __add_default_config_modelcategory(self, file):
+        """Add the default config for the parametrisation specific to the model category in the configuration file.
+
+        This function is stored in Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables
+        """
+        file.write("\n####################################\n## Model category definition\n####################################\n"
+                   f"# Define the model category and the parameters of the model that are specfic to the model category.\n"
+                   f"\n# Available model categories are {manager_model.get_available_models()}\n"
+                   )
+        file.write("model_category = 'GravitionalGroups'\n")          
+        # This function needs to be overloaded in the Model subclasses that requierts parameterisation specific to the model category
+
+    def __config_var_exist_modelcategory(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+
+        This function is stored Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables
+        """
+        return 'model_category' in dico_config_file
+    
+    def __load_config_var_content_modelcategory(self, dico_config_file, **kwargs):
+        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+
+        This function is stored Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables
+        """
+        Model_Class = self._get_ModelClass(model_category=dico_config_file['model_category'])
+        self.__model = Model_Class(name=self.get_name(), lock=self.get_dataset_Lock_instance(), instmodel4dataset=kwargs["instmodel4dataset"])
+        self.__model._finish_init_Model()
 
     # Other methods and properties
     ##############################
-    _add_default_config_var = {'datasets': __add_default_config_var_datasets, 
-                               'instmoddef': __add_default_config_var_instmoddef,
-                               'noisemoddef': __add_default_config_var_noisemoddef,
-                               }
-    _check_config_var_exists = {'datasets': __config_var_exist_datasets, 
-                                'instmoddef': __config_var_exist_instmoddef,
-                                'noisemoddef': __config_var_exist_noisemoddef,
-                                }
-    _load_config_var_content = {'datasets': __load_config_var_content_datasets, 
-                                'instmoddef': __load_config_var_content_instmoddef,
-                                'noisemoddef': __load_config_var_content_noisemoddef,
-                                }
-    
-    @property
-    def _config_categories(self):
-        """Return the list of existing configuration categories."""
-        return list(self._add_default_config_var.keys())
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'datasets':
+                return self.__add_default_config_var_datasets
+            elif config2load == 'instmoddef':
+                return self.__add_default_config_var_instmoddef
+            elif config2load == 'noisemoddef':
+                return self.__add_default_config_var_noisemoddef
+            elif config2load == 'modelcatdef':
+                return self.__add_default_config_modelcategory
+        elif function_type == 'check_config_exists':
+            if config2load == 'datasets':
+                return self.__config_var_exist_datasets
+            elif config2load == 'instmoddef':
+                return self.__config_var_exist_instmoddef
+            elif config2load == 'noisemoddef':
+                return self.__config_var_exist_noisemoddef
+            elif config2load == 'modelcatdef':
+                return self.__config_var_exist_modelcategory
+        elif function_type == 'load_config_content':
+            if config2load == 'datasets':
+                return self.__load_config_var_content_datasets
+            elif config2load == 'instmoddef':
+                return self.__load_config_var_content_instmoddef
+            elif config2load == 'noisemoddef':
+                return self.__load_config_var_content_noisemoddef
+            elif config2load == 'modelcatdef':
+                return self.__load_config_var_content_modelcategory
+        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
     
     def _get_ModelClass(self, model_category):
         """Set of model categories available.
@@ -408,73 +452,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
                 return Model_Class
         raise ValueError(f"There is no Core_Model Subclass corresponding to the model category"
                          f" {model_category} provided.")
-    
-    def _read_configfile(self):
-        """Function that reads the config file
-
-        Arguments
-        ---------
-        path_config_file: None or str
-            If None the function will offer the possibility to create a default datasets file
-            It str, should be the path to an existing datasets file.
-        """
-        # Read the content of the config file
-        cwd = getcwd()
-        chdir(self.run_folder)
-        with open(self.__config_file) as ff:
-            exec(ff.read())
-        chdir(cwd)
-        dico = locals().copy()
-        for var_name in ["self", "cwd", "ff", "path_config_file", "file_path", 'default_file_content']:
-            if var_name in dico:
-                dico.pop(var_name)
-        logger.debug(f"Content (just the name of the variables) of the config file (located at {self.__config_file}):\n{list(dico.keys())}")
-        return dico
-    
-    def _load_config(self, config2load):
-        """Function that reads the config file
-
-        Arguments
-        ---------
-        config2load         : str
-            Specify the config to load. Possible values are provided by self._config_categories
-        path_config_file    : None or str
-            If None the function will offer the possibility to create a default datasets file
-            It str, should be the path to an existing datasets file.
-        """
-        if config2load not in self._config_categories:
-            raise ValueError(f"{config2load} is not an existing configuration category {self._config_categories}")
-        dico_config_file = self._read_configfile()
-        if not(self._check_config_var_exists[config2load](self=self, dico_config_file=dico_config_file)):
-            # If the variable where the configuration of the category is supposed to be done is not defined in the config file
-            # Propose to add it with the default configuration
-            # I AM HERE
-            reply = self._askadd2configfile(config2load=config2load)
-            # If the reply is no raise an error
-            if reply == 'n':
-                raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile[config2load]}.")
-            # If the reply is yes add it to the config_file and ask the user to check the content.
-            else:
-                # Look for the config file to check if it exists
-                file_path = self.look4runfile(file_path=self.__config_file)
-                with open(file_path, "+a") as ff:
-                    self._add_default_config_var[config2load](self=self, file=ff)
-                input(f"{config2load}: Default configuration variable(s) was/were added to the configuration file ({self.__config_file}).\n"
-                      "Modify it/them to your needs and then press ENTER.\n")
-                dico_config_file = self._read_configfile()
-        # Check the content of the configuration variable and load it
-        self._load_config_var_content[config2load](self=self, dico_config_file=dico_config_file)            
-
-    def _askadd2configfile(self, config2load):
-        """ Ask the use if he wants to add a missing configuration variable to the config file.
-
-        Arguments
-        ---------
-        config2load : 
-            Specify the config to load. Possible values are provided by self._config_categories
-        """
-        intitule_question = f"The variable(s) for the {config2load} configuration is/are missing from the config file. Do you want to add it/them ?\n"
-        return QCM_utilisateur(intitule_question=intitule_question, l_reponses_possibles=['y', 'n'])
             
 
     ####################################
@@ -496,13 +473,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr):
     def model(self):
         """Return the model."""
         return self.__model
-    
-    @property
-    def config_file(self):
-        """Path to the config file
-        """
-        return self.__config_file
-
 
     # @property
     # def run_folder(self):

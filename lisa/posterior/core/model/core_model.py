@@ -72,7 +72,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Methods for interface with other modules
     ###########################################
 
-    def __init__(self, name, model_kwargs=None, lock=None):
+    def __init__(self, name, instmodel4dataset, lock=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This function should be use in the __init__ function of Subclass of this class
@@ -92,9 +92,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # Initialise the attributes related to the Prior
         Model_Prior.__init__(self, self.paramfile_info)  # self.paramfile_info comes from Core_ParamContainer
         # Init the instmodel4dataset
-        instmodel4dataset = Instmodel4Dataset(list_datasetnames=None, list_instmodels=None, lock=lock)
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
-                                       lock="instmodel4dataset")        
+                                       lock="instmodel4dataset")
+        # Initialise the instrument models
+        self.__init_instmodels(l_instmod_fullnames=self.instmodel4dataset.name_instmodels_used(inst_name=None, sortby_instname=False, inst_fullcat=None, sortby_instfullcat=None, return_fullname=True))     
         # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
         # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
         def __def_dict_noisemodhandlers():
@@ -130,33 +131,71 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         This function shoudl be overridden in the sub classes
         """
         return None
+    
+    ##################################################
+    ## Dealing with the model category parametrisation
+    ##################################################
+
+    def _add_default_config_modelcatparam(self, file):
+        """Add the default config for the parametrisation specific to the model category in the configuration file.
+
+        This function is stored in Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
+        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
+        """
+        pass    
+
+    def _config_var_exist_modelcatparam(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+
+        This function is stored Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
+        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
+        """
+        pass
+    
+    
+    def _load_config_var_content_modelcatparam(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+
+        This function is stored Posterior.get_function_config and used by Posterior._load_config
+
+        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
+        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
+        """
+        pass
+
+    ##########################################
+    ## Methods to create the instrument models
+    ##########################################
+       
+    def __init_instmodels(self, l_instmod_fullnames):
+        """Create the instrument models."""
+        for instmod_fullname in l_instmod_fullnames:
+            inst_mod_info = manager_inst.interpret_instmod_fullname(instmod_fullname=instmod_fullname)
+            inst = manager_inst.get_inst(inst_name=inst_mod_info["inst_name"], inst_fullcat=inst_mod_info["inst_fullcategory"])
+            self.add_an_instrument_model(inst, name=inst_mod_info["inst_model"])
+
 
     ##################
     ## Methods to sort
     ##################
 
-    def finish_init(self):
+    def _finish_init_Model(self):
         """Finish the initialisation of the core components of the model.
 
-        This function is meant to be run in the __init__ method of a Core_Model subclass. It initialises
-        core components of a model which require knowledge of the specificities of the model subclass
-        to be initialised and that is why the comtent of this function cannot simply be put in __init__.
-        __init__ is meant to be run right at the beginning of the subclass __init__ method while
-        finish_init is meant to be run at the end.
+        This function is meant to be run in the __load_config_var_content_modelcategory method of a Posterior class. 
+        It initialises core components of a model which require knowledge of the specificities of the model subclass
+        to be initialised and that is why the comtent of this function cannot simply be put in Core_Model.__init__.
 
         This function initialise instcat_models and the InstCat_Model subclass instances that are in this
         dictionary.
-        """
+        """   
         # Now load the available InstCat_Models and do the __init__
         for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
-                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
-                self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
-                self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
-
-        # Now load the available Noise_Models and do the __init__
-        for Noise_Model in self.noise_model_classes:
-            if Noise_Model.category in self.noisemodelcat4instmodfullname:
                 self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
                 self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
                 self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator

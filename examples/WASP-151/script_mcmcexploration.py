@@ -26,8 +26,6 @@ from lisa.explore_analyze.misc import get_def_output_folders
 obj_name = "WASP-151"  # Change
 
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
-model_category = "GravitionalGroups"
-model_kwargs = {"stars": 1, "planets": 1}
 
 data_folder = join(getcwd(), "data")  # Change if needed: Folder where the data are located
 run_folder = getcwd()
@@ -66,8 +64,7 @@ if 'sinkid_file_explore' not in globals():
 logger.info("########\nMCMC EXPLORATION")
 
 logger.info("1. Create a Posterior instance and give it the name of the object studied and the model definition.")
-post_instance = cpost.Posterior(object_name=obj_name, model_category=model_category, model_kwargs=model_kwargs, 
-                                data_folder=data_folder, run_folder=run_folder)
+post_instance = cpost.Posterior(object_name=obj_name, data_folder=data_folder, run_folder=run_folder)
 
 logger.info("2. Define the posterior.")
 post_instance.configure_posterior(path_config_file="config_file.py")  # Change if needed by the name you gave or want to give to your dataset file.
