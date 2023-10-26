@@ -36,6 +36,39 @@ d_inst_model_def = {'LC': {'EulerCam': {'0': 'inst0', '1': 'inst1'},
 # Available model categories are ['GravitionalGroups', 'GravitionalGroupsDynamic']
 model_category = 'GravitionalGroups'
 
+# Stars
+#######
+# Specify the number of stars in the gravitational group. This can be specified by giving a number (ex: 1)
+stars = 1
+
+# Planets
+#########
+# Specify the number of planets in the gravitational group. This can be specified by giving a number (ex: 1) or a list of planet names (ex: ['b'])
+planets = 1
+
+# Orbital models
+################
+orbital_model = {'b': {'do': True,
+                       'model4instrument': {'LC_EulerCam_inst0': '',
+                                            'LC_EulerCam_inst1': '',
+                                            'LC_IAC80_inst0': '',
+                                            'LC_IAC80_inst1': '',
+                                            'LC_K2_inst': '',
+                                            'LC_TRAPPIST_inst': '',
+                                            'RV_CORALIE_inst': '',
+                                            'RV_SOPHIE_inst': ''},
+                       'model_definitions': {'': {'category': 'batman',
+                                                  'param_extensions': {'planet': {'P': '',
+                                                                                  'cosinc': '',
+                                                                                  'ecosw': '',
+                                                                                  'esinw': '',
+                                                                                  'tic': ''},
+                                                                       'star': {'rho': ''}},
+                                                  'parametrisation': {'ew_format': 'ecosw-esinw',
+                                                                      'inc_format': 'cosinc',
+                                                                      'use_aR': False,
+                                                                      'use_tic': True}}}}}
+
 #########################
 ## Noise model definition
 #########################

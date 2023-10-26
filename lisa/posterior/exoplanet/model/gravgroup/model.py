@@ -68,14 +68,79 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
     ###########################################
     ## Methods for interface with other modules
     ###########################################
+        
+    #######################################
+    ## Dealing with the model configuration
+    #######################################
 
-    def _finish_init_modelparam(self, stars, planets):
-        """docstring GravGroup finish init method."""
-        # Finish the initialisation
-        super(GravGroup, self).finish_init(self)
+    def _configure_model(self):
+        """Configure the model
 
+        This function is called by Posterior.configure_posterior
+        """
+        logger.info("Load stars and planet configuration")
+        self._load_config(config2load='starsplanets')
+
+        logger.info("Load the planets' orbital models configuration.")
+        self._load_config(config2load='orbitmodels')
+
+        super(GravGroup, self)._configure_model()
+
+
+    # Function that get the function required by  ConfigFileAttr._load_config
+    #########################################################################
+
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'starsplanets':
+                return self.__add_default_config_starsplanets
+            elif config2load == 'orbitmodels':
+                return self.__add_default_config_orbitmodels
+        elif function_type == 'check_config_exists':
+            if config2load == 'starsplanets':
+                return self.__config_var_exist_starsplanets
+            elif config2load == 'orbitmodels':
+                return self.__config_var_exist_orbitmodels
+        elif function_type == 'load_config_content':
+            if config2load == 'starsplanets':
+                return self.__load_config_var_content_starsplanets
+            elif config2load == 'orbitmodels':
+                return self.__load_config_var_content_orbitmodels
+        super(GravGroup, self)._get_function_config(function_type=function_type, config2load=config2load)
+
+    # Dealing with the definition of stars and planets
+    ##################################################
+
+    def __add_default_config_starsplanets(self, file):
+        """Add the default config for the parametrisation of the stars and planets
+
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
+        """
+        file.write("\n# Stars\n#######\n"
+                   "# Specify the number of stars in the gravitational group. This can be specified by giving a number (ex: 1)\n"
+                   "stars = 1\n"
+                   )  
+        file.write("\n# Planets\n#########\n"
+                   "# Specify the number of planets in the gravitational group. This can be specified by giving a number (ex: 1) or a list of planet names (ex: ['b'])\n"
+                   "planets = 1\n"
+                   )
+
+    def __config_var_exist_starsplanets(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the stars and planets
+
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
+        """
+        return all([var in dico_config_file for var in ['stars', 'planets']])
+    
+    
+    def __load_config_var_content_starsplanets(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the stars and planets
+
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
+        """
         # Initialise the stars in the system
         ## stars: ordered dictionary of the stars in the grav group
+        stars = dico_config_file['stars']
         if isinstance(stars, int):
             if stars >= 1:
                 self.add_stars(number=stars)
@@ -91,6 +156,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
                              "or None. {}".format(stars))
         # Initialise the planets in the system
         ## planets: ordered dictionary of the planets in the grav group
+        planets = dico_config_file['planets']
         if isinstance(planets, int):
             if planets >= 1:
                 self.add_planets(number=planets)
@@ -104,99 +170,39 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
         else:
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
-
-        # # Fill the handlers4noisecatparamfile dictionary
-        # self.handlers4noisecatparamfile[stelact_GP_noisemodel] = {create_key: self.create_SANM_param_file,
-        #                                                           load_key: self.load_SANM_param_file
-        #                                                           }
-
-        # Initialise the orbital_model dictionnary which will define the orbital model to use for the
-        # RV and LC instrument models
+        # Initialize orbital_model
         self.orbital_model = OrbitalModels(l_planet=[planet for planet in self.planets.values()],
                                            host_star=self.stars[list(self.stars.keys())[0]],
-                                           l_inst_model_fullname=l_inst_model_fullname
+                                           l_inst_model_fullname=self.inst_model_fullnames,
                                            )
-
         
-
-    @property
-    def model_kwargs(self):
-        """This property contains the model_kwargs of this model. A dictionary of arguments to initialise the models.
-
-        This function shoudl be overridden in the sub classes
-        """
-        return {"stars": len(self.stars), "planets": len(self.planets)}
+    # Dealing with the definition of orbital models
+    ###############################################
     
-    ##################################################
-    ## Dealing with the model category parametrisation
-    ##################################################
+    def __add_default_config_orbitmodels(self, file):
+        """Add the default config for the parametrisation of the planets' orbital models
 
-    def _add_default_config_modelcatparam(self, file):
-        """Add the default config for the parametrisation specific to the model category in the configuration file.
-
-        This function is stored in Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
         """
-        file.write("\n# Stars\n#######\n"
-                   "# Specify the number of stars in the gravitational group. This can be specified by giving a number (ex: 1)"
-                   "stars = 1\n"
-                   )  
-        file.write("\n# Planets\n#########\n"
-                   "# Specify the number of planets in the gravitational group. This can be specified by giving a number (ex: 1) or a list of planet names (ex: ['b'])"
-                   "planets = 1\n"
-                   )
-
-    def _config_var_exist_modelcatparam(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
-
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
-        """
-        return [var in dico_config_file for var in ['stars', 'planets']]
-    
-    
-    def _load_config_var_content_modelcatparam(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
-
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
-        """
-        self.init_stars_and_planets(stars=dico_config_file['stars'], planets=dico_config_file['planets'])
-    
-    def _add_default_config_modelcategorydef(self, file):
-        """Add the default config for the parametrisation specific to the model category inn the configuration file.
-
-        This function is stored in Posterior._add_default_config_var and used by Posterior._load_config
-        """
-        file.write("\n####################################\n## Model definition for the category\n####################################\n"
-                   f"# Define the parameters of the model that are specfic to the model category ({self.category}).\n"
-                   )
+        # file.write("\n####################################\n## Model definition for the category\n####################################\n"
+        #            f"# Define the parameters of the model that are specfic to the model category ({self.category}).\n"
+        #            )
         tab_orbmod = spacestring_like("orbital_model = ")
         file.write("\n# Orbital models\n################\n"
-                   "orbital_model = {orbital_model}".format(orbital_model=pformat(self.orbital_model.dict2print, compact=True).replace("\n", f"\n{tab_orbmod}"))
+                   "orbital_model = {orbital_model}\n".format(orbital_model=pformat(self.orbital_model.dict2print, compact=True).replace("\n", f"\n{tab_orbmod}"))
                    )
         
-    def _config_var_exist_modelcategorydef(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+    def __config_var_exist_orbitmodels(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the planets' orbital models
 
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclasses that requierts parameterisation specific to the model category
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
         """
         return 'orbital_model' in dico_config_file
 
-    def _load_config_var_content_noisemoddef(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+    def __load_config_var_content_orbitmodels(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the planets' orbital models
 
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclasses that requierts parameterisation specific to the model category
+        This function is stored in GravGroup.get_function_config and used by GravGroup._load_config
         """
         self.orbital_model.load_config(dico_config=dico_config_file['orbital_model'])
 

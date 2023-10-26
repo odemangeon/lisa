@@ -22,6 +22,7 @@ from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
 from .core_parametrisation import Core_Parametrisation
 from .instrument_container import InstrumentContainerInterface
+from ..config_file import ConfigFileAttr, ConfigFile
 from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from ..paramcontainer import Core_ParamContainer, key_params_fileinfo
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -35,7 +36,7 @@ from ..prior.model_prior import Model_Prior, joint_prior_name
 from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.default_folders_data_run import RunFolder
+from ....tools.default_folders_data_run import RunFolderAttr, RunFolder
 from ....tools.miscellaneous import spacestring_like
 
 # from ....tools.miscellaneous import spacestring_like
@@ -52,6 +53,7 @@ load_key = "load"
 
 class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
+                 ConfigFileAttr, RunFolderAttr,
                  Core_Parametrisation, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
@@ -72,7 +74,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Methods for interface with other modules
     ###########################################
 
-    def __init__(self, name, instmodel4dataset, lock=None):
+    def __init__(self, name, instmodel4dataset, run_folder, config_file, lock=None):
         """Core_Model init method FOR INHERITANCE PURPOSES (as Core_Model is an abstract class).
 
         This function should be use in the __init__ function of Subclass of this class
@@ -89,6 +91,14 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         ParamContainerDatabase.__init__(self)
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
+        # Init the run_folder
+        if not(isinstance(run_folder, RunFolder)):
+            raise ValueError("run_folder should be a RunFolder instance, the one defined for the Posterior intance (Posterior.run_folder)")
+        RunFolderAttr.__init__(self, run_folder=run_folder)
+        # Init the run_folder
+        if not(isinstance(config_file, ConfigFile)):
+            raise ValueError("config_file should be a ConfigFile instance, the one defined for the Posterior intance (Posterior.config_file)")
+        ConfigFileAttr.__init__(self, config_file=config_file)
         # Initialise the attributes related to the Prior
         Model_Prior.__init__(self, self.paramfile_info)  # self.paramfile_info comes from Core_ParamContainer
         # Init the instmodel4dataset
@@ -123,49 +133,28 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             self.paramfile_model = None
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
-
-    @property
-    def model_kwargs(self):
-        """This property contains the model_kwargs of this model. A dictionary of arguments to initialise the models.
-
-        This function shoudl be overridden in the sub classes
-        """
-        return None
     
-    ##################################################
-    ## Dealing with the model category parametrisation
-    ##################################################
+    #######################################
+    ## Dealing with the model configuration
+    #######################################
 
-    def _add_default_config_modelcatparam(self, file):
-        """Add the default config for the parametrisation specific to the model category in the configuration file.
-
-        This function is stored in Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
+    def _configure_model(self):
+        """Configure the model
         """
-        pass    
+        self._init_instcat_models_and_datasimcreator()
 
-    def _config_var_exist_modelcatparam(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+        # I AM HERE
+        logger.info("Load instrument category parametrisation file.")
+        self._load_config(config2load='instcat')
 
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
+    # Function that get the function required by  ConfigFileAttr._load_config
+    #########################################################################
 
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
-        """
-        pass
-    
-    
-    def _load_config_var_content_modelcatparam(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation specific to the model category are defined in the configuration file.
+    def _get_function_config(self, function_type, config2load):
+        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
 
-        This function is stored Posterior.get_function_config and used by Posterior._load_config
-
-        # This function needs to be overloaded in the Model subclass if you want to add more variables in the section dedicated to 
-        # the parametrisation specific to the model category has a whole (not specific to the modeling a certain category of data)
-        """
-        pass
+    # Dealing with the some part of the model configuration that is common to all model
+    ###################################################################################
 
     ##########################################
     ## Methods to create the instrument models
@@ -183,7 +172,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Methods to sort
     ##################
 
-    def _finish_init_Model(self):
+    def _init_instcat_models_and_datasimcreator(self):
         """Finish the initialisation of the core components of the model.
 
         This function is meant to be run in the __load_config_var_content_modelcategory method of a Posterior class. 
@@ -195,7 +184,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """   
         # Now load the available InstCat_Models and do the __init__
         for InstCat_Model in self.instcat_model_classes:
-            if InstCat_Model.inst_cat in self.dataset_db.inst_categories:
+            if InstCat_Model.inst_cat in self.get_instcat_used():
                 self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
                 self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
                 self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
