@@ -47,8 +47,8 @@ class RV_InstCat_Model(Core_InstCat_Model):
     ## List of available rv models, the 1st element is used as default
     _rv_models = ["radvel", ]  # ["radvel", "ajplanet"] Temporarily? remove ajplanet from the available rv_models
 
-    def __init__(self, model_instance):
-        super(RV_InstCat_Model, self).__init__(model_instance=model_instance)
+    def __init__(self, model_instance, run_folder, config_file):
+        super(RV_InstCat_Model, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
         self.keplerian_rv_model = RVKeplerianModels(l_planet=[planet for planet in self.model_instance.planets.values()],
                                                     host_star=self.model_instance.stars[list(self.model_instance.stars.keys())[0]],
                                                     orbital_models=self.model_instance.orbital_model
