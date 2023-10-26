@@ -1,0 +1,21 @@
+numpy
+matplotlib
+scipy
+pandas
+astropy
+dill
+tqdm
+george
+celerite
+emcee=3.x
+PyAstronomy
+statsmodels
+batman
+radvel
+ajplanet*
+pytransit*
+rebound*
+PIL**
+
+* means not mandatory
+** probably not required at all
