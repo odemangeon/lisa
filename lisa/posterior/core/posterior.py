@@ -41,7 +41,7 @@ from .datasetsfile_db import DatasetsFileDbAttr
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
 from ..exoplanet.model.gravgroup.model import GravGroup
 from ...tools.name import Named
-from ...tools.default_folders_data_run import RunFolder
+from ...tools.default_folders_data_run import RunFolderAttr
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.standard_questions import ask4CreationDefaultFile
 from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
@@ -56,7 +56,7 @@ manager_inst_dst.load_setup()
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileAttr):
+class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileAttr):
     """Posterior is the main class of lisa.
 
     It allows to define the datasets that you want to analyse, the model that you want to use to analyse
@@ -133,8 +133,8 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         # self.__model = None
         # Define the name of the object studied
         Named.__init__(self, name=object_name)
-        # Initialize run_folder
-        RunFolder.__init__(self, run_folder=run_folder)
+        # Init the run_folder (needs to be after Named.__init__ as it uses the object_name)
+        RunFolderAttr.__init__(self, run_folder=run_folder)
         # Define two locks: dataset_lock and database_lock
         DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
         # Initialize the dataset database attribute and assign it dataset_lock
@@ -185,12 +185,12 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
             already defined.
         """
         logger.info(f"Look for configuration file.")
-        self.__config_file = self.look4runfile(file_path=path_config_file)
+        self.config_file.path = self.look4runfile(file_path=path_config_file)
         # If doesn't exists offer the possibility to create a default one
-        if self.__config_file is None:
+        if self.config_file is None:
             logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
             default_file_content = f"# Configuration file for the analysis of {self.get_name()}.\n"
-            self.__config_file = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.run_folder)
+            self.config_file = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.get_run_folder())
 
         logger.info(f"Load datasets.")
         self._load_config(config2load='datasets')
@@ -201,22 +201,10 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         logger.info("Load model category definition.")
         self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset)
 
-        logger.info("Load model category specific parametrisation.")
-        self._load_config_model(config2load='catparam')
+        self.model._configure_model()
 
         logger.info("Load the noise models for instrument model definition.")
         self._load_config(config2load='noisemoddef')
-
-        logger.info("5. Create model specific parameter file")
-        if cluster:
-            self.model.create_model_paramfile(paramfile=None, answer_overwrite="n", answer_create=None)
-        else:
-            self.model.create_model_paramfile(paramfile=None)  # paramfile=None the names are automatically chosen.
-
-            input("If there are a model specific paramerisation file please check it")
-
-        logger.info("6. Load model specific parameter file")
-        self.model.load_parameter_file_model()
 
         logger.info("7. Create inst_cat specific parameter file")
         if cluster:
@@ -225,9 +213,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
             self.model.create_instcat_paramfiles(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
 
             input("If there are any inst_cat specific paramerisation file please check them")
-
-        logger.info("8. Load inst_cat specific parameter file")
-        self.model.load_instcat_paramfile()
 
         logger.info("9. Create noise model specific parameter file")
         if cluster:
@@ -409,8 +394,8 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         # This function needs to be overloaded in the Model subclass if you want to add more variables
         """
         Model_Class = self._get_ModelClass(model_category=dico_config_file['model_category'])
-        self.__model = Model_Class(name=self.get_name(), lock=self.get_dataset_Lock_instance(), instmodel4dataset=kwargs["instmodel4dataset"])
-        self.__model._finish_init_Model()
+        self.__model = Model_Class(name=self.get_name(), lock=self.get_dataset_Lock_instance(), instmodel4dataset=kwargs["instmodel4dataset"],
+                                   run_folder=self.run_folder, config_file=self.config_file)
 
     # Other methods and properties
     ##############################
@@ -474,28 +459,6 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         """Return the model."""
         return self.__model
 
-    # @property
-    # def run_folder(self):
-    #     """The run_folder is the folder where the program will look for config files and put
-    #     outputs. It can be provided in two ways:
-    #         - Via the folder defined in software_parameters: In this case the run_folder is
-    #           automatically define as "input_run_folder/object_name". To use this you should assign
-    #           "default"
-    #         - Via the run_folder argument: You can provide any folder here via the run_folder
-    #           argument.
-    #     If not defined, return None.
-    #     """
-    #     return super(Posterior, self).run_folder
-
-    # @run_folder.setter
-    # def run_folder(self, run_folder="default"):
-    #     """Set the run_folder attribute."""
-    #     super(Posterior, self.__class__).run_folder.fset(self, run_folder)
-    #     if self.hasrun_folder:
-    #         self.dataset_db.run_folder = self.run_folder
-    #         if self.isdefined_model:
-    #             self.model.run_folder = self.run_folder
-
     def _load_noisemodelsfile(self, path_noise_models_file=None):
         """Load the noise models file
 
@@ -533,11 +496,11 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
                                                                            dico=pformat(dict(deepcopy(dico[inst_fullcat])), compact=True).replace('\n', f'\n{tab_instfullcat}')
                                                                            )
             file_path = ask4CreationDefaultFile(path_file=path_noise_models_file, default_file_content=default_file_content,
-                                                default_folder=self.run_folder)
+                                                default_folder=self.get_run_folder())
             input("Modifiy the noise model file")
         # Read the instrument models file
         cwd = getcwd()
-        chdir(self.run_folder)
+        chdir(self.get_run_folder())
         with open(file_path) as ff:
             exec(ff.read())
         chdir(cwd)
@@ -577,7 +540,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         # (designated by their full name)
         noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
         # Create the model instance
-        self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.run_folder,
+        self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.get_run_folder(),
                                       instmodel4dataset=self.instmodel4dataset,
                                       l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
                                       **kwargs)
@@ -922,7 +885,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         dico = {}
         dico["object_name"] = self.object_name
         dico["data_folder"] = self.dataset_db.data_folder
-        dico["run_folder"] = self.run_folder
+        dico["run_folder"] = self.get_run_folder()
         dico["dataset_file"] = self.datasetsfile_db.datasetsfile_path
         dico["model_category"] = self.model.category
         dico["model_kwargs"] = self.model.init_kwargs
@@ -951,7 +914,7 @@ class Posterior(Named, RunFolder, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileA
         if run_folder is None:
             run_folder = dico["run_folder"]
         self.dataset_db.data_folder = data_folder
-        self.run_folder = run_folder
+        self.set_run_folder(run_folder=run_folder)
         # load datasetfile
         self.load_datasetsfile(dico["dataset_file"])
         # define model

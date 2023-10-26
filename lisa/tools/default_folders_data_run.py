@@ -17,7 +17,48 @@ from ..software_parameters import input_data_folder
 
 
 class RunFolder(object):
-    """docstring for the interface RunFolder class for the Posterior Instance.
+    """
+    """
+
+    def __init__(self, object_name):
+        """Initialise the run_folder property.
+
+        Argument
+        --------
+        object_name : str
+            Name of the object studied. This is used by the path.setter function.
+        """
+        self.__path = None
+        if not(isinstance(object_name, str)):
+            raise ValueError("object_name should be a string.")
+        self.__object_name = object_name
+
+    @property
+    def path(self):
+        """Path to the run_folder"""
+        return self.__path    
+
+    @path.setter
+    def path(self, path):
+        """Set the path attribute"""
+        if path is None:
+            logger.warning("The path of the run_folder has NOT been defined because the provided folder is None")
+        else:
+            res = define_folder_withdefault(main_default_folder=input_run_folder,
+                                            object_name=self.object_name,
+                                            folder=path)
+            if res is not None:
+                self.__path = res
+                logger.info(f"Run folder path set to {self.path}.")
+    
+    @property
+    def object_name(self):
+        """Name of the object studied """
+        return self.__object_name  
+
+
+class RunFolderAttr(object):
+    """docstring for the interface RunFolder class for the Posterior and Core Model subclasses Instances.
 
     Should be used as a parent class of the Posterior class to give the instances of the posterior instances the attribute run_folder and the methods to use it.
 
@@ -27,50 +68,30 @@ class RunFolder(object):
     def __init__(self, run_folder=None):
         """Initialise the run_folder property.
 
-        :param string/None run_folder: Folder to use as run folder. For more info check run_folder property definition
+        Argument
+        --------
+        run_folder  : str
+            Path to the folder to use as run folder.
         """
-        # 1.
-        ## Folder where the program should look for config files by default: Initialise it
-        self.run_folder = run_folder
-        # 2.
-        if type(self) is RunFolder:
-            raise NotImplementedError("RunFolder should not be instanciated !")
-
+        if run_folder is None:
+            self.__run_folder = RunFolder(object_name=self.get_name())
+        elif isinstance(run_folder, RunFolder):
+            self.__run_folder = run_folder
+        elif isinstance(run_folder, str):
+            self.__run_folder = RunFolder(object_name=self.get_name())
+            self.__run_folder.path = run_folder
+        else:
+            raise ValueError("run_folder should be a None, a string or a RunFolder instance")
+         
     @property
     def run_folder(self):
-        """The run_folder is the folder where the program will look for config files and put
-        outputs. It can be provided in two ways:
-            - Via the folder defined in software_parameters: In this case the run_folder is
-              automatically define as "input_run_folder/object_name". To use this you should assign
-              "default"
-            - Via the run_folder argument: You can provide any folder here via the run_folder
-              argument.
-        If not defined, return None.
-        """
-        try:
-            return self.__run_folder
-        except AttributeError:
-            return None
-
-    @run_folder.setter
-    def run_folder(self, run_folder="default"):
-        """Set the run_folder attribute, see run_folder property docstring."""
-        if run_folder is None:
-            logger.warning("The run_folder has NOT been defined because the provided folder is "
-                           "None")
-        else:
-            res = define_folder_withdefault(main_default_folder=input_run_folder,
-                                            object_name=self.object_name,
-                                            folder=run_folder)
-            if res is not None:
-                self.__run_folder = res
-                logger.info("Run folder of the instance of class {} set to {}."
-                            "".format(self.__class__.__name__, self.run_folder))
-
+        """RunFolder instance"""
+        return self.__run_folder
+        
     @property
     def hasrun_folder(self):
         """Return True is run_folder has been set already, False otherwise."""
-        return self.run_folder is not None
+        return self.run_folder.path is not None
 
     def look4runfile(self, file_path):
         """Look for a file in absolute or in the default folder.
@@ -78,7 +99,7 @@ class RunFolder(object):
         :param string file_path: path or name to the file you are looking for.
         :return string absolute_path: Path to the file that you are looking for. None if not found.
         """
-        return look4file_withdeffolder(file_path=file_path, default_folder=self.run_folder)
+        return look4file_withdeffolder(file_path=file_path, default_folder=self.run_folder.path)
 
 
 class DataFolder(object):
