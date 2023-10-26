@@ -68,49 +68,21 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     __ld_dict_name = "LDs"
     __ldmod_dict_name = "LD_models"
 
-    __supersamp_dict = "SuperSamps"
+    __supersamp_dict = "SuperSamps_LC"
 
-    def __init__(self, model_instance):
-        super(LC_InstCat_Model, self).__init__(model_instance=model_instance)
+    def __init__(self, model_instance, run_folder, config_file):
+        super(LC_InstCat_Model, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
         l_inst_model_fullname = [instmod_obj.full_name for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)]
-        # self.transit_model = {planet.get_name(): {"do": True,
-        #                                           "model4instrument": defaultmodel4instrument_dict.copy(),
-        #                                           "model_definitions": {'': {"model": "batman", 'orbital_model': '', 'new_parameter': {'Rrat': True}, }, },
-        #                                           }
-        #                       for planet in self.model_instance.planets.values()
-        #                       }
         self.transit_model = TransitModels(l_planet=[planet for planet in self.model_instance.planets.values()],
                                            host_star=self.model_instance.stars[list(self.model_instance.stars.keys())[0]],
                                            l_inst_model_fullname=l_inst_model_fullname,
                                            orbital_models=self.model_instance.orbital_model
                                            )
-        # self.phasecurve_model = {planet.get_name(): {"do": False,
-        #                                              "model4instrument": defaultlistmodel4instrument_dict.copy(),
-        #                                              "model_definitions": {'': {"model": "sincos",
-        #                                                                         "args": {'sincos': 'cos',
-        #                                                                                  'factor_period': 1,
-        #                                                                                  'flux_offset': 'param',
-        #                                                                                  'phase_offset': 'param',
-        #                                                                                  'occultation': True
-        #                                                                                  },
-        #                                                                         'orbital_model': '',
-        #                                                                         'new_parameter': {'amp': True, 'flux_offset': True, 'phase_offset': True},
-        #                                                                         },
-        #                                                                    },
-        #                                              }
-        #                          for planet in self.model_instance.planets.values()
-        #                          }
         self.phasecurve_model = PhaseCurveModels(l_planet=[planet for planet in self.model_instance.planets.values()],
                                                  host_star=self.model_instance.stars[list(self.model_instance.stars.keys())[0]],
                                                  l_inst_model_fullname=l_inst_model_fullname,
                                                  orbital_models=self.model_instance.orbital_model
                                                  )
-        # self.occultation_model = {planet.get_name(): {"do": False,
-        #                                               "model4instrument": defaultmodel4instrument_dict.copy(),
-        #                                               "model_definitions": {'': {"model": "batman", 'orbital_model': '', }, },
-        #                                               }
-        #                           for planet in self.model_instance.planets.values()
-        #                           }
         self.occultation_model = OccultationModels(l_planet=[planet for planet in self.model_instance.planets.values()],
                                                    host_star=self.model_instance.stars[list(self.model_instance.stars.keys())[0]],
                                                    l_inst_model_fullname=l_inst_model_fullname,
@@ -142,74 +114,76 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                 self.decorrelation_model_config[inst_mod_obj.full_name]["what to decorrelate"][model_part] = {}
                 for decorr_model_cat in self.l_decorrelation_model_category:
                     self.decorrelation_model_config[inst_mod_obj.full_name]["what to decorrelate"][model_part][decorr_model_cat] = {}
+    
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
 
-    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+    def _configure_instcat_model(self):
+        """Configure the inst cat model
         """
-        Arguments
-        ---------
-        inst_models : List of Instrument_Model instances
-            List of intrument models corresponding to each datasets in datasets
-        datasets    : List of IND_Dataset instances
-            List of datasets
-        get_times_from_datasets  : bool
-            If True the times at which the LC model is computed is taken from the datasets.
-            Else it is an input of the datasimulator function produced.
-        """
-        return create_datasimulator_LC(star=list(self.model_instance.stars.values())[0],
-                                       planets=self.model_instance.planets,
-                                       ldmodel4instmodfname=self.ldmodel4instmodfname,
-                                       LDs=self.LDs,
-                                       transit_model=self.transit_model,
-                                       SSE4instmodfname=self.SSE4instmodfname,
-                                       phasecurve_model=self.phasecurve_model,
-                                       occultation_model=self.occultation_model,
-                                       inst_models=inst_models,
-                                       datasets=datasets,
-                                       get_times_from_datasets=get_times_from_datasets,
-                                       dataset_db=self.model_instance.dataset_db,
-                                       LCcat_model=self
-                                       )
+        super(LC_InstCat_Model, self)._configure_instcat_model()
 
-    def create_text_instcat_paramfile_model(self, model_instance):
-        """Create text for parameter file for the light-curve parametrisation.
+        logger.info("Load transit, phase_curve, occultation and instrument model configuration")
+        self._load_config(config2load='lcinstcatmod')
+        
 
-        Argument
-        ---------
-        model_instance  : Subclass of Core_Model
+    # Function that get the function required by ConfigFileAttr._load_config
+    ########################################################################
 
-        Return
-        ------
-        text    : str
-            Text to be put in the instrument category specific instrument file
-            This is only the part that is specific to this category.
-            Text associated to the decorrelation should not be included.
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'lcinstcatmod':
+                return self.__add_default_config_lcinstcatmod
+        elif function_type == 'check_config_exists':
+            if config2load == 'lcinstcatmod':
+                return self.__config_var_exist_lcinstcatmod
+        elif function_type == 'load_config_content':
+            if config2load == 'lcinstcatmod':
+                return self.__load_config_var_content_lcinstcatmod
+        return super(LC_InstCat_Model, self)._get_function_config(function_type=function_type, config2load=config2load)
+
+    # Dealing with the configuration of the transit, phase curve, occultation and instrumental models
+    #################################################################################################
+
+    def __add_default_config_lcinstcatmod(self, file):
+        """Add the default config for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
         """
         text = """
-        # Light-curve parametrisation file of {object_name}
-
-        # Which model do you want to use for the transit ?
+        # Transit model
+        ################
         transit_model = {transit_model}
 
         # Limb-darkening.
+        #################
         # Associate LC instrument models with LD param containers.
         # Available limb-darkening models are:
         # {available_lds}
         {ld_dict_name} = {{{star_ld_dict}
         {tab_ld}}}
 
-        # Supersampling and exposure_time
-        {supersamp_dict} = {{{inst_ss_dict}
-        {tab_ss}}}
-
-        # Which model do you want to use for the phase curve ?
+        # Phase curve model
+        ####################
         phasecurve_model = {phasecurve_model}
 
-        # Which model do you want to use for the occultation ?
+        # Occultation model
+        ####################
         # WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
         occultation_model = {occultation_model}
 
-        # Polynomial trends
-        polynomial_model = {poly_models}
+        # Supersampling and exposure_time for LC
+        ########################################
+        {supersamp_dict} = {{{inst_ss_dict}
+        {tab_ss}}}
+
+        # Instrumental model for LC
+        ###########################
+
+        # Polynomial trend models for LC
+        ################################
+        polynomial_model_LC = {poly_models}
         """
         text = dedent(text)  # Remove undesired indentation
 
@@ -290,25 +264,35 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                            poly_models=pformat(dico_poly, compact=True).replace("\n", f"\n{tab_poly}")
                            )
 
-        return text
+        file.write(text)
 
-    def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
+    def __config_var_exist_lcinstcatmod(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
+        """
+        return all([var in dico_config_file for var in ['transit_model', 'phasecurve_model', 'occultation_model', self.__ld_dict_name, self.__supersamp_dict, 'polynomial_model']])
+    
+    def __load_config_var_content_lcinstcatmod(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
+        """
         # Check and load the content of the LDs and Supersamps dict
         for star in self.model_instance.stars.values():
             star = self.model_instance.stars[list(self.model_instance.stars.keys())[0]]
-            LD_models = dico_config[self.__ld_dict_name][star.code_name][self.__ldmod_dict_name]
-            l_LC_instmod_name = list(dico_config[self.__ld_dict_name][star.code_name].keys())
+            LD_models = dico_config_file[self.__ld_dict_name][star.code_name][self.__ldmod_dict_name]
+            l_LC_instmod_name = list(dico_config_file[self.__ld_dict_name][star.code_name].keys())
             l_LC_instmod_name.remove(self.__ldmod_dict_name)
             for instmod_name in l_LC_instmod_name:
-                ld_name = dico_config[self.__ld_dict_name][star.code_name][instmod_name]
+                ld_name = dico_config_file[self.__ld_dict_name][star.code_name][instmod_name]
                 if instmod_name not in self.ldmodel4instmodfname:
                     self.ldmodel4instmodfname[instmod_name] = {}
                 self.ldmodel4instmodfname[instmod_name][star.code_name] = ld_name
             for ld_name, ld_type in LD_models.items():
                 # Create the LD paramcontainer with
                 self.add_a_LD(star=star, ld_type=ld_type, name=ld_name)
-        supersamp_dict = dico_config[self.__supersamp_dict]
+        supersamp_dict = dico_config_file[self.__supersamp_dict]
         for instmod_name, dico in supersamp_dict.items():
             self.SSE4instmodfname.add_instmodel_SSEdict(instmod_name, dico)
         # Check the transit_model, phasecurve_model and occultation_model
@@ -316,28 +300,58 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         l_dico_model_name = ["transit_model", "phasecurve_model", "occultation_model"]
         l_config_model_instance = [self.transit_model, self.phasecurve_model, self.occultation_model]
         for dict_name, config_model_instance in zip(l_dico_model_name, l_config_model_instance):
-            if dict_name not in dico_config:
+            if dict_name not in dico_config_file:
                 raise ValueError(f"In file {self.paramfile_instcat}: Missing {dict_name} dictionary.")
-            dico_model = dico_config[dict_name]
+            dico_model = dico_config_file[dict_name]
             config_model_instance.load_config(dico_config=dico_model)
 
-        # Check and load the polynomial models
-        if "polynomial_model" in dico_config:
-            # Check that all the keys in dico_config["polynomial_model"] are valid (star namnes or LC instruments name)
-            l_valid_keys = list(self.model_instance.stars.keys())
-            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
-                l_valid_keys.append(instmod_obj.full_name)
-            if len(set(dico_config["polynomial_model"].keys()) - set(l_valid_keys)) > 0:
-                raise ValueError(f"Some keys of the polynomial_model dictionary are not valid: {set(dico_config['polynomial_model'].keys()) - set(l_valid_keys)}.\n"
-                                 f"Valid keys are star short names or LC instrument model full names ({l_valid_keys})")
-            # Load polynomial model for star if provided.
-            for star_name, star in self.model_instance.stars.items():
-                if star_name in dico_config["polynomial_model"]:
-                    star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config["polynomial_model"][star_name])
-            # Load polynomial model for LC instruments if provided.
-            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
-                if instmod_obj.full_name in dico_config["polynomial_model"]:
-                    instmod_obj.set_dico_config_polymodel(dico_config=dico_config["polynomial_model"][instmod_obj.full_name])
+        # Check that all the keys in dico_config_file["polynomial_model"] are valid (star namnes or LC instruments name)
+        l_valid_keys = list(self.model_instance.stars.keys())
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            l_valid_keys.append(instmod_obj.full_name)
+        if len(set(dico_config_file["polynomial_model_LC"].keys()) - set(l_valid_keys)) > 0:
+            raise ValueError(f"Some keys of the polynomial_model_LC dictionary are not valid: {set(dico_config_file['polynomial_model'].keys()) - set(l_valid_keys)}.\n"
+                                f"Valid keys are star short names or LC instrument model full names ({l_valid_keys})")
+        # Load polynomial model for star if provided.
+        for star_name, star in self.model_instance.stars.items():
+            if star_name in dico_config_file["polynomial_model_LC"]:
+                star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config_file["polynomial_model"][star_name])
+        # Load polynomial model for LC instruments if provided.
+        for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+            if instmod_obj.full_name in dico_config_file["polynomial_model_LC"]:
+                instmod_obj.set_dico_config_polymodel(dico_config=dico_config_file["polynomial_model_LC"][instmod_obj.full_name])
+        
+
+    #################################
+    ## Dealing with the datasimulator
+    #################################
+
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+        """
+        Arguments
+        ---------
+        inst_models : List of Instrument_Model instances
+            List of intrument models corresponding to each datasets in datasets
+        datasets    : List of IND_Dataset instances
+            List of datasets
+        get_times_from_datasets  : bool
+            If True the times at which the LC model is computed is taken from the datasets.
+            Else it is an input of the datasimulator function produced.
+        """
+        return create_datasimulator_LC(star=list(self.model_instance.stars.values())[0],
+                                       planets=self.model_instance.planets,
+                                       ldmodel4instmodfname=self.ldmodel4instmodfname,
+                                       LDs=self.LDs,
+                                       transit_model=self.transit_model,
+                                       SSE4instmodfname=self.SSE4instmodfname,
+                                       phasecurve_model=self.phasecurve_model,
+                                       occultation_model=self.occultation_model,
+                                       inst_models=inst_models,
+                                       datasets=datasets,
+                                       get_times_from_datasets=get_times_from_datasets,
+                                       dataset_db=self.model_instance.dataset_db,
+                                       LCcat_model=self
+                                       )        
 
     def add_a_LD(self, star, ld_type, name, kwargs_getname_4_storename={"include_prefix": True, "code_version": True},
                  kwargs_getname_4_codename={"include_prefix": True, "code_version": True}):
@@ -362,7 +376,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     def get_list_LD_parconts(self):
         return self.model_instance.paramcontainers[CoreLD.category].values()
 
-    def load_config_decorrelation_model(self, dico_config):
+    def load_config_decorrelation_model(self, decorr_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
         for each dataset.
 
@@ -374,7 +388,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         dico_config : dict
             Dictionary which contain the content of the inst_cat specific param_file
         """
-        for instmod_obj_name, decorr_dict_instmod in dico_config.get(self._decorr_model_dict_name, {}).items():
+        for instmod_obj_name, decorr_dict_instmod in decorr_config.items():
             instmod_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=instmod_obj_name, raise_error=True)
             instmod_obj = self.model_instance.get_instmodel_objs(inst_fullcat=instmod_name_info["inst_fullcategory"],
                                                                  inst_model=instmod_name_info["inst_model"],

@@ -82,3 +82,144 @@ d_noise_model_def = {'LC': {'EulerCam': {'inst0': 'gaussian', 'inst1': 'gaussian
                             'K2': {'inst': 'GP1D'},
                             'TRAPPIST': {'inst': 'gaussian'}},
                      'RV': {'CORALIE': {'inst': 'GP1D'}, 'SOPHIE': {'inst': 'GP1D'}}}
+
+#############################
+## Configuration of LC models
+#############################
+
+
+# Decorrelation LC
+###############
+#
+# Define if you want to include decorrelation models.
+# In the dictionary below, each key corresponds to an instrument model and has for value a dictionary with the following structure:
+# {"do": True/False,
+#  "<decorrelation_model_name>": {"<Indicator instrument model name>": {decorrelation_model_options},  ...}
+# If "do" is False no decorrelation is performed for the data taken with the instrument model.
+# Otherwise, for each available decorrelation model you need to provide the name of the instrument
+# model of the indicators that you want to use and the options for the decorrelation method
+#
+# The list of datasets for each LC instrument model are:
+# {'LC_K2_inst': ['LC_WASP-151_K2_0'], 'LC_EulerCam_inst0': ['LC_WASP-151_EulerCam_0'], 'LC_EulerCam_inst1': ['LC_WASP-151_EulerCam_1'], 'LC_TRAPPIST_inst': ['LC_WASP-151_TRAPPIST_0'], 'LC_IAC80_inst1': ['LC_WASP-151_IAC80_1'], 'LC_IAC80_inst0': ['LC_WASP-151_IAC80_0']}
+#
+# The list of datasets for each IND instrument model are:
+# {}
+#
+# The format of decorrelation_model_options dictionary depends on the decorrelation model used
+# linear: {'quantity': 'raw'}
+# spline: {'category': 'spline', 'spline_type': 'UnivariateSpline' or 'LSQUnivariateSpline', 'spline_kwargs': {'k': 3}, 'match datasets': {<dataset name>: <indicator dataset name>}}
+# bispline: {'category': 'bispline', 'spline_type': 'SmoothBivariateSpline' or 'LSQBivariateSpline', 'spline_kwargs': {'kx': 3, 'ky': 3}, 'match datasets': {<dataset name>: {'X': <indicator dataset name>, 'Y':<indicator dataset name>}}
+
+
+# Decorrelation Model
+#####################
+decorrelation_model_LC = {'LC_EulerCam_inst0': {'do': False,
+                                             'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                                     'multiply_2_totalflux': {'linear': {}}}},
+                       'LC_EulerCam_inst1': {'do': False,
+                                             'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                                     'multiply_2_totalflux': {'linear': {}}}},
+                       'LC_IAC80_inst0': {'do': False,
+                                          'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                                  'multiply_2_totalflux': {'linear': {}}}},
+                       'LC_IAC80_inst1': {'do': False,
+                                          'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                                  'multiply_2_totalflux': {'linear': {}}}},
+                       'LC_K2_inst': {'do': False,
+                                      'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                              'multiply_2_totalflux': {'linear': {}}}},
+                       'LC_TRAPPIST_inst': {'do': False,
+                                            'what to decorrelate': {'add_2_totalflux': {'linear': {}},
+                                                                    'multiply_2_totalflux': {'linear': {}}}}}
+
+# Decorrelation likelihood
+##########################
+decorrelation_likelihood_LC = {'do': False, 'model_definitions': {}, 'order_models': []}
+
+# Transit model
+################
+transit_model = {'b': {'do': True,
+                       'model4instrument': {'LC_EulerCam_inst0': '',
+                                            'LC_EulerCam_inst1': '',
+                                            'LC_IAC80_inst0': '',
+                                            'LC_IAC80_inst1': '',
+                                            'LC_K2_inst': '',
+                                            'LC_TRAPPIST_inst': ''},
+                       'model_definitions': {'': {'category': 'batman',
+                                                  'param_extensions': {'planet': {'Rrat': ''},
+                                                                       'star': {}}}}}}
+
+# Limb-darkening.
+#################
+# Associate LC instrument models with LD param containers.
+# Available limb-darkening models are:
+# ['quadratic', 'nonlinear', 'exponential', 'logarithmic', 'squareroot', 'linear', 'uniform', 'custom']
+LDs = {'A': {'LC_K2_inst': 'default',
+             'LC_EulerCam_inst0': 'default',
+             'LC_EulerCam_inst1': 'default',
+             'LC_TRAPPIST_inst': 'default',
+             'LC_IAC80_inst1': 'default',
+             'LC_IAC80_inst0': 'default',
+
+             'LD_models': {'default': 'quadratic'}
+             }
+       }
+
+# Phase curve model
+####################
+phasecurve_model = {'b': {'do': False,
+                          'model4instrument': {'LC_EulerCam_inst0': [''],
+                                               'LC_EulerCam_inst1': [''],
+                                               'LC_IAC80_inst0': [''],
+                                               'LC_IAC80_inst1': [''],
+                                               'LC_K2_inst': [''],
+                                               'LC_TRAPPIST_inst': ['']},
+                          'model_definitions': {'': {'args': {'factor_period': 1,
+                                                              'flux_offset': 'param',
+                                                              'occultation': True,
+                                                              'phase_offset': 'param',
+                                                              'sincos': 'cos'},
+                                                     'category': 'sincos',
+                                                     'param_extensions': {'planet': {'A': '',
+                                                                                     'Foffset': '',
+                                                                                     'Phi': '',
+                                                                                     'Rrat': ''},
+                                                                          'star': {}}}}}}
+
+# Occultation model
+####################
+# WARNING: Some phasecurve models already include the occultation. No need to add it twice in these cases.
+occultation_model = {'b': {'do': False,
+                           'model4instrument': {'LC_EulerCam_inst0': '',
+                                                'LC_EulerCam_inst1': '',
+                                                'LC_IAC80_inst0': '',
+                                                'LC_IAC80_inst1': '',
+                                                'LC_K2_inst': '',
+                                                'LC_TRAPPIST_inst': ''},
+                           'model_definitions': {'': {'category': 'batman',
+                                                      'param_extensions': {'planet': {'Frat': '',
+                                                                                      'Rrat': ''},
+                                                                           'star': {}}}}}}
+
+# Supersampling and exposure_time for LC
+########################################
+SuperSamps_LC = {'LC_K2_inst': {'supersamp': 1, 'exptime': 0.02043402778},
+                 'LC_EulerCam_inst0': {'supersamp': 1, 'exptime': 0.02043402778},
+                 'LC_EulerCam_inst1': {'supersamp': 1, 'exptime': 0.02043402778},
+                 'LC_TRAPPIST_inst': {'supersamp': 1, 'exptime': 0.02043402778},
+                 'LC_IAC80_inst1': {'supersamp': 1, 'exptime': 0.02043402778},
+                 'LC_IAC80_inst0': {'supersamp': 1, 'exptime': 0.02043402778},
+                 }
+
+# Instrumental model for LC
+###########################
+
+# Polynomial trend models for LC
+################################
+polynomial_model_LC = {'A': {'do': False, 'order': 0, 'tref': None},
+                    'LC_EulerCam_inst0': {'do': True, 'order': 0, 'tref': None},
+                    'LC_EulerCam_inst1': {'do': True, 'order': 0, 'tref': None},
+                    'LC_IAC80_inst0': {'do': True, 'order': 0, 'tref': None},
+                    'LC_IAC80_inst1': {'do': True, 'order': 0, 'tref': None},
+                    'LC_K2_inst': {'do': True, 'order': 0, 'tref': None},
+                    'LC_TRAPPIST_inst': {'do': True, 'order': 0, 'tref': None}}

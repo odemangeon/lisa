@@ -28,15 +28,17 @@ from ..dataset_and_instrument.indicator import IND_inst_cat
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....tools.metaclasses import MandatoryReadOnlyAttrAndMethod
 from ....tools.miscellaneous import spacestring_like
+from ....tools.default_folders_data_run import RunFolderAttr, RunFolder
+from ..config_file import ConfigFileAttr, ConfigFile
 
 
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
 
-class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
+class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnlyAttrAndMethod):
 
-    __mandatorymeths__ = ["datasim_creator", "create_instcat_paramfile", "load_instcat_paramfile", ]
+    __mandatorymeths__ = ["datasim_creator"]
     # datasim_creator: Methods that creates the datasimulator functions
     #   The inputs of this method need to be (inst_models, datasets=None)
     # create_instcat_paramfile: Methods to create the param file specific to the instrument category
@@ -61,10 +63,18 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
 
     _decorr_likelihood_dict_name = 'decorrelation_likelihood'
 
-    def __init__(self, model_instance):
+    def __init__(self, model_instance, run_folder, config_file):
+        # Init the run_folder
+        if not(isinstance(run_folder, RunFolder)):
+            raise ValueError("run_folder should be a RunFolder instance, the one defined for the Posterior intance (Posterior.run_folder)")
+        RunFolderAttr.__init__(self, run_folder=run_folder)
+        # Init the config_folder
+        if not(isinstance(config_file, ConfigFile)):
+            raise ValueError("config_file should be a ConfigFile instance, the one defined for the Posterior intance (Posterior.config_file)")
+        ConfigFileAttr.__init__(self, config_file=config_file)
+        # set model_instannce
         self.__model_instance = model_instance
-        if self.has_instcat_paramfile:
-            self.paramfile_instcat = None
+        # Init decorrelation model and likelihood variables
         if self.decorrelation_model_available:
             self.__decorrelation_model_config = {}
             self._init_decorrelation_model_config()
@@ -77,10 +87,165 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         """Return True is the param_file of the instrument category has been defined."""
         return self.__model_instance
 
-    @property
-    def isdefined_paramfile_instcat(self):
-        """Return True is the param_file of the instrument category has been defined."""
-        return self.paramfile_instcat is not None
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
+
+    def _configure_instcat_model(self):
+        """Configure the inst cat model
+        """
+        logger.info("Load decorrelation model configuration")
+        self._load_config(config2load='decorrmod')
+
+        logger.info("Load decorrelation likelihood configuration")
+        self._load_config(config2load='decorrlike')
+
+    # Function that get the function required by ConfigFileAttr._load_config
+    ########################################################################
+
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'decorrmod':
+                return self.__add_default_config_decorrmod
+            if config2load == 'decorrlike':
+                return self.__add_default_config_decorrlike
+        elif function_type == 'check_config_exists':
+            if config2load == 'decorrmod':
+                return self.__config_var_exist_decorrmod
+            if config2load == 'decorrlike':
+                return self.__config_var_exist_decorrlike
+        elif function_type == 'load_config_content':
+            if config2load == 'decorrmod':
+                return self.__load_config_var_content_decorrmod
+            if config2load == 'decorrlike':
+                return self.__load_config_var_content_decorrlike
+        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
+    
+    # Dealing with the decorrelation model parametrisation
+    ######################################################
+
+    intro_instcat_model_config_text = """
+        #############################
+        ## Configuration of LC models
+        #############################
+        """
+    intro_instcat_model_config_text = dedent(intro_instcat_model_config_text)
+
+    def __get_intro_decorr_text(self):
+        """
+        """
+        text_decorrelation = """
+        
+        # Decorrelation
+        ###############
+        #
+        # Define if you want to include decorrelation models.
+        # In the dictionary below, each key corresponds to an instrument model and has for value a dictionary with the following structure:
+        # {{"do": True/False,
+        #  "<decorrelation_model_name>": {{"<Indicator instrument model name>": {{decorrelation_model_options}},  ...}}
+        # If "do" is False no decorrelation is performed for the data taken with the instrument model.
+        # Otherwise, for each available decorrelation model you need to provide the name of the instrument
+        # model of the indicators that you want to use and the options for the decorrelation method
+        #
+        # The list of datasets for each LC instrument model are:
+        # {dict_listdatasetname4instcatinstmod}
+        #
+        # The list of datasets for each IND instrument model are:
+        # {dict_listdatasetname4INDinstmod}
+        #
+        # The format of decorrelation_model_options dictionary depends on the decorrelation model used
+        {format_decorr_options}
+        """
+        text_decorrelation = dedent(text_decorrelation)
+        # Get the list of available indicator instrument model name
+        list_IND_instmod_names = [instmod_obj.get_name(include_prefix=True, code_version=False, recursive=True)
+                                    for instmod_obj in self.model_instance.get_instmodel_objs()
+                                    if instmod_obj.instrument.category == IND_inst_cat]
+        # Get the list of datasets for each IND instrument model are:
+        dict_listdatasetname4INDinstmod = {}
+        for IND_instmod_fullname in list_IND_instmod_names:
+            dict_listdatasetname4INDinstmod[IND_instmod_fullname] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=IND_instmod_fullname)
+        # Get list of inst model full name for the inst cat
+        l_instcat_instmod = self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+        # Get the list of datasets for each LC instrument model are:
+        dict_listdatasetname4instcatinstmod = {}
+        for LC_instmod in l_instcat_instmod:
+            dict_listdatasetname4instcatinstmod[LC_instmod.full_name] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=LC_instmod.full_name)
+        # Create the text for the format of the decorrelation model options dictionary for each decorrelation model
+        text_format_decorr_options = ""
+        for decorr_model in self.l_decorrelation_class:
+            text_format_decorr_options += f"# {decorr_model.category}: {decorr_model.format_config_dict}\n"
+        # Fill the introduction of the decorrelation text
+        text_decorrelation = text_decorrelation.format(inst_cat=self.inst_cat,
+                                                       dict_listdatasetname4instcatinstmod=dict_listdatasetname4instcatinstmod,
+                                                       dict_listdatasetname4INDinstmod=dict_listdatasetname4INDinstmod,
+                                                       format_decorr_options=text_format_decorr_options,
+                                                       )
+        return text_decorrelation
+
+    def __add_default_config_decorrmod(self, file):
+        """
+        """
+        if self.decorrelation_model_available:
+            file.write(self.intro_instcat_model_config_text)
+            file.write(self.__get_intro_decorr_text())
+            # template_instmodel_decorr_model_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_dict}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
+            decor_model_dict_content = {}
+            # Create the text for the default content of the decorrelation dictionary
+            for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
+                instmodel_name = instmod_obj.full_name
+                # Decorrelation model
+                if self.decorrelation_model_available:
+                    # tab_pre_instmodel_name_decorrmodel_dict = "" if len(decor_model_dict_content) == 0 else tab_decorr_model_dict
+                    decor_model_dict_content[instmodel_name] = {"do": self.decorrelation_model_config[instmodel_name]['do']}
+                    decor_model_dict_content[instmodel_name].update(self.get_dicoconfig_decorrelation_model(instmod_obj=instmod_obj))
+            # Define variable for Decorrelation model
+            tab_decorr_model_dict = spacestring_like(f"{self._decorr_model_dict_name} = ")
+            text_decor_model_config = pformat(decor_model_dict_content, compact=True)
+            text_decor_model_config = text_decor_model_config.replace('\n', '\n' + tab_decorr_model_dict)
+            file.write("\n# Decorrelation Model\n#####################\n")
+            file.write(f"{self._decorr_model_dict_name}_{self.inst_cat} = {text_decor_model_config}\n") # .replace('\n', '\n' + tab_decorr_model_dict)}
+
+    def __config_var_exist_decorrmod(self, dico_config_file):
+        """
+        """
+        if self.decorrelation_model_available:
+            return f"{self._decorr_model_dict_name}_{self.inst_cat}" in dico_config_file
+
+    def __load_config_var_content_decorrmod(self, dico_config_file):
+        """
+        """
+        if self.decorrelation_model_available:
+            self.load_config_decorrelation_model(decorr_config=dico_config_file[f"{self._decorr_model_dict_name}_{self.inst_cat}"])
+
+    # Dealing with the decorrelation model parametrisation
+    ######################################################
+
+    def __add_default_config_decorrlike(self, file):
+        """
+        """
+        if not(self.decorrelation_model_available):
+            file.write(self.intro_instcat_model_config_text)
+            file.write(self.__get_intro_decorr_text())
+        file.write("\n# Decorrelation likelihood\n##########################\n")
+        if self.decorrelation_likelihood_available:
+            text_decor_likelihood_config = pformat(self.decorrelation_likelihood_config, compact=True)
+            file.write(f"{self._decorr_likelihood_dict_name}_{self.inst_cat} = {text_decor_likelihood_config}\n")  # .replace('\n', '\n' + tab_decorr_likelihood_dict)
+
+    def __config_var_exist_decorrlike(self, dico_config_file):
+        """
+        """
+        if self.decorrelation_likelihood_available:
+            return f"{self._decorr_likelihood_dict_name}_{self.inst_cat}" in dico_config_file
+
+    def __load_config_var_content_decorrlike(self, dico_config_file):
+        """
+        """
+        if self.decorrelation_likelihood_available:
+            self.load_config_decorrelation_likelihood(decorr_config=dico_config_file[f"{self._decorr_likelihood_dict_name}_{self.inst_cat}"])
+
+    # To Sort
+    #########
 
     @property
     def l_decorrelation_model_class(self):
@@ -294,128 +459,109 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                 return DecorModel
         raise ValueError(f"Decorrelation model of category {decorrmodel_cat} not found in InstCat_Model {self.inst_cat}")
 
-    def create_instcat_paramfile(self, file_path):
-        """Create a parameter file for the light-curve parametrisation.
+    # def create_instcat_paramfile(self, file_path):
+    #     """Create a parameter file for the light-curve parametrisation.
 
-        Arguments
-        ---------
-        file_path           : string
-            Path to the param_file.
-        """
-        with open(file_path, 'w') as f:
-            # Write the header
-            f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
+    #     Arguments
+    #     ---------
+    #     file_path           : string
+    #         Path to the param_file.
+    #     """
+    #     with open(file_path, 'w') as f:
+    #         # Write the header
+    #         f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
 
-            f.write(self.create_text_instcat_paramfile_model(model_instance=self.model_instance))
+    #         f.write(self.create_text_instcat_paramfile_model(model_instance=self.model_instance))
 
-            if self.decorrelation_model_available or self.decorrelation_likelihood_available:
-                f.write(self.create_text_paramfile_decorrelation(model_instance=self.model_instance))
+    #         if self.decorrelation_model_available or self.decorrelation_likelihood_available:
+    #             f.write(self.create_text_paramfile_decorrelation(model_instance=self.model_instance))
 
-        logger.info(f"Parameter file for LC inst cat created at path: {file_path}")
-        self.paramfile_instcat = basename(file_path)
+    #     logger.info(f"Parameter file for LC inst cat created at path: {file_path}")
+    #     self.paramfile_instcat = basename(file_path)
 
-    def create_text_instcat_paramfile_model(self, model_instance):
-        """Return the text to be written to parametrise the model for the instrument category
+    # def _add_default_config_decorrelation(self, file, model_instance):
+    #     """Return the text to be written in any inst_cat specific param_file for to choose the decorrelation models
+    #     for each dataset.
 
-        This function is called create_instcat_paramfile to create the text for the configuration
-        of the models.
+    #     This function should be used in create_instcat_paramfile to create the text for the configuration
+    #     of the decorrelation models.
 
-        You need to overwrite it in the child class if you want it to actually do something.
+    #     Arguments
+    #     ---------
+    #     model_instance  : Model instance
 
-        Arguments
-        ---------
-        model_instance  : Model instance
+    #     Returns
+    #     -------
+    #     text_paramfile  : str
+    #         Text to put in the inst_cat specific param_file for the general configuration of the decorrelation
+    #     """
+    #     text_decorrelation = """
+    #     # Decorrelation
+    #     #
+    #     # Define if you want to include decorrelation models.
+    #     # In the dictionary below, each key corresponds to an instrument model and has for value a dictionary with the following structure:
+    #     # {{"do": True/False,
+    #     #  "<decorrelation_model_name>": {{"<Indicator instrument model name>": {{decorrelation_model_options}},  ...}}
+    #     # If "do" is False no decorrelation is performed for the data taken with the instrument model.
+    #     # Otherwise, for each available decorrelation model you need to provide the name of the instrument
+    #     # model of the indicators that you want to use and the options for the decorrelation method
+    #     #
+    #     # The list of datasets for each LC instrument model are:
+    #     # {dict_listdatasetname4instcatinstmod}
+    #     #
+    #     # The list of datasets for each IND instrument model are:
+    #     # {dict_listdatasetname4INDinstmod}
+    #     #
+    #     # The format of decorrelation_model_options dictionary depends on the decorrelation model used
+    #     {format_decorr_options}
+    #     """
+    #     text_decorrelation = dedent(text_decorrelation)
+    #     # Get the list of available indicator instrument model name
+    #     list_IND_instmod_names = [instmod_obj.get_name(include_prefix=True, code_version=False, recursive=True)
+    #                               for instmod_obj in model_instance.get_instmodel_objs()
+    #                               if instmod_obj.instrument.category == IND_inst_cat]
+    #     # Get the list of datasets for each IND instrument model are:
+    #     dict_listdatasetname4INDinstmod = {}
+    #     for IND_instmod_fullname in list_IND_instmod_names:
+    #         dict_listdatasetname4INDinstmod[IND_instmod_fullname] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=IND_instmod_fullname)
+    #     # Get list of inst model full name for the inst cat
+    #     l_instcat_instmod = model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
+    #     # Get the list of datasets for each LC instrument model are:
+    #     dict_listdatasetname4instcatinstmod = {}
+    #     for LC_instmod in l_instcat_instmod:
+    #         dict_listdatasetname4instcatinstmod[LC_instmod.full_name] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=LC_instmod.full_name)
+    #     # Create the text for the format of the decorrelation model options dictionary for each decorrelation model
+    #     text_format_decorr_options = ""
+    #     for decorr_model in self.l_decorrelation_class:
+    #         text_format_decorr_options += f"# {decorr_model.category}: {decorr_model.format_config_dict}\n"
+    #     # Fill the introduction of the decorrelation text
+    #     text_decorrelation = text_decorrelation.format(dict_listdatasetname4instcatinstmod=dict_listdatasetname4instcatinstmod,
+    #                                                    dict_listdatasetname4INDinstmod=dict_listdatasetname4INDinstmod,
+    #                                                    format_decorr_options=text_format_decorr_options,
+    #                                                    )
+    #     # Define variable for Decorrelation model
+    #     if self.decorrelation_model_available:
+    #         tab_decorr_model_dict = spacestring_like(f"{self._decorr_model_dict_name} = ")
+    #         # template_instmodel_decorr_model_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_dict}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
+    #         decor_model_dict_content = {}
+    #     # Create the text for the default content of the decorrelation dictionary
+    #     for instmod_obj in l_instcat_instmod:
+    #         instmodel_name = instmod_obj.full_name
+    #         # tab_instmodel_name = spacestring_like(f"'{instmodel_name}':  ")
+    #         # Decorrelation model
+    #         if self.decorrelation_model_available:
+    #             # tab_pre_instmodel_name_decorrmodel_dict = "" if len(decor_model_dict_content) == 0 else tab_decorr_model_dict
+    #             decor_model_dict_content[instmodel_name] = {"do": self.decorrelation_model_config[instmodel_name]['do']}
+    #             decor_model_dict_content[instmodel_name].update(self.get_dicoconfig_decorrelation_model(instmod_obj=instmod_obj))
 
-        Returns
-        -------
-        text_paramfile  : str
-            Text to put in the inst_cat specific param_file for the general configuration of the model
-        """
-        return ""
-
-    def create_text_paramfile_decorrelation(self, model_instance):
-        """Return the text to be written in any inst_cat specific param_file for to choose the decorrelation models
-        for each dataset.
-
-        This function should be used in create_instcat_paramfile to create the text for the configuration
-        of the decorrelation models.
-
-        Arguments
-        ---------
-        model_instance  : Model instance
-
-        Returns
-        -------
-        text_paramfile  : str
-            Text to put in the inst_cat specific param_file for the general configuration of the decorrelation
-        """
-        text_decorrelation = """
-        # Decorrelation
-        #
-        # Define if you want to include decorrelation models.
-        # In the dictionary below, each key corresponds to an instrument model and has for value a dictionary with the following structure:
-        # {{"do": True/False,
-        #  "<decorrelation_model_name>": {{"<Indicator instrument model name>": {{decorrelation_model_options}},  ...}}
-        # If "do" is False no decorrelation is performed for the data taken with the instrument model.
-        # Otherwise, for each available decorrelation model you need to provide the name of the instrument
-        # model of the indicators that you want to use and the options for the decorrelation method
-        #
-        # The list of datasets for each LC instrument model are:
-        # {dict_listdatasetname4instcatinstmod}
-        #
-        # The list of datasets for each IND instrument model are:
-        # {dict_listdatasetname4INDinstmod}
-        #
-        # The format of decorrelation_model_options dictionary depends on the decorrelation model used
-        {format_decorr_options}
-        """
-        text_decorrelation = dedent(text_decorrelation)
-        # Get the list of available indicator instrument model name
-        list_IND_instmod_names = [instmod_obj.get_name(include_prefix=True, code_version=False, recursive=True)
-                                  for instmod_obj in model_instance.get_instmodel_objs()
-                                  if instmod_obj.instrument.category == IND_inst_cat]
-        # Get the list of datasets for each IND instrument model are:
-        dict_listdatasetname4INDinstmod = {}
-        for IND_instmod_fullname in list_IND_instmod_names:
-            dict_listdatasetname4INDinstmod[IND_instmod_fullname] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=IND_instmod_fullname)
-        # Get list of inst model full name for the inst cat
-        l_instcat_instmod = model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__)
-        # Get the list of datasets for each LC instrument model are:
-        dict_listdatasetname4instcatinstmod = {}
-        for LC_instmod in l_instcat_instmod:
-            dict_listdatasetname4instcatinstmod[LC_instmod.full_name] = self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=LC_instmod.full_name)
-        # Create the text for the format of the decorrelation model options dictionary for each decorrelation model
-        text_format_decorr_options = ""
-        for decorr_model in self.l_decorrelation_class:
-            text_format_decorr_options += f"# {decorr_model.category}: {decorr_model.format_config_dict}\n"
-        # Fill the introduction of the decorrelation text
-        text_decorrelation = text_decorrelation.format(dict_listdatasetname4instcatinstmod=dict_listdatasetname4instcatinstmod,
-                                                       dict_listdatasetname4INDinstmod=dict_listdatasetname4INDinstmod,
-                                                       format_decorr_options=text_format_decorr_options,
-                                                       )
-        # Define variable for Decorrelation model
-        if self.decorrelation_model_available:
-            tab_decorr_model_dict = spacestring_like(f"{self._decorr_model_dict_name} = ")
-            # template_instmodel_decorr_model_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_dict}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
-            decor_model_dict_content = {}
-        # Create the text for the default content of the decorrelation dictionary
-        for instmod_obj in l_instcat_instmod:
-            instmodel_name = instmod_obj.full_name
-            # tab_instmodel_name = spacestring_like(f"'{instmodel_name}':  ")
-            # Decorrelation model
-            if self.decorrelation_model_available:
-                # tab_pre_instmodel_name_decorrmodel_dict = "" if len(decor_model_dict_content) == 0 else tab_decorr_model_dict
-                decor_model_dict_content[instmodel_name] = {"do": self.decorrelation_model_config[instmodel_name]['do']}
-                decor_model_dict_content[instmodel_name].update(self.get_dicoconfig_decorrelation_model(instmod_obj=instmod_obj))
-
-        if self.decorrelation_model_available:
-            text_decor_model_config = pformat(decor_model_dict_content, compact=True)
-            text_decor_model_config = text_decor_model_config.replace('\n', '\n' + tab_decorr_model_dict)
-            text_decorrelation += f"\n{self._decorr_model_dict_name} = {text_decor_model_config}"  # .replace('\n', '\n' + tab_decorr_model_dict)}
-        if self.decorrelation_likelihood_available:
-            text_decor_likelihood_config = pformat(self.decorrelation_likelihood_config, compact=True)
-            text_decorrelation += f"\n{self._decorr_likelihood_dict_name} = {text_decor_likelihood_config}"  # .replace('\n', '\n' + tab_decorr_likelihood_dict)
-        return text_decorrelation
+    #     if self.decorrelation_model_available:
+    #         text_decor_model_config = pformat(decor_model_dict_content, compact=True)
+    #         text_decor_model_config = text_decor_model_config.replace('\n', '\n' + tab_decorr_model_dict)
+    #         text_decorrelation += f"\n{self._decorr_model_dict_name} = {text_decor_model_config}"  # .replace('\n', '\n' + tab_decorr_model_dict)}
+    #     if self.decorrelation_likelihood_available:
+    #         text_decor_likelihood_config = pformat(self.decorrelation_likelihood_config, compact=True)
+    #         text_decorrelation += f"\n{self._decorr_likelihood_dict_name} = {text_decor_likelihood_config}"  # .replace('\n', '\n' + tab_decorr_likelihood_dict)
+    #     file.write(text_decorrelation)
 
     def get_dicoconfig_decorrelation_model(self, instmod_obj):
         """Returns the dictionary provide the configuration of the model decorrelation of an instrument model object.
@@ -433,59 +579,42 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
         dico_decorr.pop("do")
         return dico_decorr
 
-    def load_instcat_paramfile(self):
-        """Load LC_param_file."""
-        dico_config = self.read_param_file()
-        self.load_config(dico_config)
-        if self.decorrelation_model_available or self.decorrelation_likelihood_available:
-            self.load_config_decorrelations(dico_config)
+    # def load_instcat_paramfile(self):
+    #     """Load LC_param_file."""
+    #     dico_config = self.read_param_file()
+    #     self.load_config(dico_config)
+    #     if self.decorrelation_model_available or self.decorrelation_likelihood_available:
+    #         self.load_config_decorrelations(dico_config)
 
-    def read_param_file(self):
-        """Read the content of the inst cat parameter file."""
-        if self.isdefined_paramfile_instcat:
-            paramfile_instcat = self.paramfile_instcat
-            cwd = getcwd()
-            chdir(self.model_instance.run_folder)
-            with open(paramfile_instcat) as f:
-                exec(f.read())
-            chdir(cwd)
-            dico = locals().copy()
-            for var_name in ["self", "cwd", "f", "paramfile_instcat"]:
-                dico.pop(var_name)
-            logger.debug(f"{self.inst_cat} parameter file read.\nContent of the parameter file: {dico.keys()}")
-            return dico
-        else:
-            raise IOError(f"Impossible to read {self.inst_cat} parameter file: {self.paramfile_instcat} in directory {self.model_instance.run_folder}")
+    # def read_param_file(self):
+    #     """Read the content of the inst cat parameter file."""
+    #     if self.isdefined_paramfile_instcat:
+    #         paramfile_instcat = self.paramfile_instcat
+    #         cwd = getcwd()
+    #         chdir(self.model_instance.run_folder)
+    #         with open(paramfile_instcat) as f:
+    #             exec(f.read())
+    #         chdir(cwd)
+    #         dico = locals().copy()
+    #         for var_name in ["self", "cwd", "f", "paramfile_instcat"]:
+    #             dico.pop(var_name)
+    #         logger.debug(f"{self.inst_cat} parameter file read.\nContent of the parameter file: {dico.keys()}")
+    #         return dico
+    #     else:
+    #         raise IOError(f"Impossible to read {self.inst_cat} parameter file: {self.paramfile_instcat} in directory {self.model_instance.run_folder}")
 
     def load_config(self, dico_config):
         """
         """
         raise NotImplementedError(f"You need to overwrite the load_config method in the children class for instrument category {self.inst_cat} to use a specific parameter file.")
 
-    def load_config_decorrelations(self, dico_config):
-        """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
-        for each dataset.
-
-        This function should be used in load_instcat_paramfile to load the configuration of the decorrelation
-        models.
-
-        Arguments
-        ---------
-        dico_config : dict
-            Dictionary which contain the content of the inst_cat specific param_file
-        """
-        # TODO: Check that the decorrelation dictionary has on entry per instrument model object of
-        # the current instrument category
-        self.load_config_decorrelation_model(dico_config=dico_config)
-        self.load_config_decorrelation_likelihood(dico_config=dico_config)
-
-    def load_config_decorrelation_model(self, dico_config):
+    def load_config_decorrelation_model(self, decorr_config):
         """
         Arguments
         ---------
         dico_config             :
         """
-        for instmod_obj_name, decorr_dict_instmod in dico_config.get(self._decorr_model_dict_name, {}).items():
+        for instmod_obj_name, decorr_dict_instmod in decorr_config.items():
             instmod_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=instmod_obj_name, raise_error=True)
             instmod_obj = self.model_instance.get_instmodel_objs(inst_fullcat=instmod_name_info["inst_fullcategory"],
                                                                  inst_model=instmod_name_info["inst_model"],
@@ -506,32 +635,27 @@ class Core_InstCat_Model(metaclass=MandatoryReadOnlyAttrAndMethod):
                                                       decorrelation_config_inst_decorr=self.decorrelation_modelconfig[instmod_obj_name][decorr_mod.category],
                                                       )
 
-    def load_config_decorrelation_likelihood(self, dico_config):
+    def load_config_decorrelation_likelihood(self, decorr_config):
         """
         Arguments
         ---------
         dico_config             :
-        """
-        # Check if the dictionary specifying the likelihood decorrelation is provided
-        if self._decorr_likelihood_dict_name not in dico_config:
-            logger.warning("The dictionary specifying the decorrelation likelihood is not provided ! The current configuration is conserved.")
-            return None
-        dico_config_decorr_like = dico_config[self._decorr_likelihood_dict_name]
+        """       
         # Check if the dictionary specifying the likelihood decorrelation has the right keys
         set_keys = {'do', 'order_models', 'model_definitions'}
-        if set_keys != set(dico_config_decorr_like.keys()):
+        if set_keys != set(decorr_config.keys()):
             raise ValueError(f"If the {self._decorr_likelihood_dict_name} is specified, its keys should be {set_keys}")
         # load the do value
-        self.decorrelation_likelihood_config["do"] = dico_config_decorr_like["do"]
+        self.decorrelation_likelihood_config["do"] = decorr_config["do"]
         # Check that all models in order_models are specified in model_definitions
-        if not(set(dico_config_decorr_like['order_models']).issubset(set(dico_config_decorr_like['model_definitions'].keys()))):
-            raise ValueError(f"All likelihood decorrelation model names in 'order_models' have to be specified in 'model_definitions'. You didn't define models {set(dico_config_decorr_like['order_models']) - set(dico_config_decorr_like['model_definitions'].keys())}")
+        if not(set(decorr_config['order_models']).issubset(set(decorr_config['model_definitions'].keys()))):
+            raise ValueError(f"All likelihood decorrelation model names in 'order_models' have to be specified in 'model_definitions'. You didn't define models {set(decorr_config['order_models']) - set(decorr_config['model_definitions'].keys())}")
         # Init the content of order_models and model_definitions
         self.decorrelation_likelihood_config["order_models"] = []
         self.decorrelation_likelihood_config["model_definitions"] = {}
         # Check the definition of each model in order_models:
-        for model_name in dico_config_decorr_like['order_models']:
-            dico_config_model = dico_config_decorr_like['model_definitions'][model_name]
+        for model_name in decorr_config['order_models']:
+            dico_config_model = decorr_config['model_definitions'][model_name]
             # Check the category is a key of the dictionary specifying the model
             if any([key not in dico_config_model.keys() for key in ['category', 'match datasets']]):
                 raise ValueError(f"category and 'match datasets' have to be keys of the likelihood decorrelation model definitions (in part. {model_name})")

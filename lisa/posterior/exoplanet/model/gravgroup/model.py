@@ -106,7 +106,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
                 return self.__load_config_var_content_starsplanets
             elif config2load == 'orbitmodels':
                 return self.__load_config_var_content_orbitmodels
-        super(GravGroup, self)._get_function_config(function_type=function_type, config2load=config2load)
+        return super(GravGroup, self)._get_function_config(function_type=function_type, config2load=config2load)
 
     # Dealing with the definition of stars and planets
     ##################################################

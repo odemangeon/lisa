@@ -95,7 +95,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         if not(isinstance(run_folder, RunFolder)):
             raise ValueError("run_folder should be a RunFolder instance, the one defined for the Posterior intance (Posterior.run_folder)")
         RunFolderAttr.__init__(self, run_folder=run_folder)
-        # Init the run_folder
+        # Init the config_folder
         if not(isinstance(config_file, ConfigFile)):
             raise ValueError("config_file should be a ConfigFile instance, the one defined for the Posterior intance (Posterior.config_file)")
         ConfigFileAttr.__init__(self, config_file=config_file)
@@ -134,18 +134,19 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # IMPORTANT NOTE THE MODEL CATEGORY IS NOT DEFINED HERE BECAUSE IT HAS TO BE DEFINED AT THE
         # SUBCLASS LEVEL
     
-    #######################################
-    ## Dealing with the model configuration
-    #######################################
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
 
     def _configure_model(self):
         """Configure the model
         """
         self._init_instcat_models_and_datasimcreator()
 
-        # I AM HERE
         logger.info("Load instrument category parametrisation file.")
-        self._load_config(config2load='instcat')
+        for inst_cat in self.inst_categories: 
+            instcat_model = self.get_instcat_model(inst_cat)
+            instcat_model._configure_instcat_model()
 
     # Function that get the function required by  ConfigFileAttr._load_config
     #########################################################################
@@ -155,11 +156,12 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
 
     # Dealing with the some part of the model configuration that is common to all model
     ###################################################################################
+        
 
     ##########################################
     ## Methods to create the instrument models
     ##########################################
-       
+
     def __init_instmodels(self, l_instmod_fullnames):
         """Create the instrument models."""
         for instmod_fullname in l_instmod_fullnames:
@@ -185,7 +187,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # Now load the available InstCat_Models and do the __init__
         for InstCat_Model in self.instcat_model_classes:
             if InstCat_Model.inst_cat in self.get_instcat_used():
-                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self)
+                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
                 self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
                 self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
 
@@ -244,94 +246,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         self.set_parametrisation()
         self.update_paramfile_info()
         self.load_parameter_file()
-
-    ####################################
-    ## Dealing with the model param file
-    ####################################
-
-    def create_model_paramfile(self, paramfile, answer_overwrite=None, answer_create=None):
-        """Create the parameter file which will specify the status of all main parameters in the model.
-
-        Arguments
-        ---------
-        paramfile        : string
-            Path to the param_file.
-        answer_overwrite : string
-            If the param_file already exists, do you want to overwrite it ? "y" or "n". If this not
-            provide the program will ask you interactively.
-        answer_create    : string
-            If the param_file doesn't exists aleardy, where do you want to create it ? "absolute",
-            "run_folder" or "error". If this not provide the program will ask you interactively.
-        """
-        if self.has_model_paramfile:
-            param_file_path, reply = self._choose_parameter_file_path(default_paramfile_name="model_param_file.py",
-                                                                      paramfile_name=paramfile,
-                                                                      answer_overwrite=answer_overwrite,
-                                                                      answer_create=answer_create)
-            # If the file needs to be created
-            if reply == "y":
-                with open(param_file_path, 'w') as f:
-                    f.write("#!/usr/bin/python\n# -*- coding:  utf-8 -*-\n")
-                    f.write("# Model parametrisation file of {}\n".format(self.get_name()))
-                    f.write("# Parameters\n")
-                    f.write(self.get_model_paramfile_section())
-                logger.info("Model parameter file created at path: {}".format(param_file_path))
-            # If the file doesn't need to be created
-            else:
-                logger.info("Parameter file already existing and not overwritten: {}".format(param_file_path))
-            self.param_file_model = basename(param_file_path)
-
-    def read_parameter_file_model(self):
-        """Read the content of the parameter file."""
-        if self.isdefined_paramfile_model:
-            with open(join(self.run_folder, self.param_file_model)) as file:
-                exec(file.read())
-            dico = locals().copy()
-            dico.pop("self")
-            logger.debug("Model parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
-            return dico
-        else:
-            raise IOError("Impossible to read the model parameter file: {}".format(self.param_file_model))
-
-    def load_parameter_file_model(self):
-        """load the parameter file."""
-        if self.has_model_paramfile:
-            dico_config = self.read_parameter_file_model()
-            self.load_config_model(dico_config)
-
-    @property
-    def param_file_model(self):
-        """Name of the model parametrisation file"""
-        return self.__param_file_model
-
-    @param_file_model.setter
-    def param_file_model(self, path):
-        """Path to the parametrisation file"""
-        file_exists = isfile(path)
-        if file_exists:
-            self.__param_file_model = path
-        else:
-            raise AssertionError("File {} doesn't exists".format(path))
-
-    @property
-    def isdefined_paramfile_model(self):
-        """Return True is the attribute param_file has been defined."""
-        return self.param_file_model is not None
-
-    def get_model_paramfile_section(self):
-        """Return the text for the model parametrisation file.
-
-        If you set has_model_paramfile in the Subclass, you need to overwrite this method
-        """
-        raise NotImplementedError("You set has_model_paramfile to True so you need to overwrite this method in the SubClass")
-
-    def load_config_model(self, dico_config):
-        """Load the content of the model parametrisation file.
-
-        If you set has_model_paramfile in the Subclass, you need to overwrite this method
-        """
-        raise NotImplementedError("You set has_model_paramfile to True so you need to overwrite this method in the SubClass")
 
     #####################################################################
     ## Dealing with instrument categories and instrument model categories
