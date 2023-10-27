@@ -17,6 +17,7 @@ from math import exp
 
 from .core_noise_model import Core_Noise_Model
 from ..parameter import Parameter
+from ..core_modelconfiguration import Core_ModelConfig
 
 
 jitter_name = "jitter"
@@ -107,6 +108,46 @@ def apply_jitter_addlog(data_err, jitter):
     return data_err**2 + exp(2 * jitter)
 
 
+class Core_GaussianJitterModel(Core_ModelConfig):
+    """
+    """
+
+    ###############################################################
+    ## Dealing with the parameter basenames and names for the model
+    ###############################################################
+
+    # Dealing with parameter basenames
+    ##################################
+
+    def _get_l_parameter_basename_self(self):
+        """Get the list of all parameter basename for the model that are store in this model configuration.
+
+        This method needs to be overloaded in the subclass to add parameters that are stored in this model configuration.
+
+        Return
+        ------
+        l_param_basename    : list of str
+        """
+        return ['jitter', ]
+    
+
+
+class GaussianJitterAddModel(Core_GaussianJitterModel):
+    """
+    """
+    __category__ = "additive"
+
+class GaussianJitterMulitModel(Core_GaussianJitterModel):
+    """
+    """
+    __category__ = "multiplicative"
+
+class GaussianJitterdfmModel(Core_GaussianJitterModel):
+    """
+    """
+    __category__ = "dfm"
+
+
 class Gaussian_Noise_Model(Core_Noise_Model):
     """docstring for Gaussian_Noise_Model."""
 
@@ -114,7 +155,59 @@ class Gaussian_Noise_Model(Core_Noise_Model):
     __has_GP__ = False
     __has_jitter__ = True
 
-    @classmethod
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
+
+    def _configure_instcat_model(self):
+        """Configure the noise cat model
+        """
+        super(Gaussian_Noise_Model, self)._configure_instcat_model()
+        logger.info(f"Load {self.category} noise model configuration")
+        self._load_config(config2load=f'gaussiannoisemod')
+
+    # Function that get the function required by ConfigFileAttr._load_config
+    ########################################################################
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'gaussiannoisemod':
+                return self.__add_default_config_noisemod
+        elif function_type == 'check_config_exists':
+            if config2load == 'gaussiannoisemod':
+                return self.__config_var_exist_noisemod
+        elif function_type == 'load_config_content':
+            if config2load == 'gaussiannoisemod':
+                return self.__load_config_var_content_noisemod
+        return super(Gaussian_Noise_Model, self)._get_function_config(function_type=function_type, config2load=config2load)
+    
+    # Dealing with the noise model configuration
+    ############################################
+    def __add_default_config_noisemod(self, file):
+        """
+        """
+        file.write("\n# Gaussian noise model"
+                   "\n######################"
+                   )
+        gaussian_noisemodels = {"model4instrument": {}, "model_definition": {}}
+        for instmod in self.get_instmod(sortby_instfullcat=True):
+
+        file.write("gaussian_noisemodels = {gaussian_noisemodels}".format(gaussian_noisemodels)
+                   )
+
+    def __config_var_exist_noisemod(self, dico_config_file):
+        """
+        """
+        return "gaussian_noisemodels" in dico_config_file
+
+    def __load_config_var_content_noisemod(self, dico_config_file):
+        """
+        """
+        pass
+
+    ###################################
+    ## Dealing with the parametrisation
+    ###################################
+
     def apply_parametrisation(cls, model_instance, instmod_fullname):
         """Check that there is a jitter main parameter in the instrument model.
 

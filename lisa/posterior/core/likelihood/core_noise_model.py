@@ -16,8 +16,11 @@ from loguru import logger
 from collections.abc import Iterable
 from numpy import sum as npsum
 from numpy import log as nplog
+from collections import defaultdict
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr
+from ....tools.default_folders_data_run import RunFolderAttr, RunFolder
+from ..config_file import ConfigFileAttr, ConfigFile
 
 
 class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
@@ -33,7 +36,7 @@ class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
                 raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
 
 
-class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
+class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=Metaclass_NoiseModel):
     """Docstring for Core_Noise_Model class.
 
     This class deal with the choice and the parametrisation of the noise models. It also provides
@@ -66,16 +69,59 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
     # variable which will contain all the dataset_kwargs required for a given likelihood computation.
     l_required_datasetkwarg_keys = ["data", "data_err"]
 
-    def __init__(self):
-        """Init method to make Core_Noise_Model an abstract class (not instantiable).
-        """
-        # Make Core_NoiseModel an abstract class
-        if type(self) is Core_Noise_Model:
-            raise NotImplementedError("Noise_Model are abstract class they  should not be "
-                                      "instanciated. Use the class itself")
+    def __init__(self, model_instance, run_folder, config_file):
+        # Init the run_folder
+        if not(isinstance(run_folder, RunFolder)):
+            raise ValueError("run_folder should be a RunFolder instance, the one defined for the Posterior intance (Posterior.run_folder)")
+        RunFolderAttr.__init__(self, run_folder=run_folder)
+        # Init the config_folder
+        if not(isinstance(config_file, ConfigFile)):
+            raise ValueError("config_file should be a ConfigFile instance, the one defined for the Posterior intance (Posterior.config_file)")
+        ConfigFileAttr.__init__(self, config_file=config_file)
+        # set model_instannce
+        self.__model_instance = model_instance
 
-    @classmethod
-    def apply_parametrisation(cls, model_instance=None, instmod_fullname=None):
+    @property
+    def model_instance(self):
+        """Return True is the param_file of the instrument category has been defined."""
+        return self.__model_instance
+    
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
+
+    def _configure_instcat_model(self):
+        """Configure the noise cat model
+        """
+        pass
+
+    # Function that get the function required by ConfigFileAttr._load_config
+    ########################################################################
+
+    def _get_function_config(self, function_type, config2load):
+        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
+    
+    ##########################################################
+    ## Dealing with the instrument model using the noise model
+    ##########################################################
+
+    def get_instmod(self, sortby_instfullcat=False):
+        """Return the list of instrument model object for the instrument category
+        """
+        l_instmod = self.get_instmodobjs_using_noisemod(noisemod_cat=self.category)
+        if sortby_instfullcat:
+            d_instmod = defaultdict(list)
+            for instmod in l_instmod:
+                d_instmod[instmod.full_category].append(instmod)
+            return d_instmod
+        else:
+            return l_instmod
+
+    ###################################
+    ## Dealing with the parametrisation
+    ###################################
+
+    def apply_parametrisation(self):
         """Add in the model the necessary main parameters for the noise model.
 
         This function is called by Core_Model.set_noisemodels for each instrument model.
@@ -89,8 +135,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         raise NotImplementedError("You need to implement a apply_parametrisation method for your "
                                   "noise model.")
 
-    @classmethod
-    def check_parametrisation(cls, model_instance=None, instmod_fullname=None):
+    def check_parametrisation(self):
         """Check the parameteristion for the noise model.
 
         :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
@@ -102,8 +147,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         raise NotImplementedError("You need to implement a check_parametrisation method for your "
                                   "noise model.")
 
-    @classmethod
-    def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj,
+    def create_lnlikelihood_and_formatinputs(self, l_idx_simdata, l_instmod_obj, l_dataset_obj,
                                              l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,
                                              function_builder, function_shortname):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
@@ -148,7 +192,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = cls._get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
+        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = self._get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
 
         def f_format_param(param_likelihood):
             return param_likelihood[l_idx_param_noisemod]
@@ -165,8 +209,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
 
         return lnlike, f_format_param, f_format_simdata, f_format_dataset_kwargs, l_params_new
 
-    @classmethod
-    def create_gpsimulator_and_formatinputs(cls, model_instance, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
+    def create_gpsimulator_and_formatinputs(self, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
         """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -202,13 +245,12 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         l_datasim_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        if cls.has_GP:
+        if self.has_GP:
             raise NotImplementedError("You need to implement create_gpsimulator_and_formatinputs in your Noise model subclass has it involves a GP.")
         else:
             raise ValueError("This noise model doesn't include a GP, you should not call this method for this noise model.")
 
-    @classmethod
-    def _get_prefilledlnlike(cls, l_params, model_instance=None, l_instmod_obj=None):
+    def _get_prefilledlnlike(self, l_params, model_instance=None, l_instmod_obj=None):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
@@ -244,8 +286,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         raise NotImplementedError("You need to ovewrite the _get_prefilledlnlike method for your "
                                   "noise model.")
 
-    @classmethod
-    def _check_l_instmod_obj(cls, l_instmod_obj):
+    def _check_l_instmod_obj(self, l_instmod_obj):
         """Check the l_instmod_obj parameter.
 
         :param Instrument_Model/list_of_InstrumentModel l_instmod_obj: Instument model or list of
@@ -262,8 +303,7 @@ class Core_Noise_Model(object, metaclass=Metaclass_NoiseModel):
         raise ValueError("l_instmod_obj should be an Instrument_Model or an Iterable of "
                          "Instrument_Models")
 
-    @classmethod
-    def _update_lists_params(cls, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+    def _update_lists_params(self, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
                              param_obj):
         """Update the list of parameters of the lnlike and the noise model adding the parameter if necessary.
 

@@ -122,8 +122,8 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
                 return self.__load_config_var_content_decorrlike
         raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
     
-    # Dealing with the decorrelation model parametrisation
-    ######################################################
+    # Dealing with the decorrelation model configuration
+    ####################################################
 
     def __get_intro_instcat_text(self):
         intro_instcat_model_config_text = f"""
@@ -846,6 +846,10 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
                                                              plot_functionshortname=plot_functionshortname
                                                              )
         return d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text, l_paramsfullname_likelihood
+
+    ################################################################
+    ## Dealing with the instrument model of this instrument category
+    ################################################################
 
     def get_l_instmod(self, inst_model=None, inst_name=None, sortby_instname=False, sortby_instmodel=False):
         """Return the list of instrument model object for the instrument category

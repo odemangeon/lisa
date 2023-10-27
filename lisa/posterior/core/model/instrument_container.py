@@ -70,7 +70,7 @@ class InstrumentContainerInterface(object):
     @property
     def noisemodel_categories(self):
         """Return the list of noise model categories used."""
-        l_noisemodels_used = list(set([instmod_obj.noise_model for instmod_obj in self.inst_model_objects]))
+        l_noisemodels_used = list(set([instmod_obj.noise_model_category for instmod_obj in self.inst_model_objects]))
         # Remove None in case it is used.
         if None in l_noisemodels_used:
             l_noisemodels_used.remove(None)

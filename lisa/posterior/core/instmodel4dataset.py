@@ -249,6 +249,18 @@ class Instmodel4DatasetAttr(object):
             inst_model_obj = self.instruments[instmodel_fullname]
             result.add(inst_model_obj.instrument.category)
         return result
+    
+    def get_instfullcat_used(self):
+        """Return the dictionnary of instrument models used.
+
+        TODO: For now the name of the model and not the fullname seems to be stored in
+            instmodel4dataset, so this function is wrong.
+        """
+        result = set()
+        for instmodel_fullname in self.name_instmodels_used():
+            inst_model_obj = self.instruments[instmodel_fullname]
+            result.add(inst_model_obj.instrument.full_category)
+        return result
 
     def get_instmod(self, dataset_name):
         """Return the instrument model used for the specified dataset.
