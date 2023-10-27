@@ -48,8 +48,7 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     #   This methods needs to be defined even if there is no specific instcat_paramfile.
     #   This function needs to have a model_instance argument
     #   Just make a function that raises an error
-    __mandatoryattrs__ = ["inst_cat", "has_instcat_paramfile", "default_paramfile_name",
-                          "datasim_creator_name", "l_decorrelation_class"]
+    __mandatoryattrs__ = ["inst_cat", "datasim_creator_name", "l_decorrelation_class"]
     # inst_cat: string specifiying the instrument category that the InstCat_Model will handle
     # has_instcat_paramfile: bool that says if there is an instcat specific param_file
     # default_paramfile_path: Default name for the parameter file of the instrument category
@@ -94,6 +93,8 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     def _configure_instcat_model(self):
         """Configure the inst cat model
         """
+        logger.info(f"Start configuration of the {self.inst_cat} models.")
+
         logger.info("Load decorrelation model configuration")
         self._load_config(config2load='decorrmod')
 
@@ -124,12 +125,14 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     # Dealing with the decorrelation model parametrisation
     ######################################################
 
-    intro_instcat_model_config_text = """
-        #############################
-        ## Configuration of LC models
-        #############################
-        """
-    intro_instcat_model_config_text = dedent(intro_instcat_model_config_text)
+    def __get_intro_instcat_text(self):
+        intro_instcat_model_config_text = f"""
+            #############################
+            ## Configuration of {self.inst_cat} models
+            #############################
+            """
+        intro_instcat_model_config_text = dedent(intro_instcat_model_config_text)
+        return intro_instcat_model_config_text
 
     def __get_intro_decorr_text(self):
         """
@@ -187,7 +190,7 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         """
         """
         if self.decorrelation_model_available:
-            file.write(self.intro_instcat_model_config_text)
+            file.write(self.__get_intro_instcat_text())
             file.write(self.__get_intro_decorr_text())
             # template_instmodel_decorr_model_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_dict}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
             decor_model_dict_content = {}

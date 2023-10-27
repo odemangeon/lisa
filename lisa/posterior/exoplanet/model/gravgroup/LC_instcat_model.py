@@ -41,8 +41,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = LC_inst_cat
-    __has_instcat_paramfile__ = True
-    __default_paramfile_name__ = "LC_param_file.py"
     __datasim_creator_name__ = "sim_LC"
     __l_decorrelation_class__ = [LinearDecorrelation, SplineDecorrelation, BiSplineDecorrelation]
 
@@ -194,7 +192,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         tab_trmod = spacestring_like("transit_model = ")
         tab_pcmod = spacestring_like("phasecurve_model = ")
         tab_occmod = spacestring_like("occultation_model = ")
-        tab_poly = spacestring_like("polynomial_model = ")
+        tab_poly = spacestring_like("polynomial_model_RV = ")
 
         # Create the structure of the star_ld_dict
         star_ld_dict = """
@@ -271,10 +269,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
         This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
         """
-        return all([var in dico_config_file for var in ['transit_model', 'phasecurve_model', 'occultation_model', self.__ld_dict_name, self.__supersamp_dict, 'polynomial_model']])
+        return all([var in dico_config_file for var in ['transit_model', 'phasecurve_model', 'occultation_model', self.__ld_dict_name, f"{self.__supersamp_dict}", f'polynomial_model_{self.inst_cat}']])
     
     def __load_config_var_content_lcinstcatmod(self, dico_config_file):
-        """Check if the variable(s) required for the parametrisation of the instrument categories
+        """Load the variable(s) required for the parametrisation of the instrument categories
 
         This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
         """
@@ -300,8 +298,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         l_dico_model_name = ["transit_model", "phasecurve_model", "occultation_model"]
         l_config_model_instance = [self.transit_model, self.phasecurve_model, self.occultation_model]
         for dict_name, config_model_instance in zip(l_dico_model_name, l_config_model_instance):
-            if dict_name not in dico_config_file:
-                raise ValueError(f"In file {self.paramfile_instcat}: Missing {dict_name} dictionary.")
             dico_model = dico_config_file[dict_name]
             config_model_instance.load_config(dico_config=dico_model)
 
@@ -315,12 +311,11 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         # Load polynomial model for star if provided.
         for star_name, star in self.model_instance.stars.items():
             if star_name in dico_config_file["polynomial_model_LC"]:
-                star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config_file["polynomial_model"][star_name])
+                star.set_dico_config_polymodel(inst_cat=self.inst_cat, dico_config=dico_config_file["polynomial_model_LC"][star_name])
         # Load polynomial model for LC instruments if provided.
         for instmod_obj in self.model_instance.get_instmodel_objs(inst_fullcat=self.__inst_cat__):
             if instmod_obj.full_name in dico_config_file["polynomial_model_LC"]:
-                instmod_obj.set_dico_config_polymodel(dico_config=dico_config_file["polynomial_model_LC"][instmod_obj.full_name])
-        
+                instmod_obj.set_dico_config_polymodel(dico_config=dico_config_file["polynomial_model_LC"][instmod_obj.full_name])    
 
     #################################
     ## Dealing with the datasimulator
@@ -375,6 +370,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
     def get_list_LD_parconts(self):
         return self.model_instance.paramcontainers[CoreLD.category].values()
+    
+    #################################
+    ## Dealing with the decorrelation
+    #################################
 
     def load_config_decorrelation_model(self, decorr_config):
         """Load the dict in any inst_cat specific param_file about to choosen the decorrelation models
@@ -385,8 +384,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
 
         Arguments
         ---------
-        dico_config : dict
-            Dictionary which contain the content of the inst_cat specific param_file
+        decorr_config : dict
+            Dictionary which contain the content of the decorrelation configuration
         """
         for instmod_obj_name, decorr_dict_instmod in decorr_config.items():
             instmod_name_info = mgr_inst_dst.interpret_instmod_fullname(instmod_fullname=instmod_obj_name, raise_error=True)
@@ -443,6 +442,10 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                         require = True
                         break
         return require
+    
+    ####################################
+    # Deadling with the parameterisation
+    ####################################
 
     def apply_parametrisation(self):
         """Apply the parametrisation for the instrument category
