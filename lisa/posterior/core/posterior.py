@@ -306,52 +306,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
             dst_nb = dataset_info["number"]
             l_inst_model_shortname.append(instmoddef_var[inst_fullcat][inst_name][str(dst_nb)])
         return Instmodel4Dataset(list_datasetnames=l_dataset_fullname, list_instmodels=l_inst_model_shortname, lock=self.get_dataset_Lock_instance())
-
-    # Methods for the noise model definition part of the config file
-    ################################################################
-    def __add_default_config_var_noisemoddef(self, file):
-        file.write("\n#########################\n## Noise model definition\n#########################\n"
-                   "# Define which noise model you want to use for each instrument model\n"
-                   "# By default the gaussian noise model is used for all the instrument models\n"
-                   "# This is imposed by the fact that below all instrument models have 'gaussian' as entry.\n"
-                   "# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].\n"
-                   "# If you want to change the noise model used for a given instrument model, just change the value of its key.\n"
-                   )
-        dico = self.model.instmodel4dataset.name_instmodels_used(sortby_instname=True, sortby_instfullcat=True, return_fullname=False)
-        noisemoddef = {}
-        for inst_fullcat in dico:
-            for inst_name in dico[inst_fullcat]:
-                l_instmod_shortname = dico[inst_fullcat][inst_name]
-                dico[inst_fullcat][inst_name] = {instmod_shortname: "gaussian" for instmod_shortname in l_instmod_shortname}
-            noisemoddef[inst_fullcat] = dict(dico[inst_fullcat])
-        tab_noisemoddef = spacestring_like('d_noise_model_def' + " = ")
-        file.write("{var} = {content}\n".format(var='d_noise_model_def',
-                                                content=pformat(noisemoddef, compact=True).replace('\n', f'\n{tab_noisemoddef}')
-                                                )
-                   )
-        
-    def __config_var_exist_noisemoddef(self, dico_config_file):
-        return 'd_noise_model_def' in dico_config_file
-
-    def __load_config_var_content_noisemoddef(self, dico_config_file, **kwargs):
-        noisemoddef = dico_config_file['d_noise_model_def']
-        # Check that the content is valid
-        assert isinstance(noisemoddef, dict)
-        assert set(noisemoddef.keys()) == set(self.dataset_db.inst_fullcategories)
-        for inst_fullcat in noisemoddef:
-            assert isinstance(noisemoddef[inst_fullcat], dict)
-            assert set(noisemoddef[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))
-            for inst_name in noisemoddef[inst_fullcat]:
-                assert isinstance(noisemoddef[inst_fullcat][inst_name], dict)
-                assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.model.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
-                for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
-                    assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.model.possible_noise_model_categories
-        # Load it
-        for inst_fullcat in noisemoddef:
-            for inst_name in noisemoddef[inst_fullcat]:
-                for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
-                    inst_mod_obj = self.model.instruments[inst_fullcat][inst_name][instmod_shortname]
-                    inst_mod_obj.noise_model = self.model.get_NoiseModelClass(noise_model_category=noisemoddef[inst_fullcat][inst_name][instmod_shortname])
     
     # Methods for the model category definition part of the config file
     ###################################################################

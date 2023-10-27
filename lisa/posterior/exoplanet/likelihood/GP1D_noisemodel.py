@@ -129,39 +129,6 @@ class GP1D_Noise_Model(Gaussian_Noise_Model):
 
     _allowed_inst_cat = [RV_inst_cat, LC_inst_cat, IND_inst_cat]
 
-    # This is now done in the StellarActivityNoiseModelInterface.apply_parametrisation_stelact_noisemod
-    # @classmethod
-    # def apply_parametrisation(cls, model_instance, instmod_fullname):
-    #     """Add in the model the necessary main parameters for the noise model.
-    #
-    #     This function is called by Core_Model.set_noisemodels for each instrument model.
-    #
-    #     :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
-    #         noise model which requires parameter of the object studied (like GP and stellar
-    #         activity)
-    #     :param string instmod_fullname: Full name of the instrument involved in the noise model and
-    #         for which you want to apply the parametrisation for the noise modelling.
-    #     """
-    #     # Load the star and inst_model object
-    #     star = model_instance.stars[list(model_instance.stars.keys())[0]]
-    #     inst_model_obj = model_instance.instruments[instmod_fullname]
-    #     inst = inst_model_obj.instrument
-    #     inst_cat = inst.category
-    #     if inst_cat not in cls._allowed_inst_cat:
-    #         raise ValueError(f"Stellar activity noise model can only be used for instrument category "
-    #                          f"{cls._allowed_inst_cat}, got {inst_cat}."
-    #                          )
-    #     # Set the star parameters (tau, gamma, logperiod, amp)
-    #     for param_name in cls._star_param_GP_names:
-    #         if star.has_parameter(name=param_name):
-    #             param = star.get_parameter(name=param_name)
-    #             if not param.main:
-    #                 param.main = True
-    #         else:
-    #             star.add_parameter(Parameter(name=param_name, name_prefix=star.name, main=True))
-    #     # Set the instrument models parameters (jitter)
-    #     super(StellarActNoiseModel, cls).apply_parametrisation(model_instance=model_instance, instmod_fullname=instmod_fullname)
-
     @classmethod
     def create_lnlikelihood_and_formatinputs(cls, model_instance, l_idx_simdata, l_instmod_obj, l_dataset_obj,
                                              l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,

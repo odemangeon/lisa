@@ -28,7 +28,6 @@ class Core_PlanetStarModel(metaclass=MandatoryReadOnlyAttr):
     ################
 
     def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
-        # orbital_models=None, parametrisation=None, param_extensions=None
         if dico_config_model is None:
             dico_config_model = {}
         if orbital_models is None:

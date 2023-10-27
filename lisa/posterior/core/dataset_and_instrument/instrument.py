@@ -39,12 +39,12 @@ class Instrument_Model(Core_ParamContainer):
 
     __instrument = None  # This is needed to be able to pickle the object. UnPickle doesn't call __init__ but call __getattr__ and self._parameters was only defined by __init__
 
-    def __init__(self, instrument, name, noise_model=None, **kwargs):
+    def __init__(self, instrument, name, noise_model_category=None, **kwargs):
         """Docstring of the Instrument_Model init method.
 
         :param Core_Instrument instrument: Instrument that is modelled.
         :param string name: Name of the instrument model
-        :param string/None noise_model: Name of noise model to use for this instruments data
+        :param string/None noise_model_category: Name of noise model category to use for this instruments data
             likelihood.
 
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
@@ -60,10 +60,10 @@ class Instrument_Model(Core_ParamContainer):
         # Set the instrument attribute
         self.__instrument = instrument
         # Set the noise_model attribute
-        if noise_model is None:
-            self.__noise_model = noise_model
+        if noise_model_category is None:
+            self.__noise_model_category = noise_model_category
         else:
-            self.noise_model = noise_model
+            self.noise_model = noise_model_category
         # Set the parameters necessary to model the instrument behavior.
         for name, dico in instrument.params_model.items():
             self.add_parameter(Parameter(name=name, name_prefix=self.name,
@@ -78,14 +78,14 @@ class Instrument_Model(Core_ParamContainer):
         return super(Instrument_Model, self).__getattr__(name)
 
     @property
-    def noise_model(self):
+    def noise_model_category(self):
         """Return the noise model category used for this instrument model."""
-        return self.__noise_model
+        return self.__noise_model_category
 
-    @noise_model.setter
-    def noise_model(self, nm):
+    @noise_model_category.setter
+    def noise_model_category(self, nm):
         """Set the noise model category to use for this instrument model."""
-        self.__noise_model = nm
+        self.__noise_model_category = nm
 
     @property
     def instrument(self):
