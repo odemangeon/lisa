@@ -69,20 +69,6 @@ orbital_model = {'b': {'do': True,
                                                                       'use_aR': False,
                                                                       'use_tic': True}}}}}
 
-#########################
-## Noise model definition
-#########################
-# Define which noise model you want to use for each instrument model
-# By default the gaussian noise model is used for all the instrument models
-# This is imposed by the fact that below all instrument models have 'gaussian' as entry.
-# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].
-# If you want to change the noise model used for a given instrument model, just change the value of its key.
-d_noise_model_def = {'LC': {'EulerCam': {'inst0': 'gaussian', 'inst1': 'gaussian'},
-                            'IAC80': {'inst0': 'gaussian', 'inst1': 'gaussian'},
-                            'K2': {'inst': 'GP1D'},
-                            'TRAPPIST': {'inst': 'gaussian'}},
-                     'RV': {'CORALIE': {'inst': 'GP1D'}, 'SOPHIE': {'inst': 'GP1D'}}}
-
 #############################
 ## Configuration of LC models
 #############################
@@ -154,14 +140,18 @@ transit_model = {'b': {'do': True,
 # Associate LC instrument models with LD param containers.
 # Available limb-darkening models are:
 # ['quadratic', 'nonlinear', 'exponential', 'logarithmic', 'squareroot', 'linear', 'uniform', 'custom']
-LDs = {'A': {'LC_K2_inst': 'default',
-             'LC_EulerCam_inst0': 'default',
-             'LC_EulerCam_inst1': 'default',
-             'LC_TRAPPIST_inst': 'default',
-             'LC_IAC80_inst1': 'default',
-             'LC_IAC80_inst0': 'default',
+LDs = {'A': {'LC_K2_inst': 'LDKp',
+             'LC_EulerCam_inst0': 'LDNG',
+             'LC_EulerCam_inst1': 'LDNG',
+             'LC_TRAPPIST_inst': 'LDz',
+             'LC_IAC80_inst1': 'LDR',
+             'LC_IAC80_inst0': 'LDR',
 
-             'LD_models': {'default': 'quadratic'}
+             'LD_models': {'LDKp': 'quadratic',
+                           'LDNG': 'quadratic',
+                           'LDR': 'quadratic',
+                           'LDz': 'quadratic',
+                           }
              }
        }
 
@@ -203,7 +193,7 @@ occultation_model = {'b': {'do': False,
 
 # Supersampling and exposure_time for LC
 ########################################
-SuperSamps_LC = {'LC_K2_inst': {'supersamp': 1, 'exptime': 0.02043402778},
+SuperSamps_LC = {'LC_K2_inst': {'supersamp': 10, 'exptime': 0.02043402778},
                  'LC_EulerCam_inst0': {'supersamp': 1, 'exptime': 0.02043402778},
                  'LC_EulerCam_inst1': {'supersamp': 1, 'exptime': 0.02043402778},
                  'LC_TRAPPIST_inst': {'supersamp': 1, 'exptime': 0.02043402778},
@@ -223,3 +213,74 @@ polynomial_model_LC = {'A': {'do': False, 'order': 0, 'tref': None},
                     'LC_IAC80_inst1': {'do': True, 'order': 0, 'tref': None},
                     'LC_K2_inst': {'do': True, 'order': 0, 'tref': None},
                     'LC_TRAPPIST_inst': {'do': True, 'order': 0, 'tref': None}}
+
+#############################
+## Configuration of RV models
+#############################
+
+
+# Decorrelation
+###############
+#
+# Define if you want to include decorrelation models.
+# In the dictionary below, each key corresponds to an instrument model and has for value a dictionary with the following structure:
+# {"do": True/False,
+#  "<decorrelation_model_name>": {"<Indicator instrument model name>": {decorrelation_model_options},  ...}
+# If "do" is False no decorrelation is performed for the data taken with the instrument model.
+# Otherwise, for each available decorrelation model you need to provide the name of the instrument
+# model of the indicators that you want to use and the options for the decorrelation method
+#
+# The list of datasets for each LC instrument model are:
+# {'RV_SOPHIE_inst': ['RV_WASP-151_SOPHIE_0'], 'RV_CORALIE_inst': ['RV_WASP-151_CORALIE_0']}
+#
+# The list of datasets for each IND instrument model are:
+# {}
+#
+# The format of decorrelation_model_options dictionary depends on the decorrelation model used
+# linear: {'quantity': 'raw'}
+# spline: {'category': 'spline', 'spline_type': 'UnivariateSpline' or 'LSQUnivariateSpline', 'spline_kwargs': {'k': 3}, 'match datasets': {<dataset name>: <indicator dataset name>}}
+# bispline: {'category': 'bispline', 'spline_type': 'SmoothBivariateSpline' or 'LSQBivariateSpline', 'spline_kwargs': {'kx': 3, 'ky': 3}, 'match datasets': {<dataset name>: {'X': <indicator dataset name>, 'Y':<indicator dataset name>}}
+
+
+# Decorrelation Model
+#####################
+decorrelation_model_RV = {'RV_CORALIE_inst': {'do': False,
+                                           'what to decorrelate': {'add_2_totalrv': {'linear': {}},
+                                                                   'multiply_2_totalrv': {'linear': {}}}},
+                       'RV_SOPHIE_inst': {'do': False,
+                                          'what to decorrelate': {'add_2_totalrv': {'linear': {}},
+                                                                  'multiply_2_totalrv': {'linear': {}}}}}
+
+# Decorrelation likelihood
+##########################
+decorrelation_likelihood_RV = {'do': False, 'model_definitions': {}, 'order_models': []}
+
+
+# Keplerian RV model
+####################
+keplerian_rv_model = {'b': {'do': True,
+                            'model': {'category': 'radvel',
+                                      'param_extensions': {'planet': {'K': ''}, 'star': {}}}}}
+
+# Instrumental model for RV
+###########################
+
+# Polynomial trend models for RV
+################################
+polynomial_model_RV = {'A': {'do': True, 'order': 0, 'tref': None},
+                       'RV_CORALIE_inst': {'do': True, 'order': 0, 'tref': None},
+                       'RV_SOPHIE_inst': {'do': False, 'order': 0, 'tref': None}}
+
+#########################
+## Noise model definition
+#########################
+# Define which noise model you want to use for each instrument model
+# By default the gaussian noise model is used for all the instrument models
+# This is imposed by the fact that below all instrument models have 'gaussian' as entry.
+# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].
+# If you want to change the noise model used for a given instrument model, just change the value of its key.
+d_noise_model_def = {'LC': {'EulerCam': {'inst0': 'gaussian', 'inst1': 'gaussian'},
+                            'IAC80': {'inst0': 'gaussian', 'inst1': 'gaussian'},
+                            'K2': {'inst': 'GP1D'},
+                            'TRAPPIST': {'inst': 'gaussian'}},
+                     'RV': {'CORALIE': {'inst': 'GP1D'}, 'SOPHIE': {'inst': 'GP1D'}}}

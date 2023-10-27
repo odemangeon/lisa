@@ -206,14 +206,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
         logger.info("Load the noise models for instrument model definition.")
         self._load_config(config2load='noisemoddef')
 
-        logger.info("7. Create inst_cat specific parameter file")
-        if cluster:
-            self.model.create_instcat_paramfiles(paramfile_path=None, answer_overwrite="n", answer_create=None)
-        else:
-            self.model.create_instcat_paramfiles(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
-
-            input("If there are any inst_cat specific paramerisation file please check them")
-
         logger.info("9. Create noise model specific parameter file")
         if cluster:
             self.model.create_noisemodcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
