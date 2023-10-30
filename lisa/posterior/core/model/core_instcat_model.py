@@ -41,13 +41,6 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     __mandatorymeths__ = ["datasim_creator"]
     # datasim_creator: Methods that creates the datasimulator functions
     #   The inputs of this method need to be (inst_models, datasets=None)
-    # create_instcat_paramfile: Methods to create the param file specific to the instrument category
-    #   This methods needs to be defined even if there is no specific instcat_paramfile.
-    #   Just make a function that raises an error
-    # load_instcat_paramfile: Methods to load the param file specific to the instrument category
-    #   This methods needs to be defined even if there is no specific instcat_paramfile.
-    #   This function needs to have a model_instance argument
-    #   Just make a function that raises an error
     __mandatoryattrs__ = ["inst_cat", "datasim_creator_name", "l_decorrelation_class"]
     # inst_cat: string specifiying the instrument category that the InstCat_Model will handle
     # has_instcat_paramfile: bool that says if there is an instcat specific param_file
@@ -606,10 +599,10 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     #     else:
     #         raise IOError(f"Impossible to read {self.inst_cat} parameter file: {self.paramfile_instcat} in directory {self.model_instance.run_folder}")
 
-    def load_config(self, dico_config):
-        """
-        """
-        raise NotImplementedError(f"You need to overwrite the load_config method in the children class for instrument category {self.inst_cat} to use a specific parameter file.")
+    # def load_config(self, dico_config):
+    #     """
+    #     """
+    #     raise NotImplementedError(f"You need to overwrite the load_config method in the children class for instrument category {self.inst_cat} to use a specific parameter file.")
 
     def load_config_decorrelation_model(self, decorr_config):
         """

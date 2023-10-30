@@ -10,7 +10,7 @@ from .parameter import Parameter
 from ...tools.metaclasses import MandatoryReadOnlyAttr
 
 
-class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
+class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_ModelConfig.
 
     Definition of the configuration of models
@@ -25,7 +25,7 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
     def __init__(self, model_name, dico_config_model=None):
         if dico_config_model is None:
             dico_config_model = {}
-        self.__object_categories = {'self': self}  # This are parameter containers required by the model that host the model parameters
+        self.__object_categories = {}  # This are parameter containers required by the model that host the model parameters
         self.__model_name = model_name  # This is the name of the model
         self.__parametrisation = {}  # This is the dictionary that will contains the parameters related to the parameterisation (ex: you want to jump the log of a parameter instead of the parameter itself)
         self.__args = {}  # This is the dictionary that contains some parameters to define some properties of the model (ex: wether you want to let a given parameter vary or if you want to include an occultation in the phase curve model)
@@ -76,6 +76,8 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
 
         This will be used to print in the configuration file
 
+        TODO: It looks like it might be a bit redundant with dict2print TBC
+
         Return
         ------
         config_dict : dictionary
@@ -121,11 +123,9 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
                     raise ValueError(f"{key} is not a valid key for the parametrisation dictionary. Should be {list(self.parametrisation.keys())}")
 
     def _set_param_extensions(self, param_extensions=None):
-        self.__param_extensions = {obj_cat: {param_basename: self.model_name for param_basename in self._get_l_parameter_basename(object_category=obj_cat)} for obj_cat in self.object_categories
+        self.__param_extensions = {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat))}
+                                   for obj_cat in self.__object_categories
                                    }
-        # self.__param_extensions = {"planet": {param_basename: self.model_name for param_basename in self._get_l_parameter_basename_planet()},
-        #                            "star": {param_basename: self.model_name for param_basename in self._get_l_parameter_basename_star()},
-        #                            }
         if not(isinstance(param_extensions, dict) or (param_extensions is None)):
             raise ValueError(f"parametrisation should be None or a dictionary whose keys are in {list(self.parametrisation.keys())}")
         if param_extensions is not None:
@@ -185,7 +185,7 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
         """
         l_object_category = []
         for obj_cat in self.l_object_category:
-            if param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs(object_category=obj_cat)(**kwargs)):
+            if param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs)):
                 l_object_category.append(obj_cat)
         if len(l_object_category) == 0:
             raise ValueError(f"Object category of parameter {param_basename}, could not be found.")
@@ -194,118 +194,41 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
         else:
             return l_object_category[0]
     
-    ###############################################################
-    ## Dealing with the parameter basenames and names for the model
-    ###############################################################
+    ###########################################################
+    ## Dealing with the parameter and their names for the model
+    ###########################################################
 
     # Dealing with parameter basenames
     ##################################
-    def _get_function_get_l_parameter_basename(self, object_category):
-        """This function returns the get_l_parameter_basename associated to a given object_category
-
-        Argument
-        --------
-        object_category : str
-            Object category (ex: planet, star, etc..)
-
-        Return
-        ------
-        get_l_parameter_basename    : function
-            function that return the list of parameter base name for the provided object category.
-        """
-        if object_category == 'self':
-            return self._get_kwargs_4_get_l_parameter_basename_default
-        raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
-    
-    def _get_function_get_kwargs_4_get_l_parameter_basename(self, object_category):
-        """This function returns the get_kwargs_4_get_l_parameter_basename associated to a given object_category
-
-        Argument
-        --------
-        object_category : str
-            Object category (ex: planet, star, etc..)
-
-        Return
-        ------
-        get_kwargs  : function
-            function that takes as arguments a dictionary of kwargs and select the arguments 
-            required by get_l_parameter_basename or get_parameter_name of the object category.
-        """
-        if object_category == 'self':
-            return self._get_kwargs_4_get_l_parameter_basename_self
-        raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
 
     def _get_l_parameter_basename(self, object_category=None, **kwargs):
-        """Get the list of all parameter basename for the model.
-
-        Return
-        ------
-        l_param_basename    : list of str
-        """
+        """Return the list of all parameter basename for the model"""
         l_object_category = self._get_l_object_category_arg(object_category)
         l_param_basename = []
         for obj_cat in l_object_category:
-            l_param_basename += self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(**kwargs))
+            l_param_basename += self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs))
         return l_param_basename
     
-    def _get_l_parameter_basename_self(self):
-        """Get the list of all parameter basename for the model that are store in this model configuration.
-
-        This method needs to be overloaded in the subclass to add parameters that are stored in this model configuration.
-
-        Return
-        ------
-        l_param_basename    : list of str
-        """
+    def _get_function_get_l_parameter_basename(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+    
+    def _get_function_get_kwargs_4_get_l_parameter_basename(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+    
+    def _get_l_parameter_basename_default(self):
         return []
     
-    def _get_kwargs_4_get_l_parameter_basename_default(self, **kwargs):
-        """Get the dictionary of kwargs required by get_l_parameter_basename_self.
-
-        This method needs to be overloaded in the subclass if some kwargs are needed
-
-        Return
-        ------
-        l_param_basename    : list of str
-        """
+    def _get_kwargs_4_get_l_parameter_basename_default(self, object_category, **kwargs):
         return {}
     
     # Dealing with parameter names
     ##############################
-
-    def get_function_get_parameter_name(self, object_category):
-        """his function returns the get_parameter_name associated to a given object_category
-
-        Argument
-        --------
-        object_category : str
-            Object category (ex: planet, star, etc..)
-
-        Return
-        ------
-        get_parameter_name    : function
-            function that return the name of a parameter given its base name.
-        """
-        if object_category == 'self':
-            return self._get_parameter_name_default
-        raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
-    
-    def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
-        """This function returns the get_kwargs_4_get_parameter_name associated to a given object_category
-
-        Argument
-        --------
-        object_category : str
-            Object category (ex: planet, star, etc..)
-
-        Return
-        ------
-        get_kwargs_4_get_parameter_name : function
-            function that return the kwargs required by the get_parameter_name of a given object category
-        """
-        if object_category == 'self':
-            return self._get_kwargs_4_get_parameter_name_default
-        raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
 
     def _get_parameter_name(self, param_basename, object_category=None, **kwargs):
         """Return the parameter name"""
@@ -313,41 +236,33 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
             object_category = self._find_object_category(param_basename=param_basename, **kwargs)
         if param_basename not in self._get_l_parameter_basename(object_category=object_category, **self._get_function_get_kwargs(object_category=object_category)(**kwargs)):
             raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for object category {object_category} and kwargs {kwargs}")
-        return self.get_function_get_parameter_name(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)(object_category=object_category, **kwargs))
-    
+        return self._get_function_get_parameter_name(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter_name_or_create_parameter(object_category=object_category)(param_basename=param_basename, object_category=object_category, **kwargs))
+
     def _get_param_extension(self, param_basename, object_category):
         """
         """
         return self.__param_extensions[object_category][param_basename]
+
+    def _get_function_get_parameter_name(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
     
+    def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+
     def _get_parameter_name_default(self, param_basename, object_category):
         return f"{param_basename}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
     
-    def _get_kwargs_4_get_parameter_name_default(self, **kwargs):
-        return {'object_category': kwargs['object_category']}
+    def _get_kwargs_4_get_parameter_name_default(self, param_basename, object_category, **kwargs):
+        return {var_name:  kwargs[var_name] for var_name in ['param_basename', 'object_category']}
 
-    
-    ############################################
-    ## Deal with creating and getting parameters
-    ############################################
-
-    def _get_function_create_parameter(self, param_name, param_basename, object_category):
-        """This function returns the create_parameter function associated to a given object_category
-
-        Argument
-        --------
-        object_category : str
-            Object category (ex: planet, star, etc..)
-
-        Return
-        ------
-        create_parameter : function
-            function that create the parameter 
-        """
-        if object_category == 'self':
-            return self._create_parameter_default
-        raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
-
+    # Deal with creating parameters
+    ###############################
 
     def _create_parameter(self, param_name, param_basename, object_category=None, **kwargs):
         """Create (if needed) a parameter of the given object category"""
@@ -355,18 +270,19 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
             object_category = self._find_object_category(param_basename=param_basename, **kwargs)
         if param_basename not in self._get_l_parameter_basename(object_category=object_category, **self._get_function_get_kwargs(object_category=object_category)(**kwargs)):
             raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for object category {object_category} and kwargs {kwargs}")
-        return self._get_function_create_parameter(object_category=object_category)(param_name=param_name, **self._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)(object_category=object_category, **kwargs))
+        return self._get_function_create_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_create_parameter(object_category=object_category)(param_name=param_name, param_basename=param_basename, object_category=object_category, **kwargs))
 
-
-    def _get_parameter(self, param_basename, object_category=None, **kwargs):
-        """Return the parameter"""
-        if object_category is None:
-            object_category = self._find_object_category(param_basename=param_basename, **kwargs)
-        if param_basename not in self._get_function_get_l_parameter_basename(object_category=object_category)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=object_category)(**kwargs)):
-            raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for instrument model {inst_model_fullname} and object category {object_category} ")
-        param_name = self._get_parameter_name(param_basename=param_basename, object_category=object_category, **kwargs)
-        param_container = self.object_categories[object_category]
-        return param_container.parameters[param_name]
+    def _get_function_create_parameter(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+        
+    def _get_function_get_kwargs_4_create_parameter(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
 
     def _create_parameter_default(self, param_name, object_category):
         param_container = self.object_categories[object_category]
@@ -374,7 +290,42 @@ class Core_ModelConfig(Core_ParamContainer, metaclass=MandatoryReadOnlyAttr):
                 param = Parameter(name=param_name, name_prefix=param_container.name)
                 param_container.add_parameter(param)
         else:
-            param = param_container.get_parameter(name=param_name)
+            param = param_container.get_parameter(name=param_name)  
+        return param  
+
+    def _get_kwargs_4_create_parameter_default(self, param_name, param_basename, object_category, **kwargs):
+        return {'param_name': param_name, 'object_category': object_category}
+
+    # Deal with getting parameter
+    #############################
+
+    def _get_parameter(self, param_basename, object_category=None, **kwargs):
+        """Return the parameter"""
+        if object_category is None:
+            object_category = self._find_object_category(param_basename=param_basename, **kwargs)
+        if param_basename not in self._get_function_get_l_parameter_basename(object_category=object_category)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=object_category)(**kwargs)):
+            raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names object category {object_category} ")
+        return self._get_function_get_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter(object_category=object_category)(param_basename=param_basename, object_category=object_category, **kwargs))
+        
+    def _get_function_get_parameter(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+        
+    def _get_function_get_kwargs_4_get_parameter(self, object_category):
+        if object_category in self.__object_categories:
+            raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
+        else:
+            raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
+
+    def _get_parameter_default(self, param_basename, object_category):
+        param_name = self._get_parameter_name(param_basename=param_basename, object_category=object_category)
+        param_container = self.object_categories[object_category]
+        return param_container.parameters[param_name]
+    
+    def _get_kwargs_4_get_parameter_default(self, param_basename, object_category=None, **kwargs):
+        return {'param_basename': param_basename, 'object_category': object_category}
 
     ##############################
     # Functions used by Subclasses

@@ -326,13 +326,7 @@ class Core_PlanetStarModels_lmodel1inst(Core_PlanetStarModels_1model4allinst):
             Name provided to the model. It will be appended to the name of the parameters (except for the orbital parameters)
         model_category                  : str
             Catergory of the model
-        new_parameter                   : Dict of dict of bool/str
-            Dictionary saying if a given parameter should be a new parameter associated to this model
-            or if it should be using a parameter from another model.
-        args                            : dict
-            Dictionary provide arguments for the model if needed.
-        l_available_orbital_model_name  : list of str
-            List of available orbital model names
+        dico_config_model               : dict
         overwrite                       : bool
             Wheter or not you wish to overwrite if the model is already defined
         """
@@ -450,12 +444,6 @@ class Core_PlanetStarModels_1model1inst(Core_PlanetStarModels_lmodel1inst):
 
     def get_model(self, planet_name, inst_model_fullname):
         """Get the model for a given planet name and a given instrument model full name.
-
-        If do is True it means that the model should be done. To be used by the datasimulator creator functions
-
-        Argument
-        --------
-        do  : bool
         """
         if planet_name not in self.planets:
             raise ValueError(f"planet name {planet_name} is not in an available planet in the model ({list(self.planets.keys())})")

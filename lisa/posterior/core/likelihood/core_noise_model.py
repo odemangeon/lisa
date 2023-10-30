@@ -18,56 +18,17 @@ from numpy import sum as npsum
 from numpy import log as nplog
 from collections import defaultdict
 
+from ..config_file import ConfigFileAttr, ConfigFile
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.default_folders_data_run import RunFolderAttr, RunFolder
-from ..config_file import ConfigFileAttr, ConfigFile
+from ....tools.metaclasses import MandatoryReadOnlyAttr
 
 
-class Metaclass_NoiseModel(MandatoryReadOnlyAttr):
+class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnlyAttr):
 
-    def __init__(cls, name, bases, attrs):
-        super(Metaclass_NoiseModel, cls).__init__(name, bases, attrs)
-        l_mandatory_methods = []
-        # ["lnlike_creator", "lnlike", "_check_parametrisation_dataset", "apply_parametrisation"]
-        if cls.__name__ not in ["Core_Noise_Model", ]:
-            missing_attrs = ["{}".format(attr) for attr in l_mandatory_methods
-                             if not hasattr(cls, attr)]
-            if len(missing_attrs) > 0:
-                raise AttributeError("class '{}' requires attribute {}".format(name, missing_attrs))
+    # should provide the way to compute the likelihood somehow
+    __mandatoryattrs__ = ["noise_cat", "has_GP", "has_jitter"]
 
-
-class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=Metaclass_NoiseModel):
-    """Docstring for Core_Noise_Model class.
-
-    This class deal with the choice and the parametrisation of the noise models. It also provides
-    the functions to compute the likelihood.
-
-    Methods
-    -------
-    # Interfaces
-    apply_parametrisation: Create and set to main the parameters required by the noise model.
-        This function is called by the Core_Model.set_noisemodels method
-    check_parametrisation: Check that the parameters required by the noise model exists and set to main
-        This function is called by ?
-    create_lnlikelihood_and_formatinputs: Provide the required input to compute the likelihood
-        This function is called by ?
-    create_gpsimulator_and_formatinputs: This function should only exists if there is a GP (cls.has_GP).
-        It provides the required input to create a GP simulator is the noise model
-        includes one.
-        This function is called by ?
-    apply_jitter: This function should only exists if there is a jitter param (cls.has_jitter)
-        It provides the function that update the error bars according to the jitter value and jitter model
-    # Internal 
-    The rest of the methods
-    """
-
-    __mandatoryattrs__ = ["category", "has_GP", "has_jitter"]
-
-    ## list of keys (string) giving the dataset kwargs required for the computation of the likelihood
-    # of the noise model.
-    # This info will be used to get this dataset_kwargs out of the dataset and produce the dataset_kwargs
-    # variable which will contain all the dataset_kwargs required for a given likelihood computation.
-    l_required_datasetkwarg_keys = ["data", "data_err"]
 
     def __init__(self, model_instance, run_folder, config_file):
         # Init the run_folder
@@ -86,29 +47,26 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=Metaclass_NoiseM
         """Return True is the param_file of the instrument category has been defined."""
         return self.__model_instance
     
+    
     ######################################
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_instcat_model(self):
-        """Configure the noise cat model
+    def _configure_noisemodcat_model(self, **kwargs):
+        """Apply the parametrisation for the noise model
+
+        This method is called by ?
         """
-        pass
-
-    # Function that get the function required by ConfigFileAttr._load_config
-    ########################################################################
-
-    def _get_function_config(self, function_type, config2load):
-        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
-    
-    ##########################################################
-    ## Dealing with the instrument model using the noise model
-    ##########################################################
+        raise NotImplementedError("You need to overload this function in the sub class")
+        
+    ###################################################################
+    ## Dealing with the instrument model using the noise model category
+    ###################################################################
 
     def get_instmod(self, sortby_instfullcat=False):
         """Return the list of instrument model object for the instrument category
         """
-        l_instmod = self.get_instmodobjs_using_noisemod(noisemod_cat=self.category)
+        l_instmod = self.get_instmodobjs_using_noisemod(noisemod_cat=self.noise_cat)
         if sortby_instfullcat:
             d_instmod = defaultdict(list)
             for instmod in l_instmod:
@@ -116,6 +74,10 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=Metaclass_NoiseM
             return d_instmod
         else:
             return l_instmod
+        
+    @property
+    def l_inst_model_fullname(self):
+        return [instmod_obj.full_name for instmod_obj in self.get_instmod(sortby_instfullcat=False)]
 
     ###################################
     ## Dealing with the parametrisation
@@ -146,6 +108,10 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=Metaclass_NoiseM
         """
         raise NotImplementedError("You need to implement a check_parametrisation method for your "
                                   "noise model.")
+    
+    #######################################
+    ## Dealing with the likelihood function
+    #######################################
 
     def create_lnlikelihood_and_formatinputs(self, l_idx_simdata, l_instmod_obj, l_dataset_obj,
                                              l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,

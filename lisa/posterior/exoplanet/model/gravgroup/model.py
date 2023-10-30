@@ -35,10 +35,10 @@ from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..celestial_bodies import Star, Planet
 # from ...dataset_and_instrument.lc import LC_inst_cat
 # from ...dataset_and_instrument.rv import RV_inst_cat
-from ...likelihood.GP1D_noisemodel import GP1D_Noise_Model
+from ....core.likelihood.GP1D_noisemodels import GP1D_Noise_Models
 from ....core.model.core_model import Core_Model, create_key, load_key
 from ....core.model.indicator_model.IND_instcat_model import IND_InstCat_Model
-from ....core.likelihood.gaussian_noisemodel import Gaussian_Noise_Model
+from ....core.likelihood.gaussian_noisemodels import Gaussian_Noise_Models
 from .....tools.miscellaneous import spacestring_like
 
 
@@ -55,7 +55,7 @@ class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisa
     __instcat_model_classes__ = [LC_InstCat_Model, RV_InstCat_Model, IND_InstCat_Model]
 
     ## Set of possible noise model categories
-    __noise_model_classes__ = [Gaussian_Noise_Model, GP1D_Noise_Model]
+    __noise_model_classes__ = [Gaussian_Noise_Models, GP1D_Noise_Models]
 
     ## Does the model requires a model parametrisation file
     __has_model_paramfile__ = True
