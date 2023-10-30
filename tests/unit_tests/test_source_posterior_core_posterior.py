@@ -21,7 +21,7 @@ from lisa.posterior.core.model.core_model import Core_Model
 import lisa.posterior.exoplanet.dataset_and_instrument.lc as lc
 import lisa.posterior.exoplanet.dataset_and_instrument.rv as rv
 from lisa.posterior.core.dataset_and_instrument.dataset_database import DatasetDatabase
-from lisa.posterior.core.likelihood.gaussian_noisemodel import GaussianNoiseModel
+from lisa.posterior.core.likelihood.gaussian_noisemodelconfiguration import GaussianNoiseModel
 
 logger = logging.getLogger()
 if logger.level > logging.DEBUG:

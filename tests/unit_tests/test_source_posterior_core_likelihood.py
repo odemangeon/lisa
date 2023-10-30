@@ -8,8 +8,8 @@ import numpy as np
 # import matplotlib.pyplot as plt
 
 from lisa.posterior.core.likelihood.core_likelihood import LikelihoodCreator
-from lisa.posterior.core.likelihood.gaussian_noisemodel import GaussianNoiseModel
-from lisa.posterior.core.likelihood.gaussian_noisemodel import GaussianNoiseModel_wjittermulti
+from lisa.posterior.core.likelihood.gaussian_noisemodelconfiguration import GaussianNoiseModel
+from lisa.posterior.core.likelihood.gaussian_noisemodelconfiguration import GaussianNoiseModel_wjittermulti
 from lisa.tools.function_w_doc import DocFunction
 from lisa.posterior.core.dataset_and_instrument.instrument import Default_Instrument
 from lisa.posterior.core.model.jitter import jitter_name

@@ -23,11 +23,11 @@ from os.path import basename
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
-from ..dataset_and_instrument.rv import RV_inst_cat
-from ..dataset_and_instrument.lc import LC_inst_cat
-from ...core.parameter import Parameter
-from ...core.likelihood.gaussian_noisemodel import jitter_name, Gaussian_Noise_Model
-from ...core.dataset_and_instrument.indicator import IND_inst_cat
+from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
+from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
+from ..parameter import Parameter
+from .gaussian_noisemodelconfiguration import jitter_name, Gaussian_Noise_Model
+from ..dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.function_from_text_toolbox import FunctionBuilder
