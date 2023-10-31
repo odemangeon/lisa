@@ -179,17 +179,138 @@ class ParamContainerDatabase(object):
         return result
 
 
-class SpecificParamContainerCategory(object):
+class SpecificParamContainerCategoryContainer(MutableMapping):
     """docstring for SpecificParamContainerCategory."""
 
-    def get_subkwargs_4_get_list_params(self, model_instance, **kwargs):
-        """Select the keyword arguments for the get_list_params method of this param container.
-
-        :param Core_Model model_instance: Model instance which can be used for the default value
-            of some arguments of the SpecificParamContainerCategory.
-        Keyword arguments that are used only by the get_list_params method of a SpecificParamContainerCategory
-
-        :return dict selected_kwargs: Dictionary with key = argument name, value = argument value
+    def __init__(self, ordered=False):
         """
-        raise NotImplementedError("You have to overwrite the get_subkwargs_4_get_list_params method"
-                                  "when you create a subclass of SpecificParamContainerCategory")
+        """
+        self.__ordered = ordered
+        if self.__ordered:
+            self.__data = OrderedDict()
+        else:
+            self.__data = dict()
+
+    @property
+    def category(self):
+        raise NotImplementedError("You need to overload this method in the subclass.")
+
+    @property
+    def ordered(self):
+        """True if the container is based on an Ordereddict else it is a dict"""
+        return self.__ordered
+
+    @ordered.setter
+    def ordered(self, boolean):
+        if isinstance(boolean, bool):
+            self.__ordered = boolean
+        else:
+            raise ValueError("ordered has to be a boolean.")
+
+    def __copy__(self):
+        res = type(self)(ordered=self.ordered)
+        res.update(self.__data)
+        return res
+
+    @property
+    def _data(self):
+        return self.__data
+
+    def __len__(self):
+        return len(self.__data)
+
+    def __iter__(self):
+        return iter(self.__data)
+
+    def __setitem__(self, key, value):
+        self.__data[full_name] = value
+
+    def __delitem__(self, full_name):
+        del self.__data[full_name]
+
+    def __getitem__(self, full_name):
+        if full_name in self.__data:
+            return self.__data[full_name]
+        if hasattr(self, "__missing__"):
+            return self.__missing__(full_name)
+        else:
+            raise KeyError(full_name)
+
+    def __contains__(self, full_name):
+        return full_name in self.__data
+
+    @property
+    def l_param_container_fullname(self):
+        return list(self.keys())
+
+    @property
+    def l_param_container(self):
+        return list(self.values())
+
+    def get_list_params(self, main=False, free=False, no_duplicate=True, l_param_container_fullname=None):
+        """Return the list of all parameters.
+
+        Arguments
+        ---------
+        main : Boolean
+            If true (default false) returns only the main parameters
+        free : Boolean
+            If true (default false) returns only the free parameters
+        l_param_container_fullname : list of strings
+            list of the names of param containers for which you want the params.
+
+        Returns
+        -------
+        list_of_param: list of Parameter instances
+        """
+        result = []
+        if l_param_container_fullname is None:
+            l_param_container_fullname = self.l_param_container_fullname
+        for param_container_fullname in l_param_container_fullname:
+            param_container = self[param_container_fullname]
+            result_param_container = param_container.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+            if no_duplicate:
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result_param_container]
+                for param in result_param_container:
+                    if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
+                        result.append(param)
+            else:
+                result.extend(result_param_container)
+        return result
+
+    def get_subkwargs_4_get_list_params(self, model_instance, **kwargs):
+        """Select the keyword arguments for the get_list_params method.
+
+        Argument
+        --------
+        model_instance  : Core_Model
+            Model instance which is used for the default value of kwargs, see below (optional).
+
+        Keyword argument that are used by the get_list_params method of InstrumentContainer
+
+        Return
+        ------
+        selected_kwargs : dict
+            Dictionary providing the kwargs required by get_list_params
+        """
+        raise NotImplementedError("You need to overload this method in the subclass.")
+
+    @property    
+    def dico_prior_config(self):
+        """Return the dictionary for the configuration of the priors of the parameters of the parameter containers
+        located in this container.
+        """
+        text = ""
+        result = {}
+        for param_container in self.l_param_container:
+            result[param_container.full_name] = param_container.dico_prior_config
+        return result
+
+    def load_prior_config(self, dico_prior_config, model_instance, available_joint_priors={}):
+        """Load the configuration for the prior of the parameters of the parameter containers
+        located in this container.
+        """
+        for param_container_fullname in dico_prior_config:
+            param_container = self[param_container_fullname]
+            param_container.load_prior_config(dico_prior_config=dico_prior_config[param_container_fullname], model_instance=model_instance, available_joint_priors=available_joint_priors)
+

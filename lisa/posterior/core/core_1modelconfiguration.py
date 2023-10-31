@@ -36,7 +36,6 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     @property
     def dict2print(self):
         """Used to print the content in the parametrisation file."""
-        dict2print = {'category': self.category}
         if len(self.args) > 0:
             dict2print['args'] = self.args
         if len(self.parametrisation) > 0:
@@ -44,6 +43,17 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         if len(self.param_extensions) > 0:
             dict2print['param_extensions'] = self.param_extensions
         return dict2print
+
+    def load_config(self, dico_config):
+        """Load the content of the configuration dictionary read from the parametrisation file
+
+        Argument
+        --------
+        dico_config : dict
+        """
+        self._set_parametrisation(parametrisation=dico_config.get('parametrisation', None))
+        self._set_args(args=dico_config.get('args', None))
+        self._set_param_extensions(param_extensions=dico_config.get('param_extensions', None))
 
     def create_parameters_and_set_main(self, inst_model_fullname=None, object_category=None):
         """Create (if needed) the parameters of the model.

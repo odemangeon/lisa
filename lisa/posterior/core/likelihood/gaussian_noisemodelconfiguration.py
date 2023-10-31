@@ -27,10 +27,11 @@ class GaussianModel(Core_1ModelConfig):
         self.parametrisation.update({"log10": False, "use_Baluevfactor": False})
         if parametrisation is not None:
             for key in parametrisation:
-                if key in ["log10", "use_Baluevfactor"]:
-                    if not(isinstance(parametrisation[key], bool)):
-                        raise ValueError(f"Value of key {key} of parametrisation dictionary should be a bool (got {parametrisation[key]})")
-                    self.parametrisation[key] = parametrisation[key]
+                if key not in ["log10", "use_Baluevfactor"]:
+                    raise ValueError(f"The only possible keys to the 'parametrisation' are ['log10', 'use_Baluevfactor']. You provided {key}.")
+                if not(isinstance(parametrisation[key], bool)):
+                    raise ValueError(f"Value of key {key} of parametrisation dictionary should be a bool (got {parametrisation[key]})")
+                self.parametrisation[key] = parametrisation[key]
         super(GaussianModel, self)._set_parametrisation(parametrisation=parametrisation)
 
     def _set_args(self, args=None):
@@ -41,9 +42,9 @@ class GaussianModel(Core_1ModelConfig):
                     if args[key] not in ['additive', 'multiplicative', 'dfm']:
                         raise ValueError("jitter_type must be in ['additive', 'multiplicative', 'dfm']")
 
-    ###########################################################
-    ## Dealing with the parameter and their names for the model
-    ###########################################################
+    ############################################################
+    ## Dealing with the parameters and their names for the model
+    ############################################################
 
     # Dealing with parameter basenames
     ##################################
@@ -66,7 +67,7 @@ class GaussianModel(Core_1ModelConfig):
 
     def _get_function_get_parameter_name(self, object_category):
         if object_category == 'instrument':
-            return self._get_parameter_name_jitter
+            return self._get_parameter_name_instrument
         super(GaussianModel, self)._get_function_get_parameter_name(object_category=object_category)
     
     def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
@@ -74,16 +75,17 @@ class GaussianModel(Core_1ModelConfig):
             return self._get_kwargs_4_get_parameter_name_default
         super(GaussianModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
 
-    def _get_parameter_name_jitter(self, param_basename, object_category):
-        if self.jitter_type == 'additive':
-            param_name = 'jitter'
-        elif self.jitter_type == 'multiplicative':
-            param_name = 'jittermulti'
-        elif self.jitter_type == 'dfm':
-            param_name = 'jitterdfm'
-        if self.log10jitter:
-            param_name = 'log10' + param_basename
-        return f"{param_name}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
+    def _get_parameter_name_instrument(self, param_basename, object_category):
+        if param_basename == 'jitter'
+            if self.jitter_type == 'additive':
+                param_name = 'jitter'
+            elif self.jitter_type == 'multiplicative':
+                param_name = 'jittermulti'
+            elif self.jitter_type == 'dfm':
+                param_name = 'jitterdfm'
+            if self.log10jitter:
+                param_name = 'log10' + param_basename            
+            return f"{param_name}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
 
     # Deal with creating parameters
     ###############################
@@ -119,12 +121,12 @@ class GaussianModel(Core_1ModelConfig):
 
     @property
     def instrument(self):
-        """Source of jitter modeled"""
+        """Instrument model param container"""
         return self.object_categories["instrument"]
     
     @property
     def log10jitter(self):
-        """Source of jitter modeled"""
+        """True if the jumping jitter param should be log10"""
         return self.parametrisation["log10"]
     
     @property
