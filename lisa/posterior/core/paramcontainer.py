@@ -36,10 +36,6 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         self.__parameters = OrderedDict()
         ## Do the Name class init
         super(Core_ParamContainer, self).__init__(name=name, prefix=name_prefix, **kwargs)
-        ## Initialise path to parametrisation file
-        self.__param_file = None
-        ## Initialise the info regarding the content of the parametrisation file
-        self.__paramfile_info = dict()
         ## This class is not meant to be instanciated but subclassed and then instanciated.
         if type(self) is Core_ParamContainer:
             raise NotImplementedError("Core_ParamContainer should not be instanciated !")

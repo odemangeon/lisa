@@ -27,7 +27,7 @@ from ....tools.metaclasses import MandatoryReadOnlyAttr
 class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnlyAttr):
 
     # should provide the way to compute the likelihood somehow
-    __mandatoryattrs__ = ["noise_cat", "has_GP", "has_jitter"]
+    __mandatoryattrs__ = ["noise_cat", "has_GP", "has_jitter", "l_model_class"]
 
 
     def __init__(self, model_instance, run_folder, config_file):
@@ -41,12 +41,43 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         ConfigFileAttr.__init__(self, config_file=config_file)
         # set model_instannce
         self.__model_instance = model_instance
+        # Define the classes of noise models available
+        self.__model_classes = {model.category: model for model in self.l_model_class}
+        # set the configuration. 
+        # If None it that there is nothing to configure otherwise you should create a configuration dictionary
+        self._model_config = None
+
 
     @property
     def model_instance(self):
         """Return True is the param_file of the instrument category has been defined."""
         return self.__model_instance
-    
+
+    @property
+    def model_classes(self):
+        """Dictionary with defines the available models. Keys are model_category and value are the
+        model classes (subclasses of PlanetStarModel)"""
+        return self.__model_classes
+
+    @property
+    def l_available_model_category(self):
+        """List of available model category (list of str or None)"""
+        return list(self.model_classes.keys())
+
+    def _is_available_model_category(self, model_category):
+        """Return True if the model_category provided is amongst the available model categories.
+
+        If no list of available model categories have been provided, this function always returns True.
+
+        Argument
+        --------
+        model_category  : str
+
+        Return
+        ------
+        isavailable : bool
+        """
+        return model_category in self.l_available_model_category
     
     ######################################
     ## Dealing with the configuration file
@@ -55,7 +86,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     def _configure_noisemodcat_model(self, **kwargs):
         """Apply the parametrisation for the noise model
 
-        This method is called by ?
+        This method is called by Core_Model._configure_noisemodel
         """
         raise NotImplementedError("You need to overload this function in the sub class")
         
@@ -64,7 +95,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     ###################################################################
 
     def get_instmod(self, sortby_instfullcat=False):
-        """Return the list of instrument model object for the instrument category
+        """Return the list of instrument model object that uses the noise model category
         """
         l_instmod = self.get_instmodobjs_using_noisemod(noisemod_cat=self.noise_cat)
         if sortby_instfullcat:
@@ -77,6 +108,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         
     @property
     def l_inst_model_fullname(self):
+        """List of instrument full names that use the noise model category"""
         return [instmod_obj.full_name for instmod_obj in self.get_instmod(sortby_instfullcat=False)]
 
     ###################################

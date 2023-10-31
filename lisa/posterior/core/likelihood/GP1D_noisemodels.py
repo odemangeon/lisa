@@ -1,17 +1,11 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
+"""Provides the GP1D_Noise_Models classes.
+
+The instance of GP1D_Noise_Models class is used to store the informations of all the GP1D noise models
+that are going to be defined in the Model instance.
+It stores the Core_GP1DModel subclasses.
+There is only on GP1D_Noise_Models instance in a Model instance
 """
-gp_lnlike module.
 
-The objective of this module is to define the log likelihood in case you want to use a GP to
-model the residuals.
-
-@DONE:
-    -
-
-@TODO:
-    -
-"""
 from loguru import logger
 from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
@@ -32,16 +26,7 @@ from ....tools.miscellaneous import spacestring_like
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
 from ....tools.function_from_text_toolbox import FunctionBuilder
 # from ....tools.function_w_doc import DocFunction
-
-
-amp = "amp"
-tau = "tau"
-gamma = "gamma"
-logperiod = "lnperiod"
-
-param_noisemod_name = "param_noisemod"
-
-GP1D_noisemodel_cat = "GP1D"
+from .GP1D_noisemodelconfiguration import QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model
 
 
 class GP1D_Noise_Models(Core_Noise_Model):
@@ -50,6 +35,8 @@ class GP1D_Noise_Models(Core_Noise_Model):
     __category__ = "GP1D"
     __has_GP__ = True
     __has_jitter__ = True
+
+    __l_model_class__ = [QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel]
 
     ################
     # Main functions
@@ -76,9 +63,9 @@ class GP1D_Noise_Models(Core_Noise_Model):
         model_name = self._models_config['model4instrument'][inst_model_fullname]
         return self._models_config['model_definitions'][model_name]
     
-    ##############################
-    # Required by the main methods
-    ##############################
+    ################################
+    # Dealing with the configuration
+    ################################
 
     # Required by the __init__ method
     #################################
@@ -87,6 +74,54 @@ class GP1D_Noise_Models(Core_Noise_Model):
         return  {'model4instrument': {instmodfullname: '' for instmodfullname in self.l_inst_model_fullname},
                  'model_definitions': {},
                  }
+
+    def _define_default_model(self):
+        # TODO: By default all instruments of a given inst_fullcat are modeled by one QPGeorge model.
+        raise NotImplementedError
+
+    # Configure the gaussian noise models
+    #####################################
+    def _configure_noisemodcat_model(self, **kwargs):
+        """Apply the parametrisation for the noise model
+
+        This method is called by Core_Model._configure_noisemodel
+        """
+        self._load_config(config2load='gp')
+
+    # Function that get the function required by  ConfigFileAttr._load_config
+    #########################################################################
+
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'gp':
+                return self.__add_default_config_var_gp
+        elif function_type == 'check_config_exists':
+            if config2load == 'gp':
+                return self.__config_var_exist_gp
+        elif function_type == 'load_config_content':
+            if config2load == 'gp':
+                return self.__load_config_var_content_gp
+        raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
+
+    # Methods for the noise model definition part of the config file
+    ################################################################
+    def __add_default_config_var_gp(self, file):
+        file.write("\n# GP1D noise models"
+                   "\n###################\n"
+                   )
+        tab = spacestring_like('GP1D_models' + " = ")
+        file.write("{var} = {content}\n".format(var='GP1D_models',
+                                                content=pformat(self.dict2print, compact=True).replace('\n', f'\n{tab}')
+                                                )
+                   )
+        
+    def __config_var_exist_gaussian(self, dico_config_file):
+        return 'GP1D_models' in dico_config_file
+
+    def __load_config_var_content_gaussian(self, dico_config_file, **kwargs):
+        GP1D_models_config = dico_config_file['gaussian_models']
+        assert isinstance(GP1D_models_config, dict)
+        raise NotImplementedError
     
 
     

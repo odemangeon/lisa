@@ -1,13 +1,9 @@
-"""
-instrument container module.
-
-The objective of this module is to provide the interface InstrumentContainerInterface. It upgrades
+"""The objective of this module is to provide the interface InstrumentContainerInterface. It upgrades
 a ParamContainerDatabase with the possibility to handle an instruments database.
 """
 from loguru import logger
 from pprint import pformat
 
-from .paramcontainers_database import SpecificParamContainerCategory
 from ..dataset_and_instrument.instrument import instrument_model_category, Core_Instrument
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args_instruments
@@ -29,7 +25,6 @@ class InstrumentContainerInterface(object):
     models.
     """
     def __init__(self):
-        # super(ParamContainerDatabase, self).__init__()
         # Init the instruments
         self.paramcontainers.update({instrument_model_category: InstrumentContainer()})
 
@@ -147,7 +142,7 @@ class InstrumentContainerInterface(object):
         return self.instruments.hasatleast1instmod(inst_name=inst_name, inst_fullcat=inst_fullcat)
 
 
-class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
+class InstrumentContainer(DatabaseInstLevel):
     """docstring for InstrumentContainer."""
 
     def __init__(self):
@@ -207,23 +202,23 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategory):
     def get_subkwargs_4_get_list_params(self, model_instance=None, **kwargs):
         """Select the keyword arguments for the get_list_params method.
 
-        :param Core_Model model_instance: Model instance which is used for the default value of
-            inst_models, see below (optional).
+        Argument
+        --------
+        model_instance  : Core_Model
+            Model instance which is used for the default value of kwargs, see below (optional).
 
         Keyword argument that are used by the get_list_params method of InstrumentContainer
-        only:
-        :param dict inst_models : Dictionnary which for each instrument name give the list of the
-                names of instrument models for which you want the params.
-                key = isntrument name, value = list of instrument model name
-                If not provided, we return all the instrument models used by the model.
 
-        :return dict selected_kwargs: Dictionary with key = argument name, value = argument value
+        Return
+        ------
+        selected_kwargs : dict
+            Dictionary providing the kwargs required by get_list_params
         """
         selected_kwargs = {}
         # Get the specific arguments for InstrumentContainer get_param function
         for kwarg_name in ["l_inst_model_names"]:
             selected_kwargs[kwarg_name] = kwargs.get(kwarg_name, None)
-        # Set the default value for inst_models, if not provided
+        # Set the default value if not provided
         if selected_kwargs["l_inst_model_names"] is None:
             selected_kwargs["l_inst_model_names"] = model_instance.name_instmodels_used()  # name_instmodels_used is defined in Instmodel4Dataset
         return selected_kwargs
