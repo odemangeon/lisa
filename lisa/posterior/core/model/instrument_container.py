@@ -128,9 +128,9 @@ class InstrumentContainerInterface(object):
     def get_instmodobjs_using_noisemod(self, noisemod_cat):
         """Return the list of instrument model objects using a giving noise model category."""
         res = []
-        for instmod_objs in self.get_instmodel_objs():
-            if instmod_objs.noise_model == noisemod_cat:
-                res.append(instmod_objs)
+        for instmod_obj in self.get_instmodel_objs():
+            if instmod_obj.noise_model_category == noisemod_cat:
+                res.append(instmod_obj)
         return res
 
     def get_instmodfullnames_using_noisemod(self, noisemod_cat):
@@ -264,37 +264,37 @@ class InstrumentContainer(DatabaseInstLevel):
             text += pformat(dico_inst_fullcat, compact=True).replace("\n", f"\n{text_tab + extra_tab}")
         return text
 
-    def update_paramfile_info(self, inst_db_info):
-        """Update the paramfile_info for an instrument category.
+    # def update_paramfile_info(self, inst_db_info):
+    #     """Update the paramfile_info for an instrument category.
 
-        It updates things introduced by get_instcat_paramfilesection in paramfile_info.
+    #     It updates things introduced by get_instcat_paramfilesection in paramfile_info.
 
-        Arguments
-        ---------
-        inst_db_info: dictionary
-            This is a subset of the self.paramfile_info (self.paramfile_info[instmod_cat]) of the model
-            instance (instance of a subclass of Core_Model) which is filled by this function.
-            self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
-            expected content of the parameter file.
-        """
-        for inst_fullcat in self.inst_fullcategories:
-            inst_cat, inst_subcat = mgr_inst_dst.interpret_inst_fullcat(inst_fullcat)
-            inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat)
-            inst_db_info[inst_fullcat] = {}
-            inst_db_info[inst_fullcat][key_inst] = {}
-            inst_db_info[inst_fullcat][key_misc] = []
-            for inst_name in self[inst_fullcat]:
-                inst_db_info[inst_fullcat][key_inst][inst_name] = []
-                for inst_model in self[inst_fullcat][inst_name].keys():
-                    inst_db_info[inst_fullcat][key_inst][inst_name].append(inst_model)
-                    self[inst_fullcat][inst_name][inst_model].update_paramfile_info()
-                inst_db_info[inst_fullcat][key_inst][inst_name].append(string4datasetdico)
-                if hasattr(inst_subclass, "_update_inst_paramfile_info"):
-                    func = getattr(inst_subclass, "_update_inst_paramfile_info")
-                    func(inst_db_info[inst_fullcat][key_inst][inst_name])
-            if hasattr(inst_subclass, "_update_instcat_paramfile_info"):
-                func = getattr(inst_subclass, "_update_instcat_paramfile_info")
-                func(inst_db_info[inst_fullcat][key_misc])
+    #     Arguments
+    #     ---------
+    #     inst_db_info: dictionary
+    #         This is a subset of the self.paramfile_info (self.paramfile_info[instmod_cat]) of the model
+    #         instance (instance of a subclass of Core_Model) which is filled by this function.
+    #         self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
+    #         expected content of the parameter file.
+    #     """
+    #     for inst_fullcat in self.inst_fullcategories:
+    #         inst_cat, inst_subcat = mgr_inst_dst.interpret_inst_fullcat(inst_fullcat)
+    #         inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat)
+    #         inst_db_info[inst_fullcat] = {}
+    #         inst_db_info[inst_fullcat][key_inst] = {}
+    #         inst_db_info[inst_fullcat][key_misc] = []
+    #         for inst_name in self[inst_fullcat]:
+    #             inst_db_info[inst_fullcat][key_inst][inst_name] = []
+    #             for inst_model in self[inst_fullcat][inst_name].keys():
+    #                 inst_db_info[inst_fullcat][key_inst][inst_name].append(inst_model)
+    #                 self[inst_fullcat][inst_name][inst_model].update_paramfile_info()
+    #             inst_db_info[inst_fullcat][key_inst][inst_name].append(string4datasetdico)
+    #             if hasattr(inst_subclass, "_update_inst_paramfile_info"):
+    #                 func = getattr(inst_subclass, "_update_inst_paramfile_info")
+    #                 func(inst_db_info[inst_fullcat][key_inst][inst_name])
+    #         if hasattr(inst_subclass, "_update_instcat_paramfile_info"):
+    #             func = getattr(inst_subclass, "_update_instcat_paramfile_info")
+    #             func(inst_db_info[inst_fullcat][key_misc])
 
     def load_config(self, dico_config, inst_db_info, model_instance, available_joint_priors={}):
         """Update the paramfile_info for an instrument category.

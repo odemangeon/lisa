@@ -84,9 +84,9 @@ class GP1DContainerInterface(object):
             raise ValueError("GP should be an instance of class GP1D")
         self.GP1Ds[name] = GP
 
-    def rm_a_GP1D(self, GP, **kwargs):
+    def rm_a_GP1D(self, name, **kwargs):
         """Remove an instrument model to the paramcontainers of this model."""
-        self.GP1Ds.pop(GP.get_name())
+        self.GP1Ds.pop(name)
 
 
 

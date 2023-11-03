@@ -9,9 +9,11 @@ The objective of this module is to define the Core_NoiseModel Class and the stan
 @TODO:
     -
 """
+from pprint import pformat
 
 from .core_noise_model import Core_Noise_Model
 from .gaussian_noisemodelconfiguration import GaussianModel
+from ....tools.miscellaneous import spacestring_like
 
 
 class Gaussian_Noise_Models(Core_Noise_Model):

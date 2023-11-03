@@ -203,20 +203,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
 
         self.model._configure_model()
 
-        logger.info("Load the noise models for instrument model definition.")
-        self._load_config(config2load='noisemoddef')
-
-        logger.info("9. Create noise model specific parameter file")
-        if cluster:
-            self.model.create_noisemodcat_paramfile(paramfile_path=None, answer_overwrite="n", answer_create=None)
-        else:
-            self.model.create_noisemodcat_paramfile(paramfile_path=None)  # paramfile_path=None the names are automatically chosen.
-
-            if len(self.model.paramfile4noisemodcat) > 0:
-                input("Modifiy the noise model specific paramerisation file: {}".format(self.model.paramfile4noisemodcat))
-
-        logger.info("10. Load noise model category specific parameter file")
-        self.model.load_noisemodcat_paramfile()
+        self.model._configure_noisemodel()
 
         logger.info("11. Set parametrisation of the model")
         self.model.set_parametrisation()
@@ -351,8 +338,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
                 return self.__add_default_config_var_datasets
             elif config2load == 'instmoddef':
                 return self.__add_default_config_var_instmoddef
-            elif config2load == 'noisemoddef':
-                return self.__add_default_config_var_noisemoddef
             elif config2load == 'modelcatdef':
                 return self.__add_default_config_modelcategory
         elif function_type == 'check_config_exists':
@@ -360,8 +345,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
                 return self.__config_var_exist_datasets
             elif config2load == 'instmoddef':
                 return self.__config_var_exist_instmoddef
-            elif config2load == 'noisemoddef':
-                return self.__config_var_exist_noisemoddef
             elif config2load == 'modelcatdef':
                 return self.__config_var_exist_modelcategory
         elif function_type == 'load_config_content':
@@ -369,8 +352,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
                 return self.__load_config_var_content_datasets
             elif config2load == 'instmoddef':
                 return self.__load_config_var_content_instmoddef
-            elif config2load == 'noisemoddef':
-                return self.__load_config_var_content_noisemoddef
             elif config2load == 'modelcatdef':
                 return self.__load_config_var_content_modelcategory
         raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")

@@ -97,11 +97,11 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     def get_instmod(self, sortby_instfullcat=False):
         """Return the list of instrument model object that uses the noise model category
         """
-        l_instmod = self.get_instmodobjs_using_noisemod(noisemod_cat=self.noise_cat)
+        l_instmod = self.model_instance.get_instmodobjs_using_noisemod(noisemod_cat=self.noise_cat)
         if sortby_instfullcat:
             d_instmod = defaultdict(list)
             for instmod in l_instmod:
-                d_instmod[instmod.full_category].append(instmod)
+                d_instmod[instmod.instrument.full_category].append(instmod)
             return d_instmod
         else:
             return l_instmod

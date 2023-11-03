@@ -32,8 +32,7 @@ class Core_PlanetStarModel(Core_1ModelConfig):
             self._object_categories = {'planet': planet, 'star': host_star}
         else:
             self._object_categories = {'planet': planet, 'star': host_star, 'orbit': orbital_models}
-        if dico_config_model is not None:
-            self.load_config(dico_config=dico_config_model)
+        self.load_config(dico_config=dico_config_model)
 
     def get_orbital_model(self, inst_model_fullname):
         """Get the OrbitalModel instance associated to the instrument model
@@ -52,26 +51,37 @@ class Core_PlanetStarModel(Core_1ModelConfig):
             raise ValueError("The model does not possible orbital models")
         return self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
 
+    def _get_default_param_extensions(self, **kwargs):
+        return {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs))}
+                for obj_cat in ["planet", "star"]}
+
     ###############################################################
     ## Dealing with the parameter basenames and names for the model
     ###############################################################
 
     # Dealing with parameter basenames
     ##################################
-
     def _get_function_get_l_parameter_basename(self, object_category):
-        if object_category in ["planet", "star"]:
-            return self._get_l_parameter_basename_default
+        if object_category == "planet":
+            return self._get_l_parameter_basename_planet
+        elif object_category == "star":
+            return self._get_l_parameter_basename_star
         elif object_category == "orbit":
             return self._get_l_parameter_basename_orbit
         return super(Core_PlanetStarModel, self)._get_function_get_l_parameter_basename(object_category=object_category)
     
     def _get_function_get_kwargs_4_get_l_parameter_basename(self, object_category):
         if object_category in ["planet", "star"]:
-            return self._get_kwargs_4_get_l_parameter_basename_default
-        elif object_category == "orbit":
+            return self._get_kwargs_4_get_l_parameter_basename_planetstar
+        if object_category == "orbit":
             return self._get_kwargs_4_get_l_parameter_basename_orbit
         return super(Core_PlanetStarModel, self)._get_function_get_kwargs_4_get_l_parameter_basename(object_category=object_category)
+
+    def _get_l_parameter_basename_planet(self):
+        return []
+
+    def _get_l_parameter_basename_star(self):
+        return []
 
     def _get_l_parameter_basename_orbit(self, inst_model_fullname=None):
         """Return the list of orbital parameter basenames."""
@@ -100,7 +110,7 @@ class Core_PlanetStarModel(Core_1ModelConfig):
         if object_category in ["planet", "star"]:
             return self._get_kwargs_4_get_parameter_name_default
         elif object_category == "orbit":
-            return self._get_kwargs_4_get_parameter_name_instmodfullname
+            return self._get_kwargs_4_get_parameter_name_orbit
         return super(Core_PlanetStarModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
         
     def _get_parameter_name_orbit(self, param_basename, inst_model_fullname):
@@ -115,7 +125,7 @@ class Core_PlanetStarModel(Core_1ModelConfig):
             raise ValueError(f"Parameter {param_basename} not a valid parameter base name for object category {object_category}.")
         return f"{param_basename}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
 
-    def _get_kwargs_4_get_parameter_name_instmodfullname(self, **kwargs):
+    def _get_kwargs_4_get_parameter_name_orbit(self, **kwargs):
         return {'param_basename':  kwargs['param_basename'], 'inst_model_fullname': kwargs['inst_model_fullname']}
 
     # Deal with creating parameters
@@ -144,6 +154,9 @@ class Core_PlanetStarModel(Core_1ModelConfig):
 
     def _get_kwargs_4_create_parameter_orbit(self, param_name, param_basename, object_category, **kwargs):
         return {'param_name': param_name, 'param_basename': param_basename, 'object_category': object_category, 'inst_model_fullname': kwargs['inst_model_fullname']}
+
+    def _get_kwargs_4_get_l_parameter_basename_planetstar(self, object_category, **kwargs):
+        return {}
 
     # Deal with getting parameters
     ##############################
@@ -220,7 +233,7 @@ class OrbitalModelBatman(Core_PlanetStarModel):
     # Main functions
     ################
 
-    def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
+    def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):  # orbital_models is need as argument here even if not used for compatibility with the _define_model method that calls this.
         super(OrbitalModelBatman, self).__init__(model_name=model_name, planet=planet, host_star=host_star,
                                                  orbital_models=None, dico_config_model=dico_config_model,
                                                  )
@@ -256,19 +269,6 @@ class OrbitalModelBatman(Core_PlanetStarModel):
                         raise ValueError(f"Value of key {key} of parametrisation dictionary should be in {['cosinc']} (got {parametrisation[key]})")
                     self.parametrisation[key] = parametrisation[key]
 
-    def _get_l_parameter_basename(self, l_required_orbital_param_type=None, inst_model_fullname=None, object_category=None):
-        """ """
-        l_object_category = self._get_l_object_category_arg(object_category)
-        l_param_basename = []
-        for obj_cat in l_object_category:
-            if obj_cat == "planet":
-                l_param_basename += self._get_l_parameter_basename_planet(l_required_orbital_param_type=l_required_orbital_param_type)
-            elif obj_cat == "star":
-                l_param_basename += self._get_l_parameter_basename_star(l_required_orbital_param_type=l_required_orbital_param_type)
-            else:
-                raise ValueError(f"Object category {obj_cat} is not handled by this function.")
-        return l_param_basename
-
     def _get_l_parameter_basename_planet(self, l_required_orbital_param_type=None):
         """Return the list of orbital parameter basenames."""
         if l_required_orbital_param_type is None:
@@ -296,6 +296,9 @@ class OrbitalModelBatman(Core_PlanetStarModel):
             if self.use_rho:
                 l_param_basename.append("rho")
         return l_param_basename
+
+    def _get_kwargs_4_get_l_parameter_basename_planetstar(self, object_category, **kwargs):
+        return {'l_required_orbital_param_type': kwargs.get('l_required_orbital_param_type', None)}
 
 
 class TransitModelBatman(Core_PlanetStarModel):
