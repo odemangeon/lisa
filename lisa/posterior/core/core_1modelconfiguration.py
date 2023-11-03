@@ -32,7 +32,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     @property
     def dict2print(self):
         """Used to print the content in the parametrisation file."""
-        dict2print = {}
+        dict2print = {'category': self.category}
         if len(self.args) > 0:
             dict2print['args'] = self.args
         if len(self.parametrisation) > 0:
@@ -48,6 +48,8 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         --------
         dico_config : dict
         """
+        if dico_config is None:
+            dico_config = {}
         self._set_parametrisation(parametrisation=dico_config.get('parametrisation', None))
         self._set_args(args=dico_config.get('args', None))
         self._set_param_extensions(param_extensions=dico_config.get('param_extensions', None))
@@ -77,19 +79,19 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                                                )
                 param.main = True
 
-    @property
-    def config_dict(self):
-        """Return the configuration dictionary for the configuration file.
+    # @property
+    # def config_dict(self):
+    #     """Return the configuration dictionary for the configuration file.
 
-        This will be used to print in the configuration file
+    #     This will be used to print in the configuration file
 
-        TODO: It looks like it might be a bit redundant with dict2print TBC
+    #     TODO: It looks like it might be a bit redundant with dict2print TBC
 
-        Return
-        ------
-        config_dict : dictionary
-        """
-        return {'category': self.category}
+    #     Return
+    #     ------
+    #     config_dict : dictionary
+    #     """
+    #     return {'category': self.category}
 
     def get_parameters(self, inst_model_fullname=None, object_category=None):
         """Get a dictionary of the parameter of the models.
@@ -130,9 +132,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                     raise ValueError(f"{key} is not a valid key for the parametrisation dictionary. Should be {list(self.parametrisation.keys())}")
 
     def _set_param_extensions(self, param_extensions=None, **kwargs):
-        self.__param_extensions = {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(**kwargs))}
-                                   for obj_cat in self.object_categories
-                                   }
+        self.__param_extensions = self._get_default_param_extensions(**kwargs)
         if not(isinstance(param_extensions, dict) or (param_extensions is None)):
             raise ValueError(f"parametrisation should be None or a dictionary whose keys are in {list(self.parametrisation.keys())}")
         if param_extensions is not None:
@@ -145,6 +145,10 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                     if not(isinstance(param_extensions[key][param_basename], str)):
                         raise ValueError(f"param_extensions[{key}][{param_basename}] should be a str (got {param_extensions[key][param_basename]})")
                     self.__param_extensions[key][param_basename] = param_extensions[key][param_basename]
+
+    def _get_default_param_extensions(self, **kwargs):
+        return {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs))}
+                for obj_cat in self.object_categories}
 
     def _set_args(self, args=None):
         """"""
@@ -227,9 +231,6 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
-    
-    def _get_l_parameter_basename_default(self):
-        return []
     
     def _get_kwargs_4_get_l_parameter_basename_default(self, object_category, **kwargs):
         return {}

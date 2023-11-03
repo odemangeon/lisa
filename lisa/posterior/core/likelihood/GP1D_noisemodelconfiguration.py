@@ -28,10 +28,9 @@ class Core_GP1DModel(Core_1ModelConfig):
             GP1D_paramcontainer = model_instance.GP1Ds[model_name]
         else:
             GP1D_paramcontainer = GP1D(name=model_name)
-            model_instance.add_a_GP1D(GP1D=GP1D_paramcontainer, name=model_name)
+            model_instance.add_a_GP1D(GP=GP1D_paramcontainer, name=model_name)
         self._object_categories = {'GP': GP1D_paramcontainer}  # This are parameter containers required by the model that host the model parameters
-        if dico_config_model is not None:
-            self.load_config(dico_config=dico_config_model)
+        self.load_config(dico_config=dico_config_model)
 
     ######################
     # Convenience function
@@ -65,7 +64,7 @@ class QPGeorgeModel(Core_GP1DModel):
                         if param_basename not in self._get_l_parameter_basename_GP():
                             raise ValueError(f"The only possible keys to the 'log10' dictionary are {self._get_l_parameter_basename_GP()}. You provided {key}.")
                     if not(isinstance(parametrisation[key][param_basename], bool)):
-                        raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_name]})")
+                        raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_basename]})")
                     self.parametrisation[key][param_basename] = parametrisation[key][param_basename]
         super(QPGeorgeModel, self)._set_parametrisation(parametrisation=parametrisation)
 
@@ -95,12 +94,12 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_get_parameter_name(self, object_category):
         if object_category == 'GP':
             return self._get_parameter_name_GP
-        super(GaussianModel, self)._get_function_get_parameter_name(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_get_parameter_name(object_category=object_category)
     
     def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_get_parameter_name_default
-        super(GaussianModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
 
     def _get_parameter_name_GP(self, param_basename, object_category):
         param_name = param_basename
@@ -114,13 +113,13 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_create_parameter(self, object_category):
         if object_category == 'GP':
             return self._create_parameter_default
-        super(GaussianModel, self)._get_function_create_parameter(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_create_parameter(object_category=object_category)
 
         
     def _get_function_get_kwargs_4_create_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_create_parameter_default
-        super(GaussianModel, self)._get_function_get_kwargs_4_create_parameter(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_get_kwargs_4_create_parameter(object_category=object_category)
 
     # Deal with getting parameter
     #############################
@@ -128,13 +127,13 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_get_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_parameter_default
-        super(GaussianModel, self)._get_function_get_parameter(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_get_parameter(object_category=object_category)
 
         
     def _get_function_get_kwargs_4_get_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_get_parameter_default
-        super(GaussianModel, self)._get_function_get_kwargs_4_get_parameter(object_category=object_category)
+        super(QPGeorgeModel, self)._get_function_get_kwargs_4_get_parameter(object_category=object_category)
 
     ######################
     # Convenience function
@@ -221,7 +220,7 @@ class SHOCeleriteModel(QPGeorgeModel):
                         if param_basename not in ['rho/omega0', 'Q/tau', 'sigma/S0']:
                             raise ValueError(f"The only possible keys to the 'log10' dictionary are ['rho/omega0', 'Q/tau', 'sigma/S0']. You provided {key}.")
                     if not(isinstance(parametrisation[key][param_basename], bool)):
-                        raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_name]})")
+                        raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_basename]})")
                     self.parametrisation[key][param_basename] = parametrisation[key][param_basename]
         super(QPGeorgeModel, self)._set_parametrisation(parametrisation=parametrisation)
 

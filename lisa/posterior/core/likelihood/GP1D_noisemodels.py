@@ -9,23 +9,15 @@ There is only on GP1D_Noise_Models instance in a Model instance
 from loguru import logger
 from george.kernels import ExpSquaredKernel, ExpSine2Kernel
 from george import GP
-from numpy import concatenate, sqrt
 import numpy as np
 from collections import defaultdict, Counter, OrderedDict
 import os
-from os.path import basename
 from pprint import pformat
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
-from ...exoplanet.dataset_and_instrument.rv import RV_inst_cat
-from ...exoplanet.dataset_and_instrument.lc import LC_inst_cat
-from ..parameter import Parameter
 from .core_noise_model import Core_Noise_Model
-from ..dataset_and_instrument.indicator import IND_inst_cat
 from ....tools.miscellaneous import spacestring_like
-from ....tools.human_machine_interface.QCM import QCM_utilisateur
-from ....tools.function_from_text_toolbox import FunctionBuilder
 # from ....tools.function_w_doc import DocFunction
 from .GP1D_noisemodelconfiguration import QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model
 
@@ -55,7 +47,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
         for model_name in dict2print['model_definitions']:
             dict2print['model_definitions'][model_name] = dict2print['model_definitions'][model_name].dict2print
         return dict2print
-    
+
     def get_model(self, inst_model_fullname):
         """Get the model for a given instrument model full name.
         """
@@ -77,8 +69,34 @@ class GP1D_Noise_Models(Core_Noise_Model):
                  }
 
     def _define_default_model(self):
-        # TODO: By default all instruments of a given inst_fullcat are modeled by one QPGeorge model.
-        raise NotImplementedError
+        # By default all instruments of a given inst_fullcat are modeled by one QPGeorge model.
+        for inst_fullcat, l_instmod in self.get_instmod(sortby_instfullcat=True).items():
+            model_name = f"{inst_fullcat}"
+            for instmod in l_instmod:
+                self._models_config['model4instrument'][instmod.full_name] = model_name
+            self._define_model(model_name=model_name, model_category='QPGeorge', dico_config_model=None, overwrite=False)
+    
+    def _define_model(self, model_name, model_category, dico_config_model=None, overwrite=False):
+        """Define the model for the planet
+
+        Arguments
+        ---------
+        planet_name                     : str
+            Name of the planet for which you are defining the model
+        model_category                  : str
+            Catergory of the models
+        dico_config_model               : dict
+            Dictionary provide arguments for the model if needed.
+        overwrite                       : bool
+            Wheter or not you wish to overwrite if the model is already defined
+        """
+        if not(overwrite) and (model_name in self._models_config["model_definitions"]):
+            raise ValueError(f"A model of name {model_name} already exists and overwrite is False.")
+        if not(self._is_available_model_category(model_category=model_category)):
+            raise ValueError(f"{model_category} is not in the list of available model categories ({self.l_available_model_category}).")
+        (self._models_config["model_definitions"]
+         [model_name]) = self.model_classes[model_category](model_name=model_name, model_instance=self.model_instance, dico_config_model=dico_config_model)
+
 
     # Configure the gaussian noise models
     #####################################
@@ -116,13 +134,26 @@ class GP1D_Noise_Models(Core_Noise_Model):
                                                 )
                    )
         
-    def __config_var_exist_gaussian(self, dico_config_file):
+    def __config_var_exist_gp(self, dico_config_file):
         return 'GP1D_models' in dico_config_file
 
-    def __load_config_var_content_gaussian(self, dico_config_file, **kwargs):
-        GP1D_models_config = dico_config_file['gaussian_models']
+    def __load_config_var_content_gp(self, dico_config_file, **kwargs):
+        GP1D_models_config = dico_config_file['GP1D_models']
         assert isinstance(GP1D_models_config, dict)
-        raise NotImplementedError
+        if set(GP1D_models_config.keys()) != set(['model4instrument', 'model_definitions']):
+            raise ValueError(f"The keys of the 'GP1D_models' dictionary should be ['model4instrument', 'model_definitions']. You provided {set(GP1D_models_config.keys())}")
+        if set(GP1D_models_config['model4instrument'].keys()) != set(self.l_inst_model_fullname):
+            raise ValueError(f"The list of instrument models using a GP1D noise model is {self.l_inst_model_fullname}. It should be the same as the list of instrument model full name in GP1D_models['model4instrument'] ({GP1D_models_config['model4instrument']})")
+        if set(GP1D_models_config['model4instrument'].values()) != set(GP1D_models_config['model_definitions'].keys()):
+            raise ValueError(f"The list of GP1D model names provided in GP1D_models['model4instrument'] should match the list of the names of the GP1D models defined in GP1D_models['model_definitions'].")
+        # Clean the GP1D Container of model instance
+        for GP1D_model_name in self.model_instance.l_GP1D_fullname:
+            if GP1D_model_name not in GP1D_models_config['model_definitions'].keys():
+                self.model_instance.rm_a_GP1D(name=GP1D_model_name)
+        # load the config of the GP1D models defined in the configuration
+        for GP1D_model_name in GP1D_models_config['model_definitions']:
+            model_category = GP1D_models_config['model_definitions'][GP1D_model_name].pop("category")
+            self._define_model(model_name=GP1D_model_name, model_category=model_category, dico_config_model=GP1D_models_config['model_definitions'][GP1D_model_name], overwrite=True)
     
 
     

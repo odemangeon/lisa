@@ -17,8 +17,7 @@ class GaussianModel(Core_1ModelConfig):
     def __init__(self, model_name, instrument, dico_config_model=None):
         super(GaussianModel, self).__init__(model_name=model_name)
         self._object_categories = {'instrument': instrument}
-        if dico_config_model is not None:
-            self.load_config(dico_config=dico_config_model)
+        self.load_config(dico_config=dico_config_model)
 
 
     ############################################################

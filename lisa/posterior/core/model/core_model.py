@@ -32,6 +32,7 @@ from ..dataset_and_instrument.instrument import instrument_model_category as ins
 # from ..dataset_and_instrument.instrument import get_instrument_paramfilesection
 # from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..likelihood.core_likelihood import LikelihoodCreator
+from ..likelihood.GP1D import GP1DContainerInterface
 from ..prior.model_prior import Model_Prior, joint_prior_name
 from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
@@ -54,6 +55,7 @@ load_key = "load"
 class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
                  ConfigFileAttr, RunFolderAttr,
+                 GP1DContainerInterface,
                  Core_Parametrisation, metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
@@ -91,6 +93,8 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         ParamContainerDatabase.__init__(self)
         # Core Model is also an InstrumentContainer, so initialise it
         InstrumentContainerInterface.__init__(self)
+        # Core Model is also a GP1DContainer, so Initialise it
+        GP1DContainerInterface.__init__(self)
         # Init the run_folder
         if not(isinstance(run_folder, RunFolder)):
             raise ValueError("run_folder should be a RunFolder instance, the one defined for the Posterior intance (Posterior.run_folder)")
@@ -137,6 +141,8 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Dealing with the configuration file
     ######################################
 
+    # Methods related to the instrument model categories
+    ####################################################
     def _configure_model(self):
         """Configure the model
         """
@@ -147,6 +153,21 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             instcat_model = self.get_instcat_model(inst_cat)
             instcat_model._configure_instcat_model()
 
+    def _init_instcat_models_and_datasimcreator(self):
+        """Finish the initialisation of the instrument category models required by the model and the associated datasimulators.
+
+        This function is used in self._configure_model. 
+        """   
+        # Now load the available InstCat_Models and do the __init__
+        for InstCat_Model in self.instcat_model_classes:
+            if InstCat_Model.inst_cat in self.get_instcat_used():  # Maybe you should use a method of InstrumentContainerInterface, but get_instcat_used is a method of Instmodel4DatasetAttr
+                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
+                self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
+                self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
+
+    # Methods related to the noise model categories
+    ###############################################
+
     def _configure_noisemodel(self):
         """Configure the noise models
         """
@@ -154,9 +175,21 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         self._load_config(config2load='noisemoddef')
 
         logger.info("Load noise model categories configuration.")
+        self._init_noisemodels()
+
         for noise_cat in self.noisemodel_categories: # noisemodel_categories is a property of InstrumentContainerInterface as the noise models are stored in the instrument models
-            NoiseMod_Class = self.get_NoiseModelClass(noise_model_category=noise_cat) 
-            NoiseMod_Class._configure_noisemodcat_model()
+            noisemodcat = self.get_noise_model(noise_cat=noise_cat) 
+            noisemodcat._configure_noisemodcat_model()
+
+    def _init_noisemodels(self):
+        """Finish the initialisation of the noise models required by the model.
+
+        This function is used in self._configure_noisemodel. 
+        """   
+        # Now load the available InstCat_Models and do the __init__
+        for NoiseModel in self.noise_model_classes:
+            if NoiseModel.noise_cat in self.noisemodel_categories:  # noisemodel_categories is a property of InstrumentContainerInterface
+                self.__noise_models[NoiseModel.noise_cat] = NoiseModel(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
 
     # Function that get the function required by  ConfigFileAttr._load_config
     #########################################################################
@@ -205,10 +238,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         noisemoddef = dico_config_file['d_noise_model_def']
         # Check that the content is valid
         assert isinstance(noisemoddef, dict)
-        assert set(noisemoddef.keys()) == set(self.instmodel4dataset.get_instfullcat_used())
+        assert set(noisemoddef.keys()) == set(self.inst_fullcategories)  # self.inst_fullcategories is a property of InstrumentContainerInterface
         for inst_fullcat in noisemoddef:
             assert isinstance(noisemoddef[inst_fullcat], dict)
-            assert set(noisemoddef[inst_fullcat].keys()) == set(self.inst_fullcategories)  # inst_fullcategories is a property of InstrumentContainerInterface
+            assert set(noisemoddef[inst_fullcat].keys()) == set(self.get_inst_names(inst_fullcat=inst_fullcat))  # get_inst_names is a method of InstrumentContainerInterface
             for inst_name in noisemoddef[inst_fullcat]:
                 assert isinstance(noisemoddef[inst_fullcat][inst_name], dict)
                 assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
@@ -237,28 +270,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ##################
     ## Methods to sort
     ##################
-
-    def _init_instcat_models_and_datasimcreator(self):
-        """Finish the initialisation of the instrument category models required by the model and the associated datasimulators.
-
-        This function is used in self._configure_model. 
-        """   
-        # Now load the available InstCat_Models and do the __init__
-        for InstCat_Model in self.instcat_model_classes:
-            if InstCat_Model.inst_cat in self.get_instcat_used():  # get_instcat_used is a method of Instmodel4DatasetAttr
-                self.__instcat_models[InstCat_Model.inst_cat] = InstCat_Model(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
-                self.__datasimcreatorname4instcat[InstCat_Model.inst_cat] = InstCat_Model.datasim_creator_name
-                self.__datasimcreator[InstCat_Model.datasim_creator_name] = self.__instcat_models[InstCat_Model.inst_cat].datasim_creator
-
-    def _init_noisemodels(self):
-        """Finish the initialisation of the noise models required by the model.
-
-        This function is used in self._configure_noisemodel. 
-        """   
-        # Now load the available InstCat_Models and do the __init__
-        for NoiseModel in self.noise_model_classes:
-            if NoiseModel.category in self.noisemodel_categories():  # noisemodel_categories is a property of InstrumentContainerInterface
-                self.__noise_models[NoiseModel.category] = NoiseModel(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
 
     @property
     def object_name(self):
@@ -403,32 +414,32 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     def possible_noise_model_categories(self):
         """Set of instrument categories handled by the model.
         """
-        return set([Noise_Model.category for Noise_Model in self.noise_model_classes])
+        return set([Noise_Model.noise_cat for Noise_Model in self.noise_model_classes])
     
-    def get_NoiseModelClass(self, noise_model_category):
-        """Return the Core_InstCat_Model subclass corresponding to the instrument category provided
+    # def get_NoiseModelClass(self, noise_model_category):
+    #     """Return the Core_InstCat_Model subclass corresponding to the instrument category provided
 
-        Arguments
-        ---------
-        noise_model_category    : str
-            String giving the category of nnoise model for which you want the Model class
+    #     Arguments
+    #     ---------
+    #     noise_model_category    : str
+    #         String giving the category of nnoise model for which you want the Model class
 
-        Returns
-        -------
-        Noise_Model   : Core_Noise_Model Subclass
-            Class of the Model for the noise category provided
-        """
-        for Noise_Model in self.noise_model_classes:
-            if Noise_Model.category == noise_model_category:
-                return Noise_Model
-        raise ValueError(f"There is no Core_Noise_Model Subclass corresponding to the noise category {noise_model_category} in this model.")
+    #     Returns
+    #     -------
+    #     Noise_Model   : Core_Noise_Model Subclass
+    #         Class of the Model for the noise category provided
+    #     """
+    #     for Noise_Model in self.noise_model_classes:
+    #         if Noise_Model.noise_cat == noise_model_category:
+    #             return Noise_Model
+    #     raise ValueError(f"There is no Core_Noise_Model Subclass corresponding to the noise category {noise_model_category} in this model.")
     
-    def get_noise_model(self, noisemodel_cat):
+    def get_noise_model(self, noise_cat):
         """Return the NoiseModel instance corresponding to the noise model category provided
 
         Arguments
         ---------
-        noisemodel_cat    : str
+        noise_cat    : str
             String giving the category of instrument for which you want the Model class
 
         Returns
@@ -436,7 +447,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         noise_model   : NoiseModel instance
             Model for the instrument category provided
         """
-        return self.__noise_models[noisemodel_cat]
+        return self.__noise_models[noise_cat]
 
     ##########################
     ## Dealing with Parameters
@@ -655,31 +666,31 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         self.update_paramfile_info()
         return text
 
-    def update_paramfile_info(self):
-        """Update the paramfile info attribute.
+    # def update_paramfile_info(self):
+    #     """Update the paramfile info attribute.
 
-        self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
-        expected content of the parameter file.
+    #     self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
+    #     expected content of the parameter file.
 
-        TODO: It doesn't seems to be including the joint_prior_dictionary. Check and include if needed.
-        """
-        self.paramfile_info.clear()  # self.paramfile_info comes from Core_ParamContainer
-        # For each paramcontainer in the param container database. Produce the param file section.
-        for parcont_type in self.paramcont_categories:
-            # Instruments Param containers are a special case
-            if parcont_type != instmod_cat:
-                self.paramfile_info[parcont_type] = []
-                for parcont in self.paramcontainers[parcont_type].values():
-                    self.paramfile_info[parcont_type].append(parcont.code_name)
-                    parcont.update_paramfile_info()
-            else:
-                self.paramfile_info[instmod_cat] = {}
-                self.instruments.update_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat])
-        # Finally update the paramfile_info for the params in the model itself (which are not in any)
-        # specific paramcontainer
-        super(Core_Model, self).update_paramfile_info()
-        logger.debug("Updated paramfile info for {}.\nParamfile_info: {}"
-                     "".format(self.name, self.paramfile_info))
+    #     TODO: It doesn't seems to be including the joint_prior_dictionary. Check and include if needed.
+    #     """
+    #     self.paramfile_info.clear()  # self.paramfile_info comes from Core_ParamContainer
+    #     # For each paramcontainer in the param container database. Produce the param file section.
+    #     for parcont_type in self.paramcont_categories:
+    #         # Instruments Param containers are a special case
+    #         if parcont_type != instmod_cat:
+    #             self.paramfile_info[parcont_type] = []
+    #             for parcont in self.paramcontainers[parcont_type].values():
+    #                 self.paramfile_info[parcont_type].append(parcont.code_name)
+    #                 parcont.update_paramfile_info()
+    #         else:
+    #             self.paramfile_info[instmod_cat] = {}
+    #             self.instruments.update_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat])
+    #     # Finally update the paramfile_info for the params in the model itself (which are not in any)
+    #     # specific paramcontainer
+    #     super(Core_Model, self).update_paramfile_info()
+    #     logger.debug("Updated paramfile info for {}.\nParamfile_info: {}"
+    #                  "".format(self.name, self.paramfile_info))
 
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary from the parameter_file
