@@ -11,58 +11,11 @@ and provide convenience function to interact with the GP1DContainer instance.
 """
 from ..paramcontainer import Core_ParamContainer
 from ..model.paramcontainers_database import SpecificParamContainerCategoryContainer
-from ....tools import Nesteddict_wfixellvlnb
 
 
 class GP1D(Core_ParamContainer):
     
     __category__ = "GP1D"
-
-
-class GP1DContainerInterface(object):
-    """An interface of core_model.Core_Model.
-
-    It has to be in the list of parent classes of Model before ParamContainerDatabase.
-    It's an Interface of core_model.Core_Model which allows the model to properly handle
-    GP models.
-    """
-
-    def __init__(self):
-        # Init the instruments
-        self.paramcontainers.update({GP1D.category: GP1DContainer()})
-
-    @property
-    def GP1Ds(self):
-        """Return an OrderedDict with the GP models currently in the instance.
-        """
-        return self.paramcontainers[GP1D.category]
-
-    @property
-    def l_GP1D(self):
-        """Return the list of GP1D object in the GP1D container."""
-        return self.GP1Ds.l_param_container
-
-    @property
-    def l_GP1D_fullname(self):
-        """Return the list of the name of the GP1D object in the GP1D container"""
-        return self.GP1Ds.l_param_container_fullname
-
-    def add_a_GP1D(self, GP1D, name, force=False):
-        """Add an GP1D to the GP1D container."""
-        if not(isinstance(GP1D, Core_GP1D)):
-            raise ValueError("instrument should be an instance of a subclass of "
-                             "Core_Instrument.")
-        inst_fullcat = instrument.full_category
-        inst_name = instrument.get_name()
-        inst_model_obj = instrument.create_model_instance(name=name, kwargs_getname_4_storename={"include_prefix": True, "recursive": True},
-                                                          kwargs_getname_4_codename={"include_prefix": False, "code_version": True})
-        self.instruments[inst_fullcat][inst_name][name] = inst_model_obj
-
-    def rm_an_instrument_model(self, inst_model, inst_name, inst_fullcat, **kwargs):
-        """Remove an instrument model to the paramcontainers of this model."""
-        inst_model, inst_name, inst_fullcat = check_args_instruments(inst_model=inst_model, inst_name=inst_name,
-                                                                     inst_fullcat=inst_fullcat, **kwargs)
-        self.instruments[inst_fullcat][inst_name].pop(inst_model)
 
 
 class GP1DContainer(SpecificParamContainerCategoryContainer):
@@ -95,6 +48,48 @@ class GP1DContainer(SpecificParamContainerCategoryContainer):
         if selected_kwargs["l_param_container_fullname"] is None:
             selected_kwargs["l_param_container_fullname"] = model_instance.name_GP1D_used()  # name_GP1D_used is defined in GP1DNoiseModels
         return selected_kwargs
+    
+
+class GP1DContainerInterface(object):
+    """An interface of core_model.Core_Model.
+
+    It has to be in the list of parent classes of Model before ParamContainerDatabase.
+    It's an Interface of core_model.Core_Model which allows the model to properly handle
+    GP models.
+    """
+
+    def __init__(self):
+        # Init the instruments
+        self.paramcontainers.update({GP1D.category: GP1DContainer()})
+
+    @property
+    def GP1Ds(self):
+        """Return an OrderedDict with the GP models currently in the instance.
+        """
+        return self.paramcontainers[GP1D.category]
+
+    @property
+    def l_GP1D(self):
+        """Return the list of GP1D object in the GP1D container."""
+        return self.GP1Ds.l_param_container
+
+    @property
+    def l_GP1D_fullname(self):
+        """Return the list of the name of the GP1D object in the GP1D container"""
+        return self.GP1Ds.l_param_container_fullname
+
+    def add_a_GP1D(self, GP, name, force=False):
+        """Add an GP1D to the GP1D container."""
+        if not(isinstance(GP, GP1D)):
+            raise ValueError("GP should be an instance of class GP1D")
+        self.GP1Ds[name] = GP
+
+    def rm_a_GP1D(self, GP, **kwargs):
+        """Remove an instrument model to the paramcontainers of this model."""
+        self.GP1Ds.pop(GP.get_name())
+
+
+
 
 
     

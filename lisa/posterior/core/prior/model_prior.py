@@ -30,7 +30,7 @@ joint_prior_name = 'joint_prior'
 
 class Model_Prior(object):
     """docstring for Model_Prior."""
-    def __init__(self, paramfile_info):
+    def __init__(self):
         """Initialise the information related to the Prior for the Model instance.
 
         This should be called from the Core_Model.__init__ method.
@@ -41,8 +41,6 @@ class Model_Prior(object):
         """
         # Initialise the joint_prior_container
         self.__joint_priors = OrderedDict()
-        # Update paramfile_info with the name of the information related to the joint priors
-        paramfile_info["joint_prior"] = ['category', 'args', 'params']
 
     @property
     def joint_prior_container(self):

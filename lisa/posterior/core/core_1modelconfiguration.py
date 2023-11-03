@@ -4,6 +4,7 @@ The class that define the object that will be used to store the configuration
 of various models
 """
 from copy import copy
+from pprint import pformat
 
 from .paramcontainer import Core_ParamContainer
 from .parameter import Parameter
@@ -22,20 +23,16 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     # Main functions
     ################
 
-    def __init__(self, model_name, dico_config_model=None):
-        if dico_config_model is None:
-            dico_config_model = {}
-        self.__object_categories = {}  # This are parameter containers required by the model that host the model parameters
+    def __init__(self, model_name):
+        self._object_categories = {}  # This are parameter containers required by the model that host the model parameters
         self.__model_name = model_name  # This is the name of the model
         self.__parametrisation = {}  # This is the dictionary that will contains the parameters related to the parameterisation (ex: you want to jump the log of a parameter instead of the parameter itself)
         self.__args = {}  # This is the dictionary that contains some parameters to define some properties of the model (ex: wether you want to let a given parameter vary or if you want to include an occultation in the phase curve model)
-        self._set_parametrisation(parametrisation=dico_config_model.get('parametrisation', None))
-        self._set_args(args=dico_config_model.get('args', None))
-        self._set_param_extensions(param_extensions=dico_config_model.get('param_extensions', None))
 
     @property
     def dict2print(self):
         """Used to print the content in the parametrisation file."""
+        dict2print = {}
         if len(self.args) > 0:
             dict2print['args'] = self.args
         if len(self.parametrisation) > 0:
@@ -132,9 +129,9 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                 if key not in list(self.parametrisation.keys()):
                     raise ValueError(f"{key} is not a valid key for the parametrisation dictionary. Should be {list(self.parametrisation.keys())}")
 
-    def _set_param_extensions(self, param_extensions=None):
-        self.__param_extensions = {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat))}
-                                   for obj_cat in self.__object_categories
+    def _set_param_extensions(self, param_extensions=None, **kwargs):
+        self.__param_extensions = {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(**kwargs))}
+                                   for obj_cat in self.object_categories
                                    }
         if not(isinstance(param_extensions, dict) or (param_extensions is None)):
             raise ValueError(f"parametrisation should be None or a dictionary whose keys are in {list(self.parametrisation.keys())}")
@@ -165,7 +162,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     @property
     def object_categories(self):
         """Dictionary of object categories."""
-        return self.__object_categories
+        return self._object_categories
 
     @property
     def l_object_category(self):
@@ -195,7 +192,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         """
         l_object_category = []
         for obj_cat in self.l_object_category:
-            if param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs)):
+            if param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(**kwargs)):
                 l_object_category.append(obj_cat)
         if len(l_object_category) == 0:
             raise ValueError(f"Object category of parameter {param_basename}, could not be found.")
@@ -216,17 +213,17 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         l_object_category = self._get_l_object_category_arg(object_category)
         l_param_basename = []
         for obj_cat in l_object_category:
-            l_param_basename += self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs))
+            l_param_basename += self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(**kwargs))
         return l_param_basename
     
     def _get_function_get_l_parameter_basename(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
     
     def _get_function_get_kwargs_4_get_l_parameter_basename(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
@@ -254,13 +251,13 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         return self.__param_extensions[object_category][param_basename]
 
     def _get_function_get_parameter_name(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
     
     def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
@@ -283,13 +280,13 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         return self._get_function_create_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_create_parameter(object_category=object_category)(param_name=param_name, param_basename=param_basename, object_category=object_category, **kwargs))
 
     def _get_function_create_parameter(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
         
     def _get_function_get_kwargs_4_create_parameter(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
@@ -318,13 +315,13 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         return self._get_function_get_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter(object_category=object_category)(param_basename=param_basename, object_category=object_category, **kwargs))
         
     def _get_function_get_parameter(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")
         
     def _get_function_get_kwargs_4_get_parameter(self, object_category):
-        if object_category in self.__object_categories:
+        if object_category in self.object_categories:
             raise NotImplementedError(f"The function has not been implemented for object category {object_category}. BUT IT SHOULD !")
         else:
             raise ValueError(f"The object_category that you provided ({object_category}) is invalid")

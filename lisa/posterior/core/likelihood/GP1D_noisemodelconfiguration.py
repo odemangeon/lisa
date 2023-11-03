@@ -11,6 +11,7 @@ Beside the configuration these subclasses also provide the function to create th
 """
 
 from ..core_1modelconfiguration import Core_1ModelConfig
+from .GP1D import GP1D
 
 
 class Core_GP1DModel(Core_1ModelConfig):
@@ -22,13 +23,15 @@ class Core_GP1DModel(Core_1ModelConfig):
     ################
 
     def __init__(self, model_name, model_instance, dico_config_model=None):
-        super(Core_GP1DModel, self).__init__(model_name=model_name, dico_config_model=dico_config_model)
+        super(Core_GP1DModel, self).__init__(model_name=model_name)
         if model_name in model_instance.l_GP1D_fullname:
             GP1D_paramcontainer = model_instance.GP1Ds[model_name]
         else:
             GP1D_paramcontainer = GP1D(name=model_name)
             model_instance.add_a_GP1D(GP1D=GP1D_paramcontainer, name=model_name)
-        self.__object_categories = {'GP': GP1D_paramcontainer}  # This are parameter containers required by the model that host the model parameters
+        self._object_categories = {'GP': GP1D_paramcontainer}  # This are parameter containers required by the model that host the model parameters
+        if dico_config_model is not None:
+            self.load_config(dico_config=dico_config_model)
 
     ######################
     # Convenience function
@@ -231,8 +234,19 @@ class SHOCeleriteModel(QPGeorgeModel):
 
     def _get_l_parameter_basename_GP(self):
         res = []
-        if 
-        return ['sigma', 'rho', 'Q']
+        if self.use_sigma:
+            res.append('sigma')
+        else:
+            res.append('S0')
+        if self.use_rho:
+            res.append('rho')
+        else:
+            res.append('omega0')
+        if self.use_Q:
+            res.append('Q')
+        else:
+            res.append('tau')
+        return res
 
     ######################
     # Convenience function

@@ -19,7 +19,7 @@ except (ModuleNotFoundError, ImportError):
     kelp_imported = False
 
 
-class Core_PlanetStarModel(Core_1ModelConfig, metaclass=MandatoryReadOnlyAttr):
+class Core_PlanetStarModel(Core_1ModelConfig):
     """docstring for PlanetStarModel."""
 
     ################
@@ -27,11 +27,13 @@ class Core_PlanetStarModel(Core_1ModelConfig, metaclass=MandatoryReadOnlyAttr):
     ################
 
     def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
-        super(Core_PlanetStarModel, self).__init__(model_name=model_name, dico_config_model=dico_config_model)
+        super(Core_PlanetStarModel, self).__init__(model_name=model_name)
         if orbital_models is None:
-            self.__object_categories = {'planet': planet, 'star': host_star}
+            self._object_categories = {'planet': planet, 'star': host_star}
         else:
-            self.__object_categories = {'planet': planet, 'star': host_star, 'orbit': orbital_models}
+            self._object_categories = {'planet': planet, 'star': host_star, 'orbit': orbital_models}
+        if dico_config_model is not None:
+            self.load_config(dico_config=dico_config_model)
 
     def get_orbital_model(self, inst_model_fullname):
         """Get the OrbitalModel instance associated to the instrument model
@@ -189,30 +191,6 @@ class Core_PlanetStarModel(Core_1ModelConfig, metaclass=MandatoryReadOnlyAttr):
         if not(self.with_orbital_models):
             raise ValueError("Model doesn't have orbital models")
         return self.object_categories["orbit"]
-
-    ##############################
-    # Functions used by Subclasses
-    ##############################
-
-    @property
-    def model_name(self):
-        """model_name"""
-        return self.__model_name
-
-    @property
-    def parametrisation(self):
-        """parametrisation dictionary"""
-        return self.__parametrisation
-
-    @property
-    def param_extensions(self):
-        """parametrisation dictionary"""
-        return self.__param_extensions
-
-    @property
-    def args(self):
-        """parametrisation dictionary"""
-        return self.__args
 
     ################################
     # Convenience/Degugging function
