@@ -100,7 +100,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             raise ValueError("config_file should be a ConfigFile instance, the one defined for the Posterior intance (Posterior.config_file)")
         ConfigFileAttr.__init__(self, config_file=config_file)
         # Initialise the attributes related to the Prior
-        Model_Prior.__init__(self, self.paramfile_info)  # self.paramfile_info comes from Core_ParamContainer
+        Model_Prior.__init__(self)  # self.paramfile_info comes from Core_ParamContainer
         # Init the instmodel4dataset
         Instmodel4DatasetAttr.__init__(self, instmodel4dataset=instmodel4dataset,
                                        lock="instmodel4dataset")

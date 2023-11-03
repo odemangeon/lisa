@@ -15,8 +15,11 @@ class GaussianModel(Core_1ModelConfig):
     ################
 
     def __init__(self, model_name, instrument, dico_config_model=None):
-        super(GaussianModel, self).__init__(model_name=model_name, dico_config_model=dico_config_model)
-        self.__object_categories = {'instrument': instrument}
+        super(GaussianModel, self).__init__(model_name=model_name)
+        self._object_categories = {'instrument': instrument}
+        if dico_config_model is not None:
+            self.load_config(dico_config=dico_config_model)
+
 
     ############################################################
     # Dealing with the parametrisation, param_extension and args
@@ -76,7 +79,7 @@ class GaussianModel(Core_1ModelConfig):
         super(GaussianModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
 
     def _get_parameter_name_instrument(self, param_basename, object_category):
-        if param_basename == 'jitter'
+        if param_basename == 'jitter':
             if self.jitter_type == 'additive':
                 param_name = 'jitter'
             elif self.jitter_type == 'multiplicative':

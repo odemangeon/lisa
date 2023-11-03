@@ -41,7 +41,7 @@ from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
 # from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.gaussian_noisemodelconfiguration import jitter_name, apply_jitter_multi, apply_jitter_add
+# from ..posterior.core.likelihood.gaussian_noisemodelconfiguration import apply_jitter_multi, apply_jitter_add
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
@@ -583,13 +583,16 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     # jitter which give the value of the jitter (float)
     # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
     if noise_mod.has_jitter:
-        jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
-        if inst_mod.parameters[jitter_name].free:
-            idx_jitter = l_param_name.index(jitter_param_fullname)
-            jitter = param[idx_jitter]
-        else:
-            jitter = inst_mod.parameters[jitter_name].value
-        jitter_type = noise_mod.jitter_type
+        logger.error("The computation of jitter error bar needs to be re-implemented.")
+        jitter = None
+        jitter_type = None
+        # jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
+        # if inst_mod.parameters[jitter_name].free:
+        #     idx_jitter = l_param_name.index(jitter_param_fullname)
+        #     jitter = param[idx_jitter]
+        # else:
+        #     jitter = inst_mod.parameters[jitter_name].value
+        # jitter_type = noise_mod.jitter_type
     else:
         jitter = None
         jitter_type = None
@@ -1430,13 +1433,15 @@ def apply_jitter(data_err, jitter, jitter_type):
         jitter_type ("multi" or "add")
     """
     # Adapt the data_err to the jitter value is needed.
-    if jitter_type == "multi":
-        data_err_new = sqrt(apply_jitter_multi(data_err, jitter))
-    elif jitter_type == "add":
-        data_err_new = sqrt(apply_jitter_add(data_err, jitter))
-    else:
-        raise ValueError("jitter_type should be in ['multi', 'add']")
-    return data_err_new
+    logger.error("The computation of the jittered error bars needs to be reimplemented")
+    return data_err
+    # if jitter_type == "multi":
+    #     data_err_new = sqrt(apply_jitter_multi(data_err, jitter))
+    # elif jitter_type == "add":
+    #     data_err_new = sqrt(apply_jitter_add(data_err, jitter))
+    # else:
+    #     raise ValueError("jitter_type should be in ['multi', 'add']")
+    # return data_err_new
 
 
 def apply_zoom(zoom, base_array, arrays=None):

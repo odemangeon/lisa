@@ -14,6 +14,7 @@ import numpy as np
 from collections import defaultdict, Counter, OrderedDict
 import os
 from os.path import basename
+from pprint import pformat
 # from collections import OrderedDict
 
 # from ..model.celestial_bodies import Star
@@ -32,7 +33,7 @@ from .GP1D_noisemodelconfiguration import QPGeorgeModel, QPCGeorgeModel, QPCeler
 class GP1D_Noise_Models(Core_Noise_Model):
     """docstring for GP1D_Noise_Models."""
 
-    __category__ = "GP1D"
+    __noise_cat__ = "GP1D"
     __has_GP__ = True
     __has_jitter__ = True
 

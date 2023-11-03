@@ -10,6 +10,7 @@ The objective of this module is to manage the Paramcontainers database.
 """
 from loguru import logger
 from collections import OrderedDict
+from collections.abc import MutableMapping
 
 from ..paramcontainer import Core_ParamContainer
 
@@ -135,7 +136,7 @@ class ParamContainerDatabase(object):
         """
         result = []
         for paramcont_cat in self.paramcontainers_categories:  # Categories of param containers, like instruments.
-            if isinstance(self.paramcontainers[paramcont_cat], SpecificParamContainerCategory):
+            if isinstance(self.paramcontainers[paramcont_cat], SpecificParamContainerCategoryContainer):
                 selectedkwargs = (self.paramcontainers[paramcont_cat].
                                   get_subkwargs_4_get_list_params(model_instance, **kwargs))
                 result_param_cont = self.paramcontainers[paramcont_cat].get_list_params(main=main, free=free,
@@ -222,7 +223,7 @@ class SpecificParamContainerCategoryContainer(MutableMapping):
     def __iter__(self):
         return iter(self.__data)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, full_name, value):
         self.__data[full_name] = value
 
     def __delitem__(self, full_name):
