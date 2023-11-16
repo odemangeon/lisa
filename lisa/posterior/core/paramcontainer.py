@@ -214,79 +214,15 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             return has
 
     @property
-    def paramfile_info(self):
-        """Information about the content of the param file.
-
-        Dictionary giving the content of the parameter file for the parameter container.
-        It should have a key whose name is provided by key_params_fileinfo and whose values is the list
-        of the name of the parameters of this parameter container.
-
-        Depending on the parameter container this dictionary can also have other keys specific to this
-        type of containers.
-        """
-        return self.__paramfile_info
-
-    def update_paramfile_info(self, recursive=False):
-        """Update the paramfile info attribute."""
-        self.paramfile_info.update({key_params_fileinfo: [param.code_name for param in
-                                                          self.get_list_params(main=True)]})
-        logger.debug("Updated paramfile info for {}.\nKeys of paramfile_info: {}"
-                     "".format(self.get_name(), self.paramfile_info))
-
-    # def get_paramfile_section(self, text_tab="", texttab_1tline=True,
-    #                           entete_symb=" = ", quote_name=False, **kwargs):
-    #     """Return the text to include in the parameter_file for the parameters in the ParamContainer
-    #
-    #     Arguments
-    #     ---------
-    #     text_tab       : str
-    #         text giving the tabulation that needs to be added to this the text to obtain the good alignment
-    #         in the input file.
-    #     texttab_1tline : bool
-    #         Wether to use the tab for the first line or not.
-    #     entete_symb    : str
-    #         Symbol to use after the paramcontainers name
-    #     quote_name     : bool
-    #          Wether to put quote around the paramcontainer name or not.
-    #
-    #     Keywords arguments are given to self.get_list_params (see docstring for details).
-    #
-    #     Returns
-    #     -------
-    #     text : str
-    #         Text for the parameter file.
-    #     """
-    #     if quote_name:
-    #         entete = "'{}'{}{{"
-    #     else:
-    #         entete = "{}{}{{"
-    #     entete = entete.format(self.code_name, entete_symb)
-    #     space_entete_param = spacestring_like(entete)
-    #     text = ""
-    #     if texttab_1tline:
-    #         text += text_tab
-    #     text += entete
-    #     texttab_1tline_param = False
-    #     for param in self.get_list_params(main=True, **kwargs):
-    #         text += param.get_paramfile_section(text_tab=text_tab + space_entete_param,
-    #                                             texttab_1tline=texttab_1tline_param,
-    #                                             entete_symb=": ",
-    #                                             quote_name=True)
-    #         texttab_1tline_param = True
-    #     text += text_tab + space_entete_param + "}"
-    #     self.update_paramfile_info()
-    #     return text
-
-    def get_paramfile_dict(self, **kwargs):
+    def parameters_config_dict(self):
         """
         """
-        dico_param_file = {}
-        for param in self.get_list_params(main=True, **kwargs):
-            dico_param_file[param.get_name()] = param.get_paramfile_dict()
-        self.update_paramfile_info()
-        return dico_param_file
+        res = {}
+        for param in self.get_list_params(main=True, free=False, no_duplicate=False):
+            res[param.get_name()] = param.parameter_config_dict()
+        return res
 
-    def load_config(self, dico_config, model_instance, available_joint_priors={}, load_setup=False):
+    def load_parameters_config(self, dico_config, model_instance, available_joint_priors={}, load_setup=False):
         """load the configuration specified by the dictionnary
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
@@ -297,10 +233,10 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             param = getattr(self, param_name)
             if param.get_name(recursive=False, include_prefix=False, code_version=False) in dico_config:
                 param.main = True
-                param.load_config(dico_config=dico_config[param.get_name(recursive=False, include_prefix=False, code_version=False)],
-                                  model_instance=model_instance,
-                                  available_joint_priors=available_joint_priors,
-                                  load_setup=load_setup)
+                param.load_parameter_config(dico_config=dico_config[param.get_name(recursive=False, include_prefix=False, code_version=False)],
+                                            model_instance=model_instance,
+                                            available_joint_priors=available_joint_priors,
+                                            load_setup=load_setup)
             else:
                 logger.warning(f"Parameter {param.full_name} not found in parameter file.")
                 param.main = False

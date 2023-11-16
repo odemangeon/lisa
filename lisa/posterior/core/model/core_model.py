@@ -189,12 +189,18 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         if function_type == 'add_default_config':
             if config2load == 'noisemoddef':
                 return self.__add_default_config_var_noisemoddef
+            if config2load == 'parameters':
+                return self.__add_default_config_var_priors
         elif function_type == 'check_config_exists':
             if config2load == 'noisemoddef':
                 return self.__config_var_exist_noisemoddef
+            if config2load == 'parameters':
+                return self.__config_var_exist_priors
         elif function_type == 'load_config_content':
             if config2load == 'noisemoddef':
                 return self.__load_config_var_content_noisemoddef
+            if config2load == 'parameters':
+                return self.__load_config_var_content_priors
         raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
 
     # Methods for the noise model definition part of the config file
@@ -244,6 +250,41 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
                     inst_mod_obj = self.instruments[inst_fullcat][inst_name][instmod_shortname]
                     inst_mod_obj.noise_model_category = noisemoddef[inst_fullcat][inst_name][instmod_shortname]
+
+    # Methods related to the configuration of the priors
+    ####################################################
+
+    def _configure_parameters(self):
+        """Add the priors configuration to the configuration file."""
+        logger.info("Load priors definition")
+        self._load_config(config2load='parameters')
+
+    def __add_default_config_var_priors(self, file):
+        file.write("\n######################################"
+                   "\n## Parameters and priors configuration"
+                   "\n######################################\n"
+                   "# Define which parameters are free, which parameteres are duplicates"
+                   "# and their priors.\n"
+                   )
+        dico_param_config = {}
+        for parcont_type in self.paramcont_categories:
+            dico_param_config[parcont_type] = {}
+            for parcont in self.paramcontainers[parcont_type].values():
+                dico_param_config[parcont_type][parcont.get_name()] = parcont.parameters_config_dict
+        tab_priors = spacestring_like('parameters' + " = ")
+        file.write("{var} = {content}\n".format(var='parameters',
+                                                content=pformat(dico_param_config, compact=True).replace('\n', f'\n{tab_priors}')
+                                                )
+                   )
+        
+    def __config_var_exist_priors(self, dico_config_file):
+        return 'parameters' in dico_config_file
+
+    def __load_config_var_content_priors(self, dico_config_file, **kwargs):
+        priorsdef = dico_config_file['priors']
+        # Check that the content is valid
+        raise NotImplementedError()
+        # Load it
         
 
     ##########################################
@@ -266,57 +307,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     def object_name(self):
         """Return the name of the object studied."""
         return self.name
-
-    # @property
-    # def init_kwargs(self):
-    #     """Return the dictionary giving the arguments for the define_model method of Posterior.
-
-    #     TODO: Maybe There is some common initialisation that could be done. TBC
-    #     """
-    #     raise NotImplementedError("You need to create this property for your model !")
-
-    # @property
-    # def automatic_init_kwargs(self):
-    #     """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
-    #     dico = {}
-    #     dico["param_file_model"] = self.param_file_model
-    #     dico["param_file"] = self.param_file
-    #     dico["paramfile4instcat"] = {}
-    #     for inst_cat, inscat_model in self.instcat_models.items():
-    #         if inscat_model.has_instcat_paramfile:
-    #             dico["paramfile4instcat"][inst_cat] = inscat_model.paramfile_instcat
-    #     dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
-    #     return dico
-
-    # def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat):
-    #     """load the parameter file."""
-    #     if self.hasrun_folder:
-    #         param_file_model = join(self.run_folder, param_file_model)
-    #     self.param_file_model = param_file_model
-    #     if self.hasrun_folder:
-    #         param_file = join(self.run_folder, param_file)
-    #     self.param_file = param_file
-    #     for inst_cat in paramfile4instcat:
-    #         inscat_model = self.instcat_models[inst_cat]
-    #         if self.hasrun_folder:
-    #             paramfile4instcat[inst_cat] = join(self.run_folder, paramfile4instcat[inst_cat])
-    #         if isfile(paramfile4instcat[inst_cat]):
-    #             inscat_model.paramfile_instcat = paramfile4instcat[inst_cat]
-    #         else:
-    #             raise AssertionError("File {} doesn't exists".format(paramfile4instcat[inst_cat]))
-    #     for key in paramfile4noisemodcat:
-    #         if self.hasrun_folder:
-    #             paramfile4noisemodcat[key] = join(self.run_folder, paramfile4noisemodcat[key])
-    #         if isfile(paramfile4noisemodcat[key]):
-    #             self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
-    #         else:
-    #             raise AssertionError("File {} doesn't exists".format(paramfile4noisemodcat[key]))
-    #     self.load_parameter_file_model()
-    #     self.load_instcat_paramfile()
-    #     self.load_noisemodcat_paramfile()
-    #     self.set_parametrisation()
-    #     self.update_paramfile_info()
-    #     self.load_parameter_file()
 
     #####################################################################
     ## Dealing with instrument categories and instrument model categories
@@ -406,24 +396,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """Set of instrument categories handled by the model.
         """
         return set([Noise_Model.noise_cat for Noise_Model in self.noise_model_classes])
-    
-    # def get_NoiseModelClass(self, noise_model_category):
-    #     """Return the Core_InstCat_Model subclass corresponding to the instrument category provided
-
-    #     Arguments
-    #     ---------
-    #     noise_model_category    : str
-    #         String giving the category of nnoise model for which you want the Model class
-
-    #     Returns
-    #     -------
-    #     Noise_Model   : Core_Noise_Model Subclass
-    #         Class of the Model for the noise category provided
-    #     """
-    #     for Noise_Model in self.noise_model_classes:
-    #         if Noise_Model.noise_cat == noise_model_category:
-    #             return Noise_Model
-    #     raise ValueError(f"There is no Core_Noise_Model Subclass corresponding to the noise category {noise_model_category} in this model.")
     
     def get_noise_model(self, noise_cat):
         """Return the NoiseModel instance corresponding to the noise model category provided
@@ -679,32 +651,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         self.update_paramfile_info()
         return text
 
-    # def update_paramfile_info(self):
-    #     """Update the paramfile info attribute.
-
-    #     self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
-    #     expected content of the parameter file.
-
-    #     TODO: It doesn't seems to be including the joint_prior_dictionary. Check and include if needed.
-    #     """
-    #     self.paramfile_info.clear()  # self.paramfile_info comes from Core_ParamContainer
-    #     # For each paramcontainer in the param container database. Produce the param file section.
-    #     for parcont_type in self.paramcont_categories:
-    #         # Instruments Param containers are a special case
-    #         if parcont_type != instmod_cat:
-    #             self.paramfile_info[parcont_type] = []
-    #             for parcont in self.paramcontainers[parcont_type].values():
-    #                 self.paramfile_info[parcont_type].append(parcont.code_name)
-    #                 parcont.update_paramfile_info()
-    #         else:
-    #             self.paramfile_info[instmod_cat] = {}
-    #             self.instruments.update_paramfile_info(inst_db_info=self.paramfile_info[instmod_cat])
-    #     # Finally update the paramfile_info for the params in the model itself (which are not in any)
-    #     # specific paramcontainer
-    #     super(Core_Model, self).update_paramfile_info()
-    #     logger.debug("Updated paramfile info for {}.\nParamfile_info: {}"
-    #                  "".format(self.name, self.paramfile_info))
-
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary from the parameter_file
 
@@ -735,25 +681,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             else:  # For the model parameters (those who do no belong in any param container)
                 super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
                                                     available_joint_priors=self.joint_prior_container)
-
-    @property
-    def param_file(self):
-        """Path to the parametrisation file"""
-        return self.__param_file
-
-    @param_file.setter
-    def param_file(self, path):
-        """Path to the parametrisation file"""
-        file_exists = isfile(path)
-        if file_exists:
-            self.__param_file = path
-        else:
-            raise AssertionError("File {} doesn't exists".format(path))
-
-    @property
-    def isdefined_paramfile(self):
-        """Return True is the attribute param_file has been defined."""
-        return self.param_file is not None
 
     def create_parameter_file(self, param_file, answer_overwrite=None, answer_create=None):
         """Create the parameter file which will specify the status of all main parameters in the model.
@@ -786,24 +713,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             logger.info("Parameter file already existing and not overwritten: {}".format(param_file_path))
             self.update_paramfile_info()
         self.param_file = param_file
-
-    def read_parameter_file(self):
-        """Read the content of the parameter file."""
-        if self.isdefined_paramfile:
-            with open(join(self.run_folder, self.param_file)) as file:
-                exec(file.read())
-            dico = locals().copy()
-            dico.pop("self")
-            logger.debug("Parameter file read.\nContent of the parameter file: {}"
-                         "".format(dico.keys()))
-            return dico
-        else:
-            raise IOError("Impossible to read parameter file: {}".format(self.param_file))
-
-    def load_parameter_file(self):
-        """load the parameter file."""
-        dico_config = self.read_parameter_file()
-        self.load_config(dico_config)
 
     ##############################
     ## Dealing with datasimulators

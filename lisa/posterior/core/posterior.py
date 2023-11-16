@@ -209,15 +209,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
         self.model.set_parametrisation()
 
         logger.info("12. Create and modify the paramerisation file")
-        if cluster:
-            self.model.create_parameter_file("param_file.py", answer_overwrite="n", answer_create=None)
-        else:
-            self.model.create_parameter_file("param_file.py")
-
-            input("Modifiy the paramerisation file")
-
-        logger.info("13. Load the paramerisation file")
-        self.model.load_parameter_file()
+        self.model._configure_parameters()
 
     ############################################################
     ## Methods and properties used by the user interface methods

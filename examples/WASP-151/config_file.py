@@ -336,3 +336,8 @@ GP1D_models = {'model4instrument': {'LC_K2_inst': 'LC',
                                                                           'P': False,
                                                                           'gamma': False,
                                                                           'tau': False}}}}}
+
+######################################
+## Parameters and priors configuration
+######################################
+# Define which parameters are free, which parameteres are duplicates# and their priors.
