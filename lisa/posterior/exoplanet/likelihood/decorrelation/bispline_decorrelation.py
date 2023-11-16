@@ -124,10 +124,10 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
         #     decorrelation_config_inst_decorr[bispline_decorr_name] = decorrelation_config_inst_decorr_paramfile[bispline_decorr_name]
 
     @classmethod
-    def apply_parametrisation(cls, decorr_model_config):
-        """Apply the parametrisation for the decorrelation to an instrument model.
+    def set_parametrisation(cls, decorr_model_config):
+        """Set the parametrisation for the decorrelation to an instrument model.
 
-        This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation.
+        This function is used by parametrisation_gravgroup.set_instmodel_parametrisation.
         For now there is no parameters for this type of decorrelation
 
         Arguments

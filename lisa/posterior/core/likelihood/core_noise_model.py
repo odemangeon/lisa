@@ -115,19 +115,13 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     ## Dealing with the parametrisation
     ###################################
 
-    def apply_parametrisation(self):
+    def set_parametrisation(self):
         """Add in the model the necessary main parameters for the noise model.
 
-        This function is called by Core_Model.set_noisemodels for each instrument model.
-
-        :param Core_Model model_instance: Instance of Core_Model or a subclass of it. Mandatory for
-            noise model which requires parameter of the object studied (like GP and stellar
-            activity)
-        :param string instmod_fullname: Full name of the instrument involved in the noise model and
-            for which you want to apply the parametrisation for the noise modelling.
+        This function is called by Core_Model._set_noisemodelcat_parameterisation which is called by Core_Model.set_parametrisation.
         """
-        raise NotImplementedError("You need to implement a apply_parametrisation method for your "
-                                  "noise model.")
+        raise NotImplementedError("You need to implement a set_parametrisation method for your "
+                                  f"noise model {self.__class__}.")
 
     def check_parametrisation(self):
         """Check the parameteristion for the noise model.

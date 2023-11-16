@@ -88,10 +88,10 @@ class SplineDecorrelation(Core_DecorrelationLikelihood):
         config_model_storage.update(deepcopy(config_model_paramfile))
 
     @classmethod
-    def apply_parametrisation(cls, decorr_model_config):
+    def set_parametrisation(cls, decorr_model_config):
         """Apply the parametrisation for the decorrelation to an instrument model.
 
-        This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation.
+        This function is used by parametrisation_gravgroup.set_instmodel_parametrisation.
         For now there is no parameters for this type of decorrelation
 
         Arguments

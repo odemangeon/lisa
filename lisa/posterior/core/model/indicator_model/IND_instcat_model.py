@@ -889,32 +889,32 @@ class IND_InstCat_Model(Core_InstCat_Model):
     #     """
     #     self.params_indicator_models[self._polynomial_method_name] = dict_model
 
-    def apply_parametrisation(self, **kwargs):
-        """Apply the parametrisation for the instrument category
+    def set_parametrisation(self, **kwargs):
+        """Set the parametrisation for the instrument category
 
-        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        This method is called by Core_Parametrisation.set_instcat_parameterisation
         """
-        # Apply the parametrisation to the star and planets parameters
-        self.apply_system_parametrisation()
+        # Set the parametrisation to the star and planets parameters
+        self.set_system_parametrisation()
 
-        # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation()
+        # Set the parametrisation to the instrument models parameters
+        self.set_instmodel_parametrisation()
 
-    def apply_system_parametrisation(self):
+    def set_system_parametrisation(self):
         """
         """
         for ind_cat in self.indicator_subcategories:
             for model in self.models_available:
-                model.apply_parametrisation(param_container=self.model_instance, indicator_category=ind_cat,
-                                            instrument_per_instrument=False, prefix=ind_cat
-                                            )
+                model.set_parametrisation(param_container=self.model_instance, indicator_category=ind_cat,
+                                          instrument_per_instrument=False, prefix=ind_cat
+                                          )
 
-    def apply_instmodel_parametrisation(self):
+    def set_instmodel_parametrisation(self):
         """
         """
         for indinst_fullcat in self.indicator_fullcategories:
             for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=indinst_fullcat):
                 for model in self.models_available:
-                    model.apply_parametrisation(param_container=inst_model, indicator_category=inst_model.instrument.indicator_category,
-                                                instrument_per_instrument=True, prefix=None
-                                                )
+                    model.set_parametrisation(param_container=inst_model, indicator_category=inst_model.instrument.indicator_category,
+                                              instrument_per_instrument=True, prefix=None
+                                              )

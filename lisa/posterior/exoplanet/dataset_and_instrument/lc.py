@@ -12,7 +12,7 @@ from ...core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from ...core.dataset_and_instrument.instrument import Core_Instrument
 # from ...core.parameter import Parameter
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
-from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
+from ...core.model.polynomial_model import set_polymodel_parametrisation as set_polymodel_parametrisation_def
 
 
 ## LC instrument category
@@ -66,8 +66,8 @@ class LC_Instrument(Core_Instrument):
     #     """Return the parameter name of the coefficient of the instrument variation model."""
     #     return "{}{}".format(self.__inst_var_basename__, order)
     @classmethod
-    def apply_parametrisation(cls, inst_model):
-        """Apply the parametrisation to the instrument model.
+    def set_parametrisation(cls, inst_model):
+        """Set the parametrisation to the instrument model.
 
         Arguments
         ---------
@@ -75,11 +75,11 @@ class LC_Instrument(Core_Instrument):
             WARNING you cannot change the name of this argument for it to work with the __getattr__
             of lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model
         """
-        cls.apply_polymodel_parametrisation(inst_model=inst_model)
+        cls.set_polymodel_parametrisation(inst_model=inst_model)
 
     @classmethod
-    def apply_polymodel_parametrisation(cls, inst_model):
-        """Apply the parametrisation for the polynomial modelling to the instrument model.
+    def set_polymodel_parametrisation(cls, inst_model):
+        """Set the parametrisation for the polynomial modelling to the instrument model.
 
         Arguments
         ---------
@@ -87,10 +87,10 @@ class LC_Instrument(Core_Instrument):
             WARNING you cannot change the name of this argument for it to work with the __getattr__
             of lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model
         """
-        apply_polymodel_parametrisation_def(param_container=inst_model, name_coeff_const=cls.__name_coeff_const__,
-                                            func_param_name=lambda order: cls.get_polymodel_param_name(inst_model=inst_model, order=order),
-                                            full_category_4_unit=cls.category,
-                                            prefix=None)
+        set_polymodel_parametrisation_def(param_container=inst_model, name_coeff_const=cls.__name_coeff_const__,
+                                          func_param_name=lambda order: cls.get_polymodel_param_name(inst_model=inst_model, order=order),
+                                          full_category_4_unit=cls.category,
+                                          prefix=None)
 
     @classmethod
     def get_polymodel_param_name(cls, inst_model, order):

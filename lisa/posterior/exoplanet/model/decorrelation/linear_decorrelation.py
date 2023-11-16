@@ -89,10 +89,10 @@ class LinearDecorrelation(Core_DecorrelationModel):
             decorrelation_config_inst_decorr[inst_mod_obj_decorr_var_name] = decorrelation_config_inst_decorr_paramfile[inst_mod_obj_decorr_var_name]
 
     @classmethod
-    def apply_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr, model_part=""):
+    def set_parametrisation(cls, inst_mod_obj, decorrelation_config_inst_decorr, model_part=""):
         """Apply the parametrisation for the decorrelation to an instrument model.
 
-        This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation
+        This function is used by parametrisation_gravgroup.set_instmodel_parametrisation
 
         Arguments
         ---------

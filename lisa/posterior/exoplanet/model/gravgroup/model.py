@@ -31,7 +31,6 @@ from pprint import pformat
 from .planetstarmodel_parametrisation import OrbitalModels
 from .LC_instcat_model import LC_InstCat_Model
 from .RV_instcat_model import RV_InstCat_Model
-from .parametrisation_gravgroup import GravGroup_Parametrisation
 from ..celestial_bodies import Star, Planet
 # from ...dataset_and_instrument.lc import LC_inst_cat
 # from ...dataset_and_instrument.rv import RV_inst_cat
@@ -45,7 +44,7 @@ from .....tools.miscellaneous import spacestring_like
 # from pdb import set_trace
 
 
-class GravGroup(GravGroup_Parametrisation, Core_Model):  # GravGroup_Parametrisation has to be before Core_Model to override Core_Parametrisation
+class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_Model to override Core_Parametrisation
     """docstring for GravGroup."""
 
     ## Model category string

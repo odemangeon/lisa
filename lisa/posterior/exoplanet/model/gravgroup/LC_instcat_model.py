@@ -447,28 +447,28 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     # Deadling with the parameterisation
     ####################################
 
-    def apply_parametrisation(self):
-        """Apply the parametrisation for the instrument category
+    def set_parametrisation(self):
+        """Set the parametrisation for the instrument category
 
-        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        This method is called by Core_Parametrisation.set_instcat_parametrisation
         """
-        # Apply the Core_InstCat_Model.apply_parametrisation
-        super(LC_InstCat_Model, self).apply_parametrisation()
+        # Apply the Core_InstCat_Model.set_parametrisation
+        super(LC_InstCat_Model, self).set_parametrisation()
 
-        # Apply the parametrisation to the star and planets parameters
-        self.apply_star_planet_parametrisation()
+        # Set the parametrisation to the star and planets parameters
+        self.set_star_planet_parametrisation()
 
-    def apply_star_planet_parametrisation(self):
-        """Apply the parametrisation to the star and planet objects.
+    def set_star_planet_parametrisation(self):
+        """Set the parametrisation to the star and planet objects.
         """
         ############################################################
-        # Apply the parametrisation for the stellar polynomial_model
+        # Set the parametrisation for the stellar polynomial_model
         ############################################################
         for star in self.model_instance.paramcontainers["stars"].values():
-            star.apply_polymodel_parametrisation(inst_cat=LC_inst_cat)
+            star.set_polymodel_parametrisation(inst_cat=LC_inst_cat)
 
         ##############################################################################
-        # Apply the parametrisation for the transit, occultation and phasecurve models
+        # Set the parametrisation for the transit, occultation and phasecurve models
         ##############################################################################
         l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=LC_inst_cat)
         l_inst_model_fullname = []
@@ -477,7 +477,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                 l_inst_model_fullname.append(inst_model.full_name)
 
         l_apply_param_LD_done = []
-        # Apply the parametrisation to the planets parameters and star parameters triggerd by the transit, phase curve or ocultation models
+        # Set the parametrisation to the planets parameters and star parameters triggerd by the transit, phase curve or ocultation models
         for planet in self.model_instance.planets.values():
             planet_name = planet.get_name()
             # Transit model
@@ -489,7 +489,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     LD_models = self.ldmodel4instmodfname[inst_model_fullname]
                     LD_model = self.LDs[f"{star.get_name()}_{LD_models[star.get_name()]}"]
                     if LD_model not in l_apply_param_LD_done:
-                        LD_model.apply_parametrisation()
+                        LD_model.set_parametrisation()
                         l_apply_param_LD_done.append(LD_model)
             # Occultation models
             if self.occultation_model.get_do(planet_name=planet_name):
@@ -502,8 +502,8 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
                     for model in self.phasecurve_model.get_l_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname):
                         model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
-    def apply_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
-        """Apply the parametrisation for the decorrelation to an instrument model object.
+    def set_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
+        """Set the parametrisation for the decorrelation to an instrument model object.
 
         Arguments
         ---------
@@ -514,6 +514,6 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         if self.do_decorrelate_model_instmod(instmod_fullname=inst_mod_obj.full_name):
             for model_part in self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'].keys():
                 for DecorModel in self.l_decorrelation_model_class:
-                    DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
-                                                     model_part=model_part,
-                                                     decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
+                    DecorModel.set_parametrisation(inst_mod_obj=inst_mod_obj,
+                                                   model_part=model_part,
+                                                   decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])

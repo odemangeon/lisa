@@ -29,8 +29,8 @@ class Core_DecorrelationModel(object, metaclass=MandatoryReadOnlyAttrAndMethod):
     #   decorrelation model to be used, the user will use this string.
     # format_config_dict is a strong to be used as the example of how to specify the dictionary in the
     #   Instrument specific parameter file
-    __mandatorymeths__ = ["apply_parametrisation", "get_text_decorrelation"]
-    # apply_parametrisation: Method that creates the parameters necessary for the decorrelation model
+    __mandatorymeths__ = ["set_parametrisation", "get_text_decorrelation"]
+    # set_parametrisation: Method that creates the parameters necessary for the decorrelation model
     #  for each instrument model object of the instrument category to which this decorrelation model applies
     #  The arguments must be inst_mod_obj, the Instrument model object and decorrelation_config_inst_decorr
     #  the dictionary that contains the configuration of the decorrelation model for the instrument model object

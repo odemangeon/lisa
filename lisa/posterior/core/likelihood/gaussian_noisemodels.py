@@ -36,7 +36,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
 
     @property
     def dict2print(self):
-        """Used to print the content in the parametrisation file."""
+        """Used to print the content in the configuration file."""
         dict2print = self._models_config.copy()
         for inst_model_fullname in dict2print:
             dict2print[inst_model_fullname] = dict2print[inst_model_fullname].dict2print
@@ -64,7 +64,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
     # Configure the gaussian noise models
     #####################################
     def _configure_noisemodcat_model(self, **kwargs):
-        """Apply the parametrisation for the noise model
+        """Apply the configuration for the noise model
 
         This method is called by Core_Model._configure_noisemodel
         """
@@ -107,3 +107,12 @@ class Gaussian_Noise_Models(Core_Noise_Model):
         for instmod_fullname in gaussian_models_config:
             gaussian_model = self.get_model(inst_model_fullname=instmod_fullname)
             gaussian_model.load_config(dico_config=gaussian_models_config[instmod_fullname])
+
+    #############################################
+    # Dealing with the parameters/parametrisation
+    #############################################
+
+    def set_parametrisation(self):
+        for instmodfullname in self.l_inst_model_fullname:  # l_inst_model_fullname is defined in Core_Noise_Model
+            gaussian_model_config = self.get_model(inst_model_fullname=instmodfullname)
+            gaussian_model_config.create_parameters_and_set_main()

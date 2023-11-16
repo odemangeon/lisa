@@ -32,13 +32,7 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
     # format_config_dict is a strong to be used as the example of how to specify the dictionary in the
     #   Instrument specific parameter file
     __mandatorymeths__ = ["create_decorrelation_likelihood"]
-    # apply_parametrisation: Method that creates the parameters necessary for the decorrelation model
-    #  for each instrument model object of the instrument category to which this decorrelation model applies
-    #  The arguments must be inst_mod_obj, the Instrument model object and decorrelation_config_inst_decorr
-    #  the dictionary that contains the configuration of the decorrelation model for the instrument model object
-    #  considered
-    # get_text_decorrelation: This function produces the text for the decorrelation model for all decorrelation
-    #  variable using a given decorrelation category
+    # create_decorrelation_likelihood: 
 
     @classmethod
     def load_text_decorr_paramfile(cls, model_name, config_model_paramfile, config_model_storage, model_instance):
@@ -140,10 +134,10 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
                 }
 
     @classmethod
-    def apply_parametrisation(cls, decorr_model_config):
-        """Apply the parametrisation for the decorrelation to an instrument model.
+    def set_parametrisation(cls, decorr_model_config):
+        """Set the parametrisation for the decorrelation to an instrument model.
 
-        This function is used by parametrisation_gravgroup.apply_instmodel_parametrisation.
+        This function is used by parametrisation_gravgroup.set_instmodel_parametrisation.
         For now there is no parameters for this type of decorrelation
 
         Arguments
@@ -151,6 +145,6 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
         decorr_model_config    : dict
             Dictionary where the decorrelation configuration is stored for the model
         """
-        raise NotImplementedError(f"You need to implement the function apply_parametrisation for the"
+        raise NotImplementedError(f"You need to implement the function set_parametrisation for the"
                                   f"likelihood decorrelation class {cls.__class__}."
                                   )
