@@ -276,26 +276,26 @@ class RV_InstCat_Model(Core_InstCat_Model):
     # Deadling with the parameterisation
     ####################################
 
-    def apply_parametrisation(self, **kwargs):
-        """Apply the parametrisation for the instrument category
+    def set_parametrisation(self, **kwargs):
+        """Set the parametrisation for the instrument category
 
-        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        This method is called by Core_Parametrisation.set_instcat_parameterisation
         """
-        # Apply the Core_InstCat_Model.apply_parametrisation
-        super(RV_InstCat_Model, self).apply_parametrisation()
+        # Apply the Core_InstCat_Model.set_parametrisation
+        super(RV_InstCat_Model, self).set_parametrisation()
 
         # Apply the parametrisation to the star and planets parameters
-        self.apply_star_planet_parametrisation()
+        self.set_star_planet_parametrisation()
 
-    def apply_star_planet_parametrisation(self):
-        """Apply the parametrisation to the star and planet objects.
+    def set_star_planet_parametrisation(self):
+        """Set the parametrisation to the star and planet objects.
         """
         ##################################################
         # Apply the parametrisation to the star parameters
         ##################################################
         # Systemic velocity (RVs)
         for star in self.model_instance.stars.values():
-            star.apply_polymodel_parametrisation(inst_cat=RV_inst_cat)
+            star.set_polymodel_parametrisation(inst_cat=RV_inst_cat)
 
         ##############################################################################
         # Apply the parametrisation for the RV keplerian models
@@ -315,7 +315,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
                     model = self.keplerian_rv_model.get_model(planet_name=planet_name)
                     model.create_parameters_and_set_main(inst_model_fullname=inst_model_fullname)
 
-    def apply_instmod_parametrisation_decorrelation_models(self, inst_mod_obj):
+    def set_instmod_parametrisation_decorrelation_models(self, inst_mod_obj):
         """Apply the parametrisation for the decorrelation to an instrument model object.
 
         Arguments
@@ -327,6 +327,6 @@ class RV_InstCat_Model(Core_InstCat_Model):
         if self.do_decorrelate_model_instmod(instmod_fullname=inst_mod_obj.full_name):
             for model_part in self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'].keys():
                 for DecorModel in self.l_decorrelation_model_class:
-                    DecorModel.apply_parametrisation(inst_mod_obj=inst_mod_obj,
-                                                     model_part=model_part,
-                                                     decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])
+                    DecorModel.set_parametrisation(inst_mod_obj=inst_mod_obj,
+                                                   model_part=model_part,
+                                                   decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name]['what to decorrelate'][model_part][DecorModel.category])

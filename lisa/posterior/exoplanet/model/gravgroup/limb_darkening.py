@@ -91,7 +91,7 @@ class CoreLD(Core_ParamContainer):
         """Return the list of all parameters."""
         return [self.parameters[paramname] for paramname in self.__get_list_all_paramnames()]
 
-    def apply_parametrisation(self):
+    def set_parametrisation(self):
         """Set all LD parameters to main."""
         for param in self.get_list_params(no_duplicate=True):
             param.main = True

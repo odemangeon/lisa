@@ -20,7 +20,6 @@ from pprint import pformat
 
 from .datasimulator import DatasimulatorCreator
 from .paramcontainers_database import ParamContainerDatabase
-from .core_parametrisation import Core_Parametrisation
 from .instrument_container import InstrumentContainerInterface
 from ..config_file import ConfigFileAttr, ConfigFile
 from ..instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
@@ -56,7 +55,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                  ParamContainerDatabase, Instmodel4DatasetAttr, LikelihoodCreator, DatasimulatorCreator,
                  ConfigFileAttr, RunFolderAttr,
                  GP1DContainerInterface,
-                 Core_Parametrisation, metaclass=MandatoryReadOnlyAttr):
+                 metaclass=MandatoryReadOnlyAttr):
     """docstring for Core_Model abstract class."""
 
     ## List of mandatory arguments which have to be defined in the subclasses.
@@ -110,18 +109,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                                        lock="instmodel4dataset")
         # Initialise the instrument models
         self.__init_instmodels(l_instmod_fullnames=self.instmodel4dataset.name_instmodels_used(inst_name=None, sortby_instname=False, inst_fullcat=None, sortby_instfullcat=None, return_fullname=True))     
-        # # Intialise handlers4noisecatparamfile which has to be updated in the Model Subclass
-        # # Define the specific param_file handler for each noise model category (key: moisemodel_cat, value: dict(keys: "create" and "load", value: create and load methods))
-        # def __def_dict_noisemodhandlers():
-        #     return {create_key: None, load_key: None}
-        # self.__handlers4noisecatparamfile = defaultdict(__def_dict_noisemodhandlers)
-        # # Initialise paramfile4noisemodcat which has to be filled by the create_paramfile function specified in handlers4noisecatparamfile
-        # # Define the path to the parameter file specific to each noise model category if exists (key: noisemod_cat, value: path of param file)
-        # self.__paramfile4noisemodcat = {}
+        # Check that all datasets correspond to instrument model categories that valid for the model
+        self.__check_dataset_instcat()
         # Initialize the dictionary providing the function to get same GP kernel datasets.
         self._same_GP_kernel_function = {}
-        # Initialise parametrisation related attributes
-        self.init_parametrisation_attributes()
         # Initialise datasimcreatorname4instcat which has to be filled in the Model Subclass
         # Define name of the datasimcreator function for each instrument category (key: inst_cat, value: name of datasimcreator method)
         self.__datasimcreatorname4instcat = {}
@@ -276,56 +267,56 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """Return the name of the object studied."""
         return self.name
 
-    @property
-    def init_kwargs(self):
-        """Return the dictionary giving the arguments for the define_model method of Posterior.
+    # @property
+    # def init_kwargs(self):
+    #     """Return the dictionary giving the arguments for the define_model method of Posterior.
 
-        TODO: Maybe There is some common initialisation that could be done. TBC
-        """
-        raise NotImplementedError("You need to create this property for your model !")
+    #     TODO: Maybe There is some common initialisation that could be done. TBC
+    #     """
+    #     raise NotImplementedError("You need to create this property for your model !")
 
-    @property
-    def automatic_init_kwargs(self):
-        """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
-        dico = {}
-        dico["param_file_model"] = self.param_file_model
-        dico["param_file"] = self.param_file
-        dico["paramfile4instcat"] = {}
-        for inst_cat, inscat_model in self.instcat_models.items():
-            if inscat_model.has_instcat_paramfile:
-                dico["paramfile4instcat"][inst_cat] = inscat_model.paramfile_instcat
-        dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
-        return dico
+    # @property
+    # def automatic_init_kwargs(self):
+    #     """Return a dictionary giving the keyword arguments for automatic_model_initialisation."""
+    #     dico = {}
+    #     dico["param_file_model"] = self.param_file_model
+    #     dico["param_file"] = self.param_file
+    #     dico["paramfile4instcat"] = {}
+    #     for inst_cat, inscat_model in self.instcat_models.items():
+    #         if inscat_model.has_instcat_paramfile:
+    #             dico["paramfile4instcat"][inst_cat] = inscat_model.paramfile_instcat
+    #     dico["paramfile4noisemodcat"] = self.paramfile4noisemodcat
+    #     return dico
 
-    def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat):
-        """load the parameter file."""
-        if self.hasrun_folder:
-            param_file_model = join(self.run_folder, param_file_model)
-        self.param_file_model = param_file_model
-        if self.hasrun_folder:
-            param_file = join(self.run_folder, param_file)
-        self.param_file = param_file
-        for inst_cat in paramfile4instcat:
-            inscat_model = self.instcat_models[inst_cat]
-            if self.hasrun_folder:
-                paramfile4instcat[inst_cat] = join(self.run_folder, paramfile4instcat[inst_cat])
-            if isfile(paramfile4instcat[inst_cat]):
-                inscat_model.paramfile_instcat = paramfile4instcat[inst_cat]
-            else:
-                raise AssertionError("File {} doesn't exists".format(paramfile4instcat[inst_cat]))
-        for key in paramfile4noisemodcat:
-            if self.hasrun_folder:
-                paramfile4noisemodcat[key] = join(self.run_folder, paramfile4noisemodcat[key])
-            if isfile(paramfile4noisemodcat[key]):
-                self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
-            else:
-                raise AssertionError("File {} doesn't exists".format(paramfile4noisemodcat[key]))
-        self.load_parameter_file_model()
-        self.load_instcat_paramfile()
-        self.load_noisemodcat_paramfile()
-        self.set_parametrisation()
-        self.update_paramfile_info()
-        self.load_parameter_file()
+    # def automatic_model_initialisation(self, param_file, param_file_model, paramfile4instcat, paramfile4noisemodcat):
+    #     """load the parameter file."""
+    #     if self.hasrun_folder:
+    #         param_file_model = join(self.run_folder, param_file_model)
+    #     self.param_file_model = param_file_model
+    #     if self.hasrun_folder:
+    #         param_file = join(self.run_folder, param_file)
+    #     self.param_file = param_file
+    #     for inst_cat in paramfile4instcat:
+    #         inscat_model = self.instcat_models[inst_cat]
+    #         if self.hasrun_folder:
+    #             paramfile4instcat[inst_cat] = join(self.run_folder, paramfile4instcat[inst_cat])
+    #         if isfile(paramfile4instcat[inst_cat]):
+    #             inscat_model.paramfile_instcat = paramfile4instcat[inst_cat]
+    #         else:
+    #             raise AssertionError("File {} doesn't exists".format(paramfile4instcat[inst_cat]))
+    #     for key in paramfile4noisemodcat:
+    #         if self.hasrun_folder:
+    #             paramfile4noisemodcat[key] = join(self.run_folder, paramfile4noisemodcat[key])
+    #         if isfile(paramfile4noisemodcat[key]):
+    #             self.paramfile4noisemodcat[key] = paramfile4noisemodcat[key]
+    #         else:
+    #             raise AssertionError("File {} doesn't exists".format(paramfile4noisemodcat[key]))
+    #     self.load_parameter_file_model()
+    #     self.load_instcat_paramfile()
+    #     self.load_noisemodcat_paramfile()
+    #     self.set_parametrisation()
+    #     self.update_paramfile_info()
+    #     self.load_parameter_file()
 
     #####################################################################
     ## Dealing with instrument categories and instrument model categories
@@ -385,12 +376,12 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """
         return self.__instcat_models[inst_cat]
 
-    def _check_dataset_instcat(self):
+    def __check_dataset_instcat(self):
         """Check that the instrument categories of the datasets are all handled by the model. """
-        if not(self.possible_inst_categories >= set(self.dataset_db.inst_categories)):  # self.possible_inst_categories is defined in the Subclasses of Core_Model
+        if not(self.possible_inst_categories >= set(self.get_instcat_used())):  # self.get_instcat_used is defined in Instmodel4DatasetAttr
             raise ValueError("Model of category {} cannot simulate data of the following category: {}."
                              " Remove the datasets of this(ese) category(ies) or change the model."
-                             "".format(self.category, set(self.dataset_db.inst_categories) - self.possible_inst_categories))
+                             "".format(self.category, set(self.get_instcat_used()) - self.possible_inst_categories))
 
     ############################
     ## Dealing with noise models
@@ -452,6 +443,28 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ##########################
     ## Dealing with Parameters
     ##########################
+
+    # Setting parameters/parametrisation acoording to the configuration 
+    ###################################################################
+
+    def set_parametrisation(self, **kwargs):
+        """Choose the parametrisation to use and apply it.
+        """
+        self._set_instcat_parameterisation(**kwargs)
+        self._set_noisemodelcat_parameterisation(**kwargs)
+
+    def _set_noisemodelcat_parameterisation(self, **kwargs):
+        """Apply the parametrisation of the noise models"""
+        for noisemodcat in self.noise_models.values():  # noise_models comes from Core_Model
+            noisemodcat.set_parametrisation(**kwargs)
+
+    def _set_instcat_parameterisation(self, **kwargs):
+        """Apply the parametrisation of the instrument models"""
+        for inst_cat_model in self.instcat_models.values():  # instcat_models comes from Core_Model
+            inst_cat_model.set_parametrisation(**kwargs)
+
+    # Interacting with parameters
+    #############################
 
     def get_list_params(self, main=False, free=False, no_duplicate=True, recursive=False, **kwargs):
         """Return the list of all parameters.

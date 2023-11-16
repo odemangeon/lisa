@@ -19,6 +19,8 @@ class GaussianModel(Core_1ModelConfig):
         self._object_categories = {'instrument': instrument}
         self.load_config(dico_config=dico_config_model)
 
+    def create_parameters_and_set_main(self, object_category=None):
+        super(GaussianModel, self).create_parameters_and_set_main(object_category=object_category)
 
     ############################################################
     # Dealing with the parametrisation, param_extension and args

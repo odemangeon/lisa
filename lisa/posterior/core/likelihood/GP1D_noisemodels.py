@@ -155,5 +155,14 @@ class GP1D_Noise_Models(Core_Noise_Model):
             model_category = GP1D_models_config['model_definitions'][GP1D_model_name].pop("category")
             self._define_model(model_name=GP1D_model_name, model_category=model_category, dico_config_model=GP1D_models_config['model_definitions'][GP1D_model_name], overwrite=True)
     
+    #############################################
+    # Dealing with the parameters/parametrisation
+    #############################################
 
+    def set_parametrisation(self):
+        l_model_done = []
+        for instmodfullname in self.l_inst_model_fullname:  # l_inst_model_fullname is defined in Core_Noise_Model
+            GP1D_config = self.get_model(inst_model_fullname=instmodfullname)
+            if GP1D_config not in l_model_done:
+                GP1D_config.create_parameters_and_set_main()
     

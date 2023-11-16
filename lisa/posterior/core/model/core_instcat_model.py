@@ -883,19 +883,19 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
                 res.extend(self.model_instance.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname))
         return res
 
-    def apply_parametrisation(self, **kwargs):
-        """Apply the parametrisation for the instrument category
+    def set_parametrisation(self, **kwargs):
+        """Set the parametrisation for the instrument category
 
-        This method is called by Core_Parametrisation.apply_instcat_parameterisation
+        This method is called by Core_Parametrisation.set_instcat_parameterisation
         """
         # Apply the parametrisation to the instrument models parameters
-        self.apply_instmodel_parametrisation()
+        self.set_instmodel_parametrisation()
 
         # Apply likelihood decorrelation parametrisation
-        self.apply_decorrelation_likelihood_parameterisation()
+        self.set_decorrelation_likelihood_parameterisation()
 
-    def apply_instmodel_parametrisation(self):
-        """Apply the parametrisation to an instrument model object.
+    def set_instmodel_parametrisation(self):
+        """Set the parametrisation to an instrument model object.
 
         This method is called by Core_InstCat_Model.apply_parameterisation
         """
@@ -907,13 +907,13 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         l_inst_fullcat = self.model_instance.instruments.get_inst_fullcat4inst_cat(inst_cat=self.inst_cat)
         for inst_fullcat_i in l_inst_fullcat:
             for inst_model in self.model_instance.get_instmodel_objs(inst_fullcat=inst_fullcat_i):
-                inst_model.apply_parametrisation()
-                self.apply_instmod_parametrisation_decorrelation_model(inst_mod_obj=inst_model)
+                inst_model.set_parametrisation()
+                self.set_instmod_parametrisation_decorrelation_model(inst_mod_obj=inst_model)
 
-    def apply_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
-        """Apply the parametrisation for the decorrelation to an instrument model object.
+    def set_instmod_parametrisation_decorrelation_model(self, inst_mod_obj):
+        """Set the parametrisation for the decorrelation to an instrument model object.
 
-        This method is called by Core_InstCat_Model.apply_instmodel_parametrisation
+        This method is called by Core_InstCat_Model.set_instmodel_parametrisation
 
         Arguments
         ---------
@@ -927,8 +927,8 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
                                                  decorrelation_config_inst_decorr=self.decorrelation_model_config[inst_mod_obj.full_name][DecorModel.category]
                                                  )
 
-    def apply_decorrelation_likelihood_parameterisation(self):
-        """Apply the parametrisation for the decorrelation models
+    def set_decorrelation_likelihood_parameterisation(self):
+        """Set the parametrisation for the decorrelation models
 
         This method is called by Core_InstCat_Model.apply_parameterisation
         """
@@ -936,4 +936,4 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         if self.do_decorrelate_likelihood:
             for model_name in self.order_models_decorrelate_likelihood:
                 DecorClass = self.get_decorrelation_likelihood_class_4_model_category(category=self.get_decorrelation_likelihood_model_category(model_name=model_name))
-                DecorClass.apply_parametrisation(decorr_model_config=self.get_decorrelation_likelihood_model_config(model_name=model_name))
+                DecorClass.set_parametrisation(decorr_model_config=self.get_decorrelation_likelihood_model_config(model_name=model_name))

@@ -199,10 +199,10 @@ def get_polymodel(multi, l_inst_model, l_dataset, get_times_from_datasets,
     return returns
 
 
-def apply_polymodel_parametrisation(param_container, name_coeff_const, func_param_name, full_category_4_unit,
+def set_polymodel_parametrisation(param_container, name_coeff_const, func_param_name, full_category_4_unit,
                                     prefix=None
                                     ):
-    """Apply the parametrisation for the polynomial modelling to the instrument model.
+    """Set the parametrisation for the polynomial modelling to the instrument model.
 
     Arguments
     ---------

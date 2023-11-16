@@ -13,7 +13,7 @@ from ...core.dataset_and_instrument.dataset import Core_DatasetTimeSeries
 from ...core.dataset_and_instrument.instrument import Core_Instrument
 # from ...core.parameter import Parameter
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
-from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
+from ...core.model.polynomial_model import set_polymodel_parametrisation as set_polymodel_parametrisation_def
 
 
 ## RV instrument category
@@ -64,8 +64,8 @@ class RV_Instrument(Core_Instrument):
     #     model_instance.instcat_models[RV_inst_cat].set_RV_globalref_instname(dico_config_fullcat[cls.__name_RV_ref_global_var__])
 
     @classmethod
-    def apply_parametrisation(cls, inst_model):
-        """Apply the parametrisation to the instrument model.
+    def set_parametrisation(cls, inst_model):
+        """Set the parametrisation to the instrument model.
 
         Arguments
         ---------
@@ -73,11 +73,11 @@ class RV_Instrument(Core_Instrument):
             WARNING you cannot change the name of this argument for it to work with the __getattr__
             of lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model
         """
-        cls.apply_polymodel_parametrisation(inst_model=inst_model)
+        cls.set_polymodel_parametrisation(inst_model=inst_model)
 
     @classmethod
-    def apply_polymodel_parametrisation(cls, inst_model):
-        """Apply the parametrisation for the polynomial modelling to the instrument model.
+    def set_polymodel_parametrisation(cls, inst_model):
+        """Set the parametrisation for the polynomial modelling to the instrument model.
 
         Arguments
         ---------
@@ -85,10 +85,10 @@ class RV_Instrument(Core_Instrument):
             WARNING you cannot change the name of this argument for it to work with the __getattr__
             of lisa.posterior.core.dataset_and_instrument.instrument.Instrument_Model
         """
-        apply_polymodel_parametrisation_def(param_container=inst_model, name_coeff_const=cls.__name_coeff_const__,
-                                            func_param_name=lambda order: cls.get_polymodel_param_name(inst_model=inst_model, order=order),
-                                            full_category_4_unit=cls.category,
-                                            prefix=None)
+        set_polymodel_parametrisation_def(param_container=inst_model, name_coeff_const=cls.__name_coeff_const__,
+                                          func_param_name=lambda order: cls.get_polymodel_param_name(inst_model=inst_model, order=order),
+                                          full_category_4_unit=cls.category,
+                                          prefix=None)
 
     @classmethod
     def get_polymodel_param_name(cls, inst_model, order):
@@ -133,41 +133,6 @@ class RV_Instrument(Core_Instrument):
         return get_dico_config(param_container=inst_model, prefix=None, notexist_ok=notexist_ok,
                                return_None_if_notexist=return_None_if_notexist
                                )
-    # @classmethod
-    # def init_inst_var_parameters(cls, inst_model, with_inst_var=False, inst_var_order=1):
-    #     """Initialise/Create the required parameter for the modelling of the instrument variations."""
-    #     inst_model.__with_inst_var = with_inst_var
-    #     inst_model.__inst_var_order = inst_var_order
-    #     if with_inst_var:
-    #         if isinstance(inst_var_order, int) and inst_var_order >= 1:
-    #             for order in range(1, inst_var_order + 1):
-    #                 inst_model.add_parameter(Parameter(name=(inst_model.get_inst_var_param_name(order)),
-    #                                                    name_prefix=inst_model.get_name(include_prefix=True, recursive=True),
-    #                                                    main=True,
-    #                                                    unit="[RV_unit].[time]^(-{})".format(order)))
-    #         else:
-    #             raise ValueError("If you want to model instrument variations variations you need to "
-    #                              "provide an inst_var_order that is positive !")
-
-    # @classmethod
-    # def get_with_inst_var(cls, inst_model):
-    #     """True if the instrument model includes instrument variations variations."""
-    #     try:
-    #         return inst_model.__with_inst_var
-    #     except AttributeError:
-    #         return False
-    #
-    # @classmethod
-    # def get_inst_var_order(cls, inst_model):
-    #     """Return the order of the instrument variations variation model or None, if it's not modeled."""
-    #     if cls.get_with_inst_var(inst_model):
-    #         return inst_model.__inst_var_order
-    #     else:
-    #         return None
-
-    # def get_inst_var_param_name(self, order, inst_model):  # instrument is necessary don't remove it
-    #     """Return the parameter name of the coefficient of the instrument variation model."""
-    #     return "{}{}".format(self.__inst_var_basename__, order)
 
 
 class RV_Dataset(Core_DatasetTimeSeries):

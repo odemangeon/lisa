@@ -14,7 +14,7 @@ from numpy import rad2deg, arcsin, sqrt, pi
 from ...core.parameter import Parameter
 from ...core.paramcontainer import Core_ParamContainer
 from ...core.model.polynomial_model import get_dico_config, set_dico_config
-from ...core.model.polynomial_model import apply_polymodel_parametrisation as apply_polymodel_parametrisation_def
+from ...core.model.polynomial_model import set_polymodel_parametrisation as set_polymodel_parametrisation_def
 
 
 class CelestialBody(Core_ParamContainer):
@@ -258,8 +258,8 @@ class Star(CelestialBody):
         ## Metallicity
         self.add_parameter(Parameter(name="feh", name_prefix=self.name, main=False))
 
-    def apply_polymodel_parametrisation(self, inst_cat):
-        """Apply the parametrisation for the polynomial modelling of a given instrument category.
+    def set_polymodel_parametrisation(self, inst_cat):
+        """Set the parametrisation for the polynomial modelling of a given instrument category.
 
         Arguments
         ---------
@@ -270,10 +270,10 @@ class Star(CelestialBody):
             name_coeff_const = "v0"
         elif inst_cat == "LC":
             name_coeff_const = "F0"
-        apply_polymodel_parametrisation_def(param_container=self, name_coeff_const=name_coeff_const,
-                                            func_param_name=lambda order: self.get_polymodel_param_name(order=order, inst_cat=inst_cat),
-                                            full_category_4_unit=inst_cat,
-                                            prefix=inst_cat)
+        set_polymodel_parametrisation_def(param_container=self, name_coeff_const=name_coeff_const,
+                                          func_param_name=lambda order: self.get_polymodel_param_name(order=order, inst_cat=inst_cat),
+                                          full_category_4_unit=inst_cat,
+                                          prefix=inst_cat)
 
     def get_polymodel_param_name(self, order, inst_cat):
         """Return the parameter name of the coefficient of the RV drift model."""

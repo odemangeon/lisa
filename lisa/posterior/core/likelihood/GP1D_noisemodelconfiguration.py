@@ -32,6 +32,9 @@ class Core_GP1DModel(Core_1ModelConfig):
         self._object_categories = {'GP': GP1D_paramcontainer}  # This are parameter containers required by the model that host the model parameters
         self.load_config(dico_config=dico_config_model)
 
+    def create_parameters_and_set_main(self, object_category=None):
+        super(Core_GP1DModel, self).create_parameters_and_set_main(object_category=object_category)
+
     ######################
     # Convenience function
     ######################

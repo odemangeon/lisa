@@ -52,7 +52,7 @@ class Core_PlanetStarModel(Core_1ModelConfig):
         return self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
 
     def _get_default_param_extensions(self, **kwargs):
-        return {obj_cat: {param_basename: self.model_name for param_basename in self._get_function_get_l_parameter_basename(object_category=obj_cat)(**self._get_function_get_kwargs_4_get_l_parameter_basename(object_category=obj_cat)(object_category=obj_cat, **kwargs))}
+        return {obj_cat: {param_basename: self.model_name for param_basename in self._get_l_parameter_basename(object_category=obj_cat, **kwargs)}
                 for obj_cat in ["planet", "star"]}
 
     ###############################################################
