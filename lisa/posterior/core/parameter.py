@@ -214,55 +214,18 @@ class Parameter(Named_Parameter, Parameter_Prior):
             self.duplicate.unit = unt
 
     @property
-    def paramfile_info(self):
-        """Dictionary with contain the name of the information which can be set in the param file.
-
-        It is filled in the __init__ method of this class.
-        """
-        if self.duplicate is None:
-            return self.__paramfile_info
-        else:
-            return self.duplicate.paramfile_info
-
-    # def get_paramfile_section(self, text_tab="", texttab_1tline=True,
-    #                           entete_symb=" = ", quote_name=False):
-    #     """Return the text to include in the parameter_file for this parameter.
-    #
-    #     :param str text_tab : text giving the tabulation that needs to be added to this the text to
-    #         obtain the good alignment in the input file.
-    #     """
-    #     if quote_name:
-    #         entete = f"'{self.get_name(recursive=False, include_prefix=False, code_version=False)}'{entete_symb}" + "{"
-    #     else:
-    #         entete = f"{self.get_name(recursive=False, include_prefix=False, code_version=False)}{entete_symb}" + "{"
-    #     space_entete_param = spacestring_like(entete)
-    #     text = ""
-    #     # First is the name of the parameter
-    #     if texttab_1tline:
-    #         text += text_tab
-    #     text += entete
-    #     # Duplicate key
-    #     text += f"'duplicate': {self.duplicate},\n"
-    #     # Free key
-    #     text += text_tab + space_entete_param + f"'free': {self.free},\n"
-    #     # Value key
-    #     text += text_tab + space_entete_param + f"'value': {self.value},  # unit: {self.unit}\n"
-    #     # Finally the prior info
-    #     text += Parameter_Prior.get_paramfile_section(self, text_tab=text_tab + space_entete_param)
-    #     return text
-
-    def get_paramfile_dict(self):
+    def parameter_config_dict(self):
         """
         """
-        dico_param_file = {}
-        dico_param_file['duplicate'] = self.duplicate
-        dico_param_file['free'] = self.free
-        dico_param_file['value'] = self.value
-        dico_param_file['unit'] = self.unit
-        dico_param_file['prior'] = Parameter_Prior.get_paramfile_dict(self)
-        return dico_param_file
+        res = {}
+        res['duplicate'] = self.duplicate
+        res['free'] = self.free
+        res['value'] = self.value
+        res['unit'] = self.unit
+        res['prior'] = self.prior_config_dict(self)
+        return res
 
-    def load_config(self, dico_config, model_instance, **kwargs_prior):
+    def load_parameter_config(self, dico_config, model_instance, **kwargs_prior):
         """Load the configuration specified by the parameter dictionnary.
 
         :param dict dico_config : Dictionnary giving the configuration.
@@ -292,4 +255,4 @@ class Parameter(Named_Parameter, Parameter_Prior):
                 else:
                     raise ValueError(f"key {carac} is missing from the dictionary of parameter {self.get_name(include_prefix=True, recursive=True)}")
         if self.free and (self.duplicate is None):
-            Parameter_Prior.load_config(self, dico_config=dico_config, **kwargs_prior)
+            Parameter_Prior.load_prior_config(self, dico_config=dico_config, **kwargs_prior)
