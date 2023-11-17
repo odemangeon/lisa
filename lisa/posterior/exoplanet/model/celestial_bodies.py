@@ -17,79 +17,20 @@ from ...core.model.polynomial_model import get_dico_config, set_dico_config
 from ...core.model.polynomial_model import set_polymodel_parametrisation as set_polymodel_parametrisation_def
 
 
-class CelestialBody(Core_ParamContainer):
-    """docstring for CelestialBody."""
-
-    __category__ = "celestialbodies"
-
-    def __init__(self, gravgroup=None, name="", **kwargs):
-        """docstring GravGroup init method.
-
-        :param Gravgroup gravgroup: (default: None), Gravgroup instance to which the star belongs.
-        :param str name: (default: ""), Name of the star (if the star is K2-19_A, its name will be
-            'A' and 'K2-19' would be the name of the GravGroup)
-
-        Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
-        Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
-        """
-        # name_prefix is set to None because it will be set when the gravgroup is set.
-        if "name_prefix" in kwargs:
-            raise TypeError("'name_prefix' is an invalid keyword argument for this function. "
-                            "name_prefix is automatically set as gravgroup.name if gravgroup is"
-                            "provided")
-        super(CelestialBody, self).__init__(name=name, **kwargs)
-        # Set the gravgroup attribute
-        self.gravgroup = gravgroup
-        # Make CelestialBody not instanciable (abstract class)
-        if type(self) is CelestialBody:
-            raise NotImplementedError("CelestialBody should not be instanciated !")
-
-    @property
-    def gravgroup(self):
-        """Return the GravGroup instance to which the Celestial Body belongs."""
-        return self.__gravgroup
-
-    @gravgroup.setter
-    def gravgroup(self, gravgroup):
-        """Set the gravgroup attribute of a CelestialBody."""
-        if self.hasgravgroup:
-            logger.warning("The GravGroup to which the Celestial body belongs has already been "
-                           "defined. One should not redefined it so set_gravgroup command is "
-                           "ignored")
-        else:
-            if gravgroup is None:
-                logger.debug("No Gravgroup provided for CelestialBody {}.".format(self.get_name()))
-            else:
-                self.__gravgroup = gravgroup
-                self.name.prefix = gravgroup.name
-                logger.debug("gravgroup of CelestialBody {} set to {}."
-                             "".format(self.get_name(), gravgroup.get_name()))
-
-    @property
-    def hasgravgroup(self):
-        """Indicate if a CelestialBody instance has a attibute gravgroup defined."""
-        if hasattr(self, "gravgroup"):
-            return self.gravgroup is not None
-        else:
-            return False
-
-
-class Planet(CelestialBody):
+class Planet(Core_ParamContainer):
     """docstring for Planet."""
 
     __category__ = "planets"
 
-    def __init__(self, gravgroup=None, name="", **kwargs):
+    def __init__(self, name="", **kwargs):
         """docstring Planet init method.
 
-        :param Gravgroup gravgroup: (default: None), Gravgroup instance to which the star belongs.
-        :param str name: (default: ""), Name of the star (if the star is K2-19_b, its name will be
-            'b' and 'K2-19' would be the name of the GravGroup)
+        :param str name: (default: ""), Name of the star (if the star is K2-19_b, its name will be 'b')
 
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
         Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
-        super(Planet, self).__init__(gravgroup=gravgroup, name=name, **kwargs)
+        super(Planet, self).__init__(name=name, **kwargs)
         ## Radius of the planet
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the planet
@@ -206,7 +147,7 @@ class Planet(CelestialBody):
         self.transit_times = {}
 
 
-class Star(CelestialBody):
+class Star(Core_ParamContainer):
     """docstring for Star.
 
     The idea is to have a class attribute for every parameters that we could want to output (not
@@ -214,21 +155,19 @@ class Star(CelestialBody):
     """
 
     __category__ = "stars"
-    __drift_basename__ = "drift"
-    __name_coeff_const_LC__ = "F0"
-    __name_coeff_const_RV__ = "v0"
+    # __drift_basename__ = "drift"
+    # __name_coeff_const_LC__ = "F0"
+    # __name_coeff_const_RV__ = "v0"
 
-    def __init__(self, gravgroup=None, name="", **kwargs):
+    def __init__(self, name="", **kwargs):
         """docstring Planet init method.
 
-        :param Gravgroup gravgroup: (default: None), Gravgroup instance to which the star belongs.
-        :param str name: (default: ""), Name of the star (if the star is K2-19_A, its name will be
-            'A' and 'K2-19' would be the name of the GravGroup)
+        :param str name: (default: ""), Name of the star (if the star is K2-19_A, its name will be 'A'
 
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
         Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
-        super(Star, self).__init__(gravgroup, name, **kwargs)
+        super(Star, self).__init__(name=name, **kwargs)
         ## Radius of the star
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the star

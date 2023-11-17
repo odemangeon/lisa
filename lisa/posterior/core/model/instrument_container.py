@@ -4,10 +4,10 @@ a ParamContainerDatabase with the possibility to handle an instruments database.
 from loguru import logger
 from pprint import pformat
 
+from .paramcontainers_database import SpecificParamContainerCategoryContainer
 from ..dataset_and_instrument.instrument import instrument_model_category, Core_Instrument
 from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....tools.database_with_instrument_level import DatabaseInstLevel, check_args_instruments
-from ....tools.miscellaneous import spacestring_like
 
 
 mgr_inst_dst = Manager_Inst_Dataset()
@@ -142,7 +142,7 @@ class InstrumentContainerInterface(object):
         return self.instruments.hasatleast1instmod(inst_name=inst_name, inst_fullcat=inst_fullcat)
 
 
-class InstrumentContainer(DatabaseInstLevel):
+class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategoryContainer):
     """docstring for InstrumentContainer."""
 
     def __init__(self):
@@ -150,15 +150,23 @@ class InstrumentContainer(DatabaseInstLevel):
                                                   database_name="instrument container",
                                                   ordered=True)
 
-    def get_list_params(self, main=False, free=False, no_duplicate=True, l_inst_model_names=[]):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, only_duplicates=False, l_inst_model_names=[]):
         """Return the list of all parameters.
 
-        Arguments
+         Arguments
         ---------
-        main : Boolean
-            If true (default false) returns only the main parameters
-        free : Boolean
-            If true (default false) returns only the free parameters
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
         l_inst_model_names : list of strings
             list of the names of instrument models for which you want the params.
 
@@ -169,7 +177,7 @@ class InstrumentContainer(DatabaseInstLevel):
         result = []
         for inst_mod_name in l_inst_model_names:
             mod = self[inst_mod_name]
-            result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+            result_mod = mod.get_list_params(main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates)
             if no_duplicate:
                 result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_mod:
@@ -222,155 +230,31 @@ class InstrumentContainer(DatabaseInstLevel):
         if selected_kwargs["l_inst_model_names"] is None:
             selected_kwargs["l_inst_model_names"] = model_instance.name_instmodels_used()  # name_instmodels_used is defined in Instmodel4Dataset
         return selected_kwargs
-
-    def get_paramfile_section(self, model_instance, text_tab="", entete_symb=" = ", quote_name=False):
-        """Return the paramfile section for every instrument category.
-
-        Arguments
-        ---------
-        model_instance : Core_Model
-            Core_Model subclass instance
-        text_tab       : str
-            text giving the tabulation that needs to be added to this the text to obtain the good alignment
-            in the input file.
-        entete_symb    : str
-            Symbol to use after the instrument name
-        quote_name     : bool
-            If True the name of the instrument names will be quoted in the text
-
-        """
-        text = ""
+    
+    @property
+    def priors_dict(self):
+        res = {}
         for inst_fullcat in self.inst_fullcategories:
-            inst_cat, inst_subcat = mgr_inst_dst.interpret_inst_fullcat(inst_fullcat)
-            inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat)
-            inst_fullcat_code = inst_subclass.inst_fullcat_to_code(inst_fullcat=inst_fullcat)
-            text += f"\n\n{text_tab}# {instrument_model_category} {inst_fullcat}\n"
-            if quote_name:
-                entete_inst_fullcat = f"'{inst_fullcat_code}'{entete_symb}"
-            else:
-                entete_inst_fullcat = f"{inst_fullcat_code}{entete_symb}"
-            text += f"{text_tab}{entete_inst_fullcat}"
-            extra_tab = spacestring_like(entete_inst_fullcat)
-            dico_inst_fullcat = {}
+            res[inst_fullcat] = {}
             for inst_name in self[inst_fullcat]:
-                dico_inst_fullcat[inst_name] = {}
+                res[inst_fullcat][inst_name] = {}
                 for inst_model in self[inst_fullcat][inst_name].values():
-                    dico_inst_fullcat[inst_name][inst_model.get_name()] = inst_model.get_paramfile_dict()
-                dico_inst_fullcat[inst_name][string4datasetdico] = {}
-                for datasetname in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
-                    number = mgr_inst_dst.interpret_data_filename(datasetname)["number"]
-                    model_name = model_instance.instmodel4dataset[datasetname]
-                    dico_inst_fullcat[inst_name][string4datasetdico][number] = model_name
-            text += pformat(dico_inst_fullcat, compact=True).replace("\n", f"\n{text_tab + extra_tab}")
-        return text
+                    res[inst_fullcat][inst_name][inst_model.get_name()] = inst_model.priors_dict
+        return res
 
-    # def update_paramfile_info(self, inst_db_info):
-    #     """Update the paramfile_info for an instrument category.
-
-    #     It updates things introduced by get_instcat_paramfilesection in paramfile_info.
-
-    #     Arguments
-    #     ---------
-    #     inst_db_info: dictionary
-    #         This is a subset of the self.paramfile_info (self.paramfile_info[instmod_cat]) of the model
-    #         instance (instance of a subclass of Core_Model) which is filled by this function.
-    #         self.paramfile_info is defined in Core_ParamContainer. It's a dictionary which describes the
-    #         expected content of the parameter file.
-    #     """
-    #     for inst_fullcat in self.inst_fullcategories:
-    #         inst_cat, inst_subcat = mgr_inst_dst.interpret_inst_fullcat(inst_fullcat)
-    #         inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat)
-    #         inst_db_info[inst_fullcat] = {}
-    #         inst_db_info[inst_fullcat][key_inst] = {}
-    #         inst_db_info[inst_fullcat][key_misc] = []
-    #         for inst_name in self[inst_fullcat]:
-    #             inst_db_info[inst_fullcat][key_inst][inst_name] = []
-    #             for inst_model in self[inst_fullcat][inst_name].keys():
-    #                 inst_db_info[inst_fullcat][key_inst][inst_name].append(inst_model)
-    #                 self[inst_fullcat][inst_name][inst_model].update_paramfile_info()
-    #             inst_db_info[inst_fullcat][key_inst][inst_name].append(string4datasetdico)
-    #             if hasattr(inst_subclass, "_update_inst_paramfile_info"):
-    #                 func = getattr(inst_subclass, "_update_inst_paramfile_info")
-    #                 func(inst_db_info[inst_fullcat][key_inst][inst_name])
-    #         if hasattr(inst_subclass, "_update_instcat_paramfile_info"):
-    #             func = getattr(inst_subclass, "_update_instcat_paramfile_info")
-    #             func(inst_db_info[inst_fullcat][key_misc])
-
-    def load_config(self, dico_config, inst_db_info, model_instance, available_joint_priors={}):
+    def load_priors_config(self, dico_priors_config, available_joint_priors={}):
         """Update the paramfile_info for an instrument category.
 
         It updates things introduced by get_allinst_paramfilesection in paramfile_info.
         """
-        logger.debug("Categories of instruments in the param_file_info: {}"
-                     "".format(list(inst_db_info.keys())))
-        for inst_fullcat in inst_db_info.keys():
-            inst_cat, inst_subcat = mgr_inst_dst.interpret_inst_fullcat(inst_fullcat)
-            inst_subclass = mgr_inst_dst.get_inst_subclass(inst_cat)
-            inst_fullcat_code = inst_subclass.inst_fullcat_to_code(inst_fullcat=inst_fullcat)
-            logger.debug("Content of param_file_info for {} {}: {}"
-                         "".format(instrument_model_category, inst_fullcat,
-                                   inst_db_info[inst_fullcat]))
-            for inst_name in inst_db_info[inst_fullcat][key_inst].keys():
-                logger.debug("Content of param_file_info for {} {}: {}"
-                             "".format(instrument_model_category, inst_name,
-                                       inst_db_info[inst_fullcat][key_inst][inst_name]))
-                logger.debug("Content of dico_config for {} {}: {}"
-                             "".format(instrument_model_category, inst_name,
-                                       dico_config[inst_fullcat_code][inst_name]))
-                # Load config of instrument models
-                set_paramfile_info = set(inst_db_info[inst_fullcat][key_inst][inst_name])
-                set_dico_config = set(dico_config[inst_fullcat_code][inst_name].keys())
-                instcat_hasspecifickeys = False
-                if hasattr(inst_subclass, "_load_config_listspecifickeys_inst"):
-                    fun = getattr(inst_subclass, "_load_config_listspecifickeys_inst")
-                    listspecifickeys = fun()
-                    instcat_hasspecifickeys = True
-                for set_obj in [set_paramfile_info, set_dico_config]:
-                    set_obj.remove(string4datasetdico)
-                    if instcat_hasspecifickeys:
-                        for key in listspecifickeys:
-                            set_obj.remove(key)
-                logger.debug("Set of inst model before the loading: {}\n"
-                             "Set of inst model in the paramfile: {}".format(set_paramfile_info,
-                                                                             set_dico_config))
-                # Load config of already existing instrument model
-                for inst_model in (set_paramfile_info & set_dico_config):
-                    logger.debug("Instmodel to be updated: {}".format(inst_model))
-                    paramcont_dico = dico_config[inst_fullcat_code][inst_name][inst_model]
-                    self[inst_fullcat][inst_name][inst_model].load_config(dico_config=paramcont_dico,
-                                                                          model_instance=model_instance,
-                                                                          available_joint_priors=available_joint_priors)
-                # Remove instrument model that are not in the param_file anymore
-                for inst_model in (set_paramfile_info.difference(set_dico_config)):
-                    logger.debug("Instmodel to be suppressed: {}".format(inst_model))
-                    model_instance.rm_an_instrument_model(inst_model=inst_model, inst_name=inst_name,
-                                                          inst_fullcat=inst_fullcat)
-                    model_instance.update_paramfile_info()
-                # Add instrument model are in the param_file but not yet in the model
-                for inst_model in (set_dico_config.difference(set_paramfile_info)):
-                    logger.debug("Instmodel to be added: {}".format(inst_model))
-                    paramcont_dico = dico_config[inst_fullcat_code][inst_name][inst_model]
-                    instrument = mgr_inst_dst.get_instrument(inst_name)
-                    model_instance.add_an_instrument_model(instrument=instrument, name=inst_model)
-                    model_instance.update_paramfile_info()
-                    self[inst_fullcat][inst_name][inst_model].load_config(dico_config=paramcont_dico,
-                                                                          model_instance=model_instance,
-                                                                          available_joint_priors=available_joint_priors)
-                # Load which instrument model to use for which dataset
-                for dataset in model_instance.dataset_db.get_datasetnames(inst_name=inst_name, inst_fullcat=inst_fullcat):
-                    number = mgr_inst_dst.interpret_data_filename(dataset)["number"]
-                    inst_model = dico_config[inst_fullcat_code][inst_name][string4datasetdico][number]
-                    if model_instance.instmodel4dataset[dataset] != inst_model:
-                        logger.debug("Instrument model to use for dataset {} changed from "
-                                     "{} to {}.".format(dataset,
-                                                        model_instance.instmodel4dataset[dataset],
-                                                        inst_model))
-                        model_instance.instmodel4dataset[dataset] = inst_model
-                # Load specific keys of the instrument category
-                if instcat_hasspecifickeys:
-                    inst_subclass._load_config_specifickeys_inst(dico_config[inst_fullcat_code][inst_name],
-                                                                 inst_name=inst_name,
-                                                                 model_instance=model_instance)
-            if len(inst_db_info[inst_fullcat][key_misc]) > 0:
-                inst_subclass._load_config_instcat(dico_config_fullcat=dico_config[inst_fullcat_code],
-                                                   model_instance=model_instance)
+        if set(self.inst_fullcategories) != set(dico_priors_config.keys()):
+            raise ValueError(f"The priors['instruments'] dictionary in the configuration files doesn't hae the expected keys. Expected {self.inst_fullcategories}, got {dico_priors_config.keys()}")
+        for inst_fullcat in self.inst_fullcategories:
+            if set(self[inst_fullcat].keys()) != set(dico_priors_config[inst_fullcat].keys()):
+                raise ValueError(f"The priors['instruments'][{inst_fullcat}] dictionary in the configuration files doesn't hae the expected keys. Expected {self[inst_fullcat].keys()}, got {dico_priors_config[inst_fullcat].keys()}")
+            for inst_name in self[inst_fullcat]:
+                if set(self[inst_fullcat][inst_name].keys()) != set(dico_priors_config[inst_fullcat][inst_name].keys()):
+                    raise ValueError(f"The priors['instruments'][{inst_fullcat}][{inst_name}] dictionary in the configuration files doesn't hae the expected keys. Expected {self[inst_fullcat][inst_name].keys()}, got {dico_priors_config[inst_fullcat][inst_name].keys()}")
+                for inst_model in self[inst_fullcat][inst_name].values():
+                    self[inst_fullcat][inst_name][inst_model.get_name()].load_priors_config(dico_priors_config=dico_priors_config[inst_fullcat][inst_name][inst_model.get_name()],
+                                                                                            available_joint_priors=available_joint_priors)

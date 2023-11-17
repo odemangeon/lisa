@@ -105,13 +105,14 @@ class Parameter(Named_Parameter, Parameter_Prior):
         ## Unit of the value
         self.__unit = None
         if unit is not None:
-            self.unit = unit
-        # Initialise the info regarding the content of the parametrisation file for a Parameter
-        self.__paramfile_info = {"caracteristics": ["duplicate", "free", "value"]  # Caracteristics beside the prior info
-                                 # duplicate should always be the first one.
-                                 }
+            self.unit = unit        
         # Initialisation relative to the Prior.
-        Parameter_Prior.__init__(self, self.__paramfile_info, **kwargs_prior)
+        Parameter_Prior.__init__(self, **kwargs_prior)
+
+    @property
+    def is_a_duplicate(self):
+        """If different from None, then the parameter is a duplicate of the Parameter instance returned."""
+        return self.__duplicate is not None
 
     @property
     def duplicate(self):
@@ -212,47 +213,3 @@ class Parameter(Named_Parameter, Parameter_Prior):
                                          "".format(self.__unit))
         else:
             self.duplicate.unit = unt
-
-    @property
-    def parameter_config_dict(self):
-        """
-        """
-        res = {}
-        res['duplicate'] = self.duplicate
-        res['free'] = self.free
-        res['value'] = self.value
-        res['unit'] = self.unit
-        res['prior'] = self.prior_config_dict(self)
-        return res
-
-    def load_parameter_config(self, dico_config, model_instance, **kwargs_prior):
-        """Load the configuration specified by the parameter dictionnary.
-
-        :param dict dico_config : Dictionnary giving the configuration.
-
-        Keyword arguments are provided to Parameter_Prior.load_config (see its docstring for more
-        info).
-        """
-        for carac in self.paramfile_info["caracteristics"]:
-            if (carac == "duplicate") or (self.duplicate is None):
-                if carac in dico_config:
-                    if getattr(self, carac) != dico_config[carac]:
-                        logger.debug("{} attribute of param {} changed from {} to {}"
-                                     "".format(carac,
-                                               self.get_name(include_prefix=True, recursive=True),
-                                               getattr(self, carac),
-                                               dico_config[carac]))
-                        if carac == "duplicate":
-                            if dico_config[carac] is None:
-                                setattr(self, carac, dico_config[carac])
-                            else:
-                                param_duplicated = model_instance.get_parameter(dico_config[carac],
-                                                                                kwargs_get_list_params={'recursive': True, 'main': True, 'no_duplicate': False},
-                                                                                kwargs_get_name={'include_prefix': True, 'recursive': True, 'force_no_duplicate': True, 'code_version': False})
-                                setattr(self, carac, param_duplicated)
-                        else:
-                            setattr(self, carac, dico_config[carac])
-                else:
-                    raise ValueError(f"key {carac} is missing from the dictionary of parameter {self.get_name(include_prefix=True, recursive=True)}")
-        if self.free and (self.duplicate is None):
-            Parameter_Prior.load_prior_config(self, dico_config=dico_config, **kwargs_prior)

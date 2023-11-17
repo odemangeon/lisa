@@ -46,7 +46,7 @@ class GP1DContainer(SpecificParamContainerCategoryContainer):
             selected_kwargs[kwarg_name] = kwargs.get(kwarg_name, None)
         # Set the default value if not provided
         if selected_kwargs["l_param_container_fullname"] is None:
-            selected_kwargs["l_param_container_fullname"] = model_instance.name_GP1D_used()  # name_GP1D_used is defined in GP1DNoiseModels
+            selected_kwargs["l_param_container_fullname"] = self.l_param_container_fullname  # name_GP1D_used is defined in GP1DNoiseModels
         return selected_kwargs
     
 

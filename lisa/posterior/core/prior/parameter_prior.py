@@ -17,26 +17,13 @@ manager.load_setup()
 class Parameter_Prior(object):
     """docstring for Parameter_Prior. Interface for the Parameter class to handle priors"""
 
-    ## Prior function: function (TODO: Doesn't seems to be used, suppress ?)
-    # prior_func = None
-
-    ## Arguments of the prior function: dictionnary, for example for a gaussian {"mean": 0, "std":0}
-    # (TODO: Doesn't seems to be used, suppress ?)
-    # prior_args = None
-
-    ## Position of this parameter value in the list of parameter of the joint prior fucntion: int
-    # (TODO: Doesn't seems to be used, suppress ?)
-    # joint_prior_pos = None
-
-    def __init__(self, paramfile_info, prior_category=None, prior_args=None, joint_prior_ref=None,
+    def __init__(self, prior_category=None, prior_args=None, joint_prior_ref=None,
                  available_joint_priors={}):
         """Initialise the information related to the Prior for the Parameter instance.
 
         This should be called from the Parameter.__init__ method.
         This class is not meant to be instanciated directly (except for test purposes).
 
-        :param dict paramfile_info: Dictionary containing the name of information that the parameter
-            file provides for each parameter
         :param string prior_category: (default: None), Gives the category of prior probability to
             use for this parameter, eg: gaussian, uniform, ...
             If you want the prior for this parameter to be a joint prior with another parameter
@@ -57,8 +44,6 @@ class Parameter_Prior(object):
         else:
             self.set_prior(prior_category=prior_category, joint_prior_ref=joint_prior_ref,
                            available_joint_priors=available_joint_priors, **prior_args)
-        # Update paramfile_info with the name of the information related to the Prior
-        paramfile_info["prior"] = ["category", "args", "joint_prior_ref"]
 
     @property
     def prior_info(self):
@@ -185,16 +170,17 @@ class Parameter_Prior(object):
             raise ValueError("prior_category should be a str.")
 
     @property
-    def prior_config_dict(self):
+    def priors_dict(self):
         """
         """
         res = {}
         res['category'] = self.prior_category
         res['args'] = self.prior_args
+        res['unit'] = self.unit
         res['joint_prior_ref'] = self.joint_prior_ref
         return res
 
-    def load_prior_config(self, dico_config, available_joint_priors={}, load_setup=False):
+    def load_prior_config(self, dico_prior_config, available_joint_priors={}, load_setup=False):
         """Load the configuration specified by the parameter dictionnary.
 
         :param dict dico_config : Dictionnary giving the configuration.
@@ -204,8 +190,7 @@ class Parameter_Prior(object):
         """
         if load_setup:
             manager.load_setup()
-        dico_prior = dico_config["prior"]
-        self.set_prior(prior_category=dico_prior["category"],
-                       joint_prior_ref=dico_prior.get("joint_prior_ref", None),
+        self.set_prior(prior_category=dico_prior_config["category"],
+                       joint_prior_ref=dico_prior_config.get("joint_prior_ref", None),
                        available_joint_priors=available_joint_priors,
-                       **dico_prior["args"])
+                       **dico_prior_config["args"])

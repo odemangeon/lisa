@@ -11,7 +11,7 @@ The objective of this module is to define the Model_Prior class which will gener
 """
 from loguru import logger
 from collections import OrderedDict
-from textwrap import dedent
+from copy import deepcopy
 
 from .core_prior import Manager_Prior
 from ..model import par_vec_name
@@ -24,12 +24,13 @@ from ....tools.miscellaneous import spacestring_like
 manager = Manager_Prior()
 manager.load_setup()
 
-## Name of the joint prior dictionary for the parameter file
-joint_prior_name = 'joint_prior'
-
 
 class Model_Prior(object):
     """docstring for Model_Prior."""
+
+    ## Name of the joint prior dictionary for the parameter file
+    joint_prior_name = 'joint_prior'
+
     def __init__(self):
         """Initialise the information related to the Prior for the Model instance.
 
@@ -54,31 +55,18 @@ class Model_Prior(object):
         """
         return self.__joint_priors
 
-    def get_paramfile_section_jointprior(self):
-        """Return the text for the section to define joint priors in the parameter file."""
-        text_joint_param_distrib = """
-        # Joint parameters
-        # Define below the joint parameter distributions.
-        {joint_prior_name} = {{# Example:
-        {tab}# 'priorhkP': {{'category': 'hkP', 'args': {{'Pb_prior': {{'category': 'uniform', 'args': {{'vmin': 0.0, 'vmax': 1.0}} }} }},
-        {tab}#              'params': {{'hplus': 'K219_hplus', 'hminus': 'K219_hminus',
-        {tab}#                         'kplus': 'K219_kplus', 'kminus': 'K219_kminus',
-        {tab}#                         'Pb': 'K219_b_P', 'Pc': 'K219_c_P'}}
-        {tab}#              }}
-        {tab}}}
-        """.format(joint_prior_name=joint_prior_name,
-                   tab=spacestring_like("{} = {{".format(joint_prior_name)))
-        return dedent(text_joint_param_distrib)
+    @property
+    def jointprior_config_dict(self):
+        return dict(deepcopy(self.__joint_priors))
 
-    def load_jointprior_config(self, dico_config):
+    def load_jointprior_config(self, dico_jointprior_config):
         """load the configuration for joint priors specified by the dictionary into joint_prior_container
 
         :param dict dico_config: Dictionnary containing the joint priors information.
         """
-        dico_config_jointprior = dico_config[joint_prior_name]
         self.joint_prior_container.clear()
         logger.debug("joint prior container cleared.")
-        for joint_prior_ref, dico_jointprior in dico_config_jointprior.items():
+        for joint_prior_ref, dico_jointprior in dico_jointprior_config.items():
             # Check that the joint prior category is available
             if manager.is_available_priortype(dico_jointprior["category"]):
                 priorfunction_subclass = manager.get_priorfunc_subclass(dico_jointprior["category"])

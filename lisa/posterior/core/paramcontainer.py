@@ -72,11 +72,11 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         """Return the list of all parameters."""
         return list(self.parameters.keys())
 
-    def get_list_params(self, main=False, free=False, no_duplicate=True):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, only_duplicates=False):
         """Return the list of all parameters.
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         main            : bool
             If true (default false) returns only the main parameters. If False all parameters are returned.
         free            : bool
@@ -85,22 +85,32 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             so it's ignored if main is not True.
         no_duplicate    : bool
             If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Returns
         -------
         result : list of Parameter
             list of Parameter instances
         """
+        if no_duplicate and only_duplicates:
+            raise ValueError("no_duplicate and only_duplicates cannot be True at the same time")
         result = []
         for param in Core_ParamContainer.__get_list_all_params(self):
             add_param = False
-            if main:
-                if free and param.main and param.free:
-                    add_param = True
-                elif not(free) and param.main:
+            if only_duplicates:
+                if param.duplicate is not None:
                     add_param = True
             else:
-                add_param = True
+                if main:
+                    if free and param.main and param.free:
+                        add_param = True
+                    elif not(free) and param.main:
+                        add_param = True
+                else:
+                    add_param = True
             if add_param:
                 if no_duplicate:
                     if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]:
@@ -109,19 +119,33 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
                     result.append(param)
         return result
 
-    def get_list_paramnames(self, main=False, free=False, no_duplicate=True, **kwargs):
+    def get_list_paramnames(self, main=False, free=False, no_duplicate=True, only_duplicates=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameter names
-        :param bool free: If true (default false) returns only the free parameter names
+        Arguments
+        ---------
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Keyword arguments are passed directly to the Named.get_name method (see docstring of
         for exhaustive information).
 
-        :return list_of_param result: list of Parameter instances
+        Returns
+        -------
+        result  : list of Parameter instances
         """
         result = []
-        for param in Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate):
+        for param in Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates):
             result.append(param.get_name(**kwargs))
         return result
 
@@ -214,29 +238,27 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
             return has
 
     @property
-    def parameters_config_dict(self):
+    def priors_dict(self):
         """
         """
         res = {}
-        for param in self.get_list_params(main=True, free=False, no_duplicate=False):
-            res[param.get_name()] = param.parameter_config_dict()
+        for param in self.get_list_params(main=True, free=True, no_duplicate=True):
+            if not(param.is_a_duplicate):
+                res[param.get_name()] = param.priors_dict
         return res
 
-    def load_parameters_config(self, dico_config, model_instance, available_joint_priors={}, load_setup=False):
+    def load_priors_config(self, dico_priors_config, available_joint_priors={}, load_setup=False):
         """load the configuration specified by the dictionnary
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
             read from the parameter file.
         """
-        logger.debug("List of Param names: {}".format(self.paramfile_info["Param names"]))
-        for param_name in self.paramfile_info[key_params_fileinfo]:
-            param = getattr(self, param_name)
-            if param.get_name(recursive=False, include_prefix=False, code_version=False) in dico_config:
-                param.main = True
-                param.load_parameter_config(dico_config=dico_config[param.get_name(recursive=False, include_prefix=False, code_version=False)],
-                                            model_instance=model_instance,
-                                            available_joint_priors=available_joint_priors,
-                                            load_setup=load_setup)
+        for param in self.get_list_params(main=True, free=True, no_duplicate=False):
+            if param.is_a_duplicate:
+                continue
+            if param.get_name() in dico_priors_config:
+                param.load_prior_config(dico_prior_config=dico_priors_config[param.get_name()],
+                                        available_joint_priors=available_joint_priors,
+                                        load_setup=load_setup)
             else:
-                logger.warning(f"Parameter {param.full_name} not found in parameter file.")
-                param.main = False
+                raise ValueError(f"Parameter {param.full_name} not found in priors dictionary of the configuration file.")
