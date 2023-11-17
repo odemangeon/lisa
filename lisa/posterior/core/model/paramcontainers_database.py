@@ -119,15 +119,25 @@ class ParamContainerDatabase(object):
         """Return the list of the paramcontainer categories in this ParamContainerDatabase."""
         return list(self.paramcontainers.keys())
 
-    def get_list_params(self, model_instance, main=False, free=False, no_duplicate=True, **kwargs):
+    def get_list_params(self, model_instance, main=False, free=False, no_duplicate=True, only_duplicates=False, **kwargs):
         """Return the list of all parameters.
 
         TODO: This doesn't seems right. Check why would you need model_instance here and if this function is actually used.
 
-        :param Core_Model model_instance: Model instance which is used for the default value of
-            some SpecificParamContainerCategory .
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
+        Arguments
+        ---------
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Keyword arguments are arguments specific to a certain type of parameter containers (like the
          instruments). See get_list_params of these parameter container for more information.
@@ -139,8 +149,7 @@ class ParamContainerDatabase(object):
             if isinstance(self.paramcontainers[paramcont_cat], SpecificParamContainerCategoryContainer):
                 selectedkwargs = (self.paramcontainers[paramcont_cat].
                                   get_subkwargs_4_get_list_params(model_instance, **kwargs))
-                result_param_cont = self.paramcontainers[paramcont_cat].get_list_params(main=main, free=free,
-                                                                                        no_duplicate=no_duplicate,
+                result_param_cont = self.paramcontainers[paramcont_cat].get_list_params(main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates,
                                                                                         **selectedkwargs)
                 if no_duplicate:
                     result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
@@ -151,7 +160,7 @@ class ParamContainerDatabase(object):
                     result.extend(result_param_cont)
             else:
                 for param_cont in self.paramcontainers[paramcont_cat].values():
-                    result_param_cont = param_cont.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+                    result_param_cont = param_cont.get_list_params(main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates)
                     if no_duplicate:
                         result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True) for param_in_res in result]
                         for param in result_param_cont:
@@ -161,13 +170,23 @@ class ParamContainerDatabase(object):
                         result.extend(result_param_cont)
         return result
 
-    def get_list_paramnames(self, model_instance=None, main=False, free=False, no_duplicate=True, **kwargs):
+    def get_list_paramnames(self, model_instance=None, main=False, free=False, no_duplicate=True, only_duplicates=False, **kwargs):
         """Return the list of all parameters.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
-        :param Core_Model model_instance: Model instance which is used for the default value of
-            some SpecificParamContainerCategory (optional).
+        Arguments
+        ---------
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Keyword arguments are passed to the Named.get_name methods (see docstring for details).
 
@@ -175,7 +194,7 @@ class ParamContainerDatabase(object):
             by args and kwargs.
         """
         result = []
-        for param in self.get_list_params(model_instance=model_instance, main=main, free=free, no_duplicate=no_duplicate):
+        for param in self.get_list_params(model_instance=model_instance, main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates):
             result.append(param.get_name(**kwargs))
         return result
 
@@ -248,17 +267,23 @@ class SpecificParamContainerCategoryContainer(MutableMapping):
     def l_param_container(self):
         return list(self.values())
 
-    def get_list_params(self, main=False, free=False, no_duplicate=True, l_param_container_fullname=None):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, only_duplicates=False, l_param_container_fullname=None):
         """Return the list of all parameters.
 
         Arguments
         ---------
-        main : Boolean
-            If true (default false) returns only the main parameters
-        free : Boolean
-            If true (default false) returns only the free parameters
-        l_param_container_fullname : list of strings
-            list of the names of param containers for which you want the params.
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Returns
         -------
@@ -269,9 +294,9 @@ class SpecificParamContainerCategoryContainer(MutableMapping):
             l_param_container_fullname = self.l_param_container_fullname
         for param_container_fullname in l_param_container_fullname:
             param_container = self[param_container_fullname]
-            result_param_container = param_container.get_list_params(main=main, free=free, no_duplicate=no_duplicate)
+            result_param_container = param_container.get_list_params(main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates)
             if no_duplicate:
-                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result_param_container]
+                result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_param_container:
                     if param.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) not in result_param_name:
                         result.append(param)

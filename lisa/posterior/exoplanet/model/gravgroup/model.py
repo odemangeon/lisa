@@ -237,7 +237,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         else:
             list_of_possible_name = [name]
         for possible_name in list_of_possible_name:
-            star = Star(name=possible_name, gravgroup=self, kwargs_getname_4_storename=kwargs_getname_4_storename,
+            star = Star(name=possible_name, kwargs_getname_4_storename=kwargs_getname_4_storename,
                         kwargs_getname_4_codename=kwargs_getname_4_codename)
             if self.isavailable_paramcontainer(star.store_name, category=star.category):
                 continue
@@ -278,7 +278,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         else:
             list_of_possible_name = [name]
         for possible_name in list_of_possible_name:
-            planet = Planet(name=possible_name, gravgroup=self, kwargs_getname_4_storename=kwargs_getname_4_storename,
+            planet = Planet(name=possible_name, kwargs_getname_4_storename=kwargs_getname_4_storename,
                             kwargs_getname_4_codename=kwargs_getname_4_codename)
             if self.isavailable_paramcontainer(planet.store_name, category=planet.category):
                 continue

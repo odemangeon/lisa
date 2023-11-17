@@ -32,7 +32,7 @@ from ..dataset_and_instrument.instrument import instrument_model_category as ins
 # from ..dataset_and_instrument.instrument import update_instrument_paramfile_info
 from ..likelihood.core_likelihood import LikelihoodCreator
 from ..likelihood.GP1D import GP1DContainerInterface
-from ..prior.model_prior import Model_Prior, joint_prior_name
+from ..prior.model_prior import Model_Prior
 from ..prior.core_prior import Manager_Prior
 from ....tools.metaclasses import MandatoryReadOnlyAttr
 from ....tools.human_machine_interface.QCM import QCM_utilisateur
@@ -189,17 +189,35 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         if function_type == 'add_default_config':
             if config2load == 'noisemoddef':
                 return self.__add_default_config_var_noisemoddef
-            if config2load == 'parameters':
+            elif config2load == 'duplicates':
+                return self.__add_default_config_var_duplicates
+            elif config2load == 'frozens':
+                return self.__add_default_config_var_frozens
+            elif config2load == 'frozen_values':
+                return self.__add_default_config_var_frozenvals
+            elif config2load == 'priors':
                 return self.__add_default_config_var_priors
         elif function_type == 'check_config_exists':
             if config2load == 'noisemoddef':
                 return self.__config_var_exist_noisemoddef
-            if config2load == 'parameters':
+            elif config2load == 'duplicates':
+                return self.__config_var_exist_duplicates
+            elif config2load == 'frozens':
+                return self.__config_var_exist_frozens
+            elif config2load == 'frozen_values':
+                return self.__config_var_exist_frozenvals
+            elif config2load == 'priors':
                 return self.__config_var_exist_priors
         elif function_type == 'load_config_content':
             if config2load == 'noisemoddef':
                 return self.__load_config_var_content_noisemoddef
-            if config2load == 'parameters':
+            elif config2load == 'duplicates':
+                return self.__load_config_var_content_duplicates
+            elif config2load == 'frozens':
+                return self.__load_config_var_content_frozens
+            elif config2load == 'frozen_values':
+                return self.__load_config_var_content_frozenvals
+            elif config2load == 'priors':
                 return self.__load_config_var_content_priors
         raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
 
@@ -251,41 +269,198 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                     inst_mod_obj = self.instruments[inst_fullcat][inst_name][instmod_shortname]
                     inst_mod_obj.noise_model_category = noisemoddef[inst_fullcat][inst_name][instmod_shortname]
 
-    # Methods related to the configuration of the priors
-    ####################################################
+    # Methods related to the configuration of the parameters
+    ########################################################
 
     def _configure_parameters(self):
         """Add the priors configuration to the configuration file."""
-        logger.info("Load priors definition")
-        self._load_config(config2load='parameters')
+        logger.info("Load duplicate parameters definition")
+        self._load_config(config2load='duplicates')
+        logger.info("Load frozen parameters definition")
+        self._load_config(config2load='frozens')
+        logger.info("Load frozen parameters values definition")
+        self._load_config(config2load='frozen_values')
+        logger.info("Load parameters priors definition")
+        self._load_config(config2load='priors')
+
+    # Methods related to the configuration of the duplicate parameters
+    ##################################################################
+
+    def __add_default_config_var_duplicates(self, file):
+        file.write("\n###########################"
+                   "\n## Parameters configuration"
+                   "\n###########################\n"
+                   "\n# The list of main parameter full names in the model is:"
+                   f"\n# {self.get_list_paramnames(main=True, recursive=True, no_duplicate=False, include_prefix=True, code_version=False, recursive_naming=True)}\n"
+                   "\n# Duplicate parameters"
+                   "\n######################"
+                   "\n# Indicates in the duplicates dictionary which parameters you want to be seen being duplicates of another parameters"
+                   "\n# Format: keys are the full name of main parameters that you want to be duplicated."
+                   "\n# Values are the list of main parameters full names that you want to be duplicates of the parameter named by the corresponding key.\n"
+                   )
+        duplicates = {}
+        for param in self.get_list_params(main=True, free=False, no_duplicate=False, only_duplicates=True, recursive=True):
+            if param.duplicate not in duplicates:
+                duplicates[param.duplicate] = []
+            duplicates[param.duplicate].append(param.full_name)
+        tabs = spacestring_like('duplicates' + " = ")
+        file.write("{var} = {content}\n".format(var='duplicates',
+                                                content=pformat(duplicates, compact=True).replace('\n', f'\n{tabs}')
+                                                )
+                   )
+        
+    def __config_var_exist_duplicates(self, dico_config_file):
+        return 'duplicates' in dico_config_file
+
+    def __load_config_var_content_duplicates(self, dico_config_file, **kwargs):
+        duplicates = dico_config_file['duplicates']
+        l_all_main_parameters_full_name = self.get_list_paramnames(main=True, recursive=True, no_duplicate=False, include_prefix=True, code_version=False, recursive_naming=True)
+        for duplicated_param_full_name in duplicates:
+            if duplicated_param_full_name not in l_all_main_parameters_full_name:
+                raise ValueError(f"In the duplicates dictionary of the configuration file, {duplicated_param_full_name} is not a known main parameter full name.")
+            duplicated_param = self.get_parameter(name=duplicated_param_full_name, kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': True},
+                                                  kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
+            if not(isinstance(duplicates[duplicated_param_full_name], list)):
+                raise ValueError(f"In the configuration file duplicates[{duplicated_param_full_name}] should be a list (got {duplicates[duplicated_param_full_name]})")
+            for duplicate_param_full_name in duplicates[duplicated_param_full_name]:
+                if duplicate_param_full_name not in l_all_main_parameters_full_name:
+                    raise ValueError(f"In the duplicates[{duplicated_param_full_name}] list of the configuration file, {duplicate_param_full_name} is not a known main parameter full name.")
+                duplicate_param = self.get_parameter(name=duplicate_param_full_name, kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': False},
+                                                     kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
+                duplicate_param.duplicate = duplicated_param
+
+    # Methods related to the configuration of the frozen parameters
+    ###############################################################
+
+    def __add_default_config_var_frozens(self, file):
+        file.write("\n# Frozen parameters"
+                   "\n###################"
+                   "\n# Indicates the list the main parameters full names that you want to freeze."
+                   "\n# A frozen parameter will have its value fixed to a given value that you will define in the next step.\n"
+                   )
+        frozens = []
+        for param in self.get_list_params(main=True, free=False, no_duplicate=True, only_duplicates=False, recursive=True):
+            if not(param.free):
+                frozens.append(param.full_name)
+        tabs = spacestring_like('frozens' + " = ")
+        file.write("{var} = {content}\n".format(var='frozens',
+                                                content=pformat(frozens, compact=True).replace('\n', f'\n{tabs}')
+                                                )
+                   )
+        
+    def __config_var_exist_frozens(self, dico_config_file):
+        return 'frozens' in dico_config_file
+
+    def __load_config_var_content_frozens(self, dico_config_file, **kwargs):
+        frozens = dico_config_file['frozens']
+        # Get the list of parameter full names curretly frozen.
+        l_param_fullname_to_defreeze = []
+        for param in self.get_list_params(main=True, free=False, no_duplicate=True, only_duplicates=False, recursive=True):
+            if not(param.free):
+                l_param_fullname_to_defreeze.append(param.full_name)
+        # Freeze (if necessary) the parameter specified
+        l_all_main_parameters_full_name = self.get_list_paramnames(main=True, recursive=True, no_duplicate=False, include_prefix=True, code_version=False, recursive_naming=True)
+        for param_full_name in frozens:
+            if param_full_name not in l_all_main_parameters_full_name:
+                raise ValueError(f"In the frozens list of the configuration file, {frozen_param_full_name} is not a known main parameter full name.")
+            if param_full_name in l_param_fullname_to_defreeze:
+                l_param_fullname_to_defreeze.remove(param_full_name)
+            else:
+                param = self.get_parameter(name=param_full_name, kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': True},
+                                           kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
+                param.free = False
+        # Defreeze the parameter that where frozen but should not be.
+        for param_full_name in l_param_fullname_to_defreeze:
+            param = self.get_parameter(name=param_full_name, kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': True},
+                                                  kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
+            param.free = True
+            param.value = None
+
+    def __add_default_config_var_frozenvals(self, file):
+        file.write("\n# Indicates the values for the frozens main parameters"
+                   "\n# You should not change the unit value. Every changes that you might make to unit will be ignored."
+                   "\n")
+        frozen_values = {}
+        for param in self.get_list_params(main=True, free=False, no_duplicate=True, only_duplicates=False, recursive=True):
+            if not(param.free):
+                frozen_values[param.full_name] = {'value': param.value, 'unit': param.unit}
+        tabs = spacestring_like('frozen_values' + " = ")
+        file.write("{var} = {content}\n".format(var='frozen_values',
+                                                content=pformat(frozen_values, compact=True).replace('\n', f'\n{tabs}')
+                                                )
+                   )
+        
+    def __config_var_exist_frozenvals(self, dico_config_file):
+        return 'frozen_values' in dico_config_file
+
+    def __load_config_var_content_frozenvals(self, dico_config_file, **kwargs):
+        frozens_values = dico_config_file['frozen_values']
+        # Get the list of parameter full names currently frozen.
+        l_frozen_param_fullname = []
+        for param in self.get_list_params(main=True, free=False, no_duplicate=True, only_duplicates=False, recursive=True):
+            if not(param.free):
+                l_frozen_param_fullname.append(param.full_name)
+        # Freeze (if necessary) the parameter specified
+        for param_full_name, dico_param_frozen_values in frozens_values.items():
+            if param_full_name not in l_frozen_param_fullname:
+                raise ValueError(f"In the frozen_values of the configuration file, {param_full_name} is provided but is not a frozen main parameter full name.")
+            else:
+                param = self.get_parameter(name=param_full_name, kwargs_get_list_params={'main': True, 'free': False, 'recursive': True, 'no_duplicate': True},
+                                           kwargs_get_name={'recursive': True, 'include_prefix': True, 'force_no_duplicate': False})
+                param.value = dico_param_frozen_values['value']
+
+    # Methods related to the configuration of the parameters priors
+    ###############################################################
 
     def __add_default_config_var_priors(self, file):
-        file.write("\n######################################"
-                   "\n## Parameters and priors configuration"
-                   "\n######################################\n"
-                   "# Define which parameters are free, which parameteres are duplicates"
-                   "# and their priors.\n"
-                   )
-        dico_param_config = {}
+        file.write("\n# Priors"
+                   "\n########"
+                   "\n# The units are provided as information and you should not change it. Any change will be ignored."
+                   "\n")
+        priors = {}
         for parcont_type in self.paramcont_categories:
-            dico_param_config[parcont_type] = {}
+            priors[parcont_type] = {}
             for parcont in self.paramcontainers[parcont_type].values():
-                dico_param_config[parcont_type][parcont.get_name()] = parcont.parameters_config_dict
-        tab_priors = spacestring_like('parameters' + " = ")
-        file.write("{var} = {content}\n".format(var='parameters',
-                                                content=pformat(dico_param_config, compact=True).replace('\n', f'\n{tab_priors}')
+                if parcont_type != instmod_cat:
+                    priors[parcont_type][parcont.full_name] = parcont.priors_dict
+                else:
+                    priors[parcont_type] = self.instruments.priors_dict
+        priors[f"sys_{self.get_name()}"] = self.priors_dict
+        priors[self.joint_prior_name] = self.jointprior_config_dict
+        tab_priors = spacestring_like('priors' + " = ")
+        file.write("{var} = {content}\n".format(var='priors',
+                                                content=pformat(priors, compact=True).replace('\n', f'\n{tab_priors}')
                                                 )
                    )
         
     def __config_var_exist_priors(self, dico_config_file):
-        return 'parameters' in dico_config_file
+        return 'priors' in dico_config_file
 
     def __load_config_var_content_priors(self, dico_config_file, **kwargs):
-        priorsdef = dico_config_file['priors']
+        priors = dico_config_file['priors']
         # Check that the content is valid
-        raise NotImplementedError()
+        # Check that there is all the required keys at the top level
+        set_keys_parameters = set(self.paramcont_categories + [f"sys_{self.get_name()}", self.joint_prior_name])
+        if (set_keys_parameters != set(priors.keys())):
+            raise ValueError(f"The priors dictionary of the configuration file doesn't have the correct keys: Expect {set_keys_parameters}, got {set(priors.keys())}")
+        # Check that each parametercontainer_type in self.paramcont_categories has the correct parameter containers names
+        for parcont_type in self.paramcont_categories:
+            if (set(self.paramcontainers[parcont_type].keys()) != set(priors[parcont_type].keys())):
+                raise ValueError(f"The parameters[{parcont_type}] dictionary of the configuration file doesn't have the correct keys: Expect {set(self.paramcontainers[parcont_type].keys())}, got {set(parameters[parcont_type].keys())}")
         # Load it
-        
+        # load the joint prior configuration
+        Model_Prior.load_jointprior_config(self, dico_jointprior_config=priors[self.joint_prior_name])
+        # Load the new configuration from the parameter file for each Paramcontainer and parameter
+        for parcont_type in self.paramcont_categories:
+            for parcont_name in self.paramcontainers[parcont_type]:
+                if parcont_type != instmod_cat:
+                    self.paramcontainers[parcont_type][parcont_name].load_priors_config(dico_priors_config=priors[parcont_type][parcont_name],
+                                                                                        available_joint_priors=self.joint_prior_container)
+                else:
+                    self.instruments.load_priors_config(dico_priors_config=priors[parcont_type], available_joint_priors=self.joint_prior_container)
+        # Load the new configuration for the parameters stored in the model itself
+        self.load_priors_config(dico_priors_config=priors[f"sys_{self.get_name()}"], available_joint_priors=self.joint_prior_container)
+
 
     ##########################################
     ## Methods to create the instrument models
@@ -438,18 +613,23 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Interacting with parameters
     #############################
 
-    def get_list_params(self, main=False, free=False, no_duplicate=True, recursive=False, **kwargs):
+    def get_list_params(self, main=False, free=False, no_duplicate=True, only_duplicates=False, recursive=False, **kwargs):
         """Return the list of all parameters.
 
         Arguments
         ---------
-        main    : bool
-            If True returns only the main parameters. If False returns both
-        free    : bool
-            If True returns only the free parameters. If False returns both
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
         no_duplicate    : bool
-            If False returns all parameters (even duplicates). If True, the duplicates of a parameter
-            also in the list are not returned
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
         recursive   : bool
             If True (default false) also returns the parameters in the param containers of the
             param container database
@@ -463,10 +643,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """
         result = []
         # Get parameters that in the model parameters and not in any specific param container
-        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate))
+        result.extend(Core_ParamContainer.get_list_params(self, main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates))
         # Get parameters that in the param containers
         if recursive:
-            result_in_paramcont_db = ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, no_duplicate=no_duplicate, **kwargs)
+            result_in_paramcont_db = ParamContainerDatabase.get_list_params(self, model_instance=self, main=main, free=free, no_duplicate=no_duplicate, only_duplicates=only_duplicates, **kwargs)
             if no_duplicate:
                 result_param_name = [param_in_res.get_name(include_prefix=True, recursive=True, force_no_duplicate=False) for param_in_res in result]
                 for param in result_in_paramcont_db:
@@ -476,13 +656,23 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 result.extend(result_in_paramcont_db)
         return result
 
-    def get_list_paramnames(self, main=False, free=False, recursive=False, no_duplicate=True, **kwargs):
+    def get_list_paramnames(self, main=False, free=False, recursive=False, no_duplicate=True, only_duplicates=False, **kwargs):
         """Return the list of all parameters names in the model.
 
-        :param bool main: If true (default false) returns only the main parameters
-        :param bool free: If true (default false) returns only the free parameters
-        :param bool recursive: If true (default false) also returns the parameters in the param
-            containers of the param container database
+        Arguments
+        ---------
+        main            : bool
+            If true (default false) returns only the main parameters. If False all parameters are returned.
+        free            : bool
+            If true (default false) returns only the free parameters. If False, wether or the parameter
+            is not free is not used to return it or not. the free argument only makes sense for main parameters,
+            so it's ignored if main is not True.
+        no_duplicate    : bool
+            If True, the output list will not include the duplicate parameters, only the orignals
+            no_duplicate and only_duplicates cannot be True at the same time
+        only_duplicates : bool
+            If True, the output list will only include duplicate parameters (not the original of these duplicates)
+            no_duplicate and only_duplicates cannot be True at the same time
 
         Keyword arguments are passed to the Named.get_name (see docstring for exhaustive information)
         As recursive is a parameter of both get_list_paramnames and Named.get_name, for the recursive
@@ -495,7 +685,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # get_name.
         if "recursive_naming" in kwargs:
             kwargs["recursive"] = kwargs.pop("recursive_naming")
-        for param in self.get_list_params(main=main, free=free, recursive=recursive, no_duplicate=no_duplicate):
+        for param in self.get_list_params(main=main, free=free, recursive=recursive, no_duplicate=no_duplicate, only_duplicates=only_duplicates):
             result.append(param.get_name(**kwargs))
         return result
 
@@ -599,58 +789,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Dealing with the priors param file
     #####################################
 
-    def get_paramfile_section(self, text_tab="", entete_symb=" = ", quote_name=False):
-        """Return the text to include in the parameter_file for this Model.
-
-        Arguments
-        ---------
-        text_tab    : str
-            text giving the tabulation that needs to be added to this the text to obtain the good alignment
-            in the input file.
-        entete_symb : str
-            Symbol to use after the paramcontainers name
-        quote_name  : bool
-            Wether to put quote around the paramcontainer name or not.
-
-        Returns
-        -------
-        text : str
-            Text for the parameter file.
-        """
-        text = ""
-        # For each paramcontainer in the param container database. Produce the param file section.
-        for parcont_type in self.paramcont_categories:
-            text += "\n{}# {}\n".format(text_tab, parcont_type)
-            # Instruments Param containers are a special case
-            if parcont_type != instmod_cat:
-                for parcont in self.paramcontainers[parcont_type].values():
-                    # text += parcont.get_paramfile_section(text_tab=text_tab,
-                    #                                       entete_symb=entete_symb,
-                    #                                       quote_name=quote_name)
-                    if quote_name:
-                        entete = f"'{parcont.code_name}'{entete_symb}"
-                    else:
-                        entete = f"{parcont.code_name}{entete_symb}"
-                    text += entete
-                    space_entete_param = spacestring_like(entete)
-                    text += pformat(parcont.get_paramfile_dict(), compact=True).replace("\n", f"\n{text_tab + space_entete_param}")
-                    text += "\n\n"
-            else:
-                text += self.instruments.get_paramfile_section(model_instance=self, text_tab=text_tab,
-                                                               entete_symb=entete_symb, quote_name=quote_name)
-        # Produce the param file section for the parameter of the model which are not in
-        # any specific paramcontainer
-        text += "# {}\n\n".format(self.category)
-        entete = f"sys_{self.code_name} = "
-        text += entete
-        space_entete_param = spacestring_like(entete)
-        text += pformat(super(Core_Model, self).get_paramfile_dict(), compact=True).replace("\n", f"\n{text_tab + space_entete_param}")
-        # Produce the text to introduce the joint paramaters distribution section
-        text += "\n" + self.get_paramfile_section_jointprior()
-
-        self.update_paramfile_info()
-        return text
-
     def load_config(self, dico_config):
         """load the configuration specified by the dictionnary from the parameter_file
 
@@ -681,38 +819,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             else:  # For the model parameters (those who do no belong in any param container)
                 super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
                                                     available_joint_priors=self.joint_prior_container)
-
-    def create_parameter_file(self, param_file, answer_overwrite=None, answer_create=None):
-        """Create the parameter file which will specify the status of all main parameters in the model.
-
-        Arguments
-        ---------
-        paramfile_path   : string
-            Path to the param_file.
-        answer_overwrite : string
-            If the param_file already exists, do you want to overwrite it ? "y" or "n". If this not
-            provide the program will ask you interactively.
-        answer_create    : string
-            If the param_file doesn't exists aleardy, where do you want to create it ? "absolute",
-            "run_folder" or "error". If this not provide the program will ask you interactively.
-        """
-        param_file_path, reply = self._choose_parameter_file_path(default_paramfile_name="param_file.py",
-                                                                  paramfile_name=param_file,
-                                                                  answer_overwrite=answer_overwrite,
-                                                                  answer_create=answer_create)
-        # If the file needs to be created
-        if reply == "y":
-            with open(param_file_path, 'w') as f:
-                f.write("# Parametrisation file of {}\n".format(self.get_name()))
-                f.write("import numpy as np\n\n")
-                f.write("# Parameters\n")
-                f.write(self.get_paramfile_section())
-            logger.info("Parameter file created at path: {}".format(param_file_path))
-        # If the file doesn't need to be created
-        else:
-            logger.info("Parameter file already existing and not overwritten: {}".format(param_file_path))
-            self.update_paramfile_info()
-        self.param_file = param_file
 
     ##############################
     ## Dealing with datasimulators
@@ -789,29 +895,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         for instmod_fullname_ii in l_instmod_fullname:
             res.extend(self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_fullname_ii))  # Defined in Instmodel4DatasetAttr
         return res
-
-    # TODO: Doesn't seems to be used. what seems to be used is get_noisemod4instmodfullname from datasetfile_db
-    def get_noisemodandinstmod4dataset(self):
-        """Return the dictionary giving the noise model subclass for each dataset.
-
-        :return dict res: Dictionary, key = dataset name, value = dict:
-            key = "noise model", value = noise model subclass
-            key = "instrument model", value = instrument model
-        """
-        res = {}
-        for dataset_name in self.instmodel4dataset:
-            inst_mod = self.get_instmod(dataset_name)
-            res[dataset_name]["instrument model"] = inst_mod
-            (res[dataset_name]
-             ["noise model"]) = manager_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
-        return res
-
-    def load_noisemodcat_paramfile(self):
-        """Load the param files specific to each noise model category(if needed).
-        """
-        for noisemod_cat in self.noisemodel_categories:
-            if self.handlers4noisecatparamfile[noisemod_cat][load_key] is not None:
-                self.handlers4noisecatparamfile[noisemod_cat][load_key]()
 
     ################
     ## Multi-purpose
