@@ -37,7 +37,6 @@ from .model import par_vec_name
 from .model.manager_model import Manager_Model
 from .model.datasimulator_timeseries_toolbox import time_vec
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
-from .datasetsfile_db import DatasetsFileDbAttr
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
 from ..exoplanet.model.gravgroup.model import GravGroup
 from ...tools.name import Named
@@ -56,7 +55,7 @@ manager_inst_dst.load_setup()
 alldtst_key = DatabaseFunc._alldtst_key
 
 
-class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigFileAttr):
+class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     """Posterior is the main class of lisa.
 
     It allows to define the datasets that you want to analyse, the model that you want to use to analyse
@@ -197,6 +196,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
 
         logger.info(f"Load instrument models definition.")
         instmodel4dataset = self._load_config(config2load='instmoddef')
+        self.dataset_db.lock()
 
         logger.info("Load model category definition.")
         self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset)
@@ -378,95 +378,6 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
         """Return the model."""
         return self.__model
 
-    def _load_noisemodelsfile(self, path_noise_models_file=None):
-        """Load the noise models file
-
-        The noise models file define which noise model will be used by which instrument model
-
-        Argument
-        --------
-        path_noise_models_file: None or str
-            If None the function will offer the possibility to create a default instrument models file
-            It str, should be the path to an existing noise model file.
-
-        Return
-        ------
-        noisemod4instmodfullname: dict of NoiseModel instance
-
-        """
-        # Look for the noise models file to check if it exists
-        file_path = self.look4runfile(file_path=path_noise_models_file)
-        # If doesn't exists offer the possibility to create a default one
-        if file_path is None:
-            logger.info("{} doesn't exist.".format(path_noise_models_file))
-            # Create the text for the file
-            default_file_content = "# Define which noise model you want to use for each instrument model\n# By default the gaussian noise model is used for all the instrument models"
-            default_file_content += "# This is imposed by the fact that below all instrument models have 'gaussian' as entry.\n"
-            default_file_content += "# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].\n"
-            default_file_content += "# If you want to change the noise model used for a given instrument model, just change the value of its key.\n"
-            dico = self.instmodel4dataset.name_instmodels_used(sortby_instname=True, sortby_instfullcat=True, return_fullname=False)
-            for inst_fullcat in dico:
-                for inst_name in dico[inst_fullcat]:
-                    l_instmod_shortname = dico[inst_fullcat][inst_name]
-                    dico[inst_fullcat][inst_name] = {instmod_shortname: "gaussian" for instmod_shortname in l_instmod_shortname}
-                header_instfullcat = f"{inst_fullcat} = "
-                tab_instfullcat = spacestring_like(header_instfullcat)
-                default_file_content += "{inst_fullcat} = {dico}\n".format(inst_fullcat=inst_fullcat, 
-                                                                           dico=pformat(dict(deepcopy(dico[inst_fullcat])), compact=True).replace('\n', f'\n{tab_instfullcat}')
-                                                                           )
-            file_path = ask4CreationDefaultFile(path_file=path_noise_models_file, default_file_content=default_file_content,
-                                                default_folder=self.get_run_folder())
-            input("Modifiy the noise model file")
-        # Read the instrument models file
-        cwd = getcwd()
-        chdir(self.get_run_folder())
-        with open(file_path) as ff:
-            exec(ff.read())
-        chdir(cwd)
-        dico = locals().copy()
-        for var_name in ["self", "cwd", "ff", "file_path", "path_noise_models_file"]:
-            dico.pop(var_name)
-        logger.debug(f"Noise model file ({file_path}) parameter file read.\nContent of the parameter file: {dico.keys()}")
-        # Create noisemodcat4instmodfullname. Dict with the keys being instrument model full names and values being noise model subclasses 
-        l_inst_model_fullname = []
-        l_noisemodel_subclass = [] 
-        for inst_fullcat in self.datasetsfile_db.inst_fullcategories:
-            for inst_name in dico[inst_fullcat]:
-                for instmod_shortname in dico[inst_fullcat][inst_name]:
-                    l_noisemodel_subclass.append(manager_noisemodel.get_noisemodel_subclass(dico[inst_fullcat][inst_name][instmod_shortname]))
-                    l_inst_model_fullname.append(f"{inst_fullcat}_{inst_name}_{instmod_shortname}")
-        return {instmod_fullname: noisemod_subclass for instmod_fullname, noisemod_subclass in zip(l_inst_model_fullname, l_noisemodel_subclass)}
-
-    def _define_model(self, category, load_setup=False, **kwargs):
-        """Set/Initialize the model.
-
-        :param str category: String which refers to an available Core_Model Subclass that has been
-            defined in the model_setup_file.
-        :param bool load_setup: If True load the list of available Models from the model_setup_file.
-
-        Keywords arguments are passed to the Core Model subclass for its initialisation.
-        """
-        # Load the model_setup_file.py to get all the available  models
-        if load_setup:
-            manager_model.load_setup()
-        # If the name of the object studied by the model is not provided put default
-        if "name" not in kwargs:
-            kwargs.update({"name": "Target"})
-        # Get the CoreModel subclass associated to the provided category
-        logger.info("Defining new model of category {}...".format(category))
-        model_subclass = manager_model.get_model_subclass(category)
-        # Get the dictionary giving the noise model category associated to each instrument model
-        # (designated by their full name)
-        noisemod4instmodfullname = self.datasetsfile_db.get_noisemod4instmodfullname()
-        # Create the model instance
-        self.__model = model_subclass(dataset_db=self.dataset_db, run_folder=self.get_run_folder(),
-                                      instmodel4dataset=self.instmodel4dataset,
-                                      l_instmod_fullnames=list(noisemod4instmodfullname.keys()),
-                                      **kwargs)
-        self.model.set_noisemodels(noisemod4instmodfullname=noisemod4instmodfullname)
-        self.lock()
-        logger.info("Model defined with name {} !".format(self.model.get_name()))
-
     def _lock(self):
         """Lock the dataset_db and update instmodel4dataset attributes.
         """
@@ -538,9 +449,15 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, DatasetsFileDbAttr, ConfigF
         """Datasimulator database."""
         return self.__datasim_db
 
-    def get_datasimulators(self):
+    def create_datasimulators(self):
         """Get datasimulators from the model and store them into datasimulators."""
         if self.islocked_dataset_db:
+            self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
+                                             instmodel4dataset=self.model.instmodel4dataset,
+                                             database_name=self.object_name, instordered=False,
+                                             use_samelock=self.samelock,
+                                             lock_dataset=self.get_dataset_Lock_instance(),
+                                             lock_database=self.get_database_Lock_instance())
             self.datasimulators.instrument_db.update(self.model.create_datasimulators())  # self.model.create_datasimulators is defined in Datasimulator
             (self.datasimulators.dataset_db.
              update(self.model.create_datasimulators_perdataset(dataset_db=self.dataset_db)))
