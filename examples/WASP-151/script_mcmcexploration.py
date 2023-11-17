@@ -70,7 +70,7 @@ logger.info("2. Define the posterior.")
 post_instance.configure_posterior(path_config_file="config_file.py")  # Change if needed by the name you gave or want to give to your dataset file.
 
 logger.info("14. Create datasimulator functions")
-test = post_instance.get_datasimulators()
+post_instance.create_datasimulators()
 
 logger.info("15. Create likelihood functions")
 post_instance.get_lnlikelihoods()
