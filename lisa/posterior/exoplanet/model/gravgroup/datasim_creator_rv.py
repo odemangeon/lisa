@@ -24,6 +24,8 @@ from .....posterior.exoplanet.model.convert import gettp_fast, getomega_fast
 
 tab = "    "
 
+name_coeff_const_RV = "v0"
+
 
 def create_datasimulator_RV(star, planets, keplerian_rv_model, dataset_db, RVcat_model, inst_models, datasets,
                             get_times_from_datasets
@@ -364,9 +366,8 @@ def get_instvar(multi, l_inst_model, l_dataset, get_times_from_datasets, tab, ti
         Instance of the RV_InstCat_Model
         Not used right now but there to be able to produce instrumental drift in the future
     dataset_db                  : DatasetDatabase
-        Dataset database, this will be used by the function to access the all the RV dataset,
-        not only the datasets to be simulated.
-        Not used right now but there to be able to produce instrumental drift in the future
+        Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
+        not to access the RV datasets to be simulated.
     function_builder        : FunctionBuilder
         Function builder instance
     l_function_shortname    : list of str
@@ -585,7 +586,7 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
     return get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                          tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=RVcat_model,
                          dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
-                         polyonly_func_shortname="stellar_var", ext_func_fullname=ext_func_fullname, name_coeff_const=star.__name_coeff_const_RV__,
+                         polyonly_func_shortname="stellar_var", ext_func_fullname=ext_func_fullname, name_coeff_const=name_coeff_const_RV,
                          func_param_name=lambda order: star.get_polymodel_param_name(order=order, inst_cat=RVcat_model.inst_cat),
                          instrument_per_instrument_model=False, param_container=star, prefix_config=RVcat_model.inst_cat,
                          )

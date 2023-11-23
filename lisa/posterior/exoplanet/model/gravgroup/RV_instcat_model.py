@@ -180,7 +180,7 @@ class RV_InstCat_Model(Core_InstCat_Model):
     ## Dealing with the data simulator file
     #######################################
 
-    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets, dataset_db):
         """
         Arguments
         ---------
@@ -191,9 +191,12 @@ class RV_InstCat_Model(Core_InstCat_Model):
         get_times_from_datasets  : bool
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
+        dataset_db                  : DatasetDatabase
+            Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
+            not to access the RV datasets to be simulated (which are provided by datasets).
         """
         return create_datasimulator_RV(star=list(self.model_instance.stars.values())[0], planets=self.model_instance.planets,
-                                       keplerian_rv_model=self.keplerian_rv_model, dataset_db=self.model_instance.dataset_db,
+                                       keplerian_rv_model=self.keplerian_rv_model, dataset_db=dataset_db,
                                        RVcat_model=self, inst_models=inst_models, datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets
                                        )

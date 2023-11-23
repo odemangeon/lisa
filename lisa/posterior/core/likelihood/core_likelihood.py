@@ -32,13 +32,22 @@ class LikelihoodCreator(object):
     It provides methods to create likelihood functions for a model.
     """
 
-    def create_lnlikelihoods_perdataset(self, datasim_db_dtset):
+    def create_lnlikelihoods_perdataset(self, datasim_db_dtset, dataset_db):
         """Return a dictionnary giving the lnlikehood doc function for each dataset.
 
-        :param dict datasim_db_dtset: Dictionnary giving the datasimulator doc function for each
+        Arguments
+        ---------
+        datasim_db_dtset    : dict
+            Dictionnary giving the datasimulator doc function for each
             dataset. key = dataset full name, value = DatasimDocFunc for this dataset. These should
             include the dataset kwargs.
-        :return dict db: Dictionary giving the lnlikehood doc function for each dataset.
+        dataset_db          : DatasetDatabase
+            Dataset database in order to access the datasets
+
+        Returns
+        -------
+        db                  : dict
+            Dictionary giving the lnlikehood doc function for each dataset.
             key = dataset full name, value = LikelihoodDocFunc for this dataset.
         """
         # Initialise the output dictionary
@@ -55,14 +64,14 @@ class LikelihoodCreator(object):
             # ..., create the corresponding lnlikelihood doc function
             # For IND dataset you might not want to model them. In this case the datasim should be None
             if datasim is not None:
-                db[dataset_name], db_decorr[dataset_name] = self._create_lnlikelihood(datasim)
+                db[dataset_name], db_decorr[dataset_name] = self._create_lnlikelihood(datasim, dataset_db=dataset_db)
             # db[dataset_name] = self.__lnlike_withdataset_creator(lnlike_doc_func.function,
             #                                                      lnlike_doc_func.arg_list,
             #                                                      data=dataset.get_data(),
             #                                                      data_err=dataset.get_data_err())
         return db, db_decorr
 
-    def _create_lnlikelihood(self, datasim_docfunc):
+    def _create_lnlikelihood(self, datasim_docfunc, dataset_db):
         """Create the lnlikelihood function.
 
         This function "only" assemble the likelihood function from the datasimulator function and
@@ -79,6 +88,8 @@ class LikelihoodCreator(object):
             DatasimDocFunc specifying the data type (instrument category), the instrument models and
             the datasets simulated by this datasimulator of which you want to get the likelihood function
             of.
+        dataset_db      : DatasetDatabase
+            Dataset database in order to access the datasets
 
         Returns
         -------
@@ -102,7 +113,7 @@ class LikelihoodCreator(object):
 
         (l_dataset_obj, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,
          dico_noisemodel, d_l_model_decorr_name_4_inst_cat, noisemodel_names_list
-         ) = self._get_required_dataset_for_noisemodel_and_decorrmodel(datasim_docfunc=datasim_docfunc)
+         ) = self._get_required_dataset_for_noisemodel_and_decorrmodel(datasim_docfunc=datasim_docfunc, dataset_db=dataset_db)
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]
 
         # Create the datasimulator that simulate all the dataset object required
@@ -170,7 +181,7 @@ class LikelihoodCreator(object):
 
         # Fill the inddataset_kwargs dictionary with what is required
         for inddataset_name, l_datasetkwarg in d_required_datasetkwargkeys_4_inddataset.items():
-            dataset_obj = self.dataset_db[inddataset_name]
+            dataset_obj = dataset_db[inddataset_name]
             for datasetkwarg in l_datasetkwarg:
                 inddataset_kwargs[inddataset_name][datasetkwarg] = dataset_obj.get_datasetkwarg(datasetkwarg)
 
@@ -188,18 +199,18 @@ class LikelihoodCreator(object):
         # the sim_data, the params vector and the dataset_kwargs
         l_instmod_obj = [self.instruments[instmod_fullname] for instmod_fullname in datasim_docfunc.inst_model_fullnames_list]
         for noisemodel_cat, dico in dico_noisemodel.items():
-            noise_model_obj = mgr_noisemodel.get_noisemodel_subclass(noisemodel_cat)
+            noise_model = self.noise_models[noisemodel_cat]
             (dico["lnlike_func"], dico["f_format_param"], dico["f_format_simdata"], dico["f_format_datasetkwargs"],
              l_paramsfullname_likelihood
-             ) = noise_model_obj.create_lnlikelihood_and_formatinputs(model_instance=self, l_idx_simdata=dico["l_idx_simdata"],
-                                                                      l_instmod_obj=[l_instmod_obj[ii] for ii in dico["l_idx_simdata"]],
-                                                                      l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
-                                                                      l_datasetkwargs_req=dico["l_datasetkwargs_req"],
-                                                                      l_likelihood_param_fullname=l_paramsfullname_likelihood,
-                                                                      datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
-                                                                      function_builder=func_builder,
-                                                                      function_shortname=func_shortname_lnlike,
-                                                                      )
+             ) = noise_model.create_lnlikelihood_and_formatinputs(model_instance=self, l_idx_simdata=dico["l_idx_simdata"],
+                                                                  l_instmod_obj=[l_instmod_obj[ii] for ii in dico["l_idx_simdata"]],
+                                                                  l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
+                                                                  l_datasetkwargs_req=dico["l_datasetkwargs_req"],
+                                                                  l_likelihood_param_fullname=l_paramsfullname_likelihood,
+                                                                  datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
+                                                                  function_builder=func_builder,
+                                                                  function_shortname=func_shortname_lnlike,
+                                                                  )
             func_builder.add_variable_to_ldict(variable_name=f"lnlike_{noisemodel_cat}", variable_content=dico["lnlike_func"],
                                                function_shortname=func_shortname_lnlike, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name=f"format_param_{noisemodel_cat}", variable_content=dico["f_format_param"],
@@ -421,7 +432,7 @@ class LikelihoodCreator(object):
             db_lnlike.lock()
         return db_lnlike
 
-    def _get_required_dataset_for_noisemodel_and_decorrmodel(self, datasim_docfunc):
+    def _get_required_dataset_for_noisemodel_and_decorrmodel(self, datasim_docfunc, dataset_db):
         """Get the datasets (simulated and indicators) required by the likelihood computation, along
         with the dataset kwargs required.
 
@@ -430,6 +441,8 @@ class LikelihoodCreator(object):
         datasim_docfunc : DatasimDocFunc
             Datasimulator Documented function of the datasimulator from a likelihood function is being
             made
+        dataset_db      : DatasetDatabase
+            Dataset database in order to access the datasets
 
         Returns
         -------
@@ -467,7 +480,7 @@ class LikelihoodCreator(object):
         ## Deal with the noise_model/likelihood
         # Get list of dataset objects required by datasim_doc_func
         l_dataset_name = datasim_docfunc.dataset_names_list
-        l_dataset_obj = [self.dataset_db[dataset_name] for dataset_name in l_dataset_name]
+        l_dataset_obj = [dataset_db[dataset_name] for dataset_name in l_dataset_name]
 
         # Create a dictionary that regroups all the info related to the likelihood function of each noise model
         def defdic_noisemod_func():
@@ -486,7 +499,7 @@ class LikelihoodCreator(object):
         for ii in range(datasim_docfunc.noutput):
             instmod_fullname = datasim_docfunc.inst_model_fullnames_list[ii]
             instmod_obj = self.instruments[instmod_fullname]
-            noisemod_cat = instmod_obj.noise_model
+            noisemod_cat = instmod_obj.noise_model_category
             noisemodel_names_list.append(noisemod_cat)
             dataset_name = datasim_docfunc.dataset_names_list[ii]
             if noisemod_cat not in dico_noisemodel:
@@ -494,10 +507,10 @@ class LikelihoodCreator(object):
             # Fill the "l_idx_simdata" entry of dico_noisemodel
             dico_noisemodel[noisemod_cat]["l_idx_simdata"].append(l_dataset_name.index(dataset_name))
             # Fill the "l_datasetkwargs_req" entry of dico_noisemodel
-            noise_model_obj = mgr_noisemodel.get_noisemodel_subclass(noisemod_cat)
-            dico_noisemodel[noisemod_cat]["l_datasetkwargs_req"].append(noise_model_obj.l_required_datasetkwarg_keys)
+            noise_model = self.noise_models[noisemod_cat]
+            dico_noisemodel[noisemod_cat]["l_datasetkwargs_req"].append(noise_model.l_required_datasetkwarg_keys)
             # Fill d_required_datasetkwargkeys_4_dataset
-            for datasetkwarg in noise_model_obj.l_required_datasetkwarg_keys:
+            for datasetkwarg in noise_model.l_required_datasetkwarg_keys:
                 if datasetkwarg not in d_required_datasetkwargkeys_4_dataset[dataset_name]:
                     d_required_datasetkwargkeys_4_dataset[dataset_name].append(datasetkwarg)
 

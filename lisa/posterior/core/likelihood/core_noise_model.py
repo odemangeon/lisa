@@ -27,7 +27,7 @@ from ....tools.metaclasses import MandatoryReadOnlyAttr
 class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnlyAttr):
 
     # should provide the way to compute the likelihood somehow
-    __mandatoryattrs__ = ["noise_cat", "has_GP", "has_jitter", "l_model_class"]
+    __mandatoryattrs__ = ["noise_cat", "has_GP", "has_jitter", "l_model_class", "l_required_datasetkwarg_keys"]
 
 
     def __init__(self, model_instance, run_folder, config_file):
@@ -46,7 +46,6 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         # set the configuration. 
         # If None it that there is nothing to configure otherwise you should create a configuration dictionary
         self._model_config = None
-
 
     @property
     def model_instance(self):

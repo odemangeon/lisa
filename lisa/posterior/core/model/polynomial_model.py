@@ -165,18 +165,13 @@ def get_polymodel(multi, l_inst_model, l_dataset, get_times_from_datasets,
                             else:
                                 pretext = " + "
                             returns[function_shortname][ii] += f"{pretext}{drift_param}"
-                            # ..., and you need a time reference. There is one time reference
-                            # which is automatically set to the time of the first RV measurement
+                            # ..., and you need a time reference.
                             timeref_name = f"tref_{param_container.get_name()}"
                             if prefix_config is not None:
                                 timeref_name += f"_{prefix_config}"
                             # if this time_reference is not already in the ldict of the function ...
                             if timeref_name not in function_builder.get_ldict(function_shortname=function_shortname):
-                                if dico_config["tref"] is None:  # we have to compute its value and add it to the ldict
-                                    l_dataset_name = inst_cat_model.get_l_datasetname()
-                                    timeref_value = min([min(dataset_db[dataset_name].get_time()) for dataset_name in l_dataset_name])
-                                else:
-                                    timeref_value = dico_config["tref"]
+                                timeref_value = dico_config["tref"]
                                 function_builder.add_variable_to_ldict(variable_name=timeref_name, variable_content=timeref_value, function_shortname=function_shortname)
                             if order_i == 1:
                                 if multi:
@@ -200,8 +195,8 @@ def get_polymodel(multi, l_inst_model, l_dataset, get_times_from_datasets,
 
 
 def set_polymodel_parametrisation(param_container, name_coeff_const, func_param_name, full_category_4_unit,
-                                    prefix=None
-                                    ):
+                                  prefix=None
+                                  ):
     """Set the parametrisation for the polynomial modelling to the instrument model.
 
     Arguments

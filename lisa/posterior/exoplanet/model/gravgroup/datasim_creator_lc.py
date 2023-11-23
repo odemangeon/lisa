@@ -66,6 +66,9 @@ tab = "    "
 template_return = dedent(template_return)
 
 
+name_coeff_const_LC = "F0"
+
+
 def create_datasimulator_LC(star, planets, ldmodel4instmodfname, LDs, transit_model, SSE4instmodfname,
                             phasecurve_model, occultation_model,
                             dataset_db, LCcat_model,
@@ -109,14 +112,14 @@ def create_datasimulator_LC(star, planets, ldmodel4instmodfname, LDs, transit_mo
                                                            }, ...
                                },
          }
-    occultation_model            : dict
+    occultation_model           : dict
         Dictionary describing the occultation model to use. The format of this disctionary is:
         {"do": True,  # Should we do a specific model for the eclipse
          'model4instrument': {'<instrument_full_name>': '<name_given_to_a_model>', ...},  # For each instrument provide a model name, same name means same model
          'model_definitions': {'default_model': {'model': 'batman', 'modulate_pc': True}}}}
          }
     dataset_db                  : DatasetDatabase
-        Dataset database, this will be used by the function to access the dataset for the decorrelation,
+        Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
         not to access the LC datasets to be simulated.
     LCcat_model                 : LC_InstCat_Model
         Instance of the LC_InstCat_Model
@@ -495,7 +498,7 @@ def get_stellarvar(multi, l_inst_model, l_dataset, get_times_from_datasets,
     return get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                          tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=LCcat_model,
                          dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
-                         polyonly_func_shortname="stellar_var", ext_func_fullname=ext_func_fullname, name_coeff_const=star.__name_coeff_const_LC__,
+                         polyonly_func_shortname="stellar_var", ext_func_fullname=ext_func_fullname, name_coeff_const=name_coeff_const_LC,
                          func_param_name=lambda order: star.get_polymodel_param_name(order=order, inst_cat=LCcat_model.inst_cat),
                          instrument_per_instrument_model=False, param_container=star, prefix_config=LCcat_model.inst_cat,
                          )

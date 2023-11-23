@@ -243,7 +243,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
             object_category = self._find_object_category(param_basename=param_basename, **kwargs)
         if param_basename not in self._get_l_parameter_basename(object_category=object_category, **kwargs):
             raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for object category {object_category} and kwargs {kwargs}")
-        return self._get_function_get_parameter_name(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)(param_basename=param_basename, object_category=object_category, force_object_category=False, **kwargs))
+        return self._get_function_get_parameter_name(object_category=object_category)(**self._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)(param_basename=param_basename, object_category=object_category, **kwargs))
     
     def _get_param_extension(self, param_basename, object_category):
         """
@@ -267,7 +267,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     def _get_parameter_name_default(self, param_basename, object_category):
         return f"{param_basename}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
     
-    def _get_kwargs_4_get_parameter_name_default(self, param_basename, object_category, force_object_category, **kwargs):
+    def _get_kwargs_4_get_parameter_name_default(self, param_basename, object_category, **kwargs):
         return {'param_basename':  param_basename, 'object_category': object_category}
 
     # Deal with creating parameters
@@ -279,7 +279,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
             object_category = self._find_object_category(param_basename=param_basename, **kwargs)
         if param_basename not in self._get_l_parameter_basename(object_category=object_category, **kwargs):
             raise ValueError(f"parameter basename {param_basename} is not in the list of parameter base names for object category {object_category} and kwargs {kwargs}")
-        return self._get_function_create_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_create_parameter(object_category=object_category)(param_name=param_name, param_basename=param_basename, object_category=object_category, force_object_category=False, **kwargs))
+        return self._get_function_create_parameter(object_category=object_category)(**self._get_function_get_kwargs_4_create_parameter(object_category=object_category)(param_name=param_name, param_basename=param_basename, object_category=object_category, **kwargs))
 
     def _get_function_create_parameter(self, object_category):
         if object_category in self.object_categories:
@@ -302,7 +302,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
             param = param_container.get_parameter(name=param_name)  
         return param  
 
-    def _get_kwargs_4_create_parameter_default(self, param_name, param_basename, object_category, force_object_category, **kwargs):
+    def _get_kwargs_4_create_parameter_default(self, param_name, param_basename, object_category, **kwargs):
         return {'param_name': param_name, 'object_category': object_category}
 
     # Deal with getting parameter
@@ -333,7 +333,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         param_container = self.object_categories[object_category]
         return param_container.parameters[param_name]
     
-    def _get_kwargs_4_get_parameter_default(self, param_basename, object_category, force_object_category, **kwargs):
+    def _get_kwargs_4_get_parameter_default(self, param_basename, object_category, **kwargs):
         return {'param_basename': param_basename, 'object_category': object_category}
 
     ##############################

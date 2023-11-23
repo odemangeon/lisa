@@ -187,7 +187,7 @@ class Star(Core_ParamContainer):
         ## Proper motion radial velocity contribution
         self.add_parameter(Parameter(name="v0", name_prefix=self.name, main=False))
         ## drift in the radial velocity signal
-        self.add_parameter(Parameter(name="drift", name_prefix=self.name, main=False))
+        # self.add_parameter(Parameter(name="drift", name_prefix=self.name, main=False))
         ## Mean Luminosity
         self.add_parameter(Parameter(name="L", name_prefix=self.name, main=False))
         ## Mean Magnitude

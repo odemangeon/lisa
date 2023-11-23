@@ -31,6 +31,8 @@ class GP1D_Noise_Models(Core_Noise_Model):
 
     __l_model_class__ = [QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel]
 
+    __l_required_datasetkwarg_keys__ = ["data", "data_err", "time"]
+
     ################
     # Main functions
     ################

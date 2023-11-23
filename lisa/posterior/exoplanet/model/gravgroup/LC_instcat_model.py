@@ -321,7 +321,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     ## Dealing with the datasimulator
     #################################
 
-    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets, dataset_db):
         """
         Arguments
         ---------
@@ -332,20 +332,20 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         get_times_from_datasets  : bool
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
+        dataset_db                  : DatasetDatabase
+            Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
+            not to access the LC datasets to be simulated (which are provided by datasets)
         """
         return create_datasimulator_LC(star=list(self.model_instance.stars.values())[0],
                                        planets=self.model_instance.planets,
                                        ldmodel4instmodfname=self.ldmodel4instmodfname,
-                                       LDs=self.LDs,
-                                       transit_model=self.transit_model,
+                                       LDs=self.LDs, transit_model=self.transit_model,
                                        SSE4instmodfname=self.SSE4instmodfname,
                                        phasecurve_model=self.phasecurve_model,
                                        occultation_model=self.occultation_model,
-                                       inst_models=inst_models,
-                                       datasets=datasets,
+                                       inst_models=inst_models, datasets=datasets,
                                        get_times_from_datasets=get_times_from_datasets,
-                                       dataset_db=self.model_instance.dataset_db,
-                                       LCcat_model=self
+                                       dataset_db=dataset_db,LCcat_model=self
                                        )        
 
     def add_a_LD(self, star, ld_type, name, kwargs_getname_4_storename={"include_prefix": True, "code_version": True},
