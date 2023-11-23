@@ -27,6 +27,8 @@ class Gaussian_Noise_Models(Core_Noise_Model):
 
     __l_model_class__ = [GaussianModel]
 
+    __l_required_datasetkwarg_keys__ = ["data", "data_err"]
+
     ################
     # Main functions
     ################

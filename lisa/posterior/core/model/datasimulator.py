@@ -34,20 +34,21 @@ class DatasimulatorCreator(object):
     key_mand_kwargs = key_mand_kwargs
     key_opt_kwargs = key_opt_kwargs
 
-    def _create_datasimulator(self, instmod_obj, dataset, get_times_from_datasets):
+    def _create_datasimulator(self, instmod_obj, datasets, get_times_from_datasets, dataset_db):
         """Return the datasimulator for a given instrument model.
 
         Arguments
         ---------
         instmod_obj              : Instrument_Model
             Instrument_Model instance.
-        dataset                  : Dataset/None
-            If provided the output datasimulator will simulate the data of
-            the provided dataset. The function will include the dataset kwargs (like time or t_ref).
+        datasets                 : List of Dataset
+            Datasets modeled with the instrument model object provided by instmod_obj.
         get_times_from_datasets  : bool
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
-
+        dataset_db               : DatasetDatabase
+            Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
+            not to access the datasets to be simulated (which are provided by datasets)
 
         Returns
         -------
@@ -56,16 +57,25 @@ class DatasimulatorCreator(object):
         # Get the instrument category of the instrument model which will allow to get the correct
         # datasimulator creator function.
         inst_cat = instmod_obj.instrument.category
-        return self.get_datasimcreator(inst_cat)(instmod_obj, dataset, get_times_from_datasets=get_times_from_datasets)  # self.get_datasimcreator is defined in Core_Model
+        return self.get_datasimcreator(inst_cat)(instmod_obj, datasets, get_times_from_datasets=get_times_from_datasets, dataset_db=dataset_db)  # self.get_datasimcreator is defined in Core_Model
 
-    def create_datasimulators(self, affectinstmodel4dataset=False, lock_db=False):
+    def create_datasimulators(self, dataset_db, affectinstmodel4dataset=False, lock_db=False):
         """Return a database with the datasim docfuncs for each instrument model used separatly.
 
-        :param bool affectinstmodel4dataset: True if you want to copy the instmodel4dataset of the
-            model into the one of the output database.
-        :param bool lock_db: True if you want to lock the output database before returning it
-        :return DatabaseInstLvlDataset db: Database containing the datasimulator docfuncs for each
-            instrument model used. There is several datasim for each instrument model, because there
+        Arguments
+        ---------
+        dataset_db              : DatasetDatabase instance
+            Dataset database
+        affectinstmodel4dataset : bool
+            True if you want to copy the instmodel4dataset of the model into the one of the output database.
+        lock_db                 : bool
+            True if you want to lock the output database before returning it
+
+        Returns
+        -------
+        db  : DatabaseInstLvlDataset
+            Database containing the datasimulator docfuncs for each instrument model used. 
+            There is several datasim for each instrument model, because there
             might be several components (e.g. several planets) in the object studied. But there is
             always an entry which correspond to the whole object whose key is self.key_whole .
             Structure is: 1st = inst_cat, 2nd = inst_name, 3nd = inst_model, 4st = component
@@ -92,10 +102,9 @@ class DatasimulatorCreator(object):
             if (instmod_obj.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj.full_name]):
                 continue
             l_dataset_name = self.get_ldatasetname4instmodfullname(instmod_fullname=instmod_obj.full_name)  # get_ldatasetname4instmodfullname comes from lisa.posterior.core.instmodel4dataset
-            datasets = [self.dataset_db[dst_name] for dst_name in l_dataset_name]
-            db[inst_fullcat][inst_name][inst_model] = self._create_datasimulator(instmod_obj=instmod_obj,
-                                                                                 dataset=datasets,
-                                                                                 get_times_from_datasets=False)
+            datasets = [dataset_db[dst_name] for dst_name in l_dataset_name]
+            db[inst_fullcat][inst_name][inst_model] = self._create_datasimulator(instmod_obj=instmod_obj, datasets=datasets,
+                                                                                 get_times_from_datasets=False, dataset_db=dataset_db)
         # If required lock the database
         if lock_db:
             db.lock()
@@ -127,7 +136,7 @@ class DatasimulatorCreator(object):
             # For IND dataset you might not want to model them. In this case the inst_model should not have an indicator_model attribute
             if (instmod_obj.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj.full_name]):
                 continue
-            db[dataset_name] = self._create_datasimulator(instmod_obj, dataset, get_times_from_datasets=True)[self.key_whole]
+            db[dataset_name] = self._create_datasimulator(instmod_obj, dataset, get_times_from_datasets=True, dataset_db=dataset_db)[self.key_whole]
         return db
 
     def __datasim_multipledatasets_creator(self, l_datasim, l_datasim_has_multi_output, l_params_idx,
@@ -199,14 +208,17 @@ class DatasimulatorCreator(object):
             instmod_obj_ii = self.get_instmod(dataset_obj_ii.dataset_name)  # Define in Instmodel4Datase
             if (instmod_obj_ii.instrument.category == IND_inst_cat) and not(self.instcat_models[IND_inst_cat].indinst_model_is_modeled[instmod_obj_ii.full_name]):
                 l_dataset_obj_clean.remove(dataset_obj_ii)
-        return self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj_clean)[self.key_whole]
+        return self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj_clean, dataset_db=dataset_db)[self.key_whole]
 
-    def create_datasimulator_4_ldataset(self, l_dataset_obj):
+    def create_datasimulator_4_ldataset(self, l_dataset_obj, dataset_db):
         """Return one datasim docfunction that simulates all the datasets provided.
 
         Arguments
         ---------
         l_dataset_obj : List of Dataset
+        dataset_db    : DatasetDatabase
+            Dataset database, this will be used by the function to access the indicators' datasets for the decorrelation,
+            not to access the datasets to be simulated (which are provided by l_dataset_obj)
 
         Returns
         -------
@@ -253,7 +265,9 @@ class DatasimulatorCreator(object):
             # ... create the datasim function with all the datasets using this datasimcreator
             dico_datasim_output = self.datasimcreator[datsimC_name](datsimC_inputs[datsimC_name]["instmodels"],
                                                                     datsimC_inputs[datsimC_name]["datasets"],
-                                                                    get_times_from_datasets=True)
+                                                                    get_times_from_datasets=True,
+                                                                    dataset_db=dataset_db
+                                                                    )
             for key_obj in dico_datasim_output:
                 l_datsim[key_obj].append(dico_datasim_output[key_obj])
                 l_datsim_has_multi_output[key_obj].append(dico_datasim_output[key_obj].multi_output)

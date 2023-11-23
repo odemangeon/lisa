@@ -458,7 +458,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                                              use_samelock=self.samelock,
                                              lock_dataset=self.get_dataset_Lock_instance(),
                                              lock_database=self.get_database_Lock_instance())
-            self.datasimulators.instrument_db.update(self.model.create_datasimulators())  # self.model.create_datasimulators is defined in Datasimulator
+            self.datasimulators.instrument_db.update(self.model.create_datasimulators(dataset_db=self.dataset_db))  # self.model.create_datasimulators is defined in Datasimulator
             (self.datasimulators.dataset_db.
              update(self.model.create_datasimulators_perdataset(dataset_db=self.dataset_db)))
             (self.datasimulators.dataset_db
@@ -472,7 +472,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         """Return the current content lnprior database."""
         return self.__lnlike_db
 
-    def get_lnlikelihoods(self):
+    def create_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
             # Since for now I cannot produce lnlike for datasim that doesn't include the dataset
@@ -483,7 +483,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             # Create the lnlikelihood function for each dataset. This in uses all the datasets in
             # datasimulators.dataset_db, it includes the "all" dataset which includes all the datasets.
-            db_lnlike, db_decorr_like = self.model.create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.dataset_db))
+            db_lnlike, db_decorr_like = self.model.create_lnlikelihoods_perdataset(datasim_db_dtset=(self.datasimulators.dataset_db), dataset_db=self.dataset_db)
             self.lnlikelihoods.dataset_db.update(db_lnlike)  # create_lnlikelihoods_perdataset is defined in LikelihoodCreator
             self.datasimulators.dataset_db.unlock()
             for dataset_name, decorr_funcs in db_decorr_like.items():

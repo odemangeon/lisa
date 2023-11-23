@@ -73,7 +73,7 @@ logger.info("14. Create datasimulator functions")
 post_instance.create_datasimulators()
 
 logger.info("15. Create likelihood functions")
-post_instance.get_lnlikelihoods()
+post_instance.create_lnlikelihoods()
 
 logger.info("16. Create prior functions")
 post_instance.get_lnpriors()

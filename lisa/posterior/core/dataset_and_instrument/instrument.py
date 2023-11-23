@@ -63,7 +63,7 @@ class Instrument_Model(Core_ParamContainer):
         if noise_model_category is None:
             self.__noise_model_category = noise_model_category
         else:
-            self.noise_model = noise_model_category
+            self.noise_model_category = noise_model_category
         # Set the parameters necessary to model the instrument behavior.
         for name, dico in instrument.params_model.items():
             self.add_parameter(Parameter(name=name, name_prefix=self.name,

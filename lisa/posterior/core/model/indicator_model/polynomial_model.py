@@ -92,7 +92,7 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
     @classmethod
     def create_datasimulator(cls, model_instance, multi, l_inst_model, l_dataset, get_times_from_datasets,
                              tab, time_vec_name, l_time_vec_name, INDcat_model, indicator_category,
-                             dataset_db, function_builder, l_function_shortname, ext_func_fullname):
+                             function_builder, l_function_shortname, ext_func_fullname):
         """Create a datasimulator for indicators using the polynomial model
 
         Arguments
@@ -107,7 +107,7 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
         tab
         time_vec_name
         l_time_vec_name
-        INDcat_model                 : IND_InstCat_Model
+        INDcat_model                : IND_InstCat_Model
             Instance of the IND_InstCat_Model
         indicator_category          : str
         dataset_db                  : DatasetDatabase
@@ -128,8 +128,8 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
         # Produce instrumental variations models per instrument
         #######################################################
         d_l_instvar = get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
-                                    tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=INDcat_model,
-                                    dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
+                                    tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=INDcat_model, 
+                                    function_builder=function_builder, l_function_shortname=l_function_shortname,
                                     polyonly_func_shortname=f"{indicator_category}_inst_var", ext_func_fullname=ext_func_fullname,
                                     name_coeff_const=cls.__name_coeff_const_inst__,
                                     func_param_name=lambda order: cls.get_param_name(order=order, prefix=None),
@@ -141,7 +141,7 @@ class PolynomialIndicatorModel(Core_Indicator_Model):
         #######################################################
         d_l_sysvar = get_polymodel(multi=multi, l_inst_model=l_inst_model, l_dataset=l_dataset, get_times_from_datasets=get_times_from_datasets,
                                    tab=tab, time_vec_name=time_vec_name, l_time_vec_name=l_time_vec_name, inst_cat_model=INDcat_model,
-                                   dataset_db=dataset_db, function_builder=function_builder, l_function_shortname=l_function_shortname,
+                                   function_builder=function_builder, l_function_shortname=l_function_shortname,
                                    polyonly_func_shortname=f"{indicator_category}_sys_var", ext_func_fullname=ext_func_fullname,
                                    name_coeff_const=cls.__name_coeff_const_sys__.format(indicator=indicator_category),
                                    func_param_name=lambda order: cls.get_param_name(order=order, prefix=indicator_category),

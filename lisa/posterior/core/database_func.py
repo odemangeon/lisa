@@ -58,8 +58,10 @@ class DatabaseFunc(Named, Instmodel4DatasetAttr, DstDbLockAttr):
         # Add an _alldtst_key key with value None for the func including all datasets and key for
         # datasets in instmodel4dataset
         self.dataset_db = LockableDict(lock=self.get_dataset_Lock_instance())
+        self.dataset_db.unlock()
         self.dataset_db[self._alldtst_key] = None
         self.__update_datasets_dataset_db()
+        self.dataset_db.lock()
 
     def __repr__(self):
         repr = Named.__repr__(self) + ": {\n"
