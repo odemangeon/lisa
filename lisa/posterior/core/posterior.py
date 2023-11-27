@@ -44,7 +44,7 @@ from ...tools.default_folders_data_run import RunFolderAttr
 from ...tools.function_w_doc import DocFunction
 from ...tools.human_machine_interface.standard_questions import ask4CreationDefaultFile
 from ...tools.time_series_toolbox import get_time_supersampled, average_supersampled_values
-from ...tools.miscellaneous import spacestring_like, get_filename_from_file_path
+from ...tools.miscellaneous import spacestring_like, look4file_withdeffolder
 
 
 manager_model = Manager_Model()
@@ -111,34 +111,16 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     ## Methods for user interface
     #############################
 
-    def __init__(self, object_name, data_folder=None, run_folder=None):
+    def __init__(self):
         """Init method for the Posterior class.
 
         Arguments
         ---------
-        object_name     : str
-            Name of the object studied.
-        model_category  : str
-            Category of the model that you want to use
-        model_kwargs    : dict
-            Dictionary providing the arguments required for the initialization of the model.
-            The required content of this dictionary depends on the model category chosen.
         data_folder     : str
             Specify the folder where the data can be found
         run_folder      : str
             Specify the folder where the run files are/will be located
         """
-        # Initialise the model attribute
-        # self.__model = None
-        # Define the name of the object studied
-        Named.__init__(self, name=object_name)
-        # Init the run_folder (needs to be after Named.__init__ as it uses the object_name)
-        RunFolderAttr.__init__(self, run_folder=run_folder)
-        # Define two locks: dataset_lock and database_lock
-        DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
-        # Initialize the dataset database attribute and assign it dataset_lock
-        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(self.get_name(), data_folder=data_folder,
-                                                                lock=self.get_dataset_Lock_instance()))
         # Initialize the configuration file attribute
         ConfigFileAttr.__init__(self)
         # # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
@@ -184,12 +166,15 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             already defined.
         """
         logger.info(f"Look for configuration file.")
-        self.config_file.path = self.look4runfile(file_path=path_config_file)
+        self.config_file.path = look4file_withdeffolder(file_path=path_config_file, default_folder=None)
         # If doesn't exists offer the possibility to create a default one
-        if self.config_file is None:
+        if self.config_file.path is None:
             logger.info(f"Config file doesn't exist (path provided was {path_config_file})")
-            default_file_content = f"# Configuration file for the analysis of {self.get_name()}.\n"
-            self.config_file = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=self.get_run_folder())
+            default_file_content = f"# Configuration file for LISA analysis.\n"
+            self.config_file.path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=None)
+
+        logger.info(f"Load object name and folders.")
+        self._load_config(config2load='objectnameNfolders')
 
         logger.info(f"Load datasets.")
         self._load_config(config2load='datasets')
@@ -215,11 +200,48 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     ## Methods and properties used by the user interface methods
     ############################################################
 
+    # Methods for the object name part of the config file
+    ##################################################
+
+    def __add_default_config_var_objectnameNfolders(self, file):
+        file.write("\n##############")
+        file.write("\n## Object name")
+        file.write("\n##############")
+        file.write("\n# Give a name to the object that you are studying. DO NOT use _")
+        file.write("\n\nobject_name = 'Object'\n")
+        file.write("\n##########")
+        file.write("\n## Folders")
+        file.write("\n##########")
+        file.write("\n\nrun_folder = None")
+        file.write("\n\ndata_folder = None")  
+
+    def __config_var_exist_objectnameNfolders(self, dico_config_file):
+        return all([var_name in dico_config_file for var_name in ['object_name', 'run_folder', 'data_folder']])
+
+    def __load_config_var_content_objectnameNfolders(self, dico_config_file, **kwargs):
+        object_name = dico_config_file['object_name']
+        # Check that the content is valid
+        assert isinstance(object_name, str)
+        # Load it
+        Named.__init__(self, name=object_name)
+
+        run_folder = dico_config_file['run_folder']
+        assert isinstance(run_folder, str) or (run_folder is None)
+        # Init the run_folder (needs to be after Named.__init__ as it uses the object_name)
+        RunFolderAttr.__init__(self, run_folder=run_folder)
+
+        data_folder = dico_config_file['data_folder']
+        assert isinstance(data_folder, str) or (data_folder is None)
+        # Define two locks: dataset_lock and database_lock
+        DstDbLockAttr.__init__(self, lock_dataset=None, lock_database=None, use_samelock=False)
+        # Initialize the dataset database attribute and assign it dataset_lock
+        DatasetDbAttr.__init__(self, dataset_db=DatasetDatabase(object_name=self.object_name, data_folder=data_folder, lock=self.get_dataset_Lock_instance()))
+
     # Methods for the datasets part of the config file
     ##################################################
 
     def __add_default_config_var_datasets(self, file):
-        file.write("\n###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n")
+        file.write("\n\n###########\n## Datasets\n###########\n\n# List of the paths to the dataset files that you want to use\n")
         file.write(f"l_dataset = []\n")    
 
     def __config_var_exist_datasets(self, dico_config_file):
@@ -326,21 +348,27 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     ##############################
     def _get_function_config(self, function_type, config2load):
         if function_type == 'add_default_config':
-            if config2load == 'datasets':
+            if config2load == 'objectnameNfolders':
+                return self.__add_default_config_var_objectnameNfolders
+            elif config2load == 'datasets':
                 return self.__add_default_config_var_datasets
             elif config2load == 'instmoddef':
                 return self.__add_default_config_var_instmoddef
             elif config2load == 'modelcatdef':
                 return self.__add_default_config_modelcategory
         elif function_type == 'check_config_exists':
-            if config2load == 'datasets':
+            if config2load == 'objectnameNfolders':
+                return self.__config_var_exist_objectnameNfolders
+            elif config2load == 'datasets':
                 return self.__config_var_exist_datasets
             elif config2load == 'instmoddef':
                 return self.__config_var_exist_instmoddef
             elif config2load == 'modelcatdef':
                 return self.__config_var_exist_modelcategory
         elif function_type == 'load_config_content':
-            if config2load == 'datasets':
+            if config2load == 'objectnameNfolders':
+                return self.__load_config_var_content_objectnameNfolders
+            elif config2load == 'datasets':
                 return self.__load_config_var_content_datasets
             elif config2load == 'instmoddef':
                 return self.__load_config_var_content_instmoddef

@@ -9,6 +9,7 @@ class GaussianModel(Core_1ModelConfig):
     """
 
     __category__ = "gaussian"
+    _show_category_in_dict2print = False
 
     ################
     # Main functions
@@ -43,8 +44,8 @@ class GaussianModel(Core_1ModelConfig):
         if args is not None:
             for key in args:
                 if key == 'jitter_type':
-                    if args[key] not in ['additive', 'multiplicative', 'dfm']:
-                        raise ValueError("jitter_type must be in ['additive', 'multiplicative', 'dfm']")
+                    if args[key] not in ['additive', 'multiplicative']:
+                        raise ValueError("jitter_type must be in ['additive', 'multiplicative']")
 
     ############################################################
     ## Dealing with the parameters and their names for the model
@@ -85,8 +86,6 @@ class GaussianModel(Core_1ModelConfig):
                 param_name = 'jitter'
             elif self.jitter_type == 'multiplicative':
                 param_name = 'jittermulti'
-            elif self.jitter_type == 'dfm':
-                param_name = 'jitterdfm'
             if self.log10jitter:
                 param_name = 'log10' + param_basename            
             return f"{param_name}{self._get_param_extension(param_basename=param_basename, object_category=object_category)}"
@@ -118,6 +117,28 @@ class GaussianModel(Core_1ModelConfig):
         if object_category == 'instrument':
             return self._get_kwargs_4_get_parameter_default
         super(GaussianModel, self)._get_function_get_kwargs_4_get_parameter(object_category=object_category)
+
+
+    ########################################
+    # Compute impact of jitter on error bars
+    ########################################
+
+    def get_compute_jitteredvar(self):
+        if self.jitter_type == 'additive':
+            if self.log10jitter:
+                def compute_jitteredvar(data_err, jitter):
+                    return data_err**2 + 10**(2 * jitter)
+            else:
+                def compute_jitteredvar(data_err, jitter):
+                    return data_err**2 + jitter**2
+        if self.jitter_type == 'multiplicative':
+            if self.log10jitter:
+                def compute_jitteredvar(data_err, jitter):
+                    return data_err**2 * 10**(2 * jitter)
+            else:
+                def compute_jitteredvar(data_err, jitter):
+                    return (data_err * jitter)**2
+        return compute_jitteredvar
 
     ######################
     # Convenience function

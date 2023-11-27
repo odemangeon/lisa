@@ -7,19 +7,18 @@ There is only on GP1D_Noise_Models instance in a Model instance
 """
 
 from loguru import logger
-from george.kernels import ExpSquaredKernel, ExpSine2Kernel
-from george import GP
-import numpy as np
-from collections import defaultdict, Counter, OrderedDict
-import os
+from numpy import sqrt
+from collections import defaultdict, OrderedDict
 from pprint import pformat
-# from collections import OrderedDict
+from textwrap import dedent
 
 # from ..model.celestial_bodies import Star
+from ....tools.function_from_text_toolbox import FunctionBuilder
 from .core_noise_model import Core_Noise_Model
 from ....tools.miscellaneous import spacestring_like
 # from ....tools.function_w_doc import DocFunction
-from .GP1D_noisemodelconfiguration import QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model
+from .GP1D_noisemodelconfiguration import george_imported, QPGeorgeModel, QPCGeorgeModel, celerite_imported, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model
+from .gaussian_noisemodelconfiguration import GaussianModel
 
 
 class GP1D_Noise_Models(Core_Noise_Model):
@@ -29,7 +28,11 @@ class GP1D_Noise_Models(Core_Noise_Model):
     __has_GP__ = True
     __has_jitter__ = True
 
-    __l_model_class__ = [QPGeorgeModel, QPCGeorgeModel, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel]
+    __l_model_class__ = []
+    if george_imported:
+        __l_model_class__.extend([QPGeorgeModel, QPCGeorgeModel])
+    if celerite_imported:
+        __l_model_class__.extend([QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model])
 
     __l_required_datasetkwarg_keys__ = ["data", "data_err", "time"]
 
@@ -39,24 +42,33 @@ class GP1D_Noise_Models(Core_Noise_Model):
     def __init__(self, model_instance, run_folder, config_file):
         super(GP1D_Noise_Models, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
         self._models_config = self._init_model_config()
-        self._define_default_model()
+        self._define_default_GPmodel()
 
     @property
     def dict2print(self):
         """Used to print the content in the parametrisation file."""
         dict2print = self._models_config.copy()
-        dict2print['model_definitions'] = dict2print['model_definitions'].copy()
-        for model_name in dict2print['model_definitions']:
-            dict2print['model_definitions'][model_name] = dict2print['model_definitions'][model_name].dict2print
+        dict2print['GPmodel_definitions'] = dict2print['GPmodel_definitions'].copy()
+        for model_name in dict2print['GPmodel_definitions']:
+            dict2print['GPmodel_definitions'][model_name] = dict2print['GPmodel_definitions'][model_name].dict2print
+        for inst_model_fullname in dict2print['jittermodel_definitions']:
+            dict2print['jittermodel_definitions'][inst_model_fullname] = dict2print[inst_model_fullname]['jittermodel_definitions'].dict2print
         return dict2print
 
-    def get_model(self, inst_model_fullname):
+    def get_GPmodel(self, inst_model_fullname):
         """Get the model for a given instrument model full name.
         """
         if inst_model_fullname not in self.l_inst_model_fullname:
-            raise ValueError(f"The instrument model name provided ({inst_model_fullname}) doesn't exist or is not defined to be modeled with a gaussian noise model")
-        model_name = self._models_config['model4instrument'][inst_model_fullname]
-        return self._models_config['model_definitions'][model_name]
+            raise ValueError(f"The instrument model name provided ({inst_model_fullname}) doesn't exist or is not defined to be modeled with a GP1D noise model")
+        model_name = self._models_config['GPmodel4instrument'][inst_model_fullname]
+        return self._models_config['GPmodel_definitions'][model_name]
+    
+    def get_jittermodel(self, inst_model_fullname):
+        """Get the model for a given instrument model full name.
+        """
+        if inst_model_fullname not in self.l_inst_model_fullname:
+            raise ValueError(f"The instrument model name provided ({inst_model_fullname}) doesn't exist or is not defined to be modeled with a GP1D noise model")
+        return self._models_config['jittermodel_definitions'][inst_model_fullname]
     
     ################################
     # Dealing with the configuration
@@ -66,19 +78,20 @@ class GP1D_Noise_Models(Core_Noise_Model):
     #################################
 
     def _init_model_config(self):
-        return  {'model4instrument': {instmodfullname: '' for instmodfullname in self.l_inst_model_fullname},
-                 'model_definitions': {},
+        return  {'GPmodel4instrument': {instmodfullname: '' for instmodfullname in self.l_inst_model_fullname},
+                 'GPmodel_definitions': {},
+                 'jittermodel_definitions': {instmodfullname: GaussianModel(model_name='', instrument=self.model_instance.instruments[instmodfullname], dico_config_model=None) for instmodfullname in self.l_inst_model_fullname},
                  }
 
-    def _define_default_model(self):
+    def _define_default_GPmodel(self):
         # By default all instruments of a given inst_fullcat are modeled by one QPGeorge model.
         for inst_fullcat, l_instmod in self.get_instmod(sortby_instfullcat=True).items():
             model_name = f"{inst_fullcat}"
             for instmod in l_instmod:
-                self._models_config['model4instrument'][instmod.full_name] = model_name
-            self._define_model(model_name=model_name, model_category='QPGeorge', dico_config_model=None, overwrite=False)
+                self._models_config['GPmodel4instrument'][instmod.full_name] = model_name
+            self._define_GPmodel(model_name=model_name, model_category=self.l_model_class[0], dico_config_model=None, overwrite=False)
     
-    def _define_model(self, model_name, model_category, dico_config_model=None, overwrite=False):
+    def _define_GPmodel(self, model_name, model_category, dico_config_model=None, overwrite=False):
         """Define the model for the planet
 
         Arguments
@@ -92,11 +105,11 @@ class GP1D_Noise_Models(Core_Noise_Model):
         overwrite                       : bool
             Wheter or not you wish to overwrite if the model is already defined
         """
-        if not(overwrite) and (model_name in self._models_config["model_definitions"]):
+        if not(overwrite) and (model_name in self._models_config["GPmodel_definitions"]):
             raise ValueError(f"A model of name {model_name} already exists and overwrite is False.")
         if not(self._is_available_model_category(model_category=model_category)):
             raise ValueError(f"{model_category} is not in the list of available model categories ({self.l_available_model_category}).")
-        (self._models_config["model_definitions"]
+        (self._models_config["GPmodel_definitions"]
          [model_name]) = self.model_classes[model_category](model_name=model_name, model_instance=self.model_instance, dico_config_model=dico_config_model)
 
 
@@ -142,20 +155,26 @@ class GP1D_Noise_Models(Core_Noise_Model):
     def __load_config_var_content_gp(self, dico_config_file, **kwargs):
         GP1D_models_config = dico_config_file['GP1D_models']
         assert isinstance(GP1D_models_config, dict)
-        if set(GP1D_models_config.keys()) != set(['model4instrument', 'model_definitions']):
-            raise ValueError(f"The keys of the 'GP1D_models' dictionary should be ['model4instrument', 'model_definitions']. You provided {set(GP1D_models_config.keys())}")
-        if set(GP1D_models_config['model4instrument'].keys()) != set(self.l_inst_model_fullname):
-            raise ValueError(f"The list of instrument models using a GP1D noise model is {self.l_inst_model_fullname}. It should be the same as the list of instrument model full name in GP1D_models['model4instrument'] ({GP1D_models_config['model4instrument']})")
-        if set(GP1D_models_config['model4instrument'].values()) != set(GP1D_models_config['model_definitions'].keys()):
-            raise ValueError(f"The list of GP1D model names provided in GP1D_models['model4instrument'] should match the list of the names of the GP1D models defined in GP1D_models['model_definitions'].")
+        if set(GP1D_models_config.keys()) != set(['GPmodel4instrument', 'GPmodel_definitions', 'jittermodel_definitions']):
+            raise ValueError(f"The keys of the 'GP1D_models' dictionary should be ['GPmodel4instrument', 'GPmodel_definitions', 'jittermodel_definitions']. You provided {set(GP1D_models_config.keys())}")
+        if set(GP1D_models_config['GPmodel4instrument'].keys()) != set(self.l_inst_model_fullname):
+            raise ValueError(f"The list of instrument models using a GP1D noise model is {self.l_inst_model_fullname}. It should be the same as the list of instrument model full name in GP1D_models['GPmodel4instrument'] ({GP1D_models_config['GPmodel4instrument']})")
+        if set(GP1D_models_config['GPmodel4instrument'].values()) != set(GP1D_models_config['GPmodel_definitions'].keys()):
+            raise ValueError(f"The list of GP1D model names provided in GP1D_models['GPmodel4instrument'] should match the list of the names of the GP1D models defined in GP1D_models['GPmodel_definitions'].")
+        assert isinstance(GP1D_models_config['jittermodel_definitions'], dict)
+        assert set(GP1D_models_config['jittermodel_definitions'].keys()) == set(self.l_inst_model_fullname)
         # Clean the GP1D Container of model instance
         for GP1D_model_name in self.model_instance.l_GP1D_fullname:
-            if GP1D_model_name not in GP1D_models_config['model_definitions'].keys():
+            if GP1D_model_name not in GP1D_models_config['GPmodel_definitions'].keys():
                 self.model_instance.rm_a_GP1D(name=GP1D_model_name)
         # load the config of the GP1D models defined in the configuration
-        for GP1D_model_name in GP1D_models_config['model_definitions']:
-            model_category = GP1D_models_config['model_definitions'][GP1D_model_name].pop("category")
-            self._define_model(model_name=GP1D_model_name, model_category=model_category, dico_config_model=GP1D_models_config['model_definitions'][GP1D_model_name], overwrite=True)
+        for GP1D_model_name in GP1D_models_config['GPmodel_definitions']:
+            model_category = GP1D_models_config['GPmodel_definitions'][GP1D_model_name].pop("category")
+            self._define_GPmodel(model_name=GP1D_model_name, model_category=model_category, dico_config_model=GP1D_models_config['GPmodel_definitions'][GP1D_model_name], overwrite=True)
+        # load the jitter model definition
+        for instmod_fullname in GP1D_models_config['jittermodel_definitions']:
+            jitter_model = self.get_jittermodel(inst_model_fullname=instmod_fullname)
+            jitter_model.load_config(dico_config=GP1D_models_config['jittermodel_definitions'][instmod_fullname])
     
     #############################################
     # Dealing with the parameters/parametrisation
@@ -164,7 +183,162 @@ class GP1D_Noise_Models(Core_Noise_Model):
     def set_parametrisation(self):
         l_model_done = []
         for instmodfullname in self.l_inst_model_fullname:  # l_inst_model_fullname is defined in Core_Noise_Model
-            GP1D_config = self.get_model(inst_model_fullname=instmodfullname)
+            GP1D_config = self.get_GPmodel(inst_model_fullname=instmodfullname)
             if GP1D_config not in l_model_done:
                 GP1D_config.create_parameters_and_set_main()
+            jitter_config = self.get_jittermodel(inst_model_fullname=instmodfullname)
+            jitter_config.create_parameters_and_set_main()       
+
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
+
+    def create_lnlikelihood_and_formatinputs(self, l_idx_simdata, l_instmod_obj, l_dataset_obj,
+                                             l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,
+                                             function_builder, function_shortname):
+        """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
+
+        For a detailed docstring look at Core_NoiseModel.create_lnlikelihood_and_formatinputs
+        """
+        (lnlike_jitter, dico_params_noisemod, dico_idx_param_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj
+         ) = self._get_prefilledlnlike(l_params=l_likelihood_param_fullname, l_instmod_obj=l_instmod_obj, l_idx_simdata=l_idx_simdata, function_builder=function_builder,
+                                       function_shortname=function_shortname)
+
+        def f_format_param(param_likelihood):
+            return {GP1D_name: param_likelihood[idx_param_GP1D_mod] for GP1D_name, idx_param_GP1D_mod in dico_idx_param_noisemod.items()}
+
+        if datasim_has_multioutputs:
+            def f_format_simdata(sim_data):
+                return {GP1D_name: [sim_data[ii] for ii in idx_simdata_GP1D_mod] for GP1D_name, idx_simdata_GP1D_mod in dico_idx_datasim.items()}
+        else:
+            def f_format_simdata(sim_data):
+                return {GP1D_name: [sim_data, ] for GP1D_name in dico_idx_datasim.keys()}
+
+        def f_format_dataset_kwargs(dataset_kwargs):
+            return {GP1D_name: [{datasetkwarg: dataset_kwargs[l_dataset_obj[jj].dataset_name][datasetkwarg] for datasetkwarg in l_datasetkwargs_req[jj]} for jj in indexes_l_dataset_obj_GP1D_mod] for GP1D_name, indexes_l_dataset_obj_GP1D_mod in dico_idx_l_dataset_obj.items()}
+
+        # dataset_kwargs = {GP1D_name: [cls.get_necessary_datakwargs(l_dataset_obj[jj]) for jj in indexes_l_dataset_obj_GP1D_mod] for GP1D_name, indexes_l_dataset_obj_GP1D_mod in dico_idx_l_dataset_obj.items()}
+
+        return lnlike_jitter, f_format_param, f_format_simdata, f_format_dataset_kwargs
     
+    def _get_prefilledlnlike(self, l_instmod_obj, l_idx_simdata, function_builder_fulllnlike, function_shortname_fulllnlike):
+        """Return a ln likelihood function prefilled with the fixed parameters for all stellar activity model.
+
+        Arguments
+        ---------
+        l_instmod_obj    : list_of_InstrumentModel
+            list of instrument model for the ln likelihood to produce.
+        l_idx_simdata            : list of Integers
+            List of indexes in the sim_data list (output of the datasimulator function this likelihood function is associated with) which correspond to dataset that should be modeled with this noise model
+        function_builder_fulllnlike     :
+        function_shortname_fulllnlike   :
+
+        Returns
+        -------
+        prefilled_lnlike        : function
+            Prefilled ln likelohood function with as input parameters
+            model the simulated data (array), param_noisemod the free parameters value for the noise
+            model, the list of dataset kwargs and returns the ln posterior value
+        dico_params_noisemod    : Dictionary of list of String
+            Dictionary giving the list of parameter full names for each stellar activity noise model
+            keys : Stellar activity model names (as defined in the stellar activity parameter file)
+            values : List of the full names of the parameters for each stellar activity noise model.
+        dico_idx_datasim        :  Dictionary of list of Integer
+            Dictionary giving the indexes of the simulated data in the full sim_data (output of the datasimulator associated with this likelihood) for stellar activity noise model
+            keys : Stellar activity model names (as defined in the stellar activity parameter file)
+            values : List of the indexes of the simulated data in the full sim_data (output of the datasimulator associated with this likelihood) for stellar activity noise model\
+        dico_idx_l_dataset_obj  :  Dictionary of list of Integer
+            Dictionary giving the indexes of the dataset_obj in the list of dataset object (l_dataset_obj) for stellar activity noise model
+            keys : Stellar activity model names (as defined in the stellar activity parameter file)
+            values : List of the indexes of the dataset_obj in the list of dataset object.
+        """
+        # Function builder for the individual functions of each GP1D
+        function_builder_GP1D = FunctionBuilder() 
+
+        # Go through the instrument models and sort them into stellar activity models
+        dico_linstmodobj4GP1Dmodname = OrderedDict()
+        dico_idx_datasim = {}
+        dico_idx_l_dataset_obj = {}
+        for jj, (ii, instmod_obj) in enumerate(zip(l_idx_simdata, l_instmod_obj)):
+            GP1D_mod_name = self.get_GPmodel(inst_model_fullname=instmod_obj.full_name)
+            if GP1D_mod_name in dico_linstmodobj4GP1Dmodname:
+                dico_linstmodobj4GP1Dmodname[GP1D_mod_name].append(instmod_obj)
+                dico_idx_datasim[GP1D_mod_name].append(ii)
+                dico_idx_l_dataset_obj[GP1D_mod_name].append(jj)
+            else:
+                dico_linstmodobj4GP1Dmodname[GP1D_mod_name] = [instmod_obj, ]
+                dico_idx_datasim[GP1D_mod_name] = [ii, ]
+                dico_idx_l_dataset_obj[GP1D_mod_name] = [jj, ]
+        
+        # Produce a prefilled likelihood for each GP1D noise model
+        dico_func = {}
+        dico_params_noisemod = {}
+
+        lnlikefunc_text = """
+        dict_datakwargs = defaultdict(list)
+        for datakwargs, compute_jitteredvar, jitter in zip(l_datakwargs, l_compute_jitteredvar, l_jitter):
+            dict_datakwargs["time"].append(datakwargs["time"])
+            dict_datakwargs["data"].append(datakwargs["data"])
+            dict_datakwargs["data_err"].append(sqrt(compute_jitteredvar(data_err=datakwargs["data_err"], jitter=jitter)))
+        """
+        lnlikefunc_text = dedent(lnlikefunc_text)
+        
+        for GP1D_mod_name, l_instmod_obj_GP1D_mod in dico_linstmodobj4GP1Dmodname.items():
+            function_shortname_GP1D = f"lnlike_GP1D_{GP1D_mod_name}"
+            function_builder_GP1D.add_new_function(shortname=function_shortname_GP1D, parameters=None, mandatory_args=['sim_data', 'l_datakwargs'],
+                                               optional_args=None, full_function_name=None)
+            
+            function_builder_GP1D.add_to_body_text(text=lnlikefunc_text, function_shortname=function_shortname_GP1D)
+            function_builder_GP1D.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            function_builder_GP1D.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            # Do l_jitter and l_compute_jitteredvar 
+            l_jitter = []
+            l_compute_jitteredvar = []
+            for instmod_obj in l_instmod_obj:
+                jitter_model = self.get_jittermodel(inst_model_fullname=instmod_obj.full_name)
+                jitter_param = jitter_model.get_parameters(object_category=None)['jitter']
+                function_builder_fulllnlike.add_parameter(parameter=jitter_param, function_shortname=function_shortname_fulllnlike, exist_ok=True)
+                function_builder_GP1D.add_parameter(parameter=jitter_param, function_shortname=function_shortname_GP1D, exist_ok=True)
+                l_jitter.append(function_builder_GP1D.get_text_4_parameter(parameter=jitter_param, function_shortname=function_shortname_GP1D))
+                l_compute_jitteredvar.append(jitter_model.get_compute_jitteredvar())
+            function_builder_GP1D.add_variable_to_ldict(variable_name='l_jitter', variable_content=l_jitter, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            function_builder_GP1D.add_variable_to_ldict(variable_name='l_compute_jitteredvar', variable_content=l_compute_jitteredvar, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            # Do the kernel text and add the corresponding parameters
+            GP1D = self.get_GPmodel(inst_model_fullname=l_instmod_obj_GP1D_mod[0])
+            GP1D.add_text_compute_lnlike(function_builder_fulllnlike=function_builder_fulllnlike, function_shortname_fulllnlike=function_shortname_fulllnlike, 
+                                         function_builder_GP1D=function_builder_GP1D, function_shortname_GP1D=function_shortname_GP1D)
+            logger.debug(f"Likelihood of the GP1D model {GP1D_mod_name}:\n {function_builder_GP1D.get_full_function_text(shortname=function_shortname_GP1D)}")
+            exec(function_builder_GP1D.get_full_function_text(shortname=function_shortname_GP1D), function_builder_GP1D._get_ldict(function_shortname=function_shortname_GP1D))
+            dico_func[GP1D_mod_name] = function_builder_GP1D._get_ldict(function_shortname=function_shortname_GP1D)[function_builder_GP1D.get_function_fullname(shortname=function_shortname_GP1D)]
+            dico_params_noisemod[GP1D_mod_name] = function_builder_GP1D.get_free_parameter_vector(function_shortname=function_shortname_GP1D)
+
+        l_GP1D_mod_name = list(dico_linstmodobj4GP1Dmodname.keys())
+
+        def lnlike_allGP1D(sim_data, param_noisemodel, datasets_kwargs):
+            """Ln likelihood including all stellar activity models provided
+
+            The provided stellar activity model provided are: {l_GP1D_mod_name}
+
+            Arguments
+            ---------
+            sim_data                : Dictionary of list of np.array
+                dictionary of list of arrays giving the sim_data (simulated data) for each stellar activity noise model
+                keys : Stellar activity model names (as defined in the stellar activity parameter file)
+                values : list of simulated data array of each datasets simulated by each stellar activity noise model
+            param_noisemodel  : Dictionary of np.array
+                dictionary of array giving the parameters values for the parameters of each stellar activity noise model
+                keys : Stellar activity model names (as defined in the stellar activity parameter file)
+                values : array of parameter values for each stellar activity noise model
+            datasets_kwargs : dictionary of list of dictionaries
+                dictionary of list of dictionaries giving the dataset keyword arguments of the dataset associated with each stellar activity noise model.
+                keys : Stellar activity model names (as defined in the stellar activity parameter file)
+                values : list of dictionaries of datasets values.
+                    keys: "data", "data_err", "t"
+                    values: list of array giving these values for each datasets associated with each stellar activity noise model
+            """.format(l_GP1D_mod_name=l_GP1D_mod_name)
+            res = 0
+            for GP1D_mod_name in l_GP1D_mod_name:
+                res += dico_func[GP1D_mod_name](sim_data[GP1D_mod_name], param_noisemodel[GP1D_mod_name], datasets_kwargs[GP1D_mod_name])
+            return res
+
+        return lnlike_allGP1D, dico_params_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj

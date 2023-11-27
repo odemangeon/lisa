@@ -202,7 +202,7 @@ class LikelihoodCreator(object):
             noise_model = self.noise_models[noisemodel_cat]
             (dico["lnlike_func"], dico["f_format_param"], dico["f_format_simdata"], dico["f_format_datasetkwargs"],
              l_paramsfullname_likelihood
-             ) = noise_model.create_lnlikelihood_and_formatinputs(model_instance=self, l_idx_simdata=dico["l_idx_simdata"],
+             ) = noise_model.create_lnlikelihood_and_formatinputs(l_idx_simdata=dico["l_idx_simdata"],
                                                                   l_instmod_obj=[l_instmod_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_datasetkwargs_req=dico["l_datasetkwargs_req"],

@@ -17,7 +17,8 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     Definition of the configuration of models
     """
 
-    __mandatoryattrs__ = ["category"]
+    __mandatoryattrs__ = ["category", ]
+    _show_category_in_dict2print = True
 
     ################
     # Main functions
@@ -32,7 +33,9 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     @property
     def dict2print(self):
         """Used to print the content in the parametrisation file."""
-        dict2print = {'category': self.category}
+        dict2print = {}
+        if self._show_category_in_dict2print:
+            dict2print = {'category': self.category}
         if len(self.args) > 0:
             dict2print['args'] = self.args
         if len(self.parametrisation) > 0:
@@ -54,70 +57,9 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
         self._set_args(args=dico_config.get('args', None))
         self._set_param_extensions(param_extensions=dico_config.get('param_extensions', None))
 
-    def create_parameters_and_set_main(self, object_category=None, **kwargs):
-        """Create (if needed) the parameters of the model.
-
-        This function should be used in the function doing the parametrisation of the model
-
-        Arguments
-        ---------
-        inst_model_fullname : str
-        object_category     : str or list of str or None
-            If not provided (None) the list of all available object_categories will be used
-        """
-        l_object_category = self._get_l_object_category_arg(object_category)
-        for obj_cat in l_object_category:
-            l_param_basename = self._get_l_parameter_basename(object_category=obj_cat, **kwargs)
-            for param_basename in l_param_basename:
-                param_name = self._get_parameter_name(param_basename=param_basename, object_category=obj_cat, **kwargs)
-                param = self._create_parameter(param_name=param_name, param_basename=param_basename, object_category=obj_cat,
-                                               **kwargs
-                                               )
-                param.main = True
-
-    # @property
-    # def config_dict(self):
-    #     """Return the configuration dictionary for the configuration file.
-
-    #     This will be used to print in the configuration file
-
-    #     TODO: It looks like it might be a bit redundant with dict2print TBC
-
-    #     Return
-    #     ------
-    #     config_dict : dictionary
-    #     """
-    #     return {'category': self.category}
-
-    def get_parameters(self, inst_model_fullname=None, object_category=None):
-        """Get a dictionary of the parameter of the models.
-
-        This function will be used when producing the datasimulator to get the proper parameters
-
-        Arguments
-        ---------
-        inst_model_fullname : str
-        object_category     : str or list of str or None
-            If not provided (None) the list of all available object_categories will be used
-
-        Return
-        ------
-        parameters : dict of dict of Parameter
-        """
-        l_object_category = self._get_l_object_category_arg(object_category)
-        parameters = {}
-        for obj_cat in l_object_category:
-            parameters[obj_cat] = {}
-            l_param_basename = self._get_l_parameter_basename(inst_model_fullname=inst_model_fullname, object_category=obj_cat)
-            for param_basename in l_param_basename:
-                parameters[obj_cat][param_basename] = self._get_parameter(param_basename=param_basename, inst_model_fullname=inst_model_fullname,
-                                                                          object_category=obj_cat
-                                                                          )
-        return parameters
-
-    #################################################################
-    # Functions required directly or indirectly be the main functions
-    #################################################################
+    ################################
+    # Deal with the parameterisation
+    ################################
 
     def _set_parametrisation(self, parametrisation=None):
         if not(isinstance(parametrisation, dict) or (parametrisation is None)):
@@ -273,6 +215,27 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
     # Deal with creating parameters
     ###############################
 
+    def create_parameters_and_set_main(self, object_category=None, **kwargs):
+        """Create (if needed) the parameters of the model.
+
+        This function should be used in the function doing the parametrisation of the model
+
+        Arguments
+        ---------
+        inst_model_fullname : str
+        object_category     : str or list of str or None
+            If not provided (None) the list of all available object_categories will be used
+        """
+        l_object_category = self._get_l_object_category_arg(object_category)
+        for obj_cat in l_object_category:
+            l_param_basename = self._get_l_parameter_basename(object_category=obj_cat, **kwargs)
+            for param_basename in l_param_basename:
+                param_name = self._get_parameter_name(param_basename=param_basename, object_category=obj_cat, **kwargs)
+                param = self._create_parameter(param_name=param_name, param_basename=param_basename, object_category=obj_cat,
+                                              **kwargs
+                                              )
+                param.main = True
+
     def _create_parameter(self, param_name, param_basename, object_category=None, **kwargs):
         """Create (if needed) a parameter of the given object category"""
         if object_category is None:
@@ -299,7 +262,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                 param = Parameter(name=param_name, name_prefix=param_container.name)
                 param_container.add_parameter(param)
         else:
-            param = param_container.get_parameter(name=param_name)  
+            param = param_container._get_parameter(name=param_name)  
         return param  
 
     def _get_kwargs_4_create_parameter_default(self, param_name, param_basename, object_category, **kwargs):
@@ -307,6 +270,28 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
 
     # Deal with getting parameter
     #############################
+    def get_parameters(self, object_category=None, **kwargs):
+        """Get a dictionary of the parameter of the models.
+
+        This function will be used when producing the datasimulator to get the proper parameters
+
+        Arguments
+        ---------
+        object_category     : str or list of str or None
+            If not provided (None) the list of all available object_categories will be used
+
+        Return
+        ------
+        parameters : dict of dict of Parameter
+        """
+        l_object_category = self._get_l_object_category_arg(object_category)
+        parameters = {}
+        for obj_cat in l_object_category:
+            parameters[obj_cat] = {}
+            l_param_basename = self._get_l_parameter_basename(object_category=obj_cat, **kwargs)
+            for param_basename in l_param_basename:
+                parameters[obj_cat][param_basename] = self._get_parameter(param_basename=param_basename, object_category=obj_cat, **kwargs)
+        return parameters
 
     def _get_parameter(self, param_basename, object_category=None, **kwargs):
         """Return the parameter"""
