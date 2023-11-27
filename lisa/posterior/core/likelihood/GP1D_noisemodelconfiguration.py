@@ -9,6 +9,23 @@ The other classes are subclassed of Core_GP1DModel and are each used to store th
 There can be several instances of each of these subclasses in a Model instance.
 Beside the configuration these subclasses also provide the function to create the likelihood and GP simulators
 """
+from loguru import logger
+
+from collections import defaultdict
+from numpy import concatenate, sqrt
+
+try:
+    from george import GP
+    from george.kernels import ExpSquaredKernel, ExpSine2Kernel, CosineKernel
+    george_imported = True
+except:
+    george_imported = False
+
+try:
+    import celerite2 
+    celerite_imported = True
+except:
+    celerite_imported = False
 
 from ..core_1modelconfiguration import Core_1ModelConfig
 from .GP1D import GP1D
@@ -18,9 +35,9 @@ class Core_GP1DModel(Core_1ModelConfig):
 
     # Define the likelihood computation and GP simualtor functions
 
-    ################
-    # Main functions
-    ################
+    ##############
+    # Main methods
+    ##############
 
     def __init__(self, model_name, model_instance, dico_config_model=None):
         super(Core_GP1DModel, self).__init__(model_name=model_name)
@@ -35,20 +52,21 @@ class Core_GP1DModel(Core_1ModelConfig):
     def create_parameters_and_set_main(self, object_category=None):
         super(Core_GP1DModel, self).create_parameters_and_set_main(object_category=object_category)
 
-    ######################
-    # Convenience function
-    ######################
+    #####################
+    # Convenience methods
+    #####################
 
     @property
     def GP(self):
         """GP param container"""
         return self.object_categories["GP"]
-
-
-class QPGeorgeModel(Core_GP1DModel):
-
-    __category__ = "QPGeorge"
-
+    
+    def log10(self, param_basename):
+        """True if the jumping of name param_basename should be log10"""
+        if param_basename not in self._get_l_parameter_basename_GP():
+            raise ValueError(f"param_basename shoud be in {self._get_l_parameter_basename_GP()}")
+        return self.parametrisation["log10"][param_basename]
+    
     ############################################################
     # Dealing with the parametrisation, param_extension and args
     ############################################################
@@ -69,8 +87,8 @@ class QPGeorgeModel(Core_GP1DModel):
                     if not(isinstance(parametrisation[key][param_basename], bool)):
                         raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_basename]})")
                     self.parametrisation[key][param_basename] = parametrisation[key][param_basename]
-        super(QPGeorgeModel, self)._set_parametrisation(parametrisation=parametrisation)
-
+        super(Core_GP1DModel, self)._set_parametrisation(parametrisation=parametrisation)
+    
     ############################################################
     ## Dealing with the parameters and their names for the model
     ############################################################
@@ -81,15 +99,12 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_get_l_parameter_basename(self, object_category):
         if object_category == 'GP':
             return self._get_l_parameter_basename_GP
-        super(QPGeorgeModel, self)._get_function_get_l_parameter_basename(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_l_parameter_basename(object_category=object_category)
     
     def _get_function_get_kwargs_4_get_l_parameter_basename(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_get_l_parameter_basename_default
-        super(QPGeorgeModel, self)._get_function_get_kwargs_4_get_l_parameter_basename(object_category=object_category)
-    
-    def _get_l_parameter_basename_GP(self):
-        return ['A', 'P', 'tau', 'gamma']
+        super(Core_GP1DModel, self)._get_function_get_kwargs_4_get_l_parameter_basename(object_category=object_category)
 
     # Dealing with parameter names
     ##############################
@@ -97,12 +112,12 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_get_parameter_name(self, object_category):
         if object_category == 'GP':
             return self._get_parameter_name_GP
-        super(QPGeorgeModel, self)._get_function_get_parameter_name(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_parameter_name(object_category=object_category)
     
     def _get_function_get_kwargs_4_get_parameter_name(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_get_parameter_name_default
-        super(QPGeorgeModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_kwargs_4_get_parameter_name(object_category=object_category)
 
     def _get_parameter_name_GP(self, param_basename, object_category):
         param_name = param_basename
@@ -116,13 +131,13 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_create_parameter(self, object_category):
         if object_category == 'GP':
             return self._create_parameter_default
-        super(QPGeorgeModel, self)._get_function_create_parameter(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_create_parameter(object_category=object_category)
 
         
     def _get_function_get_kwargs_4_create_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_create_parameter_default
-        super(QPGeorgeModel, self)._get_function_get_kwargs_4_create_parameter(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_kwargs_4_create_parameter(object_category=object_category)
 
     # Deal with getting parameter
     #############################
@@ -130,29 +145,117 @@ class QPGeorgeModel(Core_GP1DModel):
     def _get_function_get_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_parameter_default
-        super(QPGeorgeModel, self)._get_function_get_parameter(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_parameter(object_category=object_category)
 
         
     def _get_function_get_kwargs_4_get_parameter(self, object_category):
         if object_category == 'GP':
             return self._get_kwargs_4_get_parameter_default
-        super(QPGeorgeModel, self)._get_function_get_kwargs_4_get_parameter(object_category=object_category)
+        super(Core_GP1DModel, self)._get_function_get_kwargs_4_get_parameter(object_category=object_category)
+    
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
 
-    ######################
-    # Convenience function
-    ######################
+    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
 
-    def log10(self, param_basename):
-        """True if the jumping of name param_basename should be log10"""
-        if param_basename not in self._get_l_parameter_basename_GP():
-            raise ValueError(f"param_basename shoud be in {self._get_l_parameter_basename_GP()}")
-        return self.parametrisation["log10"][param_basename]
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder        : 
+        function_shortname      :
+        """
+        raise NotImplementedError("You need to implement this method in each Core_GP1DModel subclass")
 
 
-class QPCGeorgeModel(QPGeorgeModel):
+class QPGeorgeModel(Core_GP1DModel):
 
+    ## Defined in Rasmussen & Williams 2006: https://ui.adsabs.harvard.edu/abs/2006gpml.book.....R/abstract
+    # and Roberts et al 2013: https://ui.adsabs.harvard.edu/abs/2012RSPTA.37110550R/abstract
+    # See also amongs others: Nicholson & Aigrain 2022: https://ui.adsabs.harvard.edu/abs/2022MNRAS.515.5251N/abstract"
+
+    __category__ = "QPGeorge"
+
+    kernel_text = "{amp}**2 * ExpSquaredKernel(metric={tau}) * ExpSine2Kernel(gamma=1/(2 * {gamma}**2), log_period={log_period})"
+    ldict_kernel = {'ExpSquaredKernel': ExpSquaredKernel, 'ExpSine2Kernel': ExpSine2Kernel}
+
+    ############################################################
+    ## Dealing with the parameters and their names for the model
+    ############################################################
+
+    # Dealing with parameter basenames
+    ##################################
+    
+    def _get_l_parameter_basename_GP(self):
+        return ['A', 'P', 'tau', 'gamma']
+    
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
+    
+    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder        : 
+        function_shortname      :
+        """
+        dico = {}
+        dico_param = self.get_parameters(object_category=None).values()
+        for param_basename, param in dico_param['GP'].items():
+            function_builder_fulllnlike.add_parameter(parameter=param, function_shortname=function_shortname_fulllnlike, exist_ok=True)
+            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
+            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
+            if param_basename in ["A", "tau", "gamma"]:
+                if self.log10(param_basename=param_basename):
+                    dico[param_basename] = f"10**{dico[param_basename]}"
+            if param_basename == "P":
+                if self.log10(param_basename=param_basename):
+                    dico[param_basename] = f"{dico[param_basename]} * log(10)"
+                else:
+                    dico[param_basename] = f"log{dico[param_basename]}"
+
+        ker = self.kernel_text.format(amp=dico["A"], tau=dico["tau"], gamma=dico["gamma"], log_period=dico["P"])
+        for var_name, var_content in self.ldict_kernel.items():
+            function_builder_GP1D.add_variable_to_ldict(variable_name=var_name, variable_content=var_content, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        
+        tab = "    " 
+        text_return = f"{tab}gp = GP({ker})\n"
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))"
+        function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='GP', variable_content=GP, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+
+
+class QPCGeorgeModel(Core_GP1DModel):
+
+    ## Defined in Perger et al 2021: https://ui.adsabs.harvard.edu/abs/2021A%26A...645A..58P/abstract
+    # However we addopted a parameterisation closer but not exactly equal to Nicholson & Aigrain 2022: https://ui.adsabs.harvard.edu/abs/2022MNRAS.515.5251N/abstract"
     __category__ = "QPCGeorge"
 
+    kernel_text = "{A}**2 * ExpSquaredKernel(metric={tau}) * (ExpSine2Kernel(gamma=1/(2 * {gamma}**2), log_period={log_period}) + {f} * CosineKernel(log_period={log_period} - log(2)))"
+    ldict_kernel = {'ExpSquaredKernel': ExpSquaredKernel, 'ExpSine2Kernel': ExpSine2Kernel, 'CosineKernel': CosineKernel}
 
     ############################################################
     ## Dealing with the parameters and their names for the model
@@ -162,13 +265,61 @@ class QPCGeorgeModel(QPGeorgeModel):
     ##################################
 
     def _get_l_parameter_basename_GP(self):
-        return ['A1', 'A2', 'P', 'tau']
+        return ['A', 'f', 'P', 'tau', 'gamma']
+    
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
+    
+    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder        : 
+        function_shortname      :
+        """
+        dico = {}
+        dico_param = self.get_parameters(object_category=None).values()
+        for param_basename, param in dico_param['GP'].items():
+            function_builder_fulllnlike.add_parameter(parameter=param, function_shortname=function_shortname_fulllnlike, exist_ok=True)
+            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
+            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
+            if param_basename in ["A", "tau", "gamma", "f"]:
+                if self.log10(param_basename=param_basename):
+                    dico[param_basename] = f"10**{dico[param_basename]}"
+            if param_basename == "P":
+                if self.log10(param_basename=param_basename):
+                    dico[param_basename] = f"{dico[param_basename]} * log(10)"
+                else:
+                    dico[param_basename] = f"log{dico[param_basename]}"
+
+        ker = self.kernel_text.format(A=dico["A"], tau=dico["tau"], gamma=dico["gamma"], log_period=dico["P"], f=dico["f"])
+        for var_name, var_content in self.ldict_kernel.items():
+            function_builder_GP1D.add_variable_to_ldict(variable_name=var_name, variable_content=var_content, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        
+        tab = "    " 
+        text_return = f"{tab}gp = GP({ker})\n"
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))"
+        function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='GP', variable_content=GP, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
 
 
-class QPCeleriteModel(QPGeorgeModel):
+class QPCeleriteModel(Core_GP1DModel):
 
     __category__ = "QPCelerite"
-
 
     ############################################################
     ## Dealing with the parameters and their names for the model
@@ -181,7 +332,7 @@ class QPCeleriteModel(QPGeorgeModel):
         return ['B', 'C', 'P', 'L']
 
 
-class RotationCeleriteModel(QPGeorgeModel):
+class RotationCeleriteModel(Core_GP1DModel):
 
     __category__ = "RotationCelerite"
 
@@ -197,7 +348,7 @@ class RotationCeleriteModel(QPGeorgeModel):
         return ['sigma', 'P', 'Q', 'dQ', 'f']
 
 
-class SHOCeleriteModel(QPGeorgeModel):
+class SHOCeleriteModel(Core_GP1DModel):
 
     __category__ = "SHOCelerite"
 
@@ -278,7 +429,7 @@ class SHOCeleriteModel(QPGeorgeModel):
             return self.parametrisation["log10"]['Q/tau']
 
 
-class Matern32Model(QPGeorgeModel):
+class Matern32Model(Core_GP1DModel):
 
     __category__ = "Matern32Celerite"
 

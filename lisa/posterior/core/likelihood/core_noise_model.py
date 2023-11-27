@@ -241,7 +241,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         else:
             raise ValueError("This noise model doesn't include a GP, you should not call this method for this noise model.")
 
-    def _get_prefilledlnlike(self, l_params, model_instance=None, l_instmod_obj=None):
+    def _get_prefilledlnlike(self, l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
@@ -294,48 +294,48 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         raise ValueError("l_instmod_obj should be an Instrument_Model or an Iterable of "
                          "Instrument_Models")
 
-    def _update_lists_params(self, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
-                             param_obj):
-        """Update the list of parameters of the lnlike and the noise model adding the parameter if necessary.
+    # def _update_lists_params(self, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
+    #                          param_obj):
+    #     """Update the list of parameters of the lnlike and the noise model adding the parameter if necessary.
 
-        This is a convenience function to be used in the subclass and especially in the _get_prefilledlnlike methods to properly update the list of parameters.
+    #     This is a convenience function to be used in the subclass and especially in the _get_prefilledlnlike methods to properly update the list of parameters.
 
-        Arguments
-        ---------
-        l_params_lnlike      : list of String
-            Current list of parameters full names for the lnlikehood function.
-        l_params_noisemod    : list of String
-            Current list of parameters full names for the noise model only.
-        l_idx_param_noisemod : List of Integer
-            List of the index of the noise model parameters in the updated list of parameters (l_params_new).
-        param_obj            : Parameter
-            Parameter object that might be added to the lists of parameters
+    #     Arguments
+    #     ---------
+    #     l_params_lnlike      : list of String
+    #         Current list of parameters full names for the lnlikehood function.
+    #     l_params_noisemod    : list of String
+    #         Current list of parameters full names for the noise model only.
+    #     l_idx_param_noisemod : List of Integer
+    #         List of the index of the noise model parameters in the updated list of parameters (l_params_new).
+    #     param_obj            : Parameter
+    #         Parameter object that might be added to the lists of parameters
 
-        Returns
-        -------
-        l_params_lnlike_new      : list of String
-            Updated list of parameters full names for the lnlikehood function.
-        l_params_noisemod_new    : list of String
-            Updated list of parameters full names for the noise model only.
-        l_idx_param_noisemod_new : List of Integer
-            Updated List of the index of the noise model parameters in the updated list of parameters (l_params_new).
-        """
-        if param_obj.free:
-            if param_obj.full_name not in l_params_lnlike:
-                l_params_lnlike_new = l_params_lnlike.copy()
-                l_params_lnlike_new.append(param_obj.full_name)
-            else:
-                l_params_lnlike_new = l_params_lnlike
-            if param_obj.full_name not in l_params_noisemod:
-                l_params_noisemod_new = l_params_noisemod.copy()
-                l_params_noisemod_new.append(param_obj.full_name)
-                l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
-                l_idx_param_noisemod_new.append(l_params_lnlike_new.index(param_obj.full_name))
-            else:
-                l_idx_param_noisemod_new = l_idx_param_noisemod
-                l_params_noisemod_new = l_params_noisemod
-        else:
-            l_params_lnlike_new = l_params_lnlike
-            l_idx_param_noisemod_new = l_idx_param_noisemod
-            l_params_noisemod_new = l_params_noisemod
-        return l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new
+    #     Returns
+    #     -------
+    #     l_params_lnlike_new      : list of String
+    #         Updated list of parameters full names for the lnlikehood function.
+    #     l_params_noisemod_new    : list of String
+    #         Updated list of parameters full names for the noise model only.
+    #     l_idx_param_noisemod_new : List of Integer
+    #         Updated List of the index of the noise model parameters in the updated list of parameters (l_params_new).
+    #     """
+    #     if param_obj.free:
+    #         if param_obj.full_name not in l_params_lnlike:
+    #             l_params_lnlike_new = l_params_lnlike.copy()
+    #             l_params_lnlike_new.append(param_obj.full_name)
+    #         else:
+    #             l_params_lnlike_new = l_params_lnlike
+    #         if param_obj.full_name not in l_params_noisemod:
+    #             l_params_noisemod_new = l_params_noisemod.copy()
+    #             l_params_noisemod_new.append(param_obj.full_name)
+    #             l_idx_param_noisemod_new = l_idx_param_noisemod.copy()
+    #             l_idx_param_noisemod_new.append(l_params_lnlike_new.index(param_obj.full_name))
+    #         else:
+    #             l_idx_param_noisemod_new = l_idx_param_noisemod
+    #             l_params_noisemod_new = l_params_noisemod
+    #     else:
+    #         l_params_lnlike_new = l_params_lnlike
+    #         l_idx_param_noisemod_new = l_idx_param_noisemod
+    #         l_params_noisemod_new = l_params_noisemod
+    #     return l_params_lnlike_new, l_params_noisemod_new, l_idx_param_noisemod_new

@@ -9,6 +9,7 @@ from os import getcwd, chdir
 from loguru import logger
 
 from ...tools.human_machine_interface.QCM import QCM_utilisateur
+from ...tools.miscellaneous import look4file_withdeffolder
 
 class ConfigFile(object):
     """
@@ -81,10 +82,8 @@ class ConfigFileAttr(object):
         """
         # Read the content of the config file
         cwd = getcwd()
-        chdir(self.run_folder.path)  # Self run folder comes from the RunFolderAttr (and is a RunFolder instance) that is also a parent class of Posterior and Core_Model.
         with open(self.config_file.path) as ff:
             exec(ff.read())
-        chdir(cwd)
         dico = locals().copy()
         for var_name in ["self", "cwd", "ff", "path_config_file", "file_path", 'default_file_content']:
             if var_name in dico:
@@ -126,7 +125,7 @@ class ConfigFileAttr(object):
             # If the reply is yes add it to the config_file and ask the user to check the content.
             else:
                 # Look for the config file to check if it exists
-                file_path = self.look4runfile(file_path=self.config_file.path)  # look4runfile is provided by RunFolderAttr which is also a parent classe of Posterior and Core_Model
+                file_path = look4file_withdeffolder(file_path=self.config_file.path, default_folder=None)  # look4runfile is provided by RunFolderAttr which is also a parent classe of Posterior and Core_Model
                 with open(file_path, "+a") as ff:
                     self._get_function_config(function_type='add_default_config', config2load=config2load)(file=ff) # _get_function_config is a method of both Posterior and Core_Model
                 input(f"{config2load}: Default configuration variable(s) was/were added to the configuration file ({self.config_file.path}).\n"
