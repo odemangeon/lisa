@@ -13,6 +13,7 @@ from loguru import logger
 
 from collections import defaultdict
 from numpy import concatenate, sqrt
+from math import log
 
 try:
     from george import GP
@@ -232,8 +233,8 @@ class QPGeorgeModel(Core_GP1DModel):
                 if self.log10(param_basename=param_basename):
                     dico[param_basename] = f"{dico[param_basename]} * log(10)"
                 else:
-                    dico[param_basename] = f"log{dico[param_basename]}"
-
+                    dico[param_basename] = f"log({dico[param_basename]})"
+        function_builder_GP1D.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         ker = self.kernel_text.format(amp=dico["A"], tau=dico["tau"], gamma=dico["gamma"], log_period=dico["P"])
         for var_name, var_content in self.ldict_kernel.items():
             function_builder_GP1D.add_variable_to_ldict(variable_name=var_name, variable_content=var_content, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -302,7 +303,7 @@ class QPCGeorgeModel(Core_GP1DModel):
                     dico[param_basename] = f"{dico[param_basename]} * log(10)"
                 else:
                     dico[param_basename] = f"log{dico[param_basename]}"
-
+        function_builder_GP1D.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         ker = self.kernel_text.format(A=dico["A"], tau=dico["tau"], gamma=dico["gamma"], log_period=dico["P"], f=dico["f"])
         for var_name, var_content in self.ldict_kernel.items():
             function_builder_GP1D.add_variable_to_ldict(variable_name=var_name, variable_content=var_content, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)

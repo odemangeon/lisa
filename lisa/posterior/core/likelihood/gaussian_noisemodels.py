@@ -183,9 +183,8 @@ class Gaussian_Noise_Models(Core_Noise_Model):
         lnlikefunc_text = """
         dict_datakwargs = defaultdict(list)
         for datakwargs in l_datakwargs:
-            dict_datakwargs["time"].append(datakwargs["time"])
             dict_datakwargs["data"].append(datakwargs["data"])
-            dict_datakwargs["data_err"].append(sqrt(compute_jitteredvar(data_err=datakwargs["data_err"], jitter=jitter)))
+            dict_datakwargs["data_err"].append(sqrt(compute_jitteredvar(data_err=datakwargs["data_err"], jitter={jitter})))
         """
         lnlikefunc_text = dedent(lnlikefunc_text).replace('\n', '\n    ')
 
@@ -193,9 +192,6 @@ class Gaussian_Noise_Models(Core_Noise_Model):
             function_shortname_1inst = f"lnlike_1inst_{inst_mod_fullname}"
             function_builder_1inst.add_new_function(shortname=function_shortname_1inst, parameters=None, mandatory_args=['sim_data', 'l_datakwargs'],
                                                     optional_args=None, full_function_name=None)
-            function_builder_1inst.add_to_body_text(text=lnlikefunc_text, function_shortname=function_shortname_1inst)
-            function_builder_1inst.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
-            function_builder_1inst.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
             # Do jitter and compute_jitteredvar
             jitter_model = self.get_model(inst_model_fullname=instmod_obj.full_name)
             jitter_param = jitter_model.get_parameters(object_category=None)['instrument']['jitter']
@@ -203,7 +199,9 @@ class Gaussian_Noise_Models(Core_Noise_Model):
             function_builder_1inst.add_parameter(parameter=jitter_param, function_shortname=function_shortname_1inst, exist_ok=True)
             jitter = function_builder_1inst.get_text_4_parameter(parameter=jitter_param, function_shortname=function_shortname_1inst)
             compute_jitteredvar = jitter_model.get_compute_jitteredvar()
-            function_builder_1inst.add_variable_to_ldict(variable_name='jitter', variable_content=jitter, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
+            function_builder_1inst.add_to_body_text(text=lnlikefunc_text.format(jitter=jitter), function_shortname=function_shortname_1inst)
+            function_builder_1inst.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
+            function_builder_1inst.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
             function_builder_1inst.add_variable_to_ldict(variable_name='compute_jitteredvar', variable_content=compute_jitteredvar, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
             # Do and return the computation of the ln likelihood
             jitter_model.add_text_compute_lnlike(nparam_datasim=nparam_datasim, function_builder_1inst=function_builder_1inst, function_shortname_1inst=function_shortname_1inst)
@@ -238,7 +236,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
             """.format(l_inst_mod_name=l_inst_mod_fullname)
             res = 0
             for inst_mod_fullname in l_inst_mod_fullname:
-                res += dico_func[inst_mod_fullname](sim_data[inst_mod_fullname], param_noisemodel[inst_mod_fullname], datasets_kwargs[inst_mod_fullname])
+                res += dico_func[inst_mod_fullname](p_vect=param_noisemodel[inst_mod_fullname], sim_data=sim_data[inst_mod_fullname], l_datakwargs=datasets_kwargs[inst_mod_fullname])
             return res
 
         return lnlike_alljitter, dico_params_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj
