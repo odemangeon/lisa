@@ -75,14 +75,14 @@ logger.info("15. Create likelihood functions")
 post_instance.create_lnlikelihoods()
 
 logger.info("16. Create prior functions")
-post_instance.get_lnpriors()
+post_instance.create_lnpriors()
 
 logger.info("17. Create posterior functions")
-post_instance.get_lnposteriors()
+post_instance.create_lnposteriors()
 l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
 
-logger.info("18. Save posterior instance")
-post_instance.save_post_instance(pickle_folder=output_folders["pickles_explore"])
+# logger.info("18. Save posterior instance")
+# post_instance.save_post_instance(pickle_folder=output_folders["pickles_explore"])
 
 logger.info("19. Create sampler")
 ndim = len(post_instance.lnposteriors.dataset_db["all"].param_model_names_list)
