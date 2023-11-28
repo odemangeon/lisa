@@ -139,8 +139,8 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     #######################################
 
     def create_lnlikelihood_and_formatinputs(self, l_idx_simdata, l_instmod_obj, l_dataset_obj,
-                                             l_datasetkwargs_req, l_likelihood_param_fullname, datasim_has_multioutputs,
-                                             function_builder, function_shortname):
+                                             l_datasetkwargs_req, datasim_has_multioutputs,
+                                             function_builder, function_shortname, l_paramsfullname_datasim):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
         This function might not be convenient for your noise model, in wich case you should overload it.
@@ -183,22 +183,26 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         l_likelihood_param_fullname_new : list of String
             New list of parameter full names for the likelihood which the l_likelihood_param_fullname +  the parameters for this noise model
         """
-        lnlike, l_params_new, params_noisemod, l_idx_param_noisemod = self._get_prefilledlnlike(l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname)
+        lnlike_all, dico_params_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj = self._get_prefilledlnlike(l_instmod_obj=l_instmod_obj, l_idx_simdata=l_idx_simdata, function_builder_all=function_builder, 
+                                                                                                               function_shortname_all=function_shortname, l_paramsfullname_datasim=l_paramsfullname_datasim)
+        dico_idx_param_noisemod = {}
+        for inst_mod_fullname, l_param in dico_params_noisemod.items():
+            dico_idx_param_noisemod[inst_mod_fullname] = [function_builder.get_index_4_parameter(parameter=param, function_shortname=function_shortname) for param in l_param]
 
         def f_format_param(param_likelihood):
-            return param_likelihood[l_idx_param_noisemod]
+            return {inst_mod_fullname: param_likelihood[l_idx_param_inst_mod] for inst_mod_fullname, l_idx_param_inst_mod in dico_idx_param_noisemod.items()}
 
         if datasim_has_multioutputs:
             def f_format_simdata(sim_data):
-                return [sim_data[ii] for ii in l_idx_simdata]
+                return {inst_mod_fullname: [sim_data[ii] for ii in idx_simdata_inst_mod] for inst_mod_fullname, idx_simdata_inst_mod in dico_idx_datasim.items()}
         else:
             def f_format_simdata(sim_data):
-                return [sim_data, ]
+                return {inst_mod_fullname: [sim_data, ] for inst_mod_fullname in dico_idx_datasim.keys()}
 
         def f_format_dataset_kwargs(dataset_kwargs):
-            return [{datasetkwarg: dataset_kwargs[dataset.dataset_name][datasetkwarg] for datasetkwarg in l_datasetkwarg} for dataset, l_datasetkwarg in zip(l_dataset_obj, l_datasetkwargs_req)]
+            return {inst_mod_fullname: [{datasetkwarg: dataset_kwargs[l_dataset_obj[jj].dataset_name][datasetkwarg] for datasetkwarg in l_datasetkwargs_req[jj]} for jj in indexes_l_dataset_obj_inst_mod] for inst_mod_fullname, indexes_l_dataset_obj_inst_mod in dico_idx_l_dataset_obj.items()}
 
-        return lnlike, f_format_param, f_format_simdata, f_format_dataset_kwargs, l_params_new
+        return lnlike_all, f_format_param, f_format_simdata, f_format_dataset_kwargs
 
     def create_gpsimulator_and_formatinputs(self, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
         """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
@@ -241,20 +245,18 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         else:
             raise ValueError("This noise model doesn't include a GP, you should not call this method for this noise model.")
 
-    def _get_prefilledlnlike(self, l_likelihood_param_fullname, l_instmod_obj, function_builder, function_shortname):
+    def _get_prefilledlnlike(self, l_instmod_obj, l_idx_simdata, function_builder_all, function_shortname_all):
         """Return a ln likelihood function prefilled with the fixed parameters.
 
         This function is used by LikelihoodCreator.Core_model._create_lnlikelihood()
 
         Arguments
         ---------
-        l_params        : list_of_string
-            Current list of parameters full names.
-        l_instmod_obj   : Instrument_Model/list_of_InstrumentModel
+        l_instmod_obj           : Instrument_Model/list_of_InstrumentModel
             instrument model for the ln likelihood to produce.
-        model_instance  : Core_Model
-            Instance of Core_Model or a subclass of it. Mandatory for noise model which requires parameter
-            of the object studied (like GP and stellar activity)
+        l_idx_simdata           :
+        function_builder_all    :
+        function_shortname_all  :
 
         Returns  l_params_new, l_params_noisemod, l_idx_param_noisemod
         -------
