@@ -96,11 +96,11 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     # to be used for each main parameter of the model.
     >>> post_instance.model.load_parameter_file()  # Load the parameter file defining the priors to be used
     # for each main parameter.
-    >>> post_instance.get_datasimulators()  # Create the datasimulator functions
-    >>> post_instance.get_lnlikelihoods()  # Create the lnlikelihood functions
-    >>> post_instance.get_individal_lnpriors()  # Create the individual lnprior functions
-    >>> post_instance.get_lnpriors()  # Create the lnprior functions
-    >>> post_instance.get_lnposteriors()  # Create the lnposterior functions.
+    >>> post_instance.create_datasimulators()  # Create the datasimulator functions
+    >>> post_instance.create_lnlikelihoods()  # Create the lnlikelihood functions
+    >>> post_instance.create_individal_lnpriors()  # Create the individual lnprior functions
+    >>> post_instance.create_lnpriors()  # Create the lnprior functions
+    >>> post_instance.create_lnposteriors()  # Create the lnposterior functions.
     """
 
     __model_classes = [GravGroup, ]
@@ -122,30 +122,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             Specify the folder where the run files are/will be located
         """
         # Initialize the configuration file attribute
-        ConfigFileAttr.__init__(self)
-        # # Initialise the database function attribute: lnprior_db, lnlike_db, lnpost_db,
-        # # datasim_db. Asssign them the database_lock and dataset_lock and the instmodel4dataset
-        # self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
-        #                                  instmodel4dataset=self.model.instmodel4dataset,
-        #                                  instordered=False, use_samelock=self.samelock,
-        #                                  lock_dataset=self.get_dataset_Lock_instance(),
-        #                                  lock_database=self.get_database_Lock_instance())
-        # self.__lnlike_db = DatabaseFunc(object_stored="likelihood", database_name=self.object_name,
-        #                                 instmodel4dataset=self.model.instmodel4dataset,
-        #                                 instordered=False, use_samelock=self.samelock,
-        #                                 lock_dataset=self.get_dataset_Lock_instance(),
-        #                                 lock_database=self.get_database_Lock_instance())
-        # self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
-        #                                 instmodel4dataset=self.model.instmodel4dataset,
-        #                                 instordered=False, use_samelock=self.samelock,
-        #                                 lock_dataset=self.get_dataset_Lock_instance(),
-        #                                 lock_database=self.get_database_Lock_instance())
-        # self.__datasim_db = DatabaseFunc(object_stored="datasimulator",
-        #                                  instmodel4dataset=self.model.instmodel4dataset,
-        #                                  database_name=self.object_name, instordered=False,
-        #                                  use_samelock=self.samelock,
-        #                                  lock_dataset=self.get_dataset_Lock_instance(),
-        #                                  lock_database=self.get_database_Lock_instance())
+        ConfigFileAttr.__init__(self)        
         
     def configure_posterior(self, path_config_file=None, cluster=False):
         """Configure the whole posterior using the configuration file.
@@ -447,19 +424,24 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         """Lnprior database."""
         return self.__lnprior_db
 
-    def get_individal_lnpriors(self):
+    def create_individal_lnpriors(self):
         """Get individual lnpriors from the model and store them into lnpriors."""
         if self.islocked_dataset_db:
             self.lnpriors.individual = self.model.create_individual_lnpriors()
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
-    def get_lnpriors(self):
+    def create_lnpriors(self):
         """Get joint lnpriors from the model and store them into lnpriors."""
         if self.islocked_dataset_db:
+            self.__lnprior_db = DatabaseFunc(object_stored="prior", database_name=self.object_name,
+                                             instmodel4dataset=self.model.instmodel4dataset,
+                                             instordered=False, use_samelock=self.samelock,
+                                             lock_dataset=self.get_dataset_Lock_instance(),
+                                             lock_database=self.get_database_Lock_instance())
             if not(hasattr(self.lnpriors, "individual")):
                 logger.info("Creating individual lnpriors")
-                self.get_individal_lnpriors()
+                self.create_individal_lnpriors()
             logger.info("Creating lnpriors for all entry in self.lnpriors.instrument_db")
             (self.lnpriors.instrument_db.
              update(self.model.create_lnpriors(lnlike_db=self.lnlikelihoods.instrument_db,
@@ -648,11 +630,16 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         """Return the current content lnprior database."""
         return self.__lnpost_db
 
-    def get_lnposteriors(self):
+    def create_lnposteriors(self):
         """Get lnposts from the model and store them into lnposteriors."""
         if self.islocked_dataset_db:
+            self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
+                                        instmodel4dataset=self.model.instmodel4dataset,
+                                        instordered=False, use_samelock=self.samelock,
+                                        lock_dataset=self.get_dataset_Lock_instance(),
+                                        lock_database=self.get_database_Lock_instance())
             (self.lnposteriors.instrument_db.
-             update(self.create_lnposteriors(lnlike_db=self.lnlikelihoods.instrument_db,
+             update(self._create_lnposteriors(lnlike_db=self.lnlikelihoods.instrument_db,
                                              lnprior_db=self.lnpriors.instrument_db)))
             (self.lnposteriors.dataset_db.
              update(self.
@@ -673,7 +660,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
         return DocFunction(function=lnpost, arg_list=arg_list)
 
-    def create_lnposteriors(self, lnlike_db, lnprior_db, affectinstmodel4dataset=False,
+    def _create_lnposteriors(self, lnlike_db, lnprior_db, affectinstmodel4dataset=False,
                             lock_db=False):
         """Return the posterior for each instrument model used."""
         if affectinstmodel4dataset:
@@ -768,39 +755,39 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         with open(join(pickle_folder, pickle_filename), "wb") as fpostinst:
             dump(dico, fpostinst)
 
-    def init_from_pickle(self, pickle_folder=".", pickle_filename=None, data_folder=None, run_folder=None):
-        """Initialize the instance from the post_instance pickle file produced with save_post_instance.
+    # def init_from_pickle(self, pickle_folder=".", pickle_filename=None, data_folder=None, run_folder=None):
+    #     """Initialize the instance from the post_instance pickle file produced with save_post_instance.
 
-        :param str pickle_folder: path to the folder containing the pickle file.
-        :param str pickle_filename: Name of the posterior instance pickle file
-        """
-        # load the dictionary
-        if pickle_filename is None:
-            pickle_filename = "{}{}".format(self.object_name, self._extension_postinstance)
-        with open(join(pickle_folder, pickle_filename), "rb") as fdico:
-            dico = load(fdico)
-        # define data and run folder
-        if data_folder is None:
-            data_folder = dico["data_folder"]
-        if run_folder is None:
-            run_folder = dico["run_folder"]
-        self.dataset_db.data_folder = data_folder
-        self.set_run_folder(run_folder=run_folder)
-        # load datasetfile
-        self.load_datasetsfile(dico["dataset_file"])
-        # define model
-        # Temporary fix for define_model not taking transit_model and rv_model as argument anymore.
-        # transit_model = dico["model_kwargs"].pop("transit_model", None)  # For compatibility with previsous version
-        # rv_model = dico["model_kwargs"].pop("rv_model", None)  # For compatibility with previsous version
-        self.define_model(category=dico["model_category"], name=dico["object_name"],
-                          **dico["model_kwargs"])
-        # Automatic model_init: Set parameterisation, set param_file and inst_cat_param_file and load them
-        self.model.automatic_model_initialisation(**dico["model_auto_init_kwargs"])
-        self.get_datasimulators()
-        self.get_lnlikelihoods()
-        self.get_individal_lnpriors()
-        self.get_lnpriors()
-        self.get_lnposteriors()
+    #     :param str pickle_folder: path to the folder containing the pickle file.
+    #     :param str pickle_filename: Name of the posterior instance pickle file
+    #     """
+    #     # load the dictionary
+    #     if pickle_filename is None:
+    #         pickle_filename = "{}{}".format(self.object_name, self._extension_postinstance)
+    #     with open(join(pickle_folder, pickle_filename), "rb") as fdico:
+    #         dico = load(fdico)
+    #     # define data and run folder
+    #     if data_folder is None:
+    #         data_folder = dico["data_folder"]
+    #     if run_folder is None:
+    #         run_folder = dico["run_folder"]
+    #     self.dataset_db.data_folder = data_folder
+    #     self.set_run_folder(run_folder=run_folder)
+    #     # load datasetfile
+    #     self.load_datasetsfile(dico["dataset_file"])
+    #     # define model
+    #     # Temporary fix for define_model not taking transit_model and rv_model as argument anymore.
+    #     # transit_model = dico["model_kwargs"].pop("transit_model", None)  # For compatibility with previsous version
+    #     # rv_model = dico["model_kwargs"].pop("rv_model", None)  # For compatibility with previsous version
+    #     self.define_model(category=dico["model_category"], name=dico["object_name"],
+    #                       **dico["model_kwargs"])
+    #     # Automatic model_init: Set parameterisation, set param_file and inst_cat_param_file and load them
+    #     self.model.automatic_model_initialisation(**dico["model_auto_init_kwargs"])
+    #     self.get_datasimulators()
+    #     self.get_lnlikelihoods()
+    #     self.get_individal_lnpriors()
+    #     self.get_lnpriors()
+    #     self.get_lnposteriors()
 
     # Code to add all datasets in a folder
     # # Examine data folder to look for available datasets
