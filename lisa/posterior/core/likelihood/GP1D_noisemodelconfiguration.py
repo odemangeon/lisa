@@ -157,7 +157,7 @@ class Core_GP1DModel(Core_1ModelConfig):
     # Dealing with the likelihood creation
     ######################################
 
-    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
         """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
 
         Parameters
@@ -202,7 +202,7 @@ class QPGeorgeModel(Core_GP1DModel):
     # Dealing with the likelihood creation
     ######################################
     
-    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
         """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
 
         Parameters
@@ -220,9 +220,9 @@ class QPGeorgeModel(Core_GP1DModel):
         function_shortname      :
         """
         dico = {}
-        dico_param = self.get_parameters(object_category=None).values()
+        dico_param = self.get_parameters(object_category=None)
         for param_basename, param in dico_param['GP'].items():
-            function_builder_fulllnlike.add_parameter(parameter=param, function_shortname=function_shortname_fulllnlike, exist_ok=True)
+            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
             function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
             dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
             if param_basename in ["A", "tau", "gamma"]:
@@ -241,7 +241,7 @@ class QPGeorgeModel(Core_GP1DModel):
         tab = "    " 
         text_return = f"{tab}gp = GP({ker})\n"
         # text_return += f"{tab}import pdb; pdb.set_trace()"
-        text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))"
+        text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))\n"
         text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='GP', variable_content=GP, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -271,7 +271,7 @@ class QPCGeorgeModel(Core_GP1DModel):
     # Dealing with the likelihood creation
     ######################################
     
-    def add_text_compute_lnlike(self, function_builder_fulllnlike, function_shortname_fulllnlike, function_builder_GP1D, function_shortname_GP1D):
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
         """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
 
         Parameters
@@ -285,13 +285,13 @@ class QPCGeorgeModel(Core_GP1DModel):
             Current list of indexes of the the parameters in l_params_noisemod in l_params
         params_noisemod_name    : str
         ldict                   : dict
-        function_builder        : 
-        function_shortname      :
+        function_builder_allGP1D        : 
+        function_shortname_allGP1D      :
         """
         dico = {}
         dico_param = self.get_parameters(object_category=None).values()
         for param_basename, param in dico_param['GP'].items():
-            function_builder_fulllnlike.add_parameter(parameter=param, function_shortname=function_shortname_fulllnlike, exist_ok=True)
+            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
             function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
             dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
             if param_basename in ["A", "tau", "gamma", "f"]:

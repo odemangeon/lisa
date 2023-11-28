@@ -503,6 +503,12 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     def create_lnlikelihoods(self):
         """Get lnlikes from the model and store them into lnlikelihoods."""
         if self.islocked_dataset_db:
+            self.__lnlike_db = DatabaseFunc(object_stored="likelihood", 
+                                            instmodel4dataset=self.model.instmodel4dataset,
+                                            database_name=self.object_name, instordered=False, 
+                                            use_samelock=self.samelock,
+                                            lock_dataset=self.get_dataset_Lock_instance(),
+                                            lock_database=self.get_database_Lock_instance())
             # Since for now I cannot produce lnlike for datasim that doesn't include the dataset
             # kwargs, I cannot fill the instrument_db in self.likelihoods
             # datasim_db = self.datasimulators.instrument_db

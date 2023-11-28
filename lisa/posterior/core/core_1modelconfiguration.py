@@ -85,7 +85,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                     self.__param_extensions[key][param_basename] = param_extensions[key][param_basename]
 
     def _get_default_param_extensions(self, **kwargs):
-        return {obj_cat: {param_basename: self.model_name for param_basename in self._get_l_parameter_basename(object_category=obj_cat, **kwargs)}
+        return {obj_cat: {param_basename: '' for param_basename in self._get_l_parameter_basename(object_category=obj_cat, **kwargs)}
                 for obj_cat in self.object_categories}
 
     def _set_args(self, args=None):
@@ -262,7 +262,7 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
                 param = Parameter(name=param_name, name_prefix=param_container.name)
                 param_container.add_parameter(param)
         else:
-            param = param_container._get_parameter(name=param_name)  
+            param = param_container.get_parameter(name=param_name)  
         return param  
 
     def _get_kwargs_4_create_parameter_default(self, param_name, param_basename, object_category, **kwargs):

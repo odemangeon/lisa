@@ -1,7 +1,14 @@
 """
 The objective of this module is to define the GaussianModel class which allow to configure gaussian noise models
 """
+from loguru import logger
+from numpy import sum as npsum
+from numpy import log as nplog
+from numpy import pi, concatenate
+
 from ..core_1modelconfiguration import Core_1ModelConfig
+
+twopi = 2 * pi
 
 
 class GaussianModel(Core_1ModelConfig):
@@ -139,6 +146,18 @@ class GaussianModel(Core_1ModelConfig):
                 def compute_jitteredvar(data_err, jitter):
                     return (data_err * jitter)**2
         return compute_jitteredvar
+    
+    def add_text_compute_lnlike(self, nparam_datasim, function_builder_1inst, function_shortname_1inst):
+        tab = "    " 
+        if self.use_Baluevfactor:
+            text_return = f"{tab}return -0.5 * (npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))**2 / concatenate(dict_datakwargs['data_err']) / (1 - (nparam_datasim / len(dict_datakwargs['data_err']))) - nplog(2 * pi / concatenate(dict_datakwargs['data_err'])))"
+        else:
+            text_return = f"{tab}return -0.5 * (npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))**2 / concatenate(dict_datakwargs['data_err']) - nplog(2 * pi / concatenate(dict_datakwargs['data_err'])))"
+        function_builder_1inst.add_to_body_text(text=text_return, function_shortname=function_shortname_1inst)
+        function_builder_1inst.add_variable_to_ldict(variable_name='npsum', variable_content=npsum, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
+        function_builder_1inst.add_variable_to_ldict(variable_name='nplog', variable_content=nplog, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
+        function_builder_1inst.add_variable_to_ldict(variable_name='twopipi', variable_content=twopi, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
+        function_builder_1inst.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
 
     ######################
     # Convenience function

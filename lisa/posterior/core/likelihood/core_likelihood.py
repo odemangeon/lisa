@@ -192,7 +192,7 @@ class LikelihoodCreator(object):
 
         # Initialise the list of parameter for the likelihood computation with the parameter of the
         # datasimulator
-        l_paramsfullname_likelihood = datasim_all_dst_doc_func.param_model_names_list.copy()
+        l_paramsfullname_datasim = datasim_all_dst_doc_func.param_model_names_list.copy()
 
         # Update the parameters required taking into account the parameter of the noise model
         # Also for each instrument model create the functions of the lnlikelihood and the functions to format
@@ -201,15 +201,14 @@ class LikelihoodCreator(object):
         for noisemodel_cat, dico in dico_noisemodel.items():
             noise_model = self.noise_models[noisemodel_cat]
             (dico["lnlike_func"], dico["f_format_param"], dico["f_format_simdata"], dico["f_format_datasetkwargs"],
-             l_paramsfullname_likelihood
              ) = noise_model.create_lnlikelihood_and_formatinputs(l_idx_simdata=dico["l_idx_simdata"],
                                                                   l_instmod_obj=[l_instmod_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_datasetkwargs_req=dico["l_datasetkwargs_req"],
-                                                                  l_likelihood_param_fullname=l_paramsfullname_likelihood,
                                                                   datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
                                                                   function_builder=func_builder,
                                                                   function_shortname=func_shortname_lnlike,
+                                                                  l_paramsfullname_datasim=l_paramsfullname_datasim,
                                                                   )
             func_builder.add_variable_to_ldict(variable_name=f"lnlike_{noisemodel_cat}", variable_content=dico["lnlike_func"],
                                                function_shortname=func_shortname_lnlike, exist_ok=False)
