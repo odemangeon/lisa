@@ -362,7 +362,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         l_all_main_parameters_full_name = self.get_list_paramnames(main=True, recursive=True, no_duplicate=False, include_prefix=True, code_version=False, recursive_naming=True)
         for param_full_name in frozens:
             if param_full_name not in l_all_main_parameters_full_name:
-                raise ValueError(f"In the frozens list of the configuration file, {frozen_param_full_name} is not a known main parameter full name.")
+                raise ValueError(f"In the frozens list of the configuration file, {param_full_name} is not a known main parameter full name.")
             if param_full_name in l_param_fullname_to_defreeze:
                 l_param_fullname_to_defreeze.remove(param_full_name)
             else:
@@ -446,7 +446,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # Check that each parametercontainer_type in self.paramcont_categories has the correct parameter containers names
         for parcont_type in self.paramcont_categories:
             if (set(self.paramcontainers[parcont_type].keys()) != set(priors[parcont_type].keys())):
-                raise ValueError(f"The parameters[{parcont_type}] dictionary of the configuration file doesn't have the correct keys: Expect {set(self.paramcontainers[parcont_type].keys())}, got {set(parameters[parcont_type].keys())}")
+                raise ValueError(f"The priors[{parcont_type}] dictionary of the configuration file doesn't have the correct keys: Expect {set(self.paramcontainers[parcont_type].keys())}, got {set(priors[parcont_type].keys())}")
         # Load it
         # load the joint prior configuration
         Model_Prior.load_jointprior_config(self, dico_jointprior_config=priors[self.joint_prior_name])
@@ -789,36 +789,36 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     ## Dealing with the priors param file
     #####################################
 
-    def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary from the parameter_file
+    # def load_config(self, dico_config):
+    #     """load the configuration specified by the dictionnary from the parameter_file
 
-        :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
-            read from the parameter file.
-        """
-        # load the joint prior configuration
-        Model_Prior.load_jointprior_config(self, dico_config=dico_config)
-        # Load the new configuration from the parameter file for each Paramcontainer and parameter
-        logger.debug("List of Core_ParamContainer types in param_file_info: {}"
-                     "".format(self.paramfile_info.keys()))
-        for paramcont_type in self.paramfile_info.keys():  # self.paramfile_info comes from Core_ParamContainer
-            logger.debug("Content of param_file_info for {}: {}"
-                         "".format(paramcont_type, self.paramfile_info[paramcont_type]))
-            if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
-                for paramcont_name in self.paramfile_info[paramcont_type]:
-                    paramcont_dico = dico_config[paramcont_name]
-                    logger.debug("Content of param dictionary for {} {}: {}"
-                                 "".format(paramcont_type, paramcont_name, paramcont_dico))
-                    self.paramcontainers[paramcont_type][paramcont_name].load_config(dico_config=paramcont_dico,
-                                                                                     model_instance=self,
-                                                                                     available_joint_priors=self.joint_prior_container)
-            elif paramcont_type == instmod_cat:
-                self.instruments.load_config(dico_config=dico_config,
-                                             inst_db_info=self.paramfile_info[paramcont_type],
-                                             model_instance=self,
-                                             available_joint_priors=self.joint_prior_container)
-            else:  # For the model parameters (those who do no belong in any param container)
-                super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
-                                                    available_joint_priors=self.joint_prior_container)
+    #     :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
+    #         read from the parameter file.
+    #     """
+    #     # load the joint prior configuration
+    #     Model_Prior.load_jointprior_config(self, dico_config=dico_config)
+    #     # Load the new configuration from the parameter file for each Paramcontainer and parameter
+    #     logger.debug("List of Core_ParamContainer types in param_file_info: {}"
+    #                  "".format(self.paramfile_info.keys()))
+    #     for paramcont_type in self.paramfile_info.keys():  # self.paramfile_info comes from Core_ParamContainer
+    #         logger.debug("Content of param_file_info for {}: {}"
+    #                      "".format(paramcont_type, self.paramfile_info[paramcont_type]))
+    #         if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
+    #             for paramcont_name in self.paramfile_info[paramcont_type]:
+    #                 paramcont_dico = dico_config[paramcont_name]
+    #                 logger.debug("Content of param dictionary for {} {}: {}"
+    #                              "".format(paramcont_type, paramcont_name, paramcont_dico))
+    #                 self.paramcontainers[paramcont_type][paramcont_name].load_config(dico_config=paramcont_dico,
+    #                                                                                  model_instance=self,
+    #                                                                                  available_joint_priors=self.joint_prior_container)
+    #         elif paramcont_type == instmod_cat:
+    #             self.instruments.load_config(dico_config=dico_config,
+    #                                          inst_db_info=self.paramfile_info[paramcont_type],
+    #                                          model_instance=self,
+    #                                          available_joint_priors=self.joint_prior_container)
+    #         else:  # For the model parameters (those who do no belong in any param container)
+    #             super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
+    #                                                 available_joint_priors=self.joint_prior_container)
 
     ##############################
     ## Dealing with datasimulators
