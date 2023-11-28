@@ -295,20 +295,20 @@ class GP1D_Noise_Models(Core_Noise_Model):
             function_shortname_GP1D = f"lnlike_GP1D_{GP1D_mod_name}"
             function_builder_GP1D.add_new_function(shortname=function_shortname_GP1D, parameters=None, mandatory_args=['sim_data', 'l_datakwargs'],
                                                    optional_args=None, full_function_name=None)
-            function_builder_GP1D.add_to_body_text(text=lnlikefunc_text, function_shortname=function_shortname_GP1D)
-            function_builder_GP1D.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
-            function_builder_GP1D.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
             # Do l_jitter and l_compute_jitteredvar 
             l_jitter = []
             l_compute_jitteredvar = []
-            for instmod_obj in l_instmod_obj:
+            for instmod_obj in l_instmod_obj_GP1D_mod:
                 jitter_model = self.get_jittermodel(inst_model_fullname=instmod_obj.full_name)
                 jitter_param = jitter_model.get_parameters(object_category=None)['instrument']['jitter']
                 function_builder_allGP1D.add_parameter(parameter=jitter_param, function_shortname=function_shortname_allGP1D, exist_ok=True)
                 function_builder_GP1D.add_parameter(parameter=jitter_param, function_shortname=function_shortname_GP1D, exist_ok=True)
                 l_jitter.append(function_builder_GP1D.get_text_4_parameter(parameter=jitter_param, function_shortname=function_shortname_GP1D))
                 l_compute_jitteredvar.append(jitter_model.get_compute_jitteredvar())
-            function_builder_GP1D.add_variable_to_ldict(variable_name='l_jitter', variable_content=l_jitter, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            function_builder_GP1D.add_to_body_text(text=f"    l_jitter = [{', '.join(l_jitter)}]", function_shortname=function_shortname_GP1D)
+            function_builder_GP1D.add_to_body_text(text=lnlikefunc_text, function_shortname=function_shortname_GP1D)
+            function_builder_GP1D.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+            function_builder_GP1D.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
             function_builder_GP1D.add_variable_to_ldict(variable_name='l_compute_jitteredvar', variable_content=l_compute_jitteredvar, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
             # Do the kernel text, do and return the computation of the ln likelihood and add the corresponding parameters
             GP1D, _ = self.get_GPmodel(inst_model_fullname=l_instmod_obj_GP1D_mod[0].full_name)
@@ -345,7 +345,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
             """.format(l_GP1D_mod_name=l_GP1D_mod_name)
             res = 0
             for GP1D_mod_name in l_GP1D_mod_name:
-                res += dico_func[GP1D_mod_name](sim_data[GP1D_mod_name], param_noisemodel[GP1D_mod_name], datasets_kwargs[GP1D_mod_name])
+                res += dico_func[GP1D_mod_name](p_vect=param_noisemodel[GP1D_mod_name], sim_data=sim_data[GP1D_mod_name], l_datakwargs=datasets_kwargs[GP1D_mod_name])
             return res
 
         return lnlike_allGP1D, dico_params_noisemod, dico_idx_datasim, dico_idx_l_dataset_obj
