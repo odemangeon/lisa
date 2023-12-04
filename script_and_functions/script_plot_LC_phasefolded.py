@@ -8,6 +8,7 @@ from loguru import logger
 import os
 import matplotlib.pyplot as pl
 import dill
+import pandas as pd
 
 # import matplotlib
 
@@ -47,6 +48,7 @@ extension_analysis = "_initrun_median"
 
 save_outputs = True
 save_plot = False
+save_binned_phasefolded_data = False
 
 planets = None  # e.g. ['b', ]
 periods = None  # e.g. [46., ]
@@ -161,3 +163,12 @@ if save_outputs:
     # Save chain in a pickle
     with open(os.path.join(output_folders["pickles_analyze"], f"LC_phasefolded_ouputs{extension_analysis}.pkl"), "wb") as fpickle:
         dill.dump((dico_load, computed_models), fpickle)
+
+#################################
+## Save binned phase folded curve
+if save_binned_phasefolded_data:
+    df = pd.DataFrame(data={"time for tic [h]": dico_load["phase_folded_binned_times_0"], "binned data [ppm]": dico_load["phase_folded_binned_datas_0"], "binned data err [ppm]": dico_load["phase_folded_binned_data_errs_0"], "binned data err with jitter [ppm]": dico_load["phase_folded_binned_data_err_jitters_0"]},
+                      )
+    df.to_csv(path_or_buf=os.path.join(output_folders["tables"], f"binned_LC{extension_analysis}.csv"), index=False)
+    pl.errorbar(x=df["time for tic [h]"], y=df["binned data [ppm]"], yerr=df["binned data err with jitter [ppm]"])
+    pl.show()

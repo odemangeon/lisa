@@ -29,7 +29,7 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                              compute_raw_models_func, remove_add_model_components_func,
                              kwargs_compute_model_4_key_model, l_valid_model,
                              y_name, inst_cat,
-                             d_name_component_removed_to_print,
+                             d_name_component_removed_to_print=None,
                              datasim_kwargs=None, planets=None, periods=None,
                              periods_remove_or_add_dict=None,
                              datasetnames=None, row4datasetname=None,
@@ -376,7 +376,7 @@ def create_phasefolded_plots(post_instance, df_fittedval,
             # Get the limits for the x axis for all planets and all row and set the default values
             x_min, x_max = define_x_or_y_lims(x_or_ylims=xlims, row_name=i_row, col_name=planetorperiod_name)
 
-            # Compute the phase  or tume (x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
+            # Compute the phase or time (x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
             x_values = OrderedDict()
             x_min_data = inf
             x_max_data = -inf
@@ -472,6 +472,13 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                                                         yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])
                 else:
                     axes_data[i_row][i_col].errorbar(x_values[datasetname], y=data_plorper[datasetname], **pl_kwarg_final[datasetname]['data'])
+
+                # Store phasefolded times and datas in dico_load
+                if f'phase_folded_times_{planetorperiod_name}' not in dico_load:
+                    dico_load[f'phase_folded_times_{planetorperiod_name}'] = {"show_time_from_tic": show_time_from_tic}
+                    dico_load[f'phase_folded_datas_{planetorperiod_name}'] = {}
+                dico_load[f'phase_folded_times_{planetorperiod_name}'][datasetname] = x_values[datasetname]
+                dico_load[f'phase_folded_datas_{planetorperiod_name}'][datasetname] = data_plorper[datasetname]
 
                 ####################
                 # Plot the residuals
@@ -577,6 +584,19 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                     if dico_load['has_jitters'][datasetname] and pl_show_error[datasetname]["databinned"]:
                         _ = axes_data[i_row][i_col].errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
                         _ = axes_resi[i_row][i_col].errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
+
+                    # Store phasefolded binned times, data and data errors in dico_load
+                    if f'phase_folded_binned_times_{planetorperiod_name}' not in dico_load:
+                        dico_load[f'phase_folded_binned_times_{planetorperiod_name}']= {"show_time_from_tic": show_time_from_tic}
+                        dico_load[f'phase_folded_binned_datas_{planetorperiod_name}']= {}
+                        dico_load[f'phase_folded_binned_data_errs_{planetorperiod_name}']= {}
+                        dico_load[f'phase_folded_binned_data_err_jitters_{planetorperiod_name}']= {}
+                    dico_load[f'phase_folded_binned_times_{planetorperiod_name}'][datasetname] = midbins
+                    dico_load[f'phase_folded_binned_datas_{planetorperiod_name}'][datasetname] = bindata
+                    dico_load[f'phase_folded_binned_data_errs_{planetorperiod_name}'][datasetname] = bin_err
+                    if dico_load['has_jitters'][datasetname]:
+                        dico_load["phase_folded_binned_data_err_jitters"][planetorperiod_name][datasetname] = binstd_jitter
+
                     # Compute rms of the binned residuals
                     text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
                     text_rms_binned[datasetname] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins > x_min_data, midbins < x_max_data)]))
@@ -631,6 +651,19 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                 if any([dico_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
                     _ = axes_data[i_row][i_col].errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
                     _ = axes_resi[i_row][i_col].errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
+
+                # Store phasefolded binned times, data and data errors in dico_load
+                if f'phase_folded_binned_times_{i_row}' not in dico_load:
+                    dico_load[f'phase_folded_binned_times_{i_row}']= {"show_time_from_tic": show_time_from_tic}
+                    dico_load[f'phase_folded_binned_datas_{i_row}']= {}
+                    dico_load[f'phase_folded_binned_data_errs_{i_row}']= {}
+                    dico_load[f'phase_folded_binned_data_err_jitters_{i_row}']= {}
+                dico_load[f'phase_folded_binned_times_{i_row}'] = midbins
+                dico_load[f'phase_folded_binned_datas_{i_row}'] = bindata
+                dico_load[f'phase_folded_binned_data_errs_{i_row}'] = bin_err
+                if dico_load['has_jitters'][datasetname]:
+                    dico_load[f"phase_folded_binned_data_err_jitters_{i_row}"] = binstd_jitter
+
                 # Compute rms of the binned residuals
                 text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
                 text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins > x_min_data, midbins < x_max_data)]))
