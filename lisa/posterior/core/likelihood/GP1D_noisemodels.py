@@ -17,7 +17,7 @@ from ....tools.function_from_text_toolbox import FunctionBuilder
 from .core_noise_model import Core_Noise_Model
 from ....tools.miscellaneous import spacestring_like
 # from ....tools.function_w_doc import DocFunction
-from .GP1D_noisemodelconfiguration import george_imported, QPGeorgeModel, QPCGeorgeModel, celerite_imported, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model
+from .GP1D_noisemodelconfiguration import george_imported, QPGeorgeModel, QPCGeorgeModel, celerite_imported, QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32CeleriteModel
 from .gaussian_noisemodelconfiguration import GaussianModel
 
 
@@ -32,7 +32,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
     if george_imported:
         __l_model_class__.extend([QPGeorgeModel, QPCGeorgeModel])
     if celerite_imported:
-        __l_model_class__.extend([QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32Model])
+        __l_model_class__.extend([QPCeleriteModel, RotationCeleriteModel, SHOCeleriteModel, Matern32CeleriteModel])
 
     __l_required_datasetkwarg_keys__ = ["data", "data_err", "time"]
 

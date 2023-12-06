@@ -187,9 +187,6 @@ class QPGeorgeModel(Core_GP1DModel):
 
     __category__ = "QPGeorge"
 
-    # kernel_text = "{amp}**2 * ExpSquaredKernel(metric={tau}) * ExpSine2Kernel(gamma=1/(2 * {gamma}**2), log_period={log_period}) + WhiteKernel(value={jitter}**2)"
-    # ldict_kernel = {'ExpSquaredKernel': ExpSquaredKernel, 'ExpSine2Kernel': ExpSine2Kernel}
-
     ############################################################
     ## Dealing with the parameters and their names for the model
     ############################################################
@@ -245,7 +242,7 @@ class QPGeorgeModel(Core_GP1DModel):
         # 'kernel:k1:k1:log_constant', 'kernel:k1:k2:metric:log_M_0_0', 'kernel:k2:gamma', 'kernel:k2:log_period'
         text_return = f"{tab}gp.set_parameter_vector([{dico['A']}**2, {dico['tau']}**2, 1/(2 * {dico['gamma']}**2), {dico['P']}], include_frozen=False)\n"
         text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))\n"
-        text_return += f"{tab}return gp.lnlikelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)), quiet=True)\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)), quiet=True)\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
 
@@ -314,7 +311,7 @@ class QPCGeorgeModel(Core_GP1DModel):
         # 'kernel:k1:k1:log_constant', 'kernel:k1:k2:metric:log_M_0_0', 'kernel:k2:k1:gamma','kernel:k2:k1:log_period','kernel:k2:k2:k1:log_constant','kernel:k2:k2:k2:log_period'
         text_return = f"{tab}gp.set_parameter_vector([{dico['A']}**2, {dico['tau']}**2, 1/(2 * {dico['gamma']}**2), {dico['P']}, {dico['f']}, {dico['P']}], include_frozen=False)\n"
         text_return += f"{tab}gp.compute(concatenate(dict_datakwargs['time']), concatenate(dict_datakwargs['data_err']))\n"
-        text_return += f"{tab}return gp.lnlikelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='GP', variable_content=GP, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -403,7 +400,7 @@ class QPCeleriteModel(Core_GP1DModel):
         # 
         text_return = f"{tab}gp.set_parameter_vector([{dico['A']}**2, {dico['tau']}**2, 1/(2 * {dico['gamma']}**2), {dico['P']}, {dico['f']}, {dico['P']}], include_frozen=False)\n"
         text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
-        text_return += f"{tab}return gp.lnlikelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -413,6 +410,10 @@ class RotationCeleriteModel(Core_GP1DModel):
 
     __category__ = "RotationCelerite"
 
+    # Source Foreman-Mackey et al. 2017. AJ, 154, 220 (equation 56) - https://iopscience.iop.org/article/10.3847/1538-3881/aa9332/meta
+    # In Celerite2 the example: https://celerite.readthedocs.io/en/stable/python/kernel/
+    # The implementation and parameterisation is based on the celerite2 description: https://celerite2.readthedocs.io/en/latest/api/python/#celerite2.terms.RotationTerm
+    # I have just changed the name of the sigma parameter into A
 
     ############################################################
     ## Dealing with the parameters and their names for the model
@@ -422,12 +423,61 @@ class RotationCeleriteModel(Core_GP1DModel):
     ##################################
 
     def _get_l_parameter_basename_GP(self):
-        return ['sigma', 'P', 'Q', 'dQ', 'f']
+        return ['A', 'P', 'Q0', 'dQ', 'f']
+
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
+
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder_allGP1D        : 
+        function_shortname_allGP1D      :
+        """
+        dico = {}
+        dico_param = self.get_parameters(object_category=None).values()
+        for param_basename, param in dico_param['GP'].items():
+            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
+            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
+            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
+            if self.log10(param_basename=param_basename):
+                dico[param_basename] = f"10**{dico[param_basename]}"
+        kernel = term.RotationTerm(sigma=1, period=10, Q0=0, dQ=0, f=0.1)
+        gp = GaussianProcess(kernel, mean=0.0)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        tab = "    " 
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # Result of gp.get_parameter_names()
+        # 
+        text_return = f"{tab}gp.set_parameter_vector([{dico['A']}, {dico['P']}, {dico['Q0']}, {dico['dQ']}, {dico['f']}], include_frozen=False)\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+        function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
 
 
 class SHOCeleriteModel(Core_GP1DModel):
 
     __category__ = "SHOCelerite"
+
+    # Source Foreman-Mackey et al. 2017. AJ, 154, 220 (equation 56) - https://iopscience.iop.org/article/10.3847/1538-3881/aa9332/meta
+    # In Celerite2 the example: https://celerite.readthedocs.io/en/stable/python/kernel/
+    # The implementation and parameterisation is based on the celerite2 description: https://celerite2.readthedocs.io/en/latest/api/python/#celerite2.terms.SHOTerm
+    # I have just changed the name of the sigma parameter into A
 
     ############################################################
     # Dealing with the parametrisation, param_extension and args
@@ -435,12 +485,12 @@ class SHOCeleriteModel(Core_GP1DModel):
 
     def _set_parametrisation(self, parametrisation=None):
         """ """
-        self.parametrisation.update({'use_rho': True, 'use_Q': True, 'use_sigma': True, 'log10': {'rho/omega0': False, 'Q/tau': False, 'sigma/S0': False}})
+        self.parametrisation.update({'use_rho': True, 'use_Q': True, 'use_A': True, 'log10': {'rho/omega0': False, 'Q/tau': False, 'A/S0': False}})
         if parametrisation is not None:
             for key in parametrisation:
-                if key not in ['use_rho', 'use_Q', 'use_sigma', 'log10']:
-                    raise ValueError(f"The only possible keys to the 'parametrisation' are ['use_rho', 'use_Q', 'use_sigma', 'log10']. You provided {key}.")
-                if key in ['use_rho', 'use_Q', 'use_sigma']:
+                if key not in ['use_rho', 'use_Q', 'use_A', 'log10']:
+                    raise ValueError(f"The only possible keys to the 'parametrisation' are ['use_rho', 'use_Q', 'use_A', 'log10']. You provided {key}.")
+                if key in ['use_rho', 'use_Q', 'use_A']:
                     if not(isinstance(parametrisation[key], bool)):
                         raise ValueError(f"Value of parametrisation[{key}] should be a bool (got {parametrisation[key]})")
                     self.parametrisation[key] = parametrisation[key]
@@ -448,8 +498,8 @@ class SHOCeleriteModel(Core_GP1DModel):
                     if not(isinstance(parametrisation[key], dict)):
                         raise ValueError(f"'log10' in parametrisation should be a dictionary. You provided a {type(parametrisation[key])}.")
                     for param_basename in parametrisation[key]:
-                        if param_basename not in ['rho/omega0', 'Q/tau', 'sigma/S0']:
-                            raise ValueError(f"The only possible keys to the 'log10' dictionary are ['rho/omega0', 'Q/tau', 'sigma/S0']. You provided {key}.")
+                        if param_basename not in ['rho/omega0', 'Q/tau', 'A/S0']:
+                            raise ValueError(f"The only possible keys to the 'log10' dictionary are ['rho/omega0', 'Q/tau', 'A/S0']. You provided {key}.")
                     if not(isinstance(parametrisation[key][param_basename], bool)):
                         raise ValueError(f"Value of parametrisation[{key}][{param_basename}] should be a bool (got {parametrisation[key][param_basename]})")
                     self.parametrisation[key][param_basename] = parametrisation[key][param_basename]
@@ -464,8 +514,8 @@ class SHOCeleriteModel(Core_GP1DModel):
 
     def _get_l_parameter_basename_GP(self):
         res = []
-        if self.use_sigma:
-            res.append('sigma')
+        if self.use_A:
+            res.append('A')
         else:
             res.append('S0')
         if self.use_rho:
@@ -483,8 +533,8 @@ class SHOCeleriteModel(Core_GP1DModel):
     ######################
 
     @property
-    def use_sigma(self):
-        return self.parameterisation['use_sigma']
+    def use_A(self):
+        return self.parameterisation['use_A']
 
     @property
     def use_rho(self):
@@ -498,17 +548,86 @@ class SHOCeleriteModel(Core_GP1DModel):
         """True if the jumping of name param_basename should be log10"""
         if param_basename not in self._get_l_parameter_basename_GP():
             raise ValueError(f"param_basename shoud be in {self._get_l_parameter_basename_GP()}")
-        if param_basename in ["sigma", "S0"]:
-            return self.parametrisation["log10"]['sigma/S0']
+        if param_basename in ["A", "S0"]:
+            return self.parametrisation["log10"]['A/S0']
         elif param_basename in ["rho", "omega0"]:
             return self.parametrisation["log10"]['rho/omega0']
         elif param_basename in ["Q", "tau"]:
             return self.parametrisation["log10"]['Q/tau']
 
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
 
-class Matern32Model(Core_GP1DModel):
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder_allGP1D        : 
+        function_shortname_allGP1D      :
+        """
+        dico = {}
+        dico_param = self.get_parameters(object_category=None).values()
+        for param_basename, param in dico_param['GP'].items():
+            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
+            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
+            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
+            if self.log10(param_basename=param_basename):
+                dico[param_basename] = f"10**{dico[param_basename]}"
+        kwargs = {}
+        l_param_basename = []
+        if self.use_A:
+            kwargs["sigma"] = 1
+            l_param_basename.append("A")
+        else:
+            kwargs["S0"] = 1
+            l_param_basename.append("S0")
+        if self.use_rho:
+            kwargs["rho"] = 10
+            l_param_basename.append("rho")
+        else:
+            kwargs["omega0"] = twopi / 10
+            l_param_basename.append("omega0")
+        if self.use_Q:
+            kwargs["Q"] = 1 / 2
+            l_param_basename.append("Q")
+        else:
+            kwargs["tau"] = 20
+            l_param_basename.append("tau")
+        kernel = term.SHOTerm(**kwargs)
+        gp = GaussianProcess(kernel, mean=0.0)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        tab = "    " 
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # Result of gp.get_parameter_names()
+        # 
+        text_return = f"{tab}gp.set_parameter_vector([{','.join([dico[param_basename] for param_basename in l_param_basename])}], include_frozen=False)\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+        function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+
+
+class Matern32CeleriteModel(Core_GP1DModel):
 
     __category__ = "Matern32Celerite"
+
+    # Source Foreman-Mackey et al. 2017. AJ, 154, 220 (equation 56) - https://iopscience.iop.org/article/10.3847/1538-3881/aa9332/meta
+    # In Celerite2 the example: https://celerite.readthedocs.io/en/stable/python/kernel/
+    # The implementation and parameterisation is based on the celerite2 description: https://celerite2.readthedocs.io/en/latest/api/python/#celerite2.terms.Matern32Term
+    # I have just changed the name of the sigma parameter into A
 
     ############################################################
     ## Dealing with the parameters and their names for the model
@@ -518,4 +637,48 @@ class Matern32Model(Core_GP1DModel):
     ##################################
 
     def _get_l_parameter_basename_GP(self):
-        return ['sigma', 'rho']
+        return ['A', 'rho']
+
+    ######################################
+    # Dealing with the likelihood creation
+    ######################################
+
+    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
+        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
+
+        Parameters
+        ----------
+        noise_models_GP1D       : GP1D_Noise_Models
+        l_params                : list of str
+            Current list of parameters full names for the whole likelihood function
+        l_params_noisemod       : list of str
+            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
+        l_idx_param_noisemod    : list of int
+            Current list of indexes of the the parameters in l_params_noisemod in l_params
+        params_noisemod_name    : str
+        ldict                   : dict
+        function_builder_allGP1D        : 
+        function_shortname_allGP1D      :
+        """
+        dico = {}
+        dico_param = self.get_parameters(object_category=None).values()
+        for param_basename, param in dico_param['GP'].items():
+            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
+            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
+            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
+            if self.log10(param_basename=param_basename):
+                dico[param_basename] = f"10**{dico[param_basename]}"
+        kernel = term.Matern32Term(sigma=1, rho=10)
+        gp = GaussianProcess(kernel, mean=0.0)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        tab = "    " 
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # text_return += f"{tab}import pdb; pdb.set_trace()"
+        # Result of gp.get_parameter_names()
+        # 
+        text_return = f"{tab}gp.set_parameter_vector([{dico['A']}, {dico['rho']}], include_frozen=False)\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+        function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
