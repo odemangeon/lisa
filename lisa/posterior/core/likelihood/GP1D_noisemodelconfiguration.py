@@ -394,9 +394,6 @@ class QPCeleriteModel(Core_GP1DModel):
         function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         tab = "    " 
         # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # Result of gp.get_parameter_names()
-        # 
         text_return = f"{tab}gp = set_params(b={dico['B']}, C={dico['C']}, L={dico['L']}, P={dico['P']}, gp=gp)\n"
         text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
         text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
@@ -462,11 +459,8 @@ class RotationCeleriteModel(Core_GP1DModel):
         function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         tab = "    "
         # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # Result of gp.get_parameter_names()
-        # 
         text_return = f"{tab}gp = set_params(A={dico['A']}, P={dico['P']}, Q0={dico['Q0']}, dQ={dico['dQ']}, f={dico['f']}, gp=gp)\n"
-        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
         text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -612,11 +606,8 @@ class SHOCeleriteModel(Core_GP1DModel):
         function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         tab = "    " 
         # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # Result of gp.get_parameter_names()
-        # 
         text_return = f"{tab}gp.set_parameter_vector([{','.join([dico[param_basename] for param_basename in l_param_basename])}], include_frozen=False)\n"
-        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
         text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
         function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
@@ -645,6 +636,10 @@ class Matern32CeleriteModel(Core_GP1DModel):
     ######################################
     # Dealing with the likelihood creation
     ######################################
+
+    def set_params(A, rho, gp):
+        gp.kernel = Matern32Term(sigma=A, rho=rho)
+        return gp
 
     def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
         """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
@@ -676,12 +671,9 @@ class Matern32CeleriteModel(Core_GP1DModel):
         function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         tab = "    " 
         # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # text_return += f"{tab}import pdb; pdb.set_trace()"
-        # Result of gp.get_parameter_names()
-        # 
-        text_return = f"{tab}gp.set_parameter_vector([{dico['A']}, {dico['rho']}], include_frozen=False)\n"
-        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']))\n"
+        text_return = f"{tab}gp = set_params(A={dico['A']}, rho={dico['rho']}, gp=gp)\n"
+        text_return += f"{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
         text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
         function_builder_GP1D.add_to_body_text(text=text_return, function_shortname=function_shortname_GP1D)
-        function_builder_GP1D.add_variable_to_ldict(variable_name='GaussianProcess', variable_content=GaussianProcess, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
         function_builder_GP1D.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
+        function_builder_GP1D.add_variable_to_ldict(variable_name='set_params', variable_content=set_params, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
