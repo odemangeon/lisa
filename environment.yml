@@ -13,7 +13,6 @@ dependencies:
   - corner
   - dill
   - george
-  - celerite
   - tqdm
   - statsmodels
   - cython
@@ -37,6 +36,7 @@ dependencies:
   - pip
   - pip:
     - radvel
+    - celerite2
     - PyAstronomy[occult]
 
 variables:
