@@ -2269,7 +2269,7 @@ def load_emceesampler(obj_name, extension_exploration="", folder="."):
     return chain, lnprobability, acceptance_fraction, l_param_name
 
 
-def load_chain_analysis(obj_name, extension_analysis="", folder=None):
+def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_load=None, error_ok=False):
     """load Emcee sampler elements.
 
     :param str obj_name: Name of the object for which you want to load the chain analysis results.
@@ -2286,9 +2286,19 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None):
 
     # load df_fittedval from a pickle
     file_df_fittedval = "{}{}{}.pk".format(obj_name, extension_pickle["df_fittedval"], extension_analysis)
+    
     if isfile(join(folder, file_df_fittedval)):
         with open(join(folder, file_df_fittedval), "rb") as fdffitval:
-            df_fittedval = load(fdffitval)
+            if kwargs_load is None:
+                kwargs_load = {}
+            if error_ok:
+                try:
+                    df_fittedval = load(fdffitval, **kwargs_load)
+                except:
+                    logger.error("An error occured when attempting to load df_fittedval from the pickle file.")
+                    df_fittedval = None
+            else:
+                df_fittedval = load(fdffitval, **kwargs_load)
     else:
         df_fittedval = None
 

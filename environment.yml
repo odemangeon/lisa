@@ -3,7 +3,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python
+  - python=3.9
   - ipython
   - numpy
   - scipy
@@ -15,28 +15,15 @@ dependencies:
   - george
   - tqdm
   - statsmodels
-  - cython
   - pandas
-  - nbsphinx
-  - jupyter_client
-  - ipykernel
-  - jinja2
   - python-dateutil
-  - h5py
-  - quantities
-  - numpydoc
-  - mock
-  - six
-  - Sphinx
-  - nbsphinx
-  - bidict
-  - docutils
-  - mendeleev
   - loguru
+  - arviz
   - pip
   - pip:
     - radvel
     - celerite2
+    - kelp
     - PyAstronomy[occult]
 
 variables:
