@@ -2298,7 +2298,7 @@ def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_loa
                     logger.error("An error occured when attempting to load df_fittedval from the pickle file.")
                     df_fittedval = None
             else:
-                df_fittedval = None
+                df_fittedval = load(fdffitval, **kwargs_load)
     else:
         df_fittedval = None
 
