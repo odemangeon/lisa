@@ -1651,6 +1651,82 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             returns[func_shortname][i_inputoutput] += f"{pre_text}reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0] * 1e-6 * ({text_occ})"
                             function_builder.add_variable_to_ldict(variable_name="reflected_phase_curve_inhomogeneous", variable_content=reflected_phase_curve_inhomogeneous, function_shortname=func_shortname, exist_ok=True)
 
+                        ##################################
+                        # Kelp reflected light homogeneous
+                        ##################################
+                        elif pc_component_model.category == "kelp-reflect-hom":
+                            raise NotImplementedError
+                        
+                        ####################################
+                        # Kelp reflected light inhomogeneous
+                        ####################################
+                        elif pc_component_model.category == "kelp-reflect-inhom":
+                            ## Do the text for the occultation
+                            _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
+                                                                               function_shortname=func_shortname,
+                                                                               model_definition=pc_component_model,
+                                                                               planet=planet, star=star, inst_model_obj=instmod,
+                                                                               dataset=dst,
+                                                                               get_times_from_datasets=get_times_from_datasets,
+                                                                               time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
+                                                                               do_transit=False, do_occultation=True,
+                                                                               l_dataset=l_dataset, multi=multi,
+                                                                               i_inputoutput=i_inputoutput,
+                                                                               normalize_occultation=True,
+                                                                               rp_updates=rp_updates,
+                                                                               fp_updates=fp_updates, t_sec_updates=t_sec_updates,
+                                                                               )
+
+                            ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
+                            if not(orbital_model.use_aR):
+                                aR = f"aR_{planet_name}\n"
+                            else:
+                                aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
+                                Rrat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Rrat'], function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
+                            omega_0 = function_builder.get_text_4_parameter(parameter=parameters['planet']['omega0'], function_shortname=func_shortname)
+                            omega_prime = function_builder.get_text_4_parameter(parameter=parameters['planet']['omegaprime'], function_shortname=func_shortname)
+                            x1 = function_builder.get_text_4_parameter(parameter=parameters['planet']['x1'], function_shortname=func_shortname)
+                            x2 = function_builder.get_text_4_parameter(parameter=parameters['planet']['x2'], function_shortname=func_shortname)
+                            A_g = function_builder.get_text_4_parameter(parameter=parameters['planet']['Ag'], function_shortname=func_shortname)
+                            
+                            ####################################################
+                            # Produce the text for the phase curve model returns
+                            ####################################################
+                            ## Compute the orbital phase and idx_sort (orbital phase 0 means secondary eclipse)
+                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                if multi:
+                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
+                                else:
+                                    time_vect = f"{time_arg_name}"
+                                if get_times_from_datasets:
+                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
+                                    if supersamp > 1:
+                                        logger.warning("Currently the kelp model doesn't include supersampling !")
+                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
+                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
+                                function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxdesortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
+                                function_builder.add_to_body_text(text=f"{tab}idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            
+                            if returns[func_shortname][i_inputoutput] == "":
+                                pre_text = ""
+                            else:
+                                pre_text = " + "
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}reflected_phase_curve_inhomogeneous(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0][idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+                            function_builder.add_variable_to_ldict(variable_name="reflected_phase_curve_inhomogeneous", variable_content=reflected_phase_curve_inhomogeneous, function_shortname=func_shortname, exist_ok=True)
+
                         ########################
                         # No other model for now
                         ########################
