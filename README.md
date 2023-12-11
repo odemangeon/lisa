@@ -5,6 +5,7 @@
 1. Dependancies:
 
 The dependencies are specified in the environment.yml file except for PyGLS and batman that I modified and so cannot be installed using conda/pip and need to be installed from source.
+Also not that jax is currenlty only required by kelp.
 
 2. Clone the repository
 
