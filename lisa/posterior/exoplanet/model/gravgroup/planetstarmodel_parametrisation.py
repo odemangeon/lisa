@@ -6,7 +6,7 @@ from .planetstarmodel import (spiderman_imported, kelp_imported,
                               OccultationModelBatman,
                               PhaseCurveModelSinCos, PhaseCurveModelBeaming, PhaseCurveModelEllipsoidal,
                               PhaseCurveModelLambertian, PhaseCurveModelKelpThermal, PhaseCurveModelSpidermanZhang,
-                              PhaseCurveModelGauss,
+                              PhaseCurveModelGauss, PhaseCurveModelKelpReflectHomogeneous, PhaseCurveModelKelpReflectInhomogeneous
                               )
 
 
@@ -599,11 +599,11 @@ class PhaseCurveModels(Core_PlanetStarModels_lmodel1inst):
     host_star                       : Star
     orbitalmodel_instance           : OrbitalModels
     """
-    __l_model_class__ = [PhaseCurveModelSinCos, PhaseCurveModelLambertian, PhaseCurveModelEllipsoidal, PhaseCurveModelBeaming, PhaseCurveModelGauss]
+    __l_model_class__ = [PhaseCurveModelSinCos, PhaseCurveModelLambertian, PhaseCurveModelEllipsoidal, PhaseCurveModelBeaming, PhaseCurveModelGauss, ]
     if spiderman_imported:
         __l_model_class__.append(PhaseCurveModelSpidermanZhang)
     if kelp_imported:
-        __l_model_class__.append(PhaseCurveModelKelpThermal)
+        __l_model_class__.extend([PhaseCurveModelKelpThermal, PhaseCurveModelKelpReflectHomogeneous, PhaseCurveModelKelpReflectInhomogeneous])
 
     def __init__(self, l_planet, host_star, l_inst_model_fullname, orbital_models):
         default_model_category = 'sincos'

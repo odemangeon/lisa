@@ -675,6 +675,74 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
                                                        inst_model_fullname=inst_model_fullname, object_category=None
                                                        )
 
+class PhaseCurveModelKelpReflectHomogeneous(Core_PlanetStarModel):
+    """docstring for PhaseCurveModelKelpReflectHomogeneous."""
+
+    __category__ = "kelp-reflect-hom"
+
+    ################
+    # Main functions
+    ################
+
+    def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
+        super(PhaseCurveModelKelpReflectHomogeneous, self).__init__(model_name=model_name, planet=planet, host_star=host_star,
+                                                                    orbital_models=orbital_models, dico_config_model=dico_config_model,
+                                                                    )
+
+    ####################################################
+    ## Functions directly required by the main functions
+    ####################################################
+
+    def _get_l_parameter_basename_planet(self):
+        """Return the list of orbital parameter basenames."""
+        return ['Rrat', 'omega', 'g']
+
+    def _get_l_parameter_basename_star(self):
+        """Return the list of orbital parameter basenames."""
+        if self.stellar_spectrum is None:
+            return ['Teff']
+        else:
+            return []
+
+    def _get_l_parameter_basename_orbit(self, inst_model_fullname=None):
+        """Return the list of orbital parameter basenames."""
+        l_required_orbital_param_type = ['P', 'tic', 'ew', 'inc', 'aR']
+        orbital_model = self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
+        return orbital_model._get_l_parameter_basename(l_required_orbital_param_type=l_required_orbital_param_type,
+                                                       inst_model_fullname=inst_model_fullname, object_category=None
+                                                       )    
+
+
+class PhaseCurveModelKelpReflectInhomogeneous(Core_PlanetStarModel):
+    """docstring for PhaseCurveModelKelpReflectInhomogeneous."""
+
+    __category__ = "kelp-reflect-inhom"
+
+    ################
+    # Main functions
+    ################
+
+    def __init__(self, model_name, planet, host_star, orbital_models=None, dico_config_model=None):
+        super(PhaseCurveModelKelpReflectInhomogeneous, self).__init__(model_name=model_name, planet=planet, host_star=host_star,
+                                                                      orbital_models=orbital_models, dico_config_model=dico_config_model,
+                                                                      )
+
+    ####################################################
+    ## Functions directly required by the main functions
+    ####################################################
+
+    def _get_l_parameter_basename_planet(self):
+        """Return the list of orbital parameter basenames."""
+        return ['Rrat', 'omega0', 'omegaprime', 'x1', 'x2', 'Ag']
+
+    def _get_l_parameter_basename_orbit(self, inst_model_fullname=None):
+        """Return the list of orbital parameter basenames."""
+        l_required_orbital_param_type = ['P', 'tic', 'ew', 'inc', 'aR']
+        orbital_model = self.orbital_models.get_model(planet_name=self.planet.get_name(), inst_model_fullname=inst_model_fullname)
+        return orbital_model._get_l_parameter_basename(l_required_orbital_param_type=l_required_orbital_param_type,
+                                                       inst_model_fullname=inst_model_fullname, object_category=None
+                                                       )
+
 
 class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
     """docstring for PhaseCurveModelSpidermanZhang."""
