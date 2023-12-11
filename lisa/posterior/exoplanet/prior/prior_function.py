@@ -5,7 +5,7 @@ from __future__ import division
 from loguru import logger
 from textwrap import dedent
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp  # logical_or
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, logical_or
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
@@ -1031,4 +1031,4 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
                 if dico.get("value", None) is None:
                     dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
             indexes = where(dico_ravs["tau"] / exp(dico_ravs["logP"]) < self.k)[0]
-        return dico_ravs["logP"], dico_ravs["tau"],
+        return dico_ravs["logP"], dico_ravs["tau"]

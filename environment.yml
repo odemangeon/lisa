@@ -9,7 +9,7 @@ dependencies:
   - scipy
   - matplotlib
   - emcee
-  - astropy
+  - astropy=5.3.4
   - corner
   - dill
   - george
@@ -19,6 +19,7 @@ dependencies:
   - python-dateutil
   - loguru
   - arviz
+  - jax
   - pip
   - pip:
     - radvel
