@@ -4,30 +4,7 @@
 
 1. Dependancies:
 
-Rely on python3.7. Python package dependencies:
-- unittest
-- ajplanet*
-- matplotlib
-- astropy
-- scipy
-- rebound
-- batman
-- numpy
-- dill
-- pytransit*
-- gzip
-- pandas
-- george
-- celerite
-- radvel
-- emcee=3.x
-- tqdm
-- PyAstronomy
-- statsmodels
-- loguru
-- pyGLS
-
-*indicates packages that are not mandatory or not fully supported
+The dependencies are specified in the environment.yml file except for PyGLS and batman that I modified and so cannot be installed using conda/pip and need to be installed from source.
 
 2. Clone the repository
 
