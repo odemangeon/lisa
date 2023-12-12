@@ -600,7 +600,7 @@ class Sumprior(Core_JointPrior_Function):
     __extra_args__ = ['ymin', 'ymax']
     __default_extra_args__ = {'ymin': -np.inf, 'ymax': np.inf}
     __hidden_param_refs__ = ['x', 'sum']
-    __multiple_hidden_params__ = [False]
+    __multiple_hidden_params__ = [False, False]
     __default_hidden_priors__ = {"x": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
                                  "sum": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
                                  }
@@ -634,14 +634,15 @@ class Sumprior(Core_JointPrior_Function):
         text_function = """
         def {function_name}({param_vector_name}):
             sum = {x} + {y}
-            if ({y} >= self.ymin) and ({y} <= self.ymax):
+            if ({y} >= {ymin}) and ({y} <= {ymax}):
                 return dico_logpdf["x"]({x}) + dico_logpdf["sum"](sum)
             else:
                 return -infnt
         """
         text_function = dedent(text_function)
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             x=dico_text_params["x"], y=dico_text_params["y"], 
+                                             x=dico_text_params["x"], y=dico_text_params["y"],
+                                             ymin=self.ymin, ymax=self.ymax
                                              )
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
