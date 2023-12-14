@@ -701,6 +701,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             def lnpost_withdataset_creator(prior_func, like_func):
                 def lnpost_withdataset(p_vect, *args, **kwargs):
+                    # logger.debug(f"params lnpost ({len(p_vect)}): {p_vect}")
                     lnprior_val = prior_func(p_vect)
                     # logger.debug("lnprior: {}".format(lnprior_val))
                     if not isfinite(lnprior_val):
