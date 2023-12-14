@@ -701,16 +701,17 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             def lnpost_withdataset_creator(prior_func, like_func):
                 def lnpost_withdataset(p_vect, *args, **kwargs):
-                    # logger.debug(f"params lnpost ({len(p_vect)}): {p_vect}")
                     lnprior_val = prior_func(p_vect)
                     # logger.debug("lnprior: {}".format(lnprior_val))
                     if not isfinite(lnprior_val):
                         return -inf
                     else:
-                        # lnlike_val = like_func(p_vect, *args, **kwargs)
-                        # logger.debug("lnlike: {}".format(lnlike_val))
-                        # return lnlike_val + lnprior_val
-                        return like_func(p_vect, *args, **kwargs) + lnprior_val
+                        lnlike_val = like_func(p_vect, *args, **kwargs)
+                        if not isfinite(lnlike_val):
+                            logger.error("lnlike: {}".format(lnlike_val))
+                            logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
+                        return lnlike_val + lnprior_val
+                        # return like_func(p_vect, *args, **kwargs) + lnprior_val
                 return lnpost_withdataset
 
             mand_kwargs_list = copy(lnlike_docfunc.mand_kwargs_list)
