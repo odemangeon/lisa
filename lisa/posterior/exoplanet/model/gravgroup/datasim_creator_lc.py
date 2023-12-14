@@ -1471,7 +1471,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             # Produce the text for the phase curve model returns
                             ####################################################
                             ## Compute the orbital phase and idx_sort (orbital phase 0 means secondary eclipse)
-                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                            if not(function_builder.is_done_in_text(name=f"orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
                                 if multi:
                                     time_vect = f"{time_arg_name}[{i_inputoutput}]"
                                 else:
@@ -1484,23 +1484,23 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
                                 function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"idxdesortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                                function_builder.add_to_body_text(text=f"{tab}idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                            if not(function_builder.is_done_in_text(name=f"idxdesortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
                                 function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}idxdesort_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"idxdesort_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
 
                             if returns[func_shortname][i_inputoutput] == "":
                                 pre_text = ""
                             else:
                                 pre_text = " + "
                             f = function_builder.get_text_4_parameter(parameter=parameters['planet']['f'], function_shortname=func_shortname)
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
 
                         #################
                         # Gaussian models
@@ -1557,7 +1557,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             # Produce the text for the phase curve model returns
                             ####################################################
                             ### TODO: This is only a copy paste from sin-cos
-                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                            if not(function_builder.is_done_in_text(name=f"orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
                                 if multi:
                                     time_vect = f"{time_arg_name}[{i_inputoutput}]"
                                 else:
@@ -1570,13 +1570,13 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
                             if returns[func_shortname][i_inputoutput] == "":
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] += f"{pre_text}gauss(x=orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}, Foffset={flux_offset}, A={amp}, phi={phi}, sigmaphi={sigma_phi}){text_occ}"
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}gauss(x=orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}, Foffset={flux_offset}, A={amp}, phi={phi}, sigmaphi={sigma_phi}){text_occ}"
 
                         ##################################
                         # Kelp reflected light homogeneous
@@ -1622,8 +1622,8 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             ####################################################
                             # Produce the text for the phase curve model returns
                             ####################################################
-                            ## Compute the orbital phase and idx_sort (orbital phase 0 means secondary eclipse)
-                            if not(function_builder.is_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
+                            ## Compute the orbital phase (orbital phase 0 means transit and it goes from 0 to 1)
+                            if not(function_builder.is_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
                                 if multi:
                                     time_vect = f"{time_arg_name}[{i_inputoutput}]"
                                 else:
@@ -1636,22 +1636,14 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}orbphase_{planet_name}_{instmod_fullname}_dst{dst.number} = (foldAt({time_vect}, {period}, T0={tic}, getEpoch=False) - 0.5) * 2 * pi\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"idxdesortphase_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                function_builder.add_variable_to_ldict(variable_name="argsort", variable_content=argsort, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number} = argsort(idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
+                                function_builder.add_to_body_text(text=f"{tab}orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} = foldAt({time_vect}, {period}, T0={tic}, getEpoch=False)\n", function_shortname=func_shortname)
+                                function_builder.add_to_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
                             
                             if returns[func_shortname][i_inputoutput] == "":
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}reflected_phase_curve_inhomogeneous(orbphase_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_{planet_name}_{instmod_fullname}_dst{dst.number}], omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0][idxdesort_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+                            returns[func_shortname][i_inputoutput] = f"{pre_text}reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0] * 1e-6 * ({text_occ})"
                             function_builder.add_variable_to_ldict(variable_name="reflected_phase_curve_inhomogeneous", variable_content=reflected_phase_curve_inhomogeneous, function_shortname=func_shortname, exist_ok=True)
 
                         ########################
