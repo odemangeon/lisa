@@ -1104,7 +1104,8 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
         """
         text_function = dedent(text_function)
         text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             sup=dico_text_params["sup"], inf=dico_text_params["inf"], k=self.k)
+                                             omega_0=dico_text_params["omega_0"], omega_prime=dico_text_params["omega_prime"],
+                                             x1=dico_text_params["x1"], x2=dico_text_params["x2"], A_g=dico_text_params["A_g"])
         logger.debug("text of joint prior {category}:\n{text_func}"
                      "".format(category=self.category, text_func=text_function))
         logger.debug("Parameters for joint prior {category}:\n{dico_param}"
