@@ -1637,10 +1637,13 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
                                 function_builder.add_to_body_text(text=f"{tab}orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} = foldAt({time_vect}, {period}, T0={tic}, getEpoch=False)\n", function_shortname=func_shortname)
-                                function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} > 1): print('>1: True')\n", function_shortname=func_shortname)
-                                function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} < 0): print('<0: True')\n", function_shortname=func_shortname)
+                                # function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} > 1): print('>1: True')\n", function_shortname=func_shortname)
+                                # function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} < 0): print('<0: True')\n", function_shortname=func_shortname)
                                 function_builder.add_to_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                            
+                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} orbphase: ', orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
+                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} a_rp: ', 1/rpa_{planet_name})\n", function_shortname=func_shortname)
+                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} pc: ', reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0])\n", function_shortname=func_shortname)
+
                             if returns[func_shortname][i_inputoutput] == "":
                                 pre_text = ""
                             else:

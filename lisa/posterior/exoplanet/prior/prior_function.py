@@ -4,8 +4,13 @@ Prior functions module.
 from __future__ import division
 from loguru import logger
 from textwrap import dedent
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, isfinite
 
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, logical_or
+try:
+    from kelp.jax.jax import _g_from_ag
+    kelp_loaded = True
+except:
+    kelp_loaded = False
 
 from ...core.prior.core_prior import Core_JointPrior_Function
 from ...core.prior.prior_function import BetaPrior
@@ -1032,3 +1037,111 @@ class SupInfLogPtauprior(Core_JointPrior_Function):
                     dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
             indexes = where(dico_ravs["tau"] / exp(dico_ravs["logP"]) < self.k)[0]
         return dico_ravs["logP"], dico_ravs["tau"]
+
+
+class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
+    """Joint prior made to set a prior of the scattering asymmetry factor g instead of A_g.
+    It also allow to set the prior on omega_1 the single scaterring albedo of the bright region
+    instead of omega_prime.
+
+    This also allow to avoid that the computation of the reflected light phase curve from 
+    kelp.jax.reflected_phase_curve_inhomogeneous returns nan and the source of that is often
+    that kelp.jax.jax._g_from_ag returns nan.
+
+    :param float sup_prior: Prior definition on the superior variable
+    :param float inf_prior: Prior definition on the inferior variable
+    """
+
+    __category__ = "kelp-inhom-reflect"
+    __mandatory_args__ = []
+    __extra_args__ = []
+    __default_extra_args__ = {}
+    __hidden_param_refs__ = ['omega_0', 'omega_1', 'x1', 'x2', 'g']
+    __multiple_hidden_params__ = [False, False, False, False, False]
+    __default_hidden_priors__ = {"g": {"category": "uniform", "args": {"vmin": -1, "vmax": 1.}},
+                                 "omega_0": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
+                                 "omega_1": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
+                                 'x1': {"category": "uniform", "args": {"vmin": -pi/2, "vmax": pi/2}},
+                                 'x2': {"category": "uniform", "args": {"vmin": -pi/2, "vmax": pi/2}},
+                                 }
+    __param_refs__ = ['omega_0', 'omega_prime', 'x1', 'x2', 'A_g']
+    __multiple_params__ = [False, False]
+
+    def __init__(self, *args, **kwargs):
+        super(KelpInhomegeousReflectionprior, self).__init__(*args, **kwargs)
+
+    def create_logpdf(self, params):
+        """Return the logarithmic probability density function for the joint prior.
+
+        :param dict params: Dictionnary which contains the Parameter instances required by the prior.
+            The keys are parameter keys in the self.param_refs list and the values are the parameter instances
+            as associated in the parameter file.
+        :return function logpdf: log pdf the order in which the parameter should be provided is
+            provided by self.param_refs
+        """
+        (param_nb,
+         arg_list,
+         param_vector_name,
+         ldict) = init_arglist_paramnb_arguments_ldict(keys='prior', key_param=key_param, param_vector_name=par_vec_name)
+        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        ldict["dico_logpdf"] = dico_logpdf
+        ldict["inf"] = inf
+        ldict["isfinite"] = isfinite
+        dico_text_params = {}
+        for param_key in self.param_refs:
+            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
+                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
+        function_name = "logpdf_{}".format(self.category)
+        text_function = """
+        def {function_name}({param_vector_name}):
+            if ({x1} >= {x2}) or ({omega_prime} < 0.):
+                return -inf
+            g = _g_from_ag(A_g={A_g}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2})
+            if not isfinite(g):
+                return -inf
+            omega_1 = omega_0 + omega_prime
+            return dico_logpdf["omega_0"]({omega_0}) + dico_logpdf["omega_1"](omega_1) + dico_logpdf["x1"]({x1}) + dico_logpdf["x2"]({x2}) + dico_logpdf["g"](g)
+        """
+        text_function = dedent(text_function)
+        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
+                                             sup=dico_text_params["sup"], inf=dico_text_params["inf"], k=self.k)
+        logger.debug("text of joint prior {category}:\n{text_func}"
+                     "".format(category=self.category, text_func=text_function))
+        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
+                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist='prior')[key_param])}))
+        exec(text_function, ldict)
+        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist='prior'))
+
+    def logpdf(self, omega_0, omega_prime, x1, x2, A_g):
+        dico_logpdf = self.priorinstance_hiddenparams
+        if (x1 >= x2) or (omega_prime < 0.):
+            return -inf
+        g = _g_from_ag(A_g=A_g, omega_0=omega_0, omega_prime=omega_prime, x1=x1, x2=x2)
+        if not isfinite(g):
+            return -inf
+        omega_1 = omega_0 + omega_prime
+        return dico_logpdf["omega_0"](omega_0) + dico_logpdf["omega_1"](omega_1) + dico_logpdf["x1"](x1) + dico_logpdf["x2"](x2) + dico_logpdf["g"](g)
+
+    def ravs(self, nb_values=1):
+        """Return values of the parameters drawn from the joint prior.
+
+        :param int nb_values: Number of values to draw for each parameter.
+        :return tuple_of_float/float nb_values: Tuple for which each element contains the value(s) drawn
+            for each parameter. If nb_values = 1, it's just a float, otherwise it's an np.array.
+            The order of the parameters in the tuple is provided by self.param_refs.
+        """
+        dico_ravs = {}  # Dictionary which contains the drawn values
+        # For each hidden parameter, if a value is provided than this value is used and not drwan from the prior
+        for hiddenparam_ref, dico in self.hiddenparam_defs.items():
+            if dico.get("value", None) is not None:
+                dico_ravs[hiddenparam_ref] = ones(nb_values) * dico.get("value", None)
+            else:
+                dico_ravs[hiddenparam_ref] = ones(nb_values) * nan
+        indexes = arange(nb_values)
+        while len(indexes) > 0:
+            for hiddenparam_ref, dico in self.hiddenparam_defs.items():
+                if dico.get("value", None) is None:
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+            g = _g_from_ag(A_g=dico_ravs["A_g"], omega_0=dico_ravs["omega_0"], omega_prime=dico_ravs["omega_prime"], x1=dico_ravs["x1"], x2=dico_ravs["x2"])
+            indexes = where(not(isfinite(g)))[0]
+        return dico_ravs["omega_0"], dico_ravs["omega_prime"], dico_ravs["x1"], dico_ravs["x2"], dico_ravs["A_g"]
