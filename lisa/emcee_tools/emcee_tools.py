@@ -27,7 +27,7 @@ from PyAstronomy.pyasl import foldAt
 from dill import dump, load
 from os import makedirs, getcwd
 from os.path import isfile, join
-from pandas import read_table
+from pandas import read_table, DataFrame
 from corner import corner as corner_dfm
 import emcee
 
@@ -2379,13 +2379,18 @@ def load_chains_secondary(obj_name, extension_analysis="", folder=None):
     return chainIsec
 
 
-def get_param_value_OrderedDict(values, l_param_names):
+def get_param_value_OrderedDict(values, l_param_name):
     """Return an Orderedict with associate the parameter name to its value.
     """
     res = OrderedDict()
-    for val, name in zip(values, l_param_names):
+    for val, name in zip(values, l_param_name):
         res[name] = val
     return res
+
+def get_param_value_df(values, l_param_name):
+    """Return an Orderedict with associate the parameter name to its value.
+    """
+    return DataFrame({"value": values}, index=l_param_name)
 
 
 def get_param_vector(df_val, l_param_name):
@@ -2395,6 +2400,11 @@ def get_param_vector(df_val, l_param_name):
     for param_name in l_param_name:
         p.append(df_val.loc[param_name, "value"])
     return np.array(p)
+
+def get_param_vector_from_print(param_vector_str):
+    """
+    """
+    return np.array([float(val.strip("[]\n")) for val in param_vector_str.split("[] \n") if val != ""])
 
 
 def auto_y_lims(y, ax, pad=0.1):

@@ -23,3 +23,5 @@ manager.add_available_prior(pf_exop.BetaEccPrior)
 manager.add_available_prior(pf_stdrd.SupInfprior)
 manager.add_available_prior(pf_exop.SupInfLogPtauprior)
 manager.add_available_prior(pf_stdrd.Sumprior)
+if pf_exop.kelp_loaded:
+    manager.add_available_prior(pf_exop.KelpInhomegeousReflectionprior)
