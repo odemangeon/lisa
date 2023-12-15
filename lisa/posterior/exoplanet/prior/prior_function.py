@@ -1065,7 +1065,7 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
                                  'x2': {"category": "uniform", "args": {"vmin": -pi/2, "vmax": pi/2}},
                                  }
     __param_refs__ = ['omega_0', 'omega_prime', 'x1', 'x2', 'A_g']
-    __multiple_params__ = [False, False]
+    __multiple_params__ = [False, False, False, False, False]
 
     def __init__(self, *args, **kwargs):
         super(KelpInhomegeousReflectionprior, self).__init__(*args, **kwargs)
