@@ -12,7 +12,7 @@ The objective of this module is to define the class LikelihoodCreator.
 from loguru import logger
 from collections import defaultdict, OrderedDict
 from copy import copy
-from numpy import isfinite, all, inf
+from numpy import logical_not, isfinite, all, inf
 # import matplotlib.pyplot as pl
 
 from ..likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
