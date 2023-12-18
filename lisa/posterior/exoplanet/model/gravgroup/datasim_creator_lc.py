@@ -1240,7 +1240,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}param_spiderman_{planet_name}_{instmod_fullname}.lightcurve({time_vect}{lightcurve_kwargs}) - 1 "
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}param_spiderman_{planet_name}_{instmod_fullname}.lightcurve({time_vect}{lightcurve_kwargs}) - 1 "
 
                         #########################
                         # Lambertian sphere model
@@ -1497,7 +1497,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                             else:
                                 pre_text = " + "
                             f = function_builder.get_text_4_parameter(parameter=parameters['planet']['f'], function_shortname=func_shortname)
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}model_kelp_{planet_name}_{instmod_fullname}.thermal_phase_curve(orbphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}[idxsortphase_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}], f={f}, **kelp_pc_kwargs_{planet_name}_{instmod_fullname}).flux[idxdesort_minuspipi_{planet_name}_{instmod_fullname}_dst{dst.number}] * 1e-6 * ({text_occ})"
 
                         #################
                         # Gaussian models
@@ -1645,7 +1645,7 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 pre_text = ""
                             else:
                                 pre_text = " + "
-                            returns[func_shortname][i_inputoutput] = f"{pre_text}reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0] * 1e-6 * ({text_occ})"
+                            returns[func_shortname][i_inputoutput] += f"{pre_text}reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0] * 1e-6 * ({text_occ})"
                             function_builder.add_variable_to_ldict(variable_name="reflected_phase_curve_inhomogeneous", variable_content=reflected_phase_curve_inhomogeneous, function_shortname=func_shortname, exist_ok=True)
 
                         ########################
