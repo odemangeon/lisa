@@ -730,6 +730,20 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                                                           )
 
         return db
+    
+    def create_allfunctions(self):
+        """Get the datasimulators, lnlikelihoods, lnpriors and lnposteriors"""
+        logger.info("Create datasimulator functions")
+        self.create_datasimulators()
+
+        logger.info("Create likelihood functions")
+        self.create_lnlikelihoods()
+
+        logger.info("Create prior functions")
+        self.create_lnpriors()
+
+        logger.info("Create posterior functions")
+        self.create_lnposteriors()
 
     _extension_postinstance = "_posterior_instance.pk"
 
