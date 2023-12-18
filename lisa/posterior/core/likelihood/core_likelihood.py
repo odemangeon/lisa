@@ -309,7 +309,11 @@ class LikelihoodCreator(object):
             func_builder.add_to_body_text(text=f"{tab}    return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
         func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_lnlike)
         func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite! ')\n", function_shortname=func_shortname_lnlike)
-        func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {{[l_dataset_name[idx_dst] for idx_dst, finite in  enumerate(isfinite(sim_data)) if not(finite)]}}')\n", function_shortname=func_shortname_lnlike)
+        if datasim_all_dst_doc_func.multi_output:
+            func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {{[l_dataset_name[idx_dst] for idx_dst, sim_data_ii in enumerate(sim_data) if not(isfinite(sim_data_ii).all())]}}')\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_variable_to_ldict(variable_name='l_dataset_name', variable_content=l_dataset_name, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
+        else:
+            func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {l_dataset_name[0]}')\n", function_shortname=func_shortname_lnlike)
         func_builder.add_to_body_text(text=f"{tab}    return -inf\n", function_shortname=func_shortname_lnlike)
         func_builder.add_variable_to_ldict(variable_name='inf', variable_content=inf, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
 
