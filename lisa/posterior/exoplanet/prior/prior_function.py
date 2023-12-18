@@ -4,7 +4,8 @@ Prior functions module.
 from __future__ import division
 from loguru import logger
 from textwrap import dedent
-from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, isfinite
+from numpy import pi, inf, ones, where, any, arange, nan, array, abs, log, exp, isfinite, logical_not
+from numpy.random import uniform
 
 try:
     from kelp.jax.jax import _g_from_ag
@@ -1087,11 +1088,12 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
         ldict["dico_logpdf"] = dico_logpdf
         ldict["inf"] = inf
         ldict["isfinite"] = isfinite
+        ldict["_g_from_ag"] = _g_from_ag
         dico_text_params = {}
         for param_key in self.param_refs:
             dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
                                                              param_nb=param_nb, param_vector_name=par_vec_name)['prior']
-        function_name = "logpdf_{}".format(self.category)
+        function_name = "logpdf_{}".format(self.category.replace("-", ""))
         text_function = """
         def {function_name}({param_vector_name}):
             if ({x1} >= {x2}) or ({omega_prime} < 0.):
@@ -1099,7 +1101,7 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
             g = _g_from_ag(A_g={A_g}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2})
             if not isfinite(g):
                 return -inf
-            omega_1 = omega_0 + omega_prime
+            omega_1 = {omega_0} + {omega_prime}
             return dico_logpdf["omega_0"]({omega_0}) + dico_logpdf["omega_1"](omega_1) + dico_logpdf["x1"]({x1}) + dico_logpdf["x2"]({x2}) + dico_logpdf["g"](g)
         """
         text_function = dedent(text_function)
@@ -1138,11 +1140,14 @@ class KelpInhomegeousReflectionprior(Core_JointPrior_Function):
                 dico_ravs[hiddenparam_ref] = ones(nb_values) * dico.get("value", None)
             else:
                 dico_ravs[hiddenparam_ref] = ones(nb_values) * nan
+        A_g = ones(nb_values) * nan
         indexes = arange(nb_values)
         while len(indexes) > 0:
             for hiddenparam_ref, dico in self.hiddenparam_defs.items():
                 if dico.get("value", None) is None:
                     dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
-            g = _g_from_ag(A_g=dico_ravs["A_g"], omega_0=dico_ravs["omega_0"], omega_prime=dico_ravs["omega_prime"], x1=dico_ravs["x1"], x2=dico_ravs["x2"])
-            indexes = where(not(isfinite(g)))[0]
-        return dico_ravs["omega_0"], dico_ravs["omega_prime"], dico_ravs["x1"], dico_ravs["x2"], dico_ravs["A_g"]
+            omega_prime = dico_ravs["omega_1"] - dico_ravs["omega_0"]
+            A_g[indexes] = uniform(0, 1, size=len(indexes))
+            g = _g_from_ag(A_g=A_g, omega_0=dico_ravs["omega_0"], omega_prime=omega_prime, x1=dico_ravs["x1"], x2=dico_ravs["x2"])
+            indexes = where(logical_not(isfinite(g)))[0]
+        return dico_ravs["omega_0"], omega_prime, dico_ravs["x1"], dico_ravs["x2"], A_g

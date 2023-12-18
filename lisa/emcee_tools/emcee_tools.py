@@ -2404,7 +2404,7 @@ def get_param_vector(df_val, l_param_name):
 def get_param_vector_from_print(param_vector_str):
     """
     """
-    return np.array([float(val.strip("[]\n")) for val in param_vector_str.split("[] \n") if val != ""])
+    return np.array([float(val.strip("[]\n")) for val in param_vector_str.split(" ") if val != ""])
 
 
 def auto_y_lims(y, ax, pad=0.1):
