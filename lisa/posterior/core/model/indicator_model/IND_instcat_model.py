@@ -47,8 +47,8 @@ class IND_InstCat_Model(Core_InstCat_Model):
     # # String giving the name of the dictionary used to define the model to use for each indicator in the parameter file
     # __name_model_4_indicator_dict = "model_4_indicator"
 
-    def __init__(self, model_instance):
-        super(IND_InstCat_Model, self).__init__(model_instance=model_instance)
+    def __init__(self, model_instance, run_folder, config_file):
+        super(IND_InstCat_Model, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
 
         # Define and init the variable that will store whether of not an indicator instrument model is
         # associated to a model

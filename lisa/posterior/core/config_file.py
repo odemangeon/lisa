@@ -88,7 +88,7 @@ class ConfigFileAttr(object):
         for var_name in ["self", "cwd", "ff", "path_config_file", "file_path", 'default_file_content']:
             if var_name in dico:
                 dico.pop(var_name)
-        logger.debug(f"Content (just the name of the variables) of the config file (located at {self.config_file}):\n{list(dico.keys())}")
+        logger.debug(f"Content (just the name of the variables) of the config file (located at {self.config_file.path}):\n{list(dico.keys())}")
         return dico
     
     def _askadd2configfile(self, config2load):
@@ -99,7 +99,7 @@ class ConfigFileAttr(object):
         config2load : 
             Specify the config to load. Possible values are provided by self._config_categories
         """
-        intitule_question = f"The variable(s) for the {config2load} configuration is/are missing from the config file. Do you want to add it/them ?\n"
+        intitule_question = f"The variable(s) for the {config2load} configuration is/are missing from the config file. Do you want to add it/them ? ['y', 'n']\n"
         return QCM_utilisateur(intitule_question=intitule_question, l_reponses_possibles=['y', 'n'])
     
     def _load_config(self, config2load, **kwargs):
