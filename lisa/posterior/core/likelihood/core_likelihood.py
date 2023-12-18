@@ -12,7 +12,7 @@ The objective of this module is to define the class LikelihoodCreator.
 from loguru import logger
 from collections import defaultdict, OrderedDict
 from copy import copy
-from numpy import logical_not, isfinite, all
+from numpy import logical_not, isfinite, all, inf
 # import matplotlib.pyplot as pl
 
 from ..likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
@@ -293,6 +293,7 @@ class LikelihoodCreator(object):
                     return_decorr[ii] = None
             if not(datasim_docfunc.multi_output):
                 return_decorr = return_decorr[0]
+            # Write the return for the decorr and decorr_plot function
             func_builder.add_to_body_text(text=f"{tab}    return {return_decorr}\n", function_shortname=func_shortname_decorr)
             func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_decorr)
             if not(datasim_docfunc.multi_output):
@@ -302,16 +303,21 @@ class LikelihoodCreator(object):
             func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_plotdecorr)
             func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite. No plot can be made.')\n", function_shortname=func_shortname_plotdecorr)
             func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
-
+        # Write the return for the lnlike function
         l_noisemodel_cat = list(dico_noisemodel.keys())
         if len(l_noisemodel_cat) > 1:
-            func_builder.add_to_body_text(text=f"{tab}res = 0\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab}    res = 0\n", function_shortname=func_shortname_lnlike)
             for noisemodel_cat in l_noisemodel_cat:
-                func_builder.add_to_body_text(text=f"{tab}res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
-            func_builder.add_to_body_text(text=f"{tab}return res\n", function_shortname=func_shortname_lnlike)
+                func_builder.add_to_body_text(text=f"{tab}    res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab}    return res\n", function_shortname=func_shortname_lnlike)
         else:
             noisemodel_cat = l_noisemodel_cat[0]
-            func_builder.add_to_body_text(text=f"{tab}return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab}    return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+        func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_lnlike)
+        func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite! ')\n", function_shortname=func_shortname_lnlike)
+        func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {{[l_dataset_name[idx_dst] for idx_dst, finite in  enumerate(isfinite(sim_data)) if not(finite)]}}')\n", function_shortname=func_shortname_lnlike)
+        func_builder.add_to_body_text(text=f"{tab}    return -inf\n", function_shortname=func_shortname_lnlike)
+        func_builder.add_variable_to_ldict(variable_name='inf', variable_content=inf, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
 
         # Create the lnlike function
         logger.debug(f"text of {func_shortname_lnlike} lnlikelihood function :\n{func_builder.get_full_function_text(shortname=func_shortname_lnlike)}")
