@@ -89,7 +89,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
                 if xy not in ['X', 'Y']:
                     raise ValueError(err_msg)
                 # Check that ind_dataset is the name of an existing dataset
-                if not(model_instance.dataset_db.isavailable_dataset(dataset=xy_dataset_name)):
+                if not(model_instance.isavailable_dataset(dataset_name=xy_dataset_name)):
                     raise ValueError(f"Decorrelation likelihood model definition {model_name}: "
                                      f"The indicator dataset {xy_dataset_name} associated to dataset {dataset_name} "
                                      f"{xy} keys is not an existing dataset."
@@ -139,7 +139,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
 
     @classmethod
     def create_decorrelation_likelihood(cls, function_builder, l_function_shortname, inst_cat, model_name,
-                                        dico_config, l_dataset_name, l_paramsfullname_likelihood, dataset_kwargs, inddataset_kwargs,
+                                        dico_config, l_dataset_name, dataset_kwargs, inddataset_kwargs,
                                         datasim_has_multioutputs, plot_functionshortname=None):
         """Create the text for the likelihood decorrelation for a given decorrelation model of a given
         instrument category.
@@ -165,9 +165,6 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             likelihood.
         dataset_kwargs              : dict
         inddataset_kwargs           : dict
-        l_paramsfullname_likelihood : list of str
-            list of the current parameter full names of the likelihood function. This function adds
-            the likelihood decorrelation parameter if there is any.
         datasim_has_multioutputs    : bool
             True if the datasim function used by the likelihood has multiplue outputs
         plot_functionshortname      : str
@@ -184,9 +181,6 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             Text that compute the spline functions for the decorrelation model.
         plotdecorr_body_text        : str
             Text for the plotting function which show the spline fit of the residuals.
-        l_paramsfullname_likelihood : list of str
-            Updated list of parameter full names of the likelihood function. This function adds the
-            likelihood decorrelation parameter if there is any.
         """
         model_name = check_name_code(model_name)
         if len(l_function_shortname) == 0:
@@ -258,7 +252,7 @@ class BiSplineDecorrelation(Core_DecorrelationLikelihood):
             """
             plotdecorr_body_text = dedent(plotdecorr_body_text)
             plotdecorr_body_text = plotdecorr_body_text.format(tab=tab)
-        return simdata_decorr_text, l_decorr_output_text, decorr_body_text, plotdecorr_body_text, l_paramsfullname_likelihood
+        return simdata_decorr_text, l_decorr_output_text, decorr_body_text, plotdecorr_body_text
 
     @classmethod
     def get_required_dataset(cls, match_datasets, d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset,

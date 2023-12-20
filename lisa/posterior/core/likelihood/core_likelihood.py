@@ -225,14 +225,13 @@ class LikelihoodCreator(object):
         d_decorr_elements_4_instcat_4_decorr_model = {inst_cat: {} for inst_cat in d_l_model_decorr_name_4_inst_cat.keys()}
         for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
             instcat_mod_class = self.instcat_models[inst_cat]
-            (d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text, l_paramsfullname_likelihood
+            (d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text
              ) = instcat_mod_class.create_decorrelation_likelihood(function_builder=func_builder,
                                                                    l_function_shortname=l_func_shortname,
                                                                    l_decorr_model_name=l_decorr_model_name,
                                                                    l_dataset_name=l_dataset_name,
                                                                    dataset_kwargs=dataset_kwargs,
                                                                    inddataset_kwargs=inddataset_kwargs,
-                                                                   l_paramsfullname_likelihood=l_paramsfullname_likelihood,
                                                                    datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
                                                                    plot_functionshortname=func_shortname_plotdecorr
                                                                    )
@@ -540,7 +539,7 @@ class LikelihoodCreator(object):
                             d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat] = []
                         if model_decorr_name not in d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat]:
                             d_l_model_decorr_name_4_inst_cat[instcat_mod_class.inst_cat].append(model_decorr_name)
-                            l_dataset_obj_of_model_decorr = instcat_mod_class.get_decorrelation_likelihood_model_dataset_objs(model_name=model_decorr_name)
+                            l_dataset_obj_of_model_decorr = instcat_mod_class.get_decorrelation_likelihood_model_dataset_objs(model_name=model_decorr_name, dataset_db=dataset_db)
                             l_dataset_obj_decorr += l_dataset_obj_of_model_decorr
         l_dataset_obj = l_dataset_obj + list(set(l_dataset_obj_decorr) - set(l_dataset_obj))
         l_dataset_name = [dst.dataset_name for dst in l_dataset_obj]

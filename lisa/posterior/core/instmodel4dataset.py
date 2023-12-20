@@ -293,3 +293,7 @@ class Instmodel4DatasetAttr(object):
     @property
     def __isdefined_instmodel4dataset(self):
         return hasattr(self, "instmodel4dataset")
+    
+    def isavailable_dataset(self, dataset_name):
+        """Return True is the dataset name provided is the name of existing dataset"""
+        return dataset_name in self.instmodel4dataset.list_datasets

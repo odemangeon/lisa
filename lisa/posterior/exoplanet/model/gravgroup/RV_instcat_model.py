@@ -19,12 +19,12 @@ from pprint import pformat
 
 from .planetstarmodel_parametrisation import RVKeplerianModels
 from .datasim_creator_rv import create_datasimulator_RV
-from ..decorrelation.linear_decorrelation import LinearDecorrelation
 from ...dataset_and_instrument.rv import RV_inst_cat
-from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
-from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from ....core.model.core_instcat_model import Core_InstCat_Model
+from ....core.model.decorrelation.linear_decorrelation import LinearDecorrelation
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
+from ....core.likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
+from ....core.likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from .....tools.miscellaneous import spacestring_like
 
 

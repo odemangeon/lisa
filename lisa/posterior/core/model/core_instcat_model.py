@@ -118,7 +118,7 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     # Dealing with the decorrelation model configuration
     ####################################################
 
-    def __get_intro_instcat_text(self):
+    def _get_intro_instcat_text(self):
         intro_instcat_model_config_text = f"""
             #############################
             ## Configuration of {self.inst_cat} models
@@ -183,7 +183,7 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         """
         """
         if self.decorrelation_model_available:
-            file.write(self.__get_intro_instcat_text())
+            file.write(self._get_intro_instcat_text())
             file.write(self.__get_intro_decorr_text())
             # template_instmodel_decorr_model_dict = "{tab}'{instmodel_name}': {{'do': {instmod_decorr_do},\n{tab_decorr_dict}{tab_instmodel_name}{instmod_decorr_dict}\n{tab_decorr_dict}{tab_instmodel_name}}},\n"
             decor_model_dict_content = {}
@@ -380,10 +380,10 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         """
         return list(self.get_decorrelation_likelihood_model_config(model_name=model_name)['match datasets'].keys())
 
-    def get_decorrelation_likelihood_model_dataset_objs(self, model_name):
+    def get_decorrelation_likelihood_model_dataset_objs(self, model_name, dataset_db):
         """Return the list of the dataset obj that the likelihood decorrelation model decorrelates (not the indicators datasets)
         """
-        return [self.model_instance.dataset_db[dst_name] for dst_name in self.get_decorrelation_likelihood_model_dataset_names(model_name=model_name)]
+        return [dataset_db[dst_name] for dst_name in self.get_decorrelation_likelihood_model_dataset_names(model_name=model_name)]
 
     def get_decorrelation_likelihood_match_datasets(self, model_name):
         """Return the 'match datasets' for the likelihood decorrelation model
@@ -661,8 +661,9 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
             # Check the match datasets keys (values depends on the category of likelihood decorrelation)
             for dataset_name in dico_config_model['match datasets'].keys():
                 # Check that dataset is the name of an existing dataset and that its cateogry is the current instrument category
-                if self.model_instance.dataset_db.isavailable_dataset(dataset=dataset_name):
-                    if self.model_instance.dataset_db[dataset_name].instrument.category != self.inst_cat:
+                if self.model_instance.isavailable_dataset(dataset_name=dataset_name):
+                    instmod_name_info = mgr_inst_dst.interpret_data_filename(data_file_name=dataset_name, raise_error=True)
+                    if instmod_name_info['inst_cat'] != self.inst_cat:
                         raise ValueError(f"Decorrelation likelihood model definition {model_name}: Dataset {dataset_name} is not a dataset of a {self.inst_cat} instrument.")
                 else:
                     raise ValueError(f"Decorrelation likelihood model definition {model_name}: Dataset {dataset_name} is not an existing dataset.")
@@ -766,7 +767,7 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
 
     def create_decorrelation_likelihood(self, function_builder, l_function_shortname, l_decorr_model_name,
-                                        l_dataset_name, dataset_kwargs, inddataset_kwargs, l_paramsfullname_likelihood,
+                                        l_dataset_name, dataset_kwargs, inddataset_kwargs,
                                         datasim_has_multioutputs, plot_functionshortname=None
                                         ):
         """Create the text for the likelihood decorrelation for the datasets of the current instrument
@@ -810,9 +811,6 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         d_plotdecorr_body_text      : dict of str
             For each decorrelation model name gives the text for the plotting function which show the
             spline fit of the residuals.
-        l_paramsfullname_likelihood : list of str
-            Updated list of parameter full names of the likelihood function. This function adds the
-            likelihood decorrelation parameter if there is any.
         """
         d_simdata_decorr_text = {}
         d_l_decorr_output_text = {}
@@ -821,11 +819,8 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
         for decorr_model_name in l_decorr_model_name:
             DecorrClass = self.get_decorrelation_likelihood_class(model_name=decorr_model_name)
             dico_config = self.get_decorrelation_likelihood_model_config(model_name=decorr_model_name)
-            (d_simdata_decorr_text[decorr_model_name],
-             d_l_decorr_output_text[decorr_model_name],
-             d_decorr_body_text[decorr_model_name],
+            (d_simdata_decorr_text[decorr_model_name], d_l_decorr_output_text[decorr_model_name], d_decorr_body_text[decorr_model_name],
              d_plotdecorr_body_text[decorr_model_name],
-             l_paramsfullname_likelihood
              ) = DecorrClass.create_decorrelation_likelihood(function_builder=function_builder,
                                                              l_function_shortname=l_function_shortname,
                                                              inst_cat=self.inst_cat,
@@ -834,11 +829,10 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
                                                              l_dataset_name=l_dataset_name,
                                                              dataset_kwargs=dataset_kwargs,
                                                              inddataset_kwargs=inddataset_kwargs,
-                                                             l_paramsfullname_likelihood=l_paramsfullname_likelihood,
                                                              datasim_has_multioutputs=datasim_has_multioutputs,
                                                              plot_functionshortname=plot_functionshortname
                                                              )
-        return d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text, l_paramsfullname_likelihood
+        return d_simdata_decorr_text, d_l_decorr_output_text, d_decorr_body_text, d_plotdecorr_body_text
 
     ################################################################
     ## Dealing with the instrument model of this instrument category
