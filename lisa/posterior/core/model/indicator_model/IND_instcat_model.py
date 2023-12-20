@@ -33,8 +33,6 @@ class IND_InstCat_Model(Core_InstCat_Model):
 
     # Mandatory attributes for a sublass of Core_InstCat_Model
     __inst_cat__ = IND_inst_cat
-    __has_instcat_paramfile__ = True
-    __default_paramfile_name__ = "IND_param_file.py"
     __datasim_creator_name__ = "sim_IND"
     __l_decorrelation_class__ = []
 
@@ -216,6 +214,111 @@ class IND_InstCat_Model(Core_InstCat_Model):
     #                           inst_model_fullname=inst_model_fullname,
     #                           dataset=dataset)
 
+    ######################################
+    ## Dealing with the configuration file
+    ######################################
+
+    def _configure_instcat_model(self):
+        """Configure the inst cat model
+        """
+        logger.info(f"Start configuration of the {self.inst_cat} models.")
+
+        logger.info("Load IND instrumental model configuration")
+        self._load_config(config2load='indinstcatmod')
+
+    # Function that get the function required by ConfigFileAttr._load_config
+    ########################################################################
+
+    def _get_function_config(self, function_type, config2load):
+        if function_type == 'add_default_config':
+            if config2load == 'indinstcatmod':
+                return self.__add_default_config_indinstcatmod
+        elif function_type == 'check_config_exists':
+            if config2load == 'indinstcatmod':
+                return self.__config_var_exist_indinstcatmod
+        elif function_type == 'load_config_content':
+            if config2load == 'indinstcatmod':
+                return self.__load_config_var_content_indinstcatmod
+        return super(IND_InstCat_Model, self)._get_function_config(function_type=function_type, config2load=config2load)
+
+    # Dealing with the configuration of the transit, phase curve, occultation and instrumental models
+    #################################################################################################
+
+    def __add_default_config_indinstcatmod(self, file):
+        """Add the default config for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
+        """
+        file.write(self._get_intro_instcat_text())
+        file.write("# Polynomial trend models for IND\n")
+        file.write("#################################\n")
+        file.write(f"# Define the model to use for each indicator category. Available models are {self.name_models_available}\n")
+        # Create the dictionary for the polynomial models
+        main_dict = {}
+        for ii, inst_fullcat in enumerate(self.indicator_fullcategories):
+            inst_cat, inst_subcat = IND_Instrument.interpret_inst_fullcat(inst_fullcat)
+            main_dict[inst_subcat] = {"all": {}}
+            for model in self.__models_available__:
+                main_dict[inst_subcat]["all"][model.model_name] = model.get_dico_config(param_container=self.model_instance,
+                                                                                        prefix=inst_subcat,
+                                                                                        notexist_ok=True,
+                                                                                        )
+            for indinst_model in self.get_l_instmod(inst_fullcat=inst_fullcat):
+                main_dict[inst_subcat][indinst_model.full_name] = {}
+                for model in self.__models_available__:
+                    main_dict[inst_subcat][indinst_model.full_name][model.model_name] = model.get_dico_config(param_container=indinst_model,
+                                                                                                              prefix=None,
+                                                                                                              notexist_ok=True,
+                                                                                                              )
+        text_main_dict = ""
+        for ind_category, dico_config in main_dict.items():
+            tab_ind_category = spacestring_like(f"{ind_category} = ")
+            text_main_dict += f"{ind_category} = " + pformat(dico_config, compact=True).replace('\n', f'\n{tab_ind_category}') + "\n"
+        file.write(text_main_dict)
+
+    def __config_var_exist_indinstcatmod(self, dico_config_file):
+        """Check if the variable(s) required for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
+        """
+        return all([var in dico_config_file for var in self.indicator_subcategories])
+    
+    def __load_config_var_content_indinstcatmod(self, dico_config_file):
+        """Load the variable(s) required for the parametrisation of the instrument categories
+
+        This function is stored in Core_Model.get_function_config and used by Core_Model._load_config
+        """
+        # For each indication category ...
+        for ind_fullcat in self.indicator_fullcategories:
+            ind_cat = IND_Instrument.interpret_inst_fullcat(ind_fullcat)[1]
+            dico_config_ind_cat = dico_config_file[ind_cat]
+            # Check that each instrument model of each indicator category has been defined
+            l_indcat_model = self.get_l_instmod(inst_fullcat=ind_fullcat)
+            assert set(dico_config_ind_cat.keys()) == set(["all", ] + [indinst.full_name for indinst in l_indcat_model])
+            # Set all the indicator instrument model has not modeled
+            for indinst_model in l_indcat_model:
+                self.indinst_model_is_modeled[indinst_model.full_name] = False
+            # Load config for the whole system
+            for model_name, dico_config_model in dico_config_ind_cat["all"].items():
+                model = self.get_modelclass_4_modelname(model_name=model_name)
+                model.set_dico_config(param_container=self.model_instance, prefix=ind_cat,
+                                      dico_config=dico_config_model)
+                # Update self.indinst_model_is_modeled
+                for indinst_model in l_indcat_model:
+                    self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
+            # Load config per_instrument
+            for indinst_model in l_indcat_model:
+                for model_name, dico_config_model in dico_config_ind_cat[indinst_model.full_name].items():
+                    model = self.get_modelclass_4_modelname(model_name=model_name)
+                    model.set_dico_config(param_container=indinst_model, prefix=None,
+                                          dico_config=dico_config_model)
+                    # Update self.indinst_model_is_modeled
+                    self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
+
+    ##########
+    ## To sort
+    ##########
+
     def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
         """Create the data simulator to be used for the indicators.
 
@@ -388,102 +491,6 @@ class IND_InstCat_Model(Core_InstCat_Model):
 
         return dico_docf
 
-        # ################################################################################################################################
-        # # Separate the instrument models and datasets depending on the model of indicator to use (whatever the indicator subcategory)
-        # ################################################################################################################################
-        # def defdictfunc():
-        #     return {"datasets": [], "instmodels": []}
-        # datsimC_inputs = defaultdict(defdictfunc)
-        #
-        # # For each dataset, ...
-        # for inst_mod_obj, dst in zip(l_inst_model, l_dataset):
-        #     # ... get the indicator model to be used
-        #     ind_mod = inst_mod_obj.indicator_model
-        #     # ... store the dataset and instrument model object in datsimC_inputs
-        #     datsimC_inputs[ind_mod]["datasets"].append(dst)
-        #     datsimC_inputs[ind_mod]["instmodels"].append(inst_mod_obj)
-        #
-        # ##############################################################################################################################################
-        # # Compute a datasimulator for each indicator model (just one even if there is different indicators subcategories). Going to the right function
-        # ##############################################################################################################################################
-        # datsimC = OrderedDict()
-        # l_indmod = []
-        # # For each indicator model, ...
-        # for ind_mod in datsimC_inputs.keys():
-        #     # ... add the name of the indicator model to l_ind_mod
-        #     l_indmod.append(ind_mod)
-        #     # ... create the datasim function with all the datasets using this indicator model
-        #     datsimC[ind_mod] = self.datasimcreator4indmodel[ind_mod](**self.__kwargs_datasimcreator4indmodel[ind_mod],
-        #                                                              INDcat_model=self.model_instance.instcat_models[self.inst_cat],
-        #                                                              dataset_db=self.model_instance.dataset_db,
-        #                                                              inst_models=datsimC_inputs[ind_mod]["instmodels"],
-        #                                                              datasets=datsimC_inputs[ind_mod]["datasets"],
-        #                                                              get_times_from_datasets=get_times_from_datasets
-        #                                                              )
-        #     dico_inputs_allind = {}
-        #     for obj_key in datsimC[ind_mod].keys():
-        #         dico_inputs_allind[obj_key] = {"l_params": [],
-        #                                        "l_allparams": [],
-        #                                        "l_allmand_kwargs": [],
-        #                                        "d_allopt_kwargs": {},
-        #                                        "l_params_idx": [],
-        #                                        "inst_fullcats": [],
-        #                                        "l_inst_model_fullnames_res_datasim": [],
-        #                                        "l_datasets_res_datasim": []
-        #                                        }
-        #         # ... get the ordered list of instrument categories for this function
-        #         dico_inputs_allind[obj_key]["inst_fullcats"] = dico_inputs_allind[obj_key]["inst_fullcats"] + datsimC[ind_mod][obj_key].inst_cats_list
-        #         # ... get the ordered list of instrument model full names for this function
-        #         dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] = dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"] + list(datsimC[ind_mod][obj_key].inst_model_fullnames_list)
-        #         # ... get the ordered list of dataset names for this function
-        #         dico_inputs_allind[obj_key]["l_datasets_res_datasim"] = dico_inputs_allind[obj_key]["l_datasets_res_datasim"] + datsimC[ind_mod][obj_key].dataset_names_list
-        #         # ... create the list of indexes for the function parameters and the list of all the
-        #         # model parameter for the all datasets function
-        #         idx_par = []
-        #         # For each parameter in the list of this function, ...
-        #         dico_inputs_allind[obj_key]["l_params"].append(datsimC[ind_mod][obj_key].param_model_names_list)
-        #         # WARNING/TODO: This two lines are a quick and very dirty way to pass the mand and opt kwargs to the __datasim_alldatasets_creator
-        #         # and after the DatasimDocFunc init because if several functions use the same kwargs, it will then appear several times
-        #         dico_inputs_allind[obj_key]["l_allmand_kwargs"].append(datsimC[ind_mod][obj_key].mand_kwargs_list)
-        #         dico_inputs_allind[obj_key]["d_allopt_kwargs"].update(datsimC[ind_mod][obj_key].opt_kwargs_dict)
-        #         for par in datsimC[ind_mod][obj_key].param_model_names_list:
-        #             # ... if the param is not in the list of all parameters already, add it
-        #             if par not in dico_inputs_allind[obj_key]["l_allparams"]:
-        #                 dico_inputs_allind[obj_key]["l_allparams"].append(par)
-        #             # ... get the index of this parameter in the list of all the parameters
-        #             idx_par.append(dico_inputs_allind[obj_key]["l_allparams"].index(par))
-        #         dico_inputs_allind[obj_key]["l_params_idx"].append(idx_par)
-        #
-        # # 3. If needed merge the different datasimulators from different indicator models into one datasimulator using something similar to what is done in DatasimulatorCreator.create_datasimulator_alldatasets
-        # # Create the datasim_alldatasets
-        # if len(datsimC) > 1:
-        #     dico_docf = {}
-        #     for obj_key in datsimC[ind_mod].keys():
-        #         logger.debug("Creation of datasimulator for all indicator models.\nList of parameters names:\n{}\n"
-        #                      "Input for the creation of the individual datasimulators:\n{}\n"
-        #                      "List of indicator models simulated: {}\n"
-        #                      "Dictionary of datasim functions obtained: {}\n"
-        #                      "List of parameter names for each individual datasimulator:\n{}\n"
-        #                      "List of param indexes for each individual datasimulator:\n{}\n"
-        #                      "List of instrument categories: {}\n"
-        #                      "List of instrument instrument model full names: {}\n"
-        #                      "List of datasets: {}"
-        #                      "".format(dico_inputs_allind[obj_key]["l_allparams"], datsimC_inputs,
-        #                                l_indmod, datsimC,
-        #                                dico_inputs_allind[obj_key]["l_params"], dico_inputs_allind[obj_key]["l_params_idx"],
-        #                                dico_inputs_allind[obj_key]["inst_fullcats"], dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"],
-        #                                dico_inputs_allind[obj_key]["l_datasets_res_datasim"]))
-        #         dico_docf[obj_key] = self.__datasim_alldatasets_creator(l_datasim=[datsimC[ind_mod][obj_key] for ind_mod in l_indmod],
-        #                                                                 l_params_idx=dico_inputs_allind[obj_key]["l_params"],
-        #                                                                 params_model=dico_inputs_allind[obj_key]["l_allparams"], mand_kwargs_list=dico_inputs_allind[obj_key]["l_allmand_kwargs"], opt_kwargs=dico_inputs_allind[obj_key]["l_allopt_kwargs"],
-        #                                                                 instfull_cat=dico_inputs_allind[obj_key]["inst_fullcats"],
-        #                                                                 inst_model_fullname=dico_inputs_allind[obj_key]["l_inst_model_fullnames_res_datasim"],
-        #                                                                 dataset=dico_inputs_allind[obj_key]["l_datasets_res_datasim"])
-        #     return dico_docf
-        # else:
-        #     ind_mod, = list(datsimC.keys())
-        #     return datsimC[ind_mod]
-
     def get_l_instmod(self, inst_model=None, inst_name=None, inst_fullcat=None):
         """Return the list of instrument model object for the instrument category
         """
@@ -538,43 +545,43 @@ class IND_InstCat_Model(Core_InstCat_Model):
     #     # If not ind_model match indicator model then raise an error
     #     raise ValueError(f"Indicator model {indicator_model} is not implemented.")
 
-    def create_text_instcat_paramfile_model(self, model_instance):
-        """Create the param file for definition of the indicators models.
+    # def create_text_instcat_paramfile_model(self, model_instance):
+    #     """Create the param file for definition of the indicators models.
 
-        Arguments
-        ---------
-        file_path           : string
-            Path to the param_file.
-        """
-        main_dict = {}
-        for ii, inst_fullcat in enumerate(self.indicator_fullcategories):
-            inst_cat, inst_subcat = IND_Instrument.interpret_inst_fullcat(inst_fullcat)
-            main_dict[inst_subcat] = {"all": {}}
-            for model in self.__models_available__:
-                main_dict[inst_subcat]["all"][model.model_name] = model.get_dico_config(param_container=self.model_instance,
-                                                                                        prefix=inst_subcat,
-                                                                                        notexist_ok=True,
-                                                                                        )
-            for indinst_model in self.get_l_instmod(inst_fullcat=inst_fullcat):
-                main_dict[inst_subcat][indinst_model.full_name] = {}
-                for model in self.__models_available__:
-                    main_dict[inst_subcat][indinst_model.full_name][model.model_name] = model.get_dico_config(param_container=indinst_model,
-                                                                                                              prefix=None,
-                                                                                                              notexist_ok=True,
-                                                                                                              )
-        text = """
-        # Define the model to use for each indicator category. Available models are {model_available}
-        {main_dict}
-        """
-        text = dedent(text)  # Remove undesired indentation
+    #     Arguments
+    #     ---------
+    #     file_path           : string
+    #         Path to the param_file.
+    #     """
+    #     main_dict = {}
+    #     for ii, inst_fullcat in enumerate(self.indicator_fullcategories):
+    #         inst_cat, inst_subcat = IND_Instrument.interpret_inst_fullcat(inst_fullcat)
+    #         main_dict[inst_subcat] = {"all": {}}
+    #         for model in self.__models_available__:
+    #             main_dict[inst_subcat]["all"][model.model_name] = model.get_dico_config(param_container=self.model_instance,
+    #                                                                                     prefix=inst_subcat,
+    #                                                                                     notexist_ok=True,
+    #                                                                                     )
+    #         for indinst_model in self.get_l_instmod(inst_fullcat=inst_fullcat):
+    #             main_dict[inst_subcat][indinst_model.full_name] = {}
+    #             for model in self.__models_available__:
+    #                 main_dict[inst_subcat][indinst_model.full_name][model.model_name] = model.get_dico_config(param_container=indinst_model,
+    #                                                                                                           prefix=None,
+    #                                                                                                           notexist_ok=True,
+    #                                                                                                           )
+    #     text = """
+    #     # Define the model to use for each indicator category. Available models are {model_available}
+    #     {main_dict}
+    #     """
+    #     text = dedent(text)  # Remove undesired indentation
 
-        text_main_dict = ""
-        for ind_category, dico_config in main_dict.items():
-            tab_ind_category = spacestring_like(f"{ind_category} = ")
-            text_main_dict += f"{ind_category} = " + pformat(dico_config, compact=True).replace('\n', f'\n{tab_ind_category}') + "\n"
+    #     text_main_dict = ""
+    #     for ind_category, dico_config in main_dict.items():
+    #         tab_ind_category = spacestring_like(f"{ind_category} = ")
+    #         text_main_dict += f"{ind_category} = " + pformat(dico_config, compact=True).replace('\n', f'\n{tab_ind_category}') + "\n"
 
-        text = text.format(model_available=self.name_models_available, main_dict=text_main_dict)
-        return text
+    #     text = text.format(model_available=self.name_models_available, main_dict=text_main_dict)
+    #     return text
 
     # def read_IND_param_file(self):
     #     """Read the content of the IND parameter file."""
@@ -747,36 +754,36 @@ class IND_InstCat_Model(Core_InstCat_Model):
     #             self.create_IND_param_file(paramfile_path=self.paramfile_instcat, answer_overwrite="y", answer_create=None)
     #             input("Modify the IND specific paramerisation file: {}".format(self.paramfile_instcat))
 
-    def load_config(self, dico_config):
-        """load the configuration specified by the dictionnary"""
-        # Check that each indication category has been defined
-        l_ind_fullcat = self.indicator_fullcategories
-        indfullcat_4_indsubcat = {IND_Instrument.interpret_inst_fullcat(inst_fullcat)[1]: inst_fullcat for inst_fullcat in l_ind_fullcat}
-        assert set(dico_config.keys()) == set(self.indicator_subcategories)
-        # For each indication category ...
-        for ind_cat, dico_config_ind_cat in dico_config.items():
-            # Check that each instrument model of each indicator category has been defined
-            l_indcat_model = self.get_l_instmod(inst_fullcat=indfullcat_4_indsubcat[ind_cat])
-            assert set(dico_config_ind_cat.keys()) == set(["all", ] + [indinst.full_name for indinst in l_indcat_model])
-            # Set all the indicator instrument model has not modeled
-            for indinst_model in l_indcat_model:
-                self.indinst_model_is_modeled[indinst_model.full_name] = False
-            # Load config for the whole system
-            for model_name, dico_config_model in dico_config_ind_cat["all"].items():
-                model = self.get_modelclass_4_modelname(model_name=model_name)
-                model.set_dico_config(param_container=self.model_instance, prefix=ind_cat,
-                                      dico_config=dico_config_model)
-                # Update self.indinst_model_is_modeled
-                for indinst_model in l_indcat_model:
-                    self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
-            # Load config per_instrument
-            for indinst_model in l_indcat_model:
-                for model_name, dico_config_model in dico_config_ind_cat[indinst_model.full_name].items():
-                    model = self.get_modelclass_4_modelname(model_name=model_name)
-                    model.set_dico_config(param_container=indinst_model, prefix=None,
-                                          dico_config=dico_config_model)
-                    # Update self.indinst_model_is_modeled
-                    self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
+    # def load_config(self, dico_config):
+    #     """load the configuration specified by the dictionnary"""
+    #     # Check that each indication category has been defined
+    #     l_ind_fullcat = self.indicator_fullcategories
+    #     indfullcat_4_indsubcat = {IND_Instrument.interpret_inst_fullcat(inst_fullcat)[1]: inst_fullcat for inst_fullcat in l_ind_fullcat}
+    #     assert set(dico_config.keys()) == set(self.indicator_subcategories)
+    #     # For each indication category ...
+    #     for ind_cat, dico_config_ind_cat in dico_config.items():
+    #         # Check that each instrument model of each indicator category has been defined
+    #         l_indcat_model = self.get_l_instmod(inst_fullcat=indfullcat_4_indsubcat[ind_cat])
+    #         assert set(dico_config_ind_cat.keys()) == set(["all", ] + [indinst.full_name for indinst in l_indcat_model])
+    #         # Set all the indicator instrument model has not modeled
+    #         for indinst_model in l_indcat_model:
+    #             self.indinst_model_is_modeled[indinst_model.full_name] = False
+    #         # Load config for the whole system
+    #         for model_name, dico_config_model in dico_config_ind_cat["all"].items():
+    #             model = self.get_modelclass_4_modelname(model_name=model_name)
+    #             model.set_dico_config(param_container=self.model_instance, prefix=ind_cat,
+    #                                   dico_config=dico_config_model)
+    #             # Update self.indinst_model_is_modeled
+    #             for indinst_model in l_indcat_model:
+    #                 self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
+    #         # Load config per_instrument
+    #         for indinst_model in l_indcat_model:
+    #             for model_name, dico_config_model in dico_config_ind_cat[indinst_model.full_name].items():
+    #                 model = self.get_modelclass_4_modelname(model_name=model_name)
+    #                 model.set_dico_config(param_container=indinst_model, prefix=None,
+    #                                       dico_config=dico_config_model)
+    #                 # Update self.indinst_model_is_modeled
+    #                 self.indinst_model_is_modeled[indinst_model.full_name] = self.indinst_model_is_modeled[indinst_model.full_name] or dico_config_model["do"]
 
     # @property
     # def model_4_indicator(self):

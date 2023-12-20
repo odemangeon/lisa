@@ -121,7 +121,7 @@ class ConfigFileAttr(object):
             reply = self._askadd2configfile(config2load=config2load)
             # If the reply is no raise an error
             if reply == 'n':
-                raise ValueError(f"The configuration file doesn't define the variable {self._d_varname_configfile[config2load]}.")
+                raise ValueError(f"The configuration file doesn't define the variables for {config2load}.")
             # If the reply is yes add it to the config_file and ask the user to check the content.
             else:
                 # Look for the config file to check if it exists

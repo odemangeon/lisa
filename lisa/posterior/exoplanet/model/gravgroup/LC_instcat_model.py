@@ -22,12 +22,12 @@ from .planetstarmodel_parametrisation import TransitModels, OccultationModels, P
 from .supersamp_exptime import SuperSampExpTimeAttr, _supersamp_key, _exptime_key
 from .limb_darkening import Manager_LD, CoreLD
 from .datasim_creator_lc import create_datasimulator_LC
-from ..decorrelation.linear_decorrelation import LinearDecorrelation
-from ...likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
-from ...likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from ...dataset_and_instrument.lc import LC_inst_cat
 from ....core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ....core.model.core_instcat_model import Core_InstCat_Model
+from ....core.model.decorrelation.linear_decorrelation import LinearDecorrelation
+from ....core.likelihood.decorrelation.spline_decorrelation import SplineDecorrelation
+from ....core.likelihood.decorrelation.bispline_decorrelation import BiSplineDecorrelation
 from .....tools.miscellaneous import spacestring_like
 
 

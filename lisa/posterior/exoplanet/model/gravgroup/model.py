@@ -170,9 +170,13 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
             raise ValueError("planets should be either a strictly positive int or a list of sting "
                              "or None. Got {}".format(planets))
         # Initialize orbital_model
+        l_inst_model_fullname_4_orbital_model = []
+        for InstCat_Model in [LC_InstCat_Model, RV_InstCat_Model]:
+            if InstCat_Model.inst_cat in self.inst_categories:
+                l_inst_model_fullname_4_orbital_model += [instmod_obj.full_name for instmod_obj in self.get_instmodel_objs(inst_fullcat=InstCat_Model.inst_cat)]
         self.orbital_model = OrbitalModels(l_planet=[planet for planet in self.planets.values()],
                                            host_star=self.stars[list(self.stars.keys())[0]],
-                                           l_inst_model_fullname=self.inst_model_fullnames,
+                                           l_inst_model_fullname=l_inst_model_fullname_4_orbital_model,
                                            )
         
     # Dealing with the definition of orbital models

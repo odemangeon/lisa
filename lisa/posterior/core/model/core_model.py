@@ -232,6 +232,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                    "# This is imposed by the fact that below all instrument models have 'gaussian' as entry.\n"
                    "# However there is other noise models available. Currently the list of possible noise model is ['gaussian', 'GP1D'].\n"
                    "# If you want to change the noise model used for a given instrument model, just change the value of its key.\n"
+                   "# For indicator (IND) instrument models, you can provide None and the model will not try to model the data associated to this instrument.\n"
                    )
         dico = self.instmodel4dataset.name_instmodels_used(sortby_instname=True, sortby_instfullcat=True, return_fullname=False)
         noisemoddef = {}
@@ -255,13 +256,15 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         assert isinstance(noisemoddef, dict)
         assert set(noisemoddef.keys()) == set(self.inst_fullcategories)  # self.inst_fullcategories is a property of InstrumentContainerInterface
         for inst_fullcat in noisemoddef:
+            info_inst_fullcat = manager_inst.interpret_inst_fullcat(inst_fullcat=inst_fullcat, raise_error=True)
             assert isinstance(noisemoddef[inst_fullcat], dict)
             assert set(noisemoddef[inst_fullcat].keys()) == set(self.get_inst_names(inst_fullcat=inst_fullcat))  # get_inst_names is a method of InstrumentContainerInterface
             for inst_name in noisemoddef[inst_fullcat]:
                 assert isinstance(noisemoddef[inst_fullcat][inst_name], dict)
                 assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
                 for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
-                    assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.possible_noise_model_categories
+                    if not(info_inst_fullcat[0] == "IND" and noisemoddef[inst_fullcat][inst_name][instmod_shortname] is None):
+                        assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.possible_noise_model_categories
         # Load it
         for inst_fullcat in noisemoddef:
             for inst_name in noisemoddef[inst_fullcat]:
