@@ -517,6 +517,9 @@ if do_MComp:
 
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
+    import importlib
+    import secondary_parameters
+    importlib.reload(secondary_parameters)
     from secondary_parameters import sp as sec_params
 
     chainIsec = sp.get_secondary_chains(chainI_main=chainI, sec_params=sec_params, model=post_instance.model)
