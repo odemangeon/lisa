@@ -2156,12 +2156,12 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
             if stellar_var is None or stellar_var[i_inputoutput] == "":
                 return_text[i_inputoutput] += f"{planet_contribution}"
             else:
-                return_text[i_inputoutput] += f"({stellar_var}) * (1 + {planet_contribution}) - 1"
+                return_text[i_inputoutput] += f"({stellar_var[i_inputoutput]}) * (1 + {planet_contribution}) - 1"
         else:
             if stellar_var is None or stellar_var[i_inputoutput] == "":
                 return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {planet_contribution})"
             else:
-                return_text[i_inputoutput] += f"({stellar_var}) * (1 + {planet_contribution})"
+                return_text[i_inputoutput] += f"({stellar_var[i_inputoutput]}) * (1 + {planet_contribution})"
 
         # Apply the contamination correction
         if (contamination is not None) and (contamination[i_inputoutput] != ""):
