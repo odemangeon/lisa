@@ -572,10 +572,10 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             # Get the noise model subclass associated with the dataset
             inst_mod_fullname = self.model.get_instmod_fullname(dataset_name)
             inst_mod_obj = self.model.instruments[inst_mod_fullname]
-            noise_model_subclass = manager_noisemodel.get_noisemodel_subclass(inst_mod_obj.noise_model)
+            noise_model = self.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
 
             # Compute GP contribution if needed.
-            if noise_model_subclass.has_GP and include_gp:
+            if noise_model.has_GP and include_gp:
                 # Get the list of datasets using the same GP kernel
                 l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
                 # Create the datasimulator for these datasets which we will need to create the GP simulatiop.

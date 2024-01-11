@@ -41,7 +41,6 @@ from ..tools.tqdm_logger import TqdmToLogger
 from ..tools.human_machine_interface.QCM import QCM_utilisateur
 # from ..posterior.core.dataset_and_instrument.dataset import Core_Dataset
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-# from ..posterior.core.likelihood.gaussian_noisemodelconfiguration import apply_jitter_multi, apply_jitter_add
 from ..explore_analyze.plot import hist_lnprob
 
 # from scipy.stats import mode
@@ -54,60 +53,60 @@ mgr_inst_dst.load_setup()
 exptime_Kepler = 0.02043402778  # days
 
 
-def get_centre_gaussian(xdata, ydata):
-    """Return the centre of a guassian
-    :param xdata and ydata are the x and y that define the guassian
-        they can be the x and y of an histogram
-    return double that is the centre of the guassian
-    """
-    from lmfit.models import GaussianModel
-    gmodel = GaussianModel()
-    params = gmodel.make_params(amplitude=ydata.max(), center=xdata.mean(), sigma=xdata.std())
-    result = gmodel.fit(ydata, params, x=xdata)
-    peak = result.values['center']
-    return peak
+# def get_centre_gaussian(xdata, ydata):
+#     """Return the centre of a guassian
+#     :param xdata and ydata are the x and y that define the guassian
+#         they can be the x and y of an histogram
+#     return double that is the centre of the guassian
+#     """
+#     from lmfit.models import GaussianModel
+#     gmodel = GaussianModel()
+#     params = gmodel.make_params(amplitude=ydata.max(), center=xdata.mean(), sigma=xdata.std())
+#     result = gmodel.fit(ydata, params, x=xdata)
+#     peak = result.values['center']
+#     return peak
 
 
-def gauspeak(values, nbins):
-    """Return the centre of a guassian fit to an histrogram of values
-    :param values np.array with values for which we will calculate the histogram and the centre of a gaussianfit
-        if np.array has more than one parameter it will do each one seperatly
-    :param nbins int number of bins used in the histrogram
-    return list of the guassian centre fit for each parameter
-    """
-    number_fitted = len(values[0, :])
-    peak = []
-    for i in range(0, number_fitted):
-        ydata = np.histogram(values[:, i], nbins)[0]
-        bin_edges = np.histogram(values[:, i], nbins)[1]
-        delta = bin_edges[2] - bin_edges[1]
-        xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
-        centre_gaussian = get_centre_gaussian(xdata, ydata)
-        centre_gaussian = max(centre_gaussian, xdata[0])
-        centre_gaussian = min(centre_gaussian, xdata[nbins - 1])
-        peak.append(centre_gaussian)
+# def gauspeak(values, nbins):
+#     """Return the centre of a guassian fit to an histrogram of values
+#     :param values np.array with values for which we will calculate the histogram and the centre of a gaussianfit
+#         if np.array has more than one parameter it will do each one seperatly
+#     :param nbins int number of bins used in the histrogram
+#     return list of the guassian centre fit for each parameter
+#     """
+#     number_fitted = len(values[0, :])
+#     peak = []
+#     for i in range(0, number_fitted):
+#         ydata = np.histogram(values[:, i], nbins)[0]
+#         bin_edges = np.histogram(values[:, i], nbins)[1]
+#         delta = bin_edges[2] - bin_edges[1]
+#         xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
+#         centre_gaussian = get_centre_gaussian(xdata, ydata)
+#         centre_gaussian = max(centre_gaussian, xdata[0])
+#         centre_gaussian = min(centre_gaussian, xdata[nbins - 1])
+#         peak.append(centre_gaussian)
 
-    return peak
+#     return peak
 
 
-def modepeak(values, nbins):
-    """Return the mode a distribution by cumputing the histogram
-    :param values np.array with values for which we will calculate the mode of the distribution
-        if np.array has more than one parameter it will do each one seperatly
-    :param nbins int number of bins used in the histrogram
-    return list of the mode fit for each parameter
-    """
-    number_fitted = len(values[0, :])
-    peak = []
-    for i in range(0, number_fitted):
-        ydata = np.histogram(values[:, i], nbins)[0]
-        bin_edges = np.histogram(values[:, i], nbins)[1]
-        delta = bin_edges[2] - bin_edges[1]
-        xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
-        indice = np.argmax(ydata)
-        peak.append(xdata[indice])
+# def modepeak(values, nbins):
+#     """Return the mode a distribution by cumputing the histogram
+#     :param values np.array with values for which we will calculate the mode of the distribution
+#         if np.array has more than one parameter it will do each one seperatly
+#     :param nbins int number of bins used in the histrogram
+#     return list of the mode fit for each parameter
+#     """
+#     number_fitted = len(values[0, :])
+#     peak = []
+#     for i in range(0, number_fitted):
+#         ydata = np.histogram(values[:, i], nbins)[0]
+#         bin_edges = np.histogram(values[:, i], nbins)[1]
+#         delta = bin_edges[2] - bin_edges[1]
+#         xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
+#         indice = np.argmax(ydata)
+#         peak.append(xdata[indice])
 
-    return peak
+#     return peak
 
 
 def get_init_distrib_from_fitvalues(fitted_values):
@@ -158,20 +157,6 @@ def generate_random_init_pos(nwalker, post_instance, init_distrib=None):
         else:
             p0.append(p0_notin_distrib[l_param_name_notin_distrib.index(param_name)])
     return np.asarray(p0).transpose()
-    # p0 = []
-    # if len(l_param_name_in_distrib) > 0:
-    #     return post_instance.model.get_initial_values(list_paramnames=l_param_name, nb_values=nwalker).transpose()
-    # else:
-    #     for param in l_param_name:
-    #         if param in init_distrib:
-    #             p0.append(np.random.normal(loc=init_distrib[param]["mu"],
-    #                                        scale=init_distrib[param]["sigma"],
-    #                                        size=nwalker))
-    #         else:
-    #             p0.append(np.squeeze(np.asarray([post_instance.model.
-    #                                              get_initial_values(list_paramnames=[param, ])
-    #                                              for i in range(nwalker)])))
-    #     return np.asarray(p0).transpose()
 
 
 def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.dat",
@@ -573,31 +558,22 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     title = "{}_{}({})".format(filename_info["inst_fullcat"], filename_info["inst_name"], filename_info["number"])
     # Get the instrument model object and the noise model object
     inst_mod = post_instance.model.get_instmod(dataset.dataset_name)
-    noise_mod = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+    noisemod_cat = post_instance.model.get_noise_model(noise_cat=inst_mod.noise_model_category)
     # Get data point (time, data, data_err) and other kwargs
     t_data = dataset.get_datasetkwarg("time")
     nt = len(t_data)
     data = dataset.get_datasetkwarg("data")
     data_err = dataset.get_datasetkwarg("data_err")
-    # Extract the jitter information:
-    # jitter which give the value of the jitter (float)
-    # jitter_type which give the type of jitter model used (string: 'multi' or 'add')
-    if noise_mod.has_jitter:
-        logger.error("The computation of jitter error bar needs to be re-implemented.")
-        jitter = None
-        jitter_type = None
-        # jitter_param_fullname = inst_mod.parameters[jitter_name].get_name(include_prefix=True, recursive=True)
-        # if inst_mod.parameters[jitter_name].free:
-        #     idx_jitter = l_param_name.index(jitter_param_fullname)
-        #     jitter = param[idx_jitter]
-        # else:
-        #     jitter = inst_mod.parameters[jitter_name].value
-        # jitter_type = noise_mod.jitter_type
+    # Extract the jitter information and compute data_err_new (which include the jitter):
+    # jitter gives the value of the jitter (float)
+    if noisemod_cat.has_jitter:
+        jitter = param[l_param_name.index(inst_mod.parameters["jitter"].full_name)] * multiplication_factor
+        jitter_noisemod = noisemod_cat.get_jitter_model(inst_model_fullname=inst_mod.full_name)
+        compute_jitteredvar = jitter_noisemod.get_compute_jitteredvar()
+        data_err_new = sqrt(compute_jitteredvar(data_err=data_err, jitter=jitter))
     else:
         jitter = None
-        jitter_type = None
-    # Apply jitter if needed
-    data_err_new = data_err if jitter is None else apply_jitter(data_err, jitter, jitter_type)
+        data_err_new = data_err
     # Intialise the returns variables:
     ebconts_lines_labels = {}
     # Initialise keywords argument for the plotting of the data
@@ -804,7 +780,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
         inst_mod_obj = post_instance.model.instruments[inst_mod_fullname]
         # If there is no noise-model it is that the data are not modeled
-        if inst_mod_obj.noise_model is None:
+        if inst_mod_obj.noise_model_category is None:
             continue
         else:
             nb_dataset2plot += 1
@@ -848,7 +824,7 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         inst_mod_fullname = post_instance.model.get_instmod_fullname(dataset.dataset_name)
         inst_mod_obj = post_instance.model.instruments[inst_mod_fullname]
         # If there is no noise-model it is that the data are not modeled
-        if inst_mod_obj.noise_model is None:
+        if inst_mod_obj.noise_model_category is None:
             continue
         # Get the datasimulator for the whole system
         # print(inst_mod_fullname)
@@ -1245,10 +1221,12 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     # Apply jitter if needed to the data_err and the RV_factor
     # Get the jitter value and jitter type
     instmod_obj = post_instance.model.get_instmod(dataset_name)
-    noisemod_sublcass = mgr_noisemodel.get_noisemodel_subclass(instmod_obj.noise_model)
-    if noisemod_sublcass.has_jitter:
+    noisemod_cat = post_instance.model.get_noise_model(noise_cat=instmod_obj.noise_model_category)
+    if noisemod_cat.has_jitter:
         jitter = param[l_param_name.index(instmod_obj.parameters["jitter"].full_name)] * multiplication_factor
-        data_err_new = apply_jitter(data_err, jitter, noisemod_sublcass.jitter_type)
+        jitter_noisemod = noisemod_cat.get_jitter_model(inst_model_fullname=instmod_obj.full_name)
+        compute_jitteredvar = jitter_noisemod.get_compute_jitteredvar()
+        data_err_new = sqrt(compute_jitteredvar(data_err=data_err, jitter=jitter))
     else:
         data_err_new = data_err
     # Perform zoom if needed (I do the zoom after computing the model with all the data because
@@ -1308,7 +1286,7 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
                                                            data_err=data_err_model,
                                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
-            if noisemod_sublcass.has_jitter:
+            if noisemod_cat.has_jitter:
                 if not("ecolor" in kwarg_model_jitter):
                     kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
                 plot_phase_folded_timeserie(t_data, residual, Per, tref, phasefold_central_phase=phasefold_central_phase,
@@ -1331,14 +1309,14 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
                     data_err_zoom_model = None
                     data_err_new_zoom_model = None
                 ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_zoom_model, **kwarg_model)
-                if noisemod_sublcass.has_jitter:
+                if noisemod_cat.has_jitter:
                     if not("ecolor" in kwarg_model_jitter):
                         kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
                     ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom_model, **kwarg_model_jitter)
                 residual_out = residual_zoom
             else:
                 ebcont = ax.errorbar(t_data, residual, data_err_model, **kwarg_model)
-                if noisemod_sublcass.has_jitter:
+                if noisemod_cat.has_jitter:
                     if not("ecolor" in kwarg_model_jitter):
                         kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
                     ax.errorbar(t_data, residual, data_err_new_model, **kwarg_model_jitter)
@@ -1377,7 +1355,7 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
                                                            data_err=data_err_modelandGP,
                                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
                                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
-            if noisemod_sublcass.has_jitter:
+            if noisemod_cat.has_jitter:
                 if not("ecolor" in kwarg_GP_jitter):
                     kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
                 plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
@@ -1393,13 +1371,13 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
                     data_err_zoom_modelandGP = None
                     data_err_new_zoom_modelandGP = None
                 ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_zoom_modelandGP, **kwarg_GP)
-                if noisemod_sublcass.has_jitter:
+                if noisemod_cat.has_jitter:
                     if not("ecolor" in kwarg_GP_jitter):
                         kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
                     ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom_modelandGP, **kwarg_GP_jitter)
             else:
                 ebcont_wGP = ax.errorbar(t_data, residual_wGP, data_err_modelandGP, **kwarg_GP)
-                if noisemod_sublcass.has_jitter:
+                if noisemod_cat.has_jitter:
                     if not("ecolor" in kwarg_GP_jitter):
                         kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
                     ax.errorbar(t_data, residual_wGP, data_err_new_modelandGP, **kwarg_GP_jitter)
@@ -1416,32 +1394,6 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         return t_zoom, model_zoom, model_wGP_zoom, GP_pred_zoom, GP_pred_var_zoom, residual_out, residual_wGP, ebconts_lines_labels
     else:
         return t_data, model, model_wGP, GP_pred, GP_pred_var, residual_out, residual_wGP, ebconts_lines_labels
-
-
-def apply_jitter(data_err, jitter, jitter_type):
-    """Apply jitter to the data error bar
-
-    WARNING THIS FUNCTION RETURNS THE STD NOT THE VAR
-
-    Arguments
-    ---------
-    data_err : array_float
-        data error array
-    jitter   : float
-        jitter value
-    jitter_type : str
-        jitter_type ("multi" or "add")
-    """
-    # Adapt the data_err to the jitter value is needed.
-    logger.error("The computation of the jittered error bars needs to be reimplemented")
-    return data_err
-    # if jitter_type == "multi":
-    #     data_err_new = sqrt(apply_jitter_multi(data_err, jitter))
-    # elif jitter_type == "add":
-    #     data_err_new = sqrt(apply_jitter_add(data_err, jitter))
-    # else:
-    #     raise ValueError("jitter_type should be in ['multi', 'add']")
-    # return data_err_new
 
 
 def apply_zoom(zoom, base_array, arrays=None):
