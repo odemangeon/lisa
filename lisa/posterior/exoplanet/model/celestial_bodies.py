@@ -215,8 +215,19 @@ class Star(Core_ParamContainer):
                                           prefix=inst_cat)
 
     def get_polymodel_param_name(self, order, inst_cat):
-        """Return the parameter name of the coefficient of the RV drift model."""
-        return f"{inst_cat}{self.__drift_basename__}{order}"
+        """Return the parameter name of the coefficient of the RV drift model.
+
+        Arguments
+        ---------
+        inst_cat    : str
+            Instrument category
+        """
+        if inst_cat == "RV":
+            return f"vdrift{order}"
+        elif inst_cat == "LC":
+            return f"Fdrift{order}"
+        else:
+            return f"{inst_cat}drift{order}"
 
     def set_dico_config_polymodel(self, inst_cat, dico_config=None):
         """Get the dictionary that configures the polynomial model for a given instrument category
