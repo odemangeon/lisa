@@ -36,15 +36,8 @@ from lisa.explore_analyze.plot import hist_lnprob
 ###############################
 ## Definition of the parameters
 ###############################
-obj_name = "WASP-151"  # Change
+obj_name = "target_name"  # Change
 kwargs_datasim = {}
-star_kwargs = {"M": {"value": 1.077,
-                     "error": 0.081},
-               "R": {"value": 1.14,
-                     "error": 0.03},
-               "Teff": {"value": 5871,
-                        "error": 57}
-               }
 
 output_folders = get_def_output_folders(run_folder=getcwd())  # Folder for the outputs
 
@@ -54,7 +47,7 @@ extension_exploration = "_initrun"  # extension of your exploration (Needs to be
 
 # Save plots ?
 save_plots = True  # Save all the plots.
-extension_outputs = "_initrun_median"  # extension of this chain analysis (will be added to the ouput files).
+extension_outputs = "_initrun"  # extension of this chain analysis (will be added to the ouput files).
 
 # Common parameters for the plots of histograms of the lnposterior and the trace plots
 hist_perc = 10  # For the histogram after the acceptance fraction and the ln posterior selections
@@ -193,11 +186,12 @@ matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 logger.info("########\nCHAIN ANALYSIS")
 
-if any([var not in globals() for var in ["post_instance", "lnprobability", "acceptance_fraction", "l_param_name"]]):
-    logger.info("0. Load from pickle")
-    # recreate post_instance object
-    post_instance = cpost.Posterior(object_name=obj_name)
-    post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
+if "post_instance" not in globals():
+    post_instance = cpost.Posterior()
+    post_instance.configure_posterior(path_config_file="config_file.py")
+    post_instance.create_allfunctions()
+
+if any([var not in globals() for var in [ "lnprobability", "acceptance_fraction", "l_param_name"]]):
     l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
     chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
                                                                                    folder=output_folders["pickles_explore"])
@@ -517,6 +511,9 @@ if do_MComp:
 
 if do_SecParam:
     logger.info("9. Determine best fit values and error bars for secondary parameters")
+    import importlib
+    import secondary_parameters
+    importlib.reload(secondary_parameters)
     from secondary_parameters import sp as sec_params
 
     chainIsec = sp.get_secondary_chains(chainI_main=chainI, sec_params=sec_params, model=post_instance.model)
