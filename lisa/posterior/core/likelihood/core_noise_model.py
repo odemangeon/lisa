@@ -295,6 +295,21 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
                 return l_instmod_obj
         raise ValueError("l_instmod_obj should be an Instrument_Model or an Iterable of "
                          "Instrument_Models")
+    
+    def get_jitter_model(self, inst_model_fullname):
+        """Get the jitter model for a given instrument model full name.
+        Argument
+        --------
+        inst_model_fullname :
+
+        Return
+        ------
+        jitter_model    : GaussianModel instance
+        """
+        if self.has_jitter:
+            raise NotImplementedError("You need to override this method in the SubClass !")
+        else:
+            raise NotImplementedError("This noise model subclass doesn't have jitter. You should not be calling this function")
 
     # def _update_lists_params(self, l_params_lnlike, l_params_noisemod, l_idx_param_noisemod,
     #                          param_obj):

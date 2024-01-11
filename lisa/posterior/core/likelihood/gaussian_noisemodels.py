@@ -56,6 +56,11 @@ class Gaussian_Noise_Models(Core_Noise_Model):
             raise ValueError(f"The instrument model name provided ({inst_model_fullname}) doesn't exist or is not defined to be modeled with a gaussian noise model")
         return self._models_config[inst_model_fullname]
     
+    def get_jitter_model(self, inst_model_fullname):
+        """Same than get_model with a different name for consistency across noise models with a jitter term
+        """
+        return self.get_model(inst_model_fullname=inst_model_fullname)
+    
     ################################
     # Dealing with the configuration
     ################################
