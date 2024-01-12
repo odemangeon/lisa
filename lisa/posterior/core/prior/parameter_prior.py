@@ -105,69 +105,69 @@ class Parameter_Prior(object):
         depend on the prior function used.
         """
         # IN PRINCIPLE DO NOT NEED TO HAVE ALL THIS WITHIN AN if self.duplicate is None, BECAUSE self.prior_info refers to self.duplicate
-        if isinstance(prior_category, str):
-            if joint_prior_ref is not None:
-                # Check of the joint prior ref has been defined in the param file and is thus available
-                if joint_prior_ref in available_joint_priors:
-                    self.prior_info["joint_prior_ref"] = joint_prior_ref
+        if joint_prior_ref is not None:
+            # Check of the joint prior ref has been defined in the param file and is thus available
+            if joint_prior_ref in available_joint_priors:
+                self.prior_info["joint_prior_ref"] = joint_prior_ref
+            else:
+                raise ValueError("Joint prior {} is not defined. If it's not a typo you "
+                                 "have to define it in the joint prior section of the "
+                                 "parameter file".format(joint_prior_ref))
+            # Set category to None for no confusion
+            self.prior_info["category"] = None
+            self.prior_info["args"] = {}
+            # Check that the parameter is indeed mentioned as parameter of the joint prior
+            for param_name_or_l_param_name in available_joint_priors[joint_prior_ref]["params"].values():
+                if isinstance(param_name_or_l_param_name, list):  # For Joint param with multiple params parameters, the contant of "params" can be a list of parameter names
+                    l_param_name = param_name_or_l_param_name
                 else:
-                    raise ValueError("Joint prior {} is not defined. If it's not a typo you "
-                                     "have to define it in the joint prior section of the "
-                                     "parameter file".format(joint_prior_ref))
-                # Set category to None for no confusion
-                self.prior_info["category"] = None
-                # Check that the parameter is indeed mentioned as parameter of the joint prior
-                for param_name_or_l_param_name in available_joint_priors[joint_prior_ref]["params"].values():
-                    if isinstance(param_name_or_l_param_name, list):  # For Joint param with multiple params parameters, the contant of "params" can be a list of parameter names
-                        l_param_name = param_name_or_l_param_name
-                    else:
-                        l_param_name = [param_name_or_l_param_name, ]
-                    for param_name in l_param_name:
-                        found = self.name.is_name(param_name)
-                        if found:
-                            break
+                    l_param_name = [param_name_or_l_param_name, ]
+                for param_name in l_param_name:
+                    found = self.name.is_name(param_name)
                     if found:
                         break
-                if not(found):
-                    raise ValueError("{} is indicated has joint prior for Parameter {}. However, "
-                                     "it doesn't appear has a joint prior parameter.".format(joint_prior_ref, self.get_name(include_prefix=True, recursive=True)))
-                logger.debug("The Prior for param {} is joint and called {}."
-                             "".format(self.get_name(include_prefix=True, recursive=True), self.joint_prior_ref))
-            ## Give the category of prior: string, for example 'normal', 'uniform'
-            else:
+                if found:
+                    break
+            if not(found):
+                raise ValueError("{} is indicated has joint prior for Parameter {}. However, "
+                                    "it doesn't appear has a joint prior parameter.".format(joint_prior_ref, self.get_name(include_prefix=True, recursive=True)))
+            logger.debug("The Prior for param {} is joint and called {}."
+                            "".format(self.get_name(include_prefix=True, recursive=True), self.joint_prior_ref))
+        else:
+            if isinstance(prior_category, str):
                 if manager.is_available_priortype(prior_category):
                     priorfunction_subclass = manager.get_priorfunc_subclass(prior_category)
                     priorfunction_subclass.check_args(list(kwargs.keys()))
                     if prior_category != self.prior_info["category"]:
                         logger.debug("Prior category attribute of param {} changed from {} to {}"
-                                     "".format(self.get_name(include_prefix=True, recursive=True), self.prior_info["category"],
-                                               prior_category))
+                                        "".format(self.get_name(include_prefix=True, recursive=True), self.prior_info["category"],
+                                                prior_category))
                         self.prior_info["category"] = prior_category
                         logger.debug("New prior args for param {}: {}"
-                                     "".format(self.get_name(include_prefix=True, recursive=True), kwargs))
+                                        "".format(self.get_name(include_prefix=True, recursive=True), kwargs))
                         self.prior_info["args"] = kwargs
                     else:
                         for arg in priorfunction_subclass.all_args:
                             if (arg in self.prior_info["args"]) and (arg not in kwargs):
                                 logger.debug("Prior arg {} of param {} changed from {} to None"
-                                             "".format(arg, self.get_name(include_prefix=True, recursive=True),
-                                                       self.prior_info["args"][arg]))
+                                                "".format(arg, self.get_name(include_prefix=True, recursive=True),
+                                                        self.prior_info["args"][arg]))
                                 self.prior_info["args"].pop(arg)
                             elif (arg not in self.prior_info["args"]) and (arg in kwargs):
                                 logger.debug("Prior arg {} of param {} changed from None to {}"
-                                             "".format(arg, self.get_name(include_prefix=True, recursive=True), kwargs[arg]))
+                                                "".format(arg, self.get_name(include_prefix=True, recursive=True), kwargs[arg]))
                                 self.prior_info["args"][arg] = kwargs[arg]
                             elif (arg in self.prior_info["args"]) and (arg in kwargs):
                                 if self.prior_info["args"][arg] != kwargs[arg]:
                                     logger.debug("Prior arg {} of param {} changed from {} to {}"
-                                                 "".format(arg, self.get_name(include_prefix=True, recursive=True),
-                                                           self.prior_info["args"][arg], kwargs[arg]))
+                                                    "".format(arg, self.get_name(include_prefix=True, recursive=True),
+                                                            self.prior_info["args"][arg], kwargs[arg]))
                                     self.prior_info["args"][arg] = kwargs[arg]
                 else:
                     raise ValueError("prior_category {} is not in the list of available prior types: {}"
-                                     "".format(prior_category, manager.get_available_priors()))
-        else:
-            raise ValueError("prior_category should be a str.")
+                                        "".format(prior_category, manager.get_available_priors()))
+            else:
+                raise ValueError("prior_category should be a str.")
 
     @property
     def priors_dict(self):
@@ -177,10 +177,9 @@ class Parameter_Prior(object):
         res['category'] = self.prior_category
         res['args'] = self.prior_args
         res['unit'] = self.unit
-        res['joint_prior_ref'] = self.joint_prior_ref
         return res
 
-    def load_prior_config(self, dico_prior_config, available_joint_priors={}, load_setup=False):
+    def load_inidividualprior_config(self, dico_prior_config, available_joint_priors={}, load_setup=False):
         """Load the configuration specified by the parameter dictionnary.
 
         :param dict dico_config : Dictionnary giving the configuration.
@@ -190,7 +189,12 @@ class Parameter_Prior(object):
         """
         if load_setup:
             manager.load_setup()
+        # Check that the dico config provide the required keys and only those
+        if set(["category", "args", "unit"]) != set(dico_prior_config.keys()):
+            raise ValueError(f"For the individual prior definition of parameter {self.full_name}, you did provided the correct keys. "
+                             f"You provided {set(dico_prior_config.keys())} when {set(['category', 'args', 'unit'])} is expected.")
+        # Set the prior element
         self.set_prior(prior_category=dico_prior_config["category"],
-                       joint_prior_ref=dico_prior_config.get("joint_prior_ref", None),
+                       joint_prior_ref=None,
                        available_joint_priors=available_joint_priors,
                        **dico_prior_config["args"])

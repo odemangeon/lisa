@@ -83,16 +83,16 @@ class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadO
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_instcat_model(self):
+    def _configure_instcat_model(self, ask_before_adding=False):
         """Configure the inst cat model
         """
         logger.info(f"Start configuration of the {self.inst_cat} models.")
 
         logger.info("Load decorrelation model configuration")
-        self._load_config(config2load='decorrmod')
+        self._load_config(config2load='decorrmod', ask_before_adding=ask_before_adding)
 
         logger.info("Load decorrelation likelihood configuration")
-        self._load_config(config2load='decorrlike')
+        self._load_config(config2load='decorrlike', ask_before_adding=ask_before_adding)
 
     # Function that get the function required by ConfigFileAttr._load_config
     ########################################################################

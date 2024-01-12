@@ -124,7 +124,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         # Initialize the configuration file attribute
         ConfigFileAttr.__init__(self)        
         
-    def configure_posterior(self, path_config_file=None, cluster=False):
+    def configure_posterior(self, path_config_file=None, ask_before_adding=False, cluster=False):
         """Configure the whole posterior using the configuration file.
 
         The configuration file contains all the configuration for the analysis
@@ -151,27 +151,27 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             self.config_file.path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=None)
 
         logger.info(f"Load object name and folders.")
-        self._load_config(config2load='objectnameNfolders')
+        self._load_config(config2load='objectnameNfolders', ask_before_adding=ask_before_adding)
 
         logger.info(f"Load datasets.")
-        self._load_config(config2load='datasets')
+        self._load_config(config2load='datasets', ask_before_adding=ask_before_adding)
 
         logger.info(f"Load instrument models definition.")
-        instmodel4dataset = self._load_config(config2load='instmoddef')
+        instmodel4dataset = self._load_config(config2load='instmoddef', ask_before_adding=ask_before_adding)
         self.dataset_db.lock()
 
         logger.info("Load model category definition.")
-        self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset)
+        self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset, ask_before_adding=ask_before_adding)
 
-        self.model._configure_model()
+        self.model._configure_model(ask_before_adding=ask_before_adding)
 
-        self.model._configure_noisemodel()
+        self.model._configure_noisemodel(ask_before_adding=ask_before_adding)
 
         logger.info("11. Set parametrisation of the model")
         self.model.set_parametrisation()
 
         logger.info("12. Create and modify the paramerisation file")
-        self.model._configure_parameters()
+        self.model._configure_parameters(ask_before_adding=ask_before_adding)
 
     ############################################################
     ## Methods and properties used by the user interface methods

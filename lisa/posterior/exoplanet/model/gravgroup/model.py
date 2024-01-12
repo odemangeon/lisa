@@ -72,18 +72,18 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
     ## Dealing with the model configuration
     #######################################
 
-    def _configure_model(self):
+    def _configure_model(self, ask_before_adding=False):
         """Configure the model
 
         This function is called by Posterior.configure_posterior
         """
         logger.info("Load stars and planet configuration")
-        self._load_config(config2load='starsplanets')
+        self._load_config(config2load='starsplanets', ask_before_adding=ask_before_adding)
 
         logger.info("Load the planets' orbital models configuration.")
-        self._load_config(config2load='orbitmodels')
+        self._load_config(config2load='orbitmodels', ask_before_adding=ask_before_adding)
 
-        super(GravGroup, self)._configure_model()
+        super(GravGroup, self)._configure_model(ask_before_adding=ask_before_adding)
 
 
     # Function that get the function required by  ConfigFileAttr._load_config

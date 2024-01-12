@@ -339,6 +339,34 @@ class Core_JointPrior_Function(Core_Prior_Function, metaclass=Metaclass_JointPri
         logger.debug("The parameters name provided for Joint prior category all correspond to "
                      "existing parameters")
 
+    @classmethod
+    def set_params_jointprior_ref(cls, params, joint_prior_ref, available_joint_priors, model_instance):
+        """Check that the parameters dictionnary provided for the Joint prior is correct.
+
+        Check that the parameters keys provided are the ones required by the definition of the prior.
+        Check that the parameters names provided correspond to existing parameters.
+
+        :param dict params: Params dictionary from the parameter file. Key = elements of the self.__param_refs__
+            list, value = name (full name) of the model parameter corresponding to the parameter references.
+            It can also be a list of model parameters if the parameter can be multiple (specified by
+            self.__multiple_params__)
+        :param Core_Model model_instance: model instance to be able to check that the parameter names
+            provided in params are valid.
+        """
+        for param_name, multi in zip(cls.param_refs, cls.multiple_params):
+            if multi:
+                if isinstance(params[param_name], str):
+                    l_param_name = [params[param_name], ]
+                elif isinstance(params[param_name], list):
+                    l_param_name = params[param_name]
+            else:
+                l_param_name = [params[param_name], ]
+            for ref_param_mdl_name in l_param_name:
+                param = model_instance.get_parameter(name=ref_param_mdl_name, notexist_ok=False, return_error=False, kwargs_get_list_params={'recursive': True}, 
+                                                     kwargs_get_name={'include_prefix': True, 'recursive': True})
+                param.set_prior(prior_category=None, joint_prior_ref=joint_prior_ref, available_joint_priors=available_joint_priors)
+                logger.debug(f"Joint prior ref of parameter {param.full_name} set to {joint_prior_ref}.")
+
     @property
     def dicokey4argkey(self):
         """Dictionary giving the type of argument for each possible argument (of __init__).
