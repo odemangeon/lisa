@@ -75,12 +75,12 @@ class Gaussian_Noise_Models(Core_Noise_Model):
 
     # Configure the gaussian noise models
     #####################################
-    def _configure_noisemodcat_model(self, **kwargs):
+    def _configure_noisemodcat_model(self, ask_before_adding=False, **kwargs):
         """Apply the configuration for the noise model
 
         This method is called by Core_Model._configure_noisemodel
         """
-        self._load_config(config2load='gaussian')
+        self._load_config(config2load='gaussian', ask_before_adding=ask_before_adding)
 
     # Function that get the function required by  ConfigFileAttr._load_config
     #########################################################################

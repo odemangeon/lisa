@@ -82,7 +82,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_noisemodcat_model(self, **kwargs):
+    def _configure_noisemodcat_model(self, ask_before_adding=False, **kwargs):
         """Apply the parametrisation for the noise model
 
         This method is called by Core_Model._configure_noisemodel

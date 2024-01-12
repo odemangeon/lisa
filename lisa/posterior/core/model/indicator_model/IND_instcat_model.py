@@ -218,13 +218,13 @@ class IND_InstCat_Model(Core_InstCat_Model):
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_instcat_model(self):
+    def _configure_instcat_model(self, ask_before_adding=False):
         """Configure the inst cat model
         """
         logger.info(f"Start configuration of the {self.inst_cat} models.")
 
         logger.info("Load IND instrumental model configuration")
-        self._load_config(config2load='indinstcatmod')
+        self._load_config(config2load='indinstcatmod', ask_before_adding=ask_before_adding)
 
     # Function that get the function required by ConfigFileAttr._load_config
     ########################################################################

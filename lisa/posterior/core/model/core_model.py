@@ -120,7 +120,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         # Define the available datasimcreator for the model (key: name, value: datasimcreator docf)
         self.__datasimcreator = {}
         # Initialise instcat_models which has to be filled with the InstCat_Model instances available for the model
-        # {<inst category>: InstCat_Model subclass instance}
+        # {<inst category>: InstCat_Model subclass instance}ask_before_adding
         self.__instcat_models = {}
         # Initialise noise_models which has to be filled with the NoiseModel instances available for the model
         # {<noise model category>: NoiseModel subclass instance}
@@ -134,7 +134,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
 
     # Methods related to the instrument model categories
     ####################################################
-    def _configure_model(self):
+    def _configure_model(self, ask_before_adding=False):
         """Configure the model
         """
         self._init_instcat_models_and_datasimcreator()
@@ -142,7 +142,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         logger.info("Load instrument category configuration.")
         for inst_cat in self.inst_categories: 
             instcat_model = self.get_instcat_model(inst_cat)
-            instcat_model._configure_instcat_model()
+            instcat_model._configure_instcat_model(ask_before_adding=ask_before_adding)
 
     def _init_instcat_models_and_datasimcreator(self):
         """Finish the initialisation of the instrument category models required by the model and the associated datasimulators.
@@ -159,18 +159,18 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Methods related to the noise model categories
     ###############################################
 
-    def _configure_noisemodel(self):
+    def _configure_noisemodel(self, ask_before_adding=False):
         """Configure the noise models
         """
         logger.info("Load noise model definition.")
-        self._load_config(config2load='noisemoddef')
+        self._load_config(config2load='noisemoddef', ask_before_adding=ask_before_adding)
 
         logger.info("Load noise model categories configuration.")
         self._init_noisemodels()
 
         for noise_cat in self.noisemodel_categories: # noisemodel_categories is a property of InstrumentContainerInterface as the noise models are stored in the instrument models
             noisemodcat = self.get_noise_model(noise_cat=noise_cat) 
-            noisemodcat._configure_noisemodcat_model()
+            noisemodcat._configure_noisemodcat_model(ask_before_adding=ask_before_adding)
 
     def _init_noisemodels(self):
         """Finish the initialisation of the noise models required by the model.
@@ -182,7 +182,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             if NoiseModel.noise_cat in self.noisemodel_categories:  # noisemodel_categories is a property of InstrumentContainerInterface
                 self.__noise_models[NoiseModel.noise_cat] = NoiseModel(model_instance=self, run_folder=self.run_folder, config_file=self.config_file)
 
-    # Function that get the function required by  ConfigFileAttr._load_config
+    # Function that get the function required by ConfigFileAttr._load_config
     #########################################################################
 
     def _get_function_config(self, function_type, config2load):
@@ -195,8 +195,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 return self.__add_default_config_var_frozens
             elif config2load == 'frozen_values':
                 return self.__add_default_config_var_frozenvals
-            elif config2load == 'priors':
-                return self.__add_default_config_var_priors
+            elif config2load == 'jointpriors':
+                return self.__add_default_config_var_jointpriors
+            elif config2load == 'individualpriors':
+                return self.__add_default_config_var_individualpriors
         elif function_type == 'check_config_exists':
             if config2load == 'noisemoddef':
                 return self.__config_var_exist_noisemoddef
@@ -206,8 +208,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 return self.__config_var_exist_frozens
             elif config2load == 'frozen_values':
                 return self.__config_var_exist_frozenvals
-            elif config2load == 'priors':
-                return self.__config_var_exist_priors
+            elif config2load == 'jointpriors':
+                return self.__config_var_exist_jointpriors
+            elif config2load == 'individualpriors':
+                return self.__config_var_exist_individualpriors
         elif function_type == 'load_config_content':
             if config2load == 'noisemoddef':
                 return self.__load_config_var_content_noisemoddef
@@ -217,8 +221,10 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 return self.__load_config_var_content_frozens
             elif config2load == 'frozen_values':
                 return self.__load_config_var_content_frozenvals
-            elif config2load == 'priors':
-                return self.__load_config_var_content_priors
+            elif config2load == 'jointpriors':
+                return self.__load_config_var_content_jointpriors
+            elif config2load == 'individualpriors':
+                return self.__load_config_var_content_individualpriors
         raise ValueError(f"Either the function_type (you provided {function_type}) or the config2load (you provided {config2load}) is invalid")
 
     # Methods for the noise model definition part of the config file
@@ -275,16 +281,18 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Methods related to the configuration of the parameters
     ########################################################
 
-    def _configure_parameters(self):
+    def _configure_parameters(self, ask_before_adding=False):
         """Add the priors configuration to the configuration file."""
         logger.info("Load duplicate parameters definition")
-        self._load_config(config2load='duplicates')
+        self._load_config(config2load='duplicates', ask_before_adding=ask_before_adding)
         logger.info("Load frozen parameters definition")
-        self._load_config(config2load='frozens')
+        self._load_config(config2load='frozens', ask_before_adding=ask_before_adding)
         logger.info("Load frozen parameters values definition")
-        self._load_config(config2load='frozen_values')
+        self._load_config(config2load='frozen_values', ask_before_adding=ask_before_adding)
+        logger.info("Load parameters joint priors definition")
+        self._load_config(config2load='jointpriors', ask_before_adding=ask_before_adding)
         logger.info("Load parameters priors definition")
-        self._load_config(config2load='priors')
+        self._load_config(config2load='individualpriors', ask_before_adding=ask_before_adding)
 
     # Methods related to the configuration of the duplicate parameters
     ##################################################################
@@ -415,10 +423,28 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Methods related to the configuration of the parameters priors
     ###############################################################
 
-    def __add_default_config_var_priors(self, file):
-        file.write("\n# Priors"
-                   "\n########"
+    def __add_default_config_var_jointpriors(self, file):
+        file.write("\n# Joint Priors"
+                   "\n##############"
                    "\n# The units are provided as information and you should not change it. Any change will be ignored."
+                   "\n#"
+                   "\n# These priors convert a given set of jumping parameter into a different set of parameters that"
+                   "\n# can be better suited to define priors."
+                   "\n# The list of available joint priors is: "  ## TODO
+                   "\n"
+                   )
+        tab = spacestring_like(f'{self.joint_prior_name}' + " = ")
+        file.write("{var} = {content}\n".format(var=self.joint_prior_name,  # Defined in model_prior.py
+                                                content=pformat(self.jointprior_config_dict, compact=True).replace('\n', f'\n{tab}')
+                                                )
+                   )
+        
+    def __add_default_config_var_individualpriors(self, file):
+        file.write("\n# Individual Priors"
+                   "\n###################"
+                   "\n# The units are provided as information and you should not change it. Any change will be ignored."
+                   "\n#"
+                   "\n# The list of available individual priors is: "  ## TODO
                    "\n")
         priors = {}
         for parcont_type in self.paramcont_categories:
@@ -429,21 +455,29 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 else:
                     priors[parcont_type] = self.instruments.priors_dict
         priors[f"sys_{self.get_name()}"] = self.priors_dict
-        priors[self.joint_prior_name] = self.jointprior_config_dict
-        tab_priors = spacestring_like('priors' + " = ")
-        file.write("{var} = {content}\n".format(var='priors',
+        tab_priors = spacestring_like('individual_priors' + " = ")
+        file.write("{var} = {content}\n".format(var='individual_priors',
                                                 content=pformat(priors, compact=True).replace('\n', f'\n{tab_priors}')
                                                 )
                    )
         
-    def __config_var_exist_priors(self, dico_config_file):
-        return 'priors' in dico_config_file
+    def __config_var_exist_jointpriors(self, dico_config_file):
+        return self.joint_prior_name in dico_config_file
 
-    def __load_config_var_content_priors(self, dico_config_file, **kwargs):
-        priors = dico_config_file['priors']
+    def __config_var_exist_individualpriors(self, dico_config_file):
+        return 'individual_priors' in dico_config_file
+
+    def __load_config_var_content_jointpriors(self, dico_config_file, **kwargs):
+        joint_priors = dico_config_file[self.joint_prior_name]
+        # Load it
+        # load the joint prior configuration
+        Model_Prior.load_jointprior_config(self, dico_jointprior_config=joint_priors)
+
+    def __load_config_var_content_individualpriors(self, dico_config_file, **kwargs):
+        priors = dico_config_file['individual_priors']
         # Check that the content is valid
         # Check that there is all the required keys at the top level
-        set_keys_parameters = set(self.paramcont_categories + [f"sys_{self.get_name()}", self.joint_prior_name])
+        set_keys_parameters = set(self.paramcont_categories + [f"sys_{self.get_name()}"])
         if (set_keys_parameters != set(priors.keys())):
             raise ValueError(f"The priors dictionary of the configuration file doesn't have the correct keys: Expect {set_keys_parameters}, got {set(priors.keys())}")
         # Check that each parametercontainer_type in self.paramcont_categories has the correct parameter containers names
@@ -451,18 +485,16 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             if (set(self.paramcontainers[parcont_type].keys()) != set(priors[parcont_type].keys())):
                 raise ValueError(f"The priors[{parcont_type}] dictionary of the configuration file doesn't have the correct keys: Expect {set(self.paramcontainers[parcont_type].keys())}, got {set(priors[parcont_type].keys())}")
         # Load it
-        # load the joint prior configuration
-        Model_Prior.load_jointprior_config(self, dico_jointprior_config=priors[self.joint_prior_name])
         # Load the new configuration from the parameter file for each Paramcontainer and parameter
         for parcont_type in self.paramcont_categories:
             for parcont_name in self.paramcontainers[parcont_type]:
                 if parcont_type != instmod_cat:
-                    self.paramcontainers[parcont_type][parcont_name].load_priors_config(dico_priors_config=priors[parcont_type][parcont_name],
-                                                                                        available_joint_priors=self.joint_prior_container)
+                    self.paramcontainers[parcont_type][parcont_name].load_individualpriors_config(dico_priors_config=priors[parcont_type][parcont_name],
+                                                                                                  available_joint_priors=self.joint_prior_container)
                 else:
-                    self.instruments.load_priors_config(dico_priors_config=priors[parcont_type], available_joint_priors=self.joint_prior_container)
+                    self.instruments.load_individualpriors_config(dico_priors_config=priors[parcont_type], available_joint_priors=self.joint_prior_container)
         # Load the new configuration for the parameters stored in the model itself
-        self.load_priors_config(dico_priors_config=priors[f"sys_{self.get_name()}"], available_joint_priors=self.joint_prior_container)
+        self.load_individualpriors_config(dico_priors_config=priors[f"sys_{self.get_name()}"], available_joint_priors=self.joint_prior_container)
 
 
     ##########################################
@@ -787,41 +819,6 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
             return dico_initvals
         else:
             return array([dico_initvals[param_name] for param_name in list_paramnames])
-
-    #####################################
-    ## Dealing with the priors param file
-    #####################################
-
-    # def load_config(self, dico_config):
-    #     """load the configuration specified by the dictionnary from the parameter_file
-
-    #     :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
-    #         read from the parameter file.
-    #     """
-    #     # load the joint prior configuration
-    #     Model_Prior.load_jointprior_config(self, dico_config=dico_config)
-    #     # Load the new configuration from the parameter file for each Paramcontainer and parameter
-    #     logger.debug("List of Core_ParamContainer types in param_file_info: {}"
-    #                  "".format(self.paramfile_info.keys()))
-    #     for paramcont_type in self.paramfile_info.keys():  # self.paramfile_info comes from Core_ParamContainer
-    #         logger.debug("Content of param_file_info for {}: {}"
-    #                      "".format(paramcont_type, self.paramfile_info[paramcont_type]))
-    #         if paramcont_type not in [instmod_cat, key_params_fileinfo, joint_prior_name]:
-    #             for paramcont_name in self.paramfile_info[paramcont_type]:
-    #                 paramcont_dico = dico_config[paramcont_name]
-    #                 logger.debug("Content of param dictionary for {} {}: {}"
-    #                              "".format(paramcont_type, paramcont_name, paramcont_dico))
-    #                 self.paramcontainers[paramcont_type][paramcont_name].load_config(dico_config=paramcont_dico,
-    #                                                                                  model_instance=self,
-    #                                                                                  available_joint_priors=self.joint_prior_container)
-    #         elif paramcont_type == instmod_cat:
-    #             self.instruments.load_config(dico_config=dico_config,
-    #                                          inst_db_info=self.paramfile_info[paramcont_type],
-    #                                          model_instance=self,
-    #                                          available_joint_priors=self.joint_prior_container)
-    #         else:  # For the model parameters (those who do no belong in any param container)
-    #             super(Core_Model, self).load_config(dico_config=dico_config[f"sys_{self.code_name}"], model_instance=self,
-    #                                                 available_joint_priors=self.joint_prior_container)
 
     ##############################
     ## Dealing with datasimulators

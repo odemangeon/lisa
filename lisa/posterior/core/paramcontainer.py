@@ -243,11 +243,11 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         """
         res = {}
         for param in self.get_list_params(main=True, free=True, no_duplicate=True):
-            if not(param.is_a_duplicate):
+            if not(param.is_a_duplicate) and (param.joint_prior_ref is None):
                 res[param.get_name()] = param.priors_dict
         return res
 
-    def load_priors_config(self, dico_priors_config, available_joint_priors={}, load_setup=False):
+    def load_individualpriors_config(self, dico_priors_config, available_joint_priors={}, load_setup=False):
         """load the configuration specified by the dictionnary
 
         :param dict dico_config: Dictionnary containing the new configuration for the main Parameters
@@ -256,9 +256,11 @@ class Core_ParamContainer(Named, metaclass=MandatoryReadOnlyAttr):
         for param in self.get_list_params(main=True, free=True, no_duplicate=False):
             if param.is_a_duplicate:
                 continue
+            if param.joint_prior_ref is not None:
+                continue
             if param.get_name() in dico_priors_config:
-                param.load_prior_config(dico_prior_config=dico_priors_config[param.get_name()],
-                                        available_joint_priors=available_joint_priors,
-                                        load_setup=load_setup)
+                param.load_inidividualprior_config(dico_prior_config=dico_priors_config[param.get_name()],
+                                                   available_joint_priors=available_joint_priors,
+                                                   load_setup=load_setup)
             else:
                 raise ValueError(f"Parameter {param.full_name} not found in priors dictionary of the configuration file.")

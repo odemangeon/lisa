@@ -332,11 +332,11 @@ class SpecificParamContainerCategoryContainer(MutableMapping):
             result[param_container.full_name] = param_container.dico_prior_config
         return result
 
-    def load_prior_config(self, dico_prior_config, model_instance, available_joint_priors={}):
+    def load_individualprior_config(self, dico_prior_config, model_instance, available_joint_priors={}):
         """Load the configuration for the prior of the parameters of the parameter containers
         located in this container.
         """
         for param_container_fullname in dico_prior_config:
             param_container = self[param_container_fullname]
-            param_container.load_prior_config(dico_prior_config=dico_prior_config[param_container_fullname], model_instance=model_instance, available_joint_priors=available_joint_priors)
+            param_container.load_individualprior_config(dico_prior_config=dico_prior_config[param_container_fullname], model_instance=model_instance, available_joint_priors=available_joint_priors)
 

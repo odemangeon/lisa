@@ -117,13 +117,13 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_instcat_model(self):
+    def _configure_instcat_model(self, ask_before_adding=False):
         """Configure the inst cat model
         """
-        super(LC_InstCat_Model, self)._configure_instcat_model()
+        super(LC_InstCat_Model, self)._configure_instcat_model(ask_before_adding=ask_before_adding)
 
         logger.info("Load transit, phase_curve, occultation and instrument model configuration")
-        self._load_config(config2load='lcinstcatmod')
+        self._load_config(config2load='lcinstcatmod', ask_before_adding=ask_before_adding)
         
 
     # Function that get the function required by ConfigFileAttr._load_config

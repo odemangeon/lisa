@@ -242,7 +242,7 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategoryConta
                     res[inst_fullcat][inst_name][inst_model.get_name()] = inst_model.priors_dict
         return res
 
-    def load_priors_config(self, dico_priors_config, available_joint_priors={}):
+    def load_individualpriors_config(self, dico_priors_config, available_joint_priors={}):
         """Update the paramfile_info for an instrument category.
 
         It updates things introduced by get_allinst_paramfilesection in paramfile_info.
@@ -256,5 +256,5 @@ class InstrumentContainer(DatabaseInstLevel, SpecificParamContainerCategoryConta
                 if set(self[inst_fullcat][inst_name].keys()) != set(dico_priors_config[inst_fullcat][inst_name].keys()):
                     raise ValueError(f"The priors['instruments'][{inst_fullcat}][{inst_name}] dictionary in the configuration files doesn't hae the expected keys. Expected {self[inst_fullcat][inst_name].keys()}, got {dico_priors_config[inst_fullcat][inst_name].keys()}")
                 for inst_model in self[inst_fullcat][inst_name].values():
-                    self[inst_fullcat][inst_name][inst_model.get_name()].load_priors_config(dico_priors_config=dico_priors_config[inst_fullcat][inst_name][inst_model.get_name()],
-                                                                                            available_joint_priors=available_joint_priors)
+                    self[inst_fullcat][inst_name][inst_model.get_name()].load_individualpriors_config(dico_priors_config=dico_priors_config[inst_fullcat][inst_name][inst_model.get_name()],
+                                                                                                      available_joint_priors=available_joint_priors)

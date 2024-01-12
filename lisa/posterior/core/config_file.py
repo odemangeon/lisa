@@ -102,7 +102,7 @@ class ConfigFileAttr(object):
         intitule_question = f"The variable(s) for the {config2load} configuration is/are missing from the config file. Do you want to add it/them ? ['y', 'n']\n"
         return QCM_utilisateur(intitule_question=intitule_question, l_reponses_possibles=['y', 'n'])
     
-    def _load_config(self, config2load, **kwargs):
+    def _load_config(self, config2load, ask_before_adding=False, **kwargs):
         """Function that reads the config file
 
         Arguments
@@ -117,8 +117,10 @@ class ConfigFileAttr(object):
         if not(self._get_function_config(function_type='check_config_exists', config2load=config2load)(dico_config_file=dico_config_file)):  # _get_function_config is a method of both Posterior and Core_Model
             # If the variable where the configuration of the category is supposed to be done is not defined in the config file
             # Propose to add it with the default configuration
-            # I AM HERE
-            reply = self._askadd2configfile(config2load=config2load)
+            if ask_before_adding:
+                reply = self._askadd2configfile(config2load=config2load)
+            else:
+                reply = 'y'
             # If the reply is no raise an error
             if reply == 'n':
                 raise ValueError(f"The configuration file doesn't define the variables for {config2load}.")

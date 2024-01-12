@@ -29,7 +29,7 @@ class Model_Prior(object):
     """docstring for Model_Prior."""
 
     ## Name of the joint prior dictionary for the parameter file
-    joint_prior_name = 'joint_prior'
+    joint_prior_name = 'joint_priors'
 
     def __init__(self):
         """Initialise the information related to the Prior for the Model instance.
@@ -80,11 +80,15 @@ class Model_Prior(object):
             else:
                 raise ValueError("prior_category {} is not in the list of available prior types: {}"
                                  "".format(dico_jointprior["category"], manager.get_available_priors()))
+            # Add the joint prior to the joint_prior_container
             self.joint_prior_container[joint_prior_ref] = {"category": dico_jointprior["category"],
                                                            "args": dico_jointprior["args"],
                                                            "params": dico_jointprior["params"]}
             logger.info("Joint prior {} of category {} added to the joint prior container."
                         "".format(joint_prior_ref, dico_jointprior["category"]))
+            # Set the joint_prior attribute of the parameter of this joint prior to joint_prior_ref
+            priorfunction_subclass.set_params_jointprior_ref(params=dico_jointprior["params"], joint_prior_ref=joint_prior_ref, 
+                                                             available_joint_priors=self.joint_prior_container, model_instance=self)
 
     def create_individual_lnpriors(self):
         """Return a dictionnary providing the individual prior probability density functions.
