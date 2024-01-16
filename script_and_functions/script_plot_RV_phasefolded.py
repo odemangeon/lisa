@@ -96,13 +96,15 @@ if 'sinkid_file_analyze' in globals():
     del sinkid_file_analyze
 if 'sinkid_file_plot' not in globals():
     sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
+
 #################################
 ## Load post_instance if required
 if "post_instance" not in globals():
     logger.info("Loading post_instance from pickle")
     # recreate post_instance object
-    post_instance = cpost.Posterior(object_name=obj_name)
-    post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
+    post_instance = cpost.Posterior()
+    post_instance.configure_posterior(path_config_file="config_file.py")
+    post_instance.create_allfunctions()
 
 ################################
 ## Load df_fittedval if required
