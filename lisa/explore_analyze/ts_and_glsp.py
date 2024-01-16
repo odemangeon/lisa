@@ -367,7 +367,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                 if i_col == 0:
                     tlims_i = tlims.get(i_row, tlims['all'])
                 else:  # i_col == 1
-                    tlims_i = tlims_zoom.get(i_row, tlims['all'])
+                    tlims_i = tlims_zoom.get(i_row, tlims_zoom['all'])
 
                 # Compute the time (including time_fact, x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
                 xlims_datas = OrderedDict()
@@ -414,11 +414,11 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                             continue
                         if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')):
                             if datasetname4model4row[model][i_row] == 'all':
-                                xlims_model = (xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model)
+                                xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
                             else:
-                                xlims_model = (min([xlims_datas[dst][0] for dst in datasetnames4rowidx[i_row]]) - extra_dt_model,
+                                xlims_model = [min([xlims_datas[dst][0] for dst in datasetnames4rowidx[i_row]]) - extra_dt_model,
                                                max([xlims_datas[dst][1] for dst in datasetnames4rowidx[i_row]]) + extra_dt_model
-                                               )
+                                               ]
                             if tlims_i is not None:
                                 if (tlims_i[0] is not None) and (tlims_i[0] > xlims_model[0]):
                                     xlims_model[0] = tlims_i[0]
@@ -975,7 +975,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                         text_kwargs = dico_fap.get("text_kwargs", {}).copy()
                         x_pos = text_kwargs.pop("x_pos", 1.05)
                         y_shift = text_kwargs.pop("y_shift", 0)
-                        label = str(text_kwargs.pop("label", f"{fap_lvl}\%"))
+                        label = str(text_kwargs.pop("label", fr"{fap_lvl}\%"))
                         color = text_kwargs.pop("color", None)
                         if color is None:
                             color = lines_fap.get_color()[0]

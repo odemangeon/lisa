@@ -61,6 +61,7 @@ if 'sinkid_file_analyze' in globals():
     del sinkid_file_analyze
 if 'sinkid_file_plot' not in globals():
     sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
+
 ################################
 ## Load df_fittedval if required
 if "df_fittedval" not in globals():
@@ -145,8 +146,9 @@ fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dot
 if "post_instance" not in globals():
     logger.info("Loading post_instance from pickle")
     # recreate post_instance object
-    post_instance = cpost.Posterior(object_name=obj_name)
-    post_instance.init_from_pickle(pickle_folder=output_folders["pickles_explore"])
+    post_instance = cpost.Posterior()
+    post_instance.configure_posterior(path_config_file="config_file.py")
+    post_instance.create_allfunctions()
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 

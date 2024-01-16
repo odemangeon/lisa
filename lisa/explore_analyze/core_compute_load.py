@@ -3,9 +3,7 @@ from copy import copy
 from numpy import zeros_like, sqrt
 from collections import defaultdict, OrderedDict
 
-from ..posterior.core.likelihood.manager_noise_model import Manager_NoiseModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
-from ..posterior.core.likelihood.gaussian_noisemodelconfiguration import apply_jitter_multi, apply_jitter_add
 from ..posterior.core.model.core_model import Core_Model
 
 # Key for the whole model
@@ -15,9 +13,6 @@ key_whole = Core_Model.key_whole
 extension_raw = '_raw'
 
 # managers
-mgr_noisemodel = Manager_NoiseModel()
-mgr_noisemodel.load_setup()
-
 mgr_inst_dst = Manager_Inst_Dataset()
 mgr_inst_dst.load_setup()
 
@@ -375,7 +370,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
-        noise_model = mgr_noisemodel.get_noisemodel_subclass(inst_mod.noise_model)
+        noise_model = post_instance.model.get_noise_model(inst_mod.noise_model_category)
         if filename_info["inst_name"] not in dico_outputs['dico_nb_dstperinsts']:
             dico_outputs['dico_nb_dstperinsts'][filename_info["inst_name"]] = 0
         dico_outputs['dico_nb_dstperinsts'][filename_info["inst_name"]] += 1
@@ -387,17 +382,13 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         dico_outputs['data_err_jitters'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data_err"))
         dico_outputs['has_jitters'][datasetname] = copy(noise_model.has_jitter)
         if dico_outputs['has_jitters'][datasetname]:
-            dico_outputs['dico_jitters'][datasetname]["type"] = copy(noise_model.jitter_type)
             if inst_mod.jitter.free:
                 dico_outputs['dico_jitters'][datasetname]["value"] = copy(df_fittedval.loc[inst_mod.jitter.full_name]["value"])
             else:
                 dico_outputs['dico_jitters'][datasetname]["value"] = copy(inst_mod.jitter.value)
-            if dico_outputs['dico_jitters'][datasetname]["type"] == "multi":
-                dico_outputs['data_err_jitters'][datasetname] = sqrt(apply_jitter_multi(dico_outputs['data_err_jitters'][datasetname], dico_outputs['dico_jitters'][datasetname]["value"]))
-            elif dico_outputs['dico_jitters'][datasetname]["type"] == "add":
-                dico_outputs['data_err_jitters'][datasetname] = sqrt(apply_jitter_add(dico_outputs['data_err_jitters'][datasetname], dico_outputs['dico_jitters'][datasetname]["value"]))
-            else:
-                raise ValueError("Unknown jitter_type: {}".format(noise_model.jitter_type))
+            jitter_model = noise_model.get_jitter_model(inst_model_fullname=inst_mod_fullname)
+            compute_jitteredvar = jitter_model.get_compute_jitteredvar()
+            dico_outputs['data_err_jitters'][datasetname] = sqrt(compute_jitteredvar(data_err=dico_outputs['data_err_jitters'][datasetname], jitter=dico_outputs['dico_jitters'][datasetname]["value"]))
             dico_outputs['data_err_worwojitters'][datasetname] = dico_outputs['data_err_jitters'][datasetname].copy()
         else:
             dico_outputs['data_err_worwojitters'][datasetname] = dico_outputs['data_errs'][datasetname].copy()
