@@ -134,6 +134,7 @@ class Instmodel4Dataset(LockableDict):
 
 class Instmodel4DatasetAttr(object):
     """docstring for Instmodel4DatasetAttr."""
+
     def __init__(self, instmodel4dataset=None, list_datasetnames=None, lock=None):
         """Initialise the instmodel4dataset attribute.
 
@@ -155,12 +156,6 @@ class Instmodel4DatasetAttr(object):
         Warning: It give the name and not the full_name
         """
         return self.__instmodel4dataset
-
-    # @property
-    # def isdefined_instmodel4dataset(self):
-    #     """Return True if self has an instmodel4dataset.
-    #     """
-    #     return hasattr(self, "instmodel4dataset")
 
     def replace_instmodel4dataset(self, instmodel4dataset=None, list_datasetnames=None, lock=None):
         """
