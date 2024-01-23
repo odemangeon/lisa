@@ -887,7 +887,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         """
         # Get the noise_model category associated with the dataset
         inst_mod_obj = self.get_instmod(dataset_name=dataset_name)  # Comes from Instmodel4DatasetAttr
-        noisemod_cat = inst_mod_obj.noise_model
+        noisemod_cat = inst_mod_obj.noise_model_category
         # Use the function pointed by self__same_GP_kernel_function to get the list of instrument model full name using the same GP kernel
         l_instmod_fullname = self._same_GP_kernel_function[noisemod_cat](instmod_fullname=inst_mod_obj.full_name)
         # Get the list of datasets using these instrument models
