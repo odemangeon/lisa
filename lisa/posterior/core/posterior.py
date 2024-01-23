@@ -576,8 +576,9 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             # Compute GP contribution if needed.
             if noise_model.has_GP and include_gp:
+                GP_config, GP_name = noise_model.get_GP_model(inst_model_fullname=inst_mod_fullname)
                 # Get the list of datasets using the same GP kernel
-                l_dataset_sameGP = self.model.get_same_GP_kernel_datasets(dataset_name=dataset_name)  # Defined in Core_model
+                l_dataset_sameGP = noise_model.get_l_datasetname_4_GP_name(GP_name=GP_name)  # Defined in Sub_class of Core_Noise_Model
                 # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
                 # For that you need the list of dataset_object
                 # At the same time we will get the corresponding list of instrument objects required by for the gp simulator creation
@@ -586,12 +587,12 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 for dataset_name_ii in l_dataset_sameGP:
                     l_dataset_obj.append(self.dataset_db[dataset_name_ii])
                     l_instmod_obj.append(self.model.get_instmod(dataset_name_ii))  # Define in Instmodel4DatasetAttr
-                model_allsameGPkernel = self.model.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[self.model.key_whole]
+                model_allsameGPkernel = self.model.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj, dataset_db=self.dataset_db)[self.model.key_whole]
 
                 # Create the gp_simulator function
                 # For that I need the list of the parameter full names for the datasimulator
                 l_datasim_param_fullname = model_allsameGPkernel.param_model_names_list
-                gp_simulator, f_format_param, datasets_kwargs, l_params_new = noise_model_subclass.create_gpsimulator_and_formatinputs(model_instance=self.model, l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj, l_datasim_param_fullname=l_datasim_param_fullname, l_provided_param_fullname=l_param_name)
+                gp_simulator, datasets_kwargs, l_gp_sim_param_full_name = noise_model._get_prefilledgpsim(l_instmod_obj=l_instmod_obj, l_dataset_obj=l_dataset_obj)
 
                 # Compute the simulated data
                 # For that I need the list of the indexes of the datasimulator parameter in the provided list pf parameters
@@ -599,8 +600,12 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 for param_fullname_ii in l_datasim_param_fullname:
                     l_idx_param_datasim.append(l_param_name.index(param_fullname_ii))
                 sim_data = model_allsameGPkernel(param[l_idx_param_datasim])
-                gp_pred, gp_pred_var = gp_simulator(sim_data=sim_data,
-                                                    param_noisemod=f_format_param(param),
+
+                l_idx_param_gpsim = []
+                for param_fullname_ii in l_gp_sim_param_full_name:
+                    l_idx_param_gpsim.append(l_param_name.index(param_fullname_ii))
+                gp_pred, gp_pred_var = gp_simulator(p_vect=param[l_idx_param_gpsim],
+                                                    sim_data=sim_data,
                                                     l_datakwargs=datasets_kwargs,
                                                     tsim=t_model)
                 if supersamp > 1:
