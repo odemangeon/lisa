@@ -304,6 +304,7 @@ class LikelihoodCreator(object):
             func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_plotdecorr)
             func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite. No plot can be made.')\n", function_shortname=func_shortname_plotdecorr)
             func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
+        
         # Write the return for the lnlike function
         l_noisemodel_cat = list(dico_noisemodel.keys())
         if len(l_noisemodel_cat) > 1:
