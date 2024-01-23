@@ -308,16 +308,6 @@ class GP1D_Noise_Models(Core_Noise_Model):
         # Produce a prefilled likelihood for each GP1D noise model
         dico_func = {}
         dico_params_noisemod = {}
-
-        lnlikefunc_text = """
-        dict_datakwargs = defaultdict(list)
-        for datakwargs, compute_jitteredvar, jitter in zip(l_datakwargs, l_compute_jitteredvar, l_jitter):
-            dict_datakwargs["time"].append(datakwargs["time"])
-            dict_datakwargs["data"].append(datakwargs["data"])
-            dict_datakwargs["data_err"].append(sqrt(compute_jitteredvar(data_err=datakwargs["data_err"], jitter=jitter)))
-        """
-        lnlikefunc_text = dedent(lnlikefunc_text).replace('\n', '\n    ')
-        
         for GP1D_mod_name, l_instmod_obj_GP1D_mod in dico_linstmodobj4GP1Dmodname.items():
             function_shortname_GP1D = f"lnlike_GP1D_{GP1D_mod_name}"
             function_builder.add_new_function(shortname=function_shortname_GP1D, parameters=None, mandatory_args=['sim_data', 'l_datakwargs'],
@@ -327,7 +317,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
             # Do the kernel text, do and return the computation of the ln likelihood and add the corresponding parameters
             GP1D, _ = self.get_GP_model(inst_model_fullname=l_instmod_obj_GP1D_mod[0].full_name)
             # Add the parameters required by the GP model
-            GP1D.add_text_lnlike(function_builder=function_builder, l_function_shortname=[function_shortname_allGP1D, ], l_function_shortname_add_param_only=[function_shortname_GP1D, ])
+            GP1D.add_text_lnlike(function_builder=function_builder, l_function_shortname=[function_shortname_GP1D, ], l_function_shortname_add_param_only=[function_shortname_allGP1D, ])
             logger.debug(f"Likelihood of the GP1D model {GP1D_mod_name}:\n {function_builder.get_full_function_text(shortname=function_shortname_GP1D)}")
             exec(function_builder.get_full_function_text(shortname=function_shortname_GP1D), function_builder._get_ldict(function_shortname=function_shortname_GP1D))
             dico_func[GP1D_mod_name] = function_builder._get_ldict(function_shortname=function_shortname_GP1D)[function_builder.get_function_fullname(shortname=function_shortname_GP1D)]
@@ -445,17 +435,17 @@ class GP1D_Noise_Models(Core_Noise_Model):
         jitter_text = dedent(jitter_text).replace('\n', '\n    ')
 
         # Do l_jitter and l_compute_jitteredvar 
-        l_jitter = []
+        l_jitter = {function_shortname: [] for function_shortname in l_function_shortname + l_function_shortname_add_param_only}
         l_compute_jitteredvar = []
         for instmod_obj in l_instmod_obj:
             jitter_model = self.get_jitter_model(inst_model_fullname=instmod_obj.full_name)
             jitter_param = jitter_model.get_parameters(object_category=None)['instrument']['jitter']
             for function_shortname in l_function_shortname + l_function_shortname_add_param_only:
                 function_builder.add_parameter(parameter=jitter_param, function_shortname=function_shortname, exist_ok=True)
-            l_jitter.append(function_builder.get_text_4_parameter(parameter=jitter_param, function_shortname=function_shortname))
+                l_jitter[function_shortname].append(function_builder.get_text_4_parameter(parameter=jitter_param, function_shortname=function_shortname))
             l_compute_jitteredvar.append(jitter_model.get_compute_jitteredvar())
         for function_shortname in l_function_shortname:
-            function_builder.add_to_body_text(text=f"    l_jitter = [{', '.join(l_jitter)}]", function_shortname=function_shortname)
+            function_builder.add_to_body_text(text=f"    l_jitter = [{', '.join(l_jitter[function_shortname])}]", function_shortname=function_shortname)
             function_builder.add_to_body_text(text=jitter_text, function_shortname=function_shortname)
             function_builder.add_variable_to_ldict(variable_name='defaultdict', variable_content=defaultdict, function_shortname=function_shortname , exist_ok=False, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name='sqrt', variable_content=sqrt, function_shortname=function_shortname , exist_ok=False, overwrite=False)
