@@ -67,10 +67,10 @@ def is_valid_model_available(key_model, datasetname, post_instance):
 
 
 def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
-                           include_gp_model, amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
+                           amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
                            remove_dict=None, add_dict=None,
                            exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None,
-                           plot=True, plot_GP=False, plot_model_wGP=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                           plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
                            models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
                            is_valid_model_available_func=is_valid_model_available,
                            kwargs_is_valid_model_available=None,
@@ -91,7 +91,6 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         The indexes are the parameter names and there must be one column called 'value'
     datasim_kwargs                      : dict 
         Kwargs to pass to the datasimulator function
-    include_gp_model                    : bool
     amplitude_fact                      : float
     compute_raw_models_func             : function
     remove_add_model_components_func    : function
@@ -107,9 +106,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         Factor to multiply to tsim to obtain xsim if it is not provided
     xsim                                : array
         x valuess corresponding to the values in tsim for the plot. Superseeds fact_tsim_to_xsim
-    plot                                : bool
-    plot_GP                             : bool
-    plot_model_wGP                      : bool                  
+    plot                                : bool                
     ax                                  : Axe
     pl_kwarg                            : dict
     key_pl_kwarg                        : str
@@ -181,58 +178,82 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         # Compute the model (can be different procedure)
         ################################################
         if (key_model + extension + extension_raw) not in models:
-            if key_model == 'data':
-                model = post_instance.dataset_db[datasetname].get_data()
-                model_wGP = gp_pred = gp_pred_var = None
-            elif key_model == 'data_err':
-                model = post_instance.dataset_db[datasetname].get_data_err()
-                model_wGP = gp_pred = gp_pred_var = None
-            elif key_model.startswith('zeros'):
-                model = zeros_like(tsim)
-                model_wGP = gp_pred = gp_pred_var = None
+            if key_model == "model_wGP":
+                key_model_compute = "model"
             else:
-                (model, model_wGP, gp_pred, gp_pred_var
-                 ) = compute_raw_models_func(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
-                                             datasetname=datasetname, post_instance=post_instance,
-                                             df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                             include_gp_model=include_gp_model, exptime=exptime,
-                                             supersamp=supersamp,
-                                             get_key_compute_model_func=get_key_compute_model_func,
-                                             is_valid_model_available_func=is_valid_model_available_func,
-                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                             )
-
-            if model is None:
-                logger.warning(f"Model '{key_model}' not available")
-                return models, pl_kwarg
-
+                key_model_compute = key_model
+            if key_model_compute == 'data':
+                import pdb; pdb.set_trace()
+                model = post_instance.dataset_db[datasetname].get_data()
+                model_err = None
+            elif key_model_compute == 'data_err':
+                model = post_instance.dataset_db[datasetname].get_data_err()
+                model_err = None
+            elif key_model_compute == 'residual':
+                model = zeros_like(tsim)
+                model_err = None
+            elif key_model_compute.startswith('zeros'):
+                model = zeros_like(tsim)
+                model_err = None
+            else:
+                model, model_err = compute_raw_models_func(tsim=tsim, key_model=key_model_compute, l_valid_model=l_valid_model,
+                                                           datasetname=datasetname, post_instance=post_instance,
+                                                           df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                           exptime=exptime, supersamp=supersamp,
+                                                           get_key_compute_model_func=get_key_compute_model_func,
+                                                           is_valid_model_available_func=is_valid_model_available_func,
+                                                           kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                           kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                           )
+                if model is None:
+                    logger.warning(f"Model '{key_model_compute}' not available")
+                    return models, pl_kwarg
+                
             # Apply the amplitude_fact
             if isinstance(model, dict):
-                for key in model.keys():
+                for key in model.keys(): ## TODO look into this to see if it's needed because it's not fully implemented
                     model[key] *= amplitude_fact
             else:
                 model *= amplitude_fact
-            if model_wGP is not None:
-                model_wGP *= amplitude_fact
-                gp_pred *= amplitude_fact
-                gp_pred_var *= amplitude_fact**2
-
-            # Store the raw model in the output (models)
+            if model_err is not None:
+                if isinstance(model, dict):
+                    for key in model.keys():
+                        if model_err[key] is not None:
+                            model_err[key] *= amplitude_fact
+                else:
+                    model_err *= amplitude_fact
+            # For model_wGP you need to add the GP
+            if key_model == "model_wGP":
+                if 'GP' + extension + extension_raw not in models:
+                    models, _ = compute_and_plot_model(tsim=tsim, key_model='GP', datasetname=datasetname,
+                                                       post_instance=post_instance, df_fittedval=df_fittedval,
+                                                       datasim_kwargs=datasim_kwargs,
+                                                       amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func,
+                                                       exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
+                                                       plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                       models=models, l_valid_model=l_valid_model,
+                                                       get_key_compute_model_func=get_key_compute_model_func,
+                                                       is_valid_model_available_func=is_valid_model_available_func,
+                                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                       )
+                model = remove_add_model_components_func(model=model, remove_dict={},
+                                                         add_dict={'GP': True}, extension=extension,
+                                                         extension_raw=extension_raw, models=models,
+                                                         amplitude_fact=amplitude_fact
+                                                         )
+                model_err = copy(models[f'GP_err' + extension + extension_raw])
+            # Store the raw model in models 
             models[key_model + extension + extension_raw] = copy(model)
-            if model_wGP is not None:
-                models[f'{key_model}_wGP' + extension + extension_raw] = copy(model_wGP)
-                models[f'GP_{key_model}' + extension + extension_raw] = gp_pred
-                models[f'GP_var_{key_model}' + extension + extension_raw] = gp_pred_var
-
+            if model_err is not None:
+                models[f'{key_model}_err' + extension + extension_raw] = copy(model_err)
         else:
             model = models[key_model + extension + extension_raw]
-            if f'{key_model}_wGP' + extension + extension_raw in models:
-                model_wGP = models[f'{key_model}_wGP' + extension + extension_raw]
-                gp_pred = models[f'GP_{key_model}' + extension + extension_raw]
-                gp_pred_var = models[f'GP_var_{key_model}' + extension + extension_raw]
+            if f'{key_model}_err' + extension + extension_raw in models:
+                model_err = models[f'{key_model}_err' + extension + extension_raw]
             else:
-                model_wGP = None
+                model_err = None
 
         ##################################
         # Compute the models to remove/add
@@ -241,36 +262,34 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         l_model_add = [key for key, do in add_dict.items() if do]
         for key_model_removeoradd in (l_model_remove + l_model_add):
             if key_model_removeoradd + extension + extension_raw not in models:
-                if remove_dict.get(key_model_removeoradd, False) or add_dict.get(key_model_removeoradd, False):
-                    models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
-                                                       post_instance=post_instance, df_fittedval=df_fittedval,
-                                                       datasim_kwargs=datasim_kwargs, include_gp_model=False,
-                                                       amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                       remove_add_model_components_func=remove_add_model_components_func,
-                                                       exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                       plot=False, plot_GP=False, plot_model_wGP=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
-                                                       models=models, l_valid_model=l_valid_model,
-                                                       get_key_compute_model_func=get_key_compute_model_func,
-                                                       is_valid_model_available_func=is_valid_model_available_func,
-                                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                       )
+                models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
+                                                   post_instance=post_instance, df_fittedval=df_fittedval,
+                                                   datasim_kwargs=datasim_kwargs,
+                                                   amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                   remove_add_model_components_func=remove_add_model_components_func,
+                                                   exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
+                                                   plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                   models=models, l_valid_model=l_valid_model,
+                                                   get_key_compute_model_func=get_key_compute_model_func,
+                                                   is_valid_model_available_func=is_valid_model_available_func,
+                                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                   )
 
         ##########################################
         # Remove/Add model components as requested
         ##########################################
-        model, model_wGP = remove_add_model_components_func(model=model, model_wGP=model_wGP, remove_dict=remove_dict,
-                                                            add_dict=add_dict, extension=extension,
-                                                            extension_raw=extension_raw, models=models,
-                                                            amplitude_fact=amplitude_fact
-                                                            )
+        import pdb; pdb.set_trace()
+        model = remove_add_model_components_func(model=model, remove_dict=remove_dict,
+                                                 add_dict=add_dict, extension=extension,
+                                                 extension_raw=extension_raw, models=models,
+                                                 amplitude_fact=amplitude_fact
+                                                 )
 
         # Fill computed model into output (models)
         models[key_model + extension] = model
-        if model_wGP is not None:
-            models[f'{key_model}_wGP' + extension] = model_wGP
-            models[f'GP_{key_model}' + extension] = gp_pred
-            models[f'GP_var_{key_model}' + extension] = gp_pred_var
+        if model_err is not None:
+            models[f'{key_model}_err' + extension] = model_err
 
         # Plot the model
         if plot:
@@ -284,32 +303,19 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
             if not("alpha" in pl_kwarg_to_use):
                 pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+                if pl_kwarg_to_use["alpha"] is None:
+                    pl_kwarg_to_use["alpha"] = 1.
             # import pdb; pdb.set_trace()
             # Plot the GP
-            if (model_wGP is not None) and (plot_GP or plot_model_wGP):
-                for key_GP_root in ["GP", key_model + "_wGP"]:
-                    key_GP_err = key_GP_root + "_err" + extension
-                    key_GP = key_GP_root + extension
-                    if not("color" in pl_kwarg[datasetname][key_GP]):
-                        pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg_to_use["color"]
-                    if not("color" in pl_kwarg[datasetname][key_GP_err]):
-                        pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg_to_use["color"]
-                    if not("alpha" in pl_kwarg[datasetname][key_GP]):
-                        pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
-                    if not("alpha" in pl_kwarg[datasetname][key_GP_err]):
-                        pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                    if (key_GP_root == (key_model + "_wGP")) and plot_model_wGP:
-                        if not("label" in pl_kwarg[datasetname][key_GP]):
-                            pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
-                        _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
-                        _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
-                                            **pl_kwarg[datasetname][key_GP_err],
-                                            )
-                    if (key_GP_root == "GP") and plot_GP:
-                        _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
-                        _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
-                                            **pl_kwarg[datasetname][key_GP_err]
-                                            )
+            if model_err is not None:
+                key_err = key_model + "_err" + extension
+                if not("color" in pl_kwarg[datasetname][key_err]):
+                    pl_kwarg[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
+                if not("alpha" in pl_kwarg[datasetname][key_err]):
+                    pl_kwarg[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
+                    _ = ax.fill_between(tsim, model - model_err, model + model_err,
+                                        **pl_kwarg[datasetname][key_err],
+                                        )
     return models, pl_kwarg
 
 
@@ -411,7 +417,11 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         dico_outputs['models'][datasetname] = {}
         # Make sure that kwargs_compute_model_4_key_model has at least the model key
         kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model
-        kwargs_compute_model_4_key_model = {'model': {'include_gp_model': True, 'remove_dict': None, 'add_dict': None}}
+        kwargs_compute_model_4_key_model = OrderedDict()
+        kwargs_compute_model_4_key_model["data"] = {'remove_dict': None, 'add_dict': None}  # The order is important data has to be first then model, GP and residuals
+        kwargs_compute_model_4_key_model["model"] = {'remove_dict': None, 'add_dict': None}
+        kwargs_compute_model_4_key_model["GP"] = {'remove_dict': None, 'add_dict': None}
+        kwargs_compute_model_4_key_model["residual"] = {'remove_dict': {'model': True, 'GP': True, 'decorrelation_likelihood': True}, 'add_dict': {'data': True}}
         for key_model in kwargs_compute_model_4_key_model_user:
             if key_model not in kwargs_compute_model_4_key_model:
                 kwargs_compute_model_4_key_model[key_model] = kwargs_compute_model_4_key_model_user[key_model]
@@ -423,8 +433,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         #                                                 'add_dict': kwargs_compute_model_4_key_model['model']['add_dict']
         #                                                 }
         for key_model, kwargs in kwargs_compute_model_4_key_model.items():
-            if 'include_gp_model' not in kwargs:
-                kwargs['include_gp_model'] = True if key_model == 'model' else False
+            import pdb; pdb.set_trace()
             (dico_outputs['models'][datasetname], _
              ) = compute_and_plot_model(tsim=dico_outputs['times'][datasetname], key_model=key_model,
                                         datasetname=datasetname, post_instance=post_instance, df_fittedval=df_fittedval,
@@ -432,7 +441,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         compute_raw_models_func=compute_raw_models_func,
                                         remove_add_model_components_func=remove_add_model_components_func,
                                         exptime_bin=None, supersamp_bin_model=None,
-                                        fact_tsim_to_xsim=None, plot=False, plot_GP=False, plot_model_wGP=False, ax=None, pl_kwarg=None,
+                                        fact_tsim_to_xsim=None, plot=False, ax=None, pl_kwarg=None,
                                         key_pl_kwarg=None, show_binned_model=True, models=dico_outputs['models'][datasetname],
                                         l_valid_model=l_valid_model,
                                         get_key_compute_model_func=get_key_compute_model_func,
@@ -442,32 +451,30 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         **kwargs
                                         )
 
-        #################################
-        # Remove components from the data
-        #################################
+        ###############################################################
+        # Create datas and data_errs key in first level of dico_outputs
+        ###############################################################
         if "data" in dico_outputs['models'][datasetname]:
             # import pdb; pdb.set_trace()
             dico_outputs['datas'][datasetname] = dico_outputs['models'][datasetname]["data"]
         if "data_err" in dico_outputs['models'][datasetname]:
-            # import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             coeff_err = dico_outputs['models'][datasetname]["data_err"] / dico_outputs['data_errs'][datasetname]
             dico_outputs['data_errs'][datasetname] *= coeff_err
             dico_outputs['data_err_jitters'][datasetname] *= coeff_err
             dico_outputs['data_err_worwojitters'][datasetname] *= coeff_err
 
-        #######################
-        # Compute the residuals
-        #######################
-        if kwargs_compute_model_4_key_model['model']['include_gp_model'] and not(kwargs_compute_model_4_key_model['data']['remove_dict'].get('GP_model', False)) and ('model_wGP' in dico_outputs['models'][datasetname]):
-            dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model_wGP']
-        else:
-            dico_outputs['residuals'][datasetname] = dico_outputs['datas'][datasetname] - dico_outputs['models'][datasetname]['model']
+        #####################################################
+        # Create residuals key in first level of dico_outputs
+        #####################################################
+        if "residual" in dico_outputs['models'][datasetname]:
+            dico_outputs['residuals'][datasetname] = dico_outputs['models'][datasetname]['residual']
 
     return dico_outputs, kwargs_compute_model_4_key_model
 
 
 def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
-                       df_fittedval, datasim_kwargs, include_gp_model, exptime, supersamp,
+                       df_fittedval, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
                        is_valid_model_available_func=is_valid_model_available,
                        kwargs_is_valid_model_available=None,
@@ -483,7 +490,6 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     post_instance                       : Posterior
     df_fittedval                        : DataFrame
     datasim_kwargs                      : dict
-    include_gp_model                    : bool
     exptime                             : float
     supersamp                           : int
     get_key_compute_model_func          : function
@@ -494,16 +500,14 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     Returns
     -------
     model       : array
-    model_wGP   : array
-    gp_pred     : array
-    gp_pred_var : array
+    model_err   : array
     """
     kwargs_is_valid_model_available = kwargs_is_valid_model_available if kwargs_is_valid_model_available is not None else {}
     kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}
     if key_model in l_valid_model:
         if not(is_valid_model_available_func(key_model, datasetname, post_instance, **kwargs_is_valid_model_available)):
-            model = model_wGP = gp_pred = gp_pred_var = None
-            return model, model_wGP, gp_pred, gp_pred_var
+            model = model_err = None
+            return model, model_err
 
     if exptime is None:
         exptime = 0.
@@ -516,48 +520,13 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
         model = datasim_docfunc_decorr_like.function(p_vect)
         if not(len(model) == len(tsim)):
             model = None
-        model_wGP = gp_pred = gp_pred_var = None
-    elif key_model.startswith("GP"):
-        key_compute_model = key_model[2:]
-        (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                         param=df_fittedval["value"].values,
-                                         l_param_name=list(df_fittedval.index),
-                                         key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                         include_gp=True,
-                                         supersamp=supersamp, exptime=exptime
-                                         )
-        return gp_pred, None, None, None
-    elif key_model.endswith("_wGP"):
-        key_compute_model = key_model[:-4]
-        (model, model_wGP, gp_pred, gp_pred_var
-         ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                         param=df_fittedval["value"].values,
-                                         l_param_name=list(df_fittedval.index),
-                                         key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                         include_gp=True,
-                                         supersamp=supersamp, exptime=exptime
-                                         )
-        return model_wGP, None, None, None
+        model_err = None
     else:
         key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)
-        if include_gp_model:
-            (model, model_wGP, gp_pred, gp_pred_var
-             ) = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                             param=df_fittedval["value"].values,
-                                             l_param_name=list(df_fittedval.index),
-                                             key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                             include_gp=include_gp_model,
-                                             supersamp=supersamp, exptime=exptime
-                                             )
-        else:
-            model = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                param=df_fittedval["value"].values,
-                                                l_param_name=list(df_fittedval.index),
-                                                key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
-                                                include_gp=include_gp_model,
-                                                supersamp=supersamp, exptime=exptime
-                                                )
-            model_wGP = gp_pred = gp_pred_var = None
-
-    return model, model_wGP, gp_pred, gp_pred_var
+        model, model_err = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
+                                                       param=df_fittedval["value"].values,
+                                                       l_param_name=list(df_fittedval.index),
+                                                       key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
+                                                       supersamp=supersamp, exptime=exptime
+                                                       )
+    return model, model_err

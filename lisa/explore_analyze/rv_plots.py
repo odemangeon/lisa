@@ -163,18 +163,18 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                             ):
         remove_dict_model[key] = default
     remove_dict_data = OrderedDict()
-    for key, default in zip(["GP_model", "decorrelation_likelihood", "decorrelation", "inst_var", "stellar_var"],
+    for key, default in zip(["GP", "decorrelation_likelihood", "decorrelation", "inst_var", "stellar_var"],
                             [True, True, True, True, True]
                             ):
         remove_dict_data[key] = default
     remove_dict_data_err = OrderedDict()
-    kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
+    kwargs_compute_model_4_key_model = {"model": {"remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false
                                                   },
-                                        "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
+                                        "data": {"remove_dict": remove_dict_data,
                                                  'add_dict': dict_model_false
                                                  },
-                                        "data_err": {'include_gp_model': False, "remove_dict": remove_dict_data_err,
+                                        "data_err": {"remove_dict": remove_dict_data_err,
                                                      'add_dict': dict_model_false
                                                      },
                                         }
@@ -362,24 +362,24 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         Outputs of the compute_and_plot_model function calls
     """
     remove_dict_model = OrderedDict()
-    for key, default in zip(["decorrelation", "inst_var", "stellar_var"],  # WARNING don't put 'GP_model' here the GP model should not be removed from the model as it's not part of it
+    for key, default in zip(["decorrelation", "inst_var", "stellar_var"],  # WARNING don't put 'GP' here the GP model should not be removed from the model as it's not part of it
                             [False, False, False]
                             ):
         remove_dict_model[key] = remove_dict.get(key, default)
     remove_dict_data = OrderedDict()
-    for key, default in zip(["GP_model", "decorrelation_likelihood", "decorrelation", "inst_var", "stellar_var"],
+    for key, default in zip(["GP", "decorrelation_likelihood", "decorrelation", "inst_var", "stellar_var"],
                             [False, False, False, False, False]
                             ):
         remove_dict_data[key] = remove_dict.get(key, default)
     remove_dict_data_err = OrderedDict()
     kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
-    kwargs_compute_model_4_key_model = {"model": {'include_gp_model': True, "remove_dict": remove_dict_model,
+    kwargs_compute_model_4_key_model = {"model": {"remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false
                                                   },
-                                        "data": {'include_gp_model': True, "remove_dict": remove_dict_data,
+                                        "data": {"remove_dict": remove_dict_data,
                                                  'add_dict': dict_model_false
                                                  },
-                                        "data_err": {'include_gp_model': False, "remove_dict": remove_dict_data_err,
+                                        "data_err": {"remove_dict": remove_dict_data_err,
                                                      'add_dict': dict_model_false
                                                      },
                                         }
@@ -391,7 +391,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
-                                show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP_model'],
+                                show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
                                 datasetnames4model4row=datasetnames4model4row,
                                 datasim_kwargs=datasim_kwargs,
                                 datasetnames=datasetnames,
@@ -407,7 +407,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
 
 
 
-def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
+def remove_add_model_components(model, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
     """
     Arguments
     ---------
@@ -417,16 +417,12 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
     # Remove components if needed
     for key, do in remove_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP', 'model', 'data']:
                 model -= models[key + extension + extension_raw]
-                if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP -= models[key + extension + extension_raw]
             elif key == 'decorrelation':
                 for model_part in models[key + extension + extension_raw]:
                     if model_part == "add_2_totalrv":
                         model -= models[key + extension + extension_raw]['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP -= models[key + extension + extension_raw]['add_2_totalrv']
                     else:
                         logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
             else:
@@ -434,22 +430,18 @@ def remove_add_model_components(model, model_wGP, remove_dict, add_dict, extensi
     # Add components if needed
     for key, do in add_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP_model']:
+            if key in ['stellar_var', 'inst_var', 'decorrelation_likelihood', 'GP', 'model', 'data']:
                 model += models[key + extension + extension_raw]
-                if (model_wGP is not None) and (key != 'GP_model'):
-                    model_wGP += models[key + extension + extension_raw]
             elif key == 'decorrelation':
                 for model_part in models[key + extension + extension_raw]:
                     if model_part == "add_2_totalrv":
                         model += models[key + extension + extension_raw]['add_2_totalrv']
-                        if model_wGP is not None:
-                            model_wGP += models[key + extension + extension_raw]['add_2_totalrv']
                     else:
                         logger.error(f"Decorrelation of model part {model_part} is not currently taken into account by this function.")
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
 
-    return model, model_wGP
+    return model
 
 
 def is_valid_model_available(key_model, datasetname, post_instance):

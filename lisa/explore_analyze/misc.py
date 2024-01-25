@@ -374,7 +374,7 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
-    pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "zorder": 10}
+    pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "label": "model + GP", "zorder": 10}
     pl_kwarg_GP_err_def = {"color": "C0", "linestyle": "-", "zorder": 0}
     pl_kwarg_wGP_err_def = {"color": "C4", "linestyle": "-", "zorder": 0}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst.", "zorder": 10}
