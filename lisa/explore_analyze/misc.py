@@ -374,10 +374,13 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
+    pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "zorder": 10}
     pl_kwarg_GP_err_def = {"color": "C0", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGP_err_def = {"color": "C4", "linestyle": "-", "zorder": 0}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst.", "zorder": 10}
     pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar", "zorder": 10}
     pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
+    pl_kwarg_decorr_like_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
     show_error_data = show_error_data_def
     show_error_databinned = True
 
@@ -387,7 +390,12 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_jitter = {}
     pl_show_error = {}
 
+    set_standard_keys = set(["model", "GP", "GP_err", "inst_var", "stellar_var", "sys_var", "decorrelation", "decorrelation_likelihood"])
+    set_extra_keys = set(pl_kwargs.keys()) - set(datasetnames) - set_standard_keys
     for datasetname in datasetnames:
+        set_keys = set_standard_keys.copy()
+        set_keys.update(set_extra_keys)
+        set_keys.update(set(pl_kwargs.get(datasetname, {}).keys()) - set_standard_keys)
         # Set the labels
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         if dico_nb_dstperinsts[filename_info["inst_name"]] == 1:
@@ -402,23 +410,32 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
                                        "GP_err": deepcopy(pl_kwarg_GP_err_def),
                                        "GP_binned": deepcopy(pl_kwarg_GP_def),
                                        "GP_err_binned": deepcopy(pl_kwarg_GP_err_def),
+                                       "model_wGP": deepcopy(pl_kwarg_wGP_def),
+                                       "model_wGP_err": deepcopy(pl_kwarg_wGP_err_def),
+                                       "model_wGP_binned": deepcopy(pl_kwarg_wGP_def),
+                                       "model_wGP_err_binned": deepcopy(pl_kwarg_wGP_err_def),
                                        "inst_var": deepcopy(pl_kwarg_instvar_def),
                                        "inst_var_binned": {},
                                        "stellar_var": deepcopy(pl_kwarg_stellarvar_def),
                                        "stellar_var_binned": {},
                                        "sys_var": deepcopy(pl_kwarg_stellarvar_def),
                                        "sys_var_binned": {},
-                                       "decorr": deepcopy(pl_kwarg_decorr_def),
-                                       "decorr_binned": {}
+                                       "decorrelation": deepcopy(pl_kwarg_decorr_def),
+                                       "decorrelation_binned": {},
+                                       "decorrelation_likelihood": deepcopy(pl_kwarg_decorr_like_def),
+                                       "decorrelation_likelihood_binned": {},
                                        }
         pl_kwarg_jitter[datasetname] = {}
         pl_show_error[datasetname] = {"data": show_error_data, "data_binned": show_error_databinned}
-        for key in ["model", "GP", "GP_err", "inst_var", "stellar_var", "sys_var", "decorr", ]:
+        for key in set_keys:
             # Update with the user's inputs
             for binned in [False, True]:
                 if binned:
                     key = key + "_binned"
-                pl_kwarg_final[datasetname][key].update(pl_kwargs.get(key, {}))
+                if key in pl_kwarg_final[datasetname]:
+                    pl_kwarg_final[datasetname][key].update(pl_kwargs.get(key, {}))
+                else:
+                    pl_kwarg_final[datasetname][key] = pl_kwargs.get(key, {})
                 pl_kwarg_final[datasetname][key].update(pl_kwargs.get(datasetname, {}).get(key, {}))
         for dataordatabinned, pl_kwarg_def in zip(["data", "data_binned"], [pl_kwarg_data_def, pl_kwarg_databinned_def]):
             # Load default values in pl_kwarg_final[datasetname]

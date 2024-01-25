@@ -284,29 +284,32 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
             if not("alpha" in pl_kwarg_to_use):
                 pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+            # import pdb; pdb.set_trace()
             # Plot the GP
             if (model_wGP is not None) and (plot_GP or plot_model_wGP):
-                key_GP = "GP" + extension
-                key_GP_err = "GP_err" + extension
-                if not("color" in pl_kwarg[datasetname][key_GP]):
-                    pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg_to_use["color"]
-                if not("color" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg_to_use["color"]
-                if not("alpha" in pl_kwarg[datasetname]["GP"]):
-                    pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
-                if not("alpha" in pl_kwarg[datasetname]["GP_err"]):
-                    pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                if plot_model_wGP:
-                    pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
-                    _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err],
-                                        )
-                if plot_GP:
-                    _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
-                    _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
-                                        **pl_kwarg[datasetname][key_GP_err]
-                                        )
+                for key_GP_root in ["GP", key_model + "_wGP"]:
+                    key_GP_err = key_GP_root + "_err" + extension
+                    key_GP = key_GP_root + extension
+                    if not("color" in pl_kwarg[datasetname][key_GP]):
+                        pl_kwarg[datasetname][key_GP]["color"] = pl_kwarg_to_use["color"]
+                    if not("color" in pl_kwarg[datasetname][key_GP_err]):
+                        pl_kwarg[datasetname][key_GP_err]["color"] = pl_kwarg_to_use["color"]
+                    if not("alpha" in pl_kwarg[datasetname][key_GP]):
+                        pl_kwarg[datasetname][key_GP]["alpha"] = pl_kwarg_to_use["alpha"]
+                    if not("alpha" in pl_kwarg[datasetname][key_GP_err]):
+                        pl_kwarg[datasetname][key_GP_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
+                    if (key_GP_root == (key_model + "_wGP")) and plot_model_wGP:
+                        if not("label" in pl_kwarg[datasetname][key_GP]):
+                            pl_kwarg[datasetname][key_GP]["label"] = pl_kwarg_to_use['label'] + " + GP"
+                        _ = ax.errorbar(tsim, model_wGP, **pl_kwarg[datasetname][key_GP])
+                        _ = ax.fill_between(tsim, model_wGP - sqrt(gp_pred_var), model_wGP + sqrt(gp_pred_var),
+                                            **pl_kwarg[datasetname][key_GP_err],
+                                            )
+                    if (key_GP_root == "GP") and plot_GP:
+                        _ = ax.errorbar(tsim, gp_pred, **pl_kwarg[datasetname][key_GP])
+                        _ = ax.fill_between(tsim, gp_pred - sqrt(gp_pred_var), gp_pred + sqrt(gp_pred_var),
+                                            **pl_kwarg[datasetname][key_GP_err]
+                                            )
     return models, pl_kwarg
 
 

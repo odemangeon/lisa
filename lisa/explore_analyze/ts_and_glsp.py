@@ -468,6 +468,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             )
                                 computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                             else:
+                                # import pdb; pdb.set_trace()
                                 computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
                                 computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
                                 (computed_models[datasetname], pl_kwarg_final
