@@ -81,11 +81,11 @@ save_plot = False
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
 remove_dict = {'1': True, 'contamination': False, 'inst_var': True, 'stellar_var': False, 'decorrelation': False,
-               'decorrelation_likelihood': False, 'GP_model': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model'
+               'decorrelation_likelihood': False, 'GP': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
-             'decorrelation_likelihood': False, 'GP_model': False, 'model_wGP': True, 
-             }  # Possible keys are 'contamination', 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model', 'model_wGP'
+             'decorrelation_likelihood': False, 'GP': False, 'model_wGP': True, 
+             }  # Possible keys are 'contamination', 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP', 'model_wGP'
 
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 

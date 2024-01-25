@@ -410,8 +410,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     # Compute the models
                     ####################
                     for model, show_model in show_dict.items():
-                        if model.startswith("GP_") or model.endswith("_wGP"):
-                            continue
                         if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')):
                             if datasetname4model4row[model][i_row] == 'all':
                                 xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
@@ -425,15 +423,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                 if (tlims_i[1] is not None) and (tlims_i[1] < xlims_model[1]):
                                     xlims_model[1] = tlims_i[1]
                             tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
-                            # include_gp_model = True if ((model == "model") and show_dict["GP"]) else False
                             kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
-                            if 'include_gp_model' in kwargs_compute_model:
-                                include_gp_model = kwargs_compute_model['include_gp_model']
-                            else:
-                                if model == 'model':
-                                    include_gp_model = True
-                                else:
-                                    include_gp_model = False
                             # import pdb; pdb.set_trace()
                             show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model, True)
                             if model == "decorrelation_likelihood":
@@ -445,7 +435,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             post_instance=post_instance,
                                                             df_fittedval=df_fittedval,
                                                             datasim_kwargs=datasim_kwargs,
-                                                            include_gp_model=include_gp_model,
                                                             amplitude_fact=amplitude_fact,
                                                             compute_raw_models_func=compute_raw_models_func,
                                                             remove_add_model_components_func=remove_add_model_components_func,
@@ -456,7 +445,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             supersamp_bin_model=1.,
                                                             fact_tsim_to_xsim=time_fact,
                                                             xsim=None,
-                                                            plot=True, plot_GP=False, plot_model_wGP=False, ax=axe_data,
+                                                            plot=True, ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             show_binned_model=False,
                                                             models=None,
@@ -478,7 +467,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             post_instance=post_instance,
                                                             df_fittedval=df_fittedval,
                                                             datasim_kwargs=datasim_kwargs,
-                                                            include_gp_model=include_gp_model,
                                                             amplitude_fact=amplitude_fact,
                                                             compute_raw_models_func=compute_raw_models_func,
                                                             remove_add_model_components_func=remove_add_model_components_func,
@@ -489,7 +477,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             supersamp_bin_model=supersamp_bin_model,
                                                             fact_tsim_to_xsim=time_fact,
                                                             xsim=None,
-                                                            plot=True, plot_GP=show_dict.get(f"GP_{model}", False), plot_model_wGP=show_dict.get(f"{model}_wGP", include_gp_model), 
+                                                            plot=True,
                                                             ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             show_binned_model=show_binned_model,
