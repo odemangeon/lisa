@@ -19,7 +19,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from loguru import logger
-from numpy import inf, isfinite, ones_like, sqrt, array
+from numpy import inf, isfinite, ones_like, sqrt, array, argsort
 from dill import dump, load
 from os.path import join
 from os import getcwd, chdir
@@ -532,8 +532,14 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         model_err : np.array
         """
         # Supersample the time if needed
+        # print(f"key_obj: {key_obj}")
+        # print(f"tsim[1] - tsim[0]: {tsim[1] - tsim[0]}")
+        # import pdb; pdb.set_trace()
         if supersamp > 1:
             t_model = get_time_supersampled(tsim, supersamp, exptime)
+            # if Delta_tsim < exptime, t_model will not be an order vector anymore and that can cause problem down the line
+            idx_sort_t_model = argsort(t_model)
+            t_model = t_model[idx_sort_t_model]
         else:
             t_model = tsim
 
@@ -547,6 +553,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             key_obj = self.model.key_whole
 
         instmod_fullname = self.model.get_instmod_fullname(dataset_name=dataset_name)
+
         if key_obj in self.datasimulators.instrument_db[instmod_fullname]:
             datasim_docfunc = self.datasimulators.instrument_db[instmod_fullname][key_obj]
 
@@ -569,17 +576,18 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             # De-supersamp the model if needed.
             if supersamp > 1:
+                idx_desort_t_model = argsort(idx_sort_t_model)
+                model = model[idx_desort_t_model]
                 model = average_supersampled_values(model, supersamp)
 
         elif key_obj == "GP":
             # Get the noise model subclass associated with the dataset
-            inst_mod_fullname = self.model.get_instmod_fullname(dataset_name)
-            inst_mod_obj = self.model.instruments[inst_mod_fullname]
+            inst_mod_obj = self.model.instruments[instmod_fullname]
             noise_model = self.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
 
             # Compute GP contribution if needed.
             if noise_model.has_GP:
-                GP_config, GP_name = noise_model.get_GP_model(inst_model_fullname=inst_mod_fullname)
+                GP_config, GP_name = noise_model.get_GP_model(inst_model_fullname=instmod_fullname)
                 # Get the list of datasets using the same GP kernel
                 l_dataset_sameGP = noise_model.get_l_datasetname_4_GP_name(GP_name=GP_name)  # Defined in Sub_class of Core_Noise_Model
                 # Create the datasimulator for these datasets which we will need to create the GP simulatiop.
@@ -620,11 +628,13 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 gp_pred, gp_pred_var = gp_simulator(p_vect=param[l_idx_param_gpsim], sim_data=sim_data,
                                                     l_datakwargs=datasets_kwargs, tsim=t_model)
                 if supersamp > 1:
+                    idx_desort_t_model = argsort(idx_sort_t_model)
+                    gp_pred = gp_pred[idx_desort_t_model]
+                    gp_pred_var = gp_pred_var[idx_desort_t_model]
                     gp_pred = average_supersampled_values(gp_pred, supersamp)
                     gp_pred_var = average_supersampled_values(gp_pred_var, supersamp)
                 model = gp_pred
                 model_err = sqrt(gp_pred_var)
-
             else:
                 logger.warning(f"The noise model ({noise_model}) used for dataset {dataset_name} doesn't use a GP.")
                 model = model_err = None

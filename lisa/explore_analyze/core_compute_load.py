@@ -3,6 +3,7 @@ from copy import copy
 from numpy import zeros_like, sqrt
 from collections import defaultdict, OrderedDict
 
+from .misc import update_model_binned_label
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
 
@@ -68,9 +69,9 @@ def is_valid_model_available(key_model, datasetname, post_instance):
 
 def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
                            amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
-                           remove_dict=None, add_dict=None,
-                           exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None,
-                           plot=True, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                           remove_dict=None, add_dict=None, compute_binned=True,
+                           exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None, time_unit=None,
+                           plot_unbinned=True, plot_binned=True, ax=None, pl_kwarg=None, key_pl_kwarg=None,
                            models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
                            is_valid_model_available_func=is_valid_model_available,
                            kwargs_is_valid_model_available=None,
@@ -100,17 +101,21 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     add_dict                            : dict of bool
         Dictionary which says which component should be added from the model being computed (key_model)
         Keys should be valid model keys (str) and the value is True to add this model to the model being computed.
+    compute_binned                      : bool
+        If True the binned model will be computed and added to models independantly of the value of plot_binned.
+        If plot_binned_model is True, the binned model will be computed independantly of the value of compute_binned.
     exptime_bin                         : float
     supersamp_bin_model                 : int
     fact_tsim_to_xsim                   : float
         Factor to multiply to tsim to obtain xsim if it is not provided
     xsim                                : array
         x valuess corresponding to the values in tsim for the plot. Superseeds fact_tsim_to_xsim
-    plot                                : bool                
+    time_unit                           : str
+    plot_unbinned                       : bool
+    plot_binned                         : bool               
     ax                                  : Axe
     pl_kwarg                            : dict
     key_pl_kwarg                        : str
-    show_binned_model                   : bool
     models                              : dict of array
         Dictionary cointaining the models previously computed to avoid having to recompute the same model multiple times.
         Keys are valid model keys (str) and values are array of the model evaluated at tsim
@@ -152,7 +157,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         fact_tsim_to_xsim = 1.
 
     # Set xsim the x values for the plot
-    if plot:
+    if plot_binned or plot_unbinned:
         if xsim is None:
             xsim = tsim * fact_tsim_to_xsim
 
@@ -163,7 +168,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     for binned in [False, True]:
         # Set exptime, extension and adjust key_pl_kwarg depending on whether we are treating the binned model or not
         if binned:
-            if show_binned_model and (exptime_bin > 0.):
+            if (compute_binned or plot_binned) and (exptime_bin > 0.):
                 exptime = exptime_bin / fact_tsim_to_xsim
                 supersamp = supersamp_bin_model
                 extension = '_binned'
@@ -183,7 +188,6 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             else:
                 key_model_compute = key_model
             if key_model_compute == 'data':
-                import pdb; pdb.set_trace()
                 model = post_instance.dataset_db[datasetname].get_data()
                 model_err = None
             elif key_model_compute == 'data_err':
@@ -229,9 +233,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                        post_instance=post_instance, df_fittedval=df_fittedval,
                                                        datasim_kwargs=datasim_kwargs,
                                                        amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                       remove_add_model_components_func=remove_add_model_components_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func, compute_binned=True,
                                                        exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                       plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                       time_unit=time_unit,
+                                                       plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None,
                                                        models=models, l_valid_model=l_valid_model,
                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                        is_valid_model_available_func=is_valid_model_available_func,
@@ -243,7 +248,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                          extension_raw=extension_raw, models=models,
                                                          amplitude_fact=amplitude_fact
                                                          )
-                model_err = copy(models[f'GP_err' + extension + extension_raw])
+                model_err = copy(models['GP_err' + extension + extension_raw])
             # Store the raw model in models 
             models[key_model + extension + extension_raw] = copy(model)
             if model_err is not None:
@@ -266,9 +271,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                    post_instance=post_instance, df_fittedval=df_fittedval,
                                                    datasim_kwargs=datasim_kwargs,
                                                    amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                   remove_add_model_components_func=remove_add_model_components_func,
+                                                   remove_add_model_components_func=remove_add_model_components_func, compute_binned=True,
                                                    exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                   plot=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, show_binned_model=True,
+                                                   time_unit=time_unit,
+                                                   plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
                                                    models=models, l_valid_model=l_valid_model,
                                                    get_key_compute_model_func=get_key_compute_model_func,
                                                    is_valid_model_available_func=is_valid_model_available_func,
@@ -279,7 +285,6 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         ##########################################
         # Remove/Add model components as requested
         ##########################################
-        import pdb; pdb.set_trace()
         model = remove_add_model_components_func(model=model, remove_dict=remove_dict,
                                                  add_dict=add_dict, extension=extension,
                                                  extension_raw=extension_raw, models=models,
@@ -292,7 +297,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             models[f'{key_model}_err' + extension] = model_err
 
         # Plot the model
-        if plot:
+        if (plot_unbinned and not(binned)) or (plot_binned and compute_binned and binned):
+            if binned:
+                update_model_binned_label(pl_kwarg=pl_kwarg, key_model=key_pl_kwarg_user, extension_binned=extension, datasetname=datasetname,
+                                          bin_size=exptime_bin, bin_size_unit=time_unit)
             key_pl_kwarg = key_pl_kwarg_user + extension
             if key_pl_kwarg in pl_kwarg[datasetname]:
                 pl_kwarg_to_use = pl_kwarg[datasetname][key_pl_kwarg]
@@ -305,8 +313,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
                 if pl_kwarg_to_use["alpha"] is None:
                     pl_kwarg_to_use["alpha"] = 1.
-            # import pdb; pdb.set_trace()
-            # Plot the GP
+            # Plot the model_err
             if model_err is not None:
                 key_err = key_model + "_err" + extension
                 if not("color" in pl_kwarg[datasetname][key_err]):
@@ -433,16 +440,16 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         #                                                 'add_dict': kwargs_compute_model_4_key_model['model']['add_dict']
         #                                                 }
         for key_model, kwargs in kwargs_compute_model_4_key_model.items():
-            import pdb; pdb.set_trace()
             (dico_outputs['models'][datasetname], _
              ) = compute_and_plot_model(tsim=dico_outputs['times'][datasetname], key_model=key_model,
                                         datasetname=datasetname, post_instance=post_instance, df_fittedval=df_fittedval,
                                         datasim_kwargs=datasim_kwargs, amplitude_fact=amplitude_fact,
                                         compute_raw_models_func=compute_raw_models_func,
                                         remove_add_model_components_func=remove_add_model_components_func,
+                                        compute_binned=False, 
                                         exptime_bin=None, supersamp_bin_model=None,
-                                        fact_tsim_to_xsim=None, plot=False, ax=None, pl_kwarg=None,
-                                        key_pl_kwarg=None, show_binned_model=True, models=dico_outputs['models'][datasetname],
+                                        fact_tsim_to_xsim=None, plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None,
+                                        key_pl_kwarg=None, models=dico_outputs['models'][datasetname],
                                         l_valid_model=l_valid_model,
                                         get_key_compute_model_func=get_key_compute_model_func,
                                         is_valid_model_available_func=is_valid_model_available_func,
@@ -455,10 +462,8 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         # Create datas and data_errs key in first level of dico_outputs
         ###############################################################
         if "data" in dico_outputs['models'][datasetname]:
-            # import pdb; pdb.set_trace()
             dico_outputs['datas'][datasetname] = dico_outputs['models'][datasetname]["data"]
         if "data_err" in dico_outputs['models'][datasetname]:
-            import pdb; pdb.set_trace()
             coeff_err = dico_outputs['models'][datasetname]["data_err"] / dico_outputs['data_errs'][datasetname]
             dico_outputs['data_errs'][datasetname] *= coeff_err
             dico_outputs['data_err_jitters'][datasetname] *= coeff_err
