@@ -21,16 +21,6 @@ from ..posterior.core.model.core_model import Core_Model
 
 key_whole = Core_Model.key_whole
 
-
-# remove_dict_def_PF = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-#                       'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
-# add_dict_def_PF = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-#                    'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
-# remove_dict_def_TS = {'1': True, 'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-#                       'stellar_var': True, 'inst_var': True, 'contamination': True, 'GP_residual': True}
-# add_dict_def_TS = {'1': False, 'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-#                    'stellar_var': False, 'inst_var': False, 'contamination': False, 'GP_residual': False}
-
 l_valid_model = ["model", "1", "contamination", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
 
 dict_model_false = {key: False for key in l_valid_model[1:]}
@@ -38,12 +28,12 @@ dict_model_true = {key: True for key in l_valid_model[1:]}
 
 d_name_component_removed_to_print = {'stellar_var': "Stellar Var", 'inst_var': "Inst Var", 'decorrelation': "Decorrelation",
                                      'decorrelation_likelihood': "Decorrelation Likelihood", 'contamination': "Contamination",
-                                     'GP_dataNmodel': "GP",
+                                     'GP': "GP",
                                      }
 
 
 def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None,
-                                planets=None, periods=None, periods_remove_or_add_dict=None,
+                                planets=None, planets_remove_or_add_dict=None, periods=None, periods_remove_or_add_dict=None,
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
                                 phasefold_central_phase=0.,
@@ -201,14 +191,16 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                                      'add_dict': dict_model_false
                                                      },
                                         }
+    planets_remove_or_add_dict = {"all": {"add_dict": {"1": not(remove1), "contamination": not(remove_contamination)}}}
     return create_phasefolded_plots(post_instance=post_instance, df_fittedval=df_fittedval,
                                     compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                     l_valid_model=l_valid_model,
                                     y_name=y_name, inst_cat='LC', d_name_component_removed_to_print=d_name_component_removed_to_print,
-                                    datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
-                                    periods_remove_or_add_dict=periods_remove_or_add_dict,
+                                    datasim_kwargs=datasim_kwargs, 
+                                    planets=planets, planets_remove_or_add_dict=planets_remove_or_add_dict,
+                                    periods=periods, periods_remove_or_add_dict=periods_remove_or_add_dict,
                                     datasetnames=datasetnames, row4datasetname=row4datasetname,
                                     datasetnameformodel4row=datasetnameformodel4row,
                                     npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
