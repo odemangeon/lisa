@@ -11,7 +11,7 @@ from matplotlib.ticker import AutoMinorLocator
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from scipy.stats import binned_statistic
 
-from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_binned_label,
+from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
                    check_spec_by_column_or_row, check_spec_data_or_resi, check_datasetname4model4row,
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
                    set_legend, fmt_sci_not
@@ -343,9 +343,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                            bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
                            nb_rows=nb_rows, alpha_def_data=1, color_def_data=None, show_error_data_def=True)
 
-        update_binned_label(pl_kwarg_final=pl_kwarg_final, datasetnames=datasetnames, bin_size=exptime_bin,
-                            bin_size_unit=f" {time_unit}", one_binning_per_row=one_binning_per_row,
-                            nb_rows=nb_rows)
+        update_data_binned_label(pl_kwarg=pl_kwarg_final, key_data_binned="data_binned", datasetnames=datasetnames, bin_size=exptime_bin,
+                                 bin_size_unit=time_unit, one_binning_per_row=one_binning_per_row,
+                                 nb_rows=nb_rows)
 
         #################################
         # Init the output computed_models
@@ -424,7 +424,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                     xlims_model[1] = tlims_i[1]
                             tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
                             kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
-                            # import pdb; pdb.set_trace()
                             show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model, True)
                             if model == "decorrelation_likelihood":
                                 computed_models[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
@@ -441,13 +440,13 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             key_pl_kwarg=model,
                                                             remove_dict=kwargs_compute_model.get('remove_dict', {}),
                                                             add_dict=kwargs_compute_model.get('add_dict', {}),
-                                                            exptime_bin=0.,
-                                                            supersamp_bin_model=1.,
+                                                            compute_binned=False,
+                                                            exptime_bin=None,
+                                                            supersamp_bin_model=None,
                                                             fact_tsim_to_xsim=time_fact,
-                                                            xsim=None,
-                                                            plot=True, ax=axe_data,
+                                                            xsim=None, time_unit=None,
+                                                            plot_unbinned=True, plot_binned=False, ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
-                                                            show_binned_model=False,
                                                             models=None,
                                                             l_valid_model=l_valid_model,
                                                             get_key_compute_model_func=get_key_compute_model_func,
@@ -457,7 +456,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             )
                                 computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                             else:
-                                # import pdb; pdb.set_trace()
                                 computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
                                 computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
                                 (computed_models[datasetname], pl_kwarg_final
@@ -473,14 +471,14 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             key_pl_kwarg=model,
                                                             remove_dict=kwargs_compute_model.get('remove_dict', {}),
                                                             add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                            compute_binned=show_binned_model,
                                                             exptime_bin=exptime_bin,
                                                             supersamp_bin_model=supersamp_bin_model,
                                                             fact_tsim_to_xsim=time_fact,
-                                                            xsim=None,
-                                                            plot=True,
+                                                            xsim=None, time_unit=time_unit,
+                                                            plot_unbinned=True, plot_binned=show_binned_model,
                                                             ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
-                                                            show_binned_model=show_binned_model,
                                                             models=computed_models[datasetname],
                                                             l_valid_model=l_valid_model,
                                                             get_key_compute_model_func=get_key_compute_model_func,

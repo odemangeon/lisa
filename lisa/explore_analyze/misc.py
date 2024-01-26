@@ -374,9 +374,13 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
-    pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "label": "model + GP", "zorder": 10}
     pl_kwarg_GP_err_def = {"color": "C0", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "label": "model + GP", "zorder": 10}
     pl_kwarg_wGP_err_def = {"color": "C4", "linestyle": "-", "zorder": 0}
+    pl_kwarg_GPbinned_def = {"color": "C5", "linestyle": "-", "zorder": 10}
+    pl_kwarg_GPbinned_err_def = {"color": "C5", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGPbinned_def = {"color": "C6", "linestyle": "-", "label": "model + GP", "zorder": 10}
+    pl_kwarg_wGPbinned_err_def = {"color": "C6", "linestyle": "-", "zorder": 0}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst.", "zorder": 10}
     pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar", "zorder": 10}
     pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
@@ -408,12 +412,12 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
                                        "data_binned": {},  # "label": f"{label_dst}: bin={bin_size}{bin_size_unit}",
                                        "GP": deepcopy(pl_kwarg_GP_def),
                                        "GP_err": deepcopy(pl_kwarg_GP_err_def),
-                                       "GP_binned": deepcopy(pl_kwarg_GP_def),
-                                       "GP_err_binned": deepcopy(pl_kwarg_GP_err_def),
+                                       "GP_binned": deepcopy(pl_kwarg_GPbinned_def),
+                                       "GP_err_binned": deepcopy(pl_kwarg_GPbinned_err_def),
                                        "model_wGP": deepcopy(pl_kwarg_wGP_def),
                                        "model_wGP_err": deepcopy(pl_kwarg_wGP_err_def),
-                                       "model_wGP_binned": deepcopy(pl_kwarg_wGP_def),
-                                       "model_wGP_err_binned": deepcopy(pl_kwarg_wGP_err_def),
+                                       "model_wGP_binned": deepcopy(pl_kwarg_wGPbinned_def),
+                                       "model_wGP_err_binned": deepcopy(pl_kwarg_wGPbinned_err_def),
                                        "inst_var": deepcopy(pl_kwarg_instvar_def),
                                        "inst_var_binned": {},
                                        "stellar_var": deepcopy(pl_kwarg_stellarvar_def),
@@ -501,21 +505,32 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     return pl_kwarg_final, pl_kwarg_jitter, pl_show_error
 
 
-def update_binned_label(pl_kwarg_final, datasetnames, bin_size, bin_size_unit, one_binning_per_row,
-                        nb_rows):
+def update_model_binned_label(pl_kwarg, key_model, extension_binned, datasetname, bin_size, bin_size_unit):
     """
     """
     if bin_size > 0.:
-        for datasetname in datasetnames:
-            # Set label for binned model
-            pl_kwarg_final[datasetname]["model_binned"]["label"] = f"model: bin={bin_size:.2g} [{bin_size_unit}]"
-            # Set label for binned data per dataset
-            if not(one_binning_per_row):
-                pl_kwarg_final[datasetname]["data_binned"]["label"] = f"bin={bin_size:.2g} [{bin_size_unit}]"
-        # Set label for binned data per row
+        if bin_size_unit is None:
+            text_bin_size_unit = ""
+        else:
+            text_bin_size_unit = f" [{bin_size_unit}]"
+        pl_kwarg[datasetname][f"{key_model}{extension_binned}"]["label"] = f"{key_model}: bin={bin_size:.2g}{text_bin_size_unit}"                
+    
+
+def update_data_binned_label(pl_kwarg, key_data_binned, datasetnames, bin_size, bin_size_unit, one_binning_per_row,
+                             nb_rows):
+    """
+    """
+    if bin_size > 0.:
+        if bin_size_unit is None:
+            text_bin_size_unit = ""
+        else:
+            text_bin_size_unit = f" [{bin_size_unit}]"
         if one_binning_per_row:
             for i_row in range(nb_rows):
-                pl_kwarg_final[f"row{i_row}"]["label"] = f"bin={bin_size:.2g} [{bin_size_unit}]"
+                pl_kwarg[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"
+        else:
+            for datasetname in datasetnames:
+                pl_kwarg[datasetname][key_data_binned]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"            
 
 
 def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_removed_or_add_dict,
