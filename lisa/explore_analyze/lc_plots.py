@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 Module to create plot specifically for light curve data
 
@@ -55,7 +53,7 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                 fig=None, 
                                 gs=None,
                                 ):
-    """Produce a clean LC plot.
+    """Produce a clean LC phase folded plots of a system.
 
     Arguments
     ---------
@@ -82,25 +80,16 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
         List saying which datasetmodel to use to compute the oversampled model of each row
     npt_model           : int
         Number of points used to simulated the model
+    phasefold_central_phase : float
+        orbital phase (between 0 and 1) that will be at the center of phase domain for the plot.
+        0 correspond to the transit and means that the phases for the plot will go from -0.5 to 0.5
+        0.5 correspond to the secondary transit and means that the phases for the plot will go from 0 to 1.
     remove1             : bool
         If True remove one to get an out of transit level of 0 instead of 1.
-    remove_inst_var  : bool (Def: True)
-        If True remove the instrumental variations. If there is contamination, you should always have
-        remove_inst_var and remove contamination to True, inst_var depends strongly in contamination, so any other
-        thing would not make sense.
-    remove_decorrelation    : bool
-        It True remove the decorrelation model
     remove_contamination    : bool
         It True the contamination of the light curve is removed. If there is contamination, you should always have
         remove_inst_var and remove contamination to True, inst_var depends strongly in contamination, so any other
         thing would not make sense.
-
-    remove_GP_data           : Boolean
-        If True the GP model is remove from the data for the plot.
-    remove_GP_residual       : Boolean
-        If True the GP model is remove from the residuals for the plot.
-    LC_fact             : float
-        Factor to apply to the LC (ignore if remove1 is False)
     show_time_from_tic : bool
         If True than the phase folded light curve are show as a function of the time from the mid transit time.
     time_fact           : float
@@ -112,7 +101,7 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
     exptime_bin         : float
         Width of the bins used for the binning the unit of this depends on the value of show_time_from_tic.
         If show_time_from_tic is True, it's a time unit otherwise the unit is orbital phase.
-        If it's a time unit than the unit depend on the unit of the data after time_fact is applied.
+        If it's a time unit then the unit depend on the unit of the data after time_fact is applied.
         For example if the time unit of the data is days and time_fact=24, the unit of exptime_bin is hours.
     binning_stat        : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
@@ -159,6 +148,8 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
     show_title_labels_ticklabels : dict of bool
         Defines whether or not to show the title, xlabel, ylabel, xticklabels, yticklabels.
+    LC_fact        : float
+        Factor to apply to the LC (ignore if remove1 is False)
     LC_unit        : str or None
         String giving the unit of the LCs
     fig            : Figure
@@ -197,7 +188,8 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                     l_valid_model=l_valid_model,
-                                    y_name=y_name, inst_cat='LC', d_name_component_removed_to_print=d_name_component_removed_to_print,
+                                    y_name=y_name, inst_cat='LC', 
+                                    d_name_component_removed_to_print=d_name_component_removed_to_print,
                                     datasim_kwargs=datasim_kwargs, 
                                     planets=planets, planets_remove_or_add_dict=planets_remove_or_add_dict,
                                     periods=periods, periods_remove_or_add_dict=periods_remove_or_add_dict,
@@ -215,7 +207,7 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     unit=LC_unit, fontsize=fontsize,
                                     get_key_compute_model_func=get_key_compute_model,
                                     is_valid_model_available_func=is_valid_model_available,
-                                    fig=fig, gs=gs,
+                                    fig=fig, gs=gs
                                     )
 
 
@@ -243,6 +235,7 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     datasetnames  : list of String
         List providing the datasets to load and use
     remove_dict   : dict of bool
+    datasetnames4model4row  : dict of dict of
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
             - 'row4datasetname'   : dict of int
@@ -328,7 +321,6 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                 Specificy the frequency limits for the plot in freq_unit
             - 'logscale': boolean (Def: False),
             - 'show_WF': boolean (Def: True),
-            - 'show_inst_var': boolean (Def: True),
             - 'periods': dict
                 Specify the periods for which you want to draw a vertical line.
                 The keys are the period values and the values are dict that can be empty or specify the

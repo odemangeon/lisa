@@ -81,11 +81,11 @@ save_plot = False
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
 remove_dict = {'inst_var': True, 'stellar_var': False, 'decorrelation': False,
-               'decorrelation_likelihood': False, 'GP_model': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model'
+               'decorrelation_likelihood': False, 'GP': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
-             'decorrelation_likelihood': False, 'GP_model': False, 'model_wGP': True, 
-             }  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP_model', 'model_wGP'
+             'decorrelation_likelihood': False, 'GP': False, 'model_wGP': True, 
+             }  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP', 'model_wGP'
 
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
@@ -161,9 +161,10 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              show_dict=show_dict,
                              datasetnames4model4row=None,
                              TS_kwargs={"do": do_TS,
-                                        "npt_model": 10000,
+                                        "npt_model": 5000,
                                         "exptime_bin": exptime_bin,
                                         "binning_stat": binning_stat,
+                                        "supersamp_bin_model": supersamp_bin_model,
                                         "show_binned_model": show_binned_model,
                                         "one_binning_per_row": True,
                                         'row4datasetname': row4datasetname,
