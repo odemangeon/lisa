@@ -9,21 +9,14 @@ from collections import OrderedDict
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots
 from .misc import AandA_fontsize
-from .core_compute_load import compute_raw_models
+from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
+from .core_compute_load import compute_raw_models as compute_raw_models_core
+
 from ..posterior.core.model.core_model import Core_Model
 
 
 key_whole = Core_Model.key_whole
-
-# remove_dict_def_TS = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-#                       'inst_var': True, 'stellar_var': True, 'GP_residual': True}
-# remove_dict_def_PF = {'decorrelation': True, 'decorrelation_likelihood': True, 'GP_dataNmodel': True,
-#                       'inst_var': True, 'stellar_var': True, 'GP': True}
-# add_dict_def_PF = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-#                    'inst_var': False, 'stellar_var': False, 'GP_residual': False}
-# add_dict_def_TS = {'decorrelation': False, 'decorrelation_likelihood': False, 'GP_dataNmodel': False,
-#                    'inst_var': False, 'stellar_var': False, 'GP': False}
 
 y_name = "RV"
 
@@ -36,17 +29,17 @@ d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Ste
                                      'decorrelation': "Decorrelation",
                                      'decorrelation_likelihood': "Decorrelation Likelihood",
                                      'contamination': "Contamination",
-                                     'GP_dataNmodel': "GP",
+                                     'GP': "GP",
                                      }
 
 
 def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None,
-                                planets=None, periods=None, periods_remove_or_add_dict=None,
+                                planets=None, planets_remove_or_add_dict=None, periods=None, periods_remove_or_add_dict=None,
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
                                 phasefold_central_phase=0.,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
-                                exptime_bin=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
+                                exptime_bin=0.0, binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
                                 one_binning_per_row=True,
                                 sharey=False, create_axes_kwargs=None, pad=None, indicate_y_outliers=None,
                                 pl_kwargs=None,
@@ -69,12 +62,12 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
 
     Arguments
     ---------
-    post_instance : Posterior instance
-    df_fittedval  : DataFrame
+    post_instance       : Posterior instance
+    df_fittedval        : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
     datasim_kwargs : dict
         Dictionary of keyword arguments for the datasimulator.
-    planets : list_of_str or None
+    planets             : list_of_str or None
         List of the names of the planets for which you want a phase pholded curve. If None all planets are used
     periods             : list of floats
         Period at which you want to phase fold (which are not planet orbital periods)
@@ -83,29 +76,31 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
         The values associated to each period should be a dictionary with up to two keys 'add_dict' and 'remove_dict'.
         The value associated with these two keys will be passed as the add_dict and remove_dict to the compute_and_plot_model
         if you want to add or remove components to the data when phase-folding at the given period.
-    datasetnames  : list of String
+    datasetnames        : list of String
         List providing the datasets to load and use
     row4datasetname    : dict of int
         Dictionary saying which dataset to plot on which row. The format is:
         {"<dataset_name>": <int giving the row index starting at 0>, ...}
     datasetnameformodel4row : list of str
         List saying which datasetmodel to use to compute the oversampled model of each row
-    npt_model     : int
+    npt_model           : int
         Number of points used to simulated the model
     phasefold_central_phase : float
         orbital phase (between 0 and 1) that will be at the center of phase domain for the plot.
         0 correspond to the transit and means that the phases for the plot will go from -0.5 to 0.5
         0.5 correspond to the secondary transit and means that the phases for the plot will go from 0 to 1.
-    remove_GP     : Boolean
-        If True the GP model is remove from the data for the plot.
-    RV_fact       : float
-        Factor to apply to the RV
-    exptime_bin : float
+    time_fact           : float
+        If show_time_from_tic is True, than the time from mid transit is expressed in the same unit than the period
+        by defaults. You can provide a factor here that will be applied to the times.
+    time_unit           : str
+        If show_time_from_tic is True, than you can provide here the unit in which the time from mid transit
+        is expressed (knowing that time_fact is applied)
+    exptime_bin         : float
         Width of the bins used for the binning the unit of this depends on the value of show_time_from_tic.
         If show_time_from_tic is True, it's a time unit otherwise the unit is orbital phase.
         If it's a time unit then the unit depend on the unit of the data after time_fact is applied.
         For example if the time unit of the data is days and time_fact=24, the unit of exptime_bin is hours.
-    binning_stat  : str
+    binning_stat        : str
         Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
         statistic argument of scipy.stats.binned_statistic
     supersamp_bin_model : int
@@ -136,6 +131,7 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
     force_xlims : bool
         By default, the maximum xlims is the extrema of the data. So if the user provides larger xlims,
         the actual xlims will be reduced. This will not happen if you set force_xlims to True
+    ylims       : dict
     rms_kwargs  : dict
         keys are:
             'do'            : bool
@@ -149,6 +145,8 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
     show_title_labels_ticklabels : dict of bool
         Defines whether or not to show the title, xlabel, ylabel, xticklabels, yticklabels.
+    RV_fact        : float
+        Factor to apply to the RV
     RV_unit        : str
         String giving the unit of the RVs
     fig            : Figure
@@ -179,14 +177,15 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                                      },
                                         }
     return create_phasefolded_plots(post_instance=post_instance, df_fittedval=df_fittedval,
-                                    compute_raw_models_func=compute_raw_models,
+                                    compute_raw_models_func=compute_raw_models_core,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                     l_valid_model=l_valid_model,
                                     y_name=y_name, inst_cat='RV',
                                     d_name_component_removed_to_print=d_name_component_removed_to_print,
-                                    datasim_kwargs=datasim_kwargs, planets=planets, periods=periods,
-                                    periods_remove_or_add_dict=periods_remove_or_add_dict,
+                                    datasim_kwargs=datasim_kwargs, 
+                                    planets=planets, planets_remove_or_add_dict=planets_remove_or_add_dict,
+                                    periods=periods, periods_remove_or_add_dict=periods_remove_or_add_dict,
                                     datasetnames=datasetnames, row4datasetname=row4datasetname,
                                     datasetnameformodel4row=datasetnameformodel4row,
                                     npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
@@ -199,6 +198,7 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     rms_kwargs=rms_kwargs, legend_kwargs=legend_kwargs, show_datasetnames=show_datasetnames,
                                     suptitle_kwargs=suptitle_kwargs, show_title_labels_ticklabels=show_title_labels_ticklabels,
                                     unit=RV_unit, fontsize=fontsize,
+                                    get_key_compute_model_func=get_key_compute_model_core,
                                     is_valid_model_available_func=is_valid_model_available,
                                     fig=fig, gs=gs
                                     )
@@ -227,7 +227,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
         Dictionary of keyword arguments for the datasimulator.
     datasetnames  : list of String
         List providing the datasets to load and use
-    remove_dict   : dict
+    remove_dict   : dict of bool
     datasetnames4model4row  : dict of dict of
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
@@ -238,20 +238,27 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
             - 'extra_dt_model': float (Def: 0)
                 Specify the extra time that for which you want to compute the model before and after the
                 data.
-            - 't_lims': None or Iterable of 2 float (Def: None)
-                Specificy the time limits for the plot
-            - 't_lims_zoom': None or Iterable of 2 float (Def: None)
-                If provided a zoom on the right of the main plot will be drawn.
-                This gives the beginning and end time for the zoom
+            - 't_lims': None or Iterable of 2 float or dict of Iterable of 2 float (Def: None)
+                This gives the beginning and end time for the zoom. If there is more than one row (see row4datasetname).
+                You must provide a dictionary with the following format:
+                {"<int giving the row index>": <Iterable of two float providing the min and max for the time axis>, ...}
+            - 't_lims_zoom': None or Iterable of 2 float or dict of Iterable of 2 float (Def: None)
+                If provided a zoom on the right of the main plot will be drawn. This gives the beginning
+                and end time for the zoom. If there is more than one row (see row4datasetname).
+                You must provide a dictionary with the following format:
+                {"<int giving the row index>": <Iterable of two float providing the min and max for the zoom>, ...}
             - 't_unit': str (Def: days)
                 String that is going to be used to give the unit (and reference system) of the time.
             - 'pl_kwargs': dict
                 Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
                 and values a dictionary that will be passed as keyword arguments associated the plotting functions.
-                You can also add a 'jitter' key with value a dictionary that will contain the changes that you
-                want to make for the update error bars due to potential jitter.
-                Finally you can use the 'show_error' keyword with value True or False to specify if you want
-                the error bars of the dataset to be plotted.
+                For the dictionaries corresponding to a dataset, You can also add a 'jitter' key with value
+                a dictionary that will contain the changes that you want to make for the update error bars
+                due to potential jitter.
+                You can also add a 'binned' key with value a dictionary that will contain the changes that you
+                want to make for ploting the binned data and residuals
+                You can use the 'show_error' and 'show_binned_error' key with value True or False to specify if you want
+                the error bars of the data and binned data to be plotted to be plotted.
             - 'ylims_data': Define the limits on the data y axis. This override 'pad_data'
             - 'pad_data': Iterable of 2 floats (Def: (0.1, 0.1))
                 Define the bottom and top pad to apply for data axes.
@@ -376,6 +383,9 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     kwargs_compute_model_4_key_model = {"model": {"remove_dict": remove_dict_model,
                                                   'add_dict': dict_model_false
                                                   },
+                                        "model_wGP": {"remove_dict": remove_dict_model,
+                                                      'add_dict': dict_model_false
+                                                      },
                                         "data": {"remove_dict": remove_dict_data,
                                                  'add_dict': dict_model_false
                                                  },
@@ -384,9 +394,11 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                                      },
                                         }
     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
+    if "model_wGP" not in kwargs_compute_model_4_key_model_user:
+        kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
     return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                                 y_name=y_name, inst_cat='RV',
-                                compute_raw_models_func=compute_raw_models,
+                                compute_raw_models_func=compute_raw_models_core,
                                 remove_add_model_components_func=remove_add_model_components,
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 l_valid_model=l_valid_model,
@@ -404,7 +416,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 # get_key_compute_model_func=get_key_compute_model,
                                 is_valid_model_available_func=is_valid_model_available,
                                 )
-
 
 
 def remove_add_model_components(model, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
