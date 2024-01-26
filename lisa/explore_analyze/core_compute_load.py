@@ -69,7 +69,7 @@ def is_valid_model_available(key_model, datasetname, post_instance):
 
 def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
                            amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
-                           remove_dict=None, add_dict=None, compute_binned=True,
+                           remove_dict=None, add_dict=None, compute_only_raw_models=False,compute_binned=True,
                            exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None, time_unit=None,
                            plot_unbinned=True, plot_binned=True, ax=None, pl_kwarg=None, key_pl_kwarg=None,
                            models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
@@ -101,6 +101,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     add_dict                            : dict of bool
         Dictionary which says which component should be added from the model being computed (key_model)
         Keys should be valid model keys (str) and the value is True to add this model to the model being computed.
+    compute_only_raw_models             : bool
     compute_binned                      : bool
         If True the binned model will be computed and added to models independantly of the value of plot_binned.
         If plot_binned_model is True, the binned model will be computed independantly of the value of compute_binned.
@@ -233,9 +234,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                        post_instance=post_instance, df_fittedval=df_fittedval,
                                                        datasim_kwargs=datasim_kwargs,
                                                        amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                       remove_add_model_components_func=remove_add_model_components_func, compute_binned=True,
-                                                       exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                       time_unit=time_unit,
+                                                       remove_add_model_components_func=remove_add_model_components_func, 
+                                                       remove_dict=None, add_dict=None, compute_only_raw_models=True,
+                                                       compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
+                                                       fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
                                                        plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None,
                                                        models=models, l_valid_model=l_valid_model,
                                                        get_key_compute_model_func=get_key_compute_model_func,
@@ -243,12 +245,17 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                        )
-                model = remove_add_model_components_func(model=model, remove_dict={},
-                                                         add_dict={'GP': True}, extension=extension,
-                                                         extension_raw=extension_raw, models=models,
-                                                         amplitude_fact=amplitude_fact
-                                                         )
-                model_err = copy(models['GP_err' + extension + extension_raw])
+                # If GP was computed add it 
+                if "GP" + extension + extension_raw in models:
+                    model = remove_add_model_components_func(model=model, remove_dict={},
+                                                             add_dict={'GP': True}, extension=extension,
+                                                             extension_raw=extension_raw, models=models,
+                                                             amplitude_fact=amplitude_fact
+                                                             )
+                    model_err = copy(models['GP_err' + extension + extension_raw])
+                # Else there is no GP so there should not be a model_wGP either
+                else:
+                    return models, pl_kwarg
             # Store the raw model in models 
             models[key_model + extension + extension_raw] = copy(model)
             if model_err is not None:
@@ -263,38 +270,40 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
         ##################################
         # Compute the models to remove/add
         ##################################
-        l_model_remove = [key for key, do in remove_dict.items() if do]
-        l_model_add = [key for key, do in add_dict.items() if do]
-        for key_model_removeoradd in (l_model_remove + l_model_add):
-            if key_model_removeoradd + extension + extension_raw not in models:
-                models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
-                                                   post_instance=post_instance, df_fittedval=df_fittedval,
-                                                   datasim_kwargs=datasim_kwargs,
-                                                   amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                   remove_add_model_components_func=remove_add_model_components_func, compute_binned=True,
-                                                   exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, fact_tsim_to_xsim=fact_tsim_to_xsim,
-                                                   time_unit=time_unit,
-                                                   plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
-                                                   models=models, l_valid_model=l_valid_model,
-                                                   get_key_compute_model_func=get_key_compute_model_func,
-                                                   is_valid_model_available_func=is_valid_model_available_func,
-                                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                   )
+        if not(compute_only_raw_models):
+            l_model_remove = [key for key, do in remove_dict.items() if do]
+            l_model_add = [key for key, do in add_dict.items() if do]
+            for key_model_removeoradd in (l_model_remove + l_model_add):
+                if key_model_removeoradd + extension + extension_raw not in models:
+                    models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
+                                                    post_instance=post_instance, df_fittedval=df_fittedval,
+                                                    datasim_kwargs=datasim_kwargs,
+                                                    amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                    remove_add_model_components_func=remove_add_model_components_func, 
+                                                    remove_dict=None, add_dict=None, compute_only_raw_models=True,
+                                                    compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
+                                                    fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
+                                                    plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
+                                                    models=models, l_valid_model=l_valid_model,
+                                                    get_key_compute_model_func=get_key_compute_model_func,
+                                                    is_valid_model_available_func=is_valid_model_available_func,
+                                                    kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                    )
 
-        ##########################################
-        # Remove/Add model components as requested
-        ##########################################
-        model = remove_add_model_components_func(model=model, remove_dict=remove_dict,
-                                                 add_dict=add_dict, extension=extension,
-                                                 extension_raw=extension_raw, models=models,
-                                                 amplitude_fact=amplitude_fact
+            ##########################################
+            # Remove/Add model components as requested
+            ##########################################
+            model = remove_add_model_components_func(model=model, remove_dict=remove_dict,
+                                                    add_dict=add_dict, extension=extension,
+                                                    extension_raw=extension_raw, models=models,
+                                                    amplitude_fact=amplitude_fact
                                                  )
 
-        # Fill computed model into output (models)
-        models[key_model + extension] = model
-        if model_err is not None:
-            models[f'{key_model}_err' + extension] = model_err
+            # Fill computed model into output (models)
+            models[key_model + extension] = model
+            if model_err is not None:
+                models[f'{key_model}_err' + extension] = model_err
 
         # Plot the model
         if (plot_unbinned and not(binned)) or (plot_binned and compute_binned and binned):
@@ -449,8 +458,8 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         datasim_kwargs=datasim_kwargs, amplitude_fact=amplitude_fact,
                                         compute_raw_models_func=compute_raw_models_func,
                                         remove_add_model_components_func=remove_add_model_components_func,
-                                        compute_binned=False, 
-                                        exptime_bin=None, supersamp_bin_model=None,
+                                        remove_dict=kwargs.get("remove_dict", None), add_dict=kwargs.get("add_dict", None), compute_only_raw_models=False,
+                                        compute_binned=False, exptime_bin=None, supersamp_bin_model=None,
                                         fact_tsim_to_xsim=None, plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None,
                                         key_pl_kwarg=None, models=dico_outputs['models'][datasetname],
                                         l_valid_model=l_valid_model,
@@ -458,7 +467,6 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         is_valid_model_available_func=is_valid_model_available_func,
                                         kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                         kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                        **kwargs
                                         )
 
         ###############################################################
