@@ -514,7 +514,7 @@ class RotationCeleriteModel(Core_GP1DModel_Celerite):
             kernel = RotationTerm(sigma=1, period=10, Q0=0.1, dQ=0, f=0.1)
             gp = GaussianProcess(kernel, mean=0.0)
             function_builder.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=func_shortname , exist_ok=False, overwrite=False)
-            text_GP_kernel = f"\n{tab}gp.kernel = RotationTerm(A={dico_text_param[func_shortname]['A']}, P={dico_text_param[func_shortname]['P']}, Q0={dico_text_param[func_shortname]['Q0']}, dQ={dico_text_param[func_shortname]['dQ']}, f={dico_text_param[func_shortname]['f']})\n"
+            text_GP_kernel = f"\n{tab}gp.kernel = RotationTerm(sigma={dico_text_param[func_shortname]['A']}, period={dico_text_param[func_shortname]['P']}, Q0={dico_text_param[func_shortname]['Q0']}, dQ={dico_text_param[func_shortname]['dQ']}, f={dico_text_param[func_shortname]['f']})\n"
             function_builder.add_to_body_text(text=text_GP_kernel, function_shortname=func_shortname)
             function_builder.add_variable_to_ldict(variable_name='RotationTerm', variable_content=RotationTerm, function_shortname=func_shortname , exist_ok=False, overwrite=False)
 
