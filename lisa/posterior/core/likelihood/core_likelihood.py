@@ -120,7 +120,7 @@ class LikelihoodCreator(object):
         if l_dataset_name == list(datasim_docfunc.dataset_names_list):
             datasim_all_dst_doc_func = datasim_docfunc
         else:
-            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj)[function_whole_shortname]
+            datasim_all_dst_doc_func = self.create_datasimulator_4_ldataset(l_dataset_obj=l_dataset_obj, dataset_db=dataset_db)[function_whole_shortname]
 
         func_shortname_lnlike = "lnlike"
         l_func_shortname = [func_shortname_lnlike, ]
