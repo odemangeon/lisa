@@ -45,7 +45,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
         self.__model_classes = {model.category: model for model in self.l_model_class}
         # set the configuration. 
         # If None it that there is nothing to configure otherwise you should create a configuration dictionary
-        self._model_config = None
+        self._models_config = None
 
     @property
     def model_instance(self):

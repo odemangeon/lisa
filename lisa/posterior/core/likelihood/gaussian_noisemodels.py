@@ -39,7 +39,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
     ################
     def __init__(self, model_instance, run_folder, config_file):
         super(Gaussian_Noise_Models, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
-        self._models_config = self._init_model_config()
+        self._models_config = self._init_models_config()
 
     @property
     def dict2print(self):
@@ -68,7 +68,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
     # Init the configuration dictionary
     ###################################
 
-    def _init_model_config(self):
+    def _init_models_config(self):
         return {instmodfullname: GaussianModel(model_name='', instrument=self.model_instance.instruments[instmodfullname], dico_config_model=None) 
                 for instmodfullname in self.l_inst_model_fullname
                 }
