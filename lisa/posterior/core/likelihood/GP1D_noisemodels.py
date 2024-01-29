@@ -41,7 +41,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
     ################
     def __init__(self, model_instance, run_folder, config_file):
         super(GP1D_Noise_Models, self).__init__(model_instance=model_instance, run_folder=run_folder, config_file=config_file)
-        self._models_config = self._init_model_config()
+        self._models_config = self._init_models_config()
         self._define_default_GPmodel()
 
     @property
@@ -107,7 +107,7 @@ class GP1D_Noise_Models(Core_Noise_Model):
     # Required by the __init__ method
     #################################
 
-    def _init_model_config(self):
+    def _init_models_config(self):
         return  {'GPmodel4instrument': {instmodfullname: '' for instmodfullname in self.l_inst_model_fullname},
                  'GPmodel_definitions': {},
                  'jittermodel_definitions': {instmodfullname: GaussianModel(model_name='', instrument=self.model_instance.instruments[instmodfullname], dico_config_model=None) for instmodfullname in self.l_inst_model_fullname},
@@ -126,12 +126,12 @@ class GP1D_Noise_Models(Core_Noise_Model):
 
         Arguments
         ---------
-        planet_name                     : str
-            Name of the planet for which you are defining the model
+        model_name                     : str
+            Name of the GP1D model that you want to define
         model_category                  : str
-            Catergory of the models
+            GP1D Category
         dico_config_model               : dict
-            Dictionary provide arguments for the model if needed.
+            Dictionary provide arguments for the GP1D model.
         overwrite                       : bool
             Wheter or not you wish to overwrite if the model is already defined
         """
@@ -141,6 +141,17 @@ class GP1D_Noise_Models(Core_Noise_Model):
             raise ValueError(f"{model_category} is not in the list of available model categories ({self.l_available_model_category}).")
         (self._models_config["GPmodel_definitions"]
          [model_name]) = self.model_classes[model_category](model_name=model_name, model_instance=self.model_instance, dico_config_model=dico_config_model)
+        
+    def _delete_GPmodel(self, model_name):
+        """Define the model for the planet
+
+        Arguments
+        ---------
+        model_name                     : str
+            Name of the GP1D model that you want to define
+        """
+        self._models_config["GPmodel_definitions"].pop(model_name)
+        self.model_instance.rm_a_GP1D(name=model_name)
 
 
     # Configure the gaussian noise models
@@ -184,19 +195,27 @@ class GP1D_Noise_Models(Core_Noise_Model):
 
     def __load_config_var_content_gp(self, dico_config_file, **kwargs):
         GP1D_models_config = dico_config_file['GP1D_models']
+        # Check that GP1D_models_config is a dict
         assert isinstance(GP1D_models_config, dict)
+        # Check that GP1D_models_config has all the required First level keys.
         if set(GP1D_models_config.keys()) != set(['GPmodel4instrument', 'GPmodel_definitions', 'jittermodel_definitions']):
             raise ValueError(f"The keys of the 'GP1D_models' dictionary should be ['GPmodel4instrument', 'GPmodel_definitions', 'jittermodel_definitions']. You provided {set(GP1D_models_config.keys())}")
+        # Check that all the instrument models that were to be associated to a GP1D noise model are in 'GPmodel4instrument'.
         if set(GP1D_models_config['GPmodel4instrument'].keys()) != set(self.l_inst_model_fullname):
             raise ValueError(f"The list of instrument models using a GP1D noise model is {self.l_inst_model_fullname}. It should be the same as the list of instrument model full name in GP1D_models['GPmodel4instrument'] ({GP1D_models_config['GPmodel4instrument']})")
+        # Check that all the GP1D models named in the values of 'GPmodel4instrument' are defined in 'GPmodel_definitions'.
         if set(GP1D_models_config['GPmodel4instrument'].values()) != set(GP1D_models_config['GPmodel_definitions'].keys()):
             raise ValueError(f"The list of GP1D model names provided in GP1D_models['GPmodel4instrument'] should match the list of the names of the GP1D models defined in GP1D_models['GPmodel_definitions'].")
+        # Check that GP1D_models_config['jittermodel_definitions'] is a dict
         assert isinstance(GP1D_models_config['jittermodel_definitions'], dict)
+        # Check that all the instrument models that were to be associated to a GP1D noise model are in 'jittermodel_definitions'.
         assert set(GP1D_models_config['jittermodel_definitions'].keys()) == set(self.l_inst_model_fullname)
+        # Load the 'GPmodel4instrument'
+        self._models_config['GPmodel4instrument'] = GP1D_models_config['GPmodel4instrument'].copy()
         # Clean the GP1D Container of model instance
         for GP1D_model_name in self.model_instance.l_GP1D_fullname:
             if GP1D_model_name not in GP1D_models_config['GPmodel_definitions'].keys():
-                self.model_instance.rm_a_GP1D(name=GP1D_model_name)
+                self._delete_GPmodel(model_name=GP1D_model_name)
         # load the config of the GP1D models defined in the configuration
         for GP1D_model_name in GP1D_models_config['GPmodel_definitions']:
             model_category = GP1D_models_config['GPmodel_definitions'][GP1D_model_name].pop("category")
