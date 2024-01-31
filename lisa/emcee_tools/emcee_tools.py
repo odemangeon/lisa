@@ -417,14 +417,12 @@ def plot_chains(chains, lnprobability=None, l_param_name=None, l_walker=None, l_
     return fig
 
 
-def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance, datasim_kwargs={},
+def overplot_one_data_model(param, l_param_name, dataset, post_instance, datasim_kwargs={},
                             multiplication_factor=1., oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
-                            phasefold=False, phasefold_kwargs=None, datasim_dbf_instmod=None,
-                            zoom=None, show_title=True, show_legend=True,
+                            show_title=True, show_legend=True,
                             pl_data_kwargs=None, pl_model_kwargs=None, pl_resi_kwargs=None,
                             kwargs_tick_params=None,
-                            ax_data=None, ax_resi=None,
-                            full_returns=False):
+                            ax_data=None, ax_resi=None):
     """Zoom on the data model overplot for one datasetself.
 
     :param np.array param: Vector of parameter values for the model
@@ -469,7 +467,6 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     :param ~matplotlib.axes._axes.Axes ax_resi: Axes instance where the residuals will be ploted
     :param dict kwargs_tick_params: Keywords arguments passed to tick_params if the function as to create
         the data or residuals axes.
-    :param bool full_returns: If true return the residuals
 
     Returns
     -------
@@ -509,49 +506,34 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
         GP prediction variance values. If phasefold is false and zoom is provided then
         the values are only inside the zoom.
     """
-    # Ensure that zoom has the good format
-    if zoom is None:
-        zoom = [[None, None], ]
-        nb_plots = 1
-    elif isinstance(zoom[0], Number):
-        zoom = [zoom, ]
-        nb_plots = 1
-    else:
-        nb_plots = np.shape(zoom)[0]
     # Create ax_data and/or ax_resi if not provided
     created_ax_data = False
     created_ax_resi = False
     if (ax_data is None) and (ax_resi is None):
-        fig, axes = subplots(nrows=2, ncols=nb_plots, squeeze=False)
+        fig, axes = subplots(nrows=2, ncols=1, squeeze=False)
         ax_data = axes[0]
         ax_resi = axes[1]
         created_ax_data = True
         created_ax_resi = True
     elif ax_data is None:
-        fig, ax_data = subplots(ncols=nb_plots, squeeze=False)
+        fig, ax_data = subplots(ncols=1, squeeze=False)
         ax_data = ax_data[0]
         created_ax_data = True
     elif ax_resi is None:
-        fig, ax_resi = subplots(ncols=nb_plots, squeeze=False)
+        fig, ax_resi = subplots(ncols=1, squeeze=False)
         ax_resi = ax_resi[0]
         created_ax_resi = True
-    else:
-        if isinstance(ax_data, Axes):
-            ax_data = [ax_data, ]
-        if isinstance(ax_resi, Axes):
-            ax_resi = [ax_resi, ]
     # Format the axes:
     if created_ax_data or created_ax_resi:
         kwargs_tick_params_final = {'axis': 'both', 'which': 'major', 'direction': "in", 'bottom': "on",
                                     'left': "on", 'top': "on", 'right': "on", 'reset': False}
         if kwargs_tick_params is not None:
             kwargs_tick_params_final.update(kwargs_tick_params)
-    for ax_data_i, ax_resi_i in zip(ax_data, ax_resi):
-        if created_ax_data:
-            ax_data_i.tick_params(**kwargs_tick_params_final)
-            ax_data_i.tick_params(labelbottom=False)
-        if created_ax_resi:
-            ax_resi_i.tick_params(**kwargs_tick_params_final)
+    if created_ax_data:
+        ax_data.tick_params(**kwargs_tick_params_final)
+        ax_data.tick_params(labelbottom=False)
+    if created_ax_resi:
+        ax_resi.tick_params(**kwargs_tick_params_final)
     # Initialise the title (necessary here, because below the title will be completed with the planet
     # name if phasefold)
     filename_info = mgr_inst_dst.interpret_data_filename(dataset.dataset_name)
@@ -586,140 +568,42 @@ def overplot_one_data_model(param, l_param_name, datasim, dataset, post_instance
     pl_resi_kwargs_final = {"model": {}, "model+GP": {}}
     if pl_resi_kwargs is not None:
         pl_resi_kwargs_final.update(pl_resi_kwargs)
-    # Create residual_out and residual_wGP lists for each zoom
-    residual_model = []
-    residual_wGP = []
-    times = []
-    model_val = []
-    model_wGP_val = []
-    GP_pred_val = []
-    GP_pred_var_val = []
-    # Case of phase folding
-    if phasefold:
-        # Get the planet name, period and time of inferior conjunction from phasefold_kwargs
-        planet_name = phasefold_kwargs["planet"]
-        P = phasefold_kwargs["P"]
-        tc = phasefold_kwargs["tc"]
-        # Add planet name to title
-        title += ": pl {}".format(planet_name)
-        # Define the key corresponding to the planet for the compte_model method
-        key_pl = planet_name
-        # Compute the data - other planets contributions
-        data_pl = data.copy()
-        for plnt_name in post_instance.model.planets.keys():
-            if plnt_name == planet_name:
-                continue
-            else:
-                model = post_instance.compute_model(tsim=t_data, dataset_name=dataset.dataset_name,
-                                                    param=param, l_param_name=l_param_name, key_obj=plnt_name,
-                                                    datasim_kwargs=datasim_kwargs, supersamp=supersamp_model,
-                                                    exptime=exptime, include_gp=False
-                                                    )
-                data_pl = data_pl - model
-        # Plot these data phase folded at the ephemeris of the planet.
-        # Plot the model
-        for zoom_i, ax_data_i, ax_resi_i, ii in zip(zoom, ax_data, ax_resi, range(len(ax_data))):
-            (ebcont_data, label_data, phases
-             ) = plot_phase_folded_timeserie(t_data=t_data, data=data_pl, Per=P, tref=tc, data_err=data_err_new, only_errorbar=False,
-                                             zoom=zoom_i, ax=ax_data_i, pl_kwargs=pl_data_kwargs_final)
-            phasemin = phases.min() if zoom_i[0] is None else max([phases.min(), zoom_i[0]])
-            phasemax = phases.max() if zoom_i[1] is None else min([phases.max(), zoom_i[1]])
-            tmin = tc + P * phasemin
-            tmax = tc + P * phasemax
-            ebconts_lines_labels_model_i = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
-                                                      post_instance=post_instance, key_obj=key_pl,
-                                                      supersamp=supersamp_model, exptime=exptime, datasim_kwargs=datasim_kwargs,
-                                                      plot_phase=True, Per=P, tref=tc,
-                                                      pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
-                                                      ax=ax_data_i)
-            # Plot the residuals
-            # If not speciied otherwise, impose the same color for the model and the residuals compared to this model
-            for key in ebconts_lines_labels_model_i.keys():
-                if not("color" in pl_resi_kwargs_final[key]):
-                    pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model_i[key]["ebcont or line"][0].get_color()
-            (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_lines_labels_resi_i
-             ) = plot_residuals(dataset_name=dataset.dataset_name, param=param,
-                                l_param_name=l_param_name, post_instance=post_instance, key_obj=key_pl,
-                                supersamp=supersamp_model, exptime=exptime,
-                                datasim_kwargs=datasim_kwargs, plot_phase=True, Per=P, tref=tc,
-                                pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
-                                ax=ax_resi_i)
-            residual_model.append(residual_model_i)
-            residual_wGP.append(residual_wGP_i)
-            times.append(t_data)
-            model_val.append(model_i)
-            model_wGP_val.append(model_wGP_i)
-            GP_pred_val.append(GP_pred_i)
-            GP_pred_var_val.append(GP_pred_var_i)
-            ebconts_lines_labels[f"axe{ii}"] = {"data": {"ebcont or line": ebcont_data, "label": label_data},
-                                                "model": {"ebcont or line": ebconts_lines_labels_model_i["model"]["ebcont or line"], "label": ebconts_lines_labels_model_i["model"]["label"]},
-                                                "residuals_model": {"ebcont or line": ebconts_lines_labels_resi_i["model"]["ebcont or line"], "label": ebconts_lines_labels_resi_i["model"]["label"]},
-                                                }
-            if "model+GP" in ebconts_lines_labels_model_i:
-                ebconts_lines_labels[f"axe{ii}"]["model+GP"] = {"ebcont or line": ebconts_lines_labels_model_i["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_model_i["model+GP"]["label"]}
-            if "model+GP" in ebconts_lines_labels_resi_i:
-                ebconts_lines_labels[f"axe{ii}"]["residuals_model+GP"] = {"ebcont or line": ebconts_lines_labels_resi_i["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_resi_i["model+GP"]["label"]}
-    # Case of NOT phase folding
-    else:
-        for zoom_i, ax_data_i, ax_resi_i, ii in zip(zoom, ax_data, ax_resi, range(len(ax_data))):
-            # Perform the zoom if needed
-            if (zoom_i[0] is not None) and (zoom_i[1] is not None):
-                zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom_i, base_array=t_data, arrays=[data, data_err_new])
-                t_i = zoomed_arrays[0]
-                data_i = zoomed_arrays[1]
-                data_err_new_i = zoomed_arrays[2]
-            else:
-                t_i = t_data
-                data_i = data
-                data_err_new_i = data_err_new
-            # plot the data
-            ebcont_data = ax_data_i.errorbar(t_i, data_i, data_err_new_i, **pl_data_kwargs_final)
-            # Plot the model
-            tmin = t_i.min()
-            tmax = t_i.max()
-            ebconts_lines_labels_model_i = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name,
-                                                      param=param, l_param_name=l_param_name,
-                                                      post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                                      datasim_kwargs=datasim_kwargs, exptime=exptime, plot_phase=False,
-                                                      pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
-                                                      ax=ax_data_i)
-            # Plot the residuals
-            for key in ebconts_lines_labels_model_i.keys():
-                if not("color" in pl_resi_kwargs_final[key]):
-                    pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model_i[key]["ebcont or line"][0].get_color()
-            (t_data_i, model_i, model_wGP_i, GP_pred_i, GP_pred_var_i, residual_model_i, residual_wGP_i, ebconts_lines_labels_resi_i
-             ) = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
-                                post_instance=post_instance, key_obj=post_instance.model.key_whole,
-                                datasim_kwargs=datasim_kwargs, supersamp=supersamp_model, exptime=exptime,
-                                plot_phase=False,
-                                pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
-                                ax=ax_resi_i)
-            # import pdb; pdb.pm()
-            residual_model.append(residual_model_i)
-            residual_wGP.append(residual_wGP_i)
-            times.append(t_i)
-            model_val.append(model_i)
-            model_wGP_val.append(model_wGP_i)
-            GP_pred_val.append(GP_pred_i)
-            GP_pred_var_val.append(GP_pred_var_i)
-            ebconts_lines_labels[f"axe{ii}"] = {"data": {"ebcont or line": ebcont_data, "label": pl_data_kwargs_final["label"]},
-                                                "model": {"ebcont or line": ebconts_lines_labels_model_i["model"]["ebcont or line"], "label": ebconts_lines_labels_model_i["model"]["label"]},
-                                                "residuals_model": {"ebcont or line": ebconts_lines_labels_resi_i["model"]["ebcont or line"], "label": ebconts_lines_labels_resi_i["model"]["label"]},
-                                                }
-            if "model+GP" in ebconts_lines_labels_model_i:
-                ebconts_lines_labels[f"axe{ii}"]["model+GP"] = {"ebcont or line": ebconts_lines_labels_model_i["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_model_i["model+GP"]["label"]}
-            if "model+GP" in ebconts_lines_labels_resi_i:
-                ebconts_lines_labels_resi_i["residuals_model+GP"] = {"ebcont or line": ebconts_lines_labels_resi_i["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_resi_i["model+GP"]["label"]}
+    
+    # plot the data
+    ebcont_data = ax_data.errorbar(t_data, data, data_err_new, **pl_data_kwargs_final)
+    # Plot the model
+    tmin = t_data.min()
+    tmax = t_data.max()
+    ebconts_lines_labels_model = plot_model(tmin=tmin, tmax=tmax, nt=nt * oversamp, dataset_name=dataset.dataset_name,
+                                            param=param, l_param_name=l_param_name,
+                                            post_instance=post_instance, key_obj=post_instance.model.key_whole,
+                                            datasim_kwargs=datasim_kwargs, exptime=exptime,
+                                            pl_kwargs_model=pl_model_kwargs_final["model"], pl_kwargs_modelandGP=pl_model_kwargs_final["model+GP"],
+                                            ax=ax_data)
+    # Plot the residuals
+    for key in ebconts_lines_labels_model.keys():
+        if not("color" in pl_resi_kwargs_final[key]):
+            pl_resi_kwargs_final[key]["color"] = ebconts_lines_labels_model[key]["ebcont or line"][0].get_color()
+    ebconts_lines_labels_resi = plot_residuals(dataset_name=dataset.dataset_name, param=param, l_param_name=l_param_name,
+                                               post_instance=post_instance, key_obj=post_instance.model.key_whole,
+                                               datasim_kwargs=datasim_kwargs, supersamp=supersamp_model, exptime=exptime,
+                                               pl_kwargs_model=pl_resi_kwargs_final["model"], pl_kwargs_modelandGP=pl_resi_kwargs_final["model+GP"],
+                                               ax=ax_resi)
+    ebconts_lines_labels[f"axe"] = {"data": {"ebcont or line": ebcont_data, "label": pl_data_kwargs_final["label"]},
+                                    "model": {"ebcont or line": ebconts_lines_labels_model["model"]["ebcont or line"], "label": ebconts_lines_labels_model["model"]["label"]},
+                                    "residuals_model": {"ebcont or line": ebconts_lines_labels_resi["model"]["ebcont or line"], "label": ebconts_lines_labels_resi["model"]["label"]},
+                                    }
+    if "model+GP" in ebconts_lines_labels_model:
+        ebconts_lines_labels[f"axe"]["model+GP"] = {"ebcont or line": ebconts_lines_labels_model["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_model["model+GP"]["label"]}
+    if "model+GP" in ebconts_lines_labels_resi:
+        ebconts_lines_labels_resi["residuals_model+GP"] = {"ebcont or line": ebconts_lines_labels_resi["model+GP"]["ebcont or line"], "label": ebconts_lines_labels_resi["model+GP"]["label"]}
     # Print the title if required
     if show_title:
-        ax_data[0].set_title(title)
+        ax_data.set_title(title)
     # Plot the legend
     if show_legend:
-        ax_data[0].legend(loc='upper right', shadow=True)
-    if full_returns:
-        return ebconts_lines_labels, times, residual_model, residual_wGP, model_val, model_wGP_val, GP_pred_val, GP_pred_var_val
-    else:
-        return ebconts_lines_labels
+        ax_data.legend(loc='upper right', shadow=True)
+    return ebconts_lines_labels
 
 
 def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_instance, l_datasets=None, datasim_kwargs={},
@@ -856,16 +740,10 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
                                                             phasefold_kwargs["tc"],
                                                             axes_data, axes_resi):
                 modelsNresiduals[dataset.dataset_name][planet_name] = {}
-                (ebconts_lines_labels, modelsNresiduals[dataset.dataset_name][planet_name]["time"],
-                 modelsNresiduals[dataset.dataset_name][planet_name]["residuals"], modelsNresiduals[dataset.dataset_name][planet_name]["residuals w GP"],
-                 modelsNresiduals[dataset.dataset_name][planet_name]["model"], modelsNresiduals[dataset.dataset_name][planet_name]["model w GP"],
-                 modelsNresiduals[dataset.dataset_name][planet_name]["GP only"], modelsNresiduals[dataset.dataset_name][planet_name]["GP only var"]
-                 ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim,
-                                             dataset=dataset, datasim_kwargs=datasim_kwargs, post_instance=post_instance,
-                                             oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                             phasefold=phasefold, phasefold_kwargs={"planet": planet_name, "P": P, "tc": tc},
-                                             datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                             show_legend=False, ax_data=ax_data, ax_resi=ax_resi, full_returns=True)
+                ebconts_lines_labels = overplot_one_data_model(param=param, l_param_name=l_param_name,
+                                                               dataset=dataset, datasim_kwargs=datasim_kwargs, post_instance=post_instance,
+                                                               oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                                               show_title=True, show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
         else:
             modelsNresiduals[dataset.dataset_name]["whole"] = {}
             # Create the two axes data+model and residuals
@@ -878,16 +756,11 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
             ax_resi.yaxis.set_minor_locator(AutoMinorLocator())
             ax_resi.tick_params(**kwargs_tick_params_final)
             # Produce the plots
-            (ebconts_lines_labels, modelsNresiduals[dataset.dataset_name]["whole"]["time"],
-             modelsNresiduals[dataset.dataset_name]["whole"]["residuals"], modelsNresiduals[dataset.dataset_name]["whole"]["residuals w GP"],
-             modelsNresiduals[dataset.dataset_name]["whole"]["model"], modelsNresiduals[dataset.dataset_name]["whole"]["model w GP"],
-             modelsNresiduals[dataset.dataset_name]["whole"]["GP only"], modelsNresiduals[dataset.dataset_name]["whole"]["GP only var"]
-             ) = overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                         datasim_kwargs=datasim_kwargs, post_instance=post_instance,
-                                         oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
-                                         phasefold=phasefold,
-                                         datasim_dbf_instmod=datasim_dbf_instmod, zoom=None, show_title=True,
-                                         show_legend=False, ax_data=ax_data, ax_resi=ax_resi, full_returns=True)
+            ebconts_lines_labels = overplot_one_data_model(param=param, l_param_name=l_param_name, dataset=dataset,
+                                                           datasim_kwargs=datasim_kwargs, post_instance=post_instance,
+                                                           oversamp=oversamp, supersamp_model=supersamp_model, exptime=exptime,
+                                                           show_title=True,
+                                                           show_legend=False, ax_data=ax_data, ax_resi=ax_resi)
         for key_axe_ii in ebconts_lines_labels.keys():
             for key_data_mod_resi in ebconts_lines_labels[key_axe_ii].keys():
                 dico_ebcont_line_label = ebconts_lines_labels[key_axe_ii][key_data_mod_resi]
@@ -912,71 +785,9 @@ def overplot_data_model(param, l_param_name, datasim_dbf, dataset_db, post_insta
         return modelsNresiduals
 
 
-def overplot_onedata_model_pertransits(P, t_tr, planet_name, param, l_param_name, datasim, dataset,
-                                       post_instance, datasim_kwargs={}, oversamp=10, supersamp_model=1, exptime=exptime_Kepler,
-                                       zoom_width=0.25, show_title=True, show_legend=True,
-                                       plot_height=2, plot_width=2, kwargs_tl={}):
-    """Zoom on the data model overplot for one datasetself.
-
-    :param float/list_of_float P: Orbital period(s)
-    :param float/list_of_float t_tr: Transit time(s), t0(s) of the ephemeris
-    :param string/list_of_string planet_name: Planet name(s)
-    :param np.array param: Vector of parameter values for the model
-    :param list_of_string l_param_name: List of parameter name corresponding to the parameter values
-        provided in param
-    :param DatasimDocFunc datasim: Datasimulator for the dataset.
-    :param Dataset dataset: Dataset
-    :param Posterior post_instance: Core_Model instance
-    :param int oversamp: The model will be computed in oversamp times more points than the data
-    :param int supersamp_model: Each point in which the model is compute will be supersampled by the number
-                                of points provided, meaning that we will actually compute the model at
-                                supersamp_model points spread over the exposure time (exptime) and then
-                                average over this points.
-    :param float exptime: exposure time for the supersampling
-    :param float zoom_width: Width of the zoom.
-    :param bool show_title: If True, show the title giving the dataset name.
-    :param bool show_legend: If True, show the legend.
-    """
-    # Get the min and max time of the dataset.
-    t = dataset.get_time()
-    t_max = max(t)
-    t_min = min(t)
-    # Define the zooms for each planet ephemeris
-    zoom_planets = []
-    P = [P, ] if isinstance(P, Number) else P
-    t_tr = [t_tr, ] if isinstance(t_tr, Number) else t_tr
-    planet_name = [planet_name, ] if isinstance(planet_name, str) else planet_name
-    nb_pl = len(P)
-    for jj, P_pl, t_tr_pl in zip(range(nb_pl), P, t_tr):
-        zoom_planets.append([])
-        nb_per_min = int((t_min - t_tr_pl) // P_pl)
-        nb_per_min = nb_per_min if nb_per_min > 0 else nb_per_min - 1
-        nb_per_max = int((t_max - t_tr_pl) // P_pl)
-        nb_per_max = nb_per_max if nb_per_max < 0 else nb_per_max + 1
-        for ii in range(nb_per_min, nb_per_max + 1):
-            t_tr_ii = t_tr_pl + P_pl * ii
-            zoom_min_ii = t_tr_ii - zoom_width / 2.
-            zoom_max_ii = t_tr_ii + zoom_width / 2.
-            if (zoom_max_ii < t_min) or (zoom_min_ii > t_max):
-                continue
-            else:
-                zoom_planets[jj].append([zoom_min_ii, zoom_max_ii])
-    # Defines the fig and axes
-    nb_max_zoom = max([len(zoom_pl) for zoom_pl in zoom_planets])
-    fig, axes = subplots(nrows=2 * nb_pl, ncols=nb_max_zoom, figsize=(plot_width * nb_max_zoom, nb_pl * plot_height))
-    for jj in range(nb_pl):
-        overplot_one_data_model(param=param, l_param_name=l_param_name, datasim=datasim, dataset=dataset,
-                                datasim_kwargs=datasim_kwargs, post_instance=post_instance, oversamp=oversamp,
-                                supersamp_model=supersamp_model, exptime=exptime, phasefold=False,
-                                zoom=zoom_planets[jj], show_title=False, show_legend=False, ax_data=axes[jj * 2],
-                                ax_resi=axes[jj * 2 + 1])
-    fig.tight_layout(**kwargs_tl)
-
-
 def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance, key_obj=None, datasim_kwargs=None,
                multiplication_factor=1., supersamp=1, exptime=exptime_Kepler,
-               plot_phase=False, Per=None, tref=None, phasefold_central_phase=0., show_time_from_tref=False, time_fact=24,
-               pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True, force_plot_phase_GP=False,
+               pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_modelandGP=True,
                ax=None):
     """Plot the model.
 
@@ -1006,33 +817,12 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
         supersampling factor for the model (will be passed on to compute_model)
     exptime               : float
         Exposure time for the model (will be passed on to compute_model)
-    plot_phase            : bool
-        If true, plot the phase folded model.
-    Per                   : float
-        Period for the phase folding
-    tref                  : float
-        Reference time for the phase folding
-    phasefold_central_phase: float
-        Central orbital phase value (between 0 and 1) which specify the center for the phase folding.
-        For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
-        between 0 and 1.
-    show_time_from_tref   : bool
-        If True than the phase folded light curve are show as a function of the time from tref.
-        Only considered if plot_phase is True.
-    time_fact             : float
-        The time from tref is expressed in the same unit than the period by defaults. You can provide
-        a factor here that will be applied to the times.
-        Only considered if plot_phase is True.
     pl_kwargs_model       : dict
         Dictionary of keyword arguments for the plot of the model only
     pl_kwargs_modelandGP  : dict
         Dictionary of keyword arguments for the plot of the model+GP
     show_modelandGP       : bool
         Indicate if you want to plot the model+GP.
-    force_plot_phase_GP   : bool
-        It usually doesn't make much sens to plot the GP phase-folded. If you
-        want to do it anyway set force_plot_phase_GP to True. This override show_modelandGP when plot_phase
-        is True.
     ax                    : ~matplotlib.axes._axes.Axes
         Axes instance where the model will be ploted
 
@@ -1052,16 +842,14 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     tmax_plus = tmax + tsamp  # Add 1 point after tmax
     nt += 2
     t_plot = linspace(tmin_moins, tmax_plus, nt)
-    model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
-                                                                         param=param, l_param_name=l_param_name,
-                                                                         key_obj=key_obj, datasim_kwargs=datasim_kwargs,
-                                                                         supersamp=supersamp, exptime=exptime,
-                                                                         include_gp=True)
+    model, model_err = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
+                                                   param=param, l_param_name=l_param_name,
+                                                   key_obj=key_obj, datasim_kwargs=datasim_kwargs,
+                                                   supersamp=supersamp, exptime=exptime,
+                                                   include_gp=True)
     model *= multiplication_factor
-    if model_wGP is not None:
-        model_wGP *= multiplication_factor
-        GP_pred *= multiplication_factor
-        GP_pred_var *= multiplication_factor**2
+    if model_err is not None:
+        model_err *= multiplication_factor
 
     # Create a new figure and ax if needed
     ax = __get_default_ax(ax=ax)
@@ -1073,32 +861,34 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
     if pl_kwargs_model is not None:
         kwarg_model.update(pl_kwargs_model)
     # Plot the model
-    if plot_phase:
-        ebcont, _, _ = plot_phase_folded_timeserie(t_plot, model, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                                   show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                                   ax=ax, pl_kwargs=kwarg_model)
-    else:
-        ebcont = ax.errorbar(t_plot, model, **kwarg_model)
+    ebcont = ax.errorbar(t_plot, model, **kwarg_model)
     ebconts_lines_labels["model"] = {}
     ebconts_lines_labels["model"]["ebcont or line"] = ebcont
     ebconts_lines_labels["model"]["label"] = kwarg_model["label"]
 
     # Plot the model + GP
-    if ((model_wGP is not None) and show_modelandGP) and (not(plot_phase) or force_plot_phase_GP):
+    inst_mod_obj = post_instance.model.get_instmod(dataset_name=dataset_name)
+    noise_model = post_instance.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
+    if noise_model.has_GP and show_modelandGP:
         kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.}
+        GP, GP_err = post_instance.compute_model(tsim=t_plot, dataset_name=dataset_name,
+                                                 param=param, l_param_name=l_param_name,
+                                                 key_obj="GP", datasim_kwargs=datasim_kwargs,
+                                                 supersamp=supersamp, exptime=exptime,
+                                                 include_gp=True)
+
+        GP *= multiplication_factor
+        if GP_err is not None:
+            GP_err *= multiplication_factor
+
         if pl_kwargs_modelandGP is not None:
             kwarg_GP.update(pl_kwargs_modelandGP)
-        if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_plot, model_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                                           ax=ax, pl_kwargs=kwarg_GP)
-        else:
-            kwarg_GP_pred_var = kwarg_GP.copy()
-            kwarg_GP_pred_var["alpha"] = 0.4
-            kwarg_GP_pred_var.pop("fmt")
-            GP_pred_var = ax.fill_between(t_plot, model_wGP - np.sqrt(GP_pred_var), model_wGP + np.sqrt(GP_pred_var),
-                                          **kwarg_GP_pred_var)
-            ebcont_wGP = ax.errorbar(t_plot, model_wGP, **kwarg_GP)
+        kwarg_GP_pred_var = kwarg_GP.copy()
+        kwarg_GP_pred_var["alpha"] = 0.4
+        kwarg_GP_pred_var.pop("fmt")
+        GP_pred_var = ax.fill_between(t_plot, model + GP - GP_err, model + GP + GP_err,
+                                      **kwarg_GP_pred_var)
+        ebcont_wGP = ax.errorbar(t_plot, model, **kwarg_GP)
         ebconts_lines_labels["model+GP"] = {}
         ebconts_lines_labels["model+GP"]["ebcont or line"] = ebcont_wGP
         ebconts_lines_labels["model+GP"]["label"] = kwarg_GP["label"]
@@ -1108,10 +898,7 @@ def plot_model(tmin, tmax, nt, dataset_name, param, l_param_name, post_instance,
 def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=None,
                    datasim_kwargs=None, multiplication_factor=1.,
                    supersamp=1, exptime=exptime_Kepler, bin_size=0.,
-                   plot_phase=False, Per=None, tref=None, phasefold_central_phase=0., show_time_from_tref=False, time_fact=24,
-                   zoom=None,
-                   pl_kwargs_model=None, show_model=True, show_error_model=True,
-                   pl_kwargs_modelandGP=None, show_modelandGP=True, show_error_modelandGP=True,
+                   pl_kwargs_model=None, pl_kwargs_modelandGP=None, show_residuals_model_only=True,
                    ax=None):
     """Plot the residuals of the model.
 
@@ -1137,41 +924,16 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     bin_size              : float
         If you want to bin the residuals, provide here the size of the bins. If 0., no binning is done
         the bin size has to be provided in the same unit than the time of the data.
-    plot_phase            : bool
-        If true, plot the phase folded model.
-    Per                   : float
-        Period for the phase folding
-    tref                  : float
-        Reference time for the phase folding
-    phasefold_central_phase: float
-        Central orbital phase value (between 0 and 1) which specify the center for the phase folding.
-        For example if 0, the phase while be computed between -0.5 and 0.5. If 0.5 they will be computed
-        between 0 and 1.
-    show_time_from_tref   : bool
-        If True than the phase folded light curve are show as a function of the time from tref.
-        Only considered if plot_phase is True.
-    time_fact             : float
-        The time from tref is expressed in the same unit than the period by defaults. You can provide
-        a factor here that will be applied to the times.
-        Only considered if plot_phase is True.
-    zoom                  : TBD
     pl_kwargs_model       : dict
         Dictionary of keyword arguments for the plot of the model only
         You can specify some jitter specific kargs by creating an entry "jitter" whose is a dictionary
         with the kwargs specific for the jitter errorbar display
-    show_model            : bool
-        To show the residuals of the model. It is only used when the noise model is
-        includes a GP, because if not the residual of the model are always plotted.
-    show_error_model      : bool
-        To show the error bars
     pl_kwargs_modelandGP  : dict
         Dictionary of keyword arguments for the plot of the model+GP
         You can specify some jitter specific kargs by creating an entry "jitter" whose is a dictionary
         with the kwargs specific for the jitter errorbar display
-    show_modelandGP       : bool
-        Indicate if you want to plot the residuals of the model+GP.
-    show_error_modelandGP : bool
-        To show the error bars
+    show_residuals_model_only : bool
+        If True the residuals will be data - model and not data - (model + GP) even if there is a GP model.
     ax                    : ~matplotlib.axes._axes.Axes
         Axes instance where the model will be plotted
 
@@ -1206,18 +968,34 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
     data = dataset.get_data() * multiplication_factor
     data_err = dataset.get_data_err() * multiplication_factor
     # Compute residual
-    model, model_wGP, GP_pred, GP_pred_var = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
+    model, model_err = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
                                                                          param=param, l_param_name=l_param_name,
                                                                          key_obj=key_obj, datasim_kwargs=datasim_kwargs,
                                                                          supersamp=supersamp, exptime=exptime,
                                                                          include_gp=True)
     model *= multiplication_factor
-    if model_wGP is not None:
-        model_wGP *= multiplication_factor
-        GP_pred *= multiplication_factor
-        GP_pred_var *= multiplication_factor**2
+    if model_err is not None:
+        model_err *= multiplication_factor
 
     residual = data - model
+
+    # Compute GP if there is a GP and not (show_residuals_model_only)
+    inst_mod_obj = post_instance.model.get_instmod(dataset_name=dataset_name)
+    noise_model = post_instance.model.get_noise_model(noise_cat=inst_mod_obj.noise_model_category)
+    if noise_model.has_GP and not(show_residuals_model_only):
+        kwarg_GP = {"label": "model+GP", "color": "r", "fmt": "-", "alpha": 1.}
+        GP, GP_err = post_instance.compute_model(tsim=t_data, dataset_name=dataset_name,
+                                                 param=param, l_param_name=l_param_name,
+                                                 key_obj="GP", datasim_kwargs=datasim_kwargs,
+                                                 supersamp=supersamp, exptime=exptime,
+                                                 include_gp=True)
+
+        GP *= multiplication_factor
+        if GP_err is not None:
+            GP_err *= multiplication_factor
+
+        residual -= GP
+
     # Apply jitter if needed to the data_err and the RV_factor
     # Get the jitter value and jitter type
     instmod_obj = post_instance.model.get_instmod(dataset_name)
@@ -1229,171 +1007,44 @@ def plot_residuals(dataset_name, param, l_param_name, post_instance, key_obj=Non
         data_err_new = sqrt(compute_jitteredvar(data_err=data_err, jitter=jitter))
     else:
         data_err_new = data_err
-    # Perform zoom if needed (I do the zoom after computing the model with all the data because
-    # I am not sure that doing the zoom before will not change the result for GP noise model.)
-    # I do the zoom only if I don't want to phase fold, because in this case I can do it inside plot_phase_folded_timeserie
-    if (zoom is not None) and not(plot_phase):
-        extra_arrays_to_zoom = [data, model, residual] if data_err is None else [data, model, residual, data_err, data_err_new]
-        if model_wGP is not None:
-            extra_arrays_to_zoom.extend([model_wGP, GP_pred, GP_pred_var])
-        zoomed_arrays, idx_zoom = apply_zoom(zoom=zoom, base_array=t_data, arrays=extra_arrays_to_zoom)
-        t_zoom = zoomed_arrays[0]
-        data_zoom = zoomed_arrays[1]
-        model_zoom = zoomed_arrays[2]
-        residual_zoom = zoomed_arrays[3]
-        if data_err is None:
-            data_err_new_zoom = None
-            data_err_zoom = None
-            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[4]
-            GP_pred_zoom = None if (model_wGP is None) else zoomed_arrays[5]
-            GP_pred_var_zoom = None if (model_wGP is None) else zoomed_arrays[6]
-        else:
-            data_err_zoom = zoomed_arrays[4]
-            data_err_new_zoom = zoomed_arrays[5]
-            model_wGP_zoom = None if (model_wGP is None) else zoomed_arrays[6]
-            GP_pred_zoom = None if (model_wGP is None) else zoomed_arrays[7]
-            GP_pred_var_zoom = None if (model_wGP is None) else zoomed_arrays[8]
+
     # Intialise the returns variables:
     ebconts_lines_labels = {}  # returned dictionary
-    # Plot the residuals of model only (even if noise model is GP)
-    if show_model or (model_wGP is None):
-        kwarg_model = {"label": "model", "fmt": "."}
-        if pl_kwargs_model is not None:
-            dico_jitter = pl_kwargs_model.pop("jitter") if "jitter" in pl_kwargs_model else {}
-            kwarg_model.update(pl_kwargs_model)
-        else:
-            dico_jitter = {}
-        kwarg_model_jitter = kwarg_model.copy()
-        if "color" in kwarg_model:
-            kwarg_model_jitter["ecolor"] = kwarg_model["color"]
-        if "alpha" in kwarg_model:
-            kwarg_model_jitter["alpha"] = kwarg_model["alpha"] / 2
-        else:
-            kwarg_model_jitter["alpha"] = 0.5
-        kwarg_model_jitter.update(dico_jitter)
-        kwarg_model_jitter["fmt"] = "none"
-        if show_error_model:
-            data_err_model = data_err
-            data_err_new_model = data_err_new
-        else:
-            data_err_model = None
-            data_err_new_model = None
-        if plot_phase:
-            if bin_size > 0.:
-                raise NotImplementedError
-            else:
-                ebcont, _, _ = plot_phase_folded_timeserie(t_data, residual, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                                           data_err=data_err_model,
-                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                                           zoom=zoom, ax=ax, pl_kwargs=kwarg_model)
-            if noisemod_cat.has_jitter:
-                if not("ecolor" in kwarg_model_jitter):
-                    kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                            data_err=data_err_new_model, only_errorbar=True,
-                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_model_jitter)
-            residual_out = residual
-        else:
-            if zoom is not None:
-                if show_error_model:
-                    data_err_zoom_model = data_err_zoom
-                    data_err_new_zoom_model = data_err_new_zoom
-                else:
-                    data_err_zoom_model = None
-                    data_err_new_zoom_model = None
-                if show_error_model:
-                    data_err_zoom_model = data_err_zoom
-                    data_err_new_zoom_model = data_err_new_zoom
-                else:
-                    data_err_zoom_model = None
-                    data_err_new_zoom_model = None
-                ebcont = ax.errorbar(t_zoom, residual_zoom, data_err_zoom_model, **kwarg_model)
-                if noisemod_cat.has_jitter:
-                    if not("ecolor" in kwarg_model_jitter):
-                        kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                    ax.errorbar(t_zoom, residual_zoom, data_err_new_zoom_model, **kwarg_model_jitter)
-                residual_out = residual_zoom
-            else:
-                ebcont = ax.errorbar(t_data, residual, data_err_model, **kwarg_model)
-                if noisemod_cat.has_jitter:
-                    if not("ecolor" in kwarg_model_jitter):
-                        kwarg_model_jitter["ecolor"] = ebcont[0].get_color()
-                    ax.errorbar(t_data, residual, data_err_new_model, **kwarg_model_jitter)
-                residual_out = residual
-        ebconts_lines_labels["model"] = {}
-        ebconts_lines_labels["model"]["ebcont or line"] = ebcont
-        ebconts_lines_labels["model"]["label"] = kwarg_model["label"]
+    # Plot the residuals
+    pl_kwargs_2_use = {"fmt": "."}
+    if noise_model.has_GP and not(show_residuals_model_only):
+        pl_kwargs_2_use["label"] = "resi model+GP"
+        pl_kwargs_user_2_use = pl_kwargs_modelandGP.copy()
     else:
-        residual_out = None
-    # Plot the residuals of model + GP
-    if (model_wGP is not None) and show_modelandGP:
-        residual_wGP = data - model_wGP if zoom is None else data_zoom - model_wGP_zoom
-        kwarg_GP = {"label": "model+GP", "fmt": "."}
-        if pl_kwargs_modelandGP is not None:
-            dico_jitter = pl_kwargs_modelandGP.pop("jitter") if "jitter" in pl_kwargs_modelandGP else {}
-            kwarg_GP.update(pl_kwargs_modelandGP)
-        else:
-            dico_jitter = {}
-        kwarg_GP_jitter = kwarg_GP.copy()
-        if "color" in kwarg_GP:
-            kwarg_GP_jitter["ecolor"] = kwarg_GP["color"]
-        if "alpha" in kwarg_GP:
-            kwarg_GP_jitter["alpha"] = kwarg_GP["alpha"] / 2
-        else:
-            kwarg_GP_jitter["alpha"] = 0.5
-        kwarg_GP_jitter.update(dico_jitter)
-        kwarg_GP_jitter["fmt"] = "none"
-        if show_error_model:
-            data_err_modelandGP = data_err
-            data_err_new_modelandGP = data_err_new
-        else:
-            data_err_modelandGP = None
-            data_err_new_modelandGP = None
-        if plot_phase:
-            ebcont_wGP, _, _ = plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                                           data_err=data_err_modelandGP,
-                                                           show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                                           zoom=zoom, ax=ax, pl_kwargs=kwarg_GP)
-            if noisemod_cat.has_jitter:
-                if not("ecolor" in kwarg_GP_jitter):
-                    kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                plot_phase_folded_timeserie(t_data, residual_wGP, Per, tref, phasefold_central_phase=phasefold_central_phase,
-                                            data_err=data_err_new_modelandGP, only_errorbar=True,
-                                            show_time_from_tref=show_time_from_tref, time_fact=time_fact,
-                                            zoom=zoom, ax=ax, pl_kwargs=kwarg_GP_jitter)
-        else:
-            if zoom is not None:
-                if show_error_model:
-                    data_err_zoom_modelandGP = data_err_zoom
-                    data_err_new_zoom_modelandGP = data_err_new_zoom
-                else:
-                    data_err_zoom_modelandGP = None
-                    data_err_new_zoom_modelandGP = None
-                ebcont_wGP = ax.errorbar(t_zoom, residual_wGP, data_err_zoom_modelandGP, **kwarg_GP)
-                if noisemod_cat.has_jitter:
-                    if not("ecolor" in kwarg_GP_jitter):
-                        kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                    ax.errorbar(t_zoom, residual_wGP, data_err_new_zoom_modelandGP, **kwarg_GP_jitter)
-            else:
-                ebcont_wGP = ax.errorbar(t_data, residual_wGP, data_err_modelandGP, **kwarg_GP)
-                if noisemod_cat.has_jitter:
-                    if not("ecolor" in kwarg_GP_jitter):
-                        kwarg_GP_jitter["ecolor"] = ebcont_wGP[0].get_color()
-                    ax.errorbar(t_data, residual_wGP, data_err_new_modelandGP, **kwarg_GP_jitter)
-        ebconts_lines_labels["model+GP"] = {}
-        ebconts_lines_labels["model+GP"]["ebcont or line"] = ebcont_wGP
-        ebconts_lines_labels["model+GP"]["label"] = kwarg_GP["label"]
+        pl_kwargs_2_use["label"] = "resi model"
+        pl_kwargs_user_2_use = pl_kwargs_model.copy()
+    if pl_kwargs_user_2_use is not None:
+        dico_jitter = pl_kwargs_user_2_use.pop("jitter") if "jitter" in pl_kwargs_user_2_use else {}
+        pl_kwargs_2_use.update(pl_kwargs_user_2_use)
     else:
-        residual_wGP = None
+        dico_jitter = {}
+    pl_kwarg_jitter = pl_kwargs_2_use.copy()
+    if "alpha" not in dico_jitter:
+        if "alpha" in pl_kwarg_jitter:
+            pl_kwarg_jitter["alpha"] = pl_kwarg_jitter["alpha"] / 2
+        else:
+            pl_kwarg_jitter["alpha"] = 0.5
+    pl_kwarg_jitter.update(dico_jitter)
+    pl_kwarg_jitter["fmt"] = "none"
+    
+    ebcont = ax.errorbar(t_data, residual, data_err, **pl_kwargs_2_use)
+    if noisemod_cat.has_jitter:
+        if not("ecolor" in pl_kwarg_jitter):
+            pl_kwarg_jitter["ecolor"] = ebcont[0].get_color()
+        ax.errorbar(t_data, residual, data_err_new, **pl_kwarg_jitter)
+    ebconts_lines_labels["model"] = {}
+    ebconts_lines_labels["model"]["ebcont or line"] = ebcont
+    ebconts_lines_labels["model"]["label"] = pl_kwargs_2_use["label"]
     # Draw a line y=0 for the residuals
     xmin, xmax = ax.get_xlim()
     ax.hlines(y=0.0, xmin=xmin, xmax=xmax, color="k", linestyles="dashed", linewidth=1)
     ax.set_xlim(xmin, xmax)
-    if zoom is not None and not(plot_phase):
-        return t_zoom, model_zoom, model_wGP_zoom, GP_pred_zoom, GP_pred_var_zoom, residual_out, residual_wGP, ebconts_lines_labels
-    else:
-        return t_data, model, model_wGP, GP_pred, GP_pred_var, residual_out, residual_wGP, ebconts_lines_labels
+    return ebconts_lines_labels
 
 
 def apply_zoom(zoom, base_array, arrays=None):
