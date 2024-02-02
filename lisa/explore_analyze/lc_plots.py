@@ -375,7 +375,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     computed_models : dict
         Outputs of the compute_and_plot_model function calls
     """
+    # Define Y axis quantity name 
     y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
+    # Define kwargs_compute_model_4_key_model
     remove_dict_model = OrderedDict()
     for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
                             [False, False, False, False, True]
@@ -406,6 +408,22 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
     if "model_wGP" not in kwargs_compute_model_4_key_model_user:
         kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
+    # Define default values for pl_kwargs data in TS_kwargs
+    if TS_kwargs is None:
+        TS_kwargs = {}
+    pl_kwargs_TS = TS_kwargs.get("pl_kwargs", {})
+    if pl_kwargs_TS is None:
+        pl_kwargs_TS = {}
+    TS_kwargs["pl_kwargs"] = pl_kwargs_TS
+    pl_kwargs_TS_all = pl_kwargs_TS.get("all", {})
+    pl_kwargs_TS["all"] = pl_kwargs_TS_all
+    pl_kwargs_TS_all_data = pl_kwargs_TS_all.get("data", {})
+    pl_kwargs_TS_all["data"] = pl_kwargs_TS_all_data
+    if "color" not in pl_kwargs_TS_all_data:
+        pl_kwargs_TS_all_data["color"] = 'k'
+    if "alpha" not in pl_kwargs_TS_all_data:
+        pl_kwargs_TS_all_data["alpha"] = 0.1
+    # Call the create_TSNGLSP_plots function
     return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                                 y_name=y_name, inst_cat='LC',
                                 compute_raw_models_func=compute_raw_models,

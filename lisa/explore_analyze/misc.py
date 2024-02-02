@@ -363,14 +363,13 @@ def check_row4datasetname(row4datasetname, datasetnames):
     return row4datasetname, datasetnames4rowidx
 
 
-def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_binning_per_row,
-                  nb_rows, alpha_def_data=1., color_def_data=None, show_error_data_def=True):
+def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_binning_per_row, nb_rows):
     """
     """
-    pl_kwarg_data_def = {"fmt": ".", "alpha": alpha_def_data, "zorder": 20}
-    if color_def_data is not None:
-        pl_kwarg_data_def["color"] = color_def_data
+    pl_kwarg_data_def = {"fmt": ".", "color": None, "alpha": 1, "zorder": 20}
+    pl_kwarg_data_def.update(pl_kwargs.get("all", {}).get("data", {}))
     pl_kwarg_databinned_def = {"color": "r", "fmt": ".", "alpha": 1.0, "zorder": 30}
+    pl_kwarg_databinned_def.update(pl_kwargs.get("all", {}).get("data_binned", {}))
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
@@ -385,7 +384,7 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar", "zorder": 10}
     pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
     pl_kwarg_decorr_like_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
-    show_error_data = show_error_data_def
+    show_error_data = True
     show_error_databinned = True
 
     if pl_kwargs is None:

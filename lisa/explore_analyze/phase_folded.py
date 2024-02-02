@@ -283,8 +283,7 @@ def create_phasefolded_plots(post_instance, df_fittedval,
     # Define the default values
     (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
      ) = get_pl_kwargs(pl_kwargs=pl_kwargs, dico_nb_dstperinsts=dico_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
-                       bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
-                       nb_rows=nb_rows, alpha_def_data=0.1, color_def_data="k", show_error_data_def=False)
+                       bin_size=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
 
     # Init the outputs
     computed_models = {}
