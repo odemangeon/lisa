@@ -340,8 +340,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         ##############################################
         (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
          ) = get_pl_kwargs(pl_kwargs=TS_kwargs.get('pl_kwargs', None), dico_nb_dstperinsts=dico_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
-                           bin_size=exptime_bin, one_binning_per_row=one_binning_per_row,
-                           nb_rows=nb_rows, alpha_def_data=1, color_def_data=None, show_error_data_def=True)
+                           bin_size=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
 
         update_data_binned_label(pl_kwarg=pl_kwarg_final, key_data_binned="data_binned", datasetnames=datasetnames, bin_size=exptime_bin,
                                  bin_size_unit=time_unit, one_binning_per_row=one_binning_per_row,
