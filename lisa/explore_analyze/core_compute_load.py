@@ -369,6 +369,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         dico_outputs['dico_kwargs'][datasetname] = copy(post_instance.dataset_db[datasetname].get_all_datasetkwargs())
         dico_outputs['times'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("time"))
         dico_outputs['datas'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data"))
+        dico_outputs['rawdatas'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data"))
         dico_outputs['data_errs'][datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("data_err"))
         filename_info = mgr_inst_dst.interpret_data_filename(datasetname)
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
@@ -404,6 +405,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         # Apply amplitude fact
         ################################################################################
         dico_outputs['datas'][datasetname] *= amplitude_fact
+        dico_outputs['rawdatas'][datasetname] *= amplitude_fact
         dico_outputs['data_errs'][datasetname] *= amplitude_fact
         dico_outputs['data_err_worwojitters'][datasetname] *= amplitude_fact
         if dico_outputs['has_jitters'][datasetname]:
