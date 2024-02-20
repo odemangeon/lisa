@@ -67,13 +67,14 @@ class Core_PlanetStarModels_1model4allinst(metaclass=MandatoryReadOnlyAttr):
             if not(isinstance(dico_config_planet['do'], bool)):
                 raise ValueError(f"dico_config[{planet_name}]['do'] should be a boolean (got {dico_config_planet['do']})")
             self._set_do(planet_name=planet_name, do=dico_config_planet['do'])
-            dico_config_model_planet = dico_config_planet['model']
-            if 'category' not in dico_config_model_planet:
-                raise ValueError(f"dico_config[{planet_name}]['model'] should at least contain a keys 'category' which specify the category of the model to use ({self.l_available_model_category})")
-            model_category = dico_config_model_planet.pop('category')
-            self._define_model(planet_name=planet_name, model_category=model_category, dico_config_model=dico_config_model_planet,
-                               overwrite=True
-                               )
+            if self.get_do(planet_name=planet_name):
+                dico_config_model_planet = dico_config_planet['model']
+                if 'category' not in dico_config_model_planet:
+                    raise ValueError(f"dico_config[{planet_name}]['model'] should at least contain a keys 'category' which specify the category of the model to use ({self.l_available_model_category})")
+                model_category = dico_config_model_planet.pop('category')
+                self._define_model(planet_name=planet_name, model_category=model_category, dico_config_model=dico_config_model_planet,
+                                overwrite=True
+                                )
 
     def get_do(self, planet_name):
         """Get the do for the model.
@@ -272,20 +273,21 @@ class Core_PlanetStarModels_lmodel1inst(Core_PlanetStarModels_1model4allinst):
             if not(isinstance(dico_config_planet['do'], bool)):
                 raise ValueError(f"dico_config[{planet_name}]['do'] should be a boolean (got {dico_config_planet['do']})")
             self._set_do(planet_name=planet_name, do=dico_config_planet['do'])
-            for model_name, dico_config_model_planet in dico_config_planet['model_definitions'].items():
-                if 'category' not in dico_config_model_planet:
-                    raise ValueError(f"dico_config[{planet_name}]['model_definitions']['{model_name}'] should at least contain a keys 'category' which specify the category of the model to use ({self.l_available_model_category})")
-                model_category = dico_config_model_planet.pop('category')
-                self._define_model(model_name=model_name, planet_name=planet_name, model_category=model_category,
-                                   dico_config_model=dico_config_model_planet, overwrite=True
-                                   )
-            if set(dico_config_planet['model4instrument'].keys()) != set(self.l_inst_model_fullname):
-                raise ValueError(f"The list of instrument model name in dico_config[{planet_name}]['model4instrument'] doesn't match the expected list.\n"
-                                 f"The following keys of dico_config[{planet_name}]['model4instrument'] are not expected: {set(dico_config_planet['model4instrument'].keys()) - set(self.l_inst_model_fullname)}\n"
-                                 f"The following keys of dico_config[{planet_name}]['model4instrument'] expected but not present: {set(self.l_inst_model_fullname) - set(dico_config_planet['model4instrument'].keys())}\n"
-                                 )
-            for inst_model_fullname, model_names in dico_config_planet['model4instrument'].items():
-                self._set_model_names_4_inst_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname, model_names=model_names)
+            if self.get_do(planet_name=planet_name):
+                for model_name, dico_config_model_planet in dico_config_planet['model_definitions'].items():
+                    if 'category' not in dico_config_model_planet:
+                        raise ValueError(f"dico_config[{planet_name}]['model_definitions']['{model_name}'] should at least contain a keys 'category' which specify the category of the model to use ({self.l_available_model_category})")
+                    model_category = dico_config_model_planet.pop('category')
+                    self._define_model(model_name=model_name, planet_name=planet_name, model_category=model_category,
+                                    dico_config_model=dico_config_model_planet, overwrite=True
+                                    )
+                if set(dico_config_planet['model4instrument'].keys()) != set(self.l_inst_model_fullname):
+                    raise ValueError(f"The list of instrument model name in dico_config[{planet_name}]['model4instrument'] doesn't match the expected list.\n"
+                                    f"The following keys of dico_config[{planet_name}]['model4instrument'] are not expected: {set(dico_config_planet['model4instrument'].keys()) - set(self.l_inst_model_fullname)}\n"
+                                    f"The following keys of dico_config[{planet_name}]['model4instrument'] expected but not present: {set(self.l_inst_model_fullname) - set(dico_config_planet['model4instrument'].keys())}\n"
+                                    )
+                for inst_model_fullname, model_names in dico_config_planet['model4instrument'].items():
+                    self._set_model_names_4_inst_model(planet_name=planet_name, inst_model_fullname=inst_model_fullname, model_names=model_names)
 
     def get_l_model(self, planet_name, inst_model_fullname):
         """Get the do for the model.

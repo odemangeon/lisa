@@ -298,6 +298,7 @@ class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):
         l_dico_model_name = ["transit_model", "phasecurve_model", "occultation_model"]
         l_config_model_instance = [self.transit_model, self.phasecurve_model, self.occultation_model]
         for dict_name, config_model_instance in zip(l_dico_model_name, l_config_model_instance):
+            logger.debug(f"Loading {dict_name}")
             dico_model = dico_config_file[dict_name]
             config_model_instance.load_config(dico_config=dico_model)
 
