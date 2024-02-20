@@ -150,9 +150,9 @@ class GaussianModel(Core_1ModelConfig):
     def add_text_compute_lnlike(self, nparam_datasim, function_builder_1inst, function_shortname_1inst):
         tab = "    " 
         if self.use_Baluevfactor:
-            text_return = f"{tab}return -0.5 * npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1))**2 / concatenate(dict_datakwargs['data_err']) / (1 - (nparam_datasim / len(dict_datakwargs['data_err']))) - nplog(twopi / concatenate(dict_datakwargs['data_err'])))"
+            text_return = f"\n{tab}return -0.5 * npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1))**2 / concatenate(dict_datakwargs['data_err']) / (1 - (nparam_datasim / len(dict_datakwargs['data_err']))) - nplog(twopi / concatenate(dict_datakwargs['data_err'])))"
         else:
-            text_return = f"{tab}return -0.5 * npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1))**2 / concatenate(dict_datakwargs['data_err']) - nplog(twopi / concatenate(dict_datakwargs['data_err'])))"
+            text_return = f"\n{tab}return -0.5 * npsum((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1))**2 / concatenate(dict_datakwargs['data_err']) - nplog(twopi / concatenate(dict_datakwargs['data_err'])))"
         function_builder_1inst.add_to_body_text(text=text_return, function_shortname=function_shortname_1inst)
         function_builder_1inst.add_variable_to_ldict(variable_name='npsum', variable_content=npsum, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)
         function_builder_1inst.add_variable_to_ldict(variable_name='nplog', variable_content=nplog, function_shortname=function_shortname_1inst , exist_ok=False, overwrite=False)

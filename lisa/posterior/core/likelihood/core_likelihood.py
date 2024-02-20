@@ -106,6 +106,7 @@ class LikelihoodCreator(object):
         """
 
         dataset_included_in_datasim = datasim_docfunc.include_dataset_kwarg
+        tab_current = copy(tab)
 
         if not(dataset_included_in_datasim):
             raise NotImplementedError("For now, __likelihood_creator cannot be applied to a data "
@@ -161,8 +162,8 @@ class LikelihoodCreator(object):
         for func_shortname in l_func_shortname:
             func_builder.add_variable_to_ldict(variable_name="l_idx_param_dtsim", variable_content=l_idx_param_dtsim, function_shortname=func_shortname, exist_ok=False)
             func_builder.add_variable_to_ldict(variable_name="datasim_func_alldst", variable_content=datasim_all_dst_doc_func.function, function_shortname=func_shortname, exist_ok=False)
-            func_builder.add_to_body_text(text=f"{tab}sim_data = datasim_func_alldst({par_vec_name}[l_idx_param_dtsim]{additional_args_text})\n", function_shortname=func_shortname)
-            # func_builder.add_to_body_text(text=f"{tab}import numpy as np\n{tab}for data in sim_data:\n{tab}    print(np.isfinite(data).all())\n{tab}import pdb; pdb.set_trace()\n", function_shortname=func_shortname)
+            func_builder.add_to_body_text(text=f"{tab_current}sim_data = datasim_func_alldst({par_vec_name}[l_idx_param_dtsim]{additional_args_text})\n", function_shortname=func_shortname)
+            # func_builder.add_to_body_text(text=f"{tab_current}import numpy as np\n{tab_current}for data in sim_data:\n{tab_current}    print(np.isfinite(data).all())\n{tab_current}import pdb; pdb.set_trace()\n", function_shortname=func_shortname)
 
         # Create the dataset_kwargs dictionary
         dataset_kwargs = defaultdict(dict)
@@ -246,11 +247,13 @@ class LikelihoodCreator(object):
         if len(d_l_model_decorr_name_4_inst_cat) > 0:
             return_decorr = ["" for ii in range(datasim_docfunc.noutput)]
             for func_shortname in l_func_shortname:
+                tab_current = tab
                 # Only compute the spline decorrelation if sim_data is finite
                 if datasim_all_dst_doc_func.multi_output:
-                    func_builder.add_to_body_text(text=f"{tab}if all([isfinite(sim_data_i).all() for sim_data_i in sim_data]):\n", function_shortname=func_shortname)
+                    func_builder.add_to_body_text(text=f"{tab_current}if all([isfinite(sim_data_i).all() for sim_data_i in sim_data]):\n", function_shortname=func_shortname)
                 else:
-                    func_builder.add_to_body_text(text=f"{tab}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
+                    func_builder.add_to_body_text(text=f"{tab_current}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
+                tab_current = tab_current + tab
                 func_builder.add_variable_to_ldict(variable_name='logical_not', variable_content=logical_not, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 func_builder.add_variable_to_ldict(variable_name='isfinite', variable_content=isfinite, function_shortname=func_shortname, exist_ok=True, overwrite=False)
                 func_builder.add_variable_to_ldict(variable_name='all', variable_content=all, function_shortname=func_shortname, exist_ok=True, overwrite=False)
@@ -261,23 +264,23 @@ class LikelihoodCreator(object):
                         if decorr_body_text.endswith('\n'):
                             nb_rc -= 1
                         if nb_rc > 0:
-                            decorr_body_text = decorr_body_text.replace('\n', f'\n{tab}    ', nb_rc)
-                        func_builder.add_to_body_text(text=f"{tab}    {decorr_body_text}\n", function_shortname=func_shortname)
+                            decorr_body_text = decorr_body_text.replace('\n', f'\n{tab_current}', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab_current}{decorr_body_text}\n", function_shortname=func_shortname)
                         if func_shortname == func_shortname_plotdecorr:
                             plotdecorr_body_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["plotdecorr_body_text"]
                             nb_rc = plotdecorr_body_text.count('\n')
                             if plotdecorr_body_text.endswith('\n'):
                                 nb_rc -= 1
                             if nb_rc > 0:
-                                plotdecorr_body_text = plotdecorr_body_text.replace('\n', f'\n{tab}    ', nb_rc)
-                            func_builder.add_to_body_text(text=f"{tab}    {plotdecorr_body_text}\n", function_shortname=func_shortname)
+                                plotdecorr_body_text = plotdecorr_body_text.replace('\n', f'\n{tab_current}', nb_rc)
+                            func_builder.add_to_body_text(text=f"{tab_current}{plotdecorr_body_text}\n", function_shortname=func_shortname)
                         simdata_decorr = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["sim_data_decorr_text"]
                         nb_rc = simdata_decorr.count('\n')
                         if simdata_decorr.endswith('\n'):
                             nb_rc -= 1
                         if nb_rc > 0:
-                            simdata_decorr = simdata_decorr.replace('\n', f'\n{tab}    ', nb_rc)
-                        func_builder.add_to_body_text(text=f"{tab}    {simdata_decorr}\n", function_shortname=func_shortname)
+                            simdata_decorr = simdata_decorr.replace('\n', f'\n{tab_current}', nb_rc)
+                        func_builder.add_to_body_text(text=f"{tab_current}{simdata_decorr}\n", function_shortname=func_shortname)
                         if func_shortname == func_shortname_decorr:
                             l_decorr_output_text = d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["l_decorr_output_text"]
                             for ii in range(datasim_docfunc.noutput):
@@ -293,35 +296,36 @@ class LikelihoodCreator(object):
             if not(datasim_docfunc.multi_output):
                 return_decorr = return_decorr[0]
             # Write the return for the decorr and decorr_plot function
-            func_builder.add_to_body_text(text=f"{tab}    return {return_decorr}\n", function_shortname=func_shortname_decorr)
-            func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab_current}return {return_decorr}\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab_current[:-4]}else:\n", function_shortname=func_shortname_decorr)
             if not(datasim_docfunc.multi_output):
-                func_builder.add_to_body_text(text=f"{tab}    return {None}\n", function_shortname=func_shortname_decorr)
+                func_builder.add_to_body_text(text=f"{tab_current}return {None}\n", function_shortname=func_shortname_decorr)
             else:
-                func_builder.add_to_body_text(text=f"{tab}    return {[None for ii in range(datasim_docfunc.noutput)]}\n", function_shortname=func_shortname_decorr)
-            func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_plotdecorr)
-            func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite. No plot can be made.')\n", function_shortname=func_shortname_plotdecorr)
-            func_builder.add_to_body_text(text=f"{tab}return None\n", function_shortname=func_shortname_plotdecorr)
+                func_builder.add_to_body_text(text=f"{tab_current}return {[None for ii in range(datasim_docfunc.noutput)]}\n", function_shortname=func_shortname_decorr)
+            func_builder.add_to_body_text(text=f"{tab_current[:-4]}else:\n", function_shortname=func_shortname_plotdecorr)
+            func_builder.add_to_body_text(text=f"{tab_current}print('sim_data is not finite. No plot can be made.')\n", function_shortname=func_shortname_plotdecorr)
+            func_builder.add_to_body_text(text=f"{tab_current[:-4]}return None\n", function_shortname=func_shortname_plotdecorr)
         
         # Write the return for the lnlike function
         l_noisemodel_cat = list(dico_noisemodel.keys())
         if len(l_noisemodel_cat) > 1:
-            func_builder.add_to_body_text(text=f"{tab}    res = 0\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab_current}res = 0\n", function_shortname=func_shortname_lnlike)
             for noisemodel_cat in l_noisemodel_cat:
-                func_builder.add_to_body_text(text=f"{tab}    res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
-            func_builder.add_to_body_text(text=f"{tab}    return res\n", function_shortname=func_shortname_lnlike)
+                func_builder.add_to_body_text(text=f"{tab_current}res += lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab_current}return res\n", function_shortname=func_shortname_lnlike)
         else:
             noisemodel_cat = l_noisemodel_cat[0]
-            func_builder.add_to_body_text(text=f"{tab}    return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
-        func_builder.add_to_body_text(text=f"{tab}else:\n", function_shortname=func_shortname_lnlike)
-        func_builder.add_to_body_text(text=f"{tab}    print('sim_data is not finite! ')\n", function_shortname=func_shortname_lnlike)
-        if datasim_all_dst_doc_func.multi_output:
-            func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {{[l_dataset_name[idx_dst] for idx_dst, sim_data_ii in enumerate(sim_data) if not(isfinite(sim_data_ii).all())]}}')\n", function_shortname=func_shortname_lnlike)
-            func_builder.add_variable_to_ldict(variable_name='l_dataset_name', variable_content=l_dataset_name, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
-        else:
-            func_builder.add_to_body_text(text=f"{tab}    print(f'The simulator of the following dataset are not finite: {l_dataset_name[0]}')\n", function_shortname=func_shortname_lnlike)
-        func_builder.add_to_body_text(text=f"{tab}    return -inf\n", function_shortname=func_shortname_lnlike)
-        func_builder.add_variable_to_ldict(variable_name='inf', variable_content=inf, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
+            func_builder.add_to_body_text(text=f"{tab_current}return lnlike_{noisemodel_cat}(sim_data=format_simdata_{noisemodel_cat}(sim_data), param_noisemodel=format_param_{noisemodel_cat}({par_vec_name}), datasets_kwargs=format_datasetkwargs_{noisemodel_cat}(dataset_kwargs))\n", function_shortname=func_shortname_lnlike)
+        if len(d_l_model_decorr_name_4_inst_cat) > 0:
+            func_builder.add_to_body_text(text=f"{tab_current[:-4]}else:\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab_current}print('sim_data is not finite! ')\n", function_shortname=func_shortname_lnlike)
+            if datasim_all_dst_doc_func.multi_output:
+                func_builder.add_to_body_text(text=f"{tab_current}print(f'The simulator of the following dataset are not finite: {{[l_dataset_name[idx_dst] for idx_dst, sim_data_ii in enumerate(sim_data) if not(isfinite(sim_data_ii).all())]}}')\n", function_shortname=func_shortname_lnlike)
+                func_builder.add_variable_to_ldict(variable_name='l_dataset_name', variable_content=l_dataset_name, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
+            else:
+                func_builder.add_to_body_text(text=f"{tab_current}print(f'The simulator of the following dataset are not finite: {l_dataset_name[0]}')\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_to_body_text(text=f"{tab_current}return -inf\n", function_shortname=func_shortname_lnlike)
+            func_builder.add_variable_to_ldict(variable_name='inf', variable_content=inf, function_shortname=func_shortname_lnlike, exist_ok=True, overwrite=False)
 
         # Create the lnlike function
         logger.debug(f"text of {func_shortname_lnlike} lnlikelihood function :\n{func_builder.get_full_function_text(shortname=func_shortname_lnlike)}")

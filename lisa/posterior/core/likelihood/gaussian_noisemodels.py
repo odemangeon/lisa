@@ -191,6 +191,7 @@ class Gaussian_Noise_Models(Core_Noise_Model):
             dict_datakwargs["data"].append(datakwargs["data"])
             dict_datakwargs["data_err"].append(sqrt(compute_jitteredvar(data_err=datakwargs["data_err"], jitter={jitter})))
         """
+        lnlikefunc_text = lnlikefunc_text[:-1]  # Get rid of the last \n
         lnlikefunc_text = dedent(lnlikefunc_text).replace('\n', '\n    ')
 
         for inst_mod_fullname, instmod_obj in dico_instmodobj4instmodfullname.items():
