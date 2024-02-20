@@ -353,6 +353,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                     'dico_nb_dstperinsts': {},
                     'times': {},
                     'datas': {},
+                    'rawdatas': {},
                     'data_errs': {},
                     'data_err_jitters': {},
                     'data_err_worwojitters': {},
