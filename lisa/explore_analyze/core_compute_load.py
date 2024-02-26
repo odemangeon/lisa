@@ -131,6 +131,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     models                              : dict
     pl_kwarg                            : dict
     """
+    logger.debug(f"Start compute_and_plot_models for model {key_model} and dataset {datasetname}")
     # Make sure that remove_dict and add_dict have all necessary keys
     if remove_dict is None:
         remove_dict = OrderedDict()
@@ -156,6 +157,10 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     # Set fact_tsim_to_xsim if not provided
     if fact_tsim_to_xsim is None:
         fact_tsim_to_xsim = 1.
+
+    # If supersamp_bin_model is not superior to one there is no point in showing the binned model.
+    if (supersamp_bin_model is None) or not(supersamp_bin_model > 1):
+        plot_binned = False
 
     # Set xsim the x values for the plot
     if plot_binned or plot_unbinned:
@@ -332,6 +337,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                     _ = ax.fill_between(tsim, model - model_err, model + model_err,
                                         **pl_kwarg[datasetname][key_err],
                                         )
+    logger.debug(f"Finished compute_and_plot_models for model {key_model} and dataset {datasetname}")
     return models, pl_kwarg
 
 
@@ -368,6 +374,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     dico_outputs                        : dict
     kwargs_compute_model_4_key_model    : dict
     """
+    logger.debug("Start load_datasets_and_models")
     dico_outputs = {# 'dico_datasets': {},
                     'dico_kwargs': {},
                     'dico_nb_dstperinsts': {},
@@ -416,9 +423,9 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         else:
             dico_outputs['data_err_worwojitters'][datasetname] = dico_outputs['data_errs'][datasetname].copy()
 
-        ################################################################################
+        ######################
         # Apply amplitude fact
-        ################################################################################
+        ######################
         dico_outputs['datas'][datasetname] *= amplitude_fact
         dico_outputs['data_errs'][datasetname] *= amplitude_fact
         dico_outputs['data_err_worwojitters'][datasetname] *= amplitude_fact
@@ -482,7 +489,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         #####################################################
         if "residual" in dico_outputs['models'][datasetname]:
             dico_outputs['residuals'][datasetname] = dico_outputs['models'][datasetname]['residual']
-
+    logger.debug("Finished load_datasets_and_models")
     return dico_outputs, kwargs_compute_model_4_key_model
 
 

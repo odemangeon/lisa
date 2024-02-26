@@ -10,6 +10,7 @@ from collections import OrderedDict
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
 from scipy.stats import binned_statistic
+from loguru import logger
 
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
                    check_spec_by_column_or_row, check_spec_data_or_resi, check_datasetname4model4row,
@@ -205,9 +206,11 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
     computed_models : dict
         Outputs of the compute_and_plot_model function calls
     """
+    logger.debug("Start create_TSNGLSP_plots")
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
+    logger.debug("Setup figure structure and common parameters")
     # Make sure that create_axes_kwargs is well defined
     create_axes_kwargs_user = create_axes_kwargs if create_axes_kwargs is not None else {}
     create_axes_kwargs = {'main_gridspec': {}, 'gridspec_row_TS': {}, 'gridspec_col_TS': {}, 'add_twoaxeswithsharex_TS': {},
@@ -272,6 +275,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
     # TIME SERIES
     #############
     if TS_kwargs['do']:
+        logger.debug("Doing TS plot")
 
         # Make sure that rms_kwargs is well defined
         rms_kwargs_user = TS_kwargs.get('rms_kwargs', None) if TS_kwargs.get('rms_kwargs', None) is not None else {}
@@ -327,6 +331,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         # Set the binning variables
         one_binning_per_row = TS_kwargs.get("one_binning_per_row", False)
         exptime_bin = TS_kwargs.get("exptime_bin", 0.)
+        if exptime_bin is None:
+            exptime_bin = 0.
         binning_stat = TS_kwargs.get("binning_stat", "mean")
         supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 10)
         time_fact = TS_kwargs.get('time_fact', 1.)
@@ -351,9 +357,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         #################################
         computed_models = {}
 
-        #############################################################
-        # Make the data and residuals plots (full and zoomed if needed)
-        #############################################################
+        #######################################################################
+        # Make the data, models and residuals plots (full and zoomed if needed)
+        #######################################################################
         text_rms = OrderedDict()
         text_rms_binned = OrderedDict()
         show_title = TS_kwargs.get("show_title", True)
@@ -362,6 +368,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
             gs_ts_row = GridSpecFromSubplotSpec(1, nb_cols, subplot_spec=gs_ts[i_row], **create_axes_kwargs['gridspec_col_TS'])
 
             for i_col in range(nb_cols):
+                logger.debug(f"Doing TS plot for row {i_row}/{nb_rows}, column {i_col}/{nb_cols}")
                 gs_ts_i = gs_ts_row[i_col]
                 if i_col == 0:
                     tlims_i = tlims.get(i_row, tlims['all'])
@@ -410,6 +417,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     ####################
                     for model, show_model in show_dict.items():
                         if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')):
+                            logger.debug(f"Computing and plotting model {model} for dataset {datasetname} (row {i_row}, column {i_col})")
                             if datasetname4model4row[model][i_row] == 'all':
                                 xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
                             else:
@@ -487,10 +495,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
+                            logger.debug(f"Done: Compute and plot model {model} for dataset {datasetname} (row {i_row}, column {i_col})")
 
                     ###############
                     # Plot the data
                     ###############
+                    logger.debug(f"Plotting data for dataset {datasetname} (row {i_row}, column {i_col})")
                     if pl_show_error[datasetname]['data']:
                         ebcont = axe_data.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname],
                                                    yerr=dico_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
@@ -504,10 +514,11 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
 
                     else:
                         axe_data.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
-
+                    logger.debug(f"Done: Plot data for dataset {datasetname} (row {i_row}, column {i_col})")
                     ####################
                     # Plot the residuals
                     ####################
+                    logger.debug(f"Plotting residuals for dataset {datasetname} (row {i_row}, column {i_col})")
                     if pl_show_error[datasetname]['data']:
                         if dico_load['has_jitters'][datasetname]:
                             axe_resi.errorbar(x_values[datasetname], y=dico_load['residuals'][datasetname], yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
@@ -524,11 +535,13 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     text_rms_template = f"{{:{rms_kwargs['format']}}}"
                     text_rms[datasetname] = text_rms_template.format(std(dico_load['residuals'][datasetname][logical_and(x_values[datasetname] >= x_min_rms, x_values[datasetname] <= x_max_rms)]))
                     print(f"RMS {datasetname} = {text_rms[datasetname]} {unit} (raw cadence)")
+                    logger.debug(f"Done: Plot residuals for dataset {datasetname} (row {i_row}, column {i_col})")
 
                     ################################################################################
                     # Compute and Plot the binned data and residuals if one_binning_per_row is False
                     ################################################################################
                     if not(one_binning_per_row) and (exptime_bin > 0.):
+                        logger.debug(f"Plotting binned data and residuals for dataset {datasetname} (row {i_row}, column {i_col})")
                         x_min_data, x_max_data = (min(x_values[datasetname]), max(x_values[datasetname]))
                         bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
                         midbins = bins[:-1] + exptime_bin / 2
@@ -592,11 +605,13 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                         text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
                         text_rms_binned[datasetname] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
                         print(f"RMS {datasetname}: {text_rms_binned[datasetname]} {unit}")
+                        logger.debug(f"Done: Plot binned data and residuals for dataset {datasetname} (row {i_row}, column {i_col})")
 
                 ################################################################################
                 # Compute and Plot the binned data and residuals if one_binning_per_row is True
                 ################################################################################
                 if one_binning_per_row and (exptime_bin > 0.):
+                    logger.debug(f"Plotting binned data and residuals for row {i_row}, column {i_col}")
                     x_row = concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                     x_min_data, x_max_data = (min(x_row), max(x_row))
                     bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
@@ -656,7 +671,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
                     text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
                     print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {unit}")
-
+                    logger.debug(f"Done: Plot binned data and residuals for row {i_row}, column {i_col}")
                 # Draw a horizontal line at the level of reference stellar RV level
                 # current_xlims = axe_data.get_xlim()
                 # if remove_stellar_var:
@@ -676,6 +691,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                 ###################################
                 # Set ylims and indicate_y_outliers
                 ###################################
+                logger.debug(f"Setting ylims and indicating outliers for row {i_row}, column {i_col}")
                 # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
                 for axe, data_or_resi, points, in zip((axe_data, axe_resi),
                                                       ("data", "resi"),
@@ -698,26 +714,30 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
 
                 # # Draw a horizontal line at 0 in the residual plot
                 # axe_resi.hlines(0, *current_xlims, colors="k", linestyles="dashed")
+                logger.debug(f"Done: Set ylims and indicate outliers for row {i_row}, column {i_col}")
 
                 ############################
                 # Set the tlims if provided
                 ############################
+                logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
                 # Set the x axis limits
                 if (i_col == 1) or TS_kwargs.get('force_tlims', False):
                     axe_data.set_xlim(tlims_i)
                 else:
                     x_row = concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
                     axe_data.set_xlim((min(x_row), max(x_row)))
-
+                logger.debug(f"Done: Set xlims for row {i_row}, column {i_col}")
                 ##########################
                 # Set the legend if needed
                 ##########################
                 set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
+        logger.debug("Done: TS plot")
 
     ######################################
     # Generalized Lomb-Scargle Periodogram
     ######################################
     if GLSP_kwargs.get("do", True):
+        logger.debug("Doing GLSP plot")
         # Variable that are always available
         all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
         idx_sort = argsort(all_time)
@@ -986,6 +1006,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                         ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
                     labelleft = True if jj == 0 else False
                     ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
+        logger.debug("Done: GLSP plot")
+
     if TS_kwargs['do']:
         return dico_load, computed_models
     else:
