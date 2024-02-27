@@ -19,7 +19,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from loguru import logger
-from numpy import inf, isfinite, ones_like, sqrt, array, argsort
+from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff
 from dill import dump, load
 from os.path import join
 from os import getcwd, chdir
@@ -35,7 +35,7 @@ from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model import par_vec_name
 from .model.manager_model import Manager_Model
-from .model.datasimulator_timeseries_toolbox import time_vec
+from .model.datasimulator_timeseries_toolbox import time_vec, l_time_vec
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
 from ..exoplanet.model.gravgroup.model import GravGroup
@@ -534,6 +534,9 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         # Supersample the time if needed
         # print(f"key_obj: {key_obj}")
         # print(f"tsim[1] - tsim[0]: {tsim[1] - tsim[0]}")
+        if key_obj == "GP":
+            if any(diff(tsim) < 0.0):
+                raise ValueError("tsim is not sorted !")
         # import pdb; pdb.set_trace()
         if supersamp > 1:
             t_model = get_time_supersampled(tsim, supersamp, exptime)
@@ -563,13 +566,25 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             datasim_paramnames = datasim_docfunc.param_model_names_list
             for par in datasim_paramnames:
                 idx_param_datasim.append(l_param_name.index(par))
-            if f"{time_vec}" in datasim_docfunc.mand_kwargs_list:
-                mand_kwargs = {"t": t_model}
+            if datasim_docfunc.multi_dataset:
+                if l_time_vec in datasim_docfunc.mand_kwargs_list:
+                    mand_kwargs = {l_time_vec: [t_model for dst in datasim_docfunc.dataset_names_list]}
+                else:
+                    mand_kwargs = {}
             else:
-                mand_kwargs = {}
+                if time_vec in datasim_docfunc.mand_kwargs_list:
+                    mand_kwargs = {time_vec: t_model}
+                else:
+                    mand_kwargs = {}            
             model = datasim_function(param[idx_param_datasim], **mand_kwargs, **datasim_kwargs)
-            if f"{time_vec}" not in datasim_docfunc.mand_kwargs_list:
-                model = model * ones_like(t_model)
+            if datasim_docfunc.multi_output:
+                model = model[datasim_docfunc.dataset_names_list.index(dataset_name)]
+            
+            if not(any([time_arg in datasim_docfunc.mand_kwargs_list for time_arg in [time_vec, l_time_vec]])):
+                if datasim_docfunc.multi_output:
+                    model = [mod * ones_like(t_model) for mod in mod]
+                else:
+                    model = model * ones_like(t_model)
 
             # Model errors: at the moment in this if there is no model errors
             model_err = None
