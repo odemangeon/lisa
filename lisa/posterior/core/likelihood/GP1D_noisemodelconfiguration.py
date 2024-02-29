@@ -480,7 +480,7 @@ class QPCeleriteModel(Core_GP1DModel_Celerite):
             function_builder.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=func_shortname , exist_ok=False, overwrite=False)
             text_GP_kernel = f"\n{tab}gp.kernel = CustomTerm(B={dico_text_param[func_shortname]['B']}, C={dico_text_param[func_shortname]['C']}, L={dico_text_param[func_shortname]['L']}, P={dico_text_param[func_shortname]['P']})\n"
             function_builder.add_to_body_text(text=text_GP_kernel, function_shortname=func_shortname)
-            function_builder.add_variable_to_ldict(variable_name='CustomTerm', variable_content=CustomTerm, function_shortname=func_shortname , exist_ok=False, overwrite=False)
+            function_builder.add_variable_to_ldict(variable_name='CustomTerm', variable_content=self.CustomTerm, function_shortname=func_shortname , exist_ok=False, overwrite=False)
 
 
 class RotationCeleriteModel(Core_GP1DModel_Celerite):
@@ -639,36 +639,6 @@ class SHOCeleriteModel(Core_GP1DModel_Celerite):
             text_GP_kernel = f"\n{tab}gp.kernel = SHOTerm({arguments_text})\n"
             function_builder.add_to_body_text(text=text_GP_kernel, function_shortname=func_shortname)
             function_builder.add_variable_to_ldict(variable_name='SHOTerm', variable_content=SHOTerm, function_shortname=func_shortname , exist_ok=False, overwrite=False)
-
-    def add_text_compute_lnlike(self, function_builder_allGP1D, function_shortname_allGP1D, function_builder_GP1D, function_shortname_GP1D):
-        """Return the text of the GP kernel, the list of all parameters and list of the idx of the noise model parameters
-
-        Parameters
-        ----------
-        noise_models_GP1D       : GP1D_Noise_Models
-        l_params                : list of str
-            Current list of parameters full names for the whole likelihood function
-        l_params_noisemod       : list of str
-            Current list of parameters full names for the noise model part of the likelihood (not the datasimulators)
-        l_idx_param_noisemod    : list of int
-            Current list of indexes of the the parameters in l_params_noisemod in l_params
-        params_noisemod_name    : str
-        ldict                   : dict
-        function_builder_allGP1D        : 
-        function_shortname_allGP1D      :
-        """
-        dico = {}
-        dico_param = self.get_parameters(object_category=None)
-        for param_basename, param in dico_param['GP'].items():
-            function_builder_allGP1D.add_parameter(parameter=param, function_shortname=function_shortname_allGP1D, exist_ok=True)
-            function_builder_GP1D.add_parameter(parameter=param, function_shortname=function_shortname_GP1D, exist_ok=True)
-            dico[param_basename] = function_builder_GP1D.get_text_4_parameter(parameter=param, function_shortname=function_shortname_GP1D)
-            if self.log10(param_basename=param_basename):
-                dico[param_basename] = f"10**{dico[param_basename]}"
-        
-        function_builder_GP1D.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=function_shortname_GP1D , exist_ok=False, overwrite=False)
-        tab = "    " 
-        # text_return += f"{tab}import pdb; pdb.set_trace()"
 
 
 class Matern32CeleriteModel(Core_GP1DModel_Celerite):
