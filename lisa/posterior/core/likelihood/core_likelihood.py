@@ -206,6 +206,7 @@ class LikelihoodCreator(object):
                                                                   l_instmod_obj=[l_instmod_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_dataset_obj=[l_dataset_obj[ii] for ii in dico["l_idx_simdata"]],
                                                                   l_datasetkwargs_req=dico["l_datasetkwargs_req"],
+                                                                  dataset_kwargs=dataset_kwargs,
                                                                   datasim_has_multioutputs=datasim_all_dst_doc_func.multi_output,
                                                                   function_builder=func_builder,
                                                                   function_shortname=func_shortname_lnlike,

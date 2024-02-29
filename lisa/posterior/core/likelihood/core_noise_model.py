@@ -139,7 +139,7 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     #######################################
 
     def create_lnlikelihood_and_formatinputs(self, l_idx_simdata, l_instmod_obj, l_dataset_obj,
-                                             l_datasetkwargs_req, datasim_has_multioutputs,
+                                             l_datasetkwargs_req, dataset_kwargs, datasim_has_multioutputs,
                                              function_builder, function_shortname, l_paramsfullname_datasim):
         """Create the prefilled lnlikehood function (without the datasim) for the noise model and provide the function to format the inputs and provide the dataset_kwargs
 
@@ -162,6 +162,11 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
             List of dataset objects that are simulated by the sim_data elements using this noise model (whose indexes are given by l_idx_datasim).
         l_datasetkwargs_req         : list of list of string
             Give for each dataset obj, the list of datasetkwarg required
+        dataset_kwargs              : dict of dict or array
+            Dictionnary providing the content of all datasets
+            Format: {<dataset_name>: {<kwarg like "time", or "flux", etc>: vector corresponding to the kwarg}}
+            Some noise models (like GPs) require some kwarg vectors (like time) to be sorted. This argument is there to allow the function
+            to perform this sorting prior to the creation of the likelihood function and hardcode the result.
         l_likelihood_param_fullname : list of String
             Current list of parameter full names for the likelihood.
         datasim_has_multioutputs    : bool
