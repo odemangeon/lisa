@@ -366,6 +366,12 @@ def check_row4datasetname(row4datasetname, datasetnames):
 def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_binning_per_row, nb_rows):
     """
     """
+    if pl_kwargs is None:
+        pl_kwargs = {}
+    pl_kwarg_final = {}
+    pl_kwarg_jitter = {}
+    pl_show_error = {}
+
     pl_kwarg_data_def = {"fmt": ".", "color": None, "alpha": 1, "zorder": 20}
     pl_kwarg_data_def.update(pl_kwargs.get("all", {}).get("data", {}))
     pl_kwarg_databinned_def = {"color": "r", "fmt": ".", "alpha": 1.0, "zorder": 30}
@@ -386,12 +392,6 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_decorr_like_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
     show_error_data = True
     show_error_databinned = True
-
-    if pl_kwargs is None:
-        pl_kwargs = {}
-    pl_kwarg_final = {}
-    pl_kwarg_jitter = {}
-    pl_show_error = {}
 
     set_standard_keys = set(["model", "GP", "GP_err", "inst_var", "stellar_var", "sys_var", "decorrelation", "decorrelation_likelihood"])
     set_extra_keys = set(pl_kwargs.keys()) - set(datasetnames) - set_standard_keys
