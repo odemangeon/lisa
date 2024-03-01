@@ -188,11 +188,13 @@ class Core_GP1DModel(Core_1ModelConfig):
     # Dealing with the likelihood creation
     ######################################
     
-    def add_text_lnlike(self, function_builder, l_function_shortname, l_function_shortname_add_param_only=None):
+    def add_text_lnlike(self, text_sorted_kwargs, function_builder, l_function_shortname, l_function_shortname_add_param_only=None):
         """Add the text of the GP kernel and the text to return the lnlikelihood
 
         Parameters
         ----------
+        text_sorted_kwargs                  : dict_of_str
+            Dictionnary which for each dataset kwargs provides the text for the sorted vector for this kwarg.
         function_builder                    : 
         l_function_shortname                :
         l_function_shortname_add_param_only :
@@ -203,7 +205,7 @@ class Core_GP1DModel(Core_1ModelConfig):
 
         dico_text_param = self._add_GP_parameter_and_get_parameter_text(function_builder=function_builder, l_function_shortname=l_function_shortname + l_function_shortname_add_param_only)
         self._add_text_GP_kernel(dico_text_param=dico_text_param, function_builder=function_builder, l_function_shortname=l_function_shortname)
-        self._add_text_compute_lnlike(function_builder=function_builder, l_function_shortname=l_function_shortname)
+        self._add_text_compute_lnlike(text_sorted_kwargs=text_sorted_kwargs, function_builder=function_builder, l_function_shortname=l_function_shortname)
 
     def _add_text_compute_lnlike(self, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
@@ -214,14 +216,14 @@ class Core_GP1DModel(Core_1ModelConfig):
     # Dealing with the GP simulator creation for plots
     ##################################################
 
-    def add_text_gp_simulator(self, function_builder, l_function_shortname):
+    def add_text_gp_simulator(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """
         """
         dico_text_param = self._add_GP_parameter_and_get_parameter_text(function_builder=function_builder, l_function_shortname=l_function_shortname)
         self._add_text_GP_kernel(dico_text_param=dico_text_param, function_builder=function_builder, l_function_shortname=l_function_shortname)
-        self._add_text_compute_gpsim(function_builder=function_builder, l_function_shortname=l_function_shortname)
+        self._add_text_compute_gpsim(text_sorted_kwargs=text_sorted_kwargs, function_builder=function_builder, l_function_shortname=l_function_shortname)
 
-    def _add_text_compute_gpsim(self, function_builder, l_function_shortname):
+    def _add_text_compute_gpsim(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
         """
         raise NotImplementedError(f"You need to implement _add_text_compute_gpsim in class {self.__class__}")
@@ -238,25 +240,23 @@ class Core_GP1DModel(Core_1ModelConfig):
 
 class Core_GP1DModel_George(Core_GP1DModel):
 
-    def _add_text_compute_lnlike(self, function_builder, l_function_shortname):
+    def _add_text_compute_lnlike(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
-            text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return += f"{tab}return gp.log_likelihood(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)))\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
-            function_builder.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=func_shortname , exist_ok=False, overwrite=False)
     
-    def _add_text_compute_gpsim(self, function_builder, l_function_shortname):
+    def _add_text_compute_gpsim(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
-            text_return += f"{tab}return gp.predict((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)), tsim, return_var=True)\n"
+            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return += f"{tab}return gp.predict(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)), tsim, return_var=True)\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
-            function_builder.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=func_shortname , exist_ok=False, overwrite=False)
 
 
 class QPGeorgeModel(Core_GP1DModel_George):
@@ -405,26 +405,24 @@ class QPCGeorgeModel(Core_GP1DModel_George):
 
 class Core_GP1DModel_Celerite(Core_GP1DModel):
 
-    def _add_text_compute_lnlike(self, function_builder, l_function_shortname):
+    def _add_text_compute_lnlike(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
-            text_return += f"{tab}return gp.log_likelihood((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)))\n"
+            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return += f"{tab}return gp.log_likelihood(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)))\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
-            function_builder.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=func_shortname , exist_ok=False, overwrite=False)
     
-    def _add_text_compute_gpsim(self, function_builder, l_function_shortname):
+    def _add_text_compute_gpsim(self, text_sorted_kwargs, function_builder, l_function_shortname):
         """Add the text of the GP kernel and the text to return the GP simulation/prediction
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t=concatenate(dict_datakwargs['time']), yerr=concatenate(dict_datakwargs['data_err']), quiet=True)\n"
-            text_return += f"{tab}return gp.predict((concatenate(dict_datakwargs['data']) - concatenate(sim_data)).reshape((-1)), tsim, return_var=True)\n"
+            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return += f"{tab}return gp.predict(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)), tsim, return_var=True)\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
-            function_builder.add_variable_to_ldict(variable_name='concatenate', variable_content=concatenate, function_shortname=func_shortname , exist_ok=False, overwrite=False)
-    
+
 
 class QPCeleriteModel(Core_GP1DModel_Celerite):
 

@@ -212,6 +212,10 @@ class Core_Noise_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnl
     def create_gpsimulator_and_formatinputs(self, l_instmod_obj, l_dataset_obj, l_datasim_param_fullname):
         """Create the prefilled gp_simulator function (without the datasim) for the dataset provided and provide the function to format the inputs
 
+        WARNING: This function doesn't seem to be required as this is usefull only of one try to do a gp
+        simulator for a list of instrument model that are not modeled by the same GP model. Which I didn't had
+        to do. 
+
         This function might not be convenient for your noise model, in wich case you should overload it.
 
         The these output are then used by emcee_tools.compute_model function
