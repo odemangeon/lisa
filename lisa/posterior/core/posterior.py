@@ -581,10 +581,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 model = model[datasim_docfunc.dataset_names_list.index(dataset_name)]
             
             if not(any([time_arg in datasim_docfunc.mand_kwargs_list for time_arg in [time_vec, l_time_vec]])):
-                if datasim_docfunc.multi_output:
-                    model = [mod * ones_like(t_model) for mod in mod]
-                else:
-                    model = model * ones_like(t_model)
+                model = model * ones_like(t_model)
 
             # Model errors: at the moment in this if there is no model errors
             model_err = None
