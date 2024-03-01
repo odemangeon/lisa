@@ -50,6 +50,7 @@ class LikelihoodCreator(object):
             Dictionary giving the lnlikehood doc function for each dataset.
             key = dataset full name, value = LikelihoodDocFunc for this dataset.
         """
+        logger.debug(f"Start creating likelihoods for each dataset")
         # Initialise the output dictionary
         db = {}
         db_decorr = {}
@@ -64,11 +65,10 @@ class LikelihoodCreator(object):
             # ..., create the corresponding lnlikelihood doc function
             # For IND dataset you might not want to model them. In this case the datasim should be None
             if datasim is not None:
+                logger.debug(f"Start creating likelihoods for dataset {dataset_name}")
                 db[dataset_name], db_decorr[dataset_name] = self._create_lnlikelihood(datasim, dataset_db=dataset_db)
-            # db[dataset_name] = self.__lnlike_withdataset_creator(lnlike_doc_func.function,
-            #                                                      lnlike_doc_func.arg_list,
-            #                                                      data=dataset.get_data(),
-            #                                                      data_err=dataset.get_data_err())
+                logger.debug(f"Done creating likelihoods for dataset {dataset_name}")
+        logger.debug(f"Done creating likelihoods for each dataset")
         return db, db_decorr
 
     def _create_lnlikelihood(self, datasim_docfunc, dataset_db):
@@ -104,7 +104,7 @@ class LikelihoodCreator(object):
             function will take as arguments the parameters vector and the dataset kwargs.
         decorr_docfs    :
         """
-
+        # logger.debug(f"Start creating likelihood for datasim {datasim_docfunc}")
         dataset_included_in_datasim = datasim_docfunc.include_dataset_kwarg
         tab_current = copy(tab)
 
@@ -378,7 +378,7 @@ class LikelihoodCreator(object):
                                                               mand_kwargs_list=mand_kwargs,  # datasim.mand_kwargs_list[1:],  # to exclude the params_model_vect_name
                                                               opt_kwargs_dict=opt_kwargs  # datasim.opt_kwargs_dict,
                                                               )
-
+        # logger.debug(f"Done creating likelihood for datasim {datasim_docfunc}")
         return lnlike_docf, decorr_docfs
 
     # WARNING/TODO: Right now this function is not used, because I am not creating likelihoods without dataset
