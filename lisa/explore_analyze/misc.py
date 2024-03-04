@@ -113,21 +113,39 @@ def check_spec_by_column_or_row(spec_user, l_type_spec, spec_def, l_row_name=Non
         in l_type_spec
     """
     spec = {'all': spec_def}
-    possible_keys = ['all', ]
-    if l_row_name is not None:
-        possible_keys.extend(l_row_name)
-    if l_col_name is not None:
-        possible_keys.extend(l_col_name)
+    possible_top_keys = ['all', 'col', 'row', 'row,col']
+   
     if spec_user is None:
         pass
     elif any([isinstance(spec_user, type_i) for type_i in l_type_spec]):
         spec['all'] = spec_user
-    elif isinstance(spec_user, dict) and all([key in possible_keys for key in spec_user]):
-        spec.update(spec_user)
+    elif isinstance(spec_user, dict):
+        for top_key in spec_user:
+            if top_key not in possible_top_keys:
+                raise ValueError(f"{top_key} is not in the list of possible top keys ({possible_top_keys}).")
+            else:
+                if top_key == 'all' and any([isinstance(spec_user['all'], type_i) for type_i in l_type_spec]):
+                    spec['all'] = spec_user['all']
+                else:
+                    spec[top_key] = {}
+                    if top_key == 'row':
+                        possible_bottom_keys = l_row_name
+                    elif top_key == 'col':
+                        possible_bottom_keys = l_col_name
+                    else:  # top_key == 'row,col'
+                        possible_bottom_keys = []
+                        for row_name in l_row_name:
+                            for col_name in l_col_name:
+                                possible_bottom_keys.appends(f"{row_name},{col_name}")
+                    if (possible_bottom_keys is None) or (len(possible_bottom_keys) == 0):
+                        raise ValueError("Unable to build the list of possible bottom keys. This can happen if either l_row_name or l_col_name is None or empty.")
+                    for bottom_key in spec_user[top_key]:
+                        if bottom_key not in possible_bottom_keys:
+                            raise ValueError(f"{bottom_key} is not in the list of possible key for {top_key}.")
+                        if any([isinstance(spec_user[top_key][bottom_key], type_i) for type_i in l_type_spec]):
+                            spec[top_key][bottom_key] = spec_user[top_key][bottom_key]
     else:
-        raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {possible_keys}"
-                         f" and values of type {l_type_spec} which specify the spec per row or per column,"
-                         f" got {spec_user}"
+        raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {possible_top_keys}."
                          )
     return spec
 
@@ -196,7 +214,6 @@ def check_spec_for_data_or_resi_by_column_or_row(spec_user, l_row_name, l_col_na
         in l_type_spec
     """
     l_top_keys = ['data', 'resi']
-    l_bottom_keys = l_row_name + l_col_name + ['all', ]
     spec_user_for_define_spec = {key: None for key in l_top_keys}
     if spec_user is None:
         pass
@@ -206,10 +223,7 @@ def check_spec_for_data_or_resi_by_column_or_row(spec_user, l_row_name, l_col_na
     elif isinstance(spec_user, dict) and all([key in l_top_keys for key in spec_user]):
         spec_user_for_define_spec.update(spec_user)
     else:
-        raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {l_top_keys}"
-                         f" and values that or None or a {l_type_spec} or a dict with keys in {l_bottom_keys}"
-                         f" and values of type {l_type_spec} which specify the spec per row or per column for each in {l_top_keys},"
-                         f" got {spec_user}")
+        raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {l_top_keys}.")
     spec = {}
     for key in ['data', 'resi']:
         spec[key] = check_spec_by_column_or_row(spec_user=spec_user_for_define_spec[key], l_row_name=l_row_name,
@@ -313,10 +327,26 @@ def define_x_or_y_lims(x_or_ylims, row_name, col_name):
     """
     """
     x_or_ylims_to_use = x_or_ylims['all']
-    if row_name in x_or_ylims:
-        x_or_ylims_to_use = x_or_ylims[row_name]
-    if col_name in x_or_ylims:
-        x_or_ylims_to_use = x_or_ylims[col_name]
+    if not(("row" in x_or_ylims) and ("col" in x_or_ylims)):
+        if "row" in x_or_ylims:
+            if row_name in x_or_ylims["row"]:
+                x_or_ylims_to_use = x_or_ylims["row"][row_name]
+        elif "col" in x_or_ylims:
+            if col_name in x_or_ylims["col"]:
+                x_or_ylims_to_use = x_or_ylims["col"][col_name]
+    else:
+        raise ValueError("You cannot provide both 'row' and 'col' in x_or_ylims. You have to provide one or the other or 'row,col' or none of the 3.")
+    if "row,col" in x_or_ylims:
+        if f"{row_name},{col_name}" in x_or_ylims:
+            x_or_ylims_to_use = x_or_ylims["row,col"][f"{row_name},{col_name}"]
+    else:
+        if (row_name in x_or_ylims) and (col_name in x_or_ylims):
+            raise ValueError(f"Your definition is ambiguous as both row_name ({row_name}) and col_name ({col_name}) are in x_or_ylims.")
+        else:
+            if row_name in x_or_ylims:
+                x_or_ylims_to_use = x_or_ylims[row_name]
+            elif col_name in x_or_ylims:
+                x_or_ylims_to_use = x_or_ylims[col_name]
     return x_or_ylims_to_use
 
 
