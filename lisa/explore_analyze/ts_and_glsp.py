@@ -43,6 +43,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                          d_name_component_removed_to_print,
                          show_dict, l_model_1_per_row,
                          datasetnames4model4row=None,
+                         compute_GP_model=True,
+                         split_GP_computation=None,
                          datasim_kwargs=None,
                          datasetnames=None,
                          amplitude_fact=1., unit=None,
@@ -253,11 +255,12 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                   compute_raw_models_func=compute_raw_models_func,
                                   remove_add_model_components_func=remove_add_model_components_func,
                                   kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                  compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
                                   l_valid_model=l_valid_model,
                                   get_key_compute_model_func=get_key_compute_model_func,
                                   is_valid_model_available_func=is_valid_model_available_func,
                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
-                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model
+                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                   )
 
     # Do the suptitle
@@ -448,6 +451,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             remove_dict=kwargs_compute_model.get('remove_dict', {}),
                                                             add_dict=kwargs_compute_model.get('add_dict', {}),
                                                             compute_only_raw_models=False,
+                                                            compute_GP_model=compute_GP_model,
+                                                            split_GP_computation=split_GP_computation,
                                                             compute_binned=False,
                                                             exptime_bin=None,
                                                             supersamp_bin_model=None,
@@ -480,6 +485,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             remove_dict=kwargs_compute_model.get('remove_dict', {}),
                                                             add_dict=kwargs_compute_model.get('add_dict', {}),
                                                             compute_only_raw_models=False,
+                                                            compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
                                                             compute_binned=show_binned_model,
                                                             exptime_bin=exptime_bin,
                                                             supersamp_bin_model=supersamp_bin_model,
@@ -585,16 +591,16 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                 if dico_load['has_jitters'][datasetname]:
                                     binstd_jitter[i_bin] = nan
                         # Plot the binned data
-                        bin_err = binstd if pl_show_error[datasetname]["databinned"] else None
-                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
-                        if not("color" in pl_kwarg_final[datasetname]["databinned"]):
-                            pl_kwarg_final[datasetname]["databinned"]["color"] = ebcont_binned[0].get_color()
-                        if not("ecolor" in pl_kwarg_jitter[datasetname]["databinned"]):
-                            pl_kwarg_jitter[datasetname]["databinned"] = pl_kwarg_final[datasetname]["databinned"]["color"]
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["databinned"])
-                        if dico_load['has_jitters'][datasetname] and pl_show_error[datasetname]["databinned"]:
-                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
-                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["databinned"])
+                        bin_err = binstd if pl_show_error[datasetname]["data_binned"] else None
+                        ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[datasetname]["data_binned"])
+                        if not("color" in pl_kwarg_final[datasetname]["data_binned"]):
+                            pl_kwarg_final[datasetname]["data_binned"]["color"] = ebcont_binned[0].get_color()
+                        if not("ecolor" in pl_kwarg_jitter[datasetname]["data_binned"]):
+                            pl_kwarg_jitter[datasetname]["data_binned"] = pl_kwarg_final[datasetname]["data_binned"]["color"]
+                        _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[datasetname]["data_binned"])
+                        if dico_load['has_jitters'][datasetname] and pl_show_error[datasetname]["data_binned"]:
+                            _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["data_binned"])
+                            _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[datasetname]["data_binned"])
                         # Compute rms of the binned residuals
                         x_min_rms = x_min_data
                         if tlims_i is not None and tlims_i[0] is not None:
