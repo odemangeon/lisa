@@ -216,6 +216,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             remove_dict=None,
                             kwargs_compute_model_4_key_model=None,
                             show_dict=None, datasetnames4model4row=None,
+                            compute_GP_model=True,
+                            split_GP_computation=None,
                             TS_kwargs=None, GLSP_kwargs=None,
                             create_axes_kwargs=None,
                             suptitle_kwargs=None,
@@ -429,6 +431,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 compute_raw_models_func=compute_raw_models,
                                 remove_add_model_components_func=remove_add_model_components,
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                compute_GP_model=compute_GP_model,
+                                split_GP_computation=split_GP_computation,
                                 l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
@@ -509,6 +513,7 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
                        is_valid_model_available_func=is_valid_model_available,
                        kwargs_is_valid_model_available=None,
                        kwargs_get_key_compute_model=None,
+                       split_GP_computation=None,
                        ):
     """
     """
@@ -524,4 +529,5 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
                                        is_valid_model_available_func=is_valid_model_available_func,
                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                       split_GP_computation=split_GP_computation
                                        )

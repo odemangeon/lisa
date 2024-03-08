@@ -19,7 +19,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from loguru import logger
-from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff
+from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff, ceil, concatenate
 from dill import dump, load
 from os.path import join
 from os import getcwd, chdir
@@ -510,7 +510,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
     def compute_model(self, tsim, dataset_name, param, l_param_name, key_obj=None, datasim_kwargs=None,
-                      supersamp=1, exptime=30 / (24 * 60), include_gp=False):
+                      supersamp=1, exptime=30 / (24 * 60), include_gp=False, split_GP_computation=0):
         """Function to compute the models of one dataset for display purposes.
 
         Arguments
@@ -599,6 +599,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
             # Compute GP contribution if needed.
             if noise_model.has_GP:
+
                 GP_config, GP_name = noise_model.get_GP_model(inst_model_fullname=instmod_fullname)
                 # Get the list of datasets using the same GP kernel
                 l_dataset_sameGP = noise_model.get_l_datasetname_4_GP_name(GP_name=GP_name)  # Defined in Sub_class of Core_Noise_Model
@@ -637,8 +638,29 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 l_idx_param_gpsim = []
                 for param_fullname_ii in l_gp_sim_param_full_name:
                     l_idx_param_gpsim.append(l_param_name.index(param_fullname_ii))
-                gp_pred, gp_pred_var = gp_simulator(p_vect=param[l_idx_param_gpsim], sim_data=sim_data,
-                                                    l_datakwargs=datasets_kwargs, tsim=t_model)
+                if split_GP_computation is None:
+                    l_l_idx_t_model = [range(len(t_model)), ]
+                else:
+                    l_l_idx_t_model = []
+                    nb_idx_already_in_splits = 0
+                    while nb_idx_already_in_splits < len(t_model):
+                        nb_idx_now_in_splits = nb_idx_already_in_splits + split_GP_computation
+                        if nb_idx_now_in_splits > len(t_model):
+                            nb_idx_now_in_splits = len(t_model)
+                        l_l_idx_t_model.append(list(range(nb_idx_already_in_splits, nb_idx_now_in_splits)))
+                        nb_idx_already_in_splits = nb_idx_now_in_splits
+                gp_pred = []
+                gp_pred_var = []
+                logger.debug(f"Splitting the GP computation in {len(l_l_idx_t_model)}. Nb time sample in each split: {[len(l_idx_t_model_i) for l_idx_t_model_i in l_l_idx_t_model]}")
+                for ii, l_idx_t_model_i in enumerate(l_l_idx_t_model):
+                    logger.debug(f"Start computation GP for split {ii+1}/{len(l_l_idx_t_model)}")
+                    gp_pred_i, gp_pred_var_i = gp_simulator(p_vect=param[l_idx_param_gpsim], sim_data=sim_data,
+                                                            l_datakwargs=datasets_kwargs, tsim=t_model[l_idx_t_model_i])
+                    gp_pred.append(gp_pred_i)
+                    gp_pred_var.append(gp_pred_var_i)
+                    logger.debug(f"Done computation GP for split {ii+1}/{len(l_l_idx_t_model)}")
+                gp_pred = concatenate(gp_pred)
+                gp_pred_var = concatenate(gp_pred_var)
                 if supersamp > 1:
                     idx_desort_t_model = argsort(idx_sort_t_model)
                     gp_pred = gp_pred[idx_desort_t_model]
