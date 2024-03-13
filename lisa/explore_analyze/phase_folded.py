@@ -429,11 +429,11 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                     if plnt == planetorperiod_name:
                         continue
                     else:
-                        model_pl_only = post_instance.compute_model(tsim=dico_load['times'][datasetname], dataset_name=datasetname,
-                                                                    param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
-                                                                    key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs,
-                                                                    include_gp=False
-                                                                    )
+                        model_pl_only, model_pl_err = post_instance.compute_model(tsim=dico_load['times'][datasetname], dataset_name=datasetname,
+                                                                                  param=df_fittedval["value"], l_param_name=list(df_fittedval.index),
+                                                                                  key_obj=f"{plnt}", datasim_kwargs=datasim_kwargs,
+                                                                                  include_gp=False
+                                                                                  )
                         model_pl_only *= amplitude_fact
                         data_plorper[datasetname] = data_plorper[datasetname] - model_pl_only
 
