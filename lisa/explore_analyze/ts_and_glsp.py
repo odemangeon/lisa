@@ -23,10 +23,6 @@ from .core_compute_load import (load_datasets_and_models, compute_and_plot_model
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
 
-import sys
-path_pyGLS = "/Users/olivier/Softwares/PyGLS"
-if path_pyGLS not in sys.path:
-    sys.path.append(path_pyGLS)
 from gls_mod import Gls
 
 
