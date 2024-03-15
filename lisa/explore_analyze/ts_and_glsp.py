@@ -954,7 +954,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                 #####################################
                 for per, dico_per in GLSP_kwargs.get('periods', {}).items():
                     vlines_kwargs = dico_per.get("vlines_kwargs", {})
-                    lines_per = ax_gls[ii].vlines(1 / per / day2sec * freq_fact, *ylims, **vlines_kwargs)
+                    freq_4_per = 1 / per / day2sec * freq_fact
+                    lines_per = ax_gls[ii].vlines(freq_4_per, *ylims, **vlines_kwargs)
                     if key == "data":
                         text_kwargs = dico_per.get("text_kwargs", {}).copy()
                         x_shift = text_kwargs.pop("x_shift", 0)
@@ -963,7 +964,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                         color = text_kwargs.pop("color", None)
                         if color is None:
                             color = lines_per.get_color()[0]
-                        ax_gls_twin[ii].text(1 / (per) / day2sec * freq_fact + x_shift * (xlims[1] - xlims[0]),
+                        ax_gls_twin[ii].text(freq_4_per + x_shift * (xlims[1] - xlims[0]),
                                              ylims[0] + y_pos * (ylims[1] - ylims[0]), label, color=color,
                                              fontsize=fontsize, **text_kwargs)
                 ax_gls[ii].set_ylim(ylims)
