@@ -122,7 +122,7 @@ freq_unit = "$\mu$Hz"
 
 freq_lims = (0, 120)
 
-periods = {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
+periods = {df_fittedval.loc["b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
                                                           "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
                                                           },
            }
@@ -162,6 +162,8 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              remove_dict=remove_dict,
                              show_dict=show_dict,
                              datasetnames4model4row=datasetnames4model4row,
+                             compute_GP_model=True,
+                             split_GP_computation=1000,
                              TS_kwargs={"do": do_TS,
                                         "npt_model": 5000,
                                         "exptime_bin": exptime_bin,
