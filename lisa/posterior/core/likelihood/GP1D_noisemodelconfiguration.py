@@ -295,9 +295,6 @@ class QPGeorgeModel(Core_GP1DModel_George):
             Keys are function short names in function_builder (elements of l_function_shortname) values are dictionaries
             whose keys are parameter names and values are text of the parameters to use in the function
         """
-        if l_function_shortname_add_param_only is None:
-            l_function_shortname_add_param_only = []
-
         dico = {func_shortname: {} for func_shortname in l_function_shortname}
         dico_param = self.get_parameters(object_category=None)
         for param_basename, param in dico_param['GP'].items():
@@ -367,9 +364,6 @@ class QPCGeorgeModel(Core_GP1DModel_George):
             Keys are function short names in function_builder (elements of l_function_shortname) values are dictionaries
             whose keys are parameter names and values are text of the parameters to use in the function
         """
-        if l_function_shortname_add_param_only is None:
-            l_function_shortname_add_param_only = []
-
         dico = {func_shortname: {} for func_shortname in l_function_shortname}
         dico_param = self.get_parameters(object_category=None)
         for param_basename, param in dico_param['GP'].items():
