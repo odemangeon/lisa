@@ -1,4 +1,0 @@
-from ldtk import LDPSetCreator, BoxcarFilter
-
-
-filter = 
