@@ -26,6 +26,7 @@ dependencies:
     - celerite2
     - kelp
     - PyAstronomy[occult]
+    - batman-package
 
 variables:
   LISAPATH: /Users/olivier/Softwares/lisa
