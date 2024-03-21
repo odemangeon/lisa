@@ -22,7 +22,7 @@ class Planet(Core_ParamContainer):
 
     __category__ = "planets"
 
-    def __init__(self, name="", **kwargs):
+    def __init__(self, name="", name_prefix=None):
         """docstring Planet init method.
 
         :param str name: (default: ""), Name of the star (if the star is K2-19_b, its name will be 'b')
@@ -30,7 +30,10 @@ class Planet(Core_ParamContainer):
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
         Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
-        super(Planet, self).__init__(name=name, **kwargs)
+        super(Planet, self).__init__(name=name, name_prefix=name_prefix, 
+                                     kwargs_getname_4_storename={"include_prefix": False, "code_version": True}, 
+                                     kwargs_getname_4_codename={"include_prefix": False, "code_version": True}, 
+                                     kwargs_getname_4_fullname=None)
         ## Radius of the planet
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the planet
@@ -159,7 +162,7 @@ class Star(Core_ParamContainer):
     # __name_coeff_const_LC__ = "F0"
     # __name_coeff_const_RV__ = "v0"
 
-    def __init__(self, name="", **kwargs):
+    def __init__(self, name="", name_prefix=None):
         """docstring Planet init method.
 
         :param str name: (default: ""), Name of the star (if the star is K2-19_A, its name will be 'A'
@@ -167,7 +170,10 @@ class Star(Core_ParamContainer):
         Keyword arguments are passed to Core_Paramcontainer.__init__ (see docstring for more info).
         Only name_prefix should not be provided as arguments, since it set automatically to gravgroup.name
         """
-        super(Star, self).__init__(name=name, **kwargs)
+        super(Star, self).__init__(name=name, name_prefix=name_prefix, 
+                                   kwargs_getname_4_storename={"include_prefix": False, "code_version": True}, 
+                                   kwargs_getname_4_codename={"include_prefix": False, "code_version": True}, 
+                                   kwargs_getname_4_fullname=None)
         ## Radius of the star
         self.add_parameter(Parameter(name="R", name_prefix=self.name, main=False))
         ## Mass of the star

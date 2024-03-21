@@ -156,19 +156,18 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         # Initialise the planets in the system
         ## planets: ordered dictionary of the planets in the grav group
         planets = dico_config_file['planets']
+        self.add_a_paramcontainer_category(category=Planet.category, store_name_rules=Planet.store_name_rules)
         if isinstance(planets, int):
-            if planets >= 1:
+            if planets >= 0:
                 self.add_planets(number=planets)
             else:
-                raise ValueError("If you specify the number of planets, it should be "
-                                 "strictly positive ! Got {}".format(planets))
+                raise ValueError(f"If you specify the number of planets, it should be positive ! Got {planets}")
         elif isinstance(planets, list) and isinstance(planets[0], str):
             self.add_planets(number=len(planets), names=planets)
         elif planets is None:
             pass
         else:
-            raise ValueError("planets should be either a strictly positive int or a list of sting "
-                             "or None. Got {}".format(planets))
+            raise ValueError(f"planets should be either a positive int or a list of string or None. Got {planets}")
         # Initialize orbital_model
         l_inst_model_fullname_4_orbital_model = []
         for InstCat_Model in [LC_InstCat_Model, RV_InstCat_Model]:
@@ -217,7 +216,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
     def init_kwargs(self):
         """Return the dictionary giving the arguments for the define_model method of Posterior."""
         dico = {}
-        dico["stars"] = self.nb_star
+        dico["stars"] = self.nb_stars
         dico["planets"] = self.nb_planets
         # dico["parametrisation"] = self.parametrisation
         return dico
@@ -226,8 +225,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
     ## Dealing with Stars and planet instances
     ##########################################
 
-    def add_a_star(self, name=None, kwargs_getname_4_storename={"include_prefix": False, "code_version": True},
-                   kwargs_getname_4_codename={"include_prefix": False, "code_version": True}):
+    def add_a_star(self, name=None):
         """Add a Star in the GravGroup.
 
         :param str/None name: Name of the star (ex: A, B and should not include gravgroup name)
@@ -241,8 +239,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         else:
             list_of_possible_name = [name]
         for possible_name in list_of_possible_name:
-            star = Star(name=possible_name, kwargs_getname_4_storename=kwargs_getname_4_storename,
-                        kwargs_getname_4_codename=kwargs_getname_4_codename)
+            star = Star(name=possible_name)
             if self.isavailable_paramcontainer(star.store_name, category=star.category):
                 continue
             else:
@@ -264,11 +261,10 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         return self.paramcontainers["stars"]
 
     @property
-    def nb_star(self):
+    def nb_stars(self):
         return self.nb_of_paramcontainers["stars"]
 
-    def add_a_planet(self, name=None, kwargs_getname_4_storename={"include_prefix": False, "code_version": True},
-                     kwargs_getname_4_codename={"include_prefix": False, "code_version": True}):
+    def add_a_planet(self, name=None):
         """Add a Planet in the GravGroup.
 
         :param str/None name: Name of the star (ex: A, B and should not include gravgroup name)
@@ -282,8 +278,7 @@ class GravGroup(Core_Model):  # GravGroup_Parametrisation has to be before Core_
         else:
             list_of_possible_name = [name]
         for possible_name in list_of_possible_name:
-            planet = Planet(name=possible_name, kwargs_getname_4_storename=kwargs_getname_4_storename,
-                            kwargs_getname_4_codename=kwargs_getname_4_codename)
+            planet = Planet(name=possible_name)
             if self.isavailable_paramcontainer(planet.store_name, category=planet.category):
                 continue
             else:

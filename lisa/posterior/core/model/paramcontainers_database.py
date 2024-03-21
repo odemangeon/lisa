@@ -37,6 +37,25 @@ class ParamContainerDatabase(object):
         """ParamContainers contained in the models sorted into categorie."""
         return self._store_name_rules
 
+    def add_a_paramcontainer_category(self, category, store_name_rules=None):
+        """Add a paramcontainer category to the model.
+
+        Arguments
+        ---------
+        category    : str
+            Give the paramcontainer category to be created
+        """
+        if not(isinstance(category, str)):
+            raise ValueError(f"category should be a str, got a {type(category)} ({category}).")
+        # Could check better that store_name_rules is valid
+        if store_name_rules is None:
+            store_name_rules = {"include_prefix": False, "code_version": True}
+        if category in self.paramcontainers:
+            logger.warning(f"Paramcontainer category {category} already exists")
+        else:
+            self.paramcontainers.update({category: OrderedDict()})
+        self.store_name_rules_db.update({category: store_name_rules})
+
     def add_a_paramcontainer(self, paramcontainer, force=False):
         """Add a paramcontainer to the model.
 
@@ -51,8 +70,8 @@ class ParamContainerDatabase(object):
         parcont_cat = paramcontainer.category
         # Check if the category of the param container already exist in the database. If not add it
         if parcont_cat not in self.paramcontainers:
-            self.paramcontainers.update({parcont_cat: OrderedDict()})
-            self.store_name_rules_db.update({parcont_cat: paramcontainer.store_name_rules})
+            self.add_a_paramcontainer_category(category=parcont_cat, store_name_rules=paramcontainer.store_name_rules)
+            
         # Check if the
         if not(self.store_name_rules_db[parcont_cat] == paramcontainer.store_name_rules):
             raise ValueError("This param container ({}) doesn't not have the same store name rules "
