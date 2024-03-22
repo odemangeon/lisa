@@ -47,8 +47,12 @@ class GaussianModel(Core_1ModelConfig):
         super(GaussianModel, self)._set_parametrisation(parametrisation=parametrisation)
 
     def _set_args(self, args=None):
+        # Set default value for arg
         self.args.update({'jitter_type': 'additive'})
+        # Set args according to input after validating
         if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
             for key in args:
                 if key == 'jitter_type':
                     if args[key] not in ['additive', 'multiplicative']:

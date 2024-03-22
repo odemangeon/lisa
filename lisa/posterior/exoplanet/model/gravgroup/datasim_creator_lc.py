@@ -1152,9 +1152,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 raise ValueError("spiderman doesn't seems to be installed. The import failed.")
 
                             # Add the lightcurve_kwargs to ldict
-                            if len(pc_component_model.pc_component_model) > 0:
+                            if len(pc_component_model.lightcurve_kwargs) > 0:
                                 if not(function_builder.is_in_ldict(variable_name=f"{component_name}_lightcurve_kwargs", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model.pc_component_model.copy(),
+                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model.lightcurve_kwargs.copy(),
                                                                            function_shortname=func_shortname, exist_ok=True)
                                 lightcurve_kwargs = f", **{component_name}_lightcurve_kwargs"
                             else:
@@ -2262,6 +2262,8 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                     kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
                 else:
                     kwargs_TransitModel = {}
+                if len(model_definition.TransitModel_kwargs) > 0:
+                    kwargs_TransitModel.update(model_definition.TransitModel_kwargs)
                 params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
                 m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
                 function_builder.add_variable_to_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}",
@@ -2278,8 +2280,10 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                     supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
                 else:
                     supersamp_text = ""
+                if len(model_definition.TransitModel_kwargs) > 0:
+                    function_builder.add_variable_to_ldict(variable_name=f"TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number}", variable_content=model_definition.TransitModel_kwargs, function_shortname=function_shortname, exist_ok=True)
                 function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=function_shortname, exist_ok=True)
-                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n", function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text}, **TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number})\n", function_shortname=function_shortname)
                 function_builder.add_to_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
 
     ## preambule: Create the TransitModel object for the occulation
