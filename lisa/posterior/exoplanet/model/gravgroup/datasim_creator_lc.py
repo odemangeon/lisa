@@ -2282,8 +2282,11 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                     supersamp_text = ""
                 if len(model_definition.TransitModel_kwargs) > 0:
                     function_builder.add_variable_to_ldict(variable_name=f"TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number}", variable_content=model_definition.TransitModel_kwargs, function_shortname=function_shortname, exist_ok=True)
+                    text_TransitModel_kwargs = f", **TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number}"
+                else:
+                    text_TransitModel_kwargs = ""
                 function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=function_shortname, exist_ok=True)
-                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text}, **TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number})\n", function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text}{text_TransitModel_kwargs})\n", function_shortname=function_shortname)
                 function_builder.add_to_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
 
     ## preambule: Create the TransitModel object for the occulation
