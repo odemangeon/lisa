@@ -315,9 +315,41 @@ class TransitModelBatman(Core_PlanetStarModel):
                                                  orbital_models=orbital_models, dico_config_model=dico_config_model,
                                                  )
 
+    @property
+    def TransitModel_kwargs(self):
+        return self.args['TransitModel_kwargs']
+
     ###################################################
     # Functions directly required by the main functions
     ###################################################
+        
+    def _set_args(self, args=None):
+        """ """
+        # Set default value for arg
+        default_args = {'TransitModel_kwargs': {}, }
+        l_valid_key_TransitModel = ['max_err', 'nthreads', 'fac']
+        self.args.update(default_args)
+        # Set args according to input after validating
+        if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
+            for key in args:
+                if key not in default_args.keys():
+                    raise ValueError(f"Model named '{self.model_name}' of planet {self.planet.get_name()}: {key} is not a valid keys for args. Valid keys are {list(default_args.keys())}")
+                if key == 'TransitModel_kwargs':
+                    for key_TransitModel in args['TransitModel_kwargs']:
+                        if key_TransitModel not in l_valid_key_TransitModel:
+                            raise ValueError(f"Model named '{self.model_name}' of planet {self.planet.get_name()}: {key_TransitModel} is not a valid keys for args['TransitModel_kwargs']. Valid keys are {list(default_args['TransitModel_kwargs'].keys())}")
+                        if key_TransitModel == 'max_err':
+                            if not(isinstance(args['TransitModel_kwargs'][key_TransitModel], float)) or (args['TransitModel_kwargs'][key_TransitModel] <= 0):
+                                raise TypeError(f"Model named '{self.model_name}' of planet {self.planet.get_name()}: args['TransitModel_kwargs']['max_err'] is the error tolerance (in parts per million) for the model. This should be a strictly positive float. Got {args['TransitModel_kwargs'][key_TransitModel]}")
+                        if key_TransitModel == 'nthreads':
+                            if not(isinstance(args['TransitModel_kwargs'][key_TransitModel], int)) or (args['TransitModel_kwargs'][key_TransitModel] <= 0):
+                                raise TypeError(f"Model named '{self.model_name}' of planet {self.planet.get_name()}: args['TransitModel_kwargs']['nthreads'] is the number of threads to use for parallelization. This should be a strictly positive int. Got {args['TransitModel_kwargs'][key_TransitModel]}")
+                        if key_TransitModel == 'fac':
+                            if not(isinstance(args['TransitModel_kwargs'][key_TransitModel], float)) or (args['TransitModel_kwargs'][key_TransitModel] <= 0) or (args['TransitModel_kwargs'][key_TransitModel] >= 1):
+                                raise TypeError(f"Model named '{self.model_name}' of planet {self.planet.get_name()}: args['TransitModel_kwargs']['fac'] is the scale factor for integration step size. This should be a float in ]0, 1[. Got {args['TransitModel_kwargs'][key_TransitModel]}")
+                        self.args['TransitModel_kwargs'][key_TransitModel] = args['TransitModel_kwargs'][key_TransitModel]
 
     def _get_l_parameter_basename_planet(self):
         """Return the list of orbital parameter basenames."""
@@ -403,12 +435,15 @@ class PhaseCurveModelSinCos(Core_PlanetStarModel):
 
     def _set_args(self, args=None):
         """ """
-        self.args.update({'sincos': 'cos', 'factor_period': 1, 'flux_offset': 'param', 'phase_offset': 'param',
-                          'occultation': True
-                          }
-                         )
-        super(PhaseCurveModelSinCos, self)._set_args(args=args)
+        # Set default value for arg
+        default_args = {'sincos': 'cos', 'factor_period': 1, 'flux_offset': 'param', 'phase_offset': 'param',
+                        'occultation': True
+                        }
+        self.args.update(default_args)
+        # Set args according to input after validating
         if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
             if set(args.keys()) != set(['sincos', 'factor_period', 'flux_offset', 'phase_offset', 'occultation']):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: sincos model definition needs to include an args key which contains a dictionary with the following keys: {['sincos', 'factor_period', 'flux_offset', 'phase_offset', 'occultation']}")
             if args['sincos'] not in ['sin', 'cos', None]:
@@ -473,19 +508,27 @@ class PhaseCurveModelEllipsoidal(PhaseCurveModelSinCos):
 
     def _set_args(self, args=None):
         """ """
-        self.args.update({"sincos": "sin", "factor_period": 1, "flux_offset": 0., 'phase_offset': 0.,
-                          'occultation': False
-                          }
-                         )
-        super(PhaseCurveModelEllipsoidal, self)._set_args(args=args)
+        # Set default value for arg
+        default_args = {"sincos": "sin", "factor_period": 1. / 2., "flux_offset": 0., 'phase_offset': 0.,
+                        'occultation': False
+                        }
+        self.args.update(default_args)
+        # Set args according to input after validating
         if args is not None:
-            for key in args:
-                if key == 'phase_offset':
-                    if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] == 'param')):
-                        raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' should be a number or 'param' (got {args['phase_offset']})")
-                else:
-                    raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args of ellipsoidal model definition can only be in {['phase_offset', ]}")
-                self.args[key] = args['factor_period']
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
+            if set(args.keys()) != set(['phase_offset', ]):
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: ellipsoidal model definition needs to include an args key which contains a dictionary with the following keys: {['phase_offset', ]}")
+            if not(isinstance(args['phase_offset'], Number) or (args['phase_offset'] in ['param', ])):                    
+                raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: 'phase_offset' of ellipsoidal model args should be a number or 'param' (got {args['phase_offset']})")
+            self.args['phase_offset'] = args['phase_offset']
+    
+    @property
+    def dict2print(self):
+        """Used to print the content in the parametrisation file."""
+        dict2print = super(PhaseCurveModelEllipsoidal, self).dict2print
+        dict2print['args'] = {'phase_offset': self.args['phase_offset']}
+        return dict2print
 
 
 class PhaseCurveModelBeaming(PhaseCurveModelSinCos):
@@ -508,11 +551,20 @@ class PhaseCurveModelBeaming(PhaseCurveModelSinCos):
 
     def _set_args(self, args=None):
         """ """
-        self.args.update({"sincos": "cos", "factor_period": 1. / 2., "flux_offset": 0., 'phase_offset': pi,
+        # Set default value for arg
+        self.args.update({"sincos": "sin", "factor_period": 1., "flux_offset": 0., 'phase_offset': pi,
                           'occultation': False
                           }
                          )
-        super(PhaseCurveModelEllipsoidal, self)._set_args(args=args)
+        if not(args is None):
+            raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: beaming model definition should not contain args")
+
+    @property
+    def dict2print(self):
+        """Used to print the content in the parametrisation file."""
+        dict2print = super(PhaseCurveModelBeaming, self).dict2print
+        dict2print.pop('args')
+        return dict2print
 
 
 class PhaseCurveModelGauss(Core_PlanetStarModel):
@@ -547,9 +599,12 @@ class PhaseCurveModelGauss(Core_PlanetStarModel):
 
     def _set_args(self, args=None):
         """ """
+        # Set default value for arg
         self.args.update({'flux_offset': 'param', 'phase_offset': 'param', 'occultation': True})
-        super(PhaseCurveModelGauss, self)._set_args(args=args)
+        # Set args according to input after validating
         if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
             if set(args.keys()) != set(['flux_offset', 'phase_offset', 'occultation']):
                 raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: gaussian model definition needs to include an args key which contains a dictionary with the following keys: {['flux_offset', 'phase_offset', 'occultation']}")
             if not(isinstance(args['flux_offset'], Number) or (args['flux_offset'] in ['param', 'zero'])):
@@ -617,12 +672,15 @@ class PhaseCurveModelKelpThermal(Core_PlanetStarModel):
 
     def _set_args(self, args=None):
         """ """
+        # Set default value for arg
         self.args.update({'Model_kwargs': {'lmax': 1, 'filt': None, 'stellar_spectrum': None, 'T_s': None},
                           'pc_kwargs': {'n_theta': 20, 'n_phi': 200, 'cython': True, 'quad': False, 'check_sorted': True},
                           }
                          )
-        super(PhaseCurveModelKelpThermal, self)._set_args(args=args)
+        # Set args according to input after validating
         if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
             for key in args:
                 if key not in ['Model_kwargs', 'pc_kwargs']:
                     raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args dictionary in kelp-thermal model definition can only have the following keys {['Model_kwargs', 'brightness_model_kwargs']} (got {key}).")
@@ -764,7 +822,7 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
 
     @property
     def lightcurve_kwargs(self):
-        return self.argss['lightcurve_kwargs']
+        return self.args['lightcurve_kwargs']
 
     ###################################################
     # Functions directly required by the main functions
@@ -772,13 +830,16 @@ class PhaseCurveModelSpidermanZhang(Core_PlanetStarModel):
 
     def _set_args(self, args=None):
         """ """
+        # Set default value for arg
         self.args.update({'ModelParams_kwargs': {'brightness_model': 'zhang', 'stellar_model': None},
                           'attributes': {"filter": None, "l1": None, "l2": None, "n_layers": 5},
                           'lightcurve_kwargs': {}
                           }
                          )
-        super(PhaseCurveModelSpidermanZhang, self)._set_args(args=args)
+        # Set args according to input after validating
         if args is not None:
+            if not(isinstance(args, dict)):
+                raise TypeError(f"args should be  None or a dict. Got {type(args)}")
             for key in ['ModelParams_kwargs', 'attributes']:
                 if key not in args:
                     raise ValueError(f"Model named {self.model_name} of planet {self.planet.get_name()}: args should at least contain the keys 'ModelParams_kwargs', 'attributes'.")

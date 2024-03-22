@@ -90,12 +90,16 @@ class Core_1ModelConfig(metaclass=MandatoryReadOnlyAttr):
 
     def _set_args(self, args=None):
         """"""
-        if not(isinstance(args, dict) or (args is None)):
-            raise ValueError(f"parametrisation should be None or a dictionary whose keys are in {list(self.args.keys())}")
-        if args is not None:
-            for key in args:
-                if key not in list(self.args.keys()):
-                    raise ValueError(f"{key} is not a valid key for the parametrisation dictionary. Should be {list(self.args.keys())}")
+        if not(args is None):
+            raise ValueError(f"It's not possible to provide args for class {self.__class__}. If you wish to be able to provide some args, you have to overwrite self._set_args")
+        # To overwrite you can use the following structure
+        # Set default value for arg
+        # self.args.update({<default content for args>})
+        # # Set args according to input after validating
+        # if args is not None:
+        #     if not(isinstance(args, dict)):
+        #         raise TypeError(f"args should be  None or a dict. Got {type(args)}")
+        #     # Validate each keys of args and setting it's value
 
     ###############################################
     ## Deal with the object categories in the model
