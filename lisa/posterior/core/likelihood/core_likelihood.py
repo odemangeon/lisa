@@ -244,16 +244,6 @@ class LikelihoodCreator(object):
                 d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["decorr_body_text"] = d_decorr_body_text[decorr_model_name]
                 d_decorr_elements_4_instcat_4_decorr_model[inst_cat][decorr_model_name]["plotdecorr_body_text"] = d_plotdecorr_body_text[decorr_model_name]
 
-        # Add the test of wether of not the sim data and finite.
-        for func_shortname in l_func_shortname:
-            # Only compute the likelihood decorrelation or likelihood itself if sim_data is finite
-            if datasim_all_dst_doc_func.multi_output:
-                func_builder.add_to_body_text(text=f"{tab}if all([isfinite(sim_data_i).all() for sim_data_i in sim_data]):\n", function_shortname=func_shortname)
-            else:
-                func_builder.add_to_body_text(text=f"{tab}if isfinite(sim_data).all():\n", function_shortname=func_shortname)
-            func_builder.add_variable_to_ldict(variable_name='isfinite', variable_content=isfinite, function_shortname=func_shortname, exist_ok=True, overwrite=False)
-            func_builder.add_variable_to_ldict(variable_name='all', variable_content=all, function_shortname=func_shortname, exist_ok=True, overwrite=False)
-
         # Add the text of the decorrelation model, the addition to the sim data and the text of the plot
         if len(d_l_model_decorr_name_4_inst_cat) > 0:
             return_decorr = ["" for ii in range(datasim_docfunc.noutput)]

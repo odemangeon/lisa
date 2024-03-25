@@ -1152,9 +1152,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 raise ValueError("spiderman doesn't seems to be installed. The import failed.")
 
                             # Add the lightcurve_kwargs to ldict
-                            if len(pc_component_model.pc_component_model) > 0:
+                            if len(pc_component_model.lightcurve_kwargs) > 0:
                                 if not(function_builder.is_in_ldict(variable_name=f"{component_name}_lightcurve_kwargs", function_shortname=func_shortname)):
-                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model.pc_component_model.copy(),
+                                    function_builder.add_variable_to_ldict(variable_name=f"{component_name}_lightcurve_kwargs", variable_content=pc_component_model.lightcurve_kwargs.copy(),
                                                                            function_shortname=func_shortname, exist_ok=True)
                                 lightcurve_kwargs = f", **{component_name}_lightcurve_kwargs"
                             else:
@@ -1639,77 +1639,6 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 function_builder.add_to_body_text(text=f"{tab}orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} = foldAt({time_vect}, {period}, T0={tic}, getEpoch=False)\n", function_shortname=func_shortname)
                                 # function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} > 1): print('>1: True')\n", function_shortname=func_shortname)
                                 # function_builder.add_to_body_text(text=f"{tab}if any(orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} < 0): print('<0: True')\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
-                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} orbphase: ', orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
-                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} a_rp: ', 1/rpa_{planet_name})\n", function_shortname=func_shortname)
-                                # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} pc: ', reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0])\n", function_shortname=func_shortname)
-
-                            if returns[func_shortname][i_inputoutput] == "":
-                                pre_text = ""
-                            else:
-                                pre_text = " + "
-                            returns[func_shortname][i_inputoutput] += f"{pre_text}reflected_phase_curve_inhomogeneous(phases=orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}, omega_0={omega_0}, omega_prime={omega_prime}, x1={x1}, x2={x2}, A_g={A_g}, a_rp=1/rpa_{planet_name})[0] * 1e-6 * ({text_occ})"
-                            function_builder.add_variable_to_ldict(variable_name="reflected_phase_curve_inhomogeneous", variable_content=reflected_phase_curve_inhomogeneous, function_shortname=func_shortname, exist_ok=True)
-
-                        ##################################
-                        # Kelp reflected light homogeneous
-                        ##################################
-                        elif pc_component_model.category == "kelp-reflect-hom":
-                            raise NotImplementedError
-                        
-                        ####################################
-                        # Kelp reflected light inhomogeneous
-                        ####################################
-                        elif pc_component_model.category == "kelp-reflect-inhom":
-                            ## Do the text for the occultation
-                            _, text_occ = do_batman_transit_occultation_models(function_builder=function_builder,
-                                                                               function_shortname=func_shortname,
-                                                                               model_definition=pc_component_model,
-                                                                               planet=planet, star=star, inst_model_obj=instmod,
-                                                                               dataset=dst,
-                                                                               get_times_from_datasets=get_times_from_datasets,
-                                                                               time_arg_name=time_arg_name, SSE4instmodfname=SSE4instmodfname,
-                                                                               do_transit=False, do_occultation=True,
-                                                                               l_dataset=l_dataset, multi=multi,
-                                                                               i_inputoutput=i_inputoutput,
-                                                                               normalize_occultation=True,
-                                                                               rp_updates=rp_updates,
-                                                                               fp_updates=fp_updates, t_sec_updates=t_sec_updates,
-                                                                               )
-
-                            ## preambule: define rpa the ratio of the planetary radius over the semi-major axis
-                            if not(orbital_model.use_aR):
-                                aR = f"aR_{planet_name}\n"
-                            else:
-                                aR = function_builder.get_text_4_parameter(parameter=parameters['orbit']['aR'], function_shortname=func_shortname)
-                            if not(function_builder.is_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)):
-                                Rrat = function_builder.get_text_4_parameter(parameter=parameters['planet']['Rrat'], function_shortname=func_shortname)
-                                function_builder.add_to_body_text(text=f"{tab}rpa_{planet_name} = {Rrat} / {aR}\n", function_shortname=func_shortname)
-                                function_builder.add_to_done_in_text(name=f"rpa_{planet_name}", function_shortname=func_shortname)
-                            omega_0 = function_builder.get_text_4_parameter(parameter=parameters['planet']['omega0'], function_shortname=func_shortname)
-                            omega_prime = function_builder.get_text_4_parameter(parameter=parameters['planet']['omegaprime'], function_shortname=func_shortname)
-                            x1 = function_builder.get_text_4_parameter(parameter=parameters['planet']['x1'], function_shortname=func_shortname)
-                            x2 = function_builder.get_text_4_parameter(parameter=parameters['planet']['x2'], function_shortname=func_shortname)
-                            A_g = function_builder.get_text_4_parameter(parameter=parameters['planet']['Ag'], function_shortname=func_shortname)
-                            
-                            ####################################################
-                            # Produce the text for the phase curve model returns
-                            ####################################################
-                            ## Compute the orbital phase (orbital phase 0 means transit and it goes from 0 to 1)
-                            if not(function_builder.is_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)):
-                                if multi:
-                                    time_vect = f"{time_arg_name}[{i_inputoutput}]"
-                                else:
-                                    time_vect = f"{time_arg_name}"
-                                if get_times_from_datasets:
-                                    supersamp = SSE4instmodfname.get_supersamp(instmod.get_name(include_prefix=True, code_version=True, recursive=True))
-                                    if supersamp > 1:
-                                        logger.warning("Currently the kelp model doesn't include supersampling !")
-                                period = function_builder.get_text_4_parameter(parameter=parameters['orbit']['P'], function_shortname=func_shortname)
-                                tic = function_builder.get_text_4_parameter(parameter=parameters['orbit']['tic'], function_shortname=func_shortname)
-                                function_builder.add_variable_to_ldict(variable_name="pi", variable_content=pi, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_variable_to_ldict(variable_name="foldAt", variable_content=foldAt, function_shortname=func_shortname, exist_ok=True)
-                                function_builder.add_to_body_text(text=f"{tab}orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number} = foldAt({time_vect}, {period}, T0={tic}, getEpoch=False)\n", function_shortname=func_shortname)
                                 function_builder.add_to_done_in_text(name=f"orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number}", function_shortname=func_shortname)
                                 # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} orbphase: ', orbphase_01_{planet_name}_{instmod_fullname}_dst{dst.number})\n", function_shortname=func_shortname)
                                 # function_builder.add_to_body_text(text=f"{tab}print('{instmod_fullname}_dst{dst.number} a_rp: ', 1/rpa_{planet_name})\n", function_shortname=func_shortname)
@@ -2333,6 +2262,8 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                     kwargs_TransitModel = {"supersample_factor": supersamp, "exp_time": exptime}
                 else:
                     kwargs_TransitModel = {}
+                if len(model_definition.TransitModel_kwargs) > 0:
+                    kwargs_TransitModel.update(model_definition.TransitModel_kwargs)
                 params_bat = function_builder.get_ldict(function_shortname=function_shortname)[f"params_{planet_name}_{instmod_fullname}"]
                 m_bat = TransitModel(params_bat, time_vect_value, **kwargs_TransitModel)
                 function_builder.add_variable_to_ldict(variable_name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}",
@@ -2349,8 +2280,13 @@ def do_batman_transit_occultation_models(function_builder, function_shortname, p
                     supersamp_text = f", supersample_factor={supersamp}, exp_time={exptime}"
                 else:
                     supersamp_text = ""
+                if len(model_definition.TransitModel_kwargs) > 0:
+                    function_builder.add_variable_to_ldict(variable_name=f"TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number}", variable_content=model_definition.TransitModel_kwargs, function_shortname=function_shortname, exist_ok=True)
+                    text_TransitModel_kwargs = f", **TransitModel_kwargs_{planet_name}_{instmod_fullname}_dst{dataset.number}"
+                else:
+                    text_TransitModel_kwargs = ""
                 function_builder.add_variable_to_ldict(variable_name="TransitModel", variable_content=TransitModel, function_shortname=function_shortname, exist_ok=True)
-                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text})\n", function_shortname=function_shortname)
+                function_builder.add_to_body_text(text=f"{tab}m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number} = TransitModel(params_{planet_name}_{instmod_fullname}, {time_vect}{supersamp_text}{text_TransitModel_kwargs})\n", function_shortname=function_shortname)
                 function_builder.add_to_done_in_text(name=f"m_batman_{planet_name}_{instmod_fullname}_dst{dataset.number}", function_shortname=function_shortname)
 
     ## preambule: Create the TransitModel object for the occulation
