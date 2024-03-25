@@ -245,7 +245,7 @@ class Core_GP1DModel_George(Core_GP1DModel):
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return = f"\n{tab}gp.compute(x={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']})\n"
             text_return += f"{tab}return gp.log_likelihood(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)))\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
     
@@ -254,7 +254,7 @@ class Core_GP1DModel_George(Core_GP1DModel):
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            text_return = f"\n{tab}gp.compute(t={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']}, quiet=True)\n"
+            text_return = f"\n{tab}gp.compute(x={text_sorted_kwargs['time']}, yerr={text_sorted_kwargs['data_err']})\n"
             text_return += f"{tab}return gp.predict(({text_sorted_kwargs['data']} - {text_sorted_kwargs['sim_data']}).reshape((-1)), tsim, return_var=True)\n"
             function_builder.add_to_body_text(text=text_return, function_shortname=func_shortname)
 
@@ -303,12 +303,12 @@ class QPGeorgeModel(Core_GP1DModel_George):
                 dico[func_shortname][param_basename] = function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname)
                 if param_basename in ["A", "tau", "gamma"]:
                     if self.log10(param_basename=param_basename):
-                        dico[param_basename] = f"10**{dico[param_basename]}"
+                        dico[func_shortname][param_basename] = f"10**{dico[func_shortname][param_basename]}"
                 if param_basename == "P":
                     if self.log10(param_basename=param_basename):
-                        dico[param_basename] = f"{dico[param_basename]} * log(10)"
+                        dico[func_shortname][param_basename] = f"{dico[func_shortname][param_basename]} * log(10)"
                     else:
-                        dico[param_basename] = f"log({dico[param_basename]})"
+                        dico[func_shortname][param_basename] = f"log({dico[func_shortname][param_basename]})"
                     function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
         return dico
 
@@ -372,12 +372,12 @@ class QPCGeorgeModel(Core_GP1DModel_George):
                 dico[func_shortname][param_basename] = function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname)
                 if param_basename in ["A", "tau", "gamma", "f"]:
                     if self.log10(param_basename=param_basename):
-                        dico[param_basename] = f"10**{dico[param_basename]}"
+                        dico[func_shortname][param_basename] = f"10**{dico[func_shortname][param_basename]}"
                 if param_basename == "P":
                     if self.log10(param_basename=param_basename):
-                        dico[param_basename] = f"{dico[param_basename]} * log(10)"
+                        dico[func_shortname][param_basename] = f"{dico[func_shortname][param_basename]} * log(10)"
                     else:
-                        dico[param_basename] = f"log({dico[param_basename]})"
+                        dico[func_shortname][param_basename] = f"log({dico[func_shortname][param_basename]})"
                     function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
         return dico
 
