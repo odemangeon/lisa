@@ -71,20 +71,12 @@ class ParamContainerDatabase(object):
         # Check if the category of the param container already exist in the database. If not add it
         if parcont_cat not in self.paramcontainers:
             self.add_a_paramcontainer_category(category=parcont_cat, store_name_rules=paramcontainer.store_name_rules)
-            
-        # Check if the
-        if not(self.store_name_rules_db[parcont_cat] == paramcontainer.store_name_rules):
-            raise ValueError("This param container ({}) doesn't not have the same store name rules "
-                             "than previous ones of the same category.")
+        # Add the parameter container is it doesn't exists already or if force is True   
         if parcont_name in self.paramcontainers[parcont_cat]:
             if not(force):
-                logger.error("paramcontainer {} already exist in the model, it will not be "
-                             "added.".format(parcont_cat + '_' + parcont_name))
-                raise ValueError("The paramcontainer named {} alredy exist in the model"
-                                 "".format(parcont_name))
+                raise ValueError(f"paramcontainer {parcont_cat + '_' + parcont_name} already exist in the model, it will not be added.")
             else:
-                logger.error("paramcontainer {} already exist in the model, it will be replaced."
-                             "".format(parcont_cat + '_' + parcont_name))
+                logger.warning(f"paramcontainer {parcont_cat + '_' + parcont_name} already exist in the model, it will be replaced.")
         self.paramcontainers[parcont_cat].update({parcont_name: paramcontainer})
 
     def isavailable_paramcontainer(self, name, category):

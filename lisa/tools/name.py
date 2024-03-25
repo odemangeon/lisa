@@ -195,6 +195,7 @@ class Named(object):
 
     This is meant as an inferface for a class for which you want to have a Name.
     """
+
     def __init__(self, name, prefix=None, kwargs_getname_4_storename=None, kwargs_getname_4_codename=None, kwargs_getname_4_fullname=None):
         """docstring for Named.
 

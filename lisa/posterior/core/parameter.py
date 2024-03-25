@@ -19,7 +19,7 @@ from .prior.parameter_prior import Parameter_Prior
 
 # TODO: Add the possibility to add a description of the parameter.
 class Named_Parameter(Named):
-    """docstring for Named_Parameter(Named):."""
+    """docstring for Named_Parameter."""
 
     def __repr__(self):
         return "<{} {}>".format(self.__class__.__name__, self.get_name(include_prefix=True, recursive=True, force_no_duplicate=True))

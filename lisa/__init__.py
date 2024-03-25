@@ -8,7 +8,7 @@ focus for now is the analysis of exoplanet datasets and in particular transit ph
 velocity data.
 """
 
-__version__ = "0.2.5dev"
+__version__ = "6.0"
 
 # __all__ = []  # Put here the import classes or function from the modules or packages of lisa
 # from .data_interface import  # import the main classes or function defined in data_interface

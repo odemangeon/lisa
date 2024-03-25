@@ -14,7 +14,6 @@ from loguru import logger
 
 from .manager_dataset_instrument import Manager_Inst_Dataset
 from .dataset import Core_Dataset
-from ....tools.name import Named
 from ....tools.dico_database import Nesteddict_wfixellvlnb, init_result, add_obj_in_result
 from ....tools.database_with_instrument_level import check_instfullcat
 from ....tools.default_folders_data_run import RunFolder, DataFolder
@@ -54,7 +53,7 @@ class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):
             return super(Nesteddict_defgetitem, self).__missing__(key, cls)
 
 
-class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
+class DatasetDatabase(Nesteddict_defgetitem, DataFolder):
     """Database which contains all the datasets used for the analysis.
 
     In standard use you are not supposed to handle this class directly. Datasets should be added
@@ -62,8 +61,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
     method.
     """
     def __init__(self, object_name, data_folder=None, lock=None):
-        # Initialise the name of the datatabase
-        Named.__init__(self, name=object_name)
+        self.__object_name = object_name
         # Initialise the dataset folder
         DataFolder.__init__(self, data_folder=data_folder)
         # Initialise the database (Nesteddict_defgetitem)
@@ -75,7 +73,7 @@ class DatasetDatabase(Nesteddict_defgetitem, Named, DataFolder):
     @property
     def object_name(self):
         """Return the name of the object studied by the datasets in this database."""
-        return self.name.get(include_prefix=False, code_version=False)
+        return self.__object_name
 
     def _add_a_dataset(self, dataset, force=False):
         """Add a dataset to the dataset database.

@@ -14,7 +14,6 @@ The instrument levels are instrument category, instrument name, instrument model
 """
 from loguru import logger
 
-from .name import Named
 from .dico_database import Nesteddict_wfixellvlnb
 
 
@@ -51,20 +50,20 @@ def check_instfullcat(dico_db, inst_name, inst_fullcat):
     if (inst_name is not None) and (inst_fullcat is None):
         inst_fullcat = look4instcat(dico_db, inst_name)
         if inst_fullcat is None:
-            raise ValueError("There is no instrument named {} in the database."
-                             "".format(inst_name))
+            raise ValueError(f"There is no instrument named {inst_name} in the database.")
     return inst_fullcat, inst_name
 
 
-class DatabaseInstLevel(Nesteddict_wfixellvlnb, Named):
+class DatabaseInstLevel(Nesteddict_wfixellvlnb):
     """docstring for DatabaseInstLevel.
 
     Subclass of Nesteddict_wfixellvlnb to implement a getitem with instrument model full name.
     """
 
     def __init__(self, object_stored, database_name=None, lock=None, ordered=False, default=None):
-        Named.__init__(self, name=object_stored, prefix=database_name)
         Nesteddict_wfixellvlnb.__init__(self, nb_lvl=3, lock=lock, ordered=ordered, default=default)
+        self.__object_stored = object_stored
+        self.__database_name = database_name
 
     def __getitem__(self, key):
         if key in self:
@@ -93,17 +92,17 @@ class DatabaseInstLevel(Nesteddict_wfixellvlnb, Named):
         return super(DatabaseInstLevel, self).__missing__(key, cls=Nesteddict_wfixellvlnb)
 
     def __repr__(self):
-        return Named.__repr__(self) + ":" + Nesteddict_wfixellvlnb.__repr__(self)
+        return f"{self.database_name}({self.object_stored})" + ":" + Nesteddict_wfixellvlnb.__repr__(self)
 
     @property
     def database_name(self):
         """Return the name of the database."""
-        return self.name.prefix.get_name()
+        return self.__database_name
 
     @property
     def object_stored(self):
         """Return the name of the objects stored in the database."""
-        return self.get_name()
+        return self.__object_stored
 
     @property
     def inst_fullcategories(self):
@@ -147,15 +146,16 @@ class DatabaseInstLevel(Nesteddict_wfixellvlnb, Named):
         return len(self.get_instmodels(inst_name=inst_name, inst_fullcat=inst_fullcat)) > 0
     
 
-class DatabaseDatasetLevel(Nesteddict_wfixellvlnb, Named):
+class DatabaseDatasetLevel(Nesteddict_wfixellvlnb):
     """docstring for DatabaseDatasetLevel.
 
     Subclass of Nesteddict_wfixellvlnb to implement a getitem with instrument model full name.
     """
 
     def __init__(self, object_stored, database_name=None, lock=None, ordered=False, default=None):
-        Named.__init__(self, name=object_stored, prefix=database_name)
         Nesteddict_wfixellvlnb.__init__(self, nb_lvl=3, lock=lock, ordered=ordered, default=default)
+        self.__object_stored = object_stored
+        self.__database_name = database_name
 
     def __getitem__(self, key):
         if key in self:
@@ -184,17 +184,17 @@ class DatabaseDatasetLevel(Nesteddict_wfixellvlnb, Named):
         return super(DatabaseDatasetLevel, self).__missing__(key, cls=Nesteddict_wfixellvlnb)
 
     def __repr__(self):
-        return Named.__repr__(self) + ":" + Nesteddict_wfixellvlnb.__repr__(self)
+        return f"{self.database_name}({self.object_stored})" + ":" + Nesteddict_wfixellvlnb.__repr__(self)
 
     @property
     def database_name(self):
         """Return the name of the database."""
-        return self.name.prefix.get_name()
+        return self.__database_name
 
     @property
     def object_stored(self):
         """Return the name of the objects stored in the database."""
-        return self.get_name()
+        return self.__object_stored
 
     @property
     def inst_fullcategories(self):
