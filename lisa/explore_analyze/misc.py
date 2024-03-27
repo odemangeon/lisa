@@ -124,8 +124,11 @@ def check_spec_by_column_or_row(spec_user, l_type_spec, spec_def, l_row_name=Non
             if top_key not in possible_top_keys:
                 raise ValueError(f"{top_key} is not in the list of possible top keys ({possible_top_keys}).")
             else:
-                if top_key == 'all' and any([isinstance(spec_user['all'], type_i) for type_i in l_type_spec]):
-                    spec['all'] = spec_user['all']
+                if top_key == 'all':
+                    if any([isinstance(spec_user['all'], type_i) for type_i in l_type_spec]):
+                        spec['all'] = spec_user['all']
+                    else:
+                        raise ValueError(f"The type of the content of 'all' ({type(spec_user['all'])}) is not within the valid types ({l_type_spec}).")
                 else:
                     spec[top_key] = {}
                     if top_key == 'row':
@@ -136,14 +139,16 @@ def check_spec_by_column_or_row(spec_user, l_type_spec, spec_def, l_row_name=Non
                         possible_bottom_keys = []
                         for row_name in l_row_name:
                             for col_name in l_col_name:
-                                possible_bottom_keys.appends(f"{row_name},{col_name}")
+                                possible_bottom_keys.append(f"{row_name},{col_name}")
                     if (possible_bottom_keys is None) or (len(possible_bottom_keys) == 0):
                         raise ValueError("Unable to build the list of possible bottom keys. This can happen if either l_row_name or l_col_name is None or empty.")
                     for bottom_key in spec_user[top_key]:
                         if bottom_key not in possible_bottom_keys:
-                            raise ValueError(f"{bottom_key} is not in the list of possible key for {top_key}.")
+                            raise ValueError(f"{bottom_key} is not in the list of possible key for {top_key} ({possible_bottom_keys}).")
                         if any([isinstance(spec_user[top_key][bottom_key], type_i) for type_i in l_type_spec]):
                             spec[top_key][bottom_key] = spec_user[top_key][bottom_key]
+                        else:
+                            raise ValueError(f"The type of the content of top_key '{top_key}' and bottom_key '{bottom_key}' ({type(spec[top_key][bottom_key])}) is not within the valid types ({l_type_spec}).")
     else:
         raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {possible_top_keys}."
                          )
