@@ -2080,17 +2080,22 @@ def combine_return_models(multi, l_inst_model, time_vec_name, l_time_vec_name, r
                 else:
                     planet_contribution += f" + {model[i_inputoutput]}"
                 nb_non_none_model += 1
+                
         # Combine the planetary and stellar contribution
         if reference_flux_level == 0:
-            if stellar_var is None or stellar_var[i_inputoutput] == "":
+            if (stellar_var is None or stellar_var[i_inputoutput] == "") and (planet_contribution is not None and planet_contribution != ""):
                 return_text[i_inputoutput] += f"{planet_contribution}"
-            else:
+            elif (stellar_var is not None and stellar_var[i_inputoutput] != "") and (planet_contribution is not None and planet_contribution != ""): 
                 return_text[i_inputoutput] += f"({stellar_var[i_inputoutput]}) * (1 + {planet_contribution}) - 1"
-        else:
-            if stellar_var is None or stellar_var[i_inputoutput] == "":
-                return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {planet_contribution})"
             else:
+                return_text[i_inputoutput] += {reference_flux_level}
+        else:
+            if (stellar_var is None or stellar_var[i_inputoutput] == "") and (planet_contribution is not None and planet_contribution != ""):
+                return_text[i_inputoutput] += f"{reference_flux_level} * (1 + {planet_contribution})"
+            elif (stellar_var is not None and stellar_var[i_inputoutput] != "") and (planet_contribution is not None and planet_contribution != ""): 
                 return_text[i_inputoutput] += f"({stellar_var[i_inputoutput]}) * (1 + {planet_contribution})"
+            else:
+                return_text[i_inputoutput] += {reference_flux_level}
 
         # Apply the contamination correction
         if (contamination is not None) and (contamination[i_inputoutput] != ""):
