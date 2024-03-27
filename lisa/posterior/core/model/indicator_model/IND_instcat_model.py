@@ -319,7 +319,7 @@ class IND_InstCat_Model(Core_InstCat_Model):
     ## To sort
     ##########
 
-    def datasim_creator(self, inst_models, datasets, get_times_from_datasets):
+    def datasim_creator(self, inst_models, datasets, get_times_from_datasets, dataset_db):
         """Create the data simulator to be used for the indicators.
 
         Arguments
@@ -331,6 +331,11 @@ class IND_InstCat_Model(Core_InstCat_Model):
         get_times_from_datasets  : bool
             If True the times at which the LC model is computed is taken from the datasets.
             Else it is an input of the datasimulator function produced.
+        dataset_db  : DatasetDatabase
+            Dataset database, this will not be used. It there to comply to the standard datasim_creator call.
+            For other data types it used to access the indicator dataset for the decorrelation.
+            However currently we are not decorrelating the indicators.
+            Technically it's provided to get_polymodel, but get_polymodel doesn't actually use it. (TODO)
 
         Returns
         -------
@@ -360,7 +365,7 @@ class IND_InstCat_Model(Core_InstCat_Model):
         for ind_cat, d_l_dataset_inst_model in dico_d_l_dataset_inst_model_4_ind_cat.items():
             d_d_docfunc_4_ind_cat[ind_cat] = create_datasimulator_IND(model_instance=self.model_instance,
                                                                       indicator_models=self.models_available,
-                                                                      dataset_db=self.model_instance.dataset_db,
+                                                                      dataset_db=dataset_db,
                                                                       INDcat_model=self, indicator_category=ind_cat,
                                                                       inst_models=d_l_dataset_inst_model['inst_models'],
                                                                       datasets=d_l_dataset_inst_model['datasets'],
