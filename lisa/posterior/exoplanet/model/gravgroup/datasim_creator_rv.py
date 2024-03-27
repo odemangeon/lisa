@@ -977,6 +977,9 @@ def combine_return_models(l_inst_model, tab, function_builder, function_shortnam
                     pretext = " + "
                 return_text[i_inputoutput] += pretext + component[i_inputoutput]
 
+        if return_text[i_inputoutput] == "":
+            return_text[i_inputoutput] += "0"
+
         if decorrelation is not None:
             if return_text[i_inputoutput] == "":
                 pretext = ""
