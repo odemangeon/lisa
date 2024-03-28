@@ -15,6 +15,7 @@ from numbers import Number
 from collections.abc import Iterable
 from statsmodels.stats.weightstats import DescrStatsW
 from copy import copy
+import re
 
 # from sys import stdout
 import matplotlib.gridspec as gridspec
@@ -2006,7 +2007,8 @@ def get_param_vector(df_val, l_param_name):
 def get_param_vector_from_print(param_vector_str):
     """
     """
-    return np.array([float(val.strip("[]\n")) for val in param_vector_str.split(" ") if val != ""])
+    res = re.split(';|,| ', param_vector_str)
+    return np.array([float(val.strip("[]")) for val in res if val.strip("[]") != ""])
 
 
 def auto_y_lims(y, ax, pad=0.1):
