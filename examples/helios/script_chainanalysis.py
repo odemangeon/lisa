@@ -66,7 +66,7 @@ thin_RP = 100  # thining factor for the traces plots
 # The idea for this step is to remove the chains whose acceptance fraction is too low compared to the rest.
 # To use with caution !
 # All chain whose acceptance fraction is < quantile_AFS - sig_fact_AFS * MAD(Acceptance fraction of all chains) will be removed
-do_AFS = True  # Do the acceptance fraction selection
+do_AFS = False  # Do the acceptance fraction selection
 sig_fact_AFS = 5  # Sigma clipping value.
 quantile_AFS = 75  # Quantile of the acceptance fraction of all chains that you want to use as reference
 verbose_AFS = 1  # More outputs on screen
@@ -112,8 +112,8 @@ do_geweke_plot = True  # Do the diagnostic plot. It's your diagnotic to determin
 do_hist_after_geweke = True  # Do the histogram of the lnposterior
 extra_burnin_4_hist_after_geweke = 0  # apply an an extra burnin to the values identified by the geweke algorithm before doing the lnposterior histogram
 sigma_clip_hist_after_geweke = 5  # Sigma clipping for the histogram of the lnposterior
-apply_min_burnin = False  # Will apply a given burnin to all chains even if you did the geweke selection first
-min_burnin = 100  # Valeu of the burnin to use
+apply_min_burnin = True  # Will apply a given burnin to all chains even if you did the geweke selection first
+min_burnin = 8000  # Valeu of the burnin to use
 thin_GS = 100  # Thining factor for the trace plots
 
 # Parameter based walker selection
@@ -140,12 +140,12 @@ plot_hist_PS = True
 save_walkersandburnins = True  # Save the walkers selection and burnin values
 
 # Determine best fit values and error bars
-do_bestfit = False
+do_bestfit = True
 method_bestfit = "median"  # Method to use to determine the best values for the parameter. Can be 'median' or 'MAP'
 save_results_bestfit = True
 
 # Do Corner plot
-do_corner = False
+do_corner = True
 sampling_corner = 100  # thining factor for the corner plot
 
 # Do model comparison

@@ -18,7 +18,7 @@ import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
 
 from lisa.explore_analyze.misc import get_def_output_folders
-from lisa.explore_analyze.lc_plots import create_IND_TSNGLSP_plots
+from lisa.explore_analyze.ind_plots import create_IND_TSNGLSP_plots
 
 # import sys
 # path_pyGLS = "/Users/olivier/Softwares/PyGLS"
@@ -44,14 +44,14 @@ AandA_fontsize = 8
 ##########################
 # Parameters of the script
 ##########################
-obj_name = "target_name"
+obj_name = "Sun"
 
-IND_subcat = "FWHM"
+IND_subcat = "Ha"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-extension_analysis = "_initrun_median"
+extension_analysis = "_initrun"
 
 #########
 ## logger
@@ -82,9 +82,9 @@ save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
-remove_dict = {'inst_var': True, 'stellar_var': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP'
+remove_dict = {'inst_var': False, 'sys_var': False, 'GP': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP'
 
-show_dict = {'stellar_var': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP'
+show_dict = {'inst_var': False, 'sys_var': False, 'GP': False, 'model_wGP': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation_likelihood', 'GP'
 
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
@@ -119,9 +119,9 @@ freq_unit = "$\mu$Hz"
 
 freq_lims = (0, 400)
 
-periods = {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
-                                                          "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
-                                                          },
+periods = { # df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
+            #                                                "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
+            #                                                },
            }
            
 fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
@@ -160,6 +160,8 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              remove_dict=remove_dict,
                              show_dict=show_dict,
                              datasetnames4model4row=None,
+                             compute_GP_model=True,
+                             split_GP_computation=None,
                              TS_kwargs={"do": do_TS,
                                         "npt_model": 5000,
                                         "exptime_bin": exptime_bin,

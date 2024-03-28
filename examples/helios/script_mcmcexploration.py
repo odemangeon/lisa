@@ -23,7 +23,7 @@ from lisa.explore_analyze.misc import get_def_output_folders
 ###############################
 ## Definition of the parameters
 ###############################
-obj_name = "target_name"  # Change
+obj_name = "Sun"  # Change
 
 extension_exploration = "_initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 
@@ -36,7 +36,7 @@ xtol_preminimization = 1e-12
 
 # emcee parameters
 nwalker_fact = 4
-nsteps_MCMC = 50000
+nsteps_MCMC = 10000
 check_convergence_every = 1000
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True

@@ -44,12 +44,12 @@ AandA_fontsize = 8
 ##########################
 # Parameters of the script
 ##########################
-obj_name = "target_name"
+obj_name = "Sun"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-extension_analysis = "_initrun_median"
+extension_analysis = "_initrun"
 
 #########
 ## logger
@@ -81,7 +81,7 @@ save_plot = False
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
 remove_dict = {'inst_var': True, 'stellar_var': False, 'decorrelation': False,
-               'decorrelation_likelihood': False, 'GP': True}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
+               'decorrelation_likelihood': False, 'GP': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
              'decorrelation_likelihood': False, 'GP': False, 'model_wGP': True, 
@@ -90,13 +90,13 @@ show_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
 # Common parameters to TS and GLSP
-RV_fact = 1e3
+RV_fact = 1
 RV_unit = 'm/s'
 
 # TS parameters
 do_TS = True
 
-row4datasetname = None  # e. g. {f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)} 
+row4datasetname = None  # e. g. {f"RV_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)} 
 
 datasetnames4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
 
@@ -110,7 +110,7 @@ show_binned_model = {"model": False}
 
 tlims = None
 force_xlims = False
-ylims = None  # e.g. {"data": {"all": (-250, 500)}, "resi": {"all": (-375, 375)}} 
+ylims = {"data": {"all": (-4, 5)}}   # e.g. {"data": {"all": (-250, 500)}, "resi": {"all": (-375, 375)}} 
 
 # GLSP parameters
 do_GLSP = False
@@ -122,9 +122,9 @@ freq_unit = "$\mu$Hz"
 
 freq_lims = (0, 120)
 
-periods = {df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
-                                                          "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
-                                                          },
+periods = { # df_fittedval.loc[f"{obj_name}_b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
+            #                                               "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.05}
+            #                                               },
            }
            
 fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
@@ -162,6 +162,8 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              remove_dict=remove_dict,
                              show_dict=show_dict,
                              datasetnames4model4row=datasetnames4model4row,
+                             compute_GP_model=True,
+                             split_GP_computation=None,
                              TS_kwargs={"do": do_TS,
                                         "npt_model": 5000,
                                         "exptime_bin": exptime_bin,
