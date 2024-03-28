@@ -301,7 +301,7 @@ class QPGeorgeModel(Core_GP1DModel_George):
             for func_shortname in l_function_shortname:
                 function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
                 dico[func_shortname][param_basename] = function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname)
-                if param_basename in ["A", "tau", "gamma"]:
+                if param_basename in ["gamma"]:
                     if self.log10(param_basename=param_basename):
                         dico[func_shortname][param_basename] = f"10**{dico[func_shortname][param_basename]}"
                 if param_basename == "P":
@@ -310,6 +310,12 @@ class QPGeorgeModel(Core_GP1DModel_George):
                     else:
                         dico[func_shortname][param_basename] = f"log({dico[func_shortname][param_basename]})"
                     function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
+                if param_basename in ["tau", "A"]:
+                    if self.log10(param_basename=param_basename):
+                        dico[func_shortname][param_basename] = f"2 * {dico[func_shortname][param_basename]} * log(10)"
+                    else:
+                        dico[func_shortname][param_basename] = f"2 * log({dico[func_shortname][param_basename]})"
+                    function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
         return dico
 
     def _add_text_GP_kernel(self, dico_text_param, function_builder, l_function_shortname):
@@ -317,11 +323,11 @@ class QPGeorgeModel(Core_GP1DModel_George):
         """
         tab = "    " 
         for func_shortname in l_function_shortname:
-            kernel = 1**2 * ExpSquaredKernel(metric=20) * ExpSine2Kernel(gamma=1/(2 * 0.5**2), log_period=log(10))
+            kernel = 1**2 * ExpSquaredKernel(metric=20**2) * ExpSine2Kernel(gamma=1/(2 * 0.5**2), log_period=log(10))
             gp = GP(kernel, fit_kernel=True, mean=0, fit_mean=False)
             function_builder.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=func_shortname , exist_ok=False, overwrite=False)
             # text_return += f"{tab}import pdb; pdb.set_trace()"
-            text_GP_kernel = f"\n{tab}gp.set_parameter_vector([{dico_text_param[func_shortname]['A']}**2, {dico_text_param[func_shortname]['tau']}**2, 1/(2 * {dico_text_param[func_shortname]['gamma']}**2), {dico_text_param[func_shortname]['P']}], include_frozen=False)\n"
+            text_GP_kernel = f"\n{tab}gp.set_parameter_vector([{dico_text_param[func_shortname]['A']}, {dico_text_param[func_shortname]['tau']}, 1/(2 * {dico_text_param[func_shortname]['gamma']}**2), {dico_text_param[func_shortname]['P']}], include_frozen=False)\n"
             function_builder.add_to_body_text(text=text_GP_kernel, function_shortname=func_shortname)
             function_builder.add_variable_to_ldict(variable_name='ExpSquaredKernel', variable_content=ExpSquaredKernel, function_shortname=func_shortname , exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name='ExpSine2Kernel', variable_content=ExpSine2Kernel, function_shortname=func_shortname , exist_ok=True, overwrite=False)
@@ -370,14 +376,20 @@ class QPCGeorgeModel(Core_GP1DModel_George):
             for func_shortname in l_function_shortname:
                 function_builder.add_parameter(parameter=param, function_shortname=func_shortname, exist_ok=True)
                 dico[func_shortname][param_basename] = function_builder.get_text_4_parameter(parameter=param, function_shortname=func_shortname)
-                if param_basename in ["A", "tau", "gamma", "f"]:
+                if param_basename in ["gamma",]:
                     if self.log10(param_basename=param_basename):
                         dico[func_shortname][param_basename] = f"10**{dico[func_shortname][param_basename]}"
-                if param_basename == "P":
+                if param_basename in ["P", "f"]:
                     if self.log10(param_basename=param_basename):
                         dico[func_shortname][param_basename] = f"{dico[func_shortname][param_basename]} * log(10)"
                     else:
                         dico[func_shortname][param_basename] = f"log({dico[func_shortname][param_basename]})"
+                    function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
+                if param_basename in ["tau", "A"]:
+                    if self.log10(param_basename=param_basename):
+                        dico[func_shortname][param_basename] = f"2 * {dico[func_shortname][param_basename]} * log(10)"
+                    else:
+                        dico[func_shortname][param_basename] = f"2 * log({dico[func_shortname][param_basename]})"
                     function_builder.add_variable_to_ldict(variable_name='log', variable_content=log, function_shortname=func_shortname , exist_ok=True, overwrite=False)
         return dico
 
@@ -390,7 +402,7 @@ class QPCGeorgeModel(Core_GP1DModel_George):
             gp = GP(kernel, fit_kernel=True, mean=0, fit_mean=False)
             function_builder.add_variable_to_ldict(variable_name='gp', variable_content=gp, function_shortname=func_shortname , exist_ok=False, overwrite=False)
             # text_return += f"{tab}import pdb; pdb.set_trace()"
-            text_GP_kernel = f"\n{tab}gp.set_parameter_vector([{dico_text_param[func_shortname]['A']}**2, {dico_text_param[func_shortname]['tau']}**2, 1/(2 * {dico_text_param[func_shortname]['gamma']}**2), {dico_text_param[func_shortname]['P']},  {dico_text_param[func_shortname]['f']}, {dico_text_param[func_shortname]['P']}], include_frozen=False)\n"
+            text_GP_kernel = f"\n{tab}gp.set_parameter_vector([{dico_text_param[func_shortname]['A']}, {dico_text_param[func_shortname]['tau']}, 1/(2 * {dico_text_param[func_shortname]['gamma']}**2), {dico_text_param[func_shortname]['P']},  {dico_text_param[func_shortname]['f']}, {dico_text_param[func_shortname]['P']}], include_frozen=False)\n"
             function_builder.add_to_body_text(text=text_GP_kernel, function_shortname=func_shortname)
             function_builder.add_variable_to_ldict(variable_name='ExpSquaredKernel', variable_content=ExpSquaredKernel, function_shortname=func_shortname , exist_ok=True, overwrite=False)
             function_builder.add_variable_to_ldict(variable_name='ExpSine2Kernel', variable_content=ExpSine2Kernel, function_shortname=func_shortname , exist_ok=True, overwrite=False)
