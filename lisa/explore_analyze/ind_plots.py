@@ -33,6 +33,7 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                  planets=None, planets_remove_or_add_dict=None, periods=None, periods_remove_or_add_dict=None,
                                  datasetnames=None, row4datasetname=None,
                                  datasetnameformodel4row=None, npt_model=1000,
+                                 split_GP_computation=None,
                                  phasefold_central_phase=0.,
                                  show_time_from_tic=False, time_fact=24, time_unit="h",
                                  exptime_bin=0., binning_stat="mean", supersamp_bin_model=10, show_binned_model=True,
@@ -172,7 +173,7 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                                      },
                                         }
     return create_phasefolded_plots(post_instance=post_instance, df_fittedval=df_fittedval,
-                                    compute_raw_models_func=compute_raw_models_core,
+                                    compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                     l_valid_model=l_valid_model,
@@ -183,7 +184,8 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                     periods=periods, periods_remove_or_add_dict=periods_remove_or_add_dict,
                                     datasetnames=datasetnames, row4datasetname=row4datasetname,
                                     datasetnameformodel4row=datasetnameformodel4row,
-                                    npt_model=npt_model, phasefold_central_phase=phasefold_central_phase,
+                                    npt_model=npt_model, split_GP_computation=split_GP_computation,
+                                    phasefold_central_phase=phasefold_central_phase,
                                     amplitude_fact=IND_fact, show_time_from_tic=show_time_from_tic, time_fact=time_fact,
                                     time_unit=time_unit, exptime_bin=exptime_bin, binning_stat=binning_stat,
                                     supersamp_bin_model=supersamp_bin_model, show_binned_model=show_binned_model,
@@ -205,6 +207,8 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
                              datasetnames=None,
                              remove_dict=None,
                              kwargs_compute_model_4_key_model=None,
+                             compute_GP_model=True,
+                             split_GP_computation=None,
                              show_dict=None, datasetnames4model4row=None,
                              TS_kwargs=None, GLSP_kwargs=None,
                              create_axes_kwargs=None,
@@ -395,9 +399,11 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
         kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
     return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                                 y_name=IND_subcat, inst_cat=f'IND-{IND_subcat}',
-                                compute_raw_models_func=compute_raw_models_core,
+                                compute_raw_models_func=compute_raw_models,
                                 remove_add_model_components_func=remove_add_model_components,
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                compute_GP_model=compute_GP_model,
+                                split_GP_computation=split_GP_computation,
                                 l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'sys_var', 'GP'],
@@ -453,7 +459,9 @@ def get_key_compute_model(key_model, **kwargs):
 def is_valid_model_available(key_model, datasetname, post_instance, **kwargs):
     """
     """
-    if key_model == "sys_var":
+    if key_model == "model":
+        return True
+    elif key_model == "sys_var":
         poly_model = post_instance.model.instcat_models["IND"].get_modelclass_4_modelname(model_name='polynomial')
         return ((poly_model.get_dico_config(param_container=post_instance.model, prefix=kwargs['IND_subcat'], notexist_ok=True, return_None_if_notexist=True) is not None) and
                 (poly_model.get_dico_config(param_container=post_instance.model, prefix=kwargs['IND_subcat'], notexist_ok=True, return_None_if_notexist=True)["do"])
@@ -466,4 +474,25 @@ def is_valid_model_available(key_model, datasetname, post_instance, **kwargs):
                 (poly_model.get_dico_config(param_container=inst_mod, prefix=None, notexist_ok=True, return_None_if_notexist=True)["do"])
                 )
     else:
-        return is_valid_model_available_core(key_model=key_model, datasetname=datasetname, post_instance=post_instance)
+        return False
+    
+    
+def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
+                       df_fittedval, datasim_kwargs, exptime, supersamp,
+                       get_key_compute_model_func=get_key_compute_model,
+                       is_valid_model_available_func=is_valid_model_available,
+                       kwargs_is_valid_model_available=None,
+                       kwargs_get_key_compute_model=None,
+                       split_GP_computation=None,
+                       ):
+    """
+    """
+    return compute_raw_models_core(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
+                                   datasetname=datasetname, post_instance=post_instance,
+                                   df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                   exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
+                                   is_valid_model_available_func=is_valid_model_available_func,
+                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
+                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                   split_GP_computation=split_GP_computation
+                                   )
