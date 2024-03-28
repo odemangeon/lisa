@@ -11,9 +11,11 @@ object_name = 'Sun'
 ## Folders
 ##########
 
-run_folder = '~/Softwares/lisa-dev/examples/helios'
+#run_folder = '/home/pedro/Documents/Tese/lisa_n/lisa-helios/examples/helios (copy)/'
+run_folder = '~/Softwares/lisa-dev/examples/helios/'
 
-data_folder = '~/Softwares/lisa-dev/examples/helios/data'
+#data_folder = '/home/pedro/Documents/Tese/lisa_n/lisa-helios/examples/helios (copy)/data/'
+data_folder = '~/Softwares/lisa-dev/examples/helios/data/'
 
 ###########
 ## Datasets
@@ -141,23 +143,23 @@ GP1D_models = {'GPmodel4instrument': {'IND-CaHK_HELIOS_inst': 'CaHK',
                                       'IND-Ha_HELIOS_inst': 'Ha',
                                       'RV_HELIOS_inst': 'RV'},
                'GPmodel_definitions': {'CaHK': {'category': 'QPGeorge',
-                                                    'param_extensions': {'GP': {'A': '',
-                                                                                'P': '',
-                                                                                'gamma': '',
-                                                                                'tau': ''}},
-                                                    'parametrisation': {'log10': {'A': False,
-                                                                                  'P': False,
-                                                                                  'gamma': False,
-                                                                                  'tau': False}}},
+                                                'param_extensions': {'GP': {'A': '',
+                                                                            'P': '',
+                                                                            'gamma': '',
+                                                                            'tau': ''}},
+                                                'parametrisation': {'log10': {'A': False,
+                                                                              'P': False,
+                                                                              'gamma': False,
+                                                                              'tau': False}}},
                                        'Ha': {'category': 'QPGeorge',
-                                                  'param_extensions': {'GP': {'A': '',
-                                                                              'P': '',
-                                                                              'gamma': '',
-                                                                              'tau': ''}},
-                                                  'parametrisation': {'log10': {'A': False,
-                                                                                'P': False,
-                                                                                'gamma': False,
-                                                                                'tau': False}}},
+                                              'param_extensions': {'GP': {'A': '',
+                                                                          'P': '',
+                                                                          'gamma': '',
+                                                                          'tau': ''}},
+                                              'parametrisation': {'log10': {'A': False,
+                                                                            'P': False,
+                                                                            'gamma': False,
+                                                                            'tau': False}}},
                                        'RV': {'category': 'QPGeorge',
                                               'param_extensions': {'GP': {'A': '',
                                                                           'P': '',
@@ -192,7 +194,7 @@ GP1D_models = {'GPmodel4instrument': {'IND-CaHK_HELIOS_inst': 'CaHK',
 # Indicates in the duplicates dictionary which parameters you want to be seen being duplicates of another parameters
 # Format: keys are the full name of main parameters that you want to be duplicated.
 # Values are the list of main parameters full names that you want to be duplicates of the parameter named by the corresponding key.
-duplicates = {'RV_P': ['CaHK_P', 'Ha_P']}
+duplicates = {'RV_P': ['CaHK_P', 'Ha_P'],'RV_gamma':['CaHK_gamma', 'Ha_gamma'],'RV_tau':['CaHK_tau', 'Ha_tau']}
 
 # Frozen parameters
 ###################
@@ -218,34 +220,24 @@ joint_priors = {}
 # The units are provided as information and you should not change it. Any change will be ignored.
 #
 # The list of available individual priors is: 
-individual_priors = {'GP1D': {'CaHK': {'A': {'args': {'vmax': 1.0, 'vmin': 0.0},
+individual_priors = {'GP1D': {'CaHK': {'A': {'args': {'vmax': 100, 'vmin': 0.0},
                                                  'category': 'uniform',
-                                                 'unit': None},
-                                           'gamma': {'args': {'vmax': 1.0, 'vmin': 0.0},
-                                                     'category': 'uniform',
-                                                     'unit': None},
-                                           'tau': {'args': {'vmax': 1.0, 'vmin': 0.0},
-                                                   'category': 'uniform',
-                                                   'unit': None}},
-                              'Ha': {'A': {'args': {'vmax': 1.0, 'vmin': 0.0},
+                                                 'unit': None}
+                                                 },
+                              'Ha': {'A': {'args': {'vmax': 100, 'vmin': 0.0},
                                                'category': 'uniform',
-                                               'unit': None},
-                                         'gamma': {'args': {'vmax': 1.0, 'vmin': 0.0},
-                                                   'category': 'uniform',
-                                                   'unit': None},
-                                         'tau': {'args': {'vmax': 1.0, 'vmin': 0.0},
-                                                 'category': 'uniform',
-                                                 'unit': None}},
-                              'RV': {'A': {'args': {'vmax': 1.0, 'vmin': 0.0},
+                                               'unit': None}
+                                               },
+                              'RV': {'A': {'args': {'vmax': 8.0, 'vmin': 0.0},
                                            'category': 'uniform',
                                            'unit': None},
-                                     'P': {'args': {'vmax': 1.0, 'vmin': 0.0},
+                                     'P': {'args': {'vmax': 500.0, 'vmin': 10.0},
                                            'category': 'uniform',
                                            'unit': None},
-                                     'gamma': {'args': {'vmax': 1.0, 'vmin': 0.0},
+                                     'gamma': {'args': {'vmax': 100.0, 'vmin': 0.1},
                                                'category': 'uniform',
                                                'unit': None},
-                                     'tau': {'args': {'vmax': 1.0, 'vmin': 0.0},
+                                     'tau': {'args': {'vmax': 100.0, 'vmin': 2.0},
                                              'category': 'uniform',
                                              'unit': None}}},
                      'instruments': {'IND-CaHK': {'HELIOS': {'inst': {'C0': {'args': {'vmax': 1.0,
