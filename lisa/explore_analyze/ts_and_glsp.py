@@ -34,7 +34,7 @@ day2sec = 24 * 60 * 60
 
 def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                          compute_raw_models_func, remove_add_model_components_func,
-                         kwargs_compute_model_4_key_model, l_valid_model,
+                         kwargs_compute_model_4_key_model, 
                          y_name, inst_cat,
                          d_name_component_removed_to_print,
                          show_dict, l_model_1_per_row,
@@ -50,8 +50,6 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                          suptitle_kwargs=None,
                          fontsize=AandA_fontsize,
                          get_key_compute_model_func=get_key_compute_model,
-                         is_valid_model_available_func=is_valid_model_available,
-                         kwargs_is_valid_model_available=None,
                          kwargs_get_key_compute_model=None
                          ):
     """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
@@ -252,10 +250,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                   remove_add_model_components_func=remove_add_model_components_func,
                                   kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                   compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                                  l_valid_model=l_valid_model,
                                   get_key_compute_model_func=get_key_compute_model_func,
-                                  is_valid_model_available_func=is_valid_model_available_func,
-                                  kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                   )
 
@@ -457,10 +452,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             plot_unbinned=True, plot_binned=False, ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             models=None,
-                                                            l_valid_model=l_valid_model,
                                                             get_key_compute_model_func=get_key_compute_model_func,
-                                                            is_valid_model_available_func=is_valid_model_available_func,
-                                                            kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
                                 computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
@@ -491,10 +483,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             ax=axe_data,
                                                             pl_kwarg=pl_kwarg_final,
                                                             models=computed_models[datasetname],
-                                                            l_valid_model=l_valid_model,
                                                             get_key_compute_model_func=get_key_compute_model_func,
-                                                            is_valid_model_available_func=is_valid_model_available_func,
-                                                            kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
                             logger.debug(f"Done: Compute and plot model {model} for dataset {datasetname} (row {i_row}, column {i_col})")

@@ -19,10 +19,8 @@ from ..posterior.core.model.core_model import Core_Model
 
 key_whole = Core_Model.key_whole
 
-l_valid_model = ["model", "inst_var", "sys_var"]
-
-dict_model_false = {key: False for key in l_valid_model[1:]}
-dict_model_true = {key: True for key in l_valid_model[1:]}
+dict_model_false = {key: False for key in ["inst_var", "sys_var"]}
+dict_model_true = {key: True for key in ["inst_var", "sys_var"]}
 
 d_name_component_removed_to_print = {'inst_var': "Inst Var", 'sys_var': "Sys var",
                                      'GP': "GP",
@@ -176,7 +174,6 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                     compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                    l_valid_model=l_valid_model,
                                     y_name=IND_subcat, inst_cat=f'IND-{IND_subcat}',
                                     d_name_component_removed_to_print=d_name_component_removed_to_print,
                                     datasim_kwargs=datasim_kwargs,
@@ -196,8 +193,6 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                     suptitle_kwargs=suptitle_kwargs, show_title_labels_ticklabels=show_title_labels_ticklabels, 
                                     unit=IND_unit, fontsize=fontsize,
                                     get_key_compute_model_func=get_key_compute_model,
-                                    is_valid_model_available_func=is_valid_model_available,
-                                    kwargs_is_valid_model_available={'IND_subcat': IND_subcat},
                                     kwargs_get_key_compute_model={'IND_subcat': IND_subcat},
                                     fig=fig, gs=gs
                                     )
@@ -404,7 +399,6 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 compute_GP_model=compute_GP_model,
                                 split_GP_computation=split_GP_computation,
-                                l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'sys_var', 'GP'],
                                 datasetnames4model4row=datasetnames4model4row,
@@ -417,8 +411,6 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
                                 suptitle_kwargs=suptitle_kwargs,
                                 fontsize=fontsize,
                                 get_key_compute_model_func=get_key_compute_model,
-                                is_valid_model_available_func=is_valid_model_available,
-                                kwargs_is_valid_model_available={'IND_subcat': IND_subcat},
                                 kwargs_get_key_compute_model={'IND_subcat': IND_subcat}
                                 )
 
@@ -429,14 +421,14 @@ def remove_add_model_components(model, remove_dict, add_dict, extension, extensi
     # Remove components if needed
     for key, do in remove_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['sys_var', 'inst_var', 'GP']:
+            if key in ['sys_var', 'inst_var', 'GP', 'model', 'data']:
                 model -= models[key + extension + extension_raw]
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
     # Add components if needed
     for key, do in add_dict.items():
         if do and ((key + extension + extension_raw) in models):
-            if key in ['sys_var', 'inst_var', 'GP']:
+            if key in ['sys_var', 'inst_var', 'GP', 'model', 'data']:
                 model += models[key + extension + extension_raw]
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
@@ -477,22 +469,18 @@ def is_valid_model_available(key_model, datasetname, post_instance, **kwargs):
         return False
     
     
-def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
+def compute_raw_models(tsim, key_model, datasetname, post_instance,
                        df_fittedval, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
-                       is_valid_model_available_func=is_valid_model_available,
-                       kwargs_is_valid_model_available=None,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
                        ):
     """
     """
-    return compute_raw_models_core(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
+    return compute_raw_models_core(tsim=tsim, key_model=key_model,
                                    datasetname=datasetname, post_instance=post_instance,
                                    df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
                                    exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
-                                   is_valid_model_available_func=is_valid_model_available_func,
-                                   kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                    split_GP_computation=split_GP_computation
                                    )

@@ -73,9 +73,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                            compute_GP_model=True, split_GP_computation=None,
                            compute_binned=True, exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None, time_unit=None,
                            plot_unbinned=True, plot_binned=True, ax=None, pl_kwarg=None, key_pl_kwarg=None,
-                           models=None, l_valid_model=None, get_key_compute_model_func=get_key_compute_model,
-                           is_valid_model_available_func=is_valid_model_available,
-                           kwargs_is_valid_model_available=None,
+                           models=None, get_key_compute_model_func=get_key_compute_model,
                            kwargs_get_key_compute_model=None,
                            ):
     """Compute and/or plot a model.
@@ -121,7 +119,6 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     models                              : dict of array
         Dictionary cointaining the models previously computed to avoid having to recompute the same model multiple times.
         Keys are valid model keys (str) and values are array of the model evaluated at tsim
-    l_valid_model                       : list of str
     get_key_compute_model_func          : func
     is_valid_model_available_func       : func
     kwargs_is_valid_model_available     : dict
@@ -209,13 +206,11 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             elif key_model_compute == 'GP' and not(compute_GP_model):
                 return models, pl_kwarg
             else:
-                model, model_err = compute_raw_models_func(tsim=tsim, key_model=key_model_compute, l_valid_model=l_valid_model,
+                model, model_err = compute_raw_models_func(tsim=tsim, key_model=key_model_compute,
                                                            datasetname=datasetname, post_instance=post_instance,
                                                            df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
                                                            exptime=exptime, supersamp=supersamp,
                                                            get_key_compute_model_func=get_key_compute_model_func,
-                                                           is_valid_model_available_func=is_valid_model_available_func,
-                                                           kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                            kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                            split_GP_computation=split_GP_computation
                                                            )
@@ -249,10 +244,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                        compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
                                                        fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
                                                        plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None,
-                                                       models=models, l_valid_model=l_valid_model,
+                                                       models=models,
                                                        get_key_compute_model_func=get_key_compute_model_func,
-                                                       is_valid_model_available_func=is_valid_model_available_func,
-                                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                        )
                 # If GP was computed add it 
@@ -301,10 +294,8 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                                                     compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
                                                     fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
                                                     plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
-                                                    models=models, l_valid_model=l_valid_model,
+                                                    models=models,
                                                     get_key_compute_model_func=get_key_compute_model_func,
-                                                    is_valid_model_available_func=is_valid_model_available_func,
-                                                    kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                                     kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                     )
 
@@ -358,11 +349,8 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                              compute_raw_models_func, remove_add_model_components_func,
                              kwargs_compute_model_4_key_model,
                              compute_GP_model=True,
-                             l_valid_model=None,
                              split_GP_computation=None,
                              get_key_compute_model_func=get_key_compute_model,
-                             is_valid_model_available_func=is_valid_model_available,
-                             kwargs_is_valid_model_available=None,
                              kwargs_get_key_compute_model=None,
                              ):
     """Load the dataset and models for later use by the other two functions ts_and_glsp.create_TSNGLSP_plots and phase_folded.create_phasefolded_plots
@@ -377,10 +365,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     compute_raw_models_func             : function
     remove_add_model_components_func    : function
     kwargs_compute_model_4_key_model    : dict
-    l_valid_model                       : list of str
     get_key_compute_model_func          : function
-    is_valid_model_available_func       : function
-    kwargs_is_valid_model_available     : dict
     kwargs_get_key_compute_model        : dict
 
     Return
@@ -482,10 +467,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                                         compute_binned=False, exptime_bin=None, supersamp_bin_model=None,
                                         fact_tsim_to_xsim=None, plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None,
                                         key_pl_kwarg=None, models=dico_outputs['models'][datasetname],
-                                        l_valid_model=l_valid_model,
                                         get_key_compute_model_func=get_key_compute_model_func,
-                                        is_valid_model_available_func=is_valid_model_available_func,
-                                        kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                         kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                         )
 
@@ -509,11 +491,9 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     return dico_outputs, kwargs_compute_model_4_key_model
 
 
-def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
+def compute_raw_models(tsim, key_model, datasetname, post_instance,
                        df_fittedval, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
-                       is_valid_model_available_func=is_valid_model_available,
-                       kwargs_is_valid_model_available=None,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
                        ):
@@ -522,7 +502,6 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     ---------
     tsim                                : array
     key_model                           : str
-    l_valid_model                       : list of str
     datasetname                         : str
     post_instance                       : Posterior
     df_fittedval                        : DataFrame
@@ -530,8 +509,6 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     exptime                             : float
     supersamp                           : int
     get_key_compute_model_func          : function
-    is_valid_model_available_func       : function
-    kwargs_is_valid_model_available     : dict
     kwargs_get_key_compute_model        : dict
 
     Returns
@@ -539,26 +516,23 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
     model       : array
     model_err   : array
     """
-    kwargs_is_valid_model_available = kwargs_is_valid_model_available if kwargs_is_valid_model_available is not None else {}
-    kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}
-    if key_model in l_valid_model:
-        if not(is_valid_model_available_func(key_model, datasetname, post_instance, **kwargs_is_valid_model_available)):
-            model = model_err = None
-            return model, model_err
-
     if exptime is None:
         exptime = 0.
     if supersamp is None:
         supersamp = 1.
 
     if key_model == 'decorrelation_likelihood':
-        datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-        p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list].array
-        model = datasim_docfunc_decorr_like.function(p_vect)
-        if not(len(model) == len(tsim)):
-            model = None
-        model_err = None
+        if f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db:
+            datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
+            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list].array
+            model = datasim_docfunc_decorr_like.function(p_vect)
+            if not(len(model) == len(tsim)):
+                model = None
+            model_err = None
+        else:
+            model = model_err = None
     else:
+        kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}
         key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)
         model, model_err = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
                                                        param=df_fittedval["value"].values,

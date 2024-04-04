@@ -20,10 +20,8 @@ key_whole = Core_Model.key_whole
 
 y_name = "RV"
 
-l_valid_model = ["model", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
-
-dict_model_false = {key: False for key in l_valid_model[1:]}
-dict_model_true = {key: True for key in l_valid_model[1:]}
+dict_model_false = {key: False for key in ["stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]}
+dict_model_true = {key: True for key in ["stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]}
 
 d_name_component_removed_to_print = {'inst_var': "Inst Var", 'stellar_var': "Stellar var",
                                      'decorrelation': "Decorrelation",
@@ -181,7 +179,6 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     compute_raw_models_func=compute_raw_models_core,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                    l_valid_model=l_valid_model,
                                     y_name=y_name, inst_cat='RV',
                                     d_name_component_removed_to_print=d_name_component_removed_to_print,
                                     datasim_kwargs=datasim_kwargs, 
@@ -201,7 +198,6 @@ def create_RV_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     suptitle_kwargs=suptitle_kwargs, show_title_labels_ticklabels=show_title_labels_ticklabels,
                                     unit=RV_unit, fontsize=fontsize,
                                     get_key_compute_model_func=get_key_compute_model_core,
-                                    is_valid_model_available_func=is_valid_model_available,
                                     fig=fig, gs=gs
                                     )
 
@@ -407,7 +403,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 compute_GP_model=compute_GP_model,
                                 split_GP_computation=split_GP_computation,
-                                l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
                                 datasetnames4model4row=datasetnames4model4row,
@@ -420,7 +415,6 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 suptitle_kwargs=suptitle_kwargs,
                                 fontsize=fontsize,
                                 # get_key_compute_model_func=get_key_compute_model,
-                                is_valid_model_available_func=is_valid_model_available,
                                 )
 
 

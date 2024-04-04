@@ -19,10 +19,8 @@ from ..posterior.core.model.core_model import Core_Model
 
 key_whole = Core_Model.key_whole
 
-l_valid_model = ["model", "1", "contamination", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]
-
-dict_model_false = {key: False for key in l_valid_model[1:]}
-dict_model_true = {key: True for key in l_valid_model[1:]}
+dict_model_false = {key: False for key in ["1", "contamination", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]}
+dict_model_true = {key: True for key in ["1", "contamination", "stellar_var", "inst_var", "decorrelation", "decorrelation_likelihood"]}
 
 d_name_component_removed_to_print = {'stellar_var': "Stellar Var", 'inst_var': "Inst Var", 'decorrelation': "Decorrelation",
                                      'decorrelation_likelihood': "Decorrelation Likelihood", 'contamination': "Contamination",
@@ -188,7 +186,6 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                    l_valid_model=l_valid_model,
                                     y_name=y_name, inst_cat='LC', 
                                     d_name_component_removed_to_print=d_name_component_removed_to_print,
                                     datasim_kwargs=datasim_kwargs, 
@@ -208,7 +205,6 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     suptitle_kwargs=suptitle_kwargs, show_title_labels_ticklabels=show_title_labels_ticklabels, 
                                     unit=LC_unit, fontsize=fontsize,
                                     get_key_compute_model_func=get_key_compute_model,
-                                    is_valid_model_available_func=is_valid_model_available,
                                     fig=fig, gs=gs
                                     )
 
@@ -435,7 +431,6 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 compute_GP_model=compute_GP_model,
                                 split_GP_computation=split_GP_computation,
-                                l_valid_model=l_valid_model,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
                                 datasetnames4model4row=datasetnames4model4row,
@@ -448,7 +443,6 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 suptitle_kwargs=suptitle_kwargs,
                                 fontsize=fontsize,
                                 get_key_compute_model_func=get_key_compute_model,
-                                is_valid_model_available_func=is_valid_model_available,
                                 )
 
 
@@ -509,11 +503,9 @@ def is_valid_model_available(key_model, datasetname, post_instance):
         return is_valid_model_available_core(key_model=key_model, datasetname=datasetname, post_instance=post_instance)
 
 
-def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instance,
+def compute_raw_models(tsim, key_model, datasetname, post_instance,
                        df_fittedval, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
-                       is_valid_model_available_func=is_valid_model_available,
-                       kwargs_is_valid_model_available=None,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
                        ):
@@ -524,12 +516,10 @@ def compute_raw_models(tsim, key_model, l_valid_model, datasetname, post_instanc
         model_err = None
         return model, model_err
     else:
-        return compute_raw_models_core(tsim=tsim, key_model=key_model, l_valid_model=l_valid_model,
+        return compute_raw_models_core(tsim=tsim, key_model=key_model,
                                        datasetname=datasetname, post_instance=post_instance,
                                        df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
                                        exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
-                                       is_valid_model_available_func=is_valid_model_available_func,
-                                       kwargs_is_valid_model_available=kwargs_is_valid_model_available,
                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                        split_GP_computation=split_GP_computation
                                        )
