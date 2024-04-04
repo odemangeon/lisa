@@ -495,7 +495,7 @@ def is_valid_model_available(key_model, datasetname, post_instance):
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
         inst_mod = post_instance.model.instruments[inst_mod_fullname]
         return ((star.get_dico_config_polymodel(inst_cat=inst_mod.instrument.category, notexist_ok=True, return_None_if_notexist=True) is not None) and
-                star.get_dico_config_polymodel(inst_cat=inst_mod.instrument.category, notexist_ok=True, return_None_if_notexist=True)["do"]
+                 star.get_dico_config_polymodel(inst_cat=inst_mod.instrument.category, notexist_ok=True, return_None_if_notexist=True)["do"]
                 )
     elif key_model == "inst_var":
         inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
