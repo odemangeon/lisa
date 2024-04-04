@@ -46,7 +46,7 @@ AandA_fontsize = 8
 ##########################
 obj_name = "Sun"
 
-IND_subcat = "Ha"
+IND_subcat = "CaHK"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
@@ -100,10 +100,10 @@ row4datasetname = None  # e. g. {f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range
 pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
 
 t_unit = 'BJD - 2,400,000'
-exptime_bin = 20 / 60
+exptime_bin = 0
 binning_stat = "mean"
 supersamp_bin_model = 10
-show_binned_model = True
+show_binned_model = {"model": False}
 
 tlims = None
 force_xlims = False
@@ -176,15 +176,13 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                                         # 't_lims_zoom": (2170.5, 2171.5),
                                         'ylims': ylims,
                                         'indicate_y_outliers': {"data": False, "resi": False}
-                                                   },
+                                        },
                              GLSP_kwargs={"do": do_GLSP,
                                           "period_range": period_range,
                                           "freq_fact": freq_fact,
                                           "freq_unit": freq_unit,
                                           "freq_lims": freq_lims,
                                           # "freq_lims_zoom": (0, 14),
-                                          'show_inst_var': False,
-                                          'show_decorrelation': True,
                                           'periods': periods,
                                           'fap': fap,
                                           # 'period_no_ticklabels': [10, ],
