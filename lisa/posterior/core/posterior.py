@@ -763,8 +763,9 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                         if not isfinite(lnlike_val):
                             logger.error("lnlike: {}".format(lnlike_val))
                             logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
+                            if np.isnan(lnlike_val):
+                                lnlike_val = -inf
                         return lnlike_val + lnprior_val
-                        # return like_func(p_vect, *args, **kwargs) + lnprior_val
                 return lnpost_withdataset
 
             mand_kwargs_list = copy(lnlike_docfunc.mand_kwargs_list)
