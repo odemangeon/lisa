@@ -43,7 +43,7 @@ obj_name = "target_name"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-extension_analysis = "_initrun_median"
+extension_analysis = "_initrun"
 
 save_outputs = True
 save_plot = False
@@ -67,10 +67,12 @@ show_time_from_tic = False
 time_fact = None
 time_unit = None
 
-exptime_bin = 1 / 15
+exptime_bin = 0  # 1 / 15
 binning_stat = "mean"
 supersamp_bin_model = 10
 show_binned_model = True
+
+split_GP_computation = 1000
 
 xlims = None
 force_xlims = False
@@ -126,6 +128,7 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                                  row4datasetname=row4datasetname,
                                  datasetnameformodel4row=None,
                                  npt_model=1000,
+                                 split_GP_computation=split_GP_computation,
                                  phasefold_central_phase=0.,
                                  show_time_from_tic=show_time_from_tic, time_fact=time_fact, time_unit=time_unit,
                                  exptime_bin=exptime_bin, binning_stat=binning_stat, supersamp_bin_model=supersamp_bin_model, show_binned_model=show_binned_model,

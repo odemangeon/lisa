@@ -51,7 +51,7 @@ IND_subcat = "FWHM"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-extension_analysis = "_initrun_median"
+extension_analysis = "_initrun"
 
 #########
 ## logger
