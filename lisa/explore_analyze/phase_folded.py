@@ -393,6 +393,8 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                     x_max_data = x_max
 
             # Define the bins
+            if exptime_bin is None:
+                exptime_bin = 0.
             if exptime_bin > 0.:
                 bin_size_unit = f"{time_unit}" if show_time_from_tic else "orb. phase"
                 update_data_binned_label(pl_kwarg=pl_kwarg_final, key_data_binned="data_binned", datasetnames=datasetnames, bin_size=exptime_bin,
