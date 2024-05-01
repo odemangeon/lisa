@@ -38,7 +38,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                          y_name, inst_cat,
                          d_name_component_removed_to_print,
                          show_dict, l_model_1_per_row,
-                         datasetnames4model4row=None,
+                         datasetname4model4row=None,
                          compute_GP_model=True,
                          split_GP_computation=None,
                          datasim_kwargs=None,
@@ -238,7 +238,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
     else:
         gs_gls = gs[0]
 
-    # If no dataset name is provided get all the available RV datasets
+    # If no dataset name is provided get all the available datasets of the provided inst_cat
     if datasetnames is None:
         datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat=inst_cat, sortby_instcat=False, sortby_instname=False)
 
@@ -285,9 +285,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         # Define on which rows the datasets are plots using the row4datasetname input
         row4datasetname, datasetnames4rowidx = check_row4datasetname(row4datasetname=TS_kwargs.get("row4datasetname", None), datasetnames=datasetnames)
         nb_rows = len(datasetnames4rowidx)
-        datasetname4model4row = check_datasetname4model4row(datasetname4model4row=datasetnames4model4row,
+        datasetname4model4row = check_datasetname4model4row(datasetname4model4row=datasetname4model4row,
                                                             datasetnames4rowidx=datasetnames4rowidx,
-                                                            l_model=list(show_dict.keys()), l_model_1_per_row=l_model_1_per_row,
+                                                            l_model_4_rowidx=[list(show_dict.keys()) for range(len(datasetnames4rowidx))], l_model_1_per_row=l_model_1_per_row,
                                                             )
 
         # Create the updated grid space according to the number of rows
@@ -619,7 +619,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                           range=(x_min_data, x_max_data))
                     # Compute the err on the binned values
                     binstd = zeros(nbins)
-                    if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
+                    if any([dico_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]):
                         binstd_jitter = zeros(nbins)
                     bincount = zeros(nbins)
                     data_err_row = concatenate([dico_load['data_errs'][dst] for dst in datasetnames4rowidx[i_row]])
@@ -812,7 +812,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         Pbeg, Pend = GLSP_kwargs.get("period_range", (0.1, 1000))
 
         glsps = {}
-        for ii, key in enumerate(l_gls_key):
+        for key in l_gls_key:
             glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
 
         ###############################
@@ -999,6 +999,902 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     labelleft = True if jj == 0 else False
                     ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
         logger.debug("Done: GLSP plot")
+
+    if TS_kwargs['do']:
+        return dico_load, computed_models
+    else:
+        return dico_load, None
+
+
+def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
+                          compute_raw_models_func, remove_add_model_components_func,
+                          kwargs_compute_model_4_key_model, 
+                          y_name, inst_cat,
+                          l_iterative_removal,
+                          d_name_component_removed_to_print,
+                          l_1_model_4_alldst,
+                          show_dict, show_removed_in_previousrow=True,
+                          datasetname4model=None,
+                          compute_GP_model=True,
+                          split_GP_computation=None,
+                          datasim_kwargs=None,
+                          datasetnames=None,
+                          amplitude_fact=1., unit=None,
+                          create_axes_kwargs=None,
+                          TS_kwargs=None,
+                          GLSP_kwargs=None,
+                          suptitle_kwargs=None,
+                          fontsize=AandA_fontsize,
+                          get_key_compute_model_func=get_key_compute_model,
+                          kwargs_get_key_compute_model=None
+                          ):
+    """Produce clean RV time series and generalized Lomb-Scargle plots of a system.
+
+    Arguments
+    ---------
+    fig           :
+        Figure instance (provided by the styler)
+    post_instance : Posterior instance
+    df_fittedval  : DataFrame
+        Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
+    datasim_kwargs : dict
+        Dictionary of keyword arguments for the datasimulator.
+    planets : list_of_str or None
+        List of the names of the planets for which you want a phase pholded curve. If None all planets are used
+    star_name     : String
+    datasetnames  : list of String
+        List providing the datasets to load and use
+    create_axes_kwargs     : dict
+    remove_dict   : dict
+    TS_kwargs     : None or dict
+            - 'do': boolean (Def: True)
+            - 'row4datasetname'   : dict of int
+                Dictionary saying which dataset to plot on which row. The format is:
+                {"<dataset_name>": <int giving the row index starting at 0>, ...}
+            - 'npt_model': int (Def: 1000) giving the number of points to use for the model
+            - 'extra_dt_model': float (Def: 0)
+                Specify the extra time that for which you want to compute the model before and after the
+                data.
+            - 'tlims': None or Iterable of 2 float (Def: None)
+                Specificy the time limits for the plot
+            - 'tlims_zoom': None or Iterable of 2 float (Def: None)
+                If provided a zoom on the right of the main plot will be drawn.
+                This gives the beginning and end time for the zoom
+            - 't_unit': str (Def: days)
+                String that is going to be used to give the unit (and reference system) of the time.
+            - 'pl_kwargs': dict
+                Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
+                and values a dictionary that will be passed as keyword arguments associated the plotting functions.
+                You can also add a 'jitter' key with value a dictionary that will contain the changes that you
+                want to make for the update error bars due to potential jitter.
+                Finally you can use the 'show_error' keyword with value True or False to specify if you want
+                the error bars of the dataset to be plotted.
+            - 'ylims_data': Define the limits on the data y axis. This override 'pad_data'
+            - 'pad_data': Iterable of 2 floats (Def: (0.1, 0.1))
+                Define the bottom and top pad to apply for data axes.
+                Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
+                allows to provide different pad_data for different planets.
+            - 'ylims_resi': Define the limits on the residuals y axis. This override 'pad_resi'
+            - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+            - 'indicate_y_outliers_data': boolean. If True, data outliers (outside of the plot) are indicated
+                by arrows.
+            - 'indicate_y_outliers_resi': boolean. If True, residuals outliers (outside of the plot) are indicated
+                by arrows.
+            - 'exptime_bin' : float
+                Exposure time for the binning of data in the same unit that the time of the datasets.
+                If you don't want to bin put 0.
+            - 'binning_stat' : str
+                Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
+                statistic argument of scipy.stats.binned_statistic
+            - 'one_binning_per_row' : bool
+                If true only one binning per row is performed
+            - 'show_title'  : bool
+                If True, show the titles (of the main and the zoom)
+            - 'legend_kwargs' : dict of dict
+                keys are 'all' or int providing the row index ('all' applies to all row, but the row index overwrite it)
+                Values are dict whose keys are:
+                    'do'    : bool
+                        (Default: True) Whether or not to show the legend
+                    other keys are passed to the pyplot.legend function
+            - 'rms_kwargs'  : dict
+                keys are:
+                    'do'            : bool
+                        (Default: True) Show the rms in between the data and residuals axes
+                    'rms_format'    :
+                        (Default: '.0f') Format that will be used to format the rms values
+            - 'gridspec_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                GridSpecFromSubplotSpec (GridSpecFromSubplotSpec(..., **TS_kwargs['gridspec_kwargs'])) which
+                create the gridspec separating the full and zoom GLSP columns
+            - 'axeswithsharex_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                et.add_twoaxeswithsharex(... gs_from_sps_kw=TS_kwargs['axeswithsharex_kwargs']) which
+                creates the data and residuals axes.
+    GLSP_kwargs   : None or dict
+            - 'do': boolean (Def: True)
+            - 'use_jitter': boolen (Def: True)
+                If True it uses the error bars with jitter to compute the GLSP and the FAP levels
+            - 'period_range': Iterable of 2 float providing the beginning and end period for the computation
+                of the GLSP
+            - 'freq_fact': float (Def: 1e6)
+                Factor to apply to the frequency for example to plot them in micro Hertz
+            - 'freq_unit': str  (Def: "$\\mu$Hz"),
+                Unit to display on the frequency axis. Must be coherent with freq_fact !
+            - 'freq_lims': None or Iterable of 2 float (Def: None)
+                Specificy the frequency limits for the plot in freq_unit
+            - 'logscale': boolean (Def: False),
+            - 'show_WF': boolean (Def: True),
+            - 'periods': dict
+                Specify the periods for which you want to draw a vertical line.
+                The keys are the period values and the values are dict that can be empty or specify the
+                values of the following keywords:
+                - 'color': str giving the color of the line
+                - 'linestyle': str giving the style of the line
+                - 'label': str giving the label to plot
+                - 'align': str ('left', 'right', 'center') the horizontal alignment of the label compared to the vertical line
+                - 'xshift': float x shift of the label
+                - 'yshift': float y shift of the label
+            - 'fap': dict
+                Specify the fap levels for which you want to draw a horizontal line.
+                The keys are the fap level values and the values are dict that can be empty or specify the
+                values of the following keywords:
+                - 'color': str giving the color of the line
+                - 'linestyle': str giving the style of the line
+                - 'label': int (0: don't show, 1: only the fap value, 2: fap value followed by %)
+                - 'align': str ('top', 'center', 'bottom') the horizontal alignment of the label compared to the vertical line
+                - 'xshift': float x shift of the label
+                - 'yshift': float y shift of the label
+            - 'freq_lims_zoom': None or Iterable of 2 float (Def: None)
+                If provided a zoom on the right of the main plot will be drawn.
+                This gives the beginning and end time for the zoom
+            - 'scientific_notation_P_axis': boolean (default: True)
+                If True the tick label on the period axis are in scientific notations
+            - 'period_no_ticklabels': list of int
+                list of decades to for which you don't want to show the tick label
+            - 'period_no_ticklabels_zoom': list of int
+                list of decades to for which you don't want to show the tick label for the zoom
+            - 'gridspec_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                GridSpecFromSubplotSpec (GridSpecFromSubplotSpec(..., **GLSP_kwargs['gridspec_kwargs'])) which
+                create the gridspec separating the full and zoom GLSP columns
+            - 'axeswithsharex_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                et.add_axeswithsharex(... gs_from_sps_kw=TS_kwargs['axeswithsharex_kwargs']) which
+                creates the different GLSP axes for the data, model ...
+            - 'legend_param': dict of dict
+                Dictionary with key in ('data', 'model', 'resi', 'GP', 'WF') and values dictionaries that
+                will be passed on to legend ( legend(.., **GLSP_kwargs['legend_param'][key]))
+    suptitle_kwargs : dict
+        Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
+    amplitude_fact       : float
+        Factor to apply to the data
+    unit        : str
+        String giving the unit of the data
+
+    Returns
+    -------
+    dico_load       : dict  
+        Output of the function core_compute_load.load_datasets_and_models
+    computed_models : dict
+        Outputs of the compute_and_plot_model function calls
+    """
+    logger.debug("Start create_iTSNGLSP_plots")
+    ##############################################
+    # Setup figure structure and common parameters
+    ##############################################
+    logger.debug("Setup figure structure and common parameters")
+    # Make sure that create_axes_kwargs is well defined
+    create_axes_kwargs_user = create_axes_kwargs if create_axes_kwargs is not None else {}
+    create_axes_kwargs = {'main_gridspec': {},
+                          }
+    for key in create_axes_kwargs_user:
+        if key in create_axes_kwargs:
+            create_axes_kwargs[key].update(create_axes_kwargs_user[key])
+        else:
+            raise ValueError(f"{key} is not a valid key for create_axes_kwargs, should be in ['main_gridspec', 'add_axeswithsharex']")
+
+    # Make sure that the TS_kwargs and GLSP_kwargs are well defined
+    TS_kwargs_user = TS_kwargs if create_axes_kwargs is not None else {}
+    TS_kwargs = {'do': True, }
+    TS_kwargs.update(TS_kwargs_user)
+
+    GLSP_kwargs_user = GLSP_kwargs if create_axes_kwargs is not None else {}
+    GLSP_kwargs = {'do': True, }
+    GLSP_kwargs.update(GLSP_kwargs_user)
+
+    ncols = int(TS_kwargs['do'])
+    if GLSP_kwargs['do']:
+        ncols +=1
+        if GLSP_kwargs.get("freq_lims_zoom", None) is not None:
+            ncols +=1
+
+    # Create The GridSpec
+    # TODO: Check l_iterative_removal 
+    nb_rows_ts = 1 + len(l_iterative_removal)
+    if GLSP_kwargs.get("show_WF", True):
+        nb_rows_glsp = nb_rows_ts + 1
+    else:
+        nb_rows_glsp = nb_rows_ts
+    gs = GridSpec(nrows=nb_rows_glsp, ncols=ncols, figure=fig, **create_axes_kwargs['main_gridspec'])
+
+    show_title = TS_kwargs.get("show_title", True)
+
+    if TS_kwargs['do']:
+        gs_ts = gs[0, :]
+
+    # If no dataset name is provided get all the available datasets of the provided inst_cat
+    if datasetnames is None:
+        datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat=inst_cat, sortby_instcat=False, sortby_instname=False)
+
+    # Load the defined datasets and check how many dataset there is by instrument.
+    (dico_load, kwargs_compute_model_4_key_model
+     ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                  df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
+                                  compute_raw_models_func=compute_raw_models_func,
+                                  remove_add_model_components_func=remove_add_model_components_func,
+                                  kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                  compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                  get_key_compute_model_func=get_key_compute_model_func,
+                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                  )
+
+    # Do the suptitle
+    do_suptitle(fig=fig, post_instance=post_instance, datasetnames=datasetnames, fontsize=fontsize,
+                dico_models=dico_load["models"], model_removed_or_add_dict=kwargs_compute_model_4_key_model["model"],
+                data_remove_or_add_dict=kwargs_compute_model_4_key_model["data"], suptitle_kwargs=suptitle_kwargs
+                )
+            
+    ###############################################
+    # Preliminary checks for both TS and GLSP plots
+    ###############################################
+    # Get the binning variables
+    exptime_bin = TS_kwargs.get("exptime_bin", 0.)
+    if exptime_bin is None:
+        exptime_bin = 0.
+    if exptime_bin > 0:
+        show_binned_model = True
+    binning_stat = TS_kwargs.get("binning_stat", "mean")
+    supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 10)
+
+    # Set the arguments for the plotting functions
+    (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
+     ) = get_pl_kwargs(pl_kwargs=TS_kwargs.get('pl_kwargs', None), dico_nb_dstperinsts=dico_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
+                       bin_size=exptime_bin, one_binning_per_row=True, nb_rows=nb_rows_ts)
+
+    time_unit = TS_kwargs.get('time_unit', 'days')
+
+    update_data_binned_label(pl_kwarg=pl_kwarg_final, key_data_binned="data_binned", datasetnames=datasetnames, bin_size=exptime_bin,
+                             bin_size_unit=time_unit, one_binning_per_row=True,
+                             nb_rows=nb_rows_ts)
+
+    # Make sure that legend_kwargs is well defined
+    legend_kwargs = check_kwargs_by_column_and_row(kwargs_user=TS_kwargs.get('legend_kwargs', None),
+                                                   l_row_name=list(range(nb_rows_ts)),
+                                                   l_col_name=list(range(1)),
+                                                   kwargs_def={'do': False},
+                                                   kwargs_init={0: {i_row: {'do': True} for i_row in range(nb_rows_ts)}}
+                                                   )
+
+    # Make sure the show_dict is well define
+    show_dict_user = show_dict if show_dict is not None else {}
+    show_dict = {0: {"model": True, }}
+    for i_row, t_key_model in enumerate(l_iterative_removal):
+        if i_row not in show_dict:
+            show_dict[i_row] = {}
+        if show_removed_in_previousrow:
+            for key_model in t_key_model:
+                show_dict[i_row][key_model] = True
+    show_dict.update(show_dict_user)
+
+    #####################################
+    # Preliminary checks for the TS plots
+    #####################################
+    if TS_kwargs['do']:    
+
+        # Check some of the TS parameters
+        # Make sure that rms_kwargs is well defined
+        rms_kwargs_user = TS_kwargs.get('rms_kwargs', None) if TS_kwargs.get('rms_kwargs', None) is not None else {}
+        rms_kwargs = {'do': True, 'format': '.1e'}
+        rms_kwargs.update(rms_kwargs_user)
+            
+        # Make sure that indicate_y_outliers is well defined
+        indicate_y_outliers = check_spec_data_or_resi(spec_user=TS_kwargs.get('indicate_y_outliers', None), l_type_spec=[bool], spec_def=True)
+
+        # Make sure that pad is well defined
+        pad = check_spec_data_or_resi(spec_user=TS_kwargs.get('pad', None), l_type_spec=[tuple, list], spec_def=(0.1, 0.1))
+
+        # check tlims
+        tlims = check_spec_by_column_or_row(spec_user=TS_kwargs.get('tlims', None), l_type_spec=[tuple, list],
+                                            spec_def=None, l_row_name=list(range(nb_rows_ts)))
+
+        # Make sure that ylims is well defined
+        ylims = check_spec_for_data_or_resi_by_column_or_row(spec_user=TS_kwargs.get('ylims', None),
+                                                             l_row_name=list(range(nb_rows_ts)),
+                                                             l_col_name=list(range(1)),
+                                                             l_type_spec=[tuple, list],
+                                                             spec_def={'data': None, 'resi': None}
+                                                             )
+        
+        # Get the time fact, time unit,  npt_model, extra_dt_model
+        time_fact = TS_kwargs.get('time_fact', 1.)
+        npt_model = TS_kwargs.get('npt_model', 1000)
+        extra_dt_model = TS_kwargs.get("extra_dt_model", 0.)
+
+        # Init the text_rms
+        text_rms = OrderedDict()
+
+        # Compute the time (including time_fact, x_values) corresponding to each point in each dataset and the minimum and maximum of all datasets
+        xlims_datas = OrderedDict()
+        x_values = OrderedDict()
+        for datasetname in datasetnames:
+            xlims_datas[datasetname] = [inf, -inf]
+            x_values[datasetname] = dico_load['times'][datasetname] * time_fact
+            if min(x_values[datasetname]) < xlims_datas[datasetname][0]:
+                xlims_datas[datasetname][0] = min(x_values[datasetname])
+            if max(x_values[datasetname]) > xlims_datas[datasetname][1]:
+                xlims_datas[datasetname][1] = max(x_values[datasetname])
+        
+        # Compute the models
+        computed_models = {}
+
+        # Define on which rows the datasets are plots using the row4datasetname input
+        if datasetname4model is not None:
+            datasetname4model4row = {key_model: {0: dst_name} for key_model, dst_name in datasetname4model.items()}
+        else:
+            datasetname4model4row = None
+        datasetname4model4row = check_datasetname4model4row(datasetname4model4row=datasetname4model4row,
+                                                            datasetnames4rowidx=[datasetnames],
+                                                            l_model_4_rowidx=[show_dict_i_row for show_dict]list(show_dict.keys()), l_model_1_per_row=l_1_model_4_alldst,
+                                                            )
+        datasetname4model = {key_model: dico_datasetname4row[0] for key_model, dico_datasetname4row in datasetname4model4row.items()}
+        
+        for datasetname in datasetnames:
+            # Init computed_models for this dataset
+            computed_models[datasetname] = {}
+            for i_row in range(nb_rows_ts):
+                for model, show_model in show_dict[i_row].items():
+                    if show_model and ((datasetname4model[model] == datasetname) or (datasetname4model[model] == 'all')) and (model not in computed_models[datasetname]):
+                        logger.debug(f"Computing model {model} for dataset {datasetname}")
+                        if datasetname4model[model] == 'all':
+                            xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
+                        else:
+                            xlims_model = [min([xlims_datas[dst][0] for dst in datasetnames]) - extra_dt_model,
+                                        max([xlims_datas[dst][1] for dst in datasetnames]) + extra_dt_model
+                                        ]
+                        if tlims_i is not None:
+                            if (tlims_i[0] is not None) and (tlims_i[0] > xlims_model[0]):
+                                xlims_model[0] = tlims_i[0]
+                            if (tlims_i[1] is not None) and (tlims_i[1] < xlims_model[1]):
+                                xlims_model[1] = tlims_i[1]
+                        tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
+                        kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
+                        if model == "decorrelation_likelihood":
+                            computed_models[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
+                            (models_decorr_like, _
+                            ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
+                                                       key_model=model,
+                                                       datasetname=datasetname,
+                                                       post_instance=post_instance,
+                                                       df_fittedval=df_fittedval,
+                                                       datasim_kwargs=datasim_kwargs,
+                                                       amplitude_fact=amplitude_fact,
+                                                       compute_raw_models_func=compute_raw_models_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func,
+                                                       key_pl_kwarg=model,
+                                                       remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                       add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                       compute_only_raw_models=False,
+                                                       compute_GP_model=compute_GP_model,
+                                                       split_GP_computation=split_GP_computation,
+                                                       compute_binned=False,
+                                                       exptime_bin=None,
+                                                       supersamp_bin_model=None,
+                                                       fact_tsim_to_xsim=time_fact,
+                                                       xsim=None, time_unit=None,
+                                                       plot_unbinned=False, plot_binned=False, ax=None,
+                                                       pl_kwarg=None,
+                                                       models=None,
+                                                       get_key_compute_model_func=get_key_compute_model_func,
+                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                       )
+                            computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
+                        else:
+                            computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
+                            computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
+                            (computed_models[datasetname], _
+                             ) = compute_and_plot_model(tsim=computed_models[datasetname]["tsim"],
+                                                        key_model=model,
+                                                        datasetname=datasetname,
+                                                        post_instance=post_instance,
+                                                        df_fittedval=df_fittedval,
+                                                        datasim_kwargs=datasim_kwargs,
+                                                        amplitude_fact=amplitude_fact,
+                                                        compute_raw_models_func=compute_raw_models_func,
+                                                        remove_add_model_components_func=remove_add_model_components_func,
+                                                        key_pl_kwarg=model,
+                                                        remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                        add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                        compute_only_raw_models=False,
+                                                        compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                                        compute_binned=show_binned_model,
+                                                        exptime_bin=exptime_bin,
+                                                        supersamp_bin_model=supersamp_bin_model,
+                                                        fact_tsim_to_xsim=time_fact,
+                                                        xsim=None, time_unit=time_unit,
+                                                        plot_unbinned=False, plot_binned=False,
+                                                        ax=None,
+                                                        pl_kwarg=None,
+                                                        models=computed_models[datasetname],
+                                                        get_key_compute_model_func=get_key_compute_model_func,
+                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                        )
+                        logger.debug(f"Done: Compute and plot model {model} for dataset {datasetname}")
+
+    #######################################
+    # Preliminary checks for the GLSP plots
+    #######################################
+    if GLSP_kwargs['do']:
+
+        # Define Pbeg and Pend for the glsp computation
+        Pbeg, Pend = GLSP_kwargs.get("period_range", (0.1, 1000))
+
+        ###############################
+        # Create additional axe if zoom
+        ###############################
+        if GLSP_kwargs.get("freq_lims_zoom", None) is not None:
+            if TS_kwargs['do']:
+                gs_gls = [gs[1, :], gs[2, :]]
+            else:
+                gs_gls = [gs[0, :], gs[1, :]]
+            freq_lims = [GLSP_kwargs.get("freq_lims", None), GLSP_kwargs["freq_lims_zoom"]]
+            period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), GLSP_kwargs.get("period_no_ticklabels_zoom", [])]
+            nb_columns_gls = 2
+        else:
+            if TS_kwargs['do']:
+                gs_gls = [gs[1, :], ]
+            else:
+                gs_gls = [gs[0, :], ]
+            freq_lims = [GLSP_kwargs.get("freq_lims", None), ]
+            period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), ]
+            nb_columns_gls = 1
+
+        ################################################
+        # Create additional axes for data, model, etc...
+        ################################################
+        show_WF = GLSP_kwargs.get("show_WF", True)
+        freq_fact = GLSP_kwargs.get("freq_fact", 1e6)
+        freq_unit = GLSP_kwargs.get("freq_unit", '$\mu$Hz')
+        logscale = GLSP_kwargs.get("logscale", False)
+        legend_param = GLSP_kwargs.get('legend_param', {})
+        
+    ################
+    # Iterative loop
+    ################
+    datas = {}
+    models = {}
+
+    for i_row in range(1 + len(l_iterative_removal)):
+
+        # Set l_model_2_remove and l_model_2_remove_nextrow
+        if i_row == 0:
+            l_model_2_remove = []
+            l_model_2_remove_nextrow = l_iterative_removal[i_row]
+        elif i_row == len(l_iterative_removal):
+            l_model_2_remove = l_iterative_removal[i_row - 1]
+            l_model_2_remove_nextrow = []
+        else:
+            l_model_2_remove = l_iterative_removal[i_row - 1]
+            l_model_2_remove_nextrow = l_iterative_removal[i_row]
+
+        ##################
+        # Compute the data
+        ##################
+        for datasetname in datasetnames:
+            if i_row == 0:
+                datas[datasetname] = dico_load['datas'][datasetname]
+            for key_model in l_model_2_remove:
+                if key_model in dico_load:
+                    model_2_remove = dico_load[key_model][datasetname]
+                elif (datasetname in models) and (key_model in models[datasetname]):
+                    model_2_remove = models[key_model][datasetname]
+                else:
+                    (models[datasetname], _
+                        ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
+                                                key_model=key_model,
+                                                datasetname=datasetname,
+                                                post_instance=post_instance,
+                                                df_fittedval=df_fittedval,
+                                                datasim_kwargs=datasim_kwargs,
+                                                amplitude_fact=amplitude_fact,
+                                                compute_raw_models_func=compute_raw_models_func,
+                                                remove_add_model_components_func=remove_add_model_components_func,
+                                                key_pl_kwarg=key_model,
+                                                remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                compute_only_raw_models=False,
+                                                compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                                compute_binned=False,
+                                                exptime_bin=exptime_bin,
+                                                supersamp_bin_model=supersamp_bin_model,
+                                                fact_tsim_to_xsim=time_fact,
+                                                xsim=None, time_unit=time_unit,
+                                                plot_unbinned=False, plot_binned=False,
+                                                ax=None,
+                                                pl_kwarg=None,
+                                                models=models[datasetname],
+                                                get_key_compute_model_func=get_key_compute_model_func,
+                                                kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                )
+                    model_2_remove = models[datasetname][key_model]
+                datas[datasetname] -= model_2_remove
+
+        text_rms_template = f"{{:{rms_kwargs['format']}}}"
+        text_rms[i_row] = text_rms_template.format(std(np.concatenate([datas[dst][logical_and(x_values[dst] >= x_min_rms, x_values[dst] <= x_max_rms)] for dst in datasetnames])))
+        print(f"RMS row {i_row} = {text_rms[i_row]} {unit} (raw cadence)")
+
+        #############
+        # TIME SERIES
+        #############
+        if TS_kwargs['do']:
+            logger.debug(f"Doing TS plot for row {i_row}/{nb_rows_ts}")
+
+            # Create the updated grid space according to the number of rows
+            gs_ts_i = gs_ts[i_rows]
+
+            if i_row == 0:
+                kwargs_add_suplot = {}
+            else:
+                kwargs_add_suplot = {'sharex': ax_ts_i}
+            ax_ts_i = fig.add_subplot(gs_ts_i, **kwargs_add_suplot)
+
+            if show_title and (i_row == 0):
+                ax_ts_i.set_title(f"{inst_cat} time series", fontsize=fontsize)
+                                                                      
+            # Make the data, models plots                
+            tlims_i = tlims.get(i_row, tlims['all'])
+            if i_row == (nb_rows_ts - 1):
+                ax_ts_i.set_xlabel(f"time [{time_unit}]", fontsize=fontsize)
+            ylabel = f"{y_name} [{unit}]" if unit is not None else f"{y_name}"
+            ax_ts_i.set_ylabel(ylabel, fontsize=fontsize)
+
+            ax_ts_i.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
+            ax_ts_i.xaxis.set_minor_locator(AutoMinorLocator())
+            ax_ts_i.yaxis.set_minor_locator(AutoMinorLocator())
+            ax_ts_i.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+            ax_ts_i.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+
+            ###############
+            # Plot the data
+            ###############
+            for datasetname in datasetnames:
+
+                # Plot the raw data
+                logger.debug(f"Plotting data for dataset {datasetname} (row {i_row})")
+                if pl_show_error[datasetname]['data']:
+                    ebcont = ax_ts_i.errorbar(x_values[datasetname], y=datas[datasetname],
+                                              yerr=dico_load['data_errs'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
+                    if not("ecolor" in pl_kwarg_jitter[datasetname]):
+                        pl_kwarg_jitter[datasetname]["data"]["ecolor"] = ebcont[0].get_color()
+                    if not("color" in pl_kwarg_final[datasetname]):
+                        pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
+                    if dico_load['has_jitters'][datasetname]:
+                        ax_ts_i.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname],
+                                        yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                else:
+                    ax_ts_i.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
+                logger.debug(f"Done: Plot data for dataset {datasetname} (row {i_row})")
+
+            # Plot the binned data if necessary
+            if exptime_bin > 0:
+                logger.debug(f"Plotting binned data for row {i_row}")
+                x_row = concatenate([x_values[dst] for dst in datasetnames])
+                x_min_data, x_max_data = (min(x_row), max(x_row))
+                bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
+                midbins = bins[:-1] + exptime_bin / 2
+                nbins = len(bins) - 1
+                # Compute the binned values
+                (bindata, binedges, binnb
+                ) = binned_statistic(x_row, concatenate([datas[dst] for dst in datasetnames]),
+                                    statistic=binning_stat, bins=bins,
+                                    range=(x_min_data, x_max_data))
+                # Compute the err on the binned values
+                binstd = zeros(nbins)
+                if any([dico_load['has_jitters'][dst] for dst in datasetnames]):
+                    binstd_jitter = zeros(nbins)
+                bincount = zeros(nbins)
+                data_err_row = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])
+                data_err_jitter_row = concatenate([dico_load['data_err_jitters'][dst] if dico_load['has_jitters'][dst] else ones_like(dico_load['data_errs'][dst]) * nan for dst in datasetnames])
+                for i_bin in range(nbins):
+                    bincount[i_bin] = len(where(binnb == (i_bin + 1))[0])
+                    if bincount[i_bin] > 0.0:
+                        binstd[i_bin] = sqrt(sum(power(data_err_row[binnb == (i_bin + 1)], 2.)) /
+                                            bincount[i_bin]**2
+                                            )
+                        if any([dico_load['has_jitters'][dst] for dst in datasetnames]):
+                            binstd_jitter[i_bin] = sqrt(sum(power(data_err_jitter_row[binnb == (i_bin + 1)],
+                                                                2.
+                                                                )
+                                                            ) /
+                                                        bincount[i_bin]**2
+                                                        )
+                    else:
+                        binstd[i_bin] = nan
+                        if any([dico_load['has_jitters'][dst] for dst in datasetnames]):
+                            binstd_jitter[i_bin] = nan
+                # Plot the binned data
+                bin_err = binstd if pl_show_error[f"row{i_row}"] else None
+                ebcont_binned = ax_ts_i.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"])
+                if not("color" in pl_kwarg_final[f"row{i_row}"]):
+                    pl_kwarg_final[f"row{i_row}"]["color"] = ebcont_binned[0].get_color()
+                if not("ecolor" in pl_kwarg_jitter[f"row{i_row}"]):
+                    pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_final[f"row{i_row}"]["color"]
+                if any([dico_load['has_jitters'][dst] for dst in datasetnames]) and pl_show_error[f"row{i_row}"]:
+                    _ = ax_ts_i.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
+                
+                # Compute rms of the binned data
+                x_min_rms = x_min_data
+                if tlims_i is not None and tlims_i[0] is not None:
+                    x_min_rms = tlims_i[0]
+                x_max_rms = x_max_data
+                if tlims_i is not None and tlims_i[1] is not None:
+                    x_max_rms = tlims_i[1]
+                text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
+                text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(nanstd(bindata[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
+                print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {unit}")
+                logger.debug(f"Done: Plot binned data for row {i_row}")     
+
+            ###########
+            # Write rms
+            ###########
+            # WARNING, TO BE IMPROVED for more than one dataset
+            if rms_kwargs['do']:
+                print_rms(ax=axe_resi, text_pos=(0.0, 1.05), row_name=i_row,
+                          start_with_rmsequal=(i_col == 0), add_rms_row=True,
+                          datasetnames_in_row=datasetnames4rowidx[i_row], pl_kwargs=pl_kwarg_final,
+                          text_rms=text_rms, text_rms_binned=text_rms_binned, fontsize=fontsize, unit=unit)
+
+            ###################################
+            # Set ylims and indicate_y_outliers
+            ###################################
+            logger.debug(f"Setting ylims and indicating outliers for row {i_row}")
+            # Set the y axis limits and indicate outliers for the data at the raw cadence
+            ylims_to_use = define_x_or_y_lims(x_or_ylims=ylims['data'], row_name=i_row)
+            if (ylims_to_use is None) and (pad['data'] is not None):
+                points_pl_i_row = concatenate([datas[dst] for dst in datasetnames])
+                et.auto_y_lims(points_pl_i_row, ax_ts_i, pad=pad['data'])
+            else:
+                axe.set_ylim(ylims_to_use)
+
+            # Indicate outlier values that are off y-axis with an arrows for raw cadence
+            if indicate_y_outliers[data_or_resi]:
+                for dst in datasetnames:
+                    et.indicate_y_outliers(x=x_values[dst], y=datas[dst], ax=ax_ts_i,
+                                           color=pl_kwarg_final[datasetname]["data"]["color"],
+                                           alpha=pl_kwarg_final[datasetname]["data"]["alpha"])
+
+            # # Draw a horizontal line at 0 in the residual plot
+            # axe_resi.hlines(0, *current_xlims, colors="k", linestyles="dashed")
+            logger.debug(f"Done: Set ylims and indicate outliers for row {i_row}")
+
+            ############################
+            # Set the tlims if provided
+            ############################
+            logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
+            # Set the x axis limits
+            if (i_col == 1) or TS_kwargs.get('force_tlims', False):
+                ax_ts_i.set_xlim(tlims_i)
+            else:
+                x_row = concatenate([x_values[dst] for dst in datasetnames])
+                ax_ts_i.set_xlim((min(x_row), max(x_row)))
+            logger.debug(f"Done: Set xlims for row {i_row}")
+            ##########################
+            # Set the legend if needed
+            ##########################
+            set_legend(ax=ax_ts_i, legend_kwargs=legend_kwargs[i_row], fontsize_def=fontsize)
+            logger.debug("Done: TS plot")
+
+        ######################################
+        # Generalized Lomb-Scargle Periodogram
+        ######################################
+        if GLSP_kwargs.get("do", True):
+
+            logger.debug(f"Doing GLSP plot for row {i_row}/{nb_rows_ts}")
+
+            # Set gls_input
+            gls_inputs = OrderedDict()
+            gls_inputs["data"] = {}
+            # Variable that are always available
+            gls_inputs["data"]["time"] = concatenate([dico_load['times'][dst] for dst in datasetnames])
+            idx_sort = argsort(gls_inputs["data"]["time"])
+            gls_inputs["data"]["time"] = gls_inputs["data"]["time"][idx_sort]
+            gls_inputs["data"]["value"] = concatenate([datas[dst] for dst in datasetnames])[idx_sort]
+            if GLSP_kwargs.get("use_jitter", True):
+                gls_inputs["data"]["err"] = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
+            else:
+                gls_inputs["data"]["err"] = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
+            for key_model, show_model in show_dict[i_row].items():
+                if show_model:
+                    gls_inputs[key_model] = {}
+                    gls_inputs[key_model]["time"] = gls_inputs["data"]["time"]
+                    gls_inputs[key_model]["value"] = concatenate([models[dst][key_model] for dst in datasetnames])[idx_sort]
+                    gls_inputs[key_model]["err"] = gls_inputs["data"]["err"]
+
+            ###################
+            # Compute the GLSPs
+            ###################
+            glsps = {}
+            for key in gls_inputs.keys():
+                glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
+
+            ###############
+            # Plot the GLSP
+            ###############
+            for j_col_glsp, (gs_gls_j, freq_lims_j, period_no_ticklabels_j) in enumerate(zip(gs_gls, freq_lims, period_no_ticklabels)):
+                if i_row == 0:
+                    kwargs_add_suplot = {}
+                else:
+                    kwargs_add_suplot = {'sharex': ax_glsp_i}
+                ax_glsp_i = fig.add_subplot(gs_gls_j[i_row], **kwargs_add_suplot)
+                if (j_col_glsp == 0) and (i_row == 0):
+                    ax_glsp_i.set_title("GLS Periodograms", fontsize=fontsize)
+                if (i_row == 0) and logscale:
+                    ax_glsp_i.set_xscale("log")
+        
+                # create and set the twiny axis
+                ax_gls_twin_i = ax_glsp_i.twiny()
+                if logscale:
+                    ax_gls_twin_i.set_xscale("log")
+                ax_gls_i.set_zorder(ax_gls_twin_i.get_zorder() + 1)  # To make sure that the orginal axis is above the new one
+                ax_gls_i.patch.set_visible(False)
+                labeltop = True if i_row == 0 else False
+                ax_gls_twin_i.tick_params(axis="x", labeltop=labeltop, labelsize=fontsize, which="both", direction="in")
+                ax_gls_twin_i.tick_params(axis="x", which="major", length=4, width=1)
+                ax_gls_twin_i.tick_params(axis="x", which="minor", length=2, width=0.5)
+                ax_gls_i.tick_params(axis="both", direction="in", which="both", bottom=True, top=False, left=True, right=True, labelsize=fontsize)
+                ax_gls_i.tick_params(axis="both", which="major", length=4, width=1)
+                ax_gls_i.tick_params(axis="both", which="minor", length=2, width=0.5)
+                # ax_gls_i.yaxis.set_label_position("right")
+                # ax_gls_i.yaxis.tick_right()
+                labelleft = True if j_col_glsp == 0 else False
+                labelbottom = True if i_row == (nb_row_glsp - 1) else False
+                ax_gls_i.tick_params(axis="x", labelleft=labelleft, labelbottom=labelbottom, labelsize=fontsize, which="both", direction="in")
+                ax_gls_i.tick_params(axis="y", labelleft=labelleft, labelsize=fontsize, which="both", direction="in")
+                ax_gls_i.yaxis.set_minor_locator(AutoMinorLocator())
+                ax_gls_i.xaxis.set_minor_locator(AutoMinorLocator())
+
+                # Plot the GLS in frequency (freq are in 1 / unit of the time vector provided)
+                ax_gls_i.plot(glsps[key].freq / day2sec * freq_fact, glsps[key].power, '-', color="k", label=gls_inputs[key]["label"], linewidth=GLSP_kwargs.get("lw ", 1.))
+                # Set ticks and tick labels
+                if j_col_glsp == 0:
+                    ax_gls_i.set_ylabel(f"{glsps[key].label['ylabel']}", fontsize=fontsize)  # {gls_inputs[key]['label']}
+
+                ylims = ax_gls_i.get_ylim()
+                xlims = ax_gls_i.get_xlim()
+
+                # Print the period axis
+                per_min = min(1 / glsps[key].freq)
+                freq_min = min(glsps[key].freq)
+                per_max = max(1 / glsps[key].freq)
+                freq_max = max(glsps[key].freq)
+                per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims]
+                if per_xlims[0] < 0:  # Sometimes the inferior xlims is negative and it messes up with the rest
+                    per_xlims[0] = per_max
+                per_xlims = per_xlims[::-1]
+                if not(logscale):
+                    ax_gls_twin_i.plot([freq_min / day2sec * freq_fact, freq_max / day2sec * freq_fact],
+                                        [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
+                else:
+                    ax_gls_twin_i.plot([per_min, per_max], [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
+                    xlims_per = ax_gls_twin_i.get_xlim()
+                    ax_gls_twin_i.set_xlim(xlims_per[::-1])
+                if not(logscale):
+                    per_decades = [10**(exp) for exp in list(range(int(floor(log10(per_min))), int(ceil(log10(per_max))) + 1))]
+                    per_ticks_major = []
+                    per_ticklabels_major = []
+                    per_ticks_minor = []
+                    for dec in per_decades:
+                        for fact in range(1, 10):
+                            tick = dec * fact
+                            if (tick > per_xlims[0]) and (tick < per_xlims[1]):
+                                if fact == 1:
+                                    per_ticks_major.append(tick)
+                                    if tick in period_no_ticklabels_j:
+                                        per_ticklabels_major.append("")
+                                    else:
+                                        per_ticklabels_major.append(tick)
+                                else:
+                                    per_ticks_minor.append(tick)
+                    # ax_gls_twin_i.set_xticks(per_ticks_minor, minor=True)
+                    ax_gls_twin_i.set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
+                    if GLSP_kwargs.get('scientific_notation_P_axis', True):
+                        ax_gls_twin_i.set_xticklabels([fmt_sci_not(tick) if tick != "" else "" for tick in per_ticklabels_major])
+                    else:
+                        ax_gls_twin_i.set_xticklabels(per_ticklabels_major)
+                    # ax_gls_twin_i.set_xticks(per_ticks_minor, minor=True)
+                    ax_gls_twin_i.set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
+
+                    if freq_lims_j is None:
+                        ax_gls_i.set_xlim(xlims)
+                        if logscale:
+                            ax_gls_twin_i.set_xlim(xlims_per[::-1])
+                        else:
+                            ax_gls_twin_i.set_xlim(xlims)
+                    else:
+                        ax_gls_i.set_xlim(freq_lims_j)
+                        if logscale:
+                            ax_gls_twin_i.set_xlim([1 / (freq / freq_fact * day2sec) for freq in freq_lims_j])
+                        else:
+                            ax_gls_twin_i.set_xlim(freq_lims_j)
+
+                    ylims = ax_gls_i.get_ylim()
+                    xlims = ax_gls_i.get_xlim()
+
+                #####################################
+                # Vertical lines at specified periods
+                #####################################
+                for per, dico_per in GLSP_kwargs.get('periods', {}).items():
+                    vlines_kwargs = dico_per.get("vlines_kwargs", {})
+                    freq_4_per = 1 / per / day2sec * freq_fact
+                    lines_per = ax_gls_i.vlines(freq_4_per, *ylims, **vlines_kwargs)
+                    if key == "data":
+                        text_kwargs = dico_per.get("text_kwargs", {}).copy()
+                        x_shift = text_kwargs.pop("x_shift", 0)
+                        y_pos = text_kwargs.pop("y_pos", 0.9)
+                        label = str(text_kwargs.pop("label", format_float_positional(per, precision=3, unique=False, fractional=False, trim='k')))
+                        color = text_kwargs.pop("color", None)
+                        if color is None:
+                            color = lines_per.get_color()[0]
+                        ax_gls_twin_i.text(freq_4_per + x_shift * (xlims[1] - xlims[0]),
+                                            ylims[0] + y_pos * (ylims[1] - ylims[0]), label, color=color,
+                                            fontsize=fontsize, **text_kwargs)
+                ax_gls_i.set_ylim(ylims)
+
+                ##########################################
+                # Horizontal lines at specified FAP levels
+                ##########################################
+                ylims = ax_gls_i.get_ylim()
+                xlims = ax_gls_i.get_xlim()
+
+                default_fap_dict = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"}, },
+                                    1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"}, },
+                                    10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"}, }, }
+                for fap_lvl, dico_fap in GLSP_kwargs.get('fap', default_fap_dict).items():
+                    pow_ii = glsps[key].powerLevel(fap_lvl / 100)
+                    hlines_kwargs = dico_fap.get("hlines_kwargs", {})
+                    if pow_ii < ylims[1]:
+                        lines_fap = ax_gls_i.hlines(pow_ii, *xlims, **hlines_kwargs)
+                        text_kwargs = dico_fap.get("text_kwargs", {}).copy()
+                        x_pos = text_kwargs.pop("x_pos", 1.05)
+                        y_shift = text_kwargs.pop("y_shift", 0)
+                        label = str(text_kwargs.pop("label", fr"{fap_lvl}\%"))
+                        color = text_kwargs.pop("color", None)
+                        if color is None:
+                            color = lines_fap.get_color()[0]
+                        if j_col_glsp == (nb_columns - 1):
+                            ax_gls_i.text(xlims[0] + x_pos * (xlims[1] - xlims[0]), pow_ii + y_shift * (ylims[1] - ylims[0]),
+                                            label, color=color, fontsize=fontsize, **text_kwargs)
+
+                ax_gls_i.set_xlim(xlims)
+                
+                #
+                if j == 0:
+                    ax_gls_i.legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get(key, {}))
+
+                ax_gls_twin[0].set_xlabel("Period [days]", fontsize=fontsize)
+
+                if GLSP_kwargs.get("show_WF", True):
+                    for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
+                        ax_gls[-i_WF - 1].plot(glsps[l_WF_key_model[0]].freq / day2sec * freq_fact, glsps[l_WF_key_model[0]].wf, '-', color="k", label=f"WF {l_WF_key_model}", linewidth=GLSP_kwargs.get("lw ", 1.))
+                        if j_col_glsp == 0:
+                            ax_gls[-i_WF - 1].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get("WF", {}))
+                            ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
+                        labelleft = True if j_col_glsp == 0 else False
+                        ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
+            logger.debug("Done: GLSP plot for row {i_row}/{nb_rows_ts}")
+
+    if GLSP_kwargs['do']:
+        # Do the WF plot if needed
+        ax_gls_i.set_xlabel(f"Frequency [{freq_unit}]", fontsize=fontsize)
 
     if TS_kwargs['do']:
         return dico_load, computed_models

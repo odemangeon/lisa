@@ -293,16 +293,19 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
     return kwargs
 
 
-def check_datasetname4model4row(datasetname4model4row, datasetnames4rowidx, l_model, l_model_1_per_row):
+def check_datasetname4model4row(datasetname4model4row, datasetnames4rowidx, l_model_4_rowidx, l_model_1_per_row):
     """
     """
     datasetname4model4row_user = datasetname4model4row if datasetname4model4row is not None else {}
     datasetname4model4row = {}
-    for model in l_model:
-        if model in l_model_1_per_row:
-            datasetname4model4row[model] = {i_row: datasetnames_i_row[0] for i_row, datasetnames_i_row in enumerate(datasetnames4rowidx)}
-        else:
-            datasetname4model4row[model] = {i_row: 'all' for i_row, datasetnames_i_row in enumerate(datasetnames4rowidx)}
+    for i_row, datasetnames_i_row, l_model_i_row in enumerate(zip(datasetnames4rowidx, l_model_4_rowidx)):
+        for model in l_model_i_row:
+            if model  not in datasetname4model4row:
+                datasetname4model4row[model] = {}
+            if model in l_model_1_per_row:
+                datasetname4model4row[model][i_row] = datasetnames_i_row[0]
+            else:
+                datasetname4model4row[model][i_row] = 'all'
     for model in datasetname4model4row_user:
         datasetname4model4row[model].update(datasetname4model4row_user[model])
     return datasetname4model4row

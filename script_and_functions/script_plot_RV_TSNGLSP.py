@@ -98,7 +98,7 @@ do_TS = True
 
 row4datasetname = None  # e. g. {f"LC_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)} 
 
-datasetnames4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
+datasetname4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
 
 pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
 
@@ -164,7 +164,7 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              datasetnames=datasetnames, 
                              remove_dict=remove_dict,
                              show_dict=show_dict,
-                             datasetnames4model4row=datasetnames4model4row,
+                             datasetname4model4row=datasetname4model4row,
                              compute_GP_model=compute_GP_model,
                              split_GP_computation=split_GP_computation,
                              TS_kwargs={"do": do_TS,
