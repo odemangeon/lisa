@@ -337,7 +337,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                     pl_kwarg[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
                 if not("alpha" in pl_kwarg[datasetname][key_err]):
                     pl_kwarg[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                    _ = ax.fill_between(tsim, model - model_err, model + model_err,
+                    _ = ax.fill_between(xsim, model - model_err, model + model_err,
                                         **pl_kwarg[datasetname][key_err],
                                         )
     logger.debug(f"Finished compute_and_plot_models for model {key_model} and dataset {datasetname}")

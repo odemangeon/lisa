@@ -1287,7 +1287,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             for key_model in t_key_model:
                 show_dict[i_row][key_model] = True
     show_dict[i_row + 1] = {}
-    show_dict.update(show_dict_user)
+    for i_row in show_dict_user:
+        show_dict[i_row].update(show_dict_user[i_row])
 
     #####################################
     # Preliminary checks for the TS plots
@@ -1338,7 +1339,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 xlims_datas[datasetname][1] = max(x_values[datasetname])
         
         # Compute the models
-        computed_models = {}
+        computed_models_4_TS = {}
+        times_computed_models_4_TS = {}
 
         # Define on which rows the datasets are plots using the row4datasetname input
         # if datasetname4model is not None:
@@ -1353,14 +1355,14 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
         # datasetname4model = {key_model: dico_datasetname4row[0] for key_model, dico_datasetname4row in datasetname4model4row.items()}
 
         for datasetname in datasetnames:
-            # Init computed_models for this dataset
-            computed_models[datasetname] = {}
+            # Init computed_models_4_TS for this dataset
+            computed_models_4_TS[datasetname] = {}
             for i_row in range(nb_rows_ts):
 
                 tlims_i = tlims.get(i_row, tlims['all'])
                     
                 for model, show_model in show_dict[i_row].items():
-                    if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')) and (model not in computed_models[datasetname]):
+                    if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')) and (model not in computed_models_4_TS[datasetname]):
                         logger.debug(f"Computing model {model} for dataset {datasetname}")
                         if datasetname4model4row[model][i_row] == 'all':
                             xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
@@ -1376,7 +1378,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
                         kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
                         if model == "decorrelation_likelihood":
-                            computed_models[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
+                            computed_models_4_TS[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
                             (models_decorr_like, _
                             ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
                                                        key_model=model,
@@ -1404,12 +1406,12 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                        )
-                            computed_models[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
+                            computed_models_4_TS[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                         else:
-                            computed_models[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
-                            computed_models[datasetname]["xsim"] = computed_models[datasetname]["tsim"] * time_fact
-                            (computed_models[datasetname], _
-                             ) = compute_and_plot_model(tsim=computed_models[datasetname]["tsim"],
+                            computed_models_4_TS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
+                            computed_models_4_TS[datasetname]["xsim"] = computed_models_4_TS[datasetname]["tsim"] * time_fact
+                            (computed_models_4_TS[datasetname], _
+                             ) = compute_and_plot_model(tsim=computed_models_4_TS[datasetname]["tsim"],
                                                         key_model=model,
                                                         datasetname=datasetname,
                                                         post_instance=post_instance,
@@ -1431,7 +1433,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                         plot_unbinned=False, plot_binned=False,
                                                         ax=None,
                                                         pl_kwarg=None,
-                                                        models=computed_models[datasetname],
+                                                        models=computed_models_4_TS[datasetname],
                                                         get_key_compute_model_func=get_key_compute_model_func,
                                                         kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                         )
@@ -1499,13 +1501,17 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
         # Compute the data
         ##################
         for datasetname in datasetnames:
+            logger.info(f"Computing the data for row {i_row}.")
             if i_row == 0:
                 datas[datasetname] = dico_load['datas'][datasetname]
+                data_label = f"{inst_cat} data"
+            logger.info(f"Model components to remove from the data in row {i_row} = {l_model_2_remove}.")
+            logger.info(f"Model components to visualise in row {i_row} = {[key_model for key_model, show_model in show_dict[i_row].items() if show_model]}.")
             for key_model in list(l_model_2_remove) + [key_model for key_model, show_model in show_dict[i_row].items() if show_model]:
                 if key_model in dico_load:
-                    model_2_remove = dico_load[key_model][datasetname]
+                    model_component = dico_load[key_model][datasetname]
                 elif (datasetname in models) and (key_model in models[datasetname]):
-                    model_2_remove = models[datasetname][key_model]
+                    model_component = models[datasetname][key_model]
                 else:
                     (models[datasetname], _
                         ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
@@ -1534,8 +1540,11 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                    get_key_compute_model_func=get_key_compute_model_func,
                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                    )
-                    model_2_remove = models[datasetname][key_model]
-                datas[datasetname] -= model_2_remove
+                    model_component = models[datasetname][key_model]
+                if key_model in l_model_2_remove:
+                    datas[datasetname] -= model_component
+                    data_label += f" - {key_model}" 
+                    logger.info(f"Row {i_row}: Model component {key_model} removed.")
         
         tlims_i = tlims.get(i_row, tlims['all'])
         x_row = concatenate([x_values[dst] for dst in datasetnames])
@@ -1566,7 +1575,11 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             ax_ts_i = fig.add_subplot(gs_ts_i, **kwargs_add_suplot)
 
             if show_title and (i_row == 0):
-                ax_ts_i.set_title(f"{inst_cat} time series", fontsize=fontsize)
+                title = f"{inst_cat} time series\n"
+            else:
+                title = ""
+            title += data_label
+            ax_ts_i.set_title(title, fontsize=fontsize)
                                                                       
             # Make the data, models plots                
             tlims_i = tlims.get(i_row, tlims['all'])
@@ -1574,8 +1587,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 ax_ts_i.set_xlabel(f"time [{time_unit}]", fontsize=fontsize)
             ylabel = f"{y_name} [{unit}]" if unit is not None else f"{y_name}"
             ax_ts_i.set_ylabel(ylabel, fontsize=fontsize)
-
-            ax_ts_i.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
+            labelbottom = True if i_row == (nb_rows_ts - 1) else False
+            ax_ts_i.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=labelbottom, labelsize=fontsize)
             ax_ts_i.xaxis.set_minor_locator(AutoMinorLocator())
             ax_ts_i.yaxis.set_minor_locator(AutoMinorLocator())
             ax_ts_i.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
@@ -1671,6 +1684,38 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                           datasetnames_in_row=datasetnames, pl_kwargs=pl_kwarg_final,
                           text_rms=text_rms, text_rms_binned=text_rms_binned, fontsize=fontsize, unit=unit)
 
+            #########################
+            # Plot the models to show
+            #########################
+            for key_model, show_model in show_dict[i_row].items():
+                if show_model:
+                    if datasetname4model4row[key_model][i_row] == 'all':
+                        l_datasetnames_4_plot = datasetnames
+                    else:
+                        l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
+                    for datasetname in l_datasetnames_4_plot:
+                        if key_model in pl_kwarg_final[datasetname]:
+                            pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
+                        else:
+                            pl_kwarg_to_use = {"fmt": '', "linestyle": "-", "label": key_model}
+                        ebconts_lines_labels_model = ax_ts_i.errorbar(computed_models_4_TS[datasetname]['xsim'], computed_models_4_TS[datasetname][key_model], **pl_kwarg_to_use)
+                        if not("color" in pl_kwarg_to_use):
+                            pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
+                        if not("alpha" in pl_kwarg_to_use):
+                            pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+                            if pl_kwarg_to_use["alpha"] is None:
+                                pl_kwarg_to_use["alpha"] = 1.
+                        # Plot the model_err
+                        if f'{key_model}_err' in computed_models_4_TS[datasetname]:
+                            key_err = key_model + "_err"
+                            if not("color" in pl_kwarg_final[datasetname][key_err]):
+                                pl_kwarg_final[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
+                            if not("alpha" in pl_kwarg_final[datasetname][key_err]):
+                                pl_kwarg_final[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
+                                _ = ax_ts_i.fill_between(computed_models_4_TS[datasetname]['xsim'], computed_models_4_TS[datasetname][key_model] - computed_models_4_TS[datasetname][key_err], computed_models_4_TS[datasetname][key_model] + computed_models_4_TS[datasetname][key_err],
+                                                    **pl_kwarg_final[datasetname][key_err],
+                                                    )
+                                
             ###################################
             # Set ylims and indicate_y_outliers
             ###################################
@@ -1726,11 +1771,12 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             idx_sort = argsort(gls_inputs["data"]["time"])
             gls_inputs["data"]["time"] = gls_inputs["data"]["time"][idx_sort]
             gls_inputs["data"]["value"] = concatenate([datas[dst] for dst in datasetnames])[idx_sort]
-            gls_inputs["data"]["label"] = "data"
+            gls_inputs["data"]["label"] = data_label
             if GLSP_kwargs.get("use_jitter", True):
                 gls_inputs["data"]["err"] = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
             else:
                 gls_inputs["data"]["err"] = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
+            print(f"show_dict[{i_row}] = {show_dict[i_row]}")
             for key_model, show_model in show_dict[i_row].items():
                 if show_model:
                     gls_inputs[key_model] = {}
@@ -1761,7 +1807,10 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                     ax_gls_i.set_xscale("log")
         
                 # create and set the twiny axis
+                ax_gls_twin_im1 = ax_gls_twin_i if i_row != 0 else None
                 ax_gls_twin_i = ax_gls_i.twiny()
+                if ax_gls_twin_im1 is not None:
+                    ax_gls_twin_im1.sharex(ax_gls_twin_i)
                 if logscale:
                     ax_gls_twin_i.set_xscale("log")
                 ax_gls_i.set_zorder(ax_gls_twin_i.get_zorder() + 1)  # To make sure that the orginal axis is above the new one
@@ -1783,21 +1832,28 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 ax_gls_i.xaxis.set_minor_locator(AutoMinorLocator())
 
                 # Plot the GLS in frequency (freq are in 1 / unit of the time vector provided)
-                ax_gls_i.plot(glsps[key].freq / day2sec * freq_fact, glsps[key].power, '-', color="k", label=gls_inputs[key]["label"], linewidth=GLSP_kwargs.get("lw ", 1.))
+                for key in glsps:
+                    if key == "data":
+                        alpha = 1
+                        color = "k"
+                    else:
+                        alpha = 0.5
+                        color = None
+                    ax_gls_i.plot(glsps[key].freq / day2sec * freq_fact, glsps[key].power, '-', color=color, alpha=alpha, label=gls_inputs[key]["label"], linewidth=GLSP_kwargs.get("lw ", 1.))
                 # Set ticks and tick labels
                 if j_col_glsp == 0:
                     ax_gls_i.set_ylabel(f"{glsps[key].label['ylabel']}", fontsize=fontsize)  # {gls_inputs[key]['label']}
 
-                ylims = ax_gls_i.get_ylim()
-                xlims = ax_gls_i.get_xlim()
+                ylims_gls = ax_gls_i.get_ylim()
+                xlims_gls = ax_gls_i.get_xlim()
 
                 # Print the period axis
                 per_min = min(1 / glsps[key].freq)
                 freq_min = min(glsps[key].freq)
                 per_max = max(1 / glsps[key].freq)
                 freq_max = max(glsps[key].freq)
-                per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims]
-                if per_xlims[0] < 0:  # Sometimes the inferior xlims is negative and it messes up with the rest
+                per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims_gls]
+                if per_xlims[0] < 0:  # Sometimes the inferior xlims_gls is negative and it messes up with the rest
                     per_xlims[0] = per_max
                 per_xlims = per_xlims[::-1]
                 if not(logscale):
@@ -1834,11 +1890,11 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                     ax_gls_twin_i.set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
 
                     if freq_lims_j is None:
-                        ax_gls_i.set_xlim(xlims)
+                        ax_gls_i.set_xlim(xlims_gls)
                         if logscale:
                             ax_gls_twin_i.set_xlim(xlims_per[::-1])
                         else:
-                            ax_gls_twin_i.set_xlim(xlims)
+                            ax_gls_twin_i.set_xlim(xlims_gls)
                     else:
                         ax_gls_i.set_xlim(freq_lims_j)
                         if logscale:
@@ -1846,8 +1902,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         else:
                             ax_gls_twin_i.set_xlim(freq_lims_j)
 
-                    ylims = ax_gls_i.get_ylim()
-                    xlims = ax_gls_i.get_xlim()
+                    ylims_gls = ax_gls_i.get_ylim()
+                    xlims_gls = ax_gls_i.get_xlim()
 
                 #####################################
                 # Vertical lines at specified periods
@@ -1855,7 +1911,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 for per, dico_per in GLSP_kwargs.get('periods', {}).items():
                     vlines_kwargs = dico_per.get("vlines_kwargs", {})
                     freq_4_per = 1 / per / day2sec * freq_fact
-                    lines_per = ax_gls_i.vlines(freq_4_per, *ylims, **vlines_kwargs)
+                    lines_per = ax_gls_i.vlines(freq_4_per, *ylims_gls, **vlines_kwargs)
                     if key == "data":
                         text_kwargs = dico_per.get("text_kwargs", {}).copy()
                         x_shift = text_kwargs.pop("x_shift", 0)
@@ -1864,16 +1920,16 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         color = text_kwargs.pop("color", None)
                         if color is None:
                             color = lines_per.get_color()[0]
-                        ax_gls_twin_i.text(freq_4_per + x_shift * (xlims[1] - xlims[0]),
-                                            ylims[0] + y_pos * (ylims[1] - ylims[0]), label, color=color,
+                        ax_gls_twin_i.text(freq_4_per + x_shift * (xlims_gls[1] - xlims_gls[0]),
+                                            ylims_gls[0] + y_pos * (ylims_gls[1] - ylims_gls[0]), label, color=color,
                                             fontsize=fontsize, **text_kwargs)
-                ax_gls_i.set_ylim(ylims)
+                ax_gls_i.set_ylim(ylims_gls)
 
                 ##########################################
                 # Horizontal lines at specified FAP levels
                 ##########################################
-                ylims = ax_gls_i.get_ylim()
-                xlims = ax_gls_i.get_xlim()
+                ylims_gls = ax_gls_i.get_ylim()
+                xlims_gls = ax_gls_i.get_xlim()
 
                 default_fap_dict = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"}, },
                                     1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"}, },
@@ -1881,8 +1937,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 for fap_lvl, dico_fap in GLSP_kwargs.get('fap', default_fap_dict).items():
                     pow_ii = glsps[key].powerLevel(fap_lvl / 100)
                     hlines_kwargs = dico_fap.get("hlines_kwargs", {})
-                    if pow_ii < ylims[1]:
-                        lines_fap = ax_gls_i.hlines(pow_ii, *xlims, **hlines_kwargs)
+                    if pow_ii < ylims_gls[1]:
+                        lines_fap = ax_gls_i.hlines(pow_ii, *xlims_gls, **hlines_kwargs)
                         text_kwargs = dico_fap.get("text_kwargs", {}).copy()
                         x_pos = text_kwargs.pop("x_pos", 1.05)
                         y_shift = text_kwargs.pop("y_shift", 0)
@@ -1891,16 +1947,17 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         if color is None:
                             color = lines_fap.get_color()[0]
                         if j_col_glsp == (nb_cols_gls - 1):
-                            ax_gls_i.text(xlims[0] + x_pos * (xlims[1] - xlims[0]), pow_ii + y_shift * (ylims[1] - ylims[0]),
+                            ax_gls_i.text(xlims_gls[0] + x_pos * (xlims_gls[1] - xlims_gls[0]), pow_ii + y_shift * (ylims_gls[1] - ylims_gls[0]),
                                             label, color=color, fontsize=fontsize, **text_kwargs)
 
-                ax_gls_i.set_xlim(xlims)
+                ax_gls_i.set_xlim(xlims_gls)
                 
                 #
                 if j_col_glsp == 0:
-                    ax_gls_i.legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get(key, {}))
+                    ax_gls_i.legend(fontsize=fontsize, **legend_param.get(key, {}))  # handletextpad=-.1, handlelength=0,
 
-                ax_gls_twin_i.set_xlabel("Period [days]", fontsize=fontsize)
+                if i_row == 0:
+                    ax_gls_twin_i.set_xlabel("Period [days]", fontsize=fontsize)
 
                 if GLSP_kwargs.get("show_WF", True):
                     for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
@@ -1917,6 +1974,6 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
         ax_gls_i.set_xlabel(f"Frequency [{freq_unit}]", fontsize=fontsize)
 
     if TS_kwargs['do']:
-        return dico_load, computed_models
+        return dico_load, computed_models_4_TS
     else:
         return dico_load, None
