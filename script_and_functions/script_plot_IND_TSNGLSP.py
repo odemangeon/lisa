@@ -151,7 +151,7 @@ if "post_instance" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(dico_load, computed_models
+(dico_load, computed_models, rms_values
  ) = create_IND_TSNGLSP_plots(fig=fig, post_instance=post_instance, 
                              df_fittedval=df_fittedval,
                              datasim_kwargs=kwargs_datasim,
@@ -159,7 +159,7 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              IND_subcat=IND_subcat,
                              remove_dict=remove_dict,
                              show_dict=show_dict,
-                             datasetnames4model4row=None,
+                             datasetname4model4row=None,
                              TS_kwargs={"do": do_TS,
                                         "npt_model": 5000,
                                         "exptime_bin": exptime_bin,

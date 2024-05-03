@@ -154,7 +154,7 @@ if "post_instance" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(dico_load, computed_models
+(dico_load, computed_models, rms_values
  ) = create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, 
                              df_fittedval=df_fittedval,
                              datasim_kwargs=kwargs_datasim,

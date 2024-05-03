@@ -355,6 +355,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         #######################################################################
         # Make the data, models and residuals plots (full and zoomed if needed)
         #######################################################################
+        rms_values = OrderedDict()
+        rms_binned_values = OrderedDict()
         text_rms = OrderedDict()
         text_rms_binned = OrderedDict()
         show_title = TS_kwargs.get("show_title", True)
@@ -525,7 +527,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     if tlims_i is not None and tlims_i[1] is not None:
                         x_max_rms = tlims_i[1]
                     text_rms_template = f"{{:{rms_kwargs['format']}}}"
-                    text_rms[datasetname] = text_rms_template.format(std(dico_load['residuals'][datasetname][logical_and(x_values[datasetname] >= x_min_rms, x_values[datasetname] <= x_max_rms)]))
+                    rms_values[datasetname] = std(dico_load['residuals'][datasetname][logical_and(x_values[datasetname] >= x_min_rms, x_values[datasetname] <= x_max_rms)])
+                    text_rms[datasetname] = text_rms_template.format(rms_values[datasetname])
                     print(f"RMS {datasetname} = {text_rms[datasetname]} {unit} (raw cadence)")
                     logger.debug(f"Done: Plot residuals for dataset {datasetname} (row {i_row}, column {i_col})")
 
@@ -661,7 +664,8 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                     if tlims_i is not None and tlims_i[1] is not None:
                         x_max_rms = tlims_i[1]
                     text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
-                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)]))
+                    rms_binned_values[f"row{i_row}"] = nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)])
+                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(rms_binned_values[f"row{i_row}"])
                     print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {unit}")
                     logger.debug(f"Done: Plot binned data and residuals for row {i_row}, column {i_col}")
                 # Draw a horizontal line at the level of reference stellar RV level
@@ -1002,7 +1006,7 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
         logger.debug("Done: GLSP plot")
 
     if TS_kwargs['do']:
-        return dico_load, computed_models
+        return dico_load, computed_models, {"raw": rms_values, "binned": rms_binned_values}
     else:
         return dico_load, None
 

@@ -98,7 +98,7 @@ do_TS = True
 
 row4datasetname = None  # e. g. {f"RV_{obj_name}_CHEOPS_{ii}": 0 for ii in range(3)} 
 
-datasetnames4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
+datasetname4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
 
 pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
 
@@ -154,14 +154,14 @@ if "post_instance" not in globals():
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(dico_load, computed_models
+(dico_load, computed_models, rms_values
  ) = create_RV_TSNGLSP_plots(fig=fig, post_instance=post_instance, 
                              df_fittedval=df_fittedval,
                              datasim_kwargs=kwargs_datasim,
                              datasetnames=datasetnames, 
                              remove_dict=remove_dict,
                              show_dict=show_dict,
-                             datasetnames4model4row=datasetnames4model4row,
+                             datasetname4model4row=datasetname4model4row,
                              compute_GP_model=True,
                              split_GP_computation=None,
                              TS_kwargs={"do": do_TS,
