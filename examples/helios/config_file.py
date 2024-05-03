@@ -1,4 +1,7 @@
 # Configuration file for LISA analysis.
+import pandas as pd
+import numpy as np
+import os
 
 ##############
 ## Object name
@@ -213,13 +216,26 @@ frozen_values = {'RV_HELIOS_inst_DeltaRV': {'unit': '[RV data unit]', 'value': 0
 # These priors convert a given set of jumping parameter into a different set of parameters that
 # can be better suited to define priors.
 # The list of available joint priors is: 
-joint_priors = {}
+joint_priors = {'tauP': {'category': 'supinf', 
+                         'args': {'k': 1,
+                                  'sup_prior': {'category': 'uniform', 'args': {'vmin': 10, 'vmax': 100}},
+                                  'inf_prior': {'category': 'uniform', 'args': {'vmin': 10, 'vmax': 100}},
+                                  },
+                         'params': {'sup': 'RV_tau', 'inf': 'RV_P'}
+                         },}
 
 # Individual Priors
 ###################
 # The units are provided as information and you should not change it. Any change will be ignored.
 #
 # The list of available individual priors is: 
+
+dico_df = {}
+path_data_folder = "./data/"
+for datatype in ["RV", "IND-Ha", "IND-CaHK"]:
+    file_name = f"{datatype}_Sun_HELIOS_0.txt"
+    dico_df[datatype] = pd.read_table(os.path.join(path_data_folder, file_name), sep="\s+", header=0) 
+
 individual_priors = {'GP1D': {'CaHK': {'A': {'args': {'vmax': 100, 'vmin': 0.0},
                                                  'category': 'uniform',
                                                  'unit': None}
@@ -231,21 +247,15 @@ individual_priors = {'GP1D': {'CaHK': {'A': {'args': {'vmax': 100, 'vmin': 0.0},
                               'RV': {'A': {'args': {'vmax': 8.0, 'vmin': 0.0},
                                            'category': 'uniform',
                                            'unit': None},
-                                     'P': {'args': {'vmax': 500.0, 'vmin': 10.0},
-                                           'category': 'uniform',
-                                           'unit': None},
                                      'gamma': {'args': {'vmax': 100.0, 'vmin': 0.1},
                                                'category': 'uniform',
-                                               'unit': None},
-                                     'tau': {'args': {'vmax': 100.0, 'vmin': 2.0},
-                                             'category': 'uniform',
-                                             'unit': None}}},
+                                               'unit': None},}},
                      'instruments': {'IND-CaHK': {'HELIOS': {'inst': {'C0': {'args': {'vmax': 1.0,
                                                                                       'vmin': 0.0},
                                                                              'category': 'uniform',
                                                                              'unit': '[CaHK data '
                                                                                      'unit]'},
-                                                                      'jitter': {'args': {'vmax': 1.0,
+                                                                      'jitter': {'args': {'vmax': 5 * np.median(dico_df["IND-CaHK"]["CaHK_err"]),
                                                                                           'vmin': 0.0},
                                                                                  'category': 'uniform',
                                                                                  'unit': None}}}},
@@ -254,11 +264,11 @@ individual_priors = {'GP1D': {'CaHK': {'A': {'args': {'vmax': 100, 'vmin': 0.0},
                                                                            'category': 'uniform',
                                                                            'unit': '[Ha data '
                                                                                    'unit]'},
-                                                                    'jitter': {'args': {'vmax': 1.0,
+                                                                    'jitter': {'args': {'vmax': 1. * np.median(dico_df["IND-Ha"]["Ha_err"]),
                                                                                         'vmin': 0.0},
                                                                                'category': 'uniform',
                                                                                'unit': None}}}},
-                                     'RV': {'HELIOS': {'inst': {'jitter': {'args': {'vmax': 1.0,
+                                     'RV': {'HELIOS': {'inst': {'jitter': {'args': {'vmax': 1. * np.median(dico_df["RV"]["RV_err"]),
                                                                                     'vmin': 0.0},
                                                                            'category': 'uniform',
                                                                            'unit': None}}}}},
