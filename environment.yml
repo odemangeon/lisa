@@ -37,4 +37,3 @@ dependencies:
 
 variables:
   LISAPATH: /Users/olivier/Softwares/lisa
-  LISADEVPATH: /Users/olivier/Softwares/lisa-dev
