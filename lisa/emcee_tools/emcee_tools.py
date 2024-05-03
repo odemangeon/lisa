@@ -15,6 +15,7 @@ from numbers import Number
 from collections.abc import Iterable
 from statsmodels.stats.weightstats import DescrStatsW
 from copy import copy
+from uncertainties import ufloat
 import re
 
 # from sys import stdout
@@ -2228,3 +2229,36 @@ def plot_marginalized_distrib(chaininterpret, l_param_name, l_walker=None, l_bur
     for ii, param in enumerate(l_param_name):
         ax[ii].hist(clean_flat_chains[:, ii], **kwargs_hist)
         ax[ii].set_title(param)
+
+
+def compute_limits(chainInterp, l_walker, l_burnin, l_param_name, l_confidence_level=[68, 95, 99.7]):
+    l_col_name = [f"{conf_ii}%" for conf_ii in l_confidence_level]
+    l_col_name_exact = [f"{conf_ii}% (exact)" for conf_ii in l_confidence_level]
+    l_low_qs = [100 - conf_i for conf_i in l_confidence_level]
+    l_all_qs = list(set(l_low_qs + l_confidence_level + [16, 84]))
+    qs_index = dict(zip(l_all_qs, range(len(l_all_qs))))
+    l_param_idx = [chainInterp.paramname_idx[param_name] for param_name in l_param_name]
+    chain_clean_param = get_clean_flatchain(chainInterp, l_walker=l_walker, l_burnin=l_burnin, l_param_idx=l_param_idx, iterations_indexes=None, force_finite=True)
+    column_names = l_col_name + l_col_name_exact
+    d_upper = {col_name_i: [] for col_name_i in column_names}
+    d_lower = {col_name_i: [] for col_name_i in column_names}
+    for i_param, param_name in enumerate(l_param_name):
+        qs = np.nanpercentile(chain_clean_param[:, i_param], l_all_qs)
+        sigma = qs[qs_index[84]] - qs[qs_index[16]]
+        for l_qs, dd in zip([l_confidence_level, l_low_qs], [d_upper, d_lower]): 
+            vals = [qs[qs_index[qq]] for qq in l_qs]
+            uvals = [ufloat(val_i, sigma) for val_i in vals]
+            vals_str = []
+            for i_qs, uval_i in enumerate(uvals):
+                dd[l_col_name_exact[i_qs]].append(vals[i_qs])
+                val_str_i = uval_i.__str__()
+                if val_str_i.startswith('('):
+                    exoponent = val_str_i.split(')')[-1]
+                    vv = val_str_i.split('+/-')[0][1:]
+                    dd[l_col_name[i_qs]].append(vv + exoponent)
+                else:
+                    dd[l_col_name[i_qs]].append(val_str_i.split('+/-')[0])
+    res = {uporlow: DataFrame(dd, index=l_param_name) for uporlow, dd in zip(["upper", "lower"], [d_upper, d_lower])}
+    logger.info(f"Upper limits:\n{res['upper']}")
+    logger.info(f"lower limits:\n{res['lower']}")
+    return res

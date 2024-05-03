@@ -142,6 +142,7 @@ save_walkersandburnins = True  # Save the walkers selection and burnin values
 # Determine best fit values and error bars
 do_bestfit = False
 method_bestfit = "median"  # Method to use to determine the best values for the parameter. Can be 'median' or 'MAP'
+compute_upperlower_limits = True
 save_results_bestfit = True
 
 # Do Corner plot
@@ -475,6 +476,16 @@ if do_bestfit:
 
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table{}.tex".format(obj_name, extension_outputs)),
                              df_fittedval, obj_name)
+    
+    if compute_upperlower_limits:
+        d_df_uporlow = et.compute_limits(chainInterp=chainI, l_walker=l_walker_PS, l_burnin=l_burnin_PS, l_param_name=chainI.param_names, l_confidence_level=[68, 95, 99.7])
+        if save_results_bestfit:
+            # et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_lowerlimit{}.tex".format(obj_name, extension_outputs)),
+            #                      d_df_uporlow["lower"], obj_name)
+            d_df_uporlow["lower"].to_csv(join(output_folders["tables"], "{}_latex_parameter_table_lowerlimit{}.tsv".format(obj_name, extension_outputs)), sep="\t")
+            # et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_upperlimit{}.tex".format(obj_name, extension_outputs)),
+            #                      d_df_uporlow["upper"], obj_name)
+            d_df_uporlow["upper"].to_csv(join(output_folders["tables"], "{}_latex_parameter_table_upperlimit{}.tsv".format(obj_name, extension_outputs)), sep="\t")
 
 if do_corner:
     logger.info("7. Do correlation plot for main free parameters")
@@ -570,6 +581,20 @@ if do_SecParam:
 
         et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_wsecondary{}.tex".format(obj_name, extension_outputs)),
                              df_fittedval, obj_name)
+
+    if compute_upperlower_limits:
+        d_df_uporlow_sec =  et.compute_limits(chainInterp=chainIsec, l_walker=l_walker_PS, l_burnin=l_burnin_PS, l_param_name=chainIsec.param_names, l_confidence_level=[68, 95, 99.7])
+        for uporlow in d_df_uporlow_sec:
+            d_df_uporlow[uporlow] = pd.concat([d_df_uporlow[uporlow], d_df_uporlow_sec[uporlow]])
+            d_df_uporlow[uporlow] = d_df_uporlow[uporlow][~d_df_uporlow[uporlow].index.duplicated(keep='last')]
+
+        if save_results_bestfit:
+            # et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_lowerlimit{}.tex".format(obj_name, extension_outputs)),
+            #                      d_df_uporlow["lower"], obj_name)
+            d_df_uporlow["lower"].to_csv(join(output_folders["tables"], "{}_latex_parameter_table_lowerlimit{}.tsv".format(obj_name, extension_outputs)), sep="\t")
+            # et.write_latex_table(join(output_folders["tables"], "{}_latex_parameter_table_upperlimit{}.tex".format(obj_name, extension_outputs)),
+            #                      d_df_uporlow["upper"], obj_name)
+            d_df_uporlow["upper"].to_csv(join(output_folders["tables"], "{}_latex_parameter_table_upperlimit{}.tsv".format(obj_name, extension_outputs)), sep="\t")
 
     if do_corner_sec:
         logger.info("Do correlation plot for secondary free parameters")
