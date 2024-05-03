@@ -21,6 +21,12 @@ dependencies:
   - arviz
   - jax
   - uncertainties
+  - nbsphinx  # Deps of radvel
+  - ipykernel  # Deps of radvel
+  - jinja2  # Deps of radvel
+  - coveralls  # Deps of radvel
+  - quantities  # Deps of PyAstronomy[occult]
+  - bidict  # Deps of PyAstronomy[occult]
   - pip
   - pip:
     - radvel
