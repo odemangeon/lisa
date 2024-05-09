@@ -8,7 +8,7 @@ from numpy import ones_like
 from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
-from .ts_and_glsp import create_TSNGLSP_plots
+from .ts_and_glsp import create_TSNGLSP_plots, create_iTSNGLSP_plots
 from .misc import AandA_fontsize
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
@@ -444,6 +444,246 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 fontsize=fontsize,
                                 get_key_compute_model_func=get_key_compute_model,
                                 )
+
+
+def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=None,
+                             datasetnames=None,
+                             remove_dict=None, show_dict=None,
+                             show_removed_in_previousrow=True,
+                             l_iterative_removal=None,
+                             datasetname4model4row=None,
+                             kwargs_compute_model_4_key_model=None,
+                             compute_GP_model=True, split_GP_computation=None, 
+                             TS_kwargs=None, GLSP_kwargs=None,
+                             create_axes_kwargs=None,
+                             suptitle_kwargs=None,
+                             RV_fact=1., RV_unit="$km/s$", fontsize=AandA_fontsize
+                             ):
+    """Produce clean iterative RV time series and generalized Lomb-Scargle plots of a system.
+
+    Arguments
+    ---------
+    fig           :
+        Figure instance (provided by the styler)
+    post_instance : Posterior instance
+    df_fittedval  : DataFrame
+        Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
+    datasim_kwargs : dict
+        Dictionary of keyword arguments for the datasimulator.
+    datasetnames  : list of String
+        List providing the datasets to load and use
+    remove_dict   : dict of bool
+    datasetnames4model4row  : dict of dict of
+    TS_kwargs     : None or dict
+            - 'do': boolean (Def: True)
+            - 'row4datasetname'   : dict of int
+                Dictionary saying which dataset to plot on which row. The format is:
+                {"<dataset_name>": <int giving the row index starting at 0>, ...}
+            - 'npt_model': int (Def: 1000) giving the number of points to use for the model
+            - 'extra_dt_model': float (Def: 0)
+                Specify the extra time that for which you want to compute the model before and after the
+                data.
+            - 't_lims': None or Iterable of 2 float or dict of Iterable of 2 float (Def: None)
+                This gives the beginning and end time for the zoom. If there is more than one row (see row4datasetname).
+                You must provide a dictionary with the following format:
+                {"<int giving the row index>": <Iterable of two float providing the min and max for the time axis>, ...}
+            - 't_lims_zoom': None or Iterable of 2 float or dict of Iterable of 2 float (Def: None)
+                If provided a zoom on the right of the main plot will be drawn. This gives the beginning
+                and end time for the zoom. If there is more than one row (see row4datasetname).
+                You must provide a dictionary with the following format:
+                {"<int giving the row index>": <Iterable of two float providing the min and max for the zoom>, ...}
+            - 't_unit': str (Def: days)
+                String that is going to be used to give the unit (and reference system) of the time.
+            - 'pl_kwargs': dict
+                Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
+                and values a dictionary that will be passed as keyword arguments associated the plotting functions.
+                For the dictionaries corresponding to a dataset, You can also add a 'jitter' key with value
+                a dictionary that will contain the changes that you want to make for the update error bars
+                due to potential jitter.
+                You can also add a 'binned' key with value a dictionary that will contain the changes that you
+                want to make for ploting the binned data and residuals
+                You can use the 'show_error' and 'show_binned_error' key with value True or False to specify if you want
+                the error bars of the data and binned data to be plotted to be plotted.
+            - 'ylims_data': Define the limits on the data y axis. This override 'pad_data'
+            - 'pad_data': Iterable of 2 floats (Def: (0.1, 0.1))
+                Define the bottom and top pad to apply for data axes.
+                Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
+                allows to provide different pad_data for different planets.
+            - 'ylims_resi': Define the limits on the residuals y axis. This override 'pad_resi'
+            - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
+            - 'indicate_y_outliers_data': boolean. If True, data outliers (outside of the plot) are indicated
+                by arrows.
+            - 'indicate_y_outliers_resi': boolean. If True, residuals outliers (outside of the plot) are indicated
+                by arrows.
+            - 'exptime_bin' : float
+                Exposure time for the binning of data in the same unit that the time of the datasets.
+                If you don't want to bin put 0.
+            - 'binning_stat' : str
+                Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
+                statistic argument of scipy.stats.binned_statistic
+            - 'one_binning_per_row' : bool
+                If true only one binning per row is performed
+            - 'show_title'  : bool
+                If True, show the titles (of the main and the zoom)
+            - 'legend_kwargs' : dict of dict
+                keys are 'all' or int providing the row index ('all' applies to all row, but the row index overwrite it)
+                Values are dict whose keys are:
+                    'do'    : bool
+                        (Default: True) Whether or not to show the legend
+                    other keys are passed to the pyplot.legend function
+            - 'rms_kwargs'  : dict
+                keys are:
+                    'do'            : bool
+                        (Default: True) Show the rms in between the data and residuals axes
+                    'rms_format'    :
+                        (Default: '.0f') Format that will be used to format the rms values
+            - 'gridspec_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                GridSpecFromSubplotSpec (GridSpecFromSubplotSpec(..., **TS_kwargs['gridspec_kwargs'])) which
+                create the gridspec separating the full and zoom GLSP columns
+            - 'axeswithsharex_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                et.add_twoaxeswithsharex(... gs_from_sps_kw=TS_kwargs['axeswithsharex_kwargs']) which
+                creates the data and residuals axes.
+    GLSP_kwargs   : None or dict
+            - 'do': boolean (Def: True)
+            - 'use_jitter': boolen (Def: True)
+                If True it uses the error bars with jitter to compute the GLSP and the FAP levels
+            - 'period_range': Iterable of 2 float providing the beginning and end period for the computation
+                of the GLSP
+            - 'freq_fact': float (Def: 1e6)
+                Factor to apply to the frequency for example to plot them in micro Hertz
+            - 'freq_unit': str  (Def: "$\\mu$Hz"),
+                Unit to display on the frequency axis. Must be coherent with freq_fact !
+            - 'freq_lims': None or Iterable of 2 float (Def: None)
+                Specificy the frequency limits for the plot in freq_unit
+            - 'logscale': boolean (Def: False),
+            - 'show_WF': boolean (Def: True),
+            - 'periods': dict
+                Specify the periods for which you want to draw a vertical line.
+                The keys are the period values and the values are dict that can be empty or specify the
+                values of the following keywords:
+                - 'color': str giving the color of the line
+                - 'linestyle': str giving the style of the line
+                - 'label': str giving the label to plot
+                - 'align': str ('left', 'right', 'center') the horizontal alignment of the label compared to the vertical line
+                - 'xshift': float x shift of the label
+                - 'yshift': float y shift of the label
+            - 'fap': dict
+                Specify the fap levels for which you want to draw a horizontal line.
+                The keys are the fap level values and the values are dict that can be empty or specify the
+                values of the following keywords:
+                - 'color': str giving the color of the line
+                - 'linestyle': str giving the style of the line
+                - 'label': int (0: don't show, 1: only the fap value, 2: fap value followed by %)
+                - 'align': str ('top', 'center', 'bottom') the horizontal alignment of the label compared to the vertical line
+                - 'xshift': float x shift of the label
+                - 'yshift': float y shift of the label
+            - 'freq_lims_zoom': None or Iterable of 2 float (Def: None)
+                If provided a zoom on the right of the main plot will be drawn.
+                This gives the beginning and end time for the zoom
+            - 'scientific_notation_P_axis': boolean (default: True)
+                If True the tick label on the period axis are in scientific notations
+            - 'period_no_ticklabels': list of int
+                list of decades to for which you don't want to show the tick label
+            - 'period_no_ticklabels_zoom': list of int
+                list of decades to for which you don't want to show the tick label for the zoom
+            - 'gridspec_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                GridSpecFromSubplotSpec (GridSpecFromSubplotSpec(..., **GLSP_kwargs['gridspec_kwargs'])) which
+                create the gridspec separating the full and zoom GLSP columns
+            - 'axeswithsharex_kwargs': dict
+                The content of this entry should be a dictionary which will be passed to
+                et.add_axeswithsharex(... gs_from_sps_kw=TS_kwargs['axeswithsharex_kwargs']) which
+                creates the different GLSP axes for the data, model ...
+            - 'legend_param': dict of dict
+                Dictionary with key in ('data', 'model', 'resi', 'GP', 'WF') and values dictionaries that
+                will be passed on to legend ( legend(.., **GLSP_kwargs['legend_param'][key]))
+    suptitle_kwargs : dict
+        Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
+    RV_fact       : float
+        Factor to apply to the RV
+    RV_unit        : str
+        String giving the unit of the RVs
+
+    Returns
+    -------
+    dico_load       : dict  
+        Output of the function core_compute_load.load_datasets_and_models
+    computed_models : dict
+        Outputs of the compute_and_plot_model function calls
+    """
+    # Define Y axis quantity name 
+    y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
+    # Define kwargs_compute_model_4_key_model
+    remove_dict_model = OrderedDict()
+    for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, True]
+                            ):
+        remove_dict_model[key] = remove_dict.get(key, default)
+    remove_dict_data = OrderedDict()
+    for key, default in zip(["GP", "decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
+                            [False, False, False, False, False, False, True]
+                            ):
+        remove_dict_data[key] = remove_dict.get(key, default)
+    remove_dict_data_err = OrderedDict()
+    for key in ["contamination", ]:
+        remove_dict_data_err[key] = remove_dict_data[key]
+    kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
+    kwargs_compute_model_4_key_model = {"model": {"remove_dict": remove_dict_model,
+                                                  'add_dict': dict_model_false
+                                                  },
+                                        "model_wGP": {"remove_dict": remove_dict_model,
+                                                      'add_dict': dict_model_false
+                                                      },
+                                        "data": {"remove_dict": remove_dict_data,
+                                                 'add_dict': dict_model_false
+                                                 },
+                                        "data_err": {"remove_dict": remove_dict_data_err,
+                                                     'add_dict': dict_model_false
+                                                     },
+                                        }
+    kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
+    if "model_wGP" not in kwargs_compute_model_4_key_model_user:
+        kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
+    # Define default values for pl_kwargs data in TS_kwargs
+    if TS_kwargs is None:
+        TS_kwargs = {}
+    pl_kwargs_TS = TS_kwargs.get("pl_kwargs", {})
+    if pl_kwargs_TS is None:
+        pl_kwargs_TS = {}
+    TS_kwargs["pl_kwargs"] = pl_kwargs_TS
+    pl_kwargs_TS_all = pl_kwargs_TS.get("all", {})
+    pl_kwargs_TS["all"] = pl_kwargs_TS_all
+    pl_kwargs_TS_all_data = pl_kwargs_TS_all.get("data", {})
+    pl_kwargs_TS_all["data"] = pl_kwargs_TS_all_data
+    if "color" not in pl_kwargs_TS_all_data:
+        pl_kwargs_TS_all_data["color"] = 'k'
+    if "alpha" not in pl_kwargs_TS_all_data:
+        pl_kwargs_TS_all_data["alpha"] = 0.1
+    # Call the create_iTSNGLSP_plots function
+    return create_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+                                 y_name=y_name, inst_cat='RV',
+                                 l_iterative_removal=l_iterative_removal,
+                                 compute_raw_models_func=compute_raw_models_core,
+                                 remove_add_model_components_func=remove_add_model_components,
+                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                 compute_GP_model=compute_GP_model,
+                                 split_GP_computation=split_GP_computation,
+                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
+                                 l_1_model_4_alldst=['model', 'model_wGP', 'stellar_var', 'GP'],
+                                 show_dict=show_dict, show_removed_in_previousrow=show_removed_in_previousrow,
+                                 datasetname4model4row=datasetname4model4row,
+                                 datasim_kwargs=datasim_kwargs,
+                                 datasetnames=datasetnames,
+                                 amplitude_fact=RV_fact, unit=RV_unit,
+                                 create_axes_kwargs=create_axes_kwargs,
+                                 TS_kwargs=TS_kwargs,
+                                 GLSP_kwargs=GLSP_kwargs,
+                                 suptitle_kwargs=suptitle_kwargs,
+                                 fontsize=fontsize,
+                                 # get_key_compute_model_func=get_key_compute_model,
+                                 )
 
 
 def remove_add_model_components(model, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
