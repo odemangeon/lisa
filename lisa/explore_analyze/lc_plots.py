@@ -663,7 +663,7 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
         pl_kwargs_TS_all_data["alpha"] = 0.1
     # Call the create_iTSNGLSP_plots function
     return create_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
-                                 y_name=y_name, inst_cat='RV',
+                                 y_name=y_name, inst_cat='LC',
                                  l_iterative_removal=l_iterative_removal,
                                  compute_raw_models_func=compute_raw_models_core,
                                  remove_add_model_components_func=remove_add_model_components,
