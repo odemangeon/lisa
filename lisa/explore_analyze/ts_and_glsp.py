@@ -1963,6 +1963,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 if i_row == 0:
                     ax_gls_twin_i.set_xlabel("Period [days]", fontsize=fontsize)
 
+                # TODO: This part is just a copy paste from the TSNGLSP function and is currently not working
                 if GLSP_kwargs.get("show_WF", True):
                     for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
                         ax_gls[-i_WF - 1].plot(glsps[l_WF_key_model[0]].freq / day2sec * freq_fact, glsps[l_WF_key_model[0]].wf, '-', color="k", label=f"WF {l_WF_key_model}", linewidth=GLSP_kwargs.get("lw ", 1.))
