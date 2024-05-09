@@ -96,7 +96,7 @@ remove_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
                'decorrelation_likelihood': False, 'GP': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 # List of what to remove for each iteration
-l_iterative_removal = [('stellar_var', ), ('GP', ), ('b', ), ]  # List of tuple because can remove more than one model component at a time
+l_iterative_removal = [('stellar_var', ), ('GP', ), ('b', ), ]  # List of tuple because can remove more than one model component at
 
 # What to show to start with: at the first level of the iterative removal process
 show_dict = {0: {'model_wGP': True, },
