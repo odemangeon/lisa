@@ -33,6 +33,8 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                 datasetnames=None, row4datasetname=None,
                                 datasetnameformodel4row=None, npt_model=1000,
                                 split_GP_computation=None,
+                                outputs_load_datasets_and_models=None,
+                                computed_models_4_PF=None,
                                 phasefold_central_phase=0.,
                                 remove1=True, remove_contamination=True,
                                 show_time_from_tic=False, time_fact=24, time_unit="h",
@@ -194,6 +196,8 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
                                     datasetnames=datasetnames, row4datasetname=row4datasetname,
                                     datasetnameformodel4row=datasetnameformodel4row,
                                     npt_model=npt_model, split_GP_computation=split_GP_computation,
+                                    outputs_load_datasets_and_models=outputs_load_datasets_and_models,
+                                    computed_models_4_PF=computed_models_4_PF,
                                     phasefold_central_phase=phasefold_central_phase,
                                     amplitude_fact=LC_fact, show_time_from_tic=show_time_from_tic, time_fact=time_fact,
                                     time_unit=time_unit, exptime_bin=exptime_bin, binning_stat=binning_stat,
@@ -216,6 +220,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             show_dict=None, datasetname4model4row=None,
                             compute_GP_model=True,
                             split_GP_computation=None,
+                            outputs_load_datasets_and_models=None, 
+                            computed_models_4_TS=None,
                             TS_kwargs=None, GLSP_kwargs=None,
                             create_axes_kwargs=None,
                             suptitle_kwargs=None,
@@ -431,6 +437,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 compute_GP_model=compute_GP_model,
                                 split_GP_computation=split_GP_computation,
+                                outputs_load_datasets_and_models=outputs_load_datasets_and_models,
+                                computed_models_4_TS=computed_models_4_TS,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
                                 show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
                                 datasetname4model4row=datasetname4model4row,
@@ -453,13 +461,16 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
                              l_iterative_removal=None,
                              datasetname4model4row=None,
                              kwargs_compute_model_4_key_model=None,
-                             compute_GP_model=True, split_GP_computation=None, 
+                             compute_GP_model=True, split_GP_computation=None,
+                             outputs_load_datasets_and_models=None, 
+                             computed_models_4_iTS=None,
                              TS_kwargs=None, GLSP_kwargs=None,
                              create_axes_kwargs=None,
                              suptitle_kwargs=None,
-                             RV_fact=1., RV_unit="$km/s$", fontsize=AandA_fontsize
+                             LC_fact=1e6, LC_unit="ppm", 
+                             fontsize=AandA_fontsize
                              ):
-    """Produce clean iterative RV time series and generalized Lomb-Scargle plots of a system.
+    """Produce clean iterative LC time series and generalized Lomb-Scargle plots of a system.
 
     Arguments
     ---------
@@ -495,7 +506,7 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
             - 't_unit': str (Def: days)
                 String that is going to be used to give the unit (and reference system) of the time.
             - 'pl_kwargs': dict
-                Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
+                Dictionary with keys a dataset name (ex: "LC_HD209458_ESPRESSO_0") or "model" or "GP"
                 and values a dictionary that will be passed as keyword arguments associated the plotting functions.
                 For the dictionaries corresponding to a dataset, You can also add a 'jitter' key with value
                 a dictionary that will contain the changes that you want to make for the update error bars
@@ -601,10 +612,10 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
                 will be passed on to legend ( legend(.., **GLSP_kwargs['legend_param'][key]))
     suptitle_kwargs : dict
         Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
-    RV_fact       : float
-        Factor to apply to the RV
-    RV_unit        : str
-        String giving the unit of the RVs
+    LC_fact       : float
+        Factor to apply to the LC
+    LC_unit        : str
+        String giving the unit of the LCs
 
     Returns
     -------
@@ -670,13 +681,15 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
                                  kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                  compute_GP_model=compute_GP_model,
                                  split_GP_computation=split_GP_computation,
+                                 outputs_load_datasets_and_models=outputs_load_datasets_and_models,
+                                 computed_models_4_iTS=computed_models_4_iTS,
                                  d_name_component_removed_to_print=d_name_component_removed_to_print,
                                  l_1_model_4_alldst=['model', 'model_wGP', 'stellar_var', 'GP'],
                                  show_dict=show_dict, show_removed_in_previousrow=show_removed_in_previousrow,
                                  datasetname4model4row=datasetname4model4row,
                                  datasim_kwargs=datasim_kwargs,
                                  datasetnames=datasetnames,
-                                 amplitude_fact=RV_fact, unit=RV_unit,
+                                 amplitude_fact=LC_fact, unit=LC_unit,
                                  create_axes_kwargs=create_axes_kwargs,
                                  TS_kwargs=TS_kwargs,
                                  GLSP_kwargs=GLSP_kwargs,

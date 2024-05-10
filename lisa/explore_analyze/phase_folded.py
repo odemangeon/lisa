@@ -34,6 +34,8 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                              periods_remove_or_add_dict=None,
                              datasetnames=None, row4datasetname=None,
                              datasetnameformodel4row=None, npt_model=1000, split_GP_computation=None,
+                             outputs_load_datasets_and_models=None,
+                             computed_models_4_PF=None,
                              phasefold_central_phase=0.,
                              amplitude_fact=1., unit=None,
                              show_time_from_tic=False, time_fact=24, time_unit="h",
@@ -258,16 +260,19 @@ def create_phasefolded_plots(post_instance, df_fittedval,
         show_title_labels_ticklabels = {}
 
     # Load the defined datasets and check how many dataset there is by instrument.
-    (dico_load, kwargs_compute_model_4_key_model
-     ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-                                  df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
-                                  compute_raw_models_func=compute_raw_models_func,
-                                  remove_add_model_components_func=remove_add_model_components_func,
-                                  kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                  compute_GP_model=True, split_GP_computation=split_GP_computation,
-                                  get_key_compute_model_func=get_key_compute_model_func,
-                                  kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                  )
+    if outputs_load_datasets_and_models is None:
+        (dico_load, kwargs_compute_model_4_key_model
+            ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                        df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
+                                        compute_raw_models_func=compute_raw_models_func,
+                                        remove_add_model_components_func=remove_add_model_components_func,
+                                        kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                        compute_GP_model=True, split_GP_computation=split_GP_computation,
+                                        get_key_compute_model_func=get_key_compute_model_func,
+                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                        )
+    else:
+        dico_load, kwargs_compute_model_4_key_model = outputs_load_datasets_and_models
 
     # Do the suptitle
     do_suptitle(fig=fig, post_instance=post_instance, datasetnames=datasetnames, fontsize=fontsize,
@@ -282,7 +287,8 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                        bin_size=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
 
     # Init the outputs
-    computed_models = {}
+    if computed_models_4_PF is None:
+            computed_models_4_PF = {}
 
     #################################
     # Main row loop: For each row ...
@@ -312,8 +318,8 @@ def create_phasefolded_plots(post_instance, df_fittedval,
             ####################################
             # Init the outputs per period/planet
             ####################################
-            if planetorperiod_name not in computed_models:
-                computed_models[planetorperiod_name] = {}
+            if planetorperiod_name not in computed_models_4_PF:
+                computed_models_4_PF[planetorperiod_name] = {}
 
             #####################################
             # Format ticks, set labels and titles
@@ -415,8 +421,9 @@ def create_phasefolded_plots(post_instance, df_fittedval,
             text_rms = OrderedDict()
             text_rms_binned = OrderedDict()
             for datasetname in datasetnames4rowidx[i_row]:
-                # Init computed_models[planetorperiod_name] for the dataset
-                computed_models[planetorperiod_name][datasetname] = {}
+                # Init computed_models_4_PF[planetorperiod_name] for the dataset
+                if datasetname not in computed_models_4_PF[planetorperiod_name]:
+                    computed_models_4_PF[planetorperiod_name][datasetname] = {}
 
                 ################################################################################
                 # Compute the data for the planet (removing the contribution from other planets)
@@ -488,10 +495,10 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                     if (datasetnameformodel4row[i_row] == datasetname) or (datasetnameformodel4row[i_row] == 'all'):
                         remove_dict = planets_remove_or_add_dict.get(planetorperiod_name, remove_or_add_dict_planet_default).get("remove_dict", {})
                         add_dict = planets_remove_or_add_dict.get(planetorperiod_name, remove_or_add_dict_planet_default).get("add_dict", {})
-                        computed_models[planetorperiod_name][datasetname]['tsim'] = linspace(tmin_model, tmax_model, npt_model)
-                        computed_models[planetorperiod_name][datasetname]['xsim'] = linspace(x_min_data, x_max_data, npt_model)
-                        (computed_models[planetorperiod_name][datasetname], pl_kwarg_final
-                        ) = compute_and_plot_model(tsim=computed_models[planetorperiod_name][datasetname]['tsim'],
+                        computed_models_4_PF[planetorperiod_name][datasetname]['tsim'] = linspace(tmin_model, tmax_model, npt_model)
+                        computed_models_4_PF[planetorperiod_name][datasetname]['xsim'] = linspace(x_min_data, x_max_data, npt_model)
+                        (computed_models_4_PF[planetorperiod_name][datasetname], pl_kwarg_final
+                        ) = compute_and_plot_model(tsim=computed_models_4_PF[planetorperiod_name][datasetname]['tsim'],
                                                    key_model=planetorperiod_name,
                                                    datasetname=datasetname, post_instance=post_instance,
                                                    df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
@@ -505,17 +512,17 @@ def create_phasefolded_plots(post_instance, df_fittedval,
                                                    compute_binned=show_binned_model,
                                                    exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model,
                                                    fact_tsim_to_xsim=(time_fact if show_time_from_tic else 1 / Per),  # I think this is useless since xsim superseeds it
-                                                   xsim=computed_models[planetorperiod_name][datasetname]['xsim'],
+                                                   xsim=computed_models_4_PF[planetorperiod_name][datasetname]['xsim'],
                                                    time_unit=time_unit,
                                                    plot_unbinned=True, plot_binned=show_binned_model, ax=axes_data[i_row][i_col],
                                                    pl_kwarg=pl_kwarg_final,
-                                                   models=computed_models[planetorperiod_name][datasetname],
+                                                   models=computed_models_4_PF[planetorperiod_name][datasetname],
                                                    get_key_compute_model_func=get_key_compute_model_func,
                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                    )
                 else:
                     # Add/Remove the component requested in periods_remove_or_add_dict
-                    (computed_models[planetorperiod_name][datasetname], pl_kwarg_final
+                    (computed_models_4_PF[planetorperiod_name][datasetname], pl_kwarg_final
                      ) = compute_and_plot_model(tsim=dico_load['times'][datasetname], key_model=f'zeros_{planetorperiod_name}', datasetname=datasetname, post_instance=post_instance, 
                                                 df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs, amplitude_fact=amplitude_fact,
                                                 compute_raw_models_func=compute_raw_models_func, remove_add_model_components_func=remove_add_model_components_func,
@@ -712,4 +719,4 @@ def create_phasefolded_plots(post_instance, df_fittedval,
             ##########################
             set_legend(ax=axes_data[i_row][i_col], legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
 
-    return dico_load, computed_models
+    return dico_load, computed_models_4_PF

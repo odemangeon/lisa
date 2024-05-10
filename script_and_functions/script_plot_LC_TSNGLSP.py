@@ -76,6 +76,7 @@ if "df_fittedval" not in globals():
 #####################################
 
 save_outputs = True
+load_outputs = True
 save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
@@ -107,6 +108,9 @@ exptime_bin = 20 / 60
 binning_stat = "mean"
 supersamp_bin_model = 10
 show_binned_model = {"model": True}
+
+compute_GP_model = True
+split_GP_computation = 1000
 
 tlims = None
 force_xlims = False
@@ -152,9 +156,31 @@ if "post_instance" not in globals():
     post_instance.configure_posterior(path_config_file="config_file.py")
     post_instance.create_allfunctions()
 
+file_name_outputs = f"{obj_name}_outputs_LC_plots{extension_analysis}.pk"
+file_path_outputs = os.path.join(output_folders['pickles_analyze'], file_name_outputs) 
+if any([var not in globals() for var in ['outputs_load_datasets_and_models_LC', 'computed_models_4_TS_LC']]):
+    loaded_outputs= False
+    if load_outputs:
+        logger.info("Attempting to Load outputs from pickle")
+        if os.path.isfile(file_path_outputs):
+            with open(file_path_outputs, "rb") as ff:
+                dico_outputs = dill.load(ff)
+                outputs_load_datasets_and_models_LC = dico_outputs.get('outputs_load_datasets_and_models', None)
+                computed_models_4_TS_LC = dico_outputs.get('computed_models_4_TS', None)
+                rms_values_TS_LC = dico_outputs.get('rms_values_TS', None)
+                loaded_outputs = True
+                del dico_outputs
+                logger.info(f"Outputs loaded from file {file_path_outputs}.")
+        else:
+            logger.info(f"Outputs pickle file not found ({file_path_outputs}).")
+if not(loaded_outputs):
+    outputs_load_datasets_and_models_LC = None
+    computed_models_4_TS_LC = None
+    rms_values_TS_LC = None
+
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(dico_load, computed_models, rms_values
+(outputs_load_datasets_and_models_LC, computed_models_4_TS_LC, rms_values_TS_LC
  ) = create_LC_TSNGLSP_plots(fig=fig, post_instance=post_instance, 
                              df_fittedval=df_fittedval,
                              datasim_kwargs=kwargs_datasim,
@@ -162,8 +188,10 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              remove_dict=remove_dict,
                              show_dict=show_dict,
                              datasetname4model4row=datasetname4model4row,
-                             compute_GP_model=True,
-                             split_GP_computation=1000,
+                             outputs_load_datasets_and_models=outputs_load_datasets_and_models_LC,
+                             computed_models_4_TS=computed_models_4_TS_LC,
+                             compute_GP_model=compute_GP_model,
+                             split_GP_computation=split_GP_computation,
                              TS_kwargs={"do": do_TS,
                                         "npt_model": 5000,
                                         "exptime_bin": exptime_bin,
@@ -201,20 +229,28 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                              LC_unit=LC_unit,
                              )
 
+###############
+## Save outputs
+if save_outputs:
+    if os.path.isfile(file_path_outputs):
+        logger.info(f"An output file already exists: {file_path_outputs}.")
+        with open(file_path_outputs, "rb") as ff:
+            dico_outputs = dill.load(ff)
+            logger.info(f"Output file has been loaded  and will be updated ({file_path_outputs}).") 
+    else:
+        dico_outputs = {}
+    if not loaded_outputs:
+        dico_outputs['outputs_load_datasets_and_models'] = outputs_load_datasets_and_models_LC
+    dico_outputs['computed_models_4_TS'] = computed_models_4_TS_LC
+    dico_outputs['rms_values_TS'] = rms_values_TS_LC
+    with open(file_path_outputs, "wb") as ff:
+        dill.dump(dico_outputs, ff)
+
+############
+## Save plot
 if save_plot:
     pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_GLSP_plot{extension_analysis}_paper.pdf"))
     pl.close("all")
 else:
     pl.show()
 
-if save_outputs:
-    # Save chain in a pickle
-    if os.path.isfile(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl")):
-        with open(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl"), "rb") as fpickle:
-            _, computed_models_old = dill.load(fpickle)
-    else:
-        computed_models_old = None
-    if computed_models is None:
-        computed_models = computed_models_old
-    with open(os.path.join(output_folders["pickles_analyze"], f"LC_tsnglsp_ouputs{extension_analysis}.pkl"), "wb") as fpickle:
-        dill.dump((dico_load, computed_models), fpickle)

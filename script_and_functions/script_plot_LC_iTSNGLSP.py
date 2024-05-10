@@ -13,7 +13,7 @@ import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
 
 from lisa.explore_analyze.misc import get_def_output_folders
-from lisa.explore_analyze.rv_plots import create_RV_iTSNGLSP_plots
+from lisa.explore_analyze.lc_plots import create_LC_iTSNGLSP_plots
 
 # import matplotlib.pyplot as pl
 # import numpy as np
@@ -90,27 +90,27 @@ save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
 
-datasetnames = None  # e.g. [f"RV_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
+datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
 # What to remove to start with: at the first level of the iterative removal process
-remove_dict = {'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+remove_dict = {'1': True, 'inst_var': False, 'stellar_var': False, 'decorrelation': False,
                'decorrelation_likelihood': False, 'GP': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 # List of what to remove for each iteration
-l_iterative_removal = [('stellar_var', ), ('GP', ), ('b', ), ]  # List of tuple because can remove more than one model component at
+l_iterative_removal = [('inst_var', ), ('b', ), ]  # List of tuple because can remove more than one model component at a time
 
 # What to show to start with: at the first level of the iterative removal process
 show_dict = {0: {'model_wGP': False, },
              }  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP', 'model_wGP'
 
-datasetname4model4row = None  #  e. g. {"model_wGP": {0: f"RV_{obj_name}_CHEOPS_0"}} 
+datasetname4model4row = None  #  e. g. {"model_wGP": {0: f"LC_{obj_name}_CHEOPS_0"}} 
 
 
 # Parameter specific to the GLSP computation
 
 # Common parameters to TS and GLSP
-RV_fact = 1
-RV_unit = 'm/s'
+LC_fact = 1
+LC_unit = None
 
 exptime_bin = 0
 binning_stat = "mean"
@@ -119,7 +119,7 @@ supersamp_bin_model = 10
 # TS parameters
 do_TS = True
 
-pl_kwargs = None  # e.g. {f"RV_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
+pl_kwargs = None  # e.g. {f"LC_{obj_name}_CHEOPS_{ii}": {'data': {"label": None}} for ii in range(3)}
 
 t_unit = 'BJD - 2,400,000'
 
@@ -141,13 +141,15 @@ freq_unit = "$\mu$Hz"
 freq_lims = (0, 40)
 logscale = True
 
+Porb_CHEOPS = 98.77 / 60 / 24
+
 periods = {
            df_fittedval.loc["b_P"]["value"]: {"vlines_kwargs": {"color": "C3", "linestyle": "dashed"},
                                               "text_kwargs": {"label": 'P$_b$', 'y_pos': 0.85, 'x_shift': 0.0}
                                               },
-        #    df_fittedval.loc["c_P"]["value"]: {"vlines_kwargs": {"color": "C4", "linestyle": "dashed"},
-        #                                       "text_kwargs": {"label": 'P$_c$', 'y_pos': 0.85, 'x_shift': 0.0}
-        #                                       },
+           Porb_CHEOPS: {"vlines_kwargs": {"color": "C4", "linestyle": "dashed"},
+                         "text_kwargs": {"label": 'P$_\mathrm{CH}$', 'y_pos': 0.85, 'x_shift': 0.0}
+                         },
            }
            
 fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"},
@@ -162,7 +164,7 @@ fap = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dot
        }
 
 # These were the most commonly changed parameters.
-# There are extra parameters which can be changed in the create_RV_phasefolded_plots below
+# There are extra parameters which can be changed in the create_LC_phasefolded_plots below
 
 #########################
 # Execution of the script
@@ -175,39 +177,39 @@ if "post_instance" not in globals():
     post_instance.configure_posterior(path_config_file="config_file.py")
     post_instance.create_allfunctions()
 
-file_name_outputs = f"{obj_name}_outputs_RV_plots{extension_analysis}.pk"
+file_name_outputs = f"{obj_name}_outputs_LC_plots{extension_analysis}.pk"
 file_path_outputs = os.path.join(output_folders['pickles_analyze'], file_name_outputs) 
-if any([var not in globals() for var in ['outputs_load_datasets_and_models_RV', 'computed_models_4_iTS_RV']]):
+if any([var not in globals() for var in ['outputs_load_datasets_and_models_LC', 'computed_models_4_iTS_LC']]):
     loaded_outputs= False
     if load_outputs:
         logger.info("Attempting to Load outputs from pickle")
         if os.path.isfile(file_path_outputs):
             with open(file_path_outputs, "rb") as ff:
                 dico_outputs = dill.load(ff)
-                outputs_load_datasets_and_models_RV = dico_outputs.get('outputs_load_datasets_and_models', None)
-                computed_models_4_iTS_RV = dico_outputs.get('computed_models_4_iTS', None)
-                rms_values_iTS_RV = dico_outputs.get('rms_values_iTS', None)
+                outputs_load_datasets_and_models_LC = dico_outputs.get('outputs_load_datasets_and_models', None)
+                computed_models_4_iTS_LC = dico_outputs.get('computed_models_4_iTS', None)
+                rms_values_iTS_LC = dico_outputs.get('rms_values_iTS', None)
                 loaded_outputs = True
                 del dico_outputs
                 logger.info(f"Outputs loaded from file {file_path_outputs}.")
         else:
             logger.info(f"Outputs pickle file not found ({file_path_outputs}).")
 if not(loaded_outputs):
-    outputs_load_datasets_and_models_RV = None
-    computed_models_4_iTS_RV = None
-    rms_values_iTS_RV = None
+    outputs_load_datasets_and_models_LC = None
+    computed_models_4_iTS_LC = None
+    rms_values_iTS_LC = None
 
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=False)
 
-(outputs_load_datasets_and_models_RV, computed_models_4_iTS_RV
- ) = create_RV_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+(outputs_load_datasets_and_models_LC, computed_models_4_iTS_LC
+ ) = create_LC_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                               datasim_kwargs=kwargs_datasim, datasetnames=datasetnames, 
                               remove_dict=remove_dict, show_dict=show_dict,
                               l_iterative_removal=l_iterative_removal,
                               datasetname4model4row=datasetname4model4row,
                               compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                              outputs_load_datasets_and_models=outputs_load_datasets_and_models_RV,
-                              computed_models_4_iTS=computed_models_4_iTS_RV,
+                              outputs_load_datasets_and_models=outputs_load_datasets_and_models_LC,
+                              computed_models_4_iTS=computed_models_4_iTS_LC,
                               TS_kwargs={"do": do_TS,
                                          "npt_model": 5000,
                                          "exptime_bin": exptime_bin,
@@ -242,8 +244,8 @@ fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_
                                            'show_WF': False
                                            },
                               suptitle_kwargs={'do': True, 'show_removed': True, 'show_system_name': True},  # None
-                              RV_fact=RV_fact,
-                              RV_unit=RV_unit,
+                              LC_fact=LC_fact,
+                              LC_unit=LC_unit,
                               )
 
 ###############
@@ -257,8 +259,8 @@ if save_outputs:
     else:
         dico_outputs = {}
     if not loaded_outputs:
-        dico_outputs['outputs_load_datasets_and_models'] = outputs_load_datasets_and_models_RV
-    dico_outputs['computed_models_4_iTS'] = computed_models_4_iTS_RV
+        dico_outputs['outputs_load_datasets_and_models'] = outputs_load_datasets_and_models_LC
+    dico_outputs['computed_models_4_iTS'] = computed_models_4_iTS_LC
     with open(file_path_outputs, "wb") as ff:
         dill.dump(dico_outputs, ff)
 
