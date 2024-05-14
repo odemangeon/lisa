@@ -1713,7 +1713,10 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 if show_model:
                     if datasetname4model4row[key_model][i_row] == 'all':
                         l_datasetnames_4_plot = datasetnames
-                        xmodel = computed_models_4_iTS[datasetname]['xsim']
+                        if key_model == "decorrelation_likelihood":
+                            xmodel = computed_models_4_iTS[datasetname]["tsim_decorr_like"]
+                        else:
+                            xmodel = computed_models_4_iTS[datasetname]['xsim']
                     else:
                         l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
                         xmodel = computed_models_4_iTS['xsim_all']   
