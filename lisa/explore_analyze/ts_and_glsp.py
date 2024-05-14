@@ -1713,18 +1713,25 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 if show_model:
                     if datasetname4model4row[key_model][i_row] == 'all':
                         l_datasetnames_4_plot = datasetnames
-                        if key_model == "decorrelation_likelihood":
-                            xmodel = computed_models_4_iTS[datasetname]["tsim_decorr_like"]
-                        else:
-                            xmodel = computed_models_4_iTS[datasetname]['xsim']
                     else:
                         l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
-                        xmodel = computed_models_4_iTS['xsim_all']   
+                        
                     for datasetname in l_datasetnames_4_plot:
                         if datasetname4model4row[key_model][i_row] == 'all':
-                            ymodel = computed_models_4_iTS[datasetname][key_model]
+                            if key_model in computed_models_4_iTS[datasetname]:
+                                ymodel = computed_models_4_iTS[datasetname][key_model]
+                            else:
+                                continue
+                            if key_model == "decorrelation_likelihood":
+                                xmodel = computed_models_4_iTS[datasetname]["tsim_decorr_like"]
+                            else:
+                                xmodel = computed_models_4_iTS[datasetname]['xsim']
                         else:
-                            ymodel = computed_models_4_iTS[datasetname]['all'][key_model]
+                            if key_model in computed_models_4_iTS[datasetname]['all']:
+                                ymodel = computed_models_4_iTS[datasetname]['all'][key_model]
+                            else:
+                                continue
+                            xmodel = computed_models_4_iTS['xsim_all']   
                         if key_model in pl_kwarg_final[datasetname]:
                             pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
                         else:
