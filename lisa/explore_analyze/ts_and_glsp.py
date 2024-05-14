@@ -466,11 +466,10 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             get_key_compute_model_func=get_key_compute_model_func,
                                                             kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                             )
-                                computed_models_4_TS[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
+                                computed_models_4_TS[datasetname][model] = models_decorr_like[model]
                             else:
-                                if datasetname4model4row[model][i_row] == 'all':
-                                    computed_models_4_TS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
-                                    computed_models_4_TS[datasetname]["xsim"] = computed_models_4_TS[datasetname]["tsim"] * time_fact
+                                computed_models_4_TS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
+                                computed_models_4_TS[datasetname]["xsim"] = computed_models_4_TS[datasetname]["tsim"] * time_fact
                                 (computed_models_4_TS[datasetname], pl_kwarg_final
                                  ) = compute_and_plot_model(tsim=computed_models_4_TS[datasetname]["tsim"],
                                                             key_model=model,
@@ -1419,7 +1418,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                        )
-                            computed_models_4_iTS[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
+                            computed_models_4_iTS[datasetname][model] = models_decorr_like[model]
                         else:
                             if datasetname4model4row[model][i_row] == 'all':
                                 tsim = computed_models_4_iTS[datasetname]["tsim"]
@@ -1711,7 +1710,6 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             # Plot the models to show
             #########################
             for key_model, show_model in show_dict[i_row].items():
-                key_compute_model = get_key_compute_model_func(key_model=key_model)
                 if show_model:
                     if datasetname4model4row[key_model][i_row] == 'all':
                         l_datasetnames_4_plot = datasetnames
@@ -1721,9 +1719,9 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         xmodel = computed_models_4_iTS['xsim_all']   
                     for datasetname in l_datasetnames_4_plot:
                         if datasetname4model4row[key_model][i_row] == 'all':
-                            ymodel = computed_models_4_iTS[datasetname][key_compute_model]
+                            ymodel = computed_models_4_iTS[datasetname][key_model]
                         else:
-                            ymodel = computed_models_4_iTS[datasetname]['all'][key_compute_model]
+                            ymodel = computed_models_4_iTS[datasetname]['all'][key_model]
                         if key_model in pl_kwarg_final[datasetname]:
                             pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
                         else:
