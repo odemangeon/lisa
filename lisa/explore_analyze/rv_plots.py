@@ -422,7 +422,7 @@ def create_RV_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 GLSP_kwargs=GLSP_kwargs,
                                 suptitle_kwargs=suptitle_kwargs,
                                 fontsize=fontsize,
-                                # get_key_compute_model_func=get_key_compute_model,
+                                get_key_compute_model_func=get_key_compute_model_core,
                                 )
 
 
@@ -645,7 +645,7 @@ def create_RV_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
                                  GLSP_kwargs=GLSP_kwargs,
                                  suptitle_kwargs=suptitle_kwargs,
                                  fontsize=fontsize,
-                                 # get_key_compute_model_func=get_key_compute_model,
+                                 get_key_compute_model_func=get_key_compute_model_core,
                                  )
 
 
