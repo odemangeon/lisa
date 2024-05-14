@@ -468,8 +468,9 @@ def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             )
                                 computed_models_4_TS[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                             else:
-                                computed_models_4_TS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
-                                computed_models_4_TS[datasetname]["xsim"] = computed_models_4_TS[datasetname]["tsim"] * time_fact
+                                if datasetname4model4row[model][i_row] == 'all':
+                                    computed_models_4_TS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
+                                    computed_models_4_TS[datasetname]["xsim"] = computed_models_4_TS[datasetname]["tsim"] * time_fact
                                 (computed_models_4_TS[datasetname], pl_kwarg_final
                                  ) = compute_and_plot_model(tsim=computed_models_4_TS[datasetname]["tsim"],
                                                             key_model=model,
@@ -1367,31 +1368,27 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                             l_model_1_per_row=l_1_model_4_alldst,
                                                             )
         # datasetname4model = {key_model: dico_datasetname4row[0] for key_model, dico_datasetname4row in datasetname4model4row.items()}
+        xlims_all = [min([xlims_datas[dst][0] for dst in datasetnames]) - extra_dt_model,
+                     max([xlims_datas[dst][1] for dst in datasetnames]) + extra_dt_model
+                     ]
+        tlims_all = (xlims_all[0] / time_fact, xlims_all[1] / time_fact)
+        computed_models_4_iTS["tsim_all"] = linspace(*tlims_all, npt_model)
+        computed_models_4_iTS["xsim_all"] = computed_models_4_iTS["tsim_all"] * time_fact
 
         for datasetname in datasetnames:
             # Init computed_models_4_iTS for this dataset
             if datasetname not in computed_models_4_iTS:
                 computed_models_4_iTS[datasetname] = {}
 
-            for i_row in range(nb_rows_ts):
+            xlims_dataset = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
+            tlims_dataset = (xlims_all[0] / time_fact, xlims_all[1] / time_fact)
+            computed_models_4_iTS[datasetname]["tsim"] = linspace(*tlims_dataset, npt_model)
+            computed_models_4_iTS[datasetname]["xsim"] = computed_models_4_iTS[datasetname]["tsim"] * time_fact
 
-                tlims_i = tlims.get(i_row, tlims['all'])
-                    
+            for i_row in range(nb_rows_ts):                    
                 for model, show_model in show_dict[i_row].items():
                     if show_model and ((datasetname4model4row[model][i_row] == datasetname) or (datasetname4model4row[model][i_row] == 'all')) and (model not in computed_models_4_iTS[datasetname]):
                         logger.debug(f"Computing model {model} for dataset {datasetname}")
-                        if datasetname4model4row[model][i_row] == 'all':
-                            xlims_model = [xlims_datas[datasetname][0] - extra_dt_model, xlims_datas[datasetname][1] + extra_dt_model]
-                        else:
-                            xlims_model = [min([xlims_datas[dst][0] for dst in datasetnames]) - extra_dt_model,
-                                           max([xlims_datas[dst][1] for dst in datasetnames]) + extra_dt_model
-                                           ]
-                        if tlims_i is not None:
-                            if (tlims_i[0] is not None) and (tlims_i[0] > xlims_model[0]):
-                                xlims_model[0] = tlims_i[0]
-                            if (tlims_i[1] is not None) and (tlims_i[1] < xlims_model[1]):
-                                xlims_model[1] = tlims_i[1]
-                        tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
                         kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
                         if model == "decorrelation_likelihood":
                             computed_models_4_iTS[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
@@ -1424,10 +1421,16 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                        )
                             computed_models_4_iTS[datasetname]["decorr_like"] = models_decorr_like['decorrelation_likelihood']
                         else:
-                            computed_models_4_iTS[datasetname]["tsim"] = linspace(*tlims_model, npt_model)
-                            computed_models_4_iTS[datasetname]["xsim"] = computed_models_4_iTS[datasetname]["tsim"] * time_fact
-                            (computed_models_4_iTS[datasetname], _
-                             ) = compute_and_plot_model(tsim=computed_models_4_iTS[datasetname]["tsim"],
+                            if datasetname4model4row[model][i_row] == 'all':
+                                tsim = computed_models_4_iTS[datasetname]["tsim"]
+                                models_compute_and_plot_model = computed_models_4_iTS[datasetname]
+                            else:
+                                tsim = computed_models_4_iTS["tsim_all"]
+                                if "all" not in computed_models_4_iTS[datasetname]:
+                                    computed_models_4_iTS[datasetname]['all'] = {}
+                                models_compute_and_plot_model = computed_models_4_iTS[datasetname]['all']
+                            (models_compute_and_plot_model, _
+                             ) = compute_and_plot_model(tsim=tsim,
                                                         key_model=model,
                                                         datasetname=datasetname,
                                                         post_instance=post_instance,
@@ -1449,7 +1452,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                         plot_unbinned=False, plot_binned=False,
                                                         ax=None,
                                                         pl_kwarg=None,
-                                                        models=computed_models_4_iTS[datasetname],
+                                                        models=models_compute_and_plot_model,
                                                         get_key_compute_model_func=get_key_compute_model_func,
                                                         kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                         )
@@ -1708,17 +1711,24 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             # Plot the models to show
             #########################
             for key_model, show_model in show_dict[i_row].items():
+                key_compute_model = get_key_compute_model_func(key_model=key_model)
                 if show_model:
                     if datasetname4model4row[key_model][i_row] == 'all':
                         l_datasetnames_4_plot = datasetnames
+                        xmodel = computed_models_4_iTS[datasetname]['xsim']
                     else:
                         l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
+                        xmodel = computed_models_4_iTS['xsim_all']   
                     for datasetname in l_datasetnames_4_plot:
+                        if datasetname4model4row[key_model][i_row] == 'all':
+                            ymodel = computed_models_4_iTS[datasetname][key_compute_model]
+                        else:
+                            ymodel = computed_models_4_iTS[datasetname]['all'][key_compute_model]
                         if key_model in pl_kwarg_final[datasetname]:
                             pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
                         else:
                             pl_kwarg_to_use = {"fmt": '', "linestyle": "-", "label": key_model}
-                        ebconts_lines_labels_model = ax_ts_i.errorbar(computed_models_4_iTS[datasetname]['xsim'], computed_models_4_iTS[datasetname][key_model], **pl_kwarg_to_use)
+                        ebconts_lines_labels_model = ax_ts_i.errorbar(xmodel, ymodel, **pl_kwarg_to_use)
                         if not("color" in pl_kwarg_to_use):
                             pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
                         if not("alpha" in pl_kwarg_to_use):
@@ -1726,15 +1736,19 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                             if pl_kwarg_to_use["alpha"] is None:
                                 pl_kwarg_to_use["alpha"] = 1.
                         # Plot the model_err
-                        if f'{key_model}_err' in computed_models_4_iTS[datasetname]:
-                            key_err = key_model + "_err"
+                        key_err = key_model + "_err"
+                        if (datasetname4model4row[key_model][i_row] == 'all') and (key_err in computed_models_4_iTS[datasetname]):
+                            ymodel_err = computed_models_4_iTS[datasetname][key_err]
+                        elif (datasetname4model4row[key_model][i_row] == datasetname) and (key_err in computed_models_4_iTS[datasetname]['all']):
+                            ymodel_err = computed_models_4_iTS[datasetname]['all'][key_err]
+                        else:
+                            ymodel_err = None
+                        if ymodel_err is not None:
                             if not("color" in pl_kwarg_final[datasetname][key_err]):
                                 pl_kwarg_final[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
                             if not("alpha" in pl_kwarg_final[datasetname][key_err]):
                                 pl_kwarg_final[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                                _ = ax_ts_i.fill_between(computed_models_4_iTS[datasetname]['xsim'], computed_models_4_iTS[datasetname][key_model] - computed_models_4_iTS[datasetname][key_err], computed_models_4_iTS[datasetname][key_model] + computed_models_4_iTS[datasetname][key_err],
-                                                    **pl_kwarg_final[datasetname][key_err],
-                                                    )
+                                _ = ax_ts_i.fill_between(xmodel, ymodel - ymodel_err, ymodel + ymodel_err, **pl_kwarg_final[datasetname][key_err])
                                 
             ###################################
             # Set ylims and indicate_y_outliers
