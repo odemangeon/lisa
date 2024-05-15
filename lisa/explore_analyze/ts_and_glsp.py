@@ -2001,7 +2001,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                             ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
                         labelleft = True if j_col_glsp == 0 else False
                         ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
-            logger.debug("Done: GLSP plot for row {i_row}/{nb_rows_ts}")
+            logger.debug(f"Done: GLSP plot for row {i_row}/{nb_rows_ts}")
 
     if GLSP_kwargs['do']:
         # Do the WF plot if needed
