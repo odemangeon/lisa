@@ -85,7 +85,7 @@ if "df_fittedval" not in globals():
 #####################################
 
 save_outputs = True
-load_outputs = True
+load_outputs = False
 save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
@@ -93,11 +93,11 @@ kwargs_datasim = {}  # Kwargs for the datasim functions
 datasetnames = None  # e.g. [f"LC_{obj_name}_CHEOPS_{ii}" for ii in range(3)]
 
 # What to remove to start with: at the first level of the iterative removal process
-remove_dict = {'1': True, 'inst_var': False, 'stellar_var': False, 'decorrelation': False,
+remove_dict = {'1': True, 'contamination': False, 'inst_var': False, 'stellar_var': False, 'decorrelation': False,
                'decorrelation_likelihood': False, 'GP': False}  # Possible keys are 'inst_var', 'stellar_var', 'decorrelation', 'decorrelation_likelihood', 'GP'
 
 # List of what to remove for each iteration
-l_iterative_removal = [('inst_var', ), ('b', ), ]  # List of tuple because can remove more than one model component at a time
+l_iterative_removal = [('inst_var', 'contamination'), ('b', ), ]  # List of tuple because can remove more than one model component at a time
 
 # What to show to start with: at the first level of the iterative removal process
 show_dict = {0: {'model_wGP': False, },
