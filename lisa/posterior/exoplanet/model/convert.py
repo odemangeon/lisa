@@ -1388,10 +1388,11 @@ def getFrat_sincos(A, Foffset):
     ------
     Frat    : np.array  
     """
-    if Foffset == 'zero':
-        Frat = A / 2
-    elif Foffset == 'semi-amplitude':
-        Frat = A
+    if isinstance(Foffset, str):
+        if Foffset == 'zero':
+            Frat = A / 2
+        elif Foffset == 'semi-amplitude':
+            Frat = A
     else:
         Frat = Foffset + A
 
