@@ -85,7 +85,7 @@ if "df_fittedval" not in globals():
 #####################################
 
 save_outputs = True
-load_outputs = False
+load_outputs = True
 save_plot = False
 
 kwargs_datasim = {}  # Kwargs for the datasim functions
