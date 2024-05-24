@@ -34,6 +34,8 @@ dependencies:
     - kelp
     - PyAstronomy[occult]
     - batman-package
+    # - pytransit
+    # - ldtk
 
 variables:
   LISAPATH: /Users/olivier/Softwares/lisa
