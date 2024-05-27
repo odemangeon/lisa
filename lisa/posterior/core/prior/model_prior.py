@@ -22,7 +22,6 @@ from ....tools.miscellaneous import spacestring_like
 
 ## manager object
 manager = Manager_Prior()
-manager.load_setup()
 
 
 class Model_Prior(object):

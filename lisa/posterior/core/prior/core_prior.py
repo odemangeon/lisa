@@ -11,7 +11,6 @@ from loguru import logger
 from numpy import logical_xor  # logical_not
 
 from ....tools.metaclasses import MandatoryReadOnlyAttr, MandatoryMethods
-from ....software_parameters import setupfile_prior
 
 
 class Metaclass_PriorFunction(MandatoryReadOnlyAttr, MandatoryMethods):
@@ -677,17 +676,6 @@ class Manager_Prior(object):
         def _reset_priors_database(self):
             """Reset database of available prior functions."""
             self.__priors = dict()
-
-        def load_setup(self):
-            """Load the configuration of priors defined in the setup file.
-
-            Association prior type name and Prior_Function subclass.
-            """
-            f = open(setupfile_prior)
-            exec(f.read())
-            f.close()
-            logger.debug("Setup of Manager_Prior Loaded. Available priors: {}"
-                         "".format(self.get_available_priors()))
 
         def get_available_priors(self):
             """Returns the list of available prior types.

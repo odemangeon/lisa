@@ -13,7 +13,6 @@ classes.
     - __Mgr.add_available_inst_category: UT
     - __Mgr.get_available_inst_category: UT
     - __Mgr._reset_inst_categories: Doc and UT
-    - __Mgr.load_setup: Doc but No UT because depend on the content of the setup file
     - __Mgr.get_dataset_subclass: Doc an dUT
     - __Mgr._reset_available_inst: Doc and UT
     - __Mgr.get_available_inst_name: Doc and UT
@@ -30,7 +29,6 @@ classes.
 from loguru import logger
 from os.path import exists
 from numpy import logical_xor
-from ....software_parameters import setupfile_dataset_inst
 from ....tools.miscellaneous import get_filename_from_file_path
 
 
@@ -144,17 +142,6 @@ class Manager_Inst_Dataset(object):
                 raise ValueError(f"{inst_fullcat} is not a valid instrument full category")
             new_inst = inst_subclass(name=inst_name, subcat=inst_subcat)
             self.add_available_inst(new_inst)
-
-        def load_setup(self):
-            """Load the configuration of instruments and datasets define in the setup file.
-
-            Association of instrument categories and Dataset subclasses but also available
-            instrument instances. The setup file is define in the software_parameters module.
-            """
-            f = open(setupfile_dataset_inst)
-            exec(f.read())
-            f.close()
-            logger.debug("Setup of Manager_Inst_Dataset Loaded")
 
         def get_available_inst_cat(self):
             """Returns the list of available instrument categories.

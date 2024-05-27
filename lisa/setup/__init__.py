@@ -1,0 +1,1 @@
+input_data_folder = '/Users/olivier/Data/lisa'

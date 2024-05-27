@@ -13,7 +13,6 @@ from ..dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dat
 
 
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 class Core_DecorrelationModel(object, metaclass=MandatoryReadOnlyAttrAndMethod):

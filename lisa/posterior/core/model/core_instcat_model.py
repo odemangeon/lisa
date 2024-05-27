@@ -33,7 +33,6 @@ from ..config_file import ConfigFileAttr, ConfigFile
 
 
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 class Core_InstCat_Model(RunFolderAttr, ConfigFileAttr, metaclass=MandatoryReadOnlyAttrAndMethod):

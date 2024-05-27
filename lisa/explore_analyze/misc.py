@@ -32,7 +32,6 @@ fmt_sci_not = FuncFormatter(sci_not_str)
 
 # managers
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 def get_def_output_folders(run_folder=None, output_folder=None):

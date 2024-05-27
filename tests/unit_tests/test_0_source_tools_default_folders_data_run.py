@@ -13,11 +13,8 @@ import os
 import lisa.tools.default_folders_data_run as mod
 # import lisa.posterior.core.posterior as pst
 #
-# from lisa.software_parameters import input_data_folder
 # from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import \
 #     Manager_Inst_Dataset
-# from lisa.posterior.core.model.manager_model import \
-#     Manager_Model
 # from lisa.posterior.core.model.core_model import Core_Model
 # import lisa.posterior.exoplanet.dataset_and_instrument.lc as lc
 # import lisa.posterior.exoplanet.dataset_and_instrument.rv as rv

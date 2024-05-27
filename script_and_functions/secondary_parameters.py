@@ -23,7 +23,7 @@ for planet in ['b', 'c']:
       sp[f'{planet}_omega'] = {'function': cv.getomega_deg, 'kwargs': None, 'l_param_name': [f'{planet}_ecosw', f'{planet}_esinw']}
       sp[f'{planet}_inc'] = {'function': cv.getinc, 'kwargs': None, 'l_param_name': [f'{planet}_cosinc', ]}
       sp[f'{planet}_aR'] = {'function': cv.getaoverr, 'kwargs': None, 'l_param_name': [f'{planet}_P', 'A_rho', f'{planet}_ecc', f'{planet}_omega']}
-      sp[f'{planet}_b'] = {'function': cv.getb(), 'kwargs': None, 'l_param_name': [f'{planet}_inc', f'{planet}_aR', f'{planet}_ecc', f'{planet}_omega']}
+      sp[f'{planet}_b'] = {'function': cv.getb, 'kwargs': None, 'l_param_name': [f'{planet}_inc', f'{planet}_aR', f'{planet}_ecc', f'{planet}_omega']}
       sp[f'{planet}_R'] = {'function': cv.getRp, 'kwargs': None, 'l_param_name': [f'{planet}_Rrat', 'A_R']}
       sp[f'{planet}_Frat'] = {'function': cv.getFrat_sincos, 'kwargs': None, 'l_param_name': [f'{planet}_A', f'{planet}_Foffset']}
       sp[f'{planet}_Phioffset'] = {'function': cv.getPhioffset_sincos, 'kwargs': {'sincos': 'cos'}, 'l_param_name': [f'{planet}_Phi', ]}

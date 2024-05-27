@@ -33,7 +33,6 @@ from .....tools.miscellaneous import spacestring_like
 
 mgr_LD = Manager_LD()
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 class LC_InstCat_Model(Core_InstCat_Model, SuperSampExpTimeAttr):

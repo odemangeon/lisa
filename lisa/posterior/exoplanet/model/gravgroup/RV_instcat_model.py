@@ -29,7 +29,6 @@ from .....tools.miscellaneous import spacestring_like
 
 
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 class RV_InstCat_Model(Core_InstCat_Model):

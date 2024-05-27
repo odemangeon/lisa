@@ -12,8 +12,7 @@ from os import mkdir, rmdir, remove
 from os.path import join
 
 from lisa.tools.default_folders_data_run import RunFolder, DataFolder
-from lisa.software_parameters import input_run_folder
-from lisa.software_parameters import input_data_folder
+from lisa.setup import input_data_folder
 
 level_logger = DEBUG
 level_handler = INFO
@@ -108,16 +107,16 @@ class TestMethods(TestCase):
         instance = self.TestClass(object_name="Test", run_folder="default")
         self.assertFalse(instance.hasrun_folder)
 
-    @patch("source.tools.miscellaneous.QCM_utilisateur", return_value="y")
-    def test_def_default_runfolder_doesnt_exist_create(self, input):
-        logger.info("NEW TEST SUITE\n\nStart test_def_default_runfolder_doesnt_exist_create")
-        logger.info("Test: Run folder provided has as defaults but subfolder doesn't exist and user"
-                    " creates it. Check that the run folder is defined as expected.")
-        object_name = "Test"
-        instance = self.TestClass(object_name="Test", run_folder="default")
-        rmdir(join(input_run_folder, object_name))
-        self.assertTrue(instance.hasrun_folder)
-        self.assertEqual(instance.run_folder, join(input_run_folder, object_name))
+    # @patch("source.tools.miscellaneous.QCM_utilisateur", return_value="y")
+    # def test_def_default_runfolder_doesnt_exist_create(self, input):
+    #     logger.info("NEW TEST SUITE\n\nStart test_def_default_runfolder_doesnt_exist_create")
+    #     logger.info("Test: Run folder provided has as defaults but subfolder doesn't exist and user"
+    #                 " creates it. Check that the run folder is defined as expected.")
+    #     object_name = "Test"
+    #     instance = self.TestClass(object_name="Test", run_folder="default")
+    #     rmdir(join(input_run_folder, object_name))
+    #     self.assertTrue(instance.hasrun_folder)
+    #     self.assertEqual(instance.run_folder, join(input_run_folder, object_name))
 
     def test_DataFolder_basics(self):
         logger.info("NEW TEST SUITE\n\nStart test_DataFolder_basics")

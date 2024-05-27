@@ -7,7 +7,6 @@ from .core_prior import Manager_Prior
 
 ## Prior manager
 manager = Manager_Prior()
-manager.load_setup()
 
 
 ## Joint prior category String

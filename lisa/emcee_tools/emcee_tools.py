@@ -50,7 +50,6 @@ from ..explore_analyze.plot import hist_lnprob
 # from ipdb import set_trace
 
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 exptime_Kepler = 0.02043402778  # days
 

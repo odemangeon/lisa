@@ -12,11 +12,9 @@ from unittest.mock import patch
 
 import lisa.posterior.core.posterior as pst
 
-from lisa.software_parameters import input_data_folder
+from lisa.setup import input_data_folder
 from lisa.posterior.core.dataset_and_instrument.manager_dataset_instrument import \
     Manager_Inst_Dataset
-from lisa.posterior.core.model.manager_model import \
-    Manager_Model
 from lisa.posterior.core.model.core_model import Core_Model
 import lisa.posterior.exoplanet.dataset_and_instrument.lc as lc
 import lisa.posterior.exoplanet.dataset_and_instrument.rv as rv
@@ -45,7 +43,6 @@ class TestMethods(unittest.TestCase):
         self.manager_dataset.add_available_inst_category(rv.RV_Instrument, rv.RV_Dataset)
         self.manager_dataset.add_available_inst(rv.SOPHIE_HE)
         self.test_datafile = "LC_K2-19_K2.txt"
-        self.manager_model = Manager_Model()
 
         class FakeModel(Core_Model):
             """docstring for FakeModel."""
@@ -55,7 +52,6 @@ class TestMethods(unittest.TestCase):
                          instmodel4dataset=None, l_instmod_fullnames=None, lock=None):
                 super(FakeModel, self).__init__(name, dataset_db, run_folder,
                                                 instmodel4dataset=instmodel4dataset)
-        self.manager_model.add_available_model(FakeModel)
 
     def test_object_name(self):
         self.assertEqual(self.posterior_instance.object_name, "K2-29")

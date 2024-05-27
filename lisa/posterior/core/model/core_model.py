@@ -43,9 +43,7 @@ from ....tools.miscellaneous import spacestring_like
 
 
 manager_inst = Manager_Inst_Dataset()
-manager_inst.load_setup()
 manager_prior = Manager_Prior()
-manager_prior.load_setup()
 
 create_key = "create"
 load_key = "load"

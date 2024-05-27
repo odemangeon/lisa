@@ -15,7 +15,6 @@ extension_raw = '_raw'
 
 # managers
 mgr_inst_dst = Manager_Inst_Dataset()
-mgr_inst_dst.load_setup()
 
 
 def get_key_compute_model(key_model):

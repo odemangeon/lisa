@@ -1,5 +1,3 @@
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
 """
 lisa package.
 
@@ -13,6 +11,8 @@ __version__ = "6.0"
 # __all__ = []  # Put here the import classes or function from the modules or packages of lisa
 # from .data_interface import  # import the main classes or function defined in data_interface
 from .posterior.core.posterior import Posterior
+from .setup import dataset_inst
+from .setup import prior
 
 __all__ = ["Posterior", ]
 # NO CODE here expect what is above.

@@ -20,7 +20,6 @@ from ....tools.default_folders_data_run import RunFolder, DataFolder
 # from ....tools.miscellaneous import interpret_data_filename
 
 manager_inst = Manager_Inst_Dataset()
-manager_inst.load_setup()
 
 
 class Nesteddict_defgetitem(Nesteddict_wfixellvlnb):

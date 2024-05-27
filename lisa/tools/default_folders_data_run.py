@@ -10,10 +10,10 @@ Provide the data_folder and run_folder interfaces Class.
     - The two Classes are exact duplicates of one another. Make one Superclass and twosubclasses
 """
 from loguru import logger
+import os.path
 
 from .miscellaneous import define_folder_withdefault, look4file_withdeffolder
-from ..software_parameters import input_run_folder
-from ..software_parameters import input_data_folder
+from ..setup import input_data_folder
 
 
 class RunFolder(object):
@@ -44,12 +44,11 @@ class RunFolder(object):
         if path is None:
             logger.warning("The path of the run_folder has NOT been defined because the provided folder is None")
         else:
-            res = define_folder_withdefault(main_default_folder=input_run_folder,
-                                            object_name=self.object_name,
-                                            folder=path)
-            if res is not None:
-                self.__path = res
+            if os.path.isdir(path):
+                self.__path = path
                 logger.info(f"Run folder path set to {self.path}.")
+            else:
+                raise ValueError(f"The path provided is not an existing directory: {path}")
     
     @property
     def object_name(self):
@@ -122,7 +121,7 @@ class DataFolder(object):
     def data_folder(self):
         """The data_folder is the folder where the program will look for the dataset files.
         It can be provided in two ways:
-            - Via the folder defined in software_parameters: In this case the data_folder is
+            - Via the folder defined in setup: In this case the data_folder is
               automatically define as "input_data_folder/object_name". To use this you should assign
               "default"
             - Via the data_folder argument: You can provide any folder here via the data_folder

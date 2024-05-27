@@ -34,7 +34,6 @@ from .instmodel4dataset import Instmodel4DatasetAttr, Instmodel4Dataset
 from .database_instlevelsanddataset import DstDbLockAttr
 from .dataset_and_instrument.dataset_database import DatasetDatabase, DatasetDbAttr
 from .model import par_vec_name
-from .model.manager_model import Manager_Model
 from .model.datasimulator_timeseries_toolbox import time_vec, l_time_vec
 from .database_func import DatabaseFunc, DatabaseInstLvlDataset
 from .likelihood_posterior_docfunc import LikelihoodPosteriorDocFunc
@@ -47,10 +46,7 @@ from ...tools.time_series_toolbox import get_time_supersampled, average_supersam
 from ...tools.miscellaneous import spacestring_like, look4file_withdeffolder
 
 
-manager_model = Manager_Model()
-manager_model.load_setup()
 manager_inst_dst = Manager_Inst_Dataset()
-manager_inst_dst.load_setup()
 
 alldtst_key = DatabaseFunc._alldtst_key
 
@@ -296,7 +292,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         """
         file.write("\n####################################\n## Model category definition\n####################################\n"
                    f"# Define the model category and the parameters of the model that are specfic to the model category.\n"
-                   f"\n# Available model categories are {manager_model.get_available_models()}\n"
+                   f"\n# Available model categories are {self.__model_classes}\n"
                    )
         file.write("model_category = 'GravitionalGroups'\n")          
         # This function needs to be overloaded in the Model subclasses that requierts parameterisation specific to the model category
