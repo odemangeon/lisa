@@ -292,22 +292,55 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
     return kwargs
 
 
-def check_datasetname4model4row(datasetname4model4row, datasetnames4rowidx, l_model_4_rowidx, l_model_1_per_row):
+def check_datasetnames4model4row(datasetnames4model4row, datasetnames4rowidx, l_model_4_rowidx, l_model_1_per_row):
     """
     """
-    datasetname4model4row_user = datasetname4model4row if datasetname4model4row is not None else {}
-    datasetname4model4row = {}
+    datasetnames4model4row_user = datasetnames4model4row if datasetnames4model4row is not None else {}
+    if not isinstance(datasetnames4model4row_user, dict):
+        raise ValueError(f"datasetnames4model4row should be a dictionary, got {type(datasetnames4model4row)}.")
+    # Check that all the row mention is user input exits
+    if not(set(datasetnames4model4row_user.keys()).issubset(range(len(l_model_4_rowidx)))):
+        raise ValueError(f"keys of datasetnames4model4row should be available row numbers. Got {datasetnames4model4row_user.keys()} while available row numbers are {range(len(l_model_4_rowidx))}.")
+    datasetnames4model4row = {}
     for i_row, (datasetnames_i_row, l_model_i_row) in enumerate(zip(datasetnames4rowidx, l_model_4_rowidx)):
-        for model in l_model_i_row:
-            if model not in datasetname4model4row:
-                datasetname4model4row[model] = {}
-            if model in l_model_1_per_row:
-                datasetname4model4row[model][i_row] = datasetnames_i_row[0]
+        if i_row in range(len(l_model_4_rowidx)):
+            if isinstance(datasetnames4model4row_user[i_row], dict):
+                datasetnames4model4row[i_row] = datasetnames4model4row_user[i_row]
             else:
-                datasetname4model4row[model][i_row] = 'all'
-    for model in datasetname4model4row_user:
-        datasetname4model4row[model].update(datasetname4model4row_user[model])
-    return datasetname4model4row
+                raise ValueError(f"datasetnames4model4row_user[{i_row}] should be a dict, got {type(datasetnames4model4row_user[i_row])}.")
+        else:
+            datasetnames4model4row[i_row] = {}
+        # Check if the models mentioned in user input are model to be shown
+        if len(set(datasetnames4model4row[i_row].keys()) - set(l_model_i_row)) > 0:
+            logger.info(f"datasetnames4model4row[{i_row}] contains entries for models that are not to be plotted {set(datasetnames4model4row[i_row].keys()) - set(l_model_i_row)}. These entries will thus be ignored.")
+        for model in l_model_i_row:
+            if model not in datasetnames4model4row[i_row]:
+                datasetnames4model4row[i_row][model] = []
+            # Check that the user input is a list
+            if not isinstance(datasetnames4model4row[i_row][model], list):
+                raise ValueError(f"datasetnames4model4row[{i_row}][{model}] should be a list, got {type(datasetnames4model4row[i_row][model])}.")
+            # Check the user input are valid and build the list of already included datasetnames
+            l_datasetnames_already_included = []
+            for ii, dict_datasetnamesNlabel in enumerate(datasetnames4model4row[i_row][model]):
+                if not isinstance(dict_datasetnamesNlabel, dict):
+                    raise ValueError(f"The element {ii} of datasetnames4model4row[{i_row}][{model}] should be a dict, got {type(dict_datasetnamesNlabel)}.")
+                if not(set(dict_datasetnamesNlabel.keys()).issubset(set(["datasetnames", "label"]))) or ('datasetnames' not in dict_datasetnamesNlabel):
+                    raise ValueError(f"The element {ii} of datasetnames4model4row[{i_row}][{model}] should be a dict with two keys, 'datasetnames' and 'label' ('label' is optional), got the following keys {list(dict_datasetnamesNlabel.keys())}")
+                if not isinstance(dict_datasetnamesNlabel['datasetnames'], list):
+                    raise ValueError(f"datasetnames4model4row[{i_row}][{model}][{ii}]['datasetnames'] should be a list, got {type(dict_datasetnamesNlabel['datasetnames'])}")
+                for datasetname_i in dict_datasetnamesNlabel['datasetnames']:
+                    if datasetname_i in datasetnames_i_row:
+                        l_datasetnames_already_included.append(datasetname_i)
+                    else:
+                        raise ValueError(f"{datasetname_i} is not in the list of dataset names for row {i_row}. It was list in datasetnames4model4row[{i_row}][{model}][{ii}]['datasetnames'].")
+            # For the datasetnames that are not defined use the default behavior
+            set_datasetname_not_included = set(datasetnames_i_row) - set(l_datasetnames_already_included)
+            if model in l_model_1_per_row:
+                datasetnames4model4row[i_row][model].append({'datasetnames': list(set_datasetname_not_included)})
+            else:
+                for datasetname_i in set_datasetname_not_included:
+                    datasetnames4model4row[i_row][model].append({'datasetnames': [datasetname_i, ]})
+    return datasetnames4model4row
 
 
 def check_datasetnameformodel4row(datasetnameformodel4row, datasetnames4rowidx):
