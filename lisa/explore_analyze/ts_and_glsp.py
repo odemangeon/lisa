@@ -9,9 +9,12 @@ from numpy import (linspace, inf, min, max, arange, std, logical_and, zeros, whe
 from collections import OrderedDict
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+from matplotlib.figure import Figure
 from scipy.stats import binned_statistic
 from loguru import logger
 from copy import copy
+from pandas import DataFrame
+from typing import Callable, Dict, List, Union
 
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
                    check_spec_by_column_or_row, check_spec_data_or_resi, check_datasetnames4model4row,
@@ -23,6 +26,7 @@ from .core_compute_load import (load_datasets_and_models, compute_and_plot_model
                                 )
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
+from ..posterior.core.posterior import Posterior
 
 from gls_mod import Gls
 
@@ -33,13 +37,13 @@ key_whole = Core_Model.key_whole
 day2sec = 24 * 60 * 60
 
 
-def create_TSNGLSP_plots(fig, post_instance, df_fittedval,
-                         compute_raw_models_func, remove_add_model_components_func,
-                         kwargs_compute_model_4_key_model, 
-                         y_name, inst_cat,
+def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: DataFrame,
+                         compute_raw_models_func: Callable, remove_add_model_components_func: Callable,
+                         kwargs_compute_model_4_key_model: dict[str, str], 
+                         y_name: str, inst_cat: str,
                          d_name_component_removed_to_print,
-                         show_dict, l_model_1_per_row,
-                         datasetnames4model4row=None,
+                         show_dict: Dict[str, bool], l_model_1_per_row: List[str],
+                         datasetnames4model4row: Dict[int, Dict[str, List[Dict[str,Union(str, Dict)]]]]=None,
                          compute_GP_model=True,
                          split_GP_computation=None,
                          outputs_load_datasets_and_models=None,

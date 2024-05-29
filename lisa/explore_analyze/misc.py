@@ -1,8 +1,13 @@
+from __future__ import annotations
 from loguru import logger
 from os import getcwd, makedirs
 from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
+from collections.abc import Sequence
+from typing import Dict
+from numpy import nan, float_, ndarray, isfinite
+from numpy.typing import NDArray
 
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
@@ -659,3 +664,179 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
 
         if suptitle_text != "":
             fig.suptitle(suptitle_text, fontsize=fontsize)
+
+
+class Models2plot(object):
+    """Class to specifiy which model to plot in each row of the plot.
+
+    If there is several columns in the plot the same models are shown in all columns of the same row
+    """
+
+    def __init__(self, nb_rows: int, same4allrows: bool):
+        """"""
+        self.__nb_rows: int = nb_rows
+        self.__same4allrows: bool = same4allrows
+        self._models2plot: Dict[int, set[str]] = {i_row: set() for i_row in range(self.__nb_rows)}
+
+    def __repr__(self):
+        return f"{self._models2plot}"
+
+    @property
+    def nb_rows(self):
+        """numbers of rows in the plot"""
+        return self.__nb_rows
+    
+    property
+    def same4allrows(self):
+        """numbers of rows in the plot"""
+        return self.__same4allrows
+    
+    def __get_l_row_idx(self, row_idx: int|None) -> Sequence[int]:
+        """Return l_row_idx from row_idx argument and produce warning message is needed"""
+        if self.__same4allrows:
+            if row_idx is not None:
+                logger.warning(f"You should not provide row_idx when same4allrows is True. The value that you provided ({row_idx}) was ignored.")
+            l_row_ix = list(range(self.nb_rows))
+        else:
+            if row_idx is None:
+                raise ValueError("row_idx should not be None as same4allrows is False")
+            if row_idx >= self.nb_rows:
+                raise ValueError(f"row_idx={row_idx} is out of range for Show_model with nb_rows={self.nb_rows}")
+            l_row_ix = [row_idx, ]
+        return l_row_ix
+
+    def add_model_2_plot(self, model: str, row_idx: int|None = None):
+        """Add model to show for a given row.
+        
+        Arguments
+        ---------
+        model   : One model name
+        row_idx : If same4allrows is True this should not be provided.
+            Otherwise this specifies the row of the plot for which you want to add model to show
+        """
+        for ii in self.__get_l_row_idx(row_idx=row_idx):
+            self._models2plot[ii].add(model)
+
+    def add_models_2_show(self, models: Sequence[str], row_idx: int|None = None):
+        """Add multiple models to show for a given row.
+        
+        Arguments
+        ---------
+        models  : Several models to show. Be careful that if you provide on model name (a str), instead of a Sequence of model names (Sequence[str]).
+            The function will not work.
+        row_idx : If same4allrows is True this should not be provided.
+            Otherwise this specifies the row of the plot for which you want to add model to show
+        """
+        for ii in self.__get_l_row_idx(row_idx=row_idx):
+            self._models2plot[ii].update(models)
+    
+    def get_model2show(self, row_idx: int) -> set[str]:
+        """Return the list of models to show.
+        
+        Argument
+        --------
+        row_idx : Specifies the row of the plot for which you want the set of models to show
+
+        Return
+        ------
+        models  : Set of model names to show for the row
+        """
+        if row_idx >= self.nb_rows:
+            raise ValueError(f"row_idx={row_idx} is out of range for Show_model with nb_rows={self.nb_rows}")
+        return self._models2plot[row_idx]
+
+
+class PlotModelDef(object):
+    """Class to use inside Models2plot to specify the model to plot 
+    """
+    
+    def __init__(self, model: str, datasetnames: set[str]|None=None, pl_kwargs: Dict|None=None):
+        """"""
+        self.__model: str = model
+        self.__datasetnames: set[str]|None = datasetnames
+        self.__t_lims: tuple[float|None, float|None] = (None, None)
+        self.__npt: int|None = None
+        self.pl_kwargs = pl_kwargs
+        self.__time_values: NDArray[float_]|None = None
+        self.__model_values: NDArray[float_]|None= None
+    
+    @property
+    def model(self):
+        """Model name"""
+        return self.__model
+    
+    @property
+    def datasetnames(self):
+        """Model name"""
+        return self.__datasetnames
+    
+    @datasetnames.setter
+    def datasetnames(self, new_datasetnames: set[str]):
+        """Set of dataset names for the model to plot"""
+        if self.__datasetnames is not None:
+            raise ValueError(f"A set of dataset names already exists ({self.datasetnames}), you cannot overwrite it. Create a new PlotModelDef instance")
+        if not(isinstance(new_datasetnames, set)) or not(all([isinstance(val, str) for val in new_datasetnames])):
+            raise ValueError(f"datasetnames should be a set of str (dataset names), got {new_datasetnames}")
+        self.__datasetnames = new_datasetnames
+    
+    @property
+    def t_lims(self):
+        """Tuple giving the min and max values for the model"""
+        return self.__t_lims
+    
+    @t_lims.setter
+    def t_lims(self, new_t_lims: tuple[float, float]):
+        """Tuple giving the min and max values for the model"""
+        if not(isinstance(new_t_lims, tuple)) or (len(new_t_lims) != 2) or not(all([isinstance(val, float) for val in new_t_lims])) or not(all([isfinite(val) for val in new_t_lims])):
+            raise ValueError(f"t_lims should be a tuple of 2 finite floats, got {new_t_lims}")
+        if new_t_lims[0] >= new_t_lims[1]:
+            raise ValueError(f"t_lims[0] cannot be equal or higher than t_lims[1] got {new_t_lims}")
+        self.__t_lims = new_t_lims
+
+    @property
+    def npt(self):
+        """Number of points in the model to plot"""
+        return self.__npt
+    
+    @npt.setter
+    def npt(self, new_npt:int):
+        """Number of points in the model to plot"""
+        if not(isinstance(new_npt, int)) or (new_npt <= 0):
+            raise ValueError(f"npt should be a strictly positive int, got {new_npt}")
+        self.__npt = new_npt
+
+    @property
+    def computed_model(self):
+        """Dictionary with two keys 'times', 'values' with the computed time and model values."""
+        return {'time': self.__time_values.copy(), 'values': self.__model_values.copy()}
+    
+    def set_computed_model(self, times:NDArray[float_], values:NDArray[float_]):
+        """Set the computed model (times and values).
+        
+        If npt and/or t_lims have been set, the times and values arguments will be check against those.
+        If they were not set alreay they will be set using the times and values arguments.
+
+        Once a computed model has been set it cannot be overwritten.
+        """
+        if (self.__time_values is not None) or (self.__model_values is not None):
+            raise ValueError("A computed model already exists you cannot overwrite it. Create a new PlotModelDef instance")
+        if not(isinstance(times, ndarray)) or not(isinstance(times, ndarray)):
+            raise TypeError(f"times and values should be numpy.ndarray, got {type(times)} and {type(values)}")
+        if (times.ndim != 1) or (values.ndim != 1):
+            raise ValueError(f"times and values should be ndarray with 1 dimension. The number of dimension of times is {times.ndim} and the one of values is {values.ndim}")
+        if times.size != values.size:
+            raise ValueError(f"times and values should have the same size. times' size is {times.size} and values' size is {values.size}")
+        if any([lim is not None for lim in self.__t_lims]):
+            # t_lims is already set
+            if (self.__t_lims[0] != times[0]) or (self.__t_lims[1] != times[-1]):
+                raise ValueError(f"The set t_lims ({self.__t_lims}) do not agree with the first and last values of times ({times[0]}, {times[-1]})")
+        else:
+            self.t_lims = (times[0], times[-1])
+        if self.__npt is not None:
+            # npt is already set
+            if self.__npt != times.size:
+                raise ValueError(f"The set npt ({self.__npt}) do not agree with the size of times and values ({times.size})")
+            else:
+                self.npt = times.size
+        self.__time_values = times
+        self.__model_values = values 
