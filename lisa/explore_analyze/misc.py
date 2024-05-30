@@ -5,7 +5,7 @@ from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 from collections.abc import Sequence
-from typing import Dict
+from typing import Dict, List
 from numpy import nan, float_, ndarray, isfinite
 from numpy.typing import NDArray
 
@@ -297,55 +297,38 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
     return kwargs
 
 
-def check_datasetnames4model4row(datasetnames4model4row, datasetnames4rowidx, l_model_4_rowidx, l_model_1_per_row):
+def check_Models2plot(models2plot: Models2plot|None, datasetnames4rowidx: Sequence[Sequence[str]], l_model_1_per_row: Sequence[str]) -> Models2plot:
     """
+
+    Arguments
+    ---------
+    datasetnames4rowidx : Output of check_row4datasetname
+    l_model_1_per_row   : List of the models which by default should be plotted just once per row, instead of for each dataset.
+
+    Return
+    ------
+    models2plot : The only difference is if it the models2plot input there was model with their datasetname attribute to None
     """
-    datasetnames4model4row_user = datasetnames4model4row if datasetnames4model4row is not None else {}
-    if not isinstance(datasetnames4model4row_user, dict):
-        raise ValueError(f"datasetnames4model4row should be a dictionary, got {type(datasetnames4model4row)}.")
-    # Check that all the row mention is user input exits
-    if not(set(datasetnames4model4row_user.keys()).issubset(range(len(l_model_4_rowidx)))):
-        raise ValueError(f"keys of datasetnames4model4row should be available row numbers. Got {datasetnames4model4row_user.keys()} while available row numbers are {range(len(l_model_4_rowidx))}.")
-    datasetnames4model4row = {}
-    for i_row, (datasetnames_i_row, l_model_i_row) in enumerate(zip(datasetnames4rowidx, l_model_4_rowidx)):
-        if i_row in range(len(l_model_4_rowidx)):
-            if isinstance(datasetnames4model4row_user[i_row], dict):
-                datasetnames4model4row[i_row] = datasetnames4model4row_user[i_row]
-            else:
-                raise ValueError(f"datasetnames4model4row_user[{i_row}] should be a dict, got {type(datasetnames4model4row_user[i_row])}.")
-        else:
-            datasetnames4model4row[i_row] = {}
-        # Check if the models mentioned in user input are model to be shown
-        if len(set(datasetnames4model4row[i_row].keys()) - set(l_model_i_row)) > 0:
-            logger.info(f"datasetnames4model4row[{i_row}] contains entries for models that are not to be plotted {set(datasetnames4model4row[i_row].keys()) - set(l_model_i_row)}. These entries will thus be ignored.")
-        for model in l_model_i_row:
-            if model not in datasetnames4model4row[i_row]:
-                datasetnames4model4row[i_row][model] = []
-            # Check that the user input is a list
-            if not isinstance(datasetnames4model4row[i_row][model], list):
-                raise ValueError(f"datasetnames4model4row[{i_row}][{model}] should be a list, got {type(datasetnames4model4row[i_row][model])}.")
-            # Check the user input are valid and build the list of already included datasetnames
-            l_datasetnames_already_included = []
-            for ii, dict_datasetnamesNlabel in enumerate(datasetnames4model4row[i_row][model]):
-                if not isinstance(dict_datasetnamesNlabel, dict):
-                    raise ValueError(f"The element {ii} of datasetnames4model4row[{i_row}][{model}] should be a dict, got {type(dict_datasetnamesNlabel)}.")
-                if not(set(dict_datasetnamesNlabel.keys()).issubset(set(["datasetnames", "label"]))) or ('datasetnames' not in dict_datasetnamesNlabel):
-                    raise ValueError(f"The element {ii} of datasetnames4model4row[{i_row}][{model}] should be a dict with two keys, 'datasetnames' and 'label' ('label' is optional), got the following keys {list(dict_datasetnamesNlabel.keys())}")
-                if not isinstance(dict_datasetnamesNlabel['datasetnames'], list):
-                    raise ValueError(f"datasetnames4model4row[{i_row}][{model}][{ii}]['datasetnames'] should be a list, got {type(dict_datasetnamesNlabel['datasetnames'])}")
-                for datasetname_i in dict_datasetnamesNlabel['datasetnames']:
-                    if datasetname_i in datasetnames_i_row:
-                        l_datasetnames_already_included.append(datasetname_i)
-                    else:
-                        raise ValueError(f"{datasetname_i} is not in the list of dataset names for row {i_row}. It was list in datasetnames4model4row[{i_row}][{model}][{ii}]['datasetnames'].")
-            # For the datasetnames that are not defined use the default behavior
-            set_datasetname_not_included = set(datasetnames_i_row) - set(l_datasetnames_already_included)
-            if model in l_model_1_per_row:
-                datasetnames4model4row[i_row][model].append({'datasetnames': list(set_datasetname_not_included)})
-            else:
-                for datasetname_i in set_datasetname_not_included:
-                    datasetnames4model4row[i_row][model].append({'datasetnames': [datasetname_i, ]})
-    return datasetnames4model4row
+    # models2plot_user = models2plot if datasetnames4model4row is not None else {}
+    if not isinstance(models2plot, Models2plot):
+        raise ValueError(f"models2plot should be an instance of Models2plot, got {type(models2plot)}.")
+    # Check that all the row mentioned is user input exits
+    if models2plot.nb_rows != len(datasetnames4rowidx):
+        raise ValueError(f"The number of rows in models2plot ({models2plot.nb_rows}) doesn't match the one in datasetnames4rowidx ({len(datasetnames4rowidx)})")
+    # For each row
+    for i_row in range(models2plot.nb_rows):
+        # For each model of each model is datasetname attribute is specified.
+        initial_set_models = models2plot.get_model2show(row_idx=i_row)
+        for model_i in initial_set_models:
+            if model_i.datasetname is None:
+                model_i.datasetname = datasetnames4rowidx[i_row][0]
+                if model_i.model not in l_model_1_per_row:
+                    set_models_of_currentmodel = models2plot.get_model2show(row_idx=i_row, model=model_i.model)
+                    datasetname_4_currentmodel = [model_j.datasetname for model_j in set_models_of_currentmodel]
+                    for datasetname_i in datasetnames4rowidx[i_row][1:]:
+                        if datasetname_i not in datasetname_4_currentmodel:
+                            models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
+    return models2plot
 
 
 def check_datasetnameformodel4row(datasetnameformodel4row, datasetnames4rowidx):
@@ -418,8 +401,22 @@ def print_rms(ax, text_pos, row_name, start_with_rmsequal, add_rms_row, datasetn
     ax.text(*text_pos, text_rms_to_plot, fontsize=fontsize, transform=ax.transAxes)
 
 
-def check_row4datasetname(row4datasetname, datasetnames):
+def check_row4datasetname(row4datasetname: Dict[str, int]|None, datasetnames: Sequence[str]) -> tuple[Dict[str, int], List[List[str]]]:
     """Check the row4datasetname and return the checked row4datasetname and datasetnames4rowidx
+
+    TODO: Ultimately I would like to have one classe Datasets2plot (in th same spirit as Models2plot) that would specify which dataset to plot on which row
+
+    Arguments
+    ---------
+    row4datasetname : Dictionary specifying on which row a given dataset (specified by its name) should be plotted
+    datasetnames    : Sequence of all available dataset name
+
+    Returns
+    -------
+    row4datasetname : Dictionary specifying on which row a given dataset (specified by its name) should be plotted.
+        It differs from the argument only if the argument was None. In this case each dataset is to be plotted in a separate row
+    datasetnames4rowidx : List which as the same number of element than the rows mentioned in row4datasetname. 
+        Each element of this list is itself a list of the strings giving the datasetnames to be plot in each row.
     """
     if row4datasetname is None:
         row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
@@ -667,7 +664,7 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
 
 
 class Models2plot(object):
-    """Class to specifiy which model to plot in each row of the plot.
+    """Class to specifiy which model to plot in each row of the plot
 
     If there is several columns in the plot the same models are shown in all columns of the same row
     """
@@ -676,7 +673,7 @@ class Models2plot(object):
         """"""
         self.__nb_rows: int = nb_rows
         self.__same4allrows: bool = same4allrows
-        self._models2plot: Dict[int, set[str]] = {i_row: set() for i_row in range(self.__nb_rows)}
+        self._models2plot: Dict[int, Sequence[Model2computeNplot]] = {i_row: list() for i_row in range(self.__nb_rows)}
 
     def __repr__(self):
         return f"{self._models2plot}"
@@ -705,7 +702,7 @@ class Models2plot(object):
             l_row_ix = [row_idx, ]
         return l_row_ix
 
-    def add_model_2_plot(self, model: str, row_idx: int|None = None):
+    def add_model_2_plot(self, model: str, row_idx: int|None = None, datasetname: str|None=None, npt: int|None=None, tlims: tuple[float, float]|None=None, pl_kwargs: Dict|None=None):
         """Add model to show for a given row.
         
         Arguments
@@ -715,9 +712,9 @@ class Models2plot(object):
             Otherwise this specifies the row of the plot for which you want to add model to show
         """
         for ii in self.__get_l_row_idx(row_idx=row_idx):
-            self._models2plot[ii].add(model)
+            self._models2plot[ii].append(Model2computeNplot(model=model, datasetname=datasetname, npt=npt, tlims=tlims, pl_kwargs=pl_kwargs))
 
-    def add_models_2_show(self, models: Sequence[str], row_idx: int|None = None):
+    def add_models_2_show(self, models: Sequence[str], row_idx: int|None = None, datasetnames: Sequence[str|None]|None=None, npts: Sequence[int|None]|None=None, tlims: Sequence[tuple[float, float]|None]|None=None, pl_kwargs: Sequence[Dict|None]|None=None):
         """Add multiple models to show for a given row.
         
         Arguments
@@ -727,12 +724,31 @@ class Models2plot(object):
         row_idx : If same4allrows is True this should not be provided.
             Otherwise this specifies the row of the plot for which you want to add model to show
         """
+        if (datasetnames is not None) or not(isinstance(datasetnames, Sequence)) or not(len(datasetnames) == len(models)):
+            raise TypeError(f"datasetnames should be None or a Sequence of either Nones or Sequences of datasetnames which should have the same length as models, got {datasetnames} while models is {models}")
+        if datasetnames is None:
+            datasetnames = [None for model_i in models]
+        if (npts is not None) or not(isinstance(npts, Sequence)) or not(len(npts) == len(models)):
+            raise TypeError(f"npts should be None or a Sequence of either Nones or strictly positive int which should have the same length as models, got {datasetnames} while models is {models}")
+        if npts is None:
+            npts = [None for model_i in models]
+        if (tlims is not None) or not(isinstance(tlims, Sequence)) or not(len(tlims) == len(models)):
+            raise TypeError(f"tlims should be None or a Sequence of either Nones or tuples of 2 floats which should have the same length as models, got {datasetnames} while models is {models}")
+        if tlims is None:
+            tlims = [None for model_i in models]
+        if (pl_kwargs is not None) or not(isinstance(pl_kwargs, Sequence)) or not(len(pl_kwargs) == len(models)):
+            raise TypeError(f"pl_kwargs should be None or a Sequence of either Nones or dictionaries which should have the same length as models, got {pl_kwargs} while models is {models}")
+        if pl_kwargs is None:
+            pl_kwargs = [None for model_i in models]
         for ii in self.__get_l_row_idx(row_idx=row_idx):
-            self._models2plot[ii].update(models)
+            for model_i, datasetname_i, npt_i, tlims_i, pl_kwargs_i in zip([models, datasetnames, npts, tlims, pl_kwargs]):
+                self.add_model_2_plot(model=model_i, row_idx=row_idx, datasetname=datasetname_i, npt=npt_i, tlims=tlims_i, pl_kwargs=pl_kwargs_i)
     
-    def get_model2show(self, row_idx: int) -> set[str]:
+    def get_model2show(self, row_idx: int, model: str|None=None) -> set[Model2computeNplot]:
         """Return the list of models to show.
         
+        If you only want to return models to show for a given model name, you can specify the model argument.
+
         Argument
         --------
         row_idx : Specifies the row of the plot for which you want the set of models to show
@@ -743,74 +759,128 @@ class Models2plot(object):
         """
         if row_idx >= self.nb_rows:
             raise ValueError(f"row_idx={row_idx} is out of range for Show_model with nb_rows={self.nb_rows}")
-        return self._models2plot[row_idx]
+        if model is None:
+            return self._models2plot[row_idx]
+        else:
+            models = set()
+            for model_i in self._models2plot[row_idx]:
+                if model_i.model == model:
+                    models.add(model_i)
+            return models
 
 
-class PlotModelDef(object):
+class Models2plotTSNGLSP(Models2plot):
+    """Class to specifiy which model to plot in each row of the plot for the TSNGLSP plots"""
+
+    def __init__(self, nb_rows: int):
+        """"""
+        super(Models2plotTSNGLSP, self).__init__(nb_rows=nb_rows, same4allrows=True)
+
+
+class ComputedModels(object):
+    """Class to store and retireve all the computed models.
+    
+    Each model is stored in the form a Model2computeNplot instance.
+
+    In principle, it would be best if this can be used by all plotting function TSNGLSP, iTSNGLSP, PhaseFolded.
+
+    The use case are the plotting functions TSNGLSP, iTSNGLSP, PhaseFolded
+    """
+    #TODO: Design and implement this class
+    # Could store the Model2computeNplot in dictionaries inside nested dictionaries with the 1st level being tlims, the second, npt, the third datasetname
+    # It's proably better to have the first two levels as tlims and npt, as it's sure that one cannot use a model that is not with the right sampling.
+    # The lower level dictionaries, that store the Model3computeNplot will have model name as keys. At this level I should have raw extensions
+    pass
+
+
+class Model2computeNplot(object):
     """Class to use inside Models2plot to specify the model to plot 
     """
+    __err_msg_model_already_computed = "The model has already been computed, you can no longer modify {}."
     
-    def __init__(self, model: str, datasetnames: set[str]|None=None, pl_kwargs: Dict|None=None):
+    def __init__(self, model: str, datasetname: str|None=None, npt: int|None=None, tlims: tuple[float, float]|None=None, pl_kwargs: Dict|None=None):
         """"""
         self.__model: str = model
-        self.__datasetnames: set[str]|None = datasetnames
-        self.__t_lims: tuple[float|None, float|None] = (None, None)
-        self.__npt: int|None = None
-        self.pl_kwargs = pl_kwargs
         self.__time_values: NDArray[float_]|None = None
-        self.__model_values: NDArray[float_]|None= None
-    
+        self.__model_values: Dict[float, Dict[int, NDArray[float_]]]|None= None
+        self.__model_values_err: Dict[float, Dict[int, NDArray[float_]|None]]|None= None
+        self.__datasetname: str|None = None
+        if datasetname is not None:
+            self.datasetname = datasetname
+        self.__npt: int|None = None
+        if npt is not None:
+            self.npt = npt
+        self.__tlims: tuple[float, float]|None = None
+        if tlims is not None:
+            self.tlims = tlims
+        self.pl_kwargs = pl_kwargs
+
     @property
     def model(self):
         """Model name"""
         return self.__model
     
     @property
-    def datasetnames(self):
-        """Model name"""
-        return self.__datasetnames
+    def model_stored(self) -> bool:
+        """Return True if the model has been computed and stored"""
+        return self.__time_values is not None
     
-    @datasetnames.setter
-    def datasetnames(self, new_datasetnames: set[str]):
-        """Set of dataset names for the model to plot"""
-        if self.__datasetnames is not None:
-            raise ValueError(f"A set of dataset names already exists ({self.datasetnames}), you cannot overwrite it. Create a new PlotModelDef instance")
-        if not(isinstance(new_datasetnames, set)) or not(all([isinstance(val, str) for val in new_datasetnames])):
-            raise ValueError(f"datasetnames should be a set of str (dataset names), got {new_datasetnames}")
-        self.__datasetnames = new_datasetnames
-    
-    @property
-    def t_lims(self):
-        """Tuple giving the min and max values for the model"""
-        return self.__t_lims
-    
-    @t_lims.setter
-    def t_lims(self, new_t_lims: tuple[float, float]):
-        """Tuple giving the min and max values for the model"""
-        if not(isinstance(new_t_lims, tuple)) or (len(new_t_lims) != 2) or not(all([isinstance(val, float) for val in new_t_lims])) or not(all([isfinite(val) for val in new_t_lims])):
-            raise ValueError(f"t_lims should be a tuple of 2 finite floats, got {new_t_lims}")
-        if new_t_lims[0] >= new_t_lims[1]:
-            raise ValueError(f"t_lims[0] cannot be equal or higher than t_lims[1] got {new_t_lims}")
-        self.__t_lims = new_t_lims
-
     @property
     def npt(self):
-        """Number of points in the model to plot"""
+        """Number of point in the model"""
         return self.__npt
     
     @npt.setter
-    def npt(self, new_npt:int):
-        """Number of points in the model to plot"""
+    def npt(self, new_npt):
+        """Number of point in the model"""
+        if self.model_stored:
+            raise ValueError(self.__err_msg_model_already_computed.format("npt"))
         if not(isinstance(new_npt, int)) or (new_npt <= 0):
-            raise ValueError(f"npt should be a strictly positive int, got {new_npt}")
+            raise ValueError(f"npt should be an strictly positive int, got {new_npt}")
         self.__npt = new_npt
-
-    @property
-    def computed_model(self):
-        """Dictionary with two keys 'times', 'values' with the computed time and model values."""
-        return {'time': self.__time_values.copy(), 'values': self.__model_values.copy()}
     
-    def set_computed_model(self, times:NDArray[float_], values:NDArray[float_]):
+    @property
+    def datasetname(self):
+        """Model name"""
+        return self.__datasetname
+    
+    @datasetname.setter
+    def datasetname(self, new_datasetname: str):
+        """Dataset name for to used for the model (not in terms of time samples but in terms of model)"""
+        if self.model_stored:
+            raise ValueError(self.__err_msg_model_already_computed.format("datasetname"))
+        if not(isinstance(new_datasetname, str)):
+            raise ValueError(f"datasetnames should be a str (dataset names), got {new_datasetname}")
+        self.__datasetname = new_datasetname
+    
+    @property
+    def tlims(self):
+        """Tuple giving the min and max values for the model"""
+        return self.__tlims
+    
+    @tlims.setter
+    def tlims(self, new_tlims: tuple[float, float]):
+        """Tuple giving the min and max values for the model"""
+        if not(isinstance(new_tlims, tuple)) or (len(new_tlims) != 2) or not(all([isinstance(val, float) for val in new_tlims])) or not(all([isfinite(val) for val in new_tlims])):
+            raise ValueError(f"tlims should be a tuple of 2 finite floats, got {new_tlims}")
+        if new_tlims[0] >= new_tlims[1]:
+            raise ValueError(f"tlims[0] cannot be equal or higher than t_lims[1] got {new_tlims}")
+        self.__tlims = new_tlims
+
+    def get_computed_model(self, exptime_bin=0, supersamp=0):
+        """Dictionary with two keys 'times', 'values' with the computed time and model values."""
+        if not(self.model_stored):
+            raise ValueError(f"No model have been stored")
+        if exptime_bin not in self.__model_values:
+            raise KeyError(f"There is no model stored with exptime_bin={exptime_bin}")
+        if supersamp not in self.__model_values[exptime_bin]:
+            raise KeyError(f"There is no model stored with supersamp={supersamp} for exptime_bin = {exptime_bin}")
+        return {'times': self.__time_values.copy(), 
+                'values': self.__model_values[exptime_bin][supersamp].copy(), 
+                'values_err': self.__model_values_err[exptime_bin][supersamp].copy() if self.__model_values_err[exptime_bin][supersamp].copy() is not None else None
+                }
+    
+    def set_computed_model(self, times:NDArray[float_], values:NDArray[float_], values_err: NDArray[float_]|None=None, exptime_bin: float=0, supersamp: int=0):
         """Set the computed model (times and values).
         
         If npt and/or t_lims have been set, the times and values arguments will be check against those.
@@ -822,21 +892,31 @@ class PlotModelDef(object):
             raise ValueError("A computed model already exists you cannot overwrite it. Create a new PlotModelDef instance")
         if not(isinstance(times, ndarray)) or not(isinstance(times, ndarray)):
             raise TypeError(f"times and values should be numpy.ndarray, got {type(times)} and {type(values)}")
-        if (times.ndim != 1) or (values.ndim != 1):
-            raise ValueError(f"times and values should be ndarray with 1 dimension. The number of dimension of times is {times.ndim} and the one of values is {values.ndim}")
-        if times.size != values.size:
-            raise ValueError(f"times and values should have the same size. times' size is {times.size} and values' size is {values.size}")
-        if any([lim is not None for lim in self.__t_lims]):
-            # t_lims is already set
-            if (self.__t_lims[0] != times[0]) or (self.__t_lims[1] != times[-1]):
-                raise ValueError(f"The set t_lims ({self.__t_lims}) do not agree with the first and last values of times ({times[0]}, {times[-1]})")
+        if (times.ndim != 1) or (values.ndim != 1) or ((values_err is not None) and (values.ndim != 1)):
+            raise ValueError(f"times, values and values_err (if not None) should be ndarray with 1 dimension. The number of dimension of times is {times.ndim}, the one of values is {values.ndim} and {'values_err is None' if values_err is None else f'the one of values_err is {values_err.ndim}'}")
+        if (times.size != values.size) or ((values_err is not None) and (times.size != values_err.size)):
+            raise ValueError(f"times, values and values_err (if not None) should have the same size. times' size is {times.size}, values' size is {values.size} and {'values_err is None' if values_err is None else f'values_err size is {values_err.size}'}")
+        if self.tlims is not None:
+            # tlims is already set
+            if (self.tlims[0] != times[0]) or (self.tlims[1] != times[-1]):
+                raise ValueError(f"The set tlims ({self.tlims}) do not agree with the first and last values of times ({times[0]}, {times[-1]})")
         else:
-            self.t_lims = (times[0], times[-1])
-        if self.__npt is not None:
+            self.tlims = (times[0], times[-1])
+        if self.npt is not None:
             # npt is already set
-            if self.__npt != times.size:
-                raise ValueError(f"The set npt ({self.__npt}) do not agree with the size of times and values ({times.size})")
+            if self.npt != times.size:
+                raise ValueError(f"The set npt ({self.npt}) do not agree with the size of times and values ({times.size})")
             else:
                 self.npt = times.size
         self.__time_values = times
-        self.__model_values = values 
+        if self.__model_values is None:
+            self.__model_values = {}
+        if not(isinstance(exptime_bin, float)) or (exptime_bin < 0):
+            raise ValueError(f"exptime_bin should be a positive (or zero) float, got {exptime_bin}")
+        if exptime_bin not in self.__model_values:
+            self.__model_values[exptime_bin] = {}
+            self.__model_values_err[exptime_bin] = {}
+        if not(isinstance(supersamp, int)) or (supersamp < 0):
+            raise ValueError(f"supersamp should be a positive (or zero) int, got {supersamp}")
+        self.__model_values[exptime_bin][supersamp] = values
+        self.__model_values_err[exptime_bin][supersamp] = values_err

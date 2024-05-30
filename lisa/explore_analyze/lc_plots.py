@@ -3,13 +3,14 @@ Module to create plot specifically for light curve data
 
 @TODO:
 """
+from __future__ import annotations
 from loguru import logger
 from numpy import ones_like
 from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots, create_iTSNGLSP_plots
-from .misc import AandA_fontsize
+from .misc import AandA_fontsize, Models2plot
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
 from .core_compute_load import compute_raw_models as compute_raw_models_core
@@ -217,9 +218,9 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                             datasetnames=None,
                             remove_dict=None,
                             kwargs_compute_model_4_key_model=None,
-                            show_dict=None, datasetnames4model4row=None,
-                            compute_GP_model=True,
-                            split_GP_computation=None,
+                            models2plot: Models2plot|None=None,
+                            compute_GP_model: bool=True,
+                            split_GP_computation: int=None,
                             outputs_load_datasets_and_models=None, 
                             computed_models_4_TS=None,
                             TS_kwargs=None, GLSP_kwargs=None,
@@ -440,8 +441,8 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=Non
                                 outputs_load_datasets_and_models=outputs_load_datasets_and_models,
                                 computed_models_4_TS=computed_models_4_TS,
                                 d_name_component_removed_to_print=d_name_component_removed_to_print,
-                                show_dict=show_dict, l_model_1_per_row=['model', 'stellar_var', 'GP'],
-                                datasetnames4model4row=datasetnames4model4row,
+                                l_model_1_per_row=['model', 'stellar_var'],
+                                models2plot=models2plot,
                                 datasim_kwargs=datasim_kwargs,
                                 datasetnames=datasetnames,
                                 amplitude_fact=LC_fact, unit=LC_unit,

@@ -3,6 +3,7 @@ Module to create phase folded plots
 
 @TODO:
 """
+from __future__ import annotations
 from numpy import (linspace, inf, min, max, arange, std, logical_and, zeros, where, sqrt, sum, power,
                    nan, nanstd, concatenate, ones_like, argsort, mean, floor, log10, ceil, format_float_positional
                    )
@@ -17,9 +18,9 @@ from pandas import DataFrame
 from typing import Callable, Dict, List, Union
 
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
-                   check_spec_by_column_or_row, check_spec_data_or_resi, check_datasetnames4model4row,
+                   check_spec_by_column_or_row, check_spec_data_or_resi, check_Models2plot,
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
-                   set_legend, fmt_sci_not
+                   set_legend, fmt_sci_not, Models2plotTSNGLSP
                    )
 from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
                                 is_valid_model_available
@@ -42,8 +43,8 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                          kwargs_compute_model_4_key_model: dict[str, str], 
                          y_name: str, inst_cat: str,
                          d_name_component_removed_to_print,
-                         show_dict: Dict[str, bool], l_model_1_per_row: List[str],
-                         datasetnames4model4row: Dict[int, Dict[str, List[Dict[str,Union(str, Dict)]]]]=None,
+                         l_model_1_per_row: List[str],
+                         models2plot: Models2plotTSNGLSP|None=None,
                          compute_GP_model=True,
                          split_GP_computation=None,
                          outputs_load_datasets_and_models=None,
@@ -270,12 +271,6 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                 data_remove_or_add_dict=kwargs_compute_model_4_key_model["data"], suptitle_kwargs=suptitle_kwargs
                 )
 
-    # Make sure the show_dict is well define
-    show_dict_user = show_dict if show_dict is not None else {}
-    show_dict = {"model": True, "model_wGP": True}
-    show_dict.update(show_dict_user)
-    l_model_2_show = [model_i for model_i, show_i in show_dict.items() if show_i]
-
     #############
     # TIME SERIES
     #############
@@ -295,12 +290,8 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
 
         # Define on which rows the datasets are plots using the row4datasetname input
         row4datasetname, datasetnames4rowidx = check_row4datasetname(row4datasetname=TS_kwargs.get("row4datasetname", None), datasetnames=datasetnames)
-        nb_rows = len(datasetnames4rowidx)
-        datasetnames4model4row = check_datasetnames4model4row(datasetnames4model4row=datasetnames4model4row,
-                                                              datasetnames4rowidx=datasetnames4rowidx,
-                                                              l_model_4_rowidx=[[model_i for model_i, show_i in show_dict.items() if show_i] for ii in range(len(datasetnames4rowidx))], 
-                                                              l_model_1_per_row=l_model_1_per_row,
-                                                              )
+        models2plot = check_Models2plot(models2plot=models2plot, datasetnames4rowidx=datasetnames4rowidx, l_model_1_per_row=l_model_1_per_row)
+        nb_rows = models2plot.nb_rows
 
         # Create the updated grid space according to the number of rows
         gs_ts = GridSpecFromSubplotSpec(nb_rows, 1, subplot_spec=gs_ts, **create_axes_kwargs['gridspec_row_TS'])
@@ -613,91 +604,92 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                 #############################
                 # Compute and plot the models
                 #############################
-                for model in l_model_2_show:
-                    for i_model, dict_model_irow in enumerate(datasetnames4model4row[i_row][model]):
-                        set_datasetname = dict_model_irow['datasetname']
-                        label = dict_model_irow.get('label', None)
-                        logger.debug(f"Computing and plotting model '{model}' ({i_model}/{len(datasetnames4model4row[i_row][model])}) for (row {i_row}, column {i_col})."
-                                    f"datasetnames = {set_datasetname}, label={label}")
-                        # Init the time boundaries for the model computation
-                        xlims_model = [min([xlims_datas[dst][0] for dst in set_datasetname]) - extra_dt_model,
-                                    max([xlims_datas[dst][1] for dst in set_datasetname]) + extra_dt_model
-                                    ]
-                        if tlims_i is not None:
-                            if (tlims_i[0] is not None) and (tlims_i[0] > xlims_model[0]):
-                                xlims_model[0] = tlims_i[0]
-                            if (tlims_i[1] is not None) and (tlims_i[1] < xlims_model[1]):
-                                xlims_model[1] = tlims_i[1]
-                        tlims_model = (xlims_model[0] / time_fact, xlims_model[1] / time_fact)
-                        # Init computed_models_4_TS for this set of datasetname and tlims
-                        models_4_computed_models_4_TS = None
-                        for computed_models_4_TS_i in computed_models_4_TS:
-                            if (computed_models_4_TS_i["datasetnames"] == set_datasetname) and (computed_models_4_TS_i["tlims"] == tlims_model) and (computed_models_4_TS_i["npt_model"] == npt_model):
-                                models_4_computed_models_4_TS = computed_models_4_TS_i['models']
-                        if models_4_computed_models_4_TS is None:
-                            computed_models_4_TS.append({"datasetnames": set_datasetname, "tlims": tlims_model, 'npt_model': npt_model, 'models': {}})
-                            models_4_computed_models_4_TS = computed_models_4_TS[-1]['models']
-                        kwargs_compute_model = kwargs_compute_model_4_key_model.get(model, {})
-                        show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model, True)
-                        if model == "decorrelation_likelihood":
-                            models_4_computed_models_4_TS["tsim_decorr_like"] = dico_load["times"][datasetname]
-                            (models_decorr_like, pl_kwarg_final
-                                ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
-                                                        key_model=model,
-                                                        datasetname=datasetname,
-                                                        post_instance=post_instance,
-                                                        df_fittedval=df_fittedval,
-                                                        datasim_kwargs=datasim_kwargs,
-                                                        amplitude_fact=amplitude_fact,
-                                                        compute_raw_models_func=compute_raw_models_func,
-                                                        remove_add_model_components_func=remove_add_model_components_func,
-                                                        key_pl_kwarg=model,
-                                                        remove_dict=kwargs_compute_model.get('remove_dict', {}),
-                                                        add_dict=kwargs_compute_model.get('add_dict', {}),
-                                                        compute_only_raw_models=False,
-                                                        compute_GP_model=compute_GP_model,
-                                                        split_GP_computation=split_GP_computation,
-                                                        compute_binned=False,
-                                                        exptime_bin=None,
-                                                        supersamp_bin_model=None,
-                                                        fact_tsim_to_xsim=time_fact,
-                                                        xsim=None, time_unit=None,
-                                                        plot_unbinned=True, plot_binned=False, ax=axe_data,
-                                                        pl_kwarg=pl_kwarg_final,
-                                                        models=None,
-                                                        get_key_compute_model_func=get_key_compute_model_func,
-                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                        )
-                            models_4_computed_models_4_TS['models'][model] = models_decorr_like[model]
+                for i_model, model_i in enumerate(models2plot.get_model2show(row_idx=i_row)):
+                    datasetname4compute_and_plot_model = model_i.datasetname
+                    # If model_i.npt is not specified, use npt_model
+                    if model_i.npt is None:
+                        model_i.npt = npt_model
+                    # If model_i.tlims is not specified use the min and max time of either model_i.datasetname or all the datasets in the row depending on wither or not model_i.model in in l_model_1_per_row
+                    if model_i.tlims is None:
+                        if model_i.model in l_model_1_per_row:
+                            datasetnames4autotlims = datasetnames4rowidx[i_row]
                         else:
-                            (models_4_computed_models_4_TS, pl_kwarg_final
-                            ) = compute_and_plot_model(tsim=linspace(*tlims_model, npt_model),
-                                                        key_model=model,
-                                                        datasetname=datasetname,
-                                                        post_instance=post_instance,
-                                                        df_fittedval=df_fittedval,
-                                                        datasim_kwargs=datasim_kwargs,
-                                                        amplitude_fact=amplitude_fact,
-                                                        compute_raw_models_func=compute_raw_models_func,
-                                                        remove_add_model_components_func=remove_add_model_components_func,
-                                                        key_pl_kwarg=model,
-                                                        remove_dict=kwargs_compute_model.get('remove_dict', {}),
-                                                        add_dict=kwargs_compute_model.get('add_dict', {}),
-                                                        compute_only_raw_models=False,
-                                                        compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                                                        compute_binned=show_binned_model,
-                                                        exptime_bin=exptime_bin,
-                                                        supersamp_bin_model=supersamp_bin_model,
-                                                        fact_tsim_to_xsim=time_fact,
-                                                        xsim=None, time_unit=time_unit,
-                                                        plot_unbinned=True, plot_binned=show_binned_model,
-                                                        ax=axe_data,
-                                                        pl_kwarg=pl_kwarg_final,
-                                                        models=models_4_computed_models_4_TS,
-                                                        get_key_compute_model_func=get_key_compute_model_func,
-                                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                        )
-                        logger.debug(f"Done: Compute and plot model '{model}' ({i_model}/{len(datasetnames4model4row[i_row][model])}) for (row {i_row}, column {i_col}).")
+                            datasetnames4autotlims = [model_i.datasetname, ]
+                        model_i.tlims = ((min([xlims_datas[dst][0] for dst in datasetnames4autotlims]) - extra_dt_model) / time_fact,
+                                         (max([xlims_datas[dst][1] for dst in datasetnames4autotlims]) + extra_dt_model) / time_fact
+                                         )
+                    logger.debug(f"Computing and plotting model '{model_i.model}' ({i_model}/{len(models2plot.get_model2show(row_idx=i_row))}) for (row {i_row}, column {i_col})."
+                                 f"datasetname = {model_i.datasetname}.")
+                    # Init computed_models_4_TS for this set of datasetname and tlims
+                    models_4_computed_models_4_TS = None
+                    for computed_models_4_TS_i in computed_models_4_TS:
+                        if (computed_models_4_TS_i["datasetnames"] == model_i.datasetname) and (computed_models_4_TS_i["tlims"] == model_i.tlims) and (computed_models_4_TS_i["npt_model"] == model_i.npt):
+                            models_4_computed_models_4_TS = computed_models_4_TS_i['models']
+                    if models_4_computed_models_4_TS is None:
+                        computed_models_4_TS.append({"datasetnames": model_i.datasetname, "tlims": model_i.tlims, 'npt_model': model_i.npt, 'models': {}})
+                        models_4_computed_models_4_TS = computed_models_4_TS[-1]['models']
+                    kwargs_compute_model = kwargs_compute_model_4_key_model.get(model_i.model, {})
+                    show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model_i.model, True)
+                    if model_i.model == "decorrelation_likelihood":
+                        models_4_computed_models_4_TS["tsim_decorr_like"] = dico_load["times"][datasetname]
+                        (models_decorr_like, pl_kwarg_final
+                            ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
+                                                       key_model=model_i.model,
+                                                       datasetname=datasetname4compute_and_plot_model,
+                                                       post_instance=post_instance,
+                                                       df_fittedval=df_fittedval,
+                                                       datasim_kwargs=datasim_kwargs,
+                                                       amplitude_fact=amplitude_fact,
+                                                       compute_raw_models_func=compute_raw_models_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func,
+                                                       key_pl_kwarg=model_i.model,
+                                                       remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                       add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                       compute_only_raw_models=False,
+                                                       compute_GP_model=compute_GP_model,
+                                                       split_GP_computation=split_GP_computation,
+                                                       compute_binned=False,
+                                                       exptime_bin=None,
+                                                       supersamp_bin_model=None,
+                                                       fact_tsim_to_xsim=time_fact,
+                                                       xsim=None, time_unit=None,
+                                                       plot_unbinned=True, plot_binned=False, ax=axe_data,
+                                                       pl_kwarg=pl_kwarg_final,
+                                                       models=None,
+                                                       get_key_compute_model_func=get_key_compute_model_func,
+                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                       )
+                        models_4_computed_models_4_TS['models'][model_i.model] = models_decorr_like[model_i.model]
+                    else:
+                        (models_4_computed_models_4_TS, pl_kwarg_final
+                        ) = compute_and_plot_model(tsim=linspace(*model_i.tlims, model_i.npt, endpoint=True),
+                                                   key_model=model_i.model,
+                                                   datasetname=datasetname4compute_and_plot_model,
+                                                   post_instance=post_instance,
+                                                   df_fittedval=df_fittedval,
+                                                   datasim_kwargs=datasim_kwargs,
+                                                   amplitude_fact=amplitude_fact,
+                                                   compute_raw_models_func=compute_raw_models_func,
+                                                   remove_add_model_components_func=remove_add_model_components_func,
+                                                   key_pl_kwarg=model_i.model,
+                                                   remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                   add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                   compute_only_raw_models=False,
+                                                   compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                                   compute_binned=show_binned_model,
+                                                   exptime_bin=exptime_bin,
+                                                   supersamp_bin_model=supersamp_bin_model,
+                                                   fact_tsim_to_xsim=time_fact,
+                                                   xsim=None, time_unit=time_unit,
+                                                   plot_unbinned=True, plot_binned=show_binned_model,
+                                                   ax=axe_data,
+                                                   pl_kwarg=pl_kwarg_final,
+                                                   models=models_4_computed_models_4_TS,
+                                                   get_key_compute_model_func=get_key_compute_model_func,
+                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                   )
+                    logger.debug(f"Done: Compute and plot model '{model_i.model}' ({i_model}/{len(models2plot.get_model2show(row_idx=i_row))}) for (row {i_row}, column {i_col})."
+                                 f"datasetname = {model_i.datasetname}.")
 
                 ###################################
                 # Set ylims and indicate_y_outliers
