@@ -451,13 +451,13 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
-    pl_kwarg_GP_err_def = {"color": "C0", "linestyle": "-", "zorder": 0}
+    pl_kwarg_GP_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "label": "model + GP", "zorder": 10}
-    pl_kwarg_wGP_err_def = {"color": "C4", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGP_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_GPbinned_def = {"color": "C5", "linestyle": "-", "zorder": 10}
-    pl_kwarg_GPbinned_err_def = {"color": "C5", "linestyle": "-", "zorder": 0}
+    pl_kwarg_GPbinned_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_wGPbinned_def = {"color": "C6", "linestyle": "-", "label": "model + GP", "zorder": 10}
-    pl_kwarg_wGPbinned_err_def = {"color": "C6", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGPbinned_err_def = { "linestyle": "-", "zorder": 0}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst.", "zorder": 10}
     pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar", "zorder": 10}
     pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
@@ -601,7 +601,8 @@ def update_data_binned_label(pl_kwarg, key_data_binned, datasetnames, bin_size, 
                 pl_kwarg[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"
         else:
             for datasetname in datasetnames:
-                pl_kwarg[datasetname][key_data_binned]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"            
+                if pl_kwarg[datasetname]['data']["label"] is not None:
+                    pl_kwarg[datasetname][key_data_binned]["label"] = f"{pl_kwarg[datasetname]['data']['label']}: bin={bin_size:.2g}{text_bin_size_unit}"            
 
 
 def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_removed_or_add_dict,

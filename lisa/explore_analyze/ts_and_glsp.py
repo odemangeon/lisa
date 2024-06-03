@@ -630,6 +630,10 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                         models_4_computed_models_4_TS = computed_models_4_TS[-1]['models']
                     kwargs_compute_model = kwargs_compute_model_4_key_model.get(model_i.model, {})
                     show_binned_model = TS_kwargs.get('show_binned_model', {}).get(model_i.model, True)
+                    if model_i.pl_kwargs is not None:
+                        if model_i.model not in pl_kwarg_final[datasetname4compute_and_plot_model]:
+                            pl_kwarg_final[datasetname4compute_and_plot_model][model_i.model] = {}
+                        pl_kwarg_final[datasetname4compute_and_plot_model][model_i.model].update(model_i.pl_kwargs)
                     if model_i.model == "decorrelation_likelihood":
                         models_4_computed_models_4_TS["tsim_decorr_like"] = dico_load["times"][datasetname]
                         (models_decorr_like, pl_kwarg_final
@@ -1289,17 +1293,19 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                    )
 
     # Make sure the show_dict is well define
-    show_dict_user = show_dict if show_dict is not None else {}
-    show_dict = {0: {"model": True, "model_wGP": True}}
-    for i_row, t_key_model in enumerate(l_iterative_removal):
-        if i_row not in show_dict:
-            show_dict[i_row] = {}
-        if show_removed_in_previousrow:
-            for key_model in t_key_model:
-                show_dict[i_row][key_model] = True
-    show_dict[i_row + 1] = {}
-    for i_row in show_dict_user:
-        show_dict[i_row].update(show_dict_user[i_row])
+    models2plot = check_Models2plot(models2plot=models2plot, datasetnames4rowidx=datasetnames4rowidx, l_model_1_per_row=l_model_1_per_row)
+
+    # show_dict_user = show_dict if show_dict is not None else {}
+    # show_dict = {0: {"model": True, "model_wGP": True}}
+    # for i_row, t_key_model in enumerate(l_iterative_removal):
+    #     if i_row not in show_dict:
+    #         show_dict[i_row] = {}
+    #     if show_removed_in_previousrow:
+    #         for key_model in t_key_model:
+    #             show_dict[i_row][key_model] = True
+    # show_dict[i_row + 1] = {}
+    # for i_row in show_dict_user:
+    #     show_dict[i_row].update(show_dict_user[i_row])
 
     #####################################
     # Preliminary checks for the TS plots
