@@ -331,7 +331,7 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
         if exptime_bin is None:
             exptime_bin = 0.
         binning_stat = TS_kwargs.get("binning_stat", "mean")
-        supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 10)
+        supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 1.)
         time_fact = TS_kwargs.get('time_fact', 1.)
         time_unit = TS_kwargs.get('time_unit', 'days')
 
@@ -666,33 +666,34 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                                                     )
                         # models_4_computed_models_4_TS['models'][model_i.model] = models_decorr_like[model_i.model]
                     else:
+                        import pdb; pdb.set_trace()
                         (models_4_computed_models_4_TS, pl_kwarg_final
-                        ) = compute_and_plot_model(tsim=linspace(model_i.tlims[0] / time_fact, model_i.tlims[1] / time_fact, model_i.npt, endpoint=True),
-                                                   key_model=model_i.model,
-                                                   datasetname=datasetname4compute_and_plot_model,
-                                                   post_instance=post_instance,
-                                                   df_fittedval=df_fittedval,
-                                                   datasim_kwargs=datasim_kwargs,
-                                                   amplitude_fact=amplitude_fact,
-                                                   compute_raw_models_func=compute_raw_models_func,
-                                                   remove_add_model_components_func=remove_add_model_components_func,
-                                                   key_pl_kwarg=model_i.model,
-                                                   remove_dict=kwargs_compute_model.get('remove_dict', {}),
-                                                   add_dict=kwargs_compute_model.get('add_dict', {}),
-                                                   compute_only_raw_models=False,
-                                                   compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                                                   compute_binned=show_binned_model,
-                                                   exptime_bin=exptime_bin,
-                                                   supersamp_bin_model=supersamp_bin_model,
-                                                   fact_tsim_to_xsim=time_fact,
-                                                   xsim=None, time_unit=time_unit,
-                                                   plot_unbinned=True, plot_binned=show_binned_model,
-                                                   ax=axe_data,
-                                                   pl_kwarg=pl_kwarg_final,
-                                                   models=models_4_computed_models_4_TS,
-                                                   get_key_compute_model_func=get_key_compute_model_func,
-                                                   kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                   )
+                         ) = compute_and_plot_model(tsim=linspace(model_i.tlims[0] / time_fact, model_i.tlims[1] / time_fact, model_i.npt, endpoint=True),
+                                                    key_model=model_i.model,
+                                                    datasetname=datasetname4compute_and_plot_model,
+                                                    post_instance=post_instance,
+                                                    df_fittedval=df_fittedval,
+                                                    datasim_kwargs=datasim_kwargs,
+                                                    amplitude_fact=amplitude_fact,
+                                                    compute_raw_models_func=compute_raw_models_func,
+                                                    remove_add_model_components_func=remove_add_model_components_func,
+                                                    key_pl_kwarg=model_i.model,
+                                                    remove_dict=kwargs_compute_model.get('remove_dict', {}),
+                                                    add_dict=kwargs_compute_model.get('add_dict', {}),
+                                                    compute_only_raw_models=False,
+                                                    compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                                    compute_binned=show_binned_model,
+                                                    exptime_bin=exptime_bin,
+                                                    supersamp_bin_model=supersamp_bin_model,
+                                                    fact_tsim_to_xsim=time_fact,
+                                                    xsim=None, time_unit=time_unit,
+                                                    plot_unbinned=True, plot_binned=show_binned_model,
+                                                    ax=axe_data,
+                                                    pl_kwarg=pl_kwarg_final,
+                                                    models=models_4_computed_models_4_TS,
+                                                    get_key_compute_model_func=get_key_compute_model_func,
+                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                    )
                     logger.debug(f"Done: Compute and plot model '{model_i.model}' ({i_model}/{len(models2plot.get_model2show(row_idx=i_row))}) for (row {i_row}, column {i_col})."
                                  f"datasetname = {model_i.datasetname}.")
 
@@ -1242,15 +1243,15 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
     # Load the defined datasets and check how many dataset there is by instrument.
     if outputs_load_datasets_and_models is None:
         (dico_load, kwargs_compute_model_4_key_model
-        ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-                                     df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
-                                     compute_raw_models_func=compute_raw_models_func,
-                                     remove_add_model_components_func=remove_add_model_components_func,
-                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-                                     compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                                     get_key_compute_model_func=get_key_compute_model_func,
-                                     kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                     )
+         ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
+                                      df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
+                                      compute_raw_models_func=compute_raw_models_func,
+                                      remove_add_model_components_func=remove_add_model_components_func,
+                                      kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
+                                      compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                      get_key_compute_model_func=get_key_compute_model_func,
+                                      kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                      )
     else:
         dico_load, kwargs_compute_model_4_key_model = outputs_load_datasets_and_models
 
@@ -1271,7 +1272,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
     if exptime_bin > 0:
         show_binned_model = True
     binning_stat = TS_kwargs.get("binning_stat", "mean")
-    supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 10)
+    supersamp_bin_model = TS_kwargs.get('supersamp_bin_model', 1)
 
     # Set the arguments for the plotting functions
     (pl_kwarg_final, pl_kwarg_jitter, pl_show_error
@@ -1366,16 +1367,24 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 datasetname4compute_and_plot_model = model_i.datasetname
                 # If model_i.npt is not specified, use npt_model
                 if model_i.npt is None:
-                    model_i.npt = npt_model
+                    if model_i.model == 'decorrelation_likelihood':
+                        model_i.npt = len(dico_load["times"][datasetname4compute_and_plot_model])
+                    else:
+                        model_i.npt = npt_model
                 # If model_i.tlims is not specified use the min and max time of either model_i.datasetname or all the datasets in the row depending on wither or not model_i.model in in l_model_1_per_row
                 if model_i.tlims is None:
                     if model_i.model in l_1_model_4_alldst:
                         datasetnames4autotlims = datasetnames
                     else:
                         datasetnames4autotlims = [model_i.datasetname, ]
-                    model_i.tlims = ((min([xlims_datas[dst][0] for dst in datasetnames4autotlims]) - extra_dt_model) / time_fact,
-                                     (max([xlims_datas[dst][1] for dst in datasetnames4autotlims]) + extra_dt_model) / time_fact
-                                     )
+                    if model_i.model == 'decorrelation_likelihood':
+                        model_i.tlims = (min([xlims_datas[dst][0] for dst in datasetnames4autotlims]) / time_fact,
+                                         max([xlims_datas[dst][1] for dst in datasetnames4autotlims]) / time_fact
+                                        )
+                    else:
+                        model_i.tlims = ((min([xlims_datas[dst][0] for dst in datasetnames4autotlims]) - extra_dt_model) / time_fact,
+                                        (max([xlims_datas[dst][1] for dst in datasetnames4autotlims]) + extra_dt_model) / time_fact
+                                        )
                 logger.debug(f"Computing and plotting model '{model_i.model}' ({i_model}/{len(models2plot.get_model2show(row_idx=i_row))}) for (row {i_row}) for "
                              f"dataset {model_i.datasetname}.")
                 # Init computed_models_4_TS for this set of datasetname and tlims
@@ -1394,11 +1403,13 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                     pl_kwarg_final[datasetname4compute_and_plot_model][model_i.model].update(model_i.pl_kwargs)
                 if model_i.model == "decorrelation_likelihood":
                     # computed_models_4_iTS[datasetname]["tsim_decorr_like"] = dico_load["times"][datasetname]
-                    # (models_decorr_like, _
+                    # import pdb; pdb.set_trace()
                     (models_decorr_like, _
-                     ) = compute_and_plot_model(tsim=dico_load["times"][datasetname],
+                     ) = compute_and_plot_model(tsim=dico_load["times"][datasetname4compute_and_plot_model],
                                                 key_model=model_i.model,
                                                 datasetname=datasetname4compute_and_plot_model,
+                                                # model2computeNplot=model_i,
+                                                time_fact=time_fact,
                                                 post_instance=post_instance,
                                                 df_fittedval=df_fittedval,
                                                 datasim_kwargs=datasim_kwargs,
@@ -1422,6 +1433,9 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                 get_key_compute_model_func=get_key_compute_model_func,
                                                 kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                 )
+                    model2plotNcompute_decorr_like = models_decorr_like[model_i.model]
+                    tsim_decorr, model_values_decorr, model_values_err_decorr = model2plotNcompute_decorr_like.get_computed_model(exptime_bin=0, supersamp=1)
+                    model_i.set_computed_model(times=tsim_decorr, values=model_values_decorr, values_err=model_values_err_decorr, exptime_bin=0, supersamp=1)
                     # computed_models_4_iTS[datasetname][model_i.model] = models_decorr_like[model_i.model]
                 else:
                     # if datasetname4model4row[model][i_row] == 'all':
@@ -1436,6 +1450,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                      ) = compute_and_plot_model(tsim=linspace(model_i.tlims[0] / time_fact, model_i.tlims[1] / time_fact, model_i.npt, endpoint=True),
                                                 key_model=model_i.model,
                                                 datasetname=datasetname4compute_and_plot_model,
+                                                model2computeNplot=model_i,
+                                                time_fact=time_fact,
                                                 post_instance=post_instance,
                                                 df_fittedval=df_fittedval,
                                                 datasim_kwargs=datasim_kwargs,
@@ -1628,8 +1644,8 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 datas[datasetname] = copy(dico_load['datas'][datasetname])
                 data_label = f"{inst_cat} data"
             logger.info(f"Model components to remove from the data in row {i_row} = {l_model_2_remove}.")
-            logger.info(f"Model components to visualise in row {i_row} = {[key_model for key_model, show_model in show_dict[i_row].items() if show_model]}.")
-            for key_model in list(l_model_2_remove) + [key_model for key_model, show_model in show_dict[i_row].items() if show_model]:
+            logger.info(f"Model components to visualise in row {i_row} = {[model_i.model for model_i in models2plot.get_model2show(row_idx=i_row)]}.")
+            for key_model in list(l_model_2_remove) + list(set([model_i.model for model_i in models2plot.get_model2show(row_idx=i_row)])):
                 if key_model in dico_load:
                     model_component = dico_load[key_model][datasetname]
                 elif (datasetname in models) and (key_model in models[datasetname]):
@@ -1664,8 +1680,9 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                    )
                     model_component = models[datasetname][key_model]
+                import pdb; pdb.set_trace()    
                 if key_model in l_model_2_remove:
-                    datas[datasetname] -= model_component
+                    datas[datasetname] -= model_component.get_computed_model(exptime_bin=exptime_bin, supersamp=supersamp_bin_model)[1]
                     ext_data_label = f" - {key_model}" 
                     if ext_data_label not in data_label:
                         data_label += ext_data_label
@@ -1736,7 +1753,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                         pl_kwarg_final[datasetname]["data"]["color"] = ebcont[0].get_color()
                     if dico_load['has_jitters'][datasetname]:
                         ax_ts_i.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname],
-                                        yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
+                                         yerr=dico_load['data_err_jitters'][datasetname], **pl_kwarg_jitter[datasetname]["data"])  # Plot the error bars with jitter
                 else:
                     ax_ts_i.errorbar(x_values[datasetname], y=dico_load['datas'][datasetname], **pl_kwarg_final[datasetname]["data"])  # Plot the data point and error bars without jitter
                 logger.debug(f"Done: Plot data for dataset {datasetname} (row {i_row})")
@@ -1813,54 +1830,48 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             #########################
             # Plot the models to show
             #########################
-            for key_model, show_model in show_dict[i_row].items():
-                if show_model:
-                    if datasetname4model4row[key_model][i_row] == 'all':
-                        l_datasetnames_4_plot = datasetnames
-                    else:
-                        l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
-                        
-                    for datasetname in l_datasetnames_4_plot:
-                        if datasetname4model4row[key_model][i_row] == 'all':
-                            if key_model in computed_models_4_iTS[datasetname]:
-                                ymodel = computed_models_4_iTS[datasetname][key_model]
-                            else:
-                                continue
-                            if key_model == "decorrelation_likelihood":
-                                xmodel = computed_models_4_iTS[datasetname]["tsim_decorr_like"]
-                            else:
-                                xmodel = computed_models_4_iTS[datasetname]['xsim']
-                        else:
-                            if key_model in computed_models_4_iTS[datasetname]['all']:
-                                ymodel = computed_models_4_iTS[datasetname]['all'][key_model]
-                            else:
-                                continue
-                            xmodel = computed_models_4_iTS['xsim_all']   
-                        if key_model in pl_kwarg_final[datasetname]:
-                            pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
-                        else:
-                            pl_kwarg_to_use = {"fmt": '', "linestyle": "-", "label": key_model}
-                        ebconts_lines_labels_model = ax_ts_i.errorbar(xmodel, ymodel, **pl_kwarg_to_use)
-                        if not("color" in pl_kwarg_to_use):
-                            pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
-                        if not("alpha" in pl_kwarg_to_use):
-                            pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
-                            if pl_kwarg_to_use["alpha"] is None:
-                                pl_kwarg_to_use["alpha"] = 1.
-                        # Plot the model_err
-                        key_err = key_model + "_err"
-                        if (datasetname4model4row[key_model][i_row] == 'all') and (key_err in computed_models_4_iTS[datasetname]):
-                            ymodel_err = computed_models_4_iTS[datasetname][key_err]
-                        elif (datasetname4model4row[key_model][i_row] == datasetname) and (key_err in computed_models_4_iTS[datasetname]['all']):
-                            ymodel_err = computed_models_4_iTS[datasetname]['all'][key_err]
-                        else:
-                            ymodel_err = None
-                        if ymodel_err is not None:
-                            if not("color" in pl_kwarg_final[datasetname][key_err]):
-                                pl_kwarg_final[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
-                            if not("alpha" in pl_kwarg_final[datasetname][key_err]):
-                                pl_kwarg_final[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
-                                _ = ax_ts_i.fill_between(xmodel, ymodel - ymodel_err, ymodel + ymodel_err, **pl_kwarg_final[datasetname][key_err])
+            for model_i in models2plot.get_model2show(row_idx=i_row):
+                # if datasetname4model4row[key_model][i_row] == 'all':
+                #     l_datasetnames_4_plot = datasetnames
+                # else:
+                #     l_datasetnames_4_plot = [datasetname4model4row[key_model][i_row]]
+                    
+                # for datasetname in l_datasetnames_4_plot:
+                #     if datasetname4model4row[key_model][i_row] == 'all':
+                #         if key_model in computed_models_4_iTS[datasetname]:
+                #             ymodel = computed_models_4_iTS[datasetname][key_model]
+                #         else:
+                #             continue
+                #         if key_model == "decorrelation_likelihood":
+                #             xmodel = computed_models_4_iTS[datasetname]["tsim_decorr_like"]
+                #         else:
+                #             xmodel = computed_models_4_iTS[datasetname]['xsim']
+                #     else:
+                #         if key_model in computed_models_4_iTS[datasetname]['all']:
+                #             ymodel = computed_models_4_iTS[datasetname]['all'][key_model]
+                #         else:
+                #             continue
+                #         xmodel = computed_models_4_iTS['xsim_all'] 
+                tsim_values, model_values, model_values_err = model_i.get_computed_model(exptime_bin=exptime_bin, supersamp=supersamp_bin_model)  
+                if key_model in pl_kwarg_final[datasetname]:
+                    pl_kwarg_to_use = pl_kwarg_final[datasetname][key_model]
+                else:
+                    pl_kwarg_to_use = {"fmt": '', "linestyle": "-", "label": key_model}
+                ebconts_lines_labels_model = ax_ts_i.errorbar(tsim_values / time_fact, model_values, **pl_kwarg_to_use)
+                if not("color" in pl_kwarg_to_use):
+                    pl_kwarg_to_use["color"] = ebconts_lines_labels_model[0].get_color()
+                if not("alpha" in pl_kwarg_to_use):
+                    pl_kwarg_to_use["alpha"] = ebconts_lines_labels_model[0].get_alpha()
+                    if pl_kwarg_to_use["alpha"] is None:
+                        pl_kwarg_to_use["alpha"] = 1.
+                # Plot the model_err
+                key_err = key_model + "_err"
+                if model_values_err is not None:
+                    if not("color" in pl_kwarg_final[datasetname][key_err]):
+                        pl_kwarg_final[datasetname][key_err]["color"] = pl_kwarg_to_use["color"]
+                    if not("alpha" in pl_kwarg_final[datasetname][key_err]):
+                        pl_kwarg_final[datasetname][key_err]["alpha"] = pl_kwarg_to_use["alpha"] / 3
+                        _ = ax_ts_i.fill_between(tsim_values, model_values - model_values_err, model_values + model_values_err, **pl_kwarg_final[datasetname][key_err])
                                 
             ###################################
             # Set ylims and indicate_y_outliers
@@ -1922,14 +1933,13 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                 gls_inputs["data"]["err"] = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
             else:
                 gls_inputs["data"]["err"] = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
-            print(f"show_dict[{i_row}] = {show_dict[i_row]}")
-            for key_model, show_model in show_dict[i_row].items():
-                if show_model:
-                    gls_inputs[key_model] = {}
-                    gls_inputs[key_model]["time"] = gls_inputs["data"]["time"]
-                    gls_inputs[key_model]["value"] = concatenate([models[dst][key_model] for dst in datasetnames])[idx_sort]
-                    gls_inputs[key_model]["err"] = gls_inputs["data"]["err"]
-                    gls_inputs[key_model]["label"] = key_model
+            print(f"")
+            for model_i in models2plot.get_model2show(row_idx=i_row):
+                gls_inputs[key_model] = {}
+                gls_inputs[key_model]["time"] = gls_inputs["data"]["time"]
+                gls_inputs[key_model]["value"] = concatenate([models[dst][key_model].get_computed_model(exptime_bin=exptime_bin, supersamp=supersamp_bin_model)[1] for dst in datasetnames])[idx_sort]
+                gls_inputs[key_model]["err"] = gls_inputs["data"]["err"]
+                gls_inputs[key_model]["label"] = key_model
 
             ###################
             # Compute the GLSPs

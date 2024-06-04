@@ -1,9 +1,9 @@
 from loguru import logger
 from copy import copy
-from numpy import zeros_like, sqrt
+from numpy import zeros_like, sqrt, linspace
 from collections import defaultdict, OrderedDict
 
-from .misc import update_model_binned_label
+from .misc import update_model_binned_label, Model2computeNplot
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
 
@@ -66,8 +66,10 @@ def is_valid_model_available(key_model, datasetname, post_instance):
         return False
 
 
-def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fittedval, datasim_kwargs,
-                           amplitude_fact, compute_raw_models_func, remove_add_model_components_func,
+def compute_and_plot_model(post_instance, df_fittedval, datasim_kwargs,
+                           compute_raw_models_func, remove_add_model_components_func,
+                           tsim=None, key_model=None, datasetname=None, model2computeNplot=None, time_fact=None,
+                           amplitude_fact=1, 
                            remove_dict=None, add_dict=None, compute_only_raw_models=False, 
                            compute_GP_model=True, split_GP_computation=None,
                            compute_binned=True, exptime_bin=None, supersamp_bin_model=None, fact_tsim_to_xsim=None, xsim=None, time_unit=None,
@@ -128,6 +130,16 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     models                              : dict
     pl_kwarg                            : dict
     """
+    if not((tsim is not None) and (key_model is not None) and (datasetname is not None)) and not((model2computeNplot is not None) and (time_fact is not None)):
+        raise ValueError(f"You need to provide either tsim, key_model and datasetname or (exclusive) model2computeNplot and time_fact. You provided tsim={tsim}, key_model={key_model}, datasetname={datasetname} and model2computeNplot={model2computeNplot}, time_fact={time_fact}.")
+    
+    if model2computeNplot is None:
+        model2computeNplot = Model2computeNplot(model=key_model, datasetname=datasetname, npt=len(tsim), tlims=(min(tsim), max(tsim)))
+    else:
+        tsim = linspace(model2computeNplot.tlims[0] / time_fact, model2computeNplot.tlims[1] / time_fact, model2computeNplot.npt, endpoint=True)
+        key_model = model2computeNplot.model
+        datasetname = model2computeNplot.datasetname
+
     logger.debug(f"Start compute_and_plot_model for model {key_model} and dataset {datasetname}")
     # Make sure that remove_dict and add_dict have all necessary keys
     if remove_dict is None:
@@ -138,7 +150,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
     # Init models if not provided
     if models is None:
         models = {}
-
+        
     # # Define the time vector tsim at which the models will be evaluated
     # tsim = np.linspace(*tlims_model, npt_model)
     # # Define the x vector xsim (corresponding to tsim) at which the models will be plotted
@@ -179,7 +191,7 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 continue
         else:
             exptime = 0.
-            supersamp = 1.
+            supersamp = 1
             extension = ''
 
         ################################################
@@ -251,23 +263,29 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
                 if "GP" + extension + extension_raw in models:
                     model = remove_add_model_components_func(model=model, remove_dict={},
                                                              add_dict={'GP': True}, extension=extension,
-                                                             extension_raw=extension_raw, models=models,
+                                                             extension_raw=extension_raw, 
+                                                             models=models, exptime_bin=exptime, supersamp=supersamp,
                                                              amplitude_fact=amplitude_fact
                                                              )
-                    model_err = copy(models['GP_err' + extension + extension_raw])
+                    _, _, model_err = models['GP' + extension + extension_raw].get_computed_model(exptime_bin=exptime, supersamp=supersamp)
                 # Else there is no GP so there should not be a model_wGP either
                 else:
                     return models, pl_kwarg
-            # Store the raw model in models 
-            models[key_model + extension + extension_raw] = copy(model)
-            if model_err is not None:
-                models[f'{key_model}_err' + extension + extension_raw] = copy(model_err)
-        else:
-            model = models[key_model + extension + extension_raw]
-            if f'{key_model}_err' + extension + extension_raw in models:
-                model_err = models[f'{key_model}_err' + extension + extension_raw]
+            # Store the raw model in models
+            if model_err is None:
+                model2computeNplot.set_computed_model(times=tsim, values=model, exptime_bin=exptime, supersamp=supersamp)
             else:
-                model_err = None
+                model2computeNplot.set_computed_model(times=tsim, values=model, values_err=model_err, exptime_bin=exptime, supersamp=supersamp)
+            models[key_model + extension + extension_raw] = model2computeNplot
+            # if model_err is not None:
+            #     models[f'{key_model}_err' + extension + extension_raw] = copy(model_err)
+        else:
+            model2computeNplot = models[key_model + extension + extension_raw]
+            tsim, model, model_err = model2computeNplot.get_computed_model(exptime_bin=exptime, supersamp=supersamp)
+            # if f'{key_model}_err' + extension + extension_raw in models:
+            #     model_err = models[f'{key_model}_err' + extension + extension_raw]
+            # else:
+            #     model_err = None
 
         ##################################
         # Compute the models to remove/add
@@ -284,33 +302,38 @@ def compute_and_plot_model(tsim, key_model, datasetname, post_instance, df_fitte
             for key_model_removeoradd in (l_model_remove + l_model_add):
                 if key_model_removeoradd + extension + extension_raw not in models:
                     models, _ = compute_and_plot_model(tsim=tsim, key_model=key_model_removeoradd, datasetname=datasetname,
-                                                    post_instance=post_instance, df_fittedval=df_fittedval,
-                                                    datasim_kwargs=datasim_kwargs,
-                                                    amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
-                                                    remove_add_model_components_func=remove_add_model_components_func, 
-                                                    remove_dict=None, add_dict=None, compute_only_raw_models=True,
-                                                    compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-                                                    compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
-                                                    fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
-                                                    plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
-                                                    models=models,
-                                                    get_key_compute_model_func=get_key_compute_model_func,
-                                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                                    )
+                                                       post_instance=post_instance, df_fittedval=df_fittedval,
+                                                       datasim_kwargs=datasim_kwargs,
+                                                       amplitude_fact=amplitude_fact, compute_raw_models_func=compute_raw_models_func,
+                                                       remove_add_model_components_func=remove_add_model_components_func, 
+                                                       remove_dict=None, add_dict=None, compute_only_raw_models=True,
+                                                       compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
+                                                       compute_binned=True, exptime_bin=exptime_bin, supersamp_bin_model=supersamp_bin_model, 
+                                                       fact_tsim_to_xsim=fact_tsim_to_xsim, time_unit=time_unit,
+                                                       plot_unbinned=False, plot_binned=False, ax=None, pl_kwarg=None, key_pl_kwarg=None, 
+                                                       models=models,
+                                                       get_key_compute_model_func=get_key_compute_model_func,
+                                                       kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                                       )
 
             ##########################################
             # Remove/Add model components as requested
             ##########################################
             model = remove_add_model_components_func(model=model, remove_dict=remove_dict,
-                                                    add_dict=add_dict, extension=extension,
-                                                    extension_raw=extension_raw, models=models,
-                                                    amplitude_fact=amplitude_fact
-                                                 )
+                                                     add_dict=add_dict, extension=extension,
+                                                     extension_raw=extension_raw, 
+                                                     models=models, exptime_bin=exptime, supersamp=supersamp,
+                                                     amplitude_fact=amplitude_fact
+                                                     )
 
             # Fill computed model into output (models)
-            models[key_model + extension] = model
-            if model_err is not None:
-                models[f'{key_model}_err' + extension] = model_err
+            models[key_model + extension] = Model2computeNplot(model=key_model, datasetname=datasetname, npt=len(tsim), tlims=(min(tsim), max(tsim)))
+            if model_err is None:
+                models[key_model + extension].set_computed_model(times=tsim, values=model, values_err=model_err, exptime_bin=exptime_bin, supersamp=supersamp)
+            else:
+                models[key_model + extension].set_computed_model(times=tsim, values=model, exptime_bin=exptime_bin, supersamp=supersamp)
+            # if model_err is not None:
+            #     models[f'{key_model}_err' + extension] = model_err
 
         # Plot the model
         if (plot_unbinned and not(binned)) or (plot_binned and compute_binned and binned):

@@ -5,6 +5,7 @@ from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 from collections.abc import Sequence
+from numbers import Number
 from typing import Dict, List
 from numpy import nan, float_, ndarray, isfinite
 from numpy.typing import NDArray
@@ -745,7 +746,7 @@ class Models2plot(object):
             for model_i, datasetname_i, npt_i, tlims_i, pl_kwargs_i in zip([models, datasetnames, npts, tlims, pl_kwargs]):
                 self.add_model_2_plot(model=model_i, row_idx=row_idx, datasetname=datasetname_i, npt=npt_i, tlims=tlims_i, pl_kwargs=pl_kwargs_i)
     
-    def get_model2show(self, row_idx: int, model: str|None=None) -> set[Model2computeNplot]:
+    def get_model2show(self, row_idx: int, model: str|None=None) -> Sequence[Model2computeNplot]:
         """Return the list of models to show.
         
         If you only want to return models to show for a given model name, you can specify the model argument.
@@ -763,10 +764,10 @@ class Models2plot(object):
         if model is None:
             return self._models2plot[row_idx]
         else:
-            models = set()
+            models = []
             for model_i in self._models2plot[row_idx]:
                 if model_i.model == model:
-                    models.add(model_i)
+                    models.append(model_i)
             return models
 
 
@@ -880,7 +881,7 @@ class Model2computeNplot(object):
             raise ValueError(f"tlims[0] cannot be equal or higher than t_lims[1] got {new_tlims}")
         self.__tlims = new_tlims
 
-    def get_computed_model(self, exptime_bin=0, supersamp=0):
+    def get_computed_model(self, exptime_bin=0, supersamp=1):
         """Dictionary with two keys 'times', 'values' with the computed time and model values."""
         if not(self.model_stored):
             raise ValueError(f"No model have been stored")
@@ -888,12 +889,26 @@ class Model2computeNplot(object):
             raise KeyError(f"There is no model stored with exptime_bin={exptime_bin}")
         if supersamp not in self.__model_values[exptime_bin]:
             raise KeyError(f"There is no model stored with supersamp={supersamp} for exptime_bin = {exptime_bin}")
-        return {'times': self.__time_values.copy(), 
-                'values': self.__model_values[exptime_bin][supersamp].copy(), 
-                'values_err': self.__model_values_err[exptime_bin][supersamp].copy() if self.__model_values_err[exptime_bin][supersamp].copy() is not None else None
-                }
+        return (self.__time_values.copy(), 
+                self.__model_values[exptime_bin][supersamp].copy(), 
+                self.__model_values_err[exptime_bin][supersamp].copy() if self.__model_values_err[exptime_bin][supersamp] is not None else None
+                )
     
-    def set_computed_model(self, times:NDArray[float_], values:NDArray[float_], values_err: NDArray[float_]|None=None, exptime_bin: float=0, supersamp: int=0):
+    def get_computed_exptime_supersamp(self, exptime_bin=None):
+        """"""
+        res = {}
+        if exptime_bin is None:
+            l_exptime_bin = list(self.__model_values.keys())
+        else:
+            if exptime_bin not in self.__model_values:
+                raise ValueError(f"There is no stored model for exptime_bin = {exptime_bin}")
+            l_exptime_bin = [exptime_bin, ]
+        for exptime_bin in l_exptime_bin:
+            res[exptime_bin] = list(self.__model_values[exptime_bin].keys())
+        return res
+
+    
+    def set_computed_model(self, times:NDArray[float_], values:NDArray[float_], values_err: NDArray[float_]|None=None, exptime_bin: float=0, supersamp: int=1):
         """Set the computed model (times and values).
         
         If npt and/or t_lims have been set, the times and values arguments will be check against those.
@@ -902,7 +917,8 @@ class Model2computeNplot(object):
         Once a computed model has been set it cannot be overwritten.
         """
         if (self.__time_values is not None) or (self.__model_values is not None):
-            raise ValueError("A computed model already exists you cannot overwrite it. Create a new PlotModelDef instance")
+            if (exptime_bin in self.__model_values) and (supersamp in self.__model_values[exptime_bin]):
+                raise ValueError(f"A computed model already exists for exptime_bin={exptime_bin} and supersamp={supersamp} you cannot overwrite it. Create a new PlotModelDef instance")
         if not(isinstance(times, ndarray)) or not(isinstance(times, ndarray)):
             raise TypeError(f"times and values should be numpy.ndarray, got {type(times)} and {type(values)}")
         if (times.ndim != 1) or (values.ndim != 1) or ((values_err is not None) and (values.ndim != 1)):
@@ -919,17 +935,18 @@ class Model2computeNplot(object):
             # npt is already set
             if self.npt != times.size:
                 raise ValueError(f"The set npt ({self.npt}) do not agree with the size of times and values ({times.size})")
-            else:
-                self.npt = times.size
+        else:
+            self.npt = times.size
         self.__time_values = times
         if self.__model_values is None:
             self.__model_values = {}
-        if not(isinstance(exptime_bin, float)) or (exptime_bin < 0):
+            self.__model_values_err = {}
+        if not(isinstance(exptime_bin, Number)) or (exptime_bin < 0):
             raise ValueError(f"exptime_bin should be a positive (or zero) float, got {exptime_bin}")
         if exptime_bin not in self.__model_values:
             self.__model_values[exptime_bin] = {}
             self.__model_values_err[exptime_bin] = {}
-        if not(isinstance(supersamp, int)) or (supersamp < 0):
-            raise ValueError(f"supersamp should be a positive (or zero) int, got {supersamp}")
+        if not(isinstance(supersamp, int)) or (supersamp < 1):
+            raise ValueError(f"supersamp should be an int superior or equal to 1, got {supersamp}")
         self.__model_values[exptime_bin][supersamp] = values
         self.__model_values_err[exptime_bin][supersamp] = values_err

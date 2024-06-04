@@ -698,25 +698,27 @@ def create_LC_iTSNGLSP_plots(fig, post_instance, df_fittedval, datasim_kwargs=No
                                  )
 
 
-def remove_add_model_components(model, remove_dict, add_dict, extension, extension_raw, models, amplitude_fact):
+def remove_add_model_components(model, remove_dict, add_dict, extension, extension_raw, models, exptime_bin, supersamp, amplitude_fact):
     """
     """
     # Remove components if needed
     for key, do in remove_dict.items():
         if do and ((key + extension + extension_raw) in models):
+            _, model_values, model_err_values = models[key + extension + extension_raw].get_computed_model(exptime_bin=exptime_bin, supersamp=supersamp)
             if key in ['1', 'stellar_var', 'inst_var', 'decorr_add_2_totalflux', 'decorrelation_likelihood', 'GP', 'model', 'data']:
-                model -= models[key + extension + extension_raw]
+                model -= model_values
             elif key in ['contamination', 'decorr_multiply_2_totalflux']:
-                model /= models[key + extension + extension_raw] / amplitude_fact
+                model /= model_values / amplitude_fact
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
     # Add components if needed
     for key, do in add_dict.items():
         if do and ((key + extension + extension_raw) in models):
+            _, model_values, model_err_values = models[key + extension + extension_raw].get_computed_model(exptime_bin=exptime_bin, supersamp=supersamp)
             if key in ['1', 'stellar_var', 'inst_var', 'decorr_add_2_totalflux', 'decorrelation_likelihood', 'GP', 'model', 'data']:
-                model += models[key + extension + extension_raw]
+                model += model_values
             elif key in ['contamination', 'decorr_multiply_2_totalflux']:
-                model *= models[key + extension + extension_raw] / amplitude_fact
+                model *= model_values / amplitude_fact
             else:
                 raise NotImplementedError(f"Remove from model is not implement for component {key}")
 
