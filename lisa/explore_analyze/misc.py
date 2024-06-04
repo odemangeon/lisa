@@ -715,7 +715,7 @@ class Models2plot(object):
         for ii in self.__get_l_row_idx(row_idx=row_idx):
             self._models2plot[ii].append(Model2computeNplot(model=model, datasetname=datasetname, npt=npt, tlims=tlims, pl_kwargs=pl_kwargs))
 
-    def add_models_2_show(self, models: Sequence[str], row_idx: int|None = None, datasetnames: Sequence[str|None]|None=None, npts: Sequence[int|None]|None=None, tlims: Sequence[tuple[float, float]|None]|None=None, pl_kwargs: Sequence[Dict|None]|None=None):
+    def add_models_2_plot(self, models: Sequence[str], row_idx: int|None = None, datasetnames: Sequence[str|None]|None=None, npts: Sequence[int|None]|None=None, tlims: Sequence[tuple[float, float]|None]|None=None, pl_kwargs: Sequence[Dict|None]|None=None):
         """Add multiple models to show for a given row.
         
         Arguments
@@ -776,6 +776,18 @@ class Models2plotTSNGLSP(Models2plot):
     def __init__(self, nb_rows: int):
         """"""
         super(Models2plotTSNGLSP, self).__init__(nb_rows=nb_rows, same4allrows=True)
+
+
+class Models2plotiTSNGLSP(Models2plot):
+    """Class to specifiy which model to plot in each row of the plot for the iTSNGLSP plots"""
+
+    def __init__(self, l_iterative_model_2_remove: list[Sequence[str]], plot_removed_in_previousrow: bool=True):
+        """"""
+        super(Models2plotiTSNGLSP, self).__init__(nb_rows=len(l_iterative_model_2_remove) + 1, same4allrows=False)
+        if plot_removed_in_previousrow:
+            for i_row, seq_model in enumerate(l_iterative_model_2_remove):
+                for model_i in seq_model:
+                    self.add_model_2_plot(model=model_i, row_idx=i_row)
 
 
 class ComputedModels(object):
