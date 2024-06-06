@@ -18,10 +18,11 @@ from pandas import DataFrame
 from typing import Callable, Dict, List, Union
 
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
-                   check_spec_by_column_or_row, check_spec_data_or_resi, check_Models2plot,
+                   check_spec_by_column_or_row, check_spec_data_or_resi,
                    define_x_or_y_lims, check_spec_for_data_or_resi_by_column_or_row, print_rms, check_kwargs_by_column_and_row,
-                   set_legend, fmt_sci_not, Models2plotTSNGLSP
+                   set_legend, fmt_sci_not,
                    )
+from .models2computenplot import Models2plotTS, check_Models2plot
 from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
                                 is_valid_model_available
                                 )
@@ -44,7 +45,7 @@ def create_TSNGLSP_plots(fig: Figure, post_instance: Posterior, df_fittedval: Da
                          y_name: str, inst_cat: str,
                          d_name_component_removed_to_print,
                          l_model_1_per_row: List[str],
-                         models2plot: Models2plotTSNGLSP|None=None,
+                         models2plot: Models2plotTS|None=None,
                          compute_GP_model=True,
                          split_GP_computation=None,
                          outputs_load_datasets_and_models=None,
@@ -1022,7 +1023,7 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                           l_iterative_removal,
                           d_name_component_removed_to_print,
                           l_1_model_4_alldst,
-                          models2plot: Models2plotTSNGLSP|None=None,
+                          models2plot: Models2plotTS|None=None,
                           compute_GP_model=True,
                           split_GP_computation=None,
                           outputs_load_datasets_and_models=None,

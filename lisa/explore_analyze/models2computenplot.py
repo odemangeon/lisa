@@ -8,9 +8,9 @@ from numbers import Number
 from copy import deepcopy
 
 
-def get_default_model_name(current_keys):
+def get_default_model_name(seq_current_model_name: Sequence[int|str]):
     name = 0
-    while name in current_keys:
+    while name in seq_current_model_name:
         name += 1
     return name
 
@@ -46,28 +46,28 @@ class Models2plot(object):
         # Init modelspecs
         self.__modelspecs: Dict[str|int, ModelSpecification] = {}
         # Init pl_kwargs
-        self.__pl_kwargs: Dict[str|int, Dict[tuple[float_,int]|str, Dict]] = {}
+        self.__pl_kwargs: Dict[str|int, Dict[tuple[Number,int]|str, Dict]] = {}
 
     def __repr__(self):
         return f"{self.__models2plot}"
 
     @property
-    def nb_rows(self):
+    def nb_rows(self) -> int:
         """numbers of rows in the plot"""
         return self.__nb_rows
     
     @property
-    def nb_cols(self):
+    def nb_cols(self) -> int:
         """numbers of rows in the plot"""
         return self.__nb_cols
     
     @property
-    def same4allrows(self):
+    def same4allrows(self) -> bool:
         """If True, all rows have the same models to plot"""
         return self.__same4allrows
     
     @property
-    def same4allcols(self):
+    def same4allcols(self) -> bool:
         """If True, all columns have the same models to plot"""
         return self.__same4allcols
     
@@ -76,27 +76,27 @@ class Models2plot(object):
         """Dictionary providing the conversion from names to model specifications (what the model is composed of in terms of model component added and removed and the dataset used)"""
         return self.__modelspecs.copy()
     
-    def __check_idx(self, row_or_col:str, idx: int|None, allow_idx_w_same4all=False) -> tuple[int, bool]:
+    def __check_idx(self, row_or_col:str, idx: int|None, allow_idx_w_same4all=False) -> tuple[int|None, int, bool]:
         """"""
         if row_or_col not in ['col', 'row']:
             raise ValueError(f"row_or_col should be either 'row' or 'col', you provided {row_or_col}.")
         same4all = self.same4allrows if row_or_col == 'row' else self.same4allcols
         nb = self.nb_rows if row_or_col == 'row' else self.nb_cols
-        if (idx is None) and not(same4all):
-            raise ValueError(f"{row_or_col}_idx should not be None when same4all{row_or_col}s is False.")
-        else:
-            if (idx is not None):
-                if same4all and not(allow_idx_w_same4all):
-                    raise ValueError(f"When same4all{row_or_col}s is True and allow_idx_w_same4all if False, you should not provide a {row_or_col}_idx. You provided {row_or_col}_idx={idx}")
-                if not(isinstance(idx, int)):
-                    raise TypeError(f"{row_or_col}_idx should be an int")
-                if idx < 0:
-                    raise ValueError(f"{row_or_col}_idx should not be negative")
-                if idx >= self.nb:
-                    raise ValueError(f"{row_or_col}_idx is out of range for nb_{row_or_col}={nb}")
+        if (idx is None):
+            if nb == 1:
+                idx = 0
             else:
-                if nb == 1:
-                    idx = 1
+                if not(same4all):
+                    raise ValueError(f"{row_or_col}_idx should not be None when same4all{row_or_col}s is False.")
+        else:
+            if same4all and not(allow_idx_w_same4all):
+                raise ValueError(f"When same4all{row_or_col}s is True and allow_idx_w_same4all if False, you should not provide a {row_or_col}_idx. You provided {row_or_col}_idx={idx}")
+            if not(isinstance(idx, int)):
+                raise TypeError(f"{row_or_col}_idx should be an int")
+            if idx < 0:
+                raise ValueError(f"{row_or_col}_idx should not be negative")
+            if idx >= nb:
+                raise ValueError(f"{row_or_col}_idx is out of range for nb_{row_or_col}={nb}")
         return idx, nb, same4all
     
     def __get_l_idx(self, row_or_col:str, idx: int|None) -> Sequence[int]:
@@ -116,7 +116,7 @@ class Models2plot(object):
                 break
         return name_found
 
-    def add_model_2_plot(self, modelspec: ModelSpecification, name: str|int|None, row_idx: int|None = None, col_idx: int|None = None, pl_kwargs:Dict[tuple[float_,int], Dict]|None=None):
+    def add_model_2_plot(self, modelspec: ModelSpecification, name: str|int|None, row_idx: int|None = None, col_idx: int|None = None, pl_kwargs:Dict[tuple[Number,int]|str, Dict]|None=None):
         """Add model to show for a given row.
         
         Arguments
@@ -140,7 +140,7 @@ class Models2plot(object):
             if name is None or (name in self.name2modelspec):
                 if name in self.name2modelspec:
                     logger.info(f"The name {name} already exists for another model spec and an automatic name will be assigned")
-                name = get_default_model_name(current_keys=self.__models2plot[i_row][i_col].keys()) 
+                name = get_default_model_name(seq_current_model_name=self.__modelspecs.keys())
                 logger.info(f"name automatically assigned to {name}.")
         # Add the model name to models2 plot
         for i_row in self.__get_l_idx(row_or_col='row', idx=row_idx):
@@ -152,16 +152,38 @@ class Models2plot(object):
             # Init pl_kwargs for the model
             self.__pl_kwargs[name] = {}
             if pl_kwargs is not None:
-                self.update_pl_kwargs(name=name, pl_kwargs=pl_kwargs)
+                self.update_pl_kwargs(name=name, pl_kwargs_4_name=pl_kwargs)
 
-
-    def update_pl_kwargs(name: str|int, pl_kwargs: Dict[tuple[float_,int]|str, Dict]):
+    def update_pl_kwargs(self, name: str|int, pl_kwargs_4_name: Dict[tuple[Number,int]|str, Dict]):
         """"""
-        pass
+        # Check name
+        if name not in self.__pl_kwargs.keys():
+            raise ValueError(f"{name} is not the name of an existing modelspec. Existing names are {list(self.name2modelspec.keys())}")
+        # Check pl_kwargs
+        if not(isinstance(pl_kwargs_4_name, dict)) or any([not(isinstance(tuple_exptimebin_supersamp, tuple) and (isinstance(tuple_exptimebin_supersamp[0], Number)) and (isinstance(tuple_exptimebin_supersamp[1], int))) and
+            not(tuple_exptimebin_supersamp == 'default') for tuple_exptimebin_supersamp in pl_kwargs_4_name.keys()]):
+            raise TypeError(f"pl_kwargs should be a dict and its keys should be either 'default' or a tuple[Number, int], got {pl_kwargs_4_name}.")
+        for tuple_exptimebin_supersamp, pl_kwargs_i in pl_kwargs_4_name.items():
+            if not(isinstance(pl_kwargs_i, dict)):
+                raise TypeError(f"Value for key {tuple_exptimebin_supersamp} of pl_kwargs_4_name should be a Dict, got a {type(pl_kwargs_i)}")
+        # Create the tuple_exptimebin_supersamp if needed and then update
+        for tuple_exptimebin_supersamp in pl_kwargs_4_name:
+            if tuple_exptimebin_supersamp not in self.__pl_kwargs[name]:
+                self.__pl_kwargs[name][tuple_exptimebin_supersamp] = {}
+            self.__pl_kwargs[name][tuple_exptimebin_supersamp].update(pl_kwargs_4_name[tuple_exptimebin_supersamp])
 
-    def reset_pl_kwargs(name: str|int, tuple_eexptime_bin: tuple[float_,int]|str|None=None):
-        raise NotImplementedError()
-    
+    def reset_pl_kwargs(self, name: str|int, tuple_exptimebin_supersamp: tuple[Number,int]|str|None=None):
+        # Check name
+        if name not in self.__pl_kwargs.keys():
+            raise ValueError(f"{name} is not the name of an existing modelspec. Existing names are {list(self.name2modelspec.keys())}")
+        # Check tuple_exptimebin_supersamp and pop
+        if tuple_exptimebin_supersamp is not None:
+            if tuple_exptimebin_supersamp not in self.__pl_kwargs[name]:
+                raise KeyError(f"{tuple_exptimebin_supersamp} is not a key of self.__pl_kwargs[{name}], existing keys are {list(self.__pl_kwargs[name].keys())}")
+            else:
+                self.__pl_kwargs[name].pop(tuple_exptimebin_supersamp)
+        else:
+            self.__pl_kwargs[name] = {}
     
     # def set_pl_kwargs(self, pl_kwargs: Dict, exptime_bin: Number|None=None, supersamp: int|None=None, overwrite: bool=False, update: bool=True):
     #     """Set the dictionary of the kwargs for ploting the specified model.
@@ -190,8 +212,17 @@ class Models2plot(object):
     #             self.__pl_kwargs[exptime_bin] = {}
     #         self.__pl_kwargs[exptime_bin][supersamp] = pl_kwargs
 
-    def get_pl_kwargs(self, exptime_bin: Number, supersamp: int) -> Dict:
-        raise NotImplementedError()
+    def get_pl_kwargs(self, name: int|str, tuple_exptimebin_supersamp: tuple[Number, int]|str) -> Dict:
+        # Check name
+        if name not in self.__pl_kwargs.keys():
+            raise KeyError(f"{name} is not the name of an existing modelspec. Existing names are {list(self.name2modelspec.keys())}")
+        # Check tuple_exptimebin_supersamp
+        # if not(isinstance(tuple_exptimebin_supersamp, tuple) and (isinstance(tuple_exptimebin_supersamp[0], Number)) and (isinstance(tuple_exptimebin_supersamp[1], int))) and
+        #     not(tuple_exptimebin_supersamp == 'default'):
+        #     raise TypeError(f"tuple_exptimebin_supersamp should be either 'default' or a tuple[Number, int], got {tuple_exptimebin_supersamp}")
+        if tuple_exptimebin_supersamp not in self.__pl_kwargs[name].keys():
+            raise KeyError(f"{tuple_exptimebin_supersamp} is not available in self.__pl_kwargs[{name}]. Available keys are {self.__pl_kwargs[name].keys()}")
+        return self.__pl_kwargs[name][tuple_exptimebin_supersamp]
 
     # def get_pl_kwargs(self, exptime_bin: Number, supersamp: int) -> Dict:
     #     """Return the dictionary of the kwargs for ploting the specified model"""
@@ -213,7 +244,7 @@ class Models2plot(object):
         for name_i, modelspec_i in tuples_name_modelspec:
             self.add_model_2_plot(modelspec=modelspec_i, name=name_i, row_idx=row_idx, col_idx=col_idx)
     
-    def get_modelspecs_2_plot(self, row_idx: int|None, col_idx: int|None) -> Dict[str|int, ModelSpecification]:
+    def get_models_2_plot(self, row_idx: int|None=None, col_idx: int|None=None) -> Dict[str|int, ModelSpecification]:
         """Return the list of models to show for a given row index
         
         If you only want to return models to show for a given model name, you can specify the model argument.
@@ -226,11 +257,13 @@ class Models2plot(object):
         ------
         models  : Set of model names to show for the row
         """
+        # Check row_idx and col_idx
+        checked_idx = {}
         for row_or_col, idx in zip(["row", "col"], [row_idx, col_idx]):
-            idx, nb, same4all = self.__check_idx(row_or_col=row_or_col, idx=idx, allow_idx_w_same4all=True)
-            if idx is None:
+            checked_idx[row_or_col], nb, same4all = self.__check_idx(row_or_col=row_or_col, idx=idx, allow_idx_w_same4all=True)
+            if checked_idx[row_or_col] is None:
                 raise ValueError(f"{row_or_col}_idx should not be None.")
-        return self.__models2plot[row_idx][col_idx].copy()
+        return {name_i: self.name2modelspec[name_i] for name_i in self.__models2plot[checked_idx['row']][checked_idx['col']]}
     
 
 def check_Models2plot(models2plot: Models2plot|None, datasetnames4rowidx: Sequence[Sequence[str]], l_model_1_per_row: Sequence[str]) -> Models2plot:
@@ -254,11 +287,11 @@ def check_Models2plot(models2plot: Models2plot|None, datasetnames4rowidx: Sequen
     # For each row
     for i_row in range(models2plot.nb_rows):
         # For each model of each model is datasetname attribute is specified.
-        initial_set_models = models2plot.get_model2show(row_idx=i_row)
-        for model_i in initial_set_models:
-            if model_i.datasetname is None:
-                model_i.datasetname = datasetnames4rowidx[i_row][0]
-                if model_i.model not in l_model_1_per_row:
+        initial_set_models = models2plot.get_models_2_plot(row_idx=i_row)
+        for name_i, modelspec_i in initial_set_models.items():
+            if modelspec_i.datasetname is None:
+                modelspec_i.datasetname = datasetnames4rowidx[i_row][0]
+                if any([model_name_i not in l_model_1_per_row for model_name_i in modelspec_i.add + modelspec_i.remove]):
                     set_models_of_currentmodel = models2plot.get_model2show(row_idx=i_row, model=model_i.model)
                     datasetname_4_currentmodel = [model_j.datasetname for model_j in set_models_of_currentmodel]
                     for datasetname_i in datasetnames4rowidx[i_row][1:]:
@@ -272,7 +305,7 @@ class Models2plotTS(Models2plot):
 
     def __init__(self, nb_rows: int):
         """"""
-        super(self.__cls__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
+        super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
 
 
 class Models2plotiTS(Models2plot):
@@ -408,11 +441,10 @@ class ModelSpecification(object):
             else:
                 self.__remove.remove(model_component)
 
-    def __eq__(self, other:ModelSpecification) -> bool:
+    def __eq__(self, other: ModelSpecification) -> bool:
         """Overrides the default implementation"""
         if isinstance(other, ModelSpecification):
-            other_spec = other.spec
-            return (self.__add == other_spec['add']) and (self.__remove == other_spec['remove']) and (self.datasetname == other.datasetname)
+            return (self.add == other.add) and (self.remove == other.remove) and (self.datasetname == other.datasetname)
         else:
             return False
     

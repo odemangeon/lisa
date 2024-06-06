@@ -3,7 +3,8 @@ from copy import copy
 from numpy import zeros_like, sqrt, linspace
 from collections import defaultdict, OrderedDict
 
-from .misc import update_model_binned_label, Model2computeNplot
+from .misc import update_model_binned_label
+from .models2computenplot import Model2computeNplot
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
 

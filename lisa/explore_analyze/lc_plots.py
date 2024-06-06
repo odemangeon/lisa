@@ -10,7 +10,8 @@ from collections import OrderedDict
 
 from .phase_folded import create_phasefolded_plots
 from .ts_and_glsp import create_TSNGLSP_plots, create_iTSNGLSP_plots
-from .misc import AandA_fontsize, Models2plot
+from .misc import AandA_fontsize
+from .models2computenplot import Models2plot
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
 from .core_compute_load import compute_raw_models as compute_raw_models_core
