@@ -491,10 +491,7 @@ class Model2computeNplot(object):
             raise ValueError(f"datasetnames should be a str (dataset names), got {new_datasetname}")
         self.__datasetname = new_datasetname
 
-    @property
-    def computed_exptime_supersamp(self) -> set[tuple[Number, int]]:
-        """"""
-        return set(self.__times_values.keys())
+    
 
     def __find_times_index(self, times:NDArray[float_], exptime_bin: Number, supersamp: int) -> None|int:
         """"""
