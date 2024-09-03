@@ -396,7 +396,7 @@ def check_row4datasetname(row4datasetname: Dict[str, int]|None, datasetnames: Se
     assert min(set_row_idx) == 0
     assert max(set_row_idx) == (nb_rows - 1)
     # Create datasetnames_per_row from row4datasetname
-    datasetnames4rowidx = [[] for i_row in range(nb_rows)]
+    datasetnames4rowidx:list[list[str]] = [[] for i_row in range(nb_rows)]
     for datasetname in datasetnames:
         datasetnames4rowidx[row4datasetname[datasetname]].append(datasetname)
     return row4datasetname, datasetnames4rowidx

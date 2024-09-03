@@ -390,7 +390,7 @@ class ModelSpecification(object):
     @property             
     def add_and_remove(self) -> Dict[str, list[str]]:
         """Return a dictionary with 2 keys, 'add' and 'remove' whose values are lists of str (model component name)"""
-        return {'add': self.add, 'remove': self._remove}
+        return {'add': self.add, 'remove': self.remove}
     
     @property             
     def add(self) -> list[str]:
@@ -408,17 +408,16 @@ class ModelSpecification(object):
         if add_or_remove not in ['add', 'remove']:
             raise ValueError(f"add_or_remove should be either 'add' or 'remove', got {add_or_remove}")
     
-    def __check_model_components(self, model_components: list[str]|str|None, model_components_input_name: str):
+    def __check_model_components(self, model_components: list[str]|str|None, model_components_input_name: str) -> list[str]:
         """"""
         if model_components is None:
-            checked_model_components = []
+            checked_model_components: list[str] = []
         else:
-            checked_model_components = None
             if isinstance(model_components, str):
                 checked_model_components = [model_components]
             elif isinstance(model_components, list) and all([isinstance(model_component, str) for model_component in model_components]):
                 checked_model_components = model_components.copy()
-            if checked_model_components is None:
+            else:
                 raise ValueError(f"{model_components_input_name} should be either None, or a str (model component name) or a list of strs (list of model component names), got {model_components}")
         return checked_model_components
 
@@ -441,7 +440,7 @@ class ModelSpecification(object):
             else:
                 self.__remove.remove(model_component)
 
-    def __eq__(self, other: ModelSpecification) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Overrides the default implementation"""
         if isinstance(other, ModelSpecification):
             return (self.add == other.add) and (self.remove == other.remove) and (self.datasetname == other.datasetname)
