@@ -16,9 +16,19 @@ def get_default_model_name(seq_current_model_name: Sequence[int|str]):
 
 
 class Models2plot(object):
-    """Class to specifiy which model to plot in each row of the plot
+    """Class to specifiy which models to plot in a figure that contains of a subplots grid with N rows and M columns.
 
-    If there is several columns in the plot the same models are shown in all columns of the same row
+    At creation you can specify the number of rows and columns of the grid and if you want the same models
+    to be plots in all rows or in all columns.
+
+    For each plot in the grid this class allows to define which model(s) to plot and the way to plot them (pl_kwargs).
+    You can also want to plot different sampling and or binning 
+
+    Internally this information is stored in 3 class attribute:
+    - models2plot: a dictionary of dictionary that contains the list of "names" of the models to be plotted for each row and each columns.
+    - modelspecs: a dictionary of ModelSpecification which the class that defines how to compute a model. The keys in this dictionary are 
+        the "names" of the models used in models2plot
+    - pl_kwargs: ??
     """
 
     def __init__(self, nb_rows: int, same4allrows: bool, nb_cols:int, same4allcols: bool):
@@ -33,12 +43,12 @@ class Models2plot(object):
         # Check and set same4allrows, same4allcols
         if not(isinstance(same4allrows, bool)):
             raise TypeError(f"same4allrows should be a bool, got {same4allrows}")
-        if (self.nb_rows == 1) and not(same4allrows):
+        if (self.nb_rows == 1) and not(same4allrows):  # If there is just one row, than same4allrows is automatically set to True to have a consistent behavior in this case 
             same4allrows = True
         self.__same4allrows: bool = same4allrows
         if not(isinstance(same4allcols, bool)):
             raise TypeError(f"same4allcols should be a bool, got {same4allcols}")
-        if (self.nb_cols == 1) and not(same4allcols):
+        if (self.nb_cols == 1) and not(same4allcols):  # If there is just one column, than same4allcols is automatically set to True to have a consistent behavior in this case
             same4allcols = True
         self.__same4allcols: bool = same4allcols
         # Init models2plot
@@ -329,7 +339,10 @@ class Models2plotiTS(Models2plot):
 
 
 class ModelSpecification(object):
-    """Class that defines the specification for a model computation in terms of components to add and or remove"""
+    """Class that defines the specification for a model computation in terms of base model components to add and or remove
+
+
+    """
 
     def __init__(self, datasetname: str|None=None, add: list[str]|str|None=None, remove: list[str]|str|None=None, model2computenplot: Model2computeNplot|None=None):
         """"""
