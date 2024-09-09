@@ -153,7 +153,7 @@ def check_spec_by_column_or_row(spec_user, l_type_spec, spec_def, l_row_name=Non
                         if any([isinstance(spec_user[top_key][bottom_key], type_i) for type_i in l_type_spec]):
                             spec[top_key][bottom_key] = spec_user[top_key][bottom_key]
                         else:
-                            raise ValueError(f"The type of the content of top_key '{top_key}' and bottom_key '{bottom_key}' ({type(spec[top_key][bottom_key])}) is not within the valid types ({l_type_spec}).")
+                            raise ValueError(f"The type of the content of top_key '{top_key}' and bottom_key '{bottom_key}' ({type(spec_user[top_key][bottom_key])}) is not within the valid types ({l_type_spec}).")
     else:
         raise ValueError(f"spec_user should be a None or a {l_type_spec} or a dict with keys in {possible_top_keys}."
                          )

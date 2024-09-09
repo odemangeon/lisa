@@ -51,7 +51,7 @@ load_outputs = True
 save_plot = False
 save_binned_phasefolded_data = False
 
-split_GP_computation=1000,
+split_GP_computation = 1000
 
 planets = None  # e.g. ['b', ]
 periods = None  # e.g. [46., ]
