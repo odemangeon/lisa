@@ -1,5 +1,5 @@
 from __future__ import annotations
-from collections import Sequence
+from collections import Sequence, OrderedDict
 from typing import Dict
 from loguru import logger
 from numpy.typing import NDArray
@@ -17,47 +17,74 @@ def get_default_model_name(seq_current_model_name: Sequence[int|str]):
     return name
 
 
-class ModelBinning(object):
-    """Class to set the parameters for the binning of a model
+class DataBinning(object):
+    """Class to set the parameters for the binning
+    
+    It defines the exposure time and the binning method
+    """
+    def __init__(self, exptime:float|int|None=None, method:str|None=None):
+        if exptime is None:
+            exptime = 0
+        if method is None:
+            method = 'mean'
+        self.__set_exptime(exptime=exptime)
+        self.__set_method(method=method)
+
+    @property
+    def exptime(self) -> float|int:
+        return self.__exptime
+
+    def __set_exptime(self, exptime:float|int):
+        if not(exptime >= 0):
+            raise ValueError(f"exptime should be a number superior or equal to 0")
+        self.__exptime = exptime
+
+    @property
+    def method(self) -> str:
+        return self.__method
+    
+    def __set_method(self, method:str):
+        if not(isinstance(method, str)):
+            raise TypeError(f"method should be str, got {type(method)}")
+        self.__method = method
+
+class ModelBinning(DataBinning):
+    """Class to set the parameters for the binning
     
     It is define by an exposure time and a supersampling factor
     """
 
-    def __init__(self, exptime:Number|None=None, supersampling:int|None=None):
+    def __init__(self, exptime:float|int|None=None, supersampling:int|None=None):
         if exptime is None:
             exptime = 0
         if supersampling is None:
             supersampling = 1
-        self.__set_binning(exptime=exptime, supersampling=supersampling)
-
-    @property
-    def exptime(self) -> Number:
-        return self.__exptime
+        self.__set_exptime(exptime=exptime)
+        self.__set_supersampling(exptime=self.exptime, supersampling=supersampling)
 
     @property
     def supersampling(self) -> int:
         return self.__supersampling
 
-    def __set_binning(self, exptime: Number, supersampling:int):
+    def __set_supersampling(self, exptime:float|int, supersampling:int):
         if not(exptime >= 0):
             raise ValueError(f"exptime should be a number superior or equal to 0")
         if not(supersampling >= 1) or not(isinstance(supersampling, int)):
             raise ValueError(f"supersampling should be an int superior or equal to 1")
-        if (equal(exptime, 0) and not(equal(supersampling, 1))):
-            raise ValueError(f"if supersampling is > 1 then exptime should not be 0.")
-        self.__exptime = exptime
+        if ((exptime > 0.) and not(equal(supersampling, 1))) or ((supersampling > 1) and equal(exptime, 0)):
+            raise ValueError(f"if supersampling is > 1 then exptime should not be 0 and vice versa.")
         self.__supersampling = int(supersampling)
 
 
-class ModelExpression(object):
-    """Class that defines the expression of the model to plot in terms of basic operations and base components
+class Expression(object):
+    """Class that defines the expression of the model or data to plot in terms of basic operations and base components
     """
     
     def __init__(self, expression:str):
         if not(isinstance(expression, str)):
             raise TypeError(f"expression should be a string with the expression to be used to compute the model")
         self.__expression = expression
-        self.__terms = []
+        self.__terms:list[str] = []
         
         self._parse_expression()
     
@@ -86,127 +113,18 @@ class ModelExpression(object):
     def expression(self):
         # Return a list of unique terms (removing duplicates)
         return self.__expression
+    
+    @property
+    def expression_err(self):
+        # Return a list of unique terms (removing duplicates)
+        return f"sqrt({[f'{component_i}**2' for component_i in self.components].join(' + ')})"
 
     def __eq__(self, other: object) -> bool:
         """Overrides the default implementation"""
-        if isinstance(other, ModelExpression):
+        if isinstance(other, Expression):
             return self.expression == other.expression
         else:
             return False
-
-# class ModelDescription(object):
-#     """Class that defines the components of a model in terms of base model components to add and or remove
-#     """
-
-#     def __init__(self, description:str):
-#         """"""
-        
-#         # Init add and remove
-#         self.__add: list[str] = []
-#         self.__remove: list[str] = []
-#         # Check add and remove inputs and store them into self.__add and self.__remove
-#         for add_or_remove, input in zip(["add", "remove"], [add, remove]):
-#             self.add_model_components(model_components=input, add_or_remove=add_or_remove)
-    
-#     def __eq__(self, other:ModelSpecification) -> bool:
-#         """Overrides the default implementation"""
-#         if isinstance(other, ModelSpecification):
-#             return (self.__add == other.add) and (self.__remove == other.remove) and (self.datasetname == other.datasetname)
-#         else:
-#             return False
-    
-#     def __repr__(self):
-#         """"""
-#         return f"{self.__class__.__name__}(datasetname={self.datasetname}, add={self.add}, remove={self.remove}, model2computenplot={self.model2computenplot})"
-
-#     @property
-#     def model2computenplot(self):
-#         """"""
-#         return self.__model2computenplot
-    
-#     @model2computenplot.setter
-#     def model2computenplot(self, new_model2computenplot):
-#         """"""
-#         if self.__model2computenplot is not None:
-#             raise ValueError("model2computenplot has already been set. You cannot change it.")
-#         if not(isinstance(new_model2computenplot, Model2computeNplot)):
-#             raise TypeError(f"model2computenplot should a Model2computeNplot instance, got {type(new_model2computenplot)}")
-#         return self.__model2computenplot
-
-#     @property
-#     def datasetname(self) -> None|str:
-#         """Name of the dataset to be used to compute the model"""
-#         return self.__datasetname
-    
-#     @datasetname.setter
-#     def datasetname(self, new_datasetname: None|str):
-#         """Name of the dataset to be used to compute the model"""
-#         if self.model2computenplot is not None:
-#             if self.model2computenplot.model_stored:
-#                 raise ValueError(f"A model has already been stored. You can no longer change the datasetname")
-#         if (new_datasetname is not None) and not(isinstance(new_datasetname, str)):
-#             raise TypeError(f"datasetname should be None or a str")
-#         self.__datasetname = new_datasetname
-    
-#     @property             
-#     def add_and_remove(self) -> Dict[str, list[str]]:
-#         """Return a dictionary with 2 keys, 'add' and 'remove' whose values are lists of str (model component name)"""
-#         return {'add': self.add, 'remove': self.remove}
-    
-#     @property             
-#     def add(self) -> list[str]:
-#         """Return the list of model component name to add"""
-#         return self.__add.copy()
-    
-#     @property             
-#     def remove(self) -> list[str]:
-#         """Return the list of model component name to remove"""
-#         return self.__remove.copy()
-    
-#     def __check_add_or_remove_input(self, add_or_remove: str):
-#         """"""
-#         # Check the add_or_remove
-#         if add_or_remove not in ['add', 'remove']:
-#             raise ValueError(f"add_or_remove should be either 'add' or 'remove', got {add_or_remove}")
-    
-#     def __check_model_components(self, model_components: list[str]|str|None, model_components_input_name: str) -> list[str]:
-#         """"""
-#         if model_components is None:
-#             checked_model_components: list[str] = []
-#         else:
-#             if isinstance(model_components, str):
-#                 checked_model_components = [model_components]
-#             elif isinstance(model_components, list) and all([isinstance(model_component, str) for model_component in model_components]):
-#                 checked_model_components = model_components.copy()
-#             else:
-#                 raise ValueError(f"{model_components_input_name} should be either None, or a str (model component name) or a list of strs (list of model component names), got {model_components}")
-#         return checked_model_components
-
-#     def add_model_components(self, model_components: list[str]|str, add_or_remove: str):
-#         """Add one or several model components to the list of model components to add or remove"""
-#         self.__check_add_or_remove_input(add_or_remove=add_or_remove)
-#         model_components = self.__check_model_components(model_components=model_components, model_components_input_name=f'{add_or_remove} model_components')
-#         if add_or_remove == 'add': 
-#             self.__add += model_components
-#         else:
-#             self.__remove += model_components
-
-#     def remove_model_components(self, model_components: list[str]|str, add_or_remove: str):
-#         """Remove one or several model components to the list of model components to add or remove"""
-#         self.__check_add_or_remove_input(add_or_remove=add_or_remove)
-#         model_components = self.__check_model_components(model_components=model_components, model_components_input_name=f'{add_or_remove} model_components')
-#         for model_component in model_components:
-#             if add_or_remove == 'add':
-#                 self.__add.remove(model_component)
-#             else:
-#                 self.__remove.remove(model_component)
-
-#     def __eq__(self, other: object) -> bool:
-#         """Overrides the default implementation"""
-#         if isinstance(other, ModelSpecification):
-#             return (self.add == other.add) and (self.remove == other.remove) and (self.datasetname == other.datasetname)
-#         else:
-#             return False
 
 
 class Model2plot(object):
@@ -221,13 +139,17 @@ class Model2plot(object):
     - its plot kwargs
     """
     
-    def __init__(self, expression:str, times:NDArray[float_]|None=None, exptime:Number|None=None, supersampling:int|None=None, 
-                 datasetname:str|None=None, pl_kwargs:Dict|None=None):
-        self.__expression:ModelExpression = ModelExpression(expression=expression)
+    def __init__(self, expression:str, times:NDArray[float_]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
+                 datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+        self.__expression:Expression = Expression(expression=expression)
+        self.__check_expression_4_data(expression=self.expression)
         self.__times:NDArray[float_]|None = None
         if times is not None:
             self.set_times(times=times)
-        self.__binning:ModelBinning = ModelBinning(exptime=exptime, supersampling=supersampling)
+        self.__npt:int|None = None  
+        if npt is not None:
+            self.set_npt(npt=npt)
+        self.__init_Binning(exptime=exptime, supersampling=supersampling)
         self.__datasetname:str|None = None
         if datasetname is not None:
             self.set_datasetname(datasetname=datasetname)
@@ -237,12 +159,22 @@ class Model2plot(object):
                 raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
             else:
                 self.pl_kwargs.update(pl_kwargs)
-
+        self.__pl_kwargs_err: Dict = {}
+        if pl_kwargs_error is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs_error.update(pl_kwargs_error)
+        self.show_error = show_error
 
     @property
-    def expression(self) -> ModelExpression:
+    def expression(self) -> Expression:
         # Return a list of unique terms (removing duplicates)
         return self.__expression
+    
+    def __check_expression_4_data(self, expression:Expression):
+        if "data" in expression.components:
+            raise ValueError("expression cannot involve data")
 
     @property
     def times(self) -> NDArray[float_]|None:
@@ -254,19 +186,30 @@ class Model2plot(object):
         self.__times = copy(times)
 
     @property
-    def binning(self) -> ModelBinning:
-        return self.__binning
+    def npt(self) -> int|None:
+        return self.__npt
+    
+    def set_npt(self, npt:int):
+        if self.times is not None:
+            raise ValueError("You cannot set both times and npt.")
+        if not(isinstance(npt, int)) or not(npt >1):
+            raise TypeError(f"npt should be int > 1, got {type(npt)}.")
+        self.__npt = npt
+
+    def __init_Binning(self, exptime:float|int|None, supersampling:int|None):
+        self.__modelbinning = ModelBinning(exptime=exptime, supersampling=supersampling)
+
+    @property
+    def binning(self):
+        return self.__modelbinning
     
     @property
-    def exptime(self) -> Number:
-        return self.__binning.exptime
+    def exptime(self) -> float|int:
+        return self.binning.exptime
     
     @property
     def supersampling(self) -> int:
-        return self.__binning.supersampling
-
-    def set_binning(self, exptime:Number, supersampling:int):
-        self.__binning = ModelBinning(exptime=exptime, supersampling=supersampling)
+        return self.binning.supersampling
 
     @property
     def datasetname(self) -> str|None:
@@ -280,19 +223,104 @@ class Model2plot(object):
     @property
     def pl_kwargs(self) -> Dict:
         return self.__pl_kwargs
-   
+    
+    @property
+    def pl_kwargs_error(self) -> Dict:
+        return self.__pl_kwargs_err
+    
+    @property
+    def show_error(self) -> bool:
+        return self.__show_error
+    
+    @show_error.setter
+    def show_error(self, show_error:bool):
+        if not(isinstance(show_error, bool)):
+            raise TypeError(f"show_error should be a bool, got {type(show_error)}")
+        self.__show_error = show_error
+    
+
+class Data2plot(Model2plot):
+
+    def __init__(self, expression:str, exptime:float|int|None=None, method:str|None=None,
+                 datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+        self.__expression:Expression = Expression(expression=expression)
+        self.__check_expression_4_data(expression=self.expression)
+        self.__init_Binning(exptime=exptime, method=method)
+        self.__datasetname:str|None = None
+        if datasetname is not None:
+            self.set_datasetname(datasetname=datasetname)
+        self.__pl_kwargs: Dict = {}
+        if pl_kwargs is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs.update(pl_kwargs)
+        self.__pl_kwargs_err: Dict = {}
+        if pl_kwargs_error is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs_error.update(pl_kwargs_error)
+        self.show_error = show_error
+
+    def __check_expression_4_data(self, expression:Expression):
+        if "data" not in expression.components:
+            raise ValueError("expression needs to involve data")
+        
+    def __init_Binning(self, exptime:float|int|None, method:str|None):
+        self.__databinning = DataBinning(exptime=exptime, method=method)
+
+    @property
+    def binning(self):
+        return self.__databinning
+    
+    @property
+    def exptime(self) -> float|int:
+        return self.binning.exptime
+    
+    @property
+    def method(self) -> str:
+        return self.binning.method
+    
+
+class MultiDataBin2plot(Data2plot):
+
+    def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+        self.__l_data2plot = [Data2plot(expression=expression_i, exptime=exptime, method=method, datasetname=datasetname_i, 
+                                        pl_kwargs=None, pl_kwargs_error=None, show_error=False)
+                              for expression_i, datasetname_i in l_expression_and_datasetname]
+        self.__init_Binning(exptime=exptime, method=method)
+        self.__pl_kwargs: Dict = {}
+        if pl_kwargs is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs.update(pl_kwargs)
+        self.__pl_kwargs_err: Dict = {}
+        if pl_kwargs_error is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs_error.update(pl_kwargs_error)
+        self.show_error = show_error
+    
+    @property
+    def l_data2plot(self):
+        return self.__l_data2plot
+
 class ComputedModel(object):
     """Class to store computed models values: expression, binning, datasetname, times, values, errors
     """
-    def __init__(self, expression:str, datasetname:str, exptime:Number, supersampling:int,
+    def __init__(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
                  times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_]):
-        self.__expression:ModelExpression = ModelExpression(expression=expression)
+        self.__expression:Expression = Expression(expression=expression)
         self.__set_datasetname(datasetname=datasetname)
         self.__binning:ModelBinning = ModelBinning(exptime=exptime, supersampling=supersampling)
         self.__set_computed_model(times=times, values=values, errors=errors)
 
     @property
-    def expression(self) -> ModelExpression:
+    def expression(self) -> Expression:
         # Return a list of unique terms (removing duplicates)
         return self.__expression
     
@@ -310,7 +338,7 @@ class ComputedModel(object):
         return self.__binning
     
     @property
-    def exptime(self) -> Number:
+    def exptime(self) -> float|int:
         return self.__binning.exptime
     
     @property
@@ -369,7 +397,7 @@ class ComputedModels_Database(object):
     def stored_models(self) -> list[ComputedModel]:
         return self.__stored_models
 
-    def find_computed_model(self, expression:str, datasetname:str, exptime:Number, supersampling:int,
+    def find_computed_model(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
                             times:NDArray[float_]) -> tuple[ComputedModel|None, int|None, NDArray[float_]|None]:
         model_found:ComputedModel|None = None
         times_found:NDArray[float_]|None = None
@@ -392,7 +420,7 @@ class ComputedModels_Database(object):
         else:
             return None, None, times_found
     
-    def store_computed_model(self, expression:str, datasetname:str, exptime:Number, supersampling:int,
+    def store_computed_model(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
                              times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_],
                              overwrite: bool=False):
         """Set the computed model (times and values).
@@ -480,19 +508,20 @@ class ComputedModels_Database(object):
     
     
 class PlotsDefinition(object):
-    """Class to specifiy which models to plot in which axis of figure that contains of a subplots grid with N rows and M columns.
+    """Class to specifiy which models to plot in which axis of a figure that contains of a subplots grid with N rows and M columns.
 
     At creation you can specify the number of rows and columns of the grid and if you want the same models
     to be plots in all rows or in all columns.
 
-    For each plot in the grid this class allows to define which model(s) to plot and the way to plot them (pl_kwargs).
-    You can also want to plot different sampling and or binning 
+    For each axis in the grid this class allows to define which model(s) to plot, the way to plot them (pl_kwargs),
+    and the x and y limits for the axis.
 
     Internally this information is stored in 3 class attribute:
-    - models2plot: a dictionary of dictionary that contains the list of "names" of the models to be plotted for each row and each columns.
-    - modelspecs: a dictionary of ModelSpecification which the class that defines how to compute a model. The keys in this dictionary are 
-        the "names" of the models used in models2plot
-    - pl_kwargs: ??
+    - grid: a tuple of tuple of lists of name such that grid[i_row][i_col] gives the list of models names that you want to plot in the
+        axis located at row i_row and at column i_col.
+    - models: a dictionary of Model2plot that match the names used in grid with a model instance.
+    - lims: a tuple of tuple of dict of tuple of float such that lims[i_row][i_col]['x'] give the xlims 
+        and lims[i_row][i_col]['y'] give the ylims
     """
 
     def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
@@ -521,9 +550,11 @@ class PlotsDefinition(object):
         if self.same4allcols:
             nb_cols = 1
         # Init grid
-        self.__grid:tuple[tuple[list[str|int], ...], ...] = tuple([tuple([[] for _ in range(nb_cols)]) for _ in range(nb_rows)])
+        self.__grid:tuple[tuple[list[str], ...], ...] = tuple([tuple([[] for _ in range(nb_cols)]) for _ in range(nb_rows)])
+        # Init lims
+        self.__lims:tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...] = tuple([tuple([{"x":(None, None),"y":(None, None)} for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init models2plot_database
-        self.__models: Dict[str|int, Model2plot] = {}
+        self.__things2plot: Dict[str, Model2plot|Data2plot|MultiDataBin2plot] = {}
 
     def __repr__(self):
         return f"{self.__grid}"
@@ -549,65 +580,39 @@ class PlotsDefinition(object):
         return self.__same4allcols
     
     @property
-    def grid(self) -> tuple[tuple[list[str|int], ...], ...]:
+    def grid(self) -> tuple[tuple[list[str], ...], ...]:
         """Grid (in the form of a tuple of tuple) with the list of what to plot in each element of the grid"""
         return deepcopy(self.__grid)
+    
+    @property
+    def lims(self) -> tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...]:
+        """Grid (in the form of a tuple of tuple) with a dict with two keys 'x' and 'y' whose values are tuples which give the x and y limits for the axis."""
+        return deepcopy(self.__lims)
 
     @property
-    def models(self) -> Dict[str|int, Model2plot]:
-        """Dictionary providing the conversion from names to Model2plot instance"""
-        return self.__models.copy()
+    def things2plot(self) -> Dict[str, Model2plot|Data2plot|MultiDataBin2plot]:
+        """Dictionary providing the conversion from names to Model2plot, Data2plot or MultiDataBin2plot instances"""
+        return self.__things2plot.copy()
     
-    # def __check_idx(self, row_or_col:str, idx: int|None, allow_idx_w_same4all=False) -> tuple[int|None, int, bool]:
-    #     """"""
-    #     if row_or_col not in ['col', 'row']:
-    #         raise ValueError(f"row_or_col should be either 'row' or 'col', you provided {row_or_col}.")
-    #     same4all = self.same4allrows if row_or_col == 'row' else self.same4allcols
-    #     nb = self.nb_rows if row_or_col == 'row' else self.nb_cols
-    #     if (idx is None):
-    #         if nb == 1:
-    #             idx = 0
-    #         else:
-    #             if not(same4all):
-    #                 raise ValueError(f"{row_or_col}_idx should not be None when same4all{row_or_col}s is False.")
-    #     else:
-    #         if same4all and not(allow_idx_w_same4all):
-    #             raise ValueError(f"When same4all{row_or_col}s is True and allow_idx_w_same4all if False, you should not provide a {row_or_col}_idx. You provided {row_or_col}_idx={idx}")
-    #         if not(isinstance(idx, int)):
-    #             raise TypeError(f"{row_or_col}_idx should be an int")
-    #         if idx < 0:
-    #             raise ValueError(f"{row_or_col}_idx should not be negative")
-    #         if idx >= nb:
-    #             raise ValueError(f"{row_or_col}_idx is out of range for nb_{row_or_col}={nb}")
-    #     return idx, nb, same4all
-    
-    def __get_l_i(self, idx, roworcol):
+    def __get_l_i(self, idx:int|None, roworcol:str) -> list[int]:
         """Return a list of idx depending on idx and colorrow"""
         if roworcol == 'row':
             size = len(self.grid)
         elif roworcol == 'col':
             size = len(self.grid[0])
         else:
-            raise ValueError(f"roworcol should be in ['col', 'row'], got {colorrow}")
+            raise ValueError(f"roworcol should be in ['col', 'row'], got {roworcol}")
         # If you don't provide i_row it means that you want to add to all rows
         if idx is None:
-            l_idx = range(size)
+            l_idx = list(range(size))
         else:
             l_idx = [idx, ]
         return l_idx
 
-    # def __find_modelspec(self, modelspec: ModelSpecification):
-    #     name_found = None
-    #     for name_i, modelspec_i in self.name2modelspec.items():
-    #         if modelspec == modelspec_i:
-    #             name_found = name_i
-    #             break
-    #     return name_found
-
-    def addexistingtogrid(self, i_row:int|None=None, i_col:int|None=None, name:str):
+    def add_existing_to_grid(self, name:str, i_row:int|None=None, i_col:int|None=None):
         """Add a model that is already in the models2plot in the grid."""
         # Check that name is in models
-        if not(name in self.models):
+        if not(name in self.things2plot):
             raise ValueError(f"There is no model2plot with name {name}.")
         # Make sure that i_row and i_col are correct
         if i_row is None:
@@ -627,67 +632,93 @@ class PlotsDefinition(object):
             if self.same4allcols and (i_col != 0):
                 raise ValueError("same4allcols is True, so you don't need to provide i_col. If you do it must be 0.")
         # Add the name to the grid
-        self.grid[i_row][i_col].append(name)
+        self.__grid[i_row][i_col].append(name)
 
     def removefromgrid(self, i_row:int, i_col:int, name:str):
         """Remove a model from the grid"""
-        self.grid[i_row][i_col].remove(name)
+        self.__grid[i_row][i_col].remove(name)
         
-    def addtomodels(self, expression:str, name:str|None=None, overwrite:bool=False, **kwargs_model2plot):
-        """Add a model to plot in the grid.
-
-        This function can work 
-        
-        Arguments
-        ---------
-        modelspec   :
+    def add_modelordata2plot(self, expression:str, name:str|None=None, overwrite:bool=False, **kwargs) -> str:
+        """Add a Model2plot or Data2plot to things2plot
         """
         # Check if name already exists
-        if (name is not None) and (name in self.models) and not(overwrite):
+        if (name is not None) and (name in self.things2plot) and not(overwrite):
             raise ValueError(f"There is already a model2plot with this name ({name}). Please choose another name")
-        elif (name is not None) and (name in self.models) and not(overwrite):
+        elif (name is not None) and (name in self.things2plot) and not(overwrite):
             logger.info(f"There is already a model2plot with this name ({name}). It will be overwritten")
         elif name is None:
             basename = expression
-            if ('datasetname' in kwargs_model2plot) and (kwargs_model2plot['datasetname'])
-                basename += f"_{kwargs_model2plot['datasetname']}" 
+            if ('datasetname' in kwargs) and (kwargs['datasetname']):
+                basename += f"_{kwargs['datasetname']}" 
             ii = 0
             name = f"{basename}"
-            while name in self.models:
+            while name in self.things2plot:
                 ii += 1
                 name = f"{basename}_{ii}"
-        # Add Model2plot instance to models
-        self.models[name] = Model2plot(expression=expression, **kwargs_model2plot)
+        # Add instance to models
+        expression_instance = Expression(expression=expression)
+        if "data" in expression_instance.components:
+            self.__things2plot[name] = Data2plot(expression=expression, **kwargs)
+        else:
+            self.__things2plot[name] = Model2plot(expression=expression, **kwargs)
         return name
     
-    def getmodel(self, name:str) -> Model2plot|None:
+    def add_multidatab2plot(self, l_expression_and_datasetname:list[tuple[str, str]], name:str|None=None, overwrite:bool=False, **kwargs) -> str:
+        """Add a MultiDataBin2plot to things2plot
+        """
+        # Check if name already exists
+        if (name is not None) and (name in self.things2plot) and not(overwrite):
+            raise ValueError(f"There is already a model2plot with this name ({name}). Please choose another name")
+        elif (name is not None) and (name in self.things2plot) and not(overwrite):
+            logger.info(f"There is already a model2plot with this name ({name}). It will be overwritten")
+        elif name is None:
+            basename = "multidatabin"
+            ii = 0
+            name = f"{basename}"
+            while name in self.things2plot:
+                ii += 1
+                name = f"{basename}_{ii}"
+        # Add instance to models
+        self.__things2plot[name] = MultiDataBin2plot(l_expression_and_datasetname=l_expression_and_datasetname, **kwargs)
+        return name
+    
+    def getthing2plot(self, name:str) -> Model2plot|Data2plot|MultiDataBin2plot:
         """Get a Model2plot from models"""
         # Check that name is in models
-        if not(name in self.models):
-            raise ValueError(f"There is no model2plot with name {name}.")
-        return self.models[name]
+        if not(name in self.things2plot):
+            raise ValueError(f"There is nothing to plot with name {name}.")
+        return self.things2plot[name]
     
-    def addtogrid(self, i_row:int|None=None, i_col:int|None=None, name:str|None=None, expression:str|None=None, overwrite:bool=False, **kwargs_model2plot):
+    def add_modelordata_to_grid(self, expression:str, i_row:int|None=None, i_col:int|None=None, name:str|None=None, overwrite:bool=False, **kwargs):
         """Add a model that is already in the grid.
         
         This function is a wrapper around addtogrid and addtomodels for the user convenience.
         There is two use cases:
-        1. Adding a model which already exists in models to the grid (exactly like addexistingtogrid)
         2. Adding a model to models and to grid in one function call
         """
         # If you don't provide i_row it means that you want to add to all rows
         l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
         l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
         # Add
-        if (name is not None) and (expression is None):  # Use case 1
-            for i_row in l_i_rows:
-                for i_col in l_i_cols:
-                    self.addexistingtogrid(i_row=i_row, i_col=i_col, name=name)
-        else:  # Use case 2
-            name = self.addtomodels(expression=expression, name=name, overwrite=overwrite, **kwargs_model2plot)
-            for i_row in l_i_rows:
-                for i_col in l_i_cols:
-                    self.addexistingtogrid(i_row=i_row, i_col=i_col, name=name)
+        name = self.add_modelordata2plot(expression=expression, name=name, overwrite=overwrite, **kwargs)
+        for i_row in l_i_rows:
+            for i_col in l_i_cols:
+                self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
+
+    def add_multidatabin_to_grid(self, l_expression_and_datasetname:list[tuple[str, str]], i_row:int|None=None, i_col:int|None=None, name:str|None=None, overwrite:bool=False, **kwargs):
+        """Add a model that is already in the grid.
+        
+        This function is a wrapper around addtogrid and addtomodels for the user convenience.
+        There is two use cases:
+        2. Adding a model to models and to grid in one function call
+        """
+        # If you don't provide i_row it means that you want to add to all rows
+        l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
+        l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
+        name = self.add_multidatab2plot(l_expression_and_datasetname=l_expression_and_datasetname, name=name, overwrite=overwrite, **kwargs)
+        for i_row in l_i_rows:
+            for i_col in l_i_cols:
+                self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
 
     def setdatasetname(self, datasetname:str, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
         """Set the datasetname for the models2plot that do not have a dataset"""
@@ -705,18 +736,61 @@ class PlotsDefinition(object):
                 elif isinstance(name, list) and all([isinstance(name_i, str) for name_i in name]):
                     l_name = copy(name)
                 else:
-                    raise TypeError(f"name should be either None, or a str or a list of str")
+                    raise TypeError(f"name should be either None, or a str or a list of str, got {name}")
                 for name in l_name:
                     if name not in self.grid[i_row][i_col]:
                         logger.info(f"No model with name {name} in the grid at row {i_row} and col {i_col}")
                     else:
-                        model2plot = self.getmodel(name=name)
-                    if model2plot.datasetname is None:
-                        model2plot.set_datasetname(datasetname=datasetname)
-                    else:
-                        logger.info(f"model2plot {name} (found in the grid at row {i_row} and col {i_col}) already as a datasetname ({model2plot.datasetname}) it will not be changed")
-                        
+                        thing2plot = self.getthing2plot(name=name)
+                        if isinstance(thing2plot, MultiDataBin2plot):
+                            pass
+                        else:
+                            if thing2plot.datasetname is None:
+                                thing2plot.set_datasetname(datasetname=datasetname)
+                            else:
+                                logger.info(f"{name} (found in the grid at row {i_row} and col {i_col}) already as a datasetname ({thing2plot.datasetname}) it will not be changed")
+        
+    def get_axis_models(self, i_row:int, i_col:int) -> OrderedDict[str,Model2plot]:
+        """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
+        """
+        models4axis = OrderedDict()
+        for name in self.grid[i_row][i_col]:
+            models4axis[name] = self.things2plot[name]
+        return models4axis
+    
+    def get_axis_xlims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
+        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
+        return self.lims[i_row][i_col]['x']
+    
+    def get_axis_ylims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
+        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
+        return self.lims[i_row][i_col]['y']
+        
+    # def get_all_modelnames(self) -> list[str]:
+    #     """Return the list of all the names of the Model2plot instances used in the grid."""
+    #     l_i_rows = self.__get_l_i(roworcol='row')
+    #     l_i_cols = self.__get_l_i(roworcol='col')
+    #     model_names = []
+    #     for i_row in l_i_rows:
+    #         for i_col in l_i_cols:
+    #             model_names.extend(self.grid[i_row][i_col])
+    #     return list(set(model_names))
 
+    def get_axis_datasetnames(self, i_row:int, i_col:int) -> list[str|None]:
+        """Return the list of datasetnames used for one axis of the grid designated by i_row and i_col."""
+        models_axis = self.get_axis_models(i_row=i_row, i_col=i_col)
+        datasetnames = []
+        for model2plot_i in models_axis.values():
+            datasetnames.append(model2plot_i.datasetname)
+        return list(set(datasetnames))
+
+    # def get_all_datasetnames(self) -> list[str]:
+    #     """Return the list of all datasetnames of the Model2plot instances used in the grid."""
+    #     model_names = self.get_all_modelnames()
+    #     datasetnames = []
+    #     for name in model_names:
+    #         datasetnames.append(self.models[name].datasetname)
+    #     return list(set(datasetnames))
         
         # if name_found:
         #     if name is None:
@@ -855,74 +929,74 @@ class PlotsDefinition(object):
     #     return {name_i: self.name2modelspec[name_i] for name_i in self.__models2plot[checked_idx['row']][checked_idx['col']]}
     
 
-def check_Models2plot(models2plot: Models2plot|None, datasetnames4rowidx: Sequence[Sequence[str]], l_model_1_per_row: Sequence[str]) -> Models2plot:
-    """
+# def check_Models2plot(models2plot: Models2plot|None, datasetnames4rowidx: Sequence[Sequence[str]], l_model_1_per_row: Sequence[str]) -> Models2plot:
+#     """
 
-    Arguments
-    ---------
-    datasetnames4rowidx : Output of check_row4datasetname
-    l_model_1_per_row   : List of the models which by default should be plotted just once per row, instead of for each dataset.
+#     Arguments
+#     ---------
+#     datasetnames4rowidx : Output of check_row4datasetname
+#     l_model_1_per_row   : List of the models which by default should be plotted just once per row, instead of for each dataset.
 
-    Return
-    ------
-    models2plot : The only difference is if it the models2plot input there was model with their datasetname attribute to None
-    """
-    # models2plot_user = models2plot if datasetnames4model4row is not None else {}
-    if not isinstance(models2plot, Models2plot):
-        raise ValueError(f"models2plot should be an instance of Models2plot, got {type(models2plot)}.")
-    # Check that all the row mentioned is user input exits
-    if models2plot.nb_rows != len(datasetnames4rowidx):
-        raise ValueError(f"The number of rows in models2plot ({models2plot.nb_rows}) doesn't match the one in datasetnames4rowidx ({len(datasetnames4rowidx)})")
-    # For each row
-    for i_row in range(models2plot.nb_rows):
-        # For each model of each model is datasetname attribute is specified.
-        initial_set_models = models2plot.get_models_2_plot(row_idx=i_row)
-        for name_i, modelspec_i in initial_set_models.items():
-            if modelspec_i.datasetname is None:
-                modelspec_i.datasetname = datasetnames4rowidx[i_row][0]
-                if any([model_name_i not in l_model_1_per_row for model_name_i in modelspec_i.add + modelspec_i.remove]):
-                    set_models_of_currentmodel = models2plot.get_model2show(row_idx=i_row, model=model_i.model)
-                    datasetname_4_currentmodel = [model_j.datasetname for model_j in set_models_of_currentmodel]
-                    for datasetname_i in datasetnames4rowidx[i_row][1:]:
-                        if datasetname_i not in datasetname_4_currentmodel:
-                            models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
-    return models2plot
-
-
-class PlotsDefinitionTS(PlotsDefinition):
-    """Class to specifiy which model to plot in each row of the plot for the TS plots"""
-
-    def __init__(self, nb_rows: int):
-        """"""
-        super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
+#     Return
+#     ------
+#     models2plot : The only difference is if it the models2plot input there was model with their datasetname attribute to None
+#     """
+#     # models2plot_user = models2plot if datasetnames4model4row is not None else {}
+#     if not isinstance(models2plot, Models2plot):
+#         raise ValueError(f"models2plot should be an instance of Models2plot, got {type(models2plot)}.")
+#     # Check that all the row mentioned is user input exits
+#     if models2plot.nb_rows != len(datasetnames4rowidx):
+#         raise ValueError(f"The number of rows in models2plot ({models2plot.nb_rows}) doesn't match the one in datasetnames4rowidx ({len(datasetnames4rowidx)})")
+#     # For each row
+#     for i_row in range(models2plot.nb_rows):
+#         # For each model of each model is datasetname attribute is specified.
+#         initial_set_models = models2plot.get_models_2_plot(row_idx=i_row)
+#         for name_i, modelspec_i in initial_set_models.items():
+#             if modelspec_i.datasetname is None:
+#                 modelspec_i.datasetname = datasetnames4rowidx[i_row][0]
+#                 if any([model_name_i not in l_model_1_per_row for model_name_i in modelspec_i.add + modelspec_i.remove]):
+#                     set_models_of_currentmodel = models2plot.get_model2show(row_idx=i_row, model=model_i.model)
+#                     datasetname_4_currentmodel = [model_j.datasetname for model_j in set_models_of_currentmodel]
+#                     for datasetname_i in datasetnames4rowidx[i_row][1:]:
+#                         if datasetname_i not in datasetname_4_currentmodel:
+#                             models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
+#     return models2plot
 
 
-class PlotsDefinitioniTS(PlotsDefinition):
-    """Class to specifiy which model to plot in each row of the plot for the iTS plots"""
+# class PlotsDefinitionTS(PlotsDefinition):
+#     """Class to specifiy which model to plot in each row of the plot for the TS plots"""
 
-    def __init__(self, l_iterative_models_2_remove: list[Sequence[tuple[str, ModelSpecification]]], plot_removed_in_previousrow: bool=True):
-        """"""
-        # Checking plot_removed_in_previousrow.
-        if not(isinstance(plot_removed_in_previousrow, bool)):
-            raise TypeError(f"plot_removed_in_previousrow should be a bool")
-        # Checking l_iterative_model_2_remove.
-        if not(isinstance(l_iterative_models_2_remove, list)):
-            raise TypeError(f"l_iterative_models_2_remove should be a list, got a {type(l_iterative_models_2_remove)}")
-        super(self.__cls__, self).__init__(nb_rows=len(l_iterative_models_2_remove) + 1, same4allrows=False, nb_cols=1, same4allcols=True)
-        if plot_removed_in_previousrow:
-            for i_row, seq_tuple_name_model_spec in enumerate(l_iterative_models_2_remove):
-                if not(isinstance(seq_tuple_name_model_spec, Sequence)):
-                    raise TypeError(f"l_iterative_models_2_remove should be a list of sequences. Element {i_row} is a {type(seq_tuple_name_model_spec)}")
-                for name_i, modelspec_i in seq_tuple_name_model_spec:
-                    self.add_model_2_plot(modelspec=modelspec_i, name=name_i, row_idx=i_row)
+#     def __init__(self, nb_rows: int):
+#         """"""
+#         super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
 
 
-class PlotsDefinitionPF(PlotsDefinition):
-    """Class to specifiy which model to plot in each row of the plot for the TS plots"""
+# class PlotsDefinitioniTS(PlotsDefinition):
+#     """Class to specifiy which model to plot in each row of the plot for the iTS plots"""
 
-    def __init__(self, nb_rows: int):
-        """"""
-        super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
+#     def __init__(self, l_iterative_models_2_remove: list[Sequence[tuple[str, ModelSpecification]]], plot_removed_in_previousrow: bool=True):
+#         """"""
+#         # Checking plot_removed_in_previousrow.
+#         if not(isinstance(plot_removed_in_previousrow, bool)):
+#             raise TypeError(f"plot_removed_in_previousrow should be a bool")
+#         # Checking l_iterative_model_2_remove.
+#         if not(isinstance(l_iterative_models_2_remove, list)):
+#             raise TypeError(f"l_iterative_models_2_remove should be a list, got a {type(l_iterative_models_2_remove)}")
+#         super(self.__cls__, self).__init__(nb_rows=len(l_iterative_models_2_remove) + 1, same4allrows=False, nb_cols=1, same4allcols=True)
+#         if plot_removed_in_previousrow:
+#             for i_row, seq_tuple_name_model_spec in enumerate(l_iterative_models_2_remove):
+#                 if not(isinstance(seq_tuple_name_model_spec, Sequence)):
+#                     raise TypeError(f"l_iterative_models_2_remove should be a list of sequences. Element {i_row} is a {type(seq_tuple_name_model_spec)}")
+#                 for name_i, modelspec_i in seq_tuple_name_model_spec:
+#                     self.add_model_2_plot(modelspec=modelspec_i, name=name_i, row_idx=i_row)
+
+
+# class PlotsDefinitionPF(PlotsDefinition):
+#     """Class to specifiy which model to plot in each row of the plot for the TS plots"""
+
+#     def __init__(self, nb_rows: int):
+#         """"""
+#         super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
     
 
 
