@@ -19,7 +19,7 @@ from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetnam
                    get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_data_binned_label,
                    print_rms, set_legend, AandA_full_width, default_figheight_factor
                    )
-from .core_compute_load import (load_datasets_and_models, compute_and_plot_model, get_key_compute_model,
+from .core_compute_load import (load_datasets_and_models, compute_model, get_key_compute_model,
                                 is_valid_model_available
                                 )
 from ..emcee_tools import emcee_tools as et

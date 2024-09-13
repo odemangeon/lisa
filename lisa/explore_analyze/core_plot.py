@@ -3,11 +3,12 @@ from collections import Sequence, OrderedDict
 from typing import Dict
 from loguru import logger
 from numpy.typing import NDArray
-from numpy import float_, isfinite, ndarray, equal
+from numpy import float_, isfinite, ndarray, equal, linspace, array_equal
 from numbers import Number
 from copy import deepcopy, copy
 import re
 
+from ..posterior.core.posterior import Posterior
 
 
 def get_default_model_name(seq_current_model_name: Sequence[int|str]):
@@ -23,18 +24,21 @@ class DataBinning(object):
     It defines the exposure time and the binning method
     """
     def __init__(self, exptime:float|int|None=None, method:str|None=None):
-        if exptime is None:
-            exptime = 0
-        if method is None:
-            method = 'mean'
-        self.__set_exptime(exptime=exptime)
-        self.__set_method(method=method)
+        exptime = self._default_exptime(exptime=exptime)
+        self._set_exptime(exptime=exptime)
+        method = self._default_method(method=method)
+        self._set_method(method=method)
 
     @property
     def exptime(self) -> float|int:
         return self.__exptime
 
-    def __set_exptime(self, exptime:float|int):
+    def _default_exptime(self, exptime:float|int|None=None) -> float|int:
+        if exptime is None:
+            exptime = 0
+        return exptime
+
+    def _set_exptime(self, exptime:float|int):
         if not(exptime >= 0):
             raise ValueError(f"exptime should be a number superior or equal to 0")
         self.__exptime = exptime
@@ -42,8 +46,13 @@ class DataBinning(object):
     @property
     def method(self) -> str:
         return self.__method
+
+    def _default_method(self, method:str|None=None) -> str:
+        if method is None:
+            method = 'mean'
+        return method
     
-    def __set_method(self, method:str):
+    def _set_method(self, method:str):
         if not(isinstance(method, str)):
             raise TypeError(f"method should be str, got {type(method)}")
         self.__method = method
@@ -55,18 +64,21 @@ class ModelBinning(DataBinning):
     """
 
     def __init__(self, exptime:float|int|None=None, supersampling:int|None=None):
-        if exptime is None:
-            exptime = 0
-        if supersampling is None:
-            supersampling = 1
-        self.__set_exptime(exptime=exptime)
-        self.__set_supersampling(exptime=self.exptime, supersampling=supersampling)
+        exptime = self._default_exptime(exptime=exptime)
+        self._set_exptime(exptime=exptime)
+        supersampling = self._default_supersampling(supersampling=supersampling)
+        self._set_supersampling(exptime=self.exptime, supersampling=supersampling)
 
     @property
     def supersampling(self) -> int:
         return self.__supersampling
 
-    def __set_supersampling(self, exptime:float|int, supersampling:int):
+    def _default_supersampling(self, supersampling:int|None) -> int:
+        if supersampling is None:
+            supersampling = 1
+        return supersampling
+
+    def _set_supersampling(self, exptime:float|int, supersampling:int):
         if not(exptime >= 0):
             raise ValueError(f"exptime should be a number superior or equal to 0")
         if not(supersampling >= 1) or not(isinstance(supersampling, int)):
@@ -117,7 +129,7 @@ class Expression(object):
     @property
     def expression_err(self):
         # Return a list of unique terms (removing duplicates)
-        return f"sqrt({[f'{component_i}**2' for component_i in self.components].join(' + ')})"
+        return f"sqrt({' + '.join([f'{component_i}**2' for component_i in self.components])})"
 
     def __eq__(self, other: object) -> bool:
         """Overrides the default implementation"""
@@ -141,30 +153,18 @@ class Model2plot(object):
     
     def __init__(self, expression:str, times:NDArray[float_]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
                  datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
-        self.__expression:Expression = Expression(expression=expression)
-        self.__check_expression_4_data(expression=self.expression)
+        self._init_expression(expression=expression)
+        self._check_expression_4_data(expression=self.expression)
         self.__times:NDArray[float_]|None = None
         if times is not None:
             self.set_times(times=times)
         self.__npt:int|None = None  
         if npt is not None:
             self.set_npt(npt=npt)
-        self.__init_Binning(exptime=exptime, supersampling=supersampling)
-        self.__datasetname:str|None = None
-        if datasetname is not None:
-            self.set_datasetname(datasetname=datasetname)
-        self.__pl_kwargs: Dict = {}
-        if pl_kwargs is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs.update(pl_kwargs)
-        self.__pl_kwargs_err: Dict = {}
-        if pl_kwargs_error is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs_error.update(pl_kwargs_error)
+        self._init_ModelBinning(exptime=exptime, supersampling=supersampling)
+        self._init_datasetname(datasetname=datasetname)
+        self._init_pl_kwargs(pl_kwargs=pl_kwargs)
+        self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
         self.show_error = show_error
 
     @property
@@ -172,7 +172,10 @@ class Model2plot(object):
         # Return a list of unique terms (removing duplicates)
         return self.__expression
     
-    def __check_expression_4_data(self, expression:Expression):
+    def _init_expression(self, expression:str):
+        self.__expression = Expression(expression=expression)
+            
+    def _check_expression_4_data(self, expression:Expression):
         if "data" in expression.components:
             raise ValueError("expression cannot involve data")
 
@@ -185,6 +188,21 @@ class Model2plot(object):
             raise TypeError(f"times should be numpy.ndarray of float, got {type(times)}.")
         self.__times = copy(times)
 
+    def get_times(self, post_instance:Posterior|None=None, npt_default:int=1000, extra_dt:float=0.) -> NDArray[float_]:
+        """Return the times vector define by the user or return a default one using the """
+        if self.times is not None:
+            return self.times
+        else:
+            if post_instance is None:
+                raise ValueError("You didn't specify times. To be able to compute a default time vector you need to provide post_instance !")
+            times_dataset = copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
+            if self.npt is None:
+                npt = npt_default
+            else:
+                npt = self.npt
+            return linspace(min(times_dataset) - extra_dt, max(times_dataset) + extra_dt, 
+                            npt, endpoint=True)
+            
     @property
     def npt(self) -> int|None:
         return self.__npt
@@ -196,7 +214,7 @@ class Model2plot(object):
             raise TypeError(f"npt should be int > 1, got {type(npt)}.")
         self.__npt = npt
 
-    def __init_Binning(self, exptime:float|int|None, supersampling:int|None):
+    def _init_ModelBinning(self, exptime:float|int|None, supersampling:int|None):
         self.__modelbinning = ModelBinning(exptime=exptime, supersampling=supersampling)
 
     @property
@@ -214,6 +232,11 @@ class Model2plot(object):
     @property
     def datasetname(self) -> str|None:
         return self.__datasetname
+            
+    def _init_datasetname(self, datasetname:str|None):
+        self.__datasetname:str|None = None
+        if datasetname is not None:
+            self.set_datasetname(datasetname=datasetname)
 
     def set_datasetname(self, datasetname:str):
         if not(isinstance(datasetname, str)):
@@ -223,10 +246,26 @@ class Model2plot(object):
     @property
     def pl_kwargs(self) -> Dict:
         return self.__pl_kwargs
+
+    def _init_pl_kwargs(self, pl_kwargs:dict|None):
+        self.__pl_kwargs: Dict = {}
+        if pl_kwargs is not None:
+            if not(isinstance(pl_kwargs, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
+            else:
+                self.pl_kwargs.update(pl_kwargs)
     
     @property
     def pl_kwargs_error(self) -> Dict:
         return self.__pl_kwargs_err
+    
+    def _init_pl_kwargs_err(self, pl_kwargs_error:dict|None):
+        self.__pl_kwargs_err: Dict = {}
+        if pl_kwargs_error is not None:
+            if not(isinstance(pl_kwargs_error, dict)):
+                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs_error)}")
+            else:
+                self.pl_kwargs_error.update(pl_kwargs_error)
     
     @property
     def show_error(self) -> bool:
@@ -243,31 +282,19 @@ class Data2plot(Model2plot):
 
     def __init__(self, expression:str, exptime:float|int|None=None, method:str|None=None,
                  datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
-        self.__expression:Expression = Expression(expression=expression)
-        self.__check_expression_4_data(expression=self.expression)
-        self.__init_Binning(exptime=exptime, method=method)
-        self.__datasetname:str|None = None
-        if datasetname is not None:
-            self.set_datasetname(datasetname=datasetname)
-        self.__pl_kwargs: Dict = {}
-        if pl_kwargs is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs.update(pl_kwargs)
-        self.__pl_kwargs_err: Dict = {}
-        if pl_kwargs_error is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs_error.update(pl_kwargs_error)
+        self._init_expression(expression=expression)
+        self._check_expression_4_data(expression=self.expression)
+        self._init_DataBinning(exptime=exptime, method=method)
+        self._init_datasetname(datasetname=datasetname)
+        self._init_pl_kwargs(pl_kwargs=pl_kwargs)
+        self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
         self.show_error = show_error
 
-    def __check_expression_4_data(self, expression:Expression):
+    def _check_expression_4_data(self, expression:Expression):
         if "data" not in expression.components:
             raise ValueError("expression needs to involve data")
         
-    def __init_Binning(self, exptime:float|int|None, method:str|None):
+    def _init_DataBinning(self, exptime:float|int|None, method:str|None):
         self.__databinning = DataBinning(exptime=exptime, method=method)
 
     @property
@@ -281,33 +308,31 @@ class Data2plot(Model2plot):
     @property
     def method(self) -> str:
         return self.binning.method
+
+    def get_times_dataset(self, post_instance:Posterior) -> NDArray[float_]:
+        """Return the times vector of the dataset"""
+        return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
     
 
 class MultiDataBin2plot(Data2plot):
 
     def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
                  pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
-        self.__l_data2plot = [Data2plot(expression=expression_i, exptime=exptime, method=method, datasetname=datasetname_i, 
-                                        pl_kwargs=None, pl_kwargs_error=None, show_error=False)
-                              for expression_i, datasetname_i in l_expression_and_datasetname]
-        self.__init_Binning(exptime=exptime, method=method)
-        self.__pl_kwargs: Dict = {}
-        if pl_kwargs is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs.update(pl_kwargs)
-        self.__pl_kwargs_err: Dict = {}
-        if pl_kwargs_error is not None:
-            if not(isinstance(pl_kwargs, dict)):
-                raise TypeError(f"pl_kwargs should be a dict or None, got {type(pl_kwargs)}")
-            else:
-                self.pl_kwargs_error.update(pl_kwargs_error)
+        self._init_l_data2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, method=method)
+        self._init_DataBinning(exptime=exptime, method=method)
+        self._init_pl_kwargs(pl_kwargs=pl_kwargs)
+        self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
         self.show_error = show_error
     
     @property
     def l_data2plot(self):
         return self.__l_data2plot
+
+    def _init_l_data2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None):
+        self.__l_data2plot = [Data2plot(expression=expression_i, exptime=exptime, method=method, datasetname=datasetname_i, 
+                                        pl_kwargs=None, pl_kwargs_error=None, show_error=False)
+                              for expression_i, datasetname_i in l_expression_and_datasetname]
+        
 
 class ComputedModel(object):
     """Class to store computed models values: expression, binning, datasetname, times, values, errors
@@ -403,12 +428,12 @@ class ComputedModels_Database(object):
         times_found:NDArray[float_]|None = None
         i_model_found:list[int] = []
         for ii, computed_model in enumerate(self.stored_models):
-            if all(computed_model.times == times):
+            if array_equal(computed_model.times, times):
                 times_found = computed_model.times
             if ((computed_model.expression == expression) and 
                 (computed_model.datasetname == datasetname) and 
                 (computed_model.binning == ModelBinning(exptime=exptime, supersampling=supersampling)) and
-                all(computed_model.times == times)
+                array_equal(computed_model.times, times)
                 ):
                 if model_found is not None:
                     i_model_found.append(ii)
@@ -614,25 +639,13 @@ class PlotsDefinition(object):
         # Check that name is in models
         if not(name in self.things2plot):
             raise ValueError(f"There is no model2plot with name {name}.")
+        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
-        if i_row is None:
-            if self.same4allrows:
-                i_row = 0
-            else:
-                raise ValueError("You need to provide i_row (as same4allrows is False)")
-        else:
-            if self.same4allrows and (i_row != 0):
-                raise ValueError("same4allrows is True, so you don't need to provide i_row. If you do it must be 0.")
-        if i_col is None:
-            if self.same4allcols:
-                i_col = 0
-            else:
-                raise ValueError("You need to provide i_col (as same4allcols is False)")
-        else:
-            if self.same4allcols and (i_col != 0):
-                raise ValueError("same4allcols is True, so you don't need to provide i_col. If you do it must be 0.")
-        # Add the name to the grid
-        self.__grid[i_row][i_col].append(name)
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                # Add the name to the grid
+                self.__grid[i_row][i_col].append(name)
 
     def removefromgrid(self, i_row:int, i_col:int, name:str):
         """Remove a model from the grid"""
@@ -750,13 +763,32 @@ class PlotsDefinition(object):
                             else:
                                 logger.info(f"{name} (found in the grid at row {i_row} and col {i_col}) already as a datasetname ({thing2plot.datasetname}) it will not be changed")
         
-    def get_axis_models(self, i_row:int, i_col:int) -> OrderedDict[str,Model2plot]:
+    def get_models2plot(self, i_row:int, i_col:int) -> OrderedDict[str,Model2plot]:
         """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
         """
-        models4axis = OrderedDict()
+        res = OrderedDict()
         for name in self.grid[i_row][i_col]:
-            models4axis[name] = self.things2plot[name]
-        return models4axis
+            if type(self.things2plot[name]) is Model2plot:
+                res[name] = self.things2plot[name]
+        return res
+
+    def get_datas2plot(self, i_row:int, i_col:int) -> OrderedDict[str,Data2plot]:
+        """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
+        """
+        res = OrderedDict()
+        for name in self.grid[i_row][i_col]:
+            if type(self.things2plot[name]) is Data2plot:
+                res[name] = self.things2plot[name]
+        return res
+
+    def get_mulitdatabins2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiDataBin2plot]:
+        """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
+        """
+        res = OrderedDict()
+        for name in self.grid[i_row][i_col]:
+            if type(self.things2plot[name]) is MultiDataBin2plot:
+                res[name] = self.things2plot[name]
+        return res
     
     def get_axis_xlims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
@@ -775,14 +807,6 @@ class PlotsDefinition(object):
     #         for i_col in l_i_cols:
     #             model_names.extend(self.grid[i_row][i_col])
     #     return list(set(model_names))
-
-    def get_axis_datasetnames(self, i_row:int, i_col:int) -> list[str|None]:
-        """Return the list of datasetnames used for one axis of the grid designated by i_row and i_col."""
-        models_axis = self.get_axis_models(i_row=i_row, i_col=i_col)
-        datasetnames = []
-        for model2plot_i in models_axis.values():
-            datasetnames.append(model2plot_i.datasetname)
-        return list(set(datasetnames))
 
     # def get_all_datasetnames(self) -> list[str]:
     #     """Return the list of all datasetnames of the Model2plot instances used in the grid."""

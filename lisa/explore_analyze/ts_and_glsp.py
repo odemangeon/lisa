@@ -16,6 +16,7 @@ from loguru import logger
 from copy import copy
 from pandas import DataFrame
 from typing import Callable, Dict, List, Union
+from numpy.typing import NDArray
 
 from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kwargs, update_data_binned_label,
                    check_spec_by_column_or_row, check_spec_data_or_resi,
@@ -24,8 +25,9 @@ from .misc import (AandA_fontsize, do_suptitle, check_row4datasetname, get_pl_kw
                    )
 # from .models2computenplot import Models2plotTS, check_Models2plot
 from .core_plot import PlotsDefinition, ComputedModels_Database
+from .binning import compute_binning
 from .core_compute_load import (load_datasets_and_models, compute_model, get_key_compute_model,
-                                is_valid_model_available
+                                is_valid_model_available, compute_data_err_jittered
                                 )
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
@@ -41,15 +43,10 @@ day2sec = 24 * 60 * 60
 
 
 def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataFrame,
-                         compute_raw_models_func: Callable, 
+                         y_name: str, inst_cat: str,
+                         compute_raw_models_func: Callable,
                          plotdef_TS:PlotsDefinition,
                          plotdef_GLSP:PlotsDefinition|None=None,
-                        #  remove_add_model_components_func: Callable,
-                        #  kwargs_compute_model_4_key_model: dict[str, str], 
-                         y_name: str, inst_cat: str,
-                        #  d_name_component_removed_to_print,
-                        #  l_model_1_per_row: List[str],
-                        #  models2plot: Models2plotTS|None=None,
                          computedmodels_db:ComputedModels_Database|None=None,
                          compute_GP_model=True,
                          split_GP_computation=None,
@@ -333,7 +330,7 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                                                        l_row_name=list(range(plotdef_TS.nb_rows)),
                                                        l_col_name=list(range(plotdef_TS.nb_cols)),
                                                        kwargs_def={'do': False},
-                                                       kwargs_init={0: {i_row: {'do': True} for i_row in range(nb_rows)}}
+                                                       kwargs_init={0: {i_row: {'do': True} for i_row in range(plotdef_TS.nb_rows)}}
                                                        )
 
         # Set the binning variables
@@ -423,22 +420,9 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                 ##################################################
                 # Plot the data and models specified in plotdef_TS
                 ##################################################
-                for name_model2plot_i, model2plot_i in plotdef_TS.get_axis_models(i_row=i_row, i_col=i_col).items(0):
-                    # Check if times is defined
-                    if model2plot_i.involve_data:
-                        times_model2plot_i = copy(post_instance.dataset_db[model2plot_i.datasetname].get_datasetkwarg("time"))
-                    else:
-                        if model2plot_i.times is not None:
-                            times_model2plot_i = model2plot_i.times
-                        else:
-                            if model2plot_i.npt is None:
-                                npt_model2plot_i = npt_default
-                            npt_model2plot_i = model2plot_i.npt
-                            times_lims_model2plot_i = (min(model2plot_i.datasetname) - extra_dt_model,
-                                                       max(model2plot_i.datasetname) + extra_dt_model
-                                                       )
-                            times_model2plot_i = linspace(times_lims_model2plot_i[0], times_lims_model2plot_i[1], npt_model2plot_i, endpoint=True)
-                    
+                for name_model2plot_i, model2plot_i in plotdef_TS.get_models2plot(i_row=i_row, i_col=i_col).items():
+                    logger.info(f"Start Plotting model {name_model2plot_i}")
+                    times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, npt_default=npt_default, extra_dt=extra_dt_model)
                     # Compute the model
                     model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
                                                             compute_raw_models_func=compute_raw_models_func, 
@@ -447,24 +431,17 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                                                             computedmodels_db=computedmodels_db, 
                                                             get_key_compute_model_func=get_key_compute_model,
                                                             kwargs_get_key_compute_model=None,
-                                                            split_GP_computation=None)
+                                                            split_GP_computation=split_GP_computation)
                     # Plot
                     # Plot the model values
                     pl_kwarg_to_use = copy(model2plot_i.pl_kwargs)
-                    if not(model2plot_i.involve_data) or (model2plot_i.involve_data and (not(model2plot_i.show_err) or (model_err_i is None))):
-                        # You are plot data or a modified version of the data
-                        ebcont = axe_data.errorbar(times_model2plot_i * time_fact, y=model_i * amplitude_fact,
-                                                   **pl_kwarg_to_use)
-                        color = ebcont[0].get_color()
-                        alpha = ebcont[0].get_alpha()
-                    else:
-                        ebcont = axe_data.errorbar(times_model2plot_i * time_fact, y=model_i * amplitude_fact, yerr=model_err_i
-                                                    **pl_kwarg_to_use)
-                        color = ebcont[0].get_color()
-                        alpha = ebcont[0].get_alpha()
-                        # TODO: Compute and plot the jittered error bars
+                    # You are plot data or a modified version of the data
+                    ebcont = axe_data.errorbar(times_model2plot_i * time_fact, y=model_i * amplitude_fact,
+                                                **pl_kwarg_to_use)
+                    color = ebcont[0].get_color()
+                    alpha = ebcont[0].get_alpha()
                     # Plot the model uncertainty region for models that do not involve data 
-                    if not(model2plot_i.involve_data) and ((model_err_i is not None) and model2plot_i.show_error):
+                    if (model_err_i is not None) and model2plot_i.show_error:
                         pl_kwarg_to_use = copy(model2plot_i.pl_kwargs_error)
                         if not("color" in pl_kwarg_to_use):
                             pl_kwarg_to_use["color"] = color
@@ -474,74 +451,61 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                             pl_kwarg_to_use["alpha"] = alpha / 3
                             _ = axe_data.fill_between(times_model2plot_i * time_fact, (model_i - model_err_i) * amplitude_fact, (model_i + model_err_i) * amplitude_fact,
                                                       **pl_kwarg_to_use)
-                    
 
-                ################################################################################
-                # Compute and Plot the binned data and residuals if one_binning_per_row is True
-                ################################################################################
-                if one_binning_per_row and (exptime_bin > 0.):
-                    logger.debug(f"Plotting binned data and residuals for row {i_row}, column {i_col}")
-                    x_row = concatenate([x_values[dst] for dst in datasetnames4rowidx[i_row]])
-                    x_min_data, x_max_data = (min(x_row), max(x_row))
-                    bins = arange(x_min_data, x_max_data + exptime_bin, exptime_bin)
-                    midbins = bins[:-1] + exptime_bin / 2
-                    nbins = len(bins) - 1
-                    # Compute the binned values
-                    (bindata, binedges, binnb
-                     ) = binned_statistic(x_row, concatenate([dico_load['datas'][dst] for dst in datasetnames4rowidx[i_row]]),
-                                          statistic=binning_stat, bins=bins,
-                                          range=(x_min_data, x_max_data))
-                    (binresi, binedges, binnb
-                     ) = binned_statistic(x_row, concatenate([dico_load['residuals'][dst] for dst in datasetnames4rowidx[i_row]]),
-                                          statistic=binning_stat, bins=bins,
-                                          range=(x_min_data, x_max_data))
-                    # Compute the err on the binned values
-                    binstd = zeros(nbins)
-                    if any([dico_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]):
-                        binstd_jitter = zeros(nbins)
-                    bincount = zeros(nbins)
-                    data_err_row = concatenate([dico_load['data_errs'][dst] for dst in datasetnames4rowidx[i_row]])
-                    data_err_jitter_row = concatenate([dico_load['data_err_jitters'][dst] if dico_load['has_jitters'][dst] else ones_like(dico_load['data_errs'][dst]) * nan for dst in datasetnames4rowidx[i_row]])
-                    for i_bin in range(nbins):
-                        bincount[i_bin] = len(where(binnb == (i_bin + 1))[0])
-                        if bincount[i_bin] > 0.0:
-                            binstd[i_bin] = sqrt(sum(power(data_err_row[binnb == (i_bin + 1)], 2.)) /
-                                                 bincount[i_bin]**2
-                                                 )
-                            if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-                                binstd_jitter[i_bin] = sqrt(sum(power(data_err_jitter_row[binnb == (i_bin + 1)],
-                                                                      2.
-                                                                      )
-                                                                ) /
-                                                            bincount[i_bin]**2
-                                                            )
-                        else:
-                            binstd[i_bin] = nan
-                            if any([dico_load['has_jitters'][datasetname] for datasetname in datasetnames4rowidx[i_row]]):
-                                binstd_jitter[i_bin] = nan
-                    # Plot the binned data
-                    bin_err = binstd if pl_show_error[f"row{i_row}"] else None
-                    ebcont_binned = axe_data.errorbar(midbins, bindata, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"])
-                    if not("color" in pl_kwarg_final[f"row{i_row}"]):
-                        pl_kwarg_final[f"row{i_row}"]["color"] = ebcont_binned[0].get_color()
-                    if not("ecolor" in pl_kwarg_jitter[f"row{i_row}"]):
-                        pl_kwarg_jitter[f"row{i_row}"]["ecolor"] = pl_kwarg_final[f"row{i_row}"]["color"]
-                    _ = axe_resi.errorbar(midbins, binresi, yerr=bin_err, **pl_kwarg_final[f"row{i_row}"])
-                    if any([dico_load['has_jitters'][dst] for dst in datasetnames4rowidx[i_row]]) and pl_show_error[f"row{i_row}"]:
-                        _ = axe_data.errorbar(midbins, bindata, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
-                        _ = axe_resi.errorbar(midbins, binresi, yerr=binstd_jitter, **pl_kwarg_jitter[f"row{i_row}"])
-                    # Compute rms of the binned residuals
-                    x_min_rms = x_min_data
-                    if tlims_i is not None and tlims_i[0] is not None:
-                        x_min_rms = tlims_i[0]
-                    x_max_rms = x_max_data
-                    if tlims_i is not None and tlims_i[1] is not None:
-                        x_max_rms = tlims_i[1]
-                    text_rms_binned_template = f"{{:{rms_kwargs['format']}}} (bin)"
-                    rms_binned_values[f"row{i_row}"] = nanstd(binresi[logical_and(midbins >= x_min_rms, midbins <= x_max_rms)])
-                    text_rms_binned[f"row{i_row}"] = text_rms_binned_template.format(rms_binned_values[f"row{i_row}"])
-                    print(f"RMS row {i_row}: {text_rms_binned[f'row{i_row}']} {unit}")
-                    logger.debug(f"Done: Plot binned data and residuals for row {i_row}, column {i_col}")
+                for name_data2plot_i, data2plot_i in plotdef_TS.get_datas2plot(i_row=i_row, i_col=i_col).items():    
+                    logger.info(f"Start Plotting data {name_data2plot_i}")
+                    import pdb; pdb.set_trace()
+                    times_dataset = data2plot_i.get_times_dataset(post_instance=post_instance)
+                    # Compute the data_model
+                    data_i, data_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                          compute_raw_models_func=compute_raw_models_func, 
+                                                          expression=data2plot_i.expression, times=times_dataset, datasetname=data2plot_i.datasetname,
+                                                          exptime=None, supersampling=None,
+                                                          computedmodels_db=computedmodels_db, 
+                                                          get_key_compute_model_func=get_key_compute_model,
+                                                          kwargs_get_key_compute_model=None,
+                                                          split_GP_computation=split_GP_computation
+                                                          )
+                    # Compute jittered_errors
+                    data_err_jitter_i = compute_data_err_jittered(data_err=data_err_i, post_instance=post_instance, datasetname=data2plot_i.datasetname, df_fittedval=df_fittedval)                    
+                    # Bin the data if needed
+                    if data2plot_i.exptime > 0:
+                        (bins_i, _, bindata_i, binstd_i, binstd_jitter_i
+                         ) = compute_binning(times_dataset=times_dataset, values=data_i, errors=data_err_i, errors_jitter=data_err_jitter_i, exptime=data2plot_i.exptime, method=data2plot_i.method)
+                    # Plot the data or binned data
+                    if data2plot_i.exptime == 0.:
+                        data_plot_i = data_i
+                        data_err_plot_i = data_err_i
+                        data_err_jitter_plot_i = data_err_jitter_i
+                        time_plot_i = times_dataset
+                    else:
+                        data_plot_i = bindata_i
+                        data_err_plot_i = binstd_i
+                        data_err_jitter_plot_i = binstd_jitter_i
+                        time_plot_i = bins_i
+                    pl_kwarg_to_use = copy(data2plot_i.pl_kwargs)
+                    if not(data2plot_i.show_error) or (data_err_i is None):
+                        # You are plot data or a modified version of the data
+                        ebcont = axe_data.errorbar(time_plot_i * time_fact, y=data_plot_i * amplitude_fact, **pl_kwarg_to_use)
+                        color = ebcont[0].get_color()
+                        alpha = ebcont[0].get_alpha()
+                    else:
+                        ebcont = axe_data.errorbar(time_plot_i * time_fact, y=data_plot_i * amplitude_fact, yerr=data_err_plot_i * amplitude_fact
+                                                   **pl_kwarg_to_use)
+                        color = ebcont[0].get_color()
+                        alpha = ebcont[0].get_alpha()
+                    if "color" not in pl_kwarg_to_use:
+                        pl_kwarg_to_use["color"] = color
+                    if "alpha" not in pl_kwarg_to_use:
+                        pl_kwarg_to_use["alpha"] = alpha
+                    if pl_kwarg_to_use["alpha"] is None:
+                        pl_kwarg_to_use["alpha"] = 1
+                    if data_err_jitter_plot_i is not None:
+                        pl_kwarg_to_use["alpha"] /= 3
+                        _ = axe_data.errorbar(time_plot_i * time_fact, y=data_plot_i * amplitude_fact, yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use)
+
+                for name_multidatabin2plot_i, mulitdatabin2plot_i in plotdef_TS.get_multidatabins2plot(i_row=i_row, i_col=i_col).items():
+                    pass
 
                 ###########
                 # Write rms

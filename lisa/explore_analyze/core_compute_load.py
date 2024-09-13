@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 from loguru import logger
 from copy import copy
-from numpy import zeros_like, sqrt, linspace
+from numpy import zeros_like, sqrt, linspace, size, ones_like, float_
+from numpy.typing import NDArray
 from collections import defaultdict, OrderedDict
+from pandas import DataFrame
 
 from .misc import update_model_binned_label
-from .core_plot import ComputedModels_Database, ModelExpression, ComputedModel
+from .core_plot import ComputedModels_Database, Expression, ComputedModel
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
+from ..posterior.core.posterior import Posterior
 
 # Key for the whole model
 key_whole = Core_Model.key_whole
@@ -69,7 +74,7 @@ def is_valid_model_available(key_model, datasetname, post_instance):
 
 def compute_model(post_instance, df_fittedval, datasim_kwargs,
                   compute_raw_models_func,
-                  expression:ModelExpression,
+                  expression:Expression,
                   times, 
                   datasetname:str,
                   exptime,
@@ -154,6 +159,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                                                        exptime=exptime, supersampling=supersampling, times=times
                                                        )
             if computedmodel_component_i is None:
+                logger.info(f"Computing model for component {component_i} and dataset {datasetname}")
                 if component_i == 'data':
                     model = post_instance.dataset_db[datasetname].get_data()
                     model_err = post_instance.dataset_db[datasetname].get_data_err()
@@ -175,12 +181,18 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
             else:
                 components[component_i] = {"values": computedmodel_component_i.values, "errors": computedmodel_component_i.errors}
         
-        globals = {component_i: components[component_i]["values"] for components_i in components}
-        exec(f"result = {expression.expression}", globals)
-        model = globals["result"]
-        globals = {component_i: components[component_i]["errors"] for components_i in components if components[component_i]["errors"] is not None}
-        exec(expression.expression_err, globals)
-        model_err = globals["result"]
+        d_globals = {component_i: components[component_i]["values"] for component_i in expression.components}
+        exec(f"result = {expression.expression}", d_globals)
+        model = d_globals["result"]
+        d_globals = {component_i: components[component_i]["errors"] if components[component_i]["errors"] is not None else 0. for component_i in expression.components}
+        d_globals['sqrt'] = sqrt
+        exec(f"result = {expression.expression_err}", d_globals)
+        model_err = d_globals["result"]
+        if size(model_err) == 1:
+            if model_err == 0.:
+                model_err = None
+            else:
+                model_err = ones_like(model) * model_err
         
         computedmodels_db.store_computed_model(expression=expression.expression, datasetname=datasetname, exptime=exptime, supersampling=supersampling,
                                                times=times, values=model, errors=model_err)
@@ -389,3 +401,19 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
                                                        split_GP_computation=split_GP_computation,
                                                        )
     return model, model_err
+
+def compute_data_err_jittered(data_err:NDArray[float_], post_instance:Posterior, datasetname:str, df_fittedval:DataFrame) -> NDArray[float_]|None:
+    inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
+    inst_mod = post_instance.model.instruments[inst_mod_fullname]
+    noise_model = post_instance.model.get_noise_model(inst_mod.noise_model_category)
+    if noise_model.has_jitter:
+        if inst_mod.jitter.free:
+            jitter_value = copy(df_fittedval.loc[inst_mod.jitter.full_name]["value"])
+        else:
+            jitter_value = copy(inst_mod.jitter.value)
+        jitter_model = noise_model.get_jitter_model(inst_model_fullname=inst_mod_fullname)
+        compute_jitteredvar = jitter_model.get_compute_jitteredvar()
+        data_err_jitter= sqrt(compute_jitteredvar(data_err=copy(data_err), jitter=jitter_value))
+    else:
+        data_err_jitter = None
+    return data_err_jitter

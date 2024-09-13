@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from numpy.typing import NDArray
+from numpy import float_, arange, zeros, where, sqrt, power, nan
+from scipy.stats import binned_statistic
+
+
+def compute_binning(times_dataset:NDArray[float_], values:NDArray[float_], errors:NDArray[float_], errors_jitter:NDArray[float_]|None, exptime:int|float, method:str='mean'):
+    """Compute the binned data."""
+    # Compute the evenly space binned data time vector
+    x_min_data, x_max_data = (min(times_dataset), max(times_dataset))
+    bins = arange(x_min_data, x_max_data + exptime, exptime)
+    midbins = bins[:-1] + exptime / 2
+    nbins = len(bins) - 1
+    # Compute the binned values
+    (bindata, binedges, binnb
+     ) = binned_statistic(times_dataset, values, statistic=method, bins=bins, range=(x_min_data, x_max_data))
+    # Compute the err on the binned values
+    binstd = zeros(nbins)
+    if errors_jitter is not None:
+        binstd_jitter = zeros(nbins)
+    else:
+        binstd_jitter = None
+    bincount = zeros(nbins)
+    for i_bin in range(nbins):
+        bincount[i_bin] = len(where(binnb == (i_bin + 1))[0])
+        if bincount[i_bin] > 0.0:
+            binstd[i_bin] = sqrt(sum(power(errors[binnb == (i_bin + 1)], 2.)) /
+                                 bincount[i_bin]**2
+                                 )
+            if errors_jitter is not None:
+                binstd_jitter[i_bin] = sqrt(sum(power(errors_jitter[binnb == (i_bin + 1)], 2.)) /
+                                            bincount[i_bin]**2
+                                            )
+        else:
+            binstd[i_bin] = nan
+            if errors_jitter is not None:
+                binstd_jitter[i_bin] = nan
+    return bins, binedges, bindata, binstd, binstd_jitter
