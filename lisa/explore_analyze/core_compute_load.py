@@ -8,7 +8,7 @@ from collections import defaultdict, OrderedDict
 from pandas import DataFrame
 
 from .misc import update_model_binned_label
-from .core_plot import ComputedModels_Database, Expression, ComputedModel
+from .core_plot import ComputedModels_Database, Expression, ComputedModel, ModelBinning
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
 from ..posterior.core.posterior import Posterior
@@ -137,7 +137,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
     models                              : dict
     pl_kwarg                            : dict
     """
-    logger.debug(f"Start compute_model for expression {expression.expression} and dataset {datasetname}")
+    logger.info(f"Start compute_model for expression {expression.expression} and dataset {datasetname}")
     
     # Init models if not provided
     if computedmodels_db is None:
@@ -146,8 +146,10 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
     # Check if the model is already in computedmodels_db
     (computedmodel, _, times_found
      ) = computedmodels_db.find_computed_model(expression=expression.expression, datasetname=datasetname, 
-                                               exptime=exptime, supersampling=supersampling, times=times
+                                               binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
                                                )
+    if times_found is not None:
+        times = times_found
 
     if computedmodel is None:
         # The model was not found you have to compute it
@@ -156,10 +158,10 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
         for component_i in expression.components:
             (computedmodel_component_i, _, _
              ) = computedmodels_db.find_computed_model(expression=component_i, datasetname=datasetname, 
-                                                       exptime=exptime, supersampling=supersampling, times=times
+                                                       binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
                                                        )
             if computedmodel_component_i is None:
-                logger.info(f"Computing model for component {component_i} and dataset {datasetname}")
+                logger.info(f"Computing component {component_i} for dataset {datasetname}")
                 if component_i == 'data':
                     model = post_instance.dataset_db[datasetname].get_data()
                     model_err = post_instance.dataset_db[datasetname].get_data_err()
@@ -175,31 +177,42 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                                                                kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                                                split_GP_computation=split_GP_computation
                                                                )
-                computedmodels_db.store_computed_model(expression=component_i, datasetname=datasetname, exptime=exptime, supersampling=supersampling,
-                                                       times=times, values=model, errors=model_err)
-                components[component_i] = {"values": model, "errors": model_err}
+                if model is None:
+                    logger.warning(f"Component {component_i} could not be computed for dataset {datasetname} and is set to zero.")
+                    components[component_i] = {"values": 0., "errors": model_err}
+                else:
+                    computedmodels_db.store_computed_model(expression=component_i, datasetname=datasetname, binning=ModelBinning(exptime=exptime, supersampling=supersampling),
+                                                           times=times, values=model, errors=model_err)
+                    components[component_i] = {"values": model, "errors": model_err}
             else:
                 components[component_i] = {"values": computedmodel_component_i.values, "errors": computedmodel_component_i.errors}
         
-        d_globals = {component_i: components[component_i]["values"] for component_i in expression.components}
-        exec(f"result = {expression.expression}", d_globals)
-        model = d_globals["result"]
-        d_globals = {component_i: components[component_i]["errors"] if components[component_i]["errors"] is not None else 0. for component_i in expression.components}
-        d_globals['sqrt'] = sqrt
-        exec(f"result = {expression.expression_err}", d_globals)
-        model_err = d_globals["result"]
-        if size(model_err) == 1:
-            if model_err == 0.:
-                model_err = None
-            else:
-                model_err = ones_like(model) * model_err
-        
-        computedmodels_db.store_computed_model(expression=expression.expression, datasetname=datasetname, exptime=exptime, supersampling=supersampling,
-                                               times=times, values=model, errors=model_err)
+        (computedmodel, _, _
+         ) = computedmodels_db.find_computed_model(expression=expression.expression, datasetname=datasetname, 
+                                                   binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
+                                                   )
+        if computedmodel is None:
+            d_globals = {component_i: components[component_i]["values"] for component_i in expression.components}
+            exec(f"result = {expression.expression}", d_globals)
+            model = d_globals["result"]
+            if size(model) == 1:
+                model = ones_like(times) * model
+            d_globals = {component_i: components[component_i]["errors"] if components[component_i]["errors"] is not None else 0. for component_i in expression.components}
+            d_globals['sqrt'] = sqrt
+            exec(f"result = {expression.expression_err}", d_globals)
+            model_err = d_globals["result"]
+            if size(model_err) == 1:
+                if model_err == 0.:
+                    model_err = None
+                else:
+                    model_err = ones_like(times) * model_err
+            computedmodels_db.store_computed_model(expression=expression.expression, datasetname=datasetname, binning=ModelBinning(exptime=exptime, supersampling=supersampling),
+                                                times=times, values=model, errors=model_err)
     else:
         model = computedmodel.values
         model_err = computedmodel.errors
-
+    
+    logger.debug(f"Done compute_model for expression {expression.expression} and dataset {datasetname}")
     return model, model_err, computedmodels_db
 
 

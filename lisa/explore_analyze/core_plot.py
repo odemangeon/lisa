@@ -3,9 +3,10 @@ from collections import Sequence, OrderedDict
 from typing import Dict
 from loguru import logger
 from numpy.typing import NDArray
-from numpy import float_, isfinite, ndarray, equal, linspace, array_equal
+from numpy import float_, isfinite, ndarray, equal, linspace, array_equal, size
 from numbers import Number
 from copy import deepcopy, copy
+from pprint import pprint
 import re
 
 from ..posterior.core.posterior import Posterior
@@ -57,6 +58,14 @@ class DataBinning(object):
             raise TypeError(f"method should be str, got {type(method)}")
         self.__method = method
 
+    def __eq__(self, other: object) -> bool:
+        """Overrides the default implementation"""
+        if isinstance(other, DataBinning):
+            return (self.exptime == other.exptime) and (self.method == other.method)
+        else:
+            return False
+
+
 class ModelBinning(DataBinning):
     """Class to set the parameters for the binning
     
@@ -83,9 +92,16 @@ class ModelBinning(DataBinning):
             raise ValueError(f"exptime should be a number superior or equal to 0")
         if not(supersampling >= 1) or not(isinstance(supersampling, int)):
             raise ValueError(f"supersampling should be an int superior or equal to 1")
-        if ((exptime > 0.) and not(equal(supersampling, 1))) or ((supersampling > 1) and equal(exptime, 0)):
+        if ((exptime > 0.) and equal(supersampling, 1)) or ((supersampling > 1) and equal(exptime, 0)):
             raise ValueError(f"if supersampling is > 1 then exptime should not be 0 and vice versa.")
         self.__supersampling = int(supersampling)
+
+    def __eq__(self, other: object) -> bool:
+        """Overrides the default implementation"""
+        if isinstance(other, ModelBinning):
+            return (self.exptime == other.exptime) and (self.supersampling == other.supersampling)
+        else:
+            return False
 
 
 class Expression(object):
@@ -337,11 +353,11 @@ class MultiDataBin2plot(Data2plot):
 class ComputedModel(object):
     """Class to store computed models values: expression, binning, datasetname, times, values, errors
     """
-    def __init__(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
+    def __init__(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning,
                  times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_]):
         self.__expression:Expression = Expression(expression=expression)
         self.__set_datasetname(datasetname=datasetname)
-        self.__binning:ModelBinning = ModelBinning(exptime=exptime, supersampling=supersampling)
+        self.__binning:ModelBinning|DataBinning = binning
         self.__set_computed_model(times=times, values=values, errors=errors)
 
     @property
@@ -422,7 +438,7 @@ class ComputedModels_Database(object):
     def stored_models(self) -> list[ComputedModel]:
         return self.__stored_models
 
-    def find_computed_model(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
+    def find_computed_model(self, expression:str, datasetname:str, binning:DataBinning|ModelBinning,
                             times:NDArray[float_]) -> tuple[ComputedModel|None, int|None, NDArray[float_]|None]:
         model_found:ComputedModel|None = None
         times_found:NDArray[float_]|None = None
@@ -430,9 +446,9 @@ class ComputedModels_Database(object):
         for ii, computed_model in enumerate(self.stored_models):
             if array_equal(computed_model.times, times):
                 times_found = computed_model.times
-            if ((computed_model.expression == expression) and 
+            if ((computed_model.expression.expression == expression) and 
                 (computed_model.datasetname == datasetname) and 
-                (computed_model.binning == ModelBinning(exptime=exptime, supersampling=supersampling)) and
+                (computed_model.binning == binning) and
                 array_equal(computed_model.times, times)
                 ):
                 if model_found is not None:
@@ -445,7 +461,7 @@ class ComputedModels_Database(object):
         else:
             return None, None, times_found
     
-    def store_computed_model(self, expression:str, datasetname:str, exptime:float|int, supersampling:int,
+    def store_computed_model(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning,
                              times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_],
                              overwrite: bool=False):
         """Set the computed model (times and values).
@@ -455,17 +471,30 @@ class ComputedModels_Database(object):
 
         Once a computed model has been set it cannot be overwritten.
         """
-        model_found, _, times_found = self.find_computed_model(expression=expression, datasetname=datasetname, exptime=exptime, supersampling=supersampling,
+        model_found, _, times_found = self.find_computed_model(expression=expression, datasetname=datasetname, binning=binning,
                                                                times=times)
         if not((model_found is not None) and not(overwrite)):
             if (model_found is not None) and overwrite:
                 logger.info("Such model is already in the database, but it will be overwritten.")
             if times_found is not None:
                 times = times_found
-            self.stored_models.append(ComputedModel(expression=expression, datasetname=datasetname, exptime=exptime, supersampling=supersampling,
-                                                           times=times, values=values, errors=errors))
+            self.stored_models.append(ComputedModel(expression=expression, datasetname=datasetname, binning=binning,
+                                                    times=times, values=values, errors=errors))
         else:
            logger.warning("Such model is already in the database and overwrite is False. The store command will be ignored.")
+
+    def show_stored_models(self):
+        dico = OrderedDict()
+        for ii, stored_model_i in enumerate(self.stored_models):
+            dico[ii] = {'expression': stored_model_i.expression.expression,
+                        'datasetname': stored_model_i.datasetname,
+                        'binning': stored_model_i.binning,
+                        'times': {'size': stored_model_i.times.size, 
+                                  'min': min(stored_model_i.times),
+                                  'max': max(stored_model_i.times),
+                                  },
+                        }
+        pprint(dico)
 
 
 # class Database_Model2computeNplot(object):
@@ -577,7 +606,7 @@ class PlotsDefinition(object):
         # Init grid
         self.__grid:tuple[tuple[list[str], ...], ...] = tuple([tuple([[] for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init lims
-        self.__lims:tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...] = tuple([tuple([{"x":(None, None),"y":(None, None)} for _ in range(nb_cols)]) for _ in range(nb_rows)])
+        self.__lims:tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...] = tuple([tuple([{"x":(None, None),"y_data":(None, None), "y_resi":(None, None)} for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init models2plot_database
         self.__things2plot: Dict[str, Model2plot|Data2plot|MultiDataBin2plot] = {}
 
@@ -611,7 +640,7 @@ class PlotsDefinition(object):
     
     @property
     def lims(self) -> tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...]:
-        """Grid (in the form of a tuple of tuple) with a dict with two keys 'x' and 'y' whose values are tuples which give the x and y limits for the axis."""
+        """Grid (in the form of a tuple of tuple) with a dict with three keys 'x', 'y_data', 'y_resi' whose values are tuples which give the x and y limits for the axis."""
         return deepcopy(self.__lims)
 
     @property
@@ -781,7 +810,7 @@ class PlotsDefinition(object):
                 res[name] = self.things2plot[name]
         return res
 
-    def get_mulitdatabins2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiDataBin2plot]:
+    def get_multidatabins2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiDataBin2plot]:
         """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
         """
         res = OrderedDict()
@@ -790,13 +819,36 @@ class PlotsDefinition(object):
                 res[name] = self.things2plot[name]
         return res
     
+    def get_used_datasetnames(self, i_row:int, i_col:int) -> list[str]:
+        """Return the list of all datasetnames used in a given axis of the grid (designated by i_row and i_col)."""
+        datasetnames = []
+        for data2plot_i in self.get_datas2plot(i_row=i_row, i_col=i_col).values():
+            datasetnames.append(data2plot_i.datasetname)
+        return list(set(datasetnames))
+    
     def get_axis_xlims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
         return self.lims[i_row][i_col]['x']
     
-    def get_axis_ylims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
+    def set_axis_xlims(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+        """Set the xlims for one axis of the grid designated by i_row and i_col."""
+        self.lims[i_row][i_col]['x'] = lims
+    
+    def get_axis_ylims_data(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
-        return self.lims[i_row][i_col]['y']
+        return self.lims[i_row][i_col]['y_data']
+    
+    def set_axis_ylims_data(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+        """Set the ylims for the data plot of one axis of the grid designated by i_row and i_col."""
+        self.lims[i_row][i_col]['y_data'] = lims
+    
+    def get_axis_ylims_resi(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
+        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
+        return self.lims[i_row][i_col]['y_resi']
+    
+    def set_axis_ylims_resi(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+        """Set the ylims for the resi plot of one axis of the grid designated by i_row and i_col."""
+        self.lims[i_row][i_col]['y_resi'] = lims
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
