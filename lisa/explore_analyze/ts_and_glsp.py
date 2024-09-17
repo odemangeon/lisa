@@ -491,8 +491,8 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                         _ = axe_resi.errorbar(dico_times[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
                         pl_kwarg_to_use[name_data2plot_i]["alpha"] *= 3 
                     
-                for name_multidatabin2plot_i, mulitdatabin2plot_i in plotdef_TS.get_multidatabins2plot(i_row=i_row, i_col=i_col).items():
-                    raise NotImplementedError("Plotting of MultiDataBin2Plot is not implemented yet")
+                for name_multidata2plot_i, mulitdata2plot_i in plotdef_TS.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
+                    raise NotImplementedError("Plotting of MultiData2Plot is not implemented yet")
 
                 ###################################
                 # Set ylims and indicate_y_outliers
@@ -550,267 +550,267 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
 
         for i_row in range(plotdef_GLSP.nb_rows):
             for i_col in range(plotdef_TS.nb_cols):
-                
-        # Variable that are always available
-        all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
-        idx_sort = argsort(all_time)
-        all_time = all_time[idx_sort]
-        all_data = concatenate([dico_load['datas'][dst] for dst in datasetnames])[idx_sort]
-        if GLSP_kwargs.get("use_jitter", True):
-            all_data_err = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
-        else:
-            all_data_err = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
-        all_model = concatenate([dico_load['models'][dst]['model'] for dst in datasetnames])[idx_sort]
-        all_resi = concatenate([dico_load['residuals'][dst] for dst in datasetnames])[idx_sort]
-        gls_inputs = {"data": {"time": all_time, "data": all_data, "err": all_data_err, 'label': "data"},
-                      "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
-                      "resi": {"time": all_time, "data": all_resi, "err": all_data_err, 'label': "residuals"},
-                      }
-        l_l_WF_key_model = [["data", "model", "resi"], ]
-        l_gls_key = ["data", "model"]
-        # Add component from the show model dict
-        l_extra_key = [key_model for key_model in show_dict if show_dict[key_model]]
-        if "model" in l_extra_key:
-            l_extra_key.remove("model")
-        for key_model in l_extra_key:
-            model_time = []
-            model_value = []
-            model_value_err = []
-            for dst in datasetnames:
-                if key_model in dico_load['models'][dst]:
-                    # Then the model exist for this dataset
-                    model_value.append(dico_load['models'][dst][key_model])
-                    model_time.append(dico_load['times'][dst])
-                    if GLSP_kwargs.get("use_jitter", True):
-                        model_value_err.append(dico_load['data_err_jitters'][dst])
-                    else:
-                        model_value_err.append(dico_load['data_errs'][dst])
-            if len(model_value) > 0:
-                gls_inputs[key_model] = {}
-                gls_inputs[key_model]["time"] = concatenate(model_time)
-                idx_sort = argsort(gls_inputs[key_model]["time"])
-                gls_inputs[key_model]["time"] = gls_inputs[key_model]["time"][idx_sort]
-                gls_inputs[key_model]["data"] = concatenate(model_value)[idx_sort]
-                gls_inputs[key_model]["err"] = concatenate(model_value_err)[idx_sort]
-                gls_inputs[key_model]["label"] = key_model
-                for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
-                    if (gls_inputs[key_model]["time"] == gls_inputs[l_WF_key_model[0]]["time"]).all():
-                        l_WF_key_model.append(key_model)
-                        found_times_axis = True
-                        break
-                    else:
-                        found_times_axis = False
-                if not(found_times_axis):
-                    l_l_WF_key_model.append([key_model, ])
-                l_gls_key.append(key_model)
-                
-        # Add the residuals
-        l_gls_key.append("resi")
- 
-        # model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=l_datasetname_RVrefglobal[0],
-        #                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
-        #                                                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True)
-        # model_GLS *= RV_fact
-        # if gp_pred_GLS is not None:
-        #     gp_pred_GLS *= RV_fact
-        #     gp_pred_var_GLS *= RV_fact**2
-        # if model_wGP is not None:  # WARNING: This assumes that all datasets have (or don't have) GP
-        #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
-        #                   "model": {"data": model_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "model"},  # sqrt(gp_pred_var_GLS)
-        #                   "GP": {"data": gp_pred_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "GP"},
-        #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
-        #                   }
-        #     l_gls_key = ["data", "model", "GP", "resi"]
+                pass
+        # # Variable that are always available
+        # all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])
+        # idx_sort = argsort(all_time)
+        # all_time = all_time[idx_sort]
+        # all_data = concatenate([dico_load['datas'][dst] for dst in datasetnames])[idx_sort]
+        # if GLSP_kwargs.get("use_jitter", True):
+        #     all_data_err = concatenate([dico_load['data_err_jitters'][dst] for dst in datasetnames])[idx_sort]
         # else:
-        #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
-        #                   "model": {"data": model_GLS, "err": all_rv_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
-        #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
-        #                   }
-        #     l_gls_key = ["data", "model", "resi"]
+        #     all_data_err = concatenate([dico_load['data_errs'][dst] for dst in datasetnames])[idx_sort]
+        # all_model = concatenate([dico_load['models'][dst]['model'] for dst in datasetnames])[idx_sort]
+        # all_resi = concatenate([dico_load['residuals'][dst] for dst in datasetnames])[idx_sort]
+        # gls_inputs = {"data": {"time": all_time, "data": all_data, "err": all_data_err, 'label': "data"},
+        #             "model": {"time": all_time, "data": all_model, "err": all_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
+        #             "resi": {"time": all_time, "data": all_resi, "err": all_data_err, 'label': "residuals"},
+        #             }
+        # l_l_WF_key_model = [["data", "model", "resi"], ]
+        # l_gls_key = ["data", "model"]
+        # # Add component from the show model dict
+        # l_extra_key = [key_model for key_model in show_dict if show_dict[key_model]]
+        # if "model" in l_extra_key:
+        #     l_extra_key.remove("model")
+        # for key_model in l_extra_key:
+        #     model_time = []
+        #     model_value = []
+        #     model_value_err = []
+        #     for dst in datasetnames:
+        #         if key_model in dico_load['models'][dst]:
+        #             # Then the model exist for this dataset
+        #             model_value.append(dico_load['models'][dst][key_model])
+        #             model_time.append(dico_load['times'][dst])
+        #             if GLSP_kwargs.get("use_jitter", True):
+        #                 model_value_err.append(dico_load['data_err_jitters'][dst])
+        #             else:
+        #                 model_value_err.append(dico_load['data_errs'][dst])
+        #     if len(model_value) > 0:
+        #         gls_inputs[key_model] = {}
+        #         gls_inputs[key_model]["time"] = concatenate(model_time)
+        #         idx_sort = argsort(gls_inputs[key_model]["time"])
+        #         gls_inputs[key_model]["time"] = gls_inputs[key_model]["time"][idx_sort]
+        #         gls_inputs[key_model]["data"] = concatenate(model_value)[idx_sort]
+        #         gls_inputs[key_model]["err"] = concatenate(model_value_err)[idx_sort]
+        #         gls_inputs[key_model]["label"] = key_model
+        #         for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
+        #             if (gls_inputs[key_model]["time"] == gls_inputs[l_WF_key_model[0]]["time"]).all():
+        #                 l_WF_key_model.append(key_model)
+        #                 found_times_axis = True
+        #                 break
+        #             else:
+        #                 found_times_axis = False
+        #         if not(found_times_axis):
+        #             l_l_WF_key_model.append([key_model, ])
+        #         l_gls_key.append(key_model)
+                
+        # # Add the residuals
+        # l_gls_key.append("resi")
 
-        ###############################
-        # Compute the GLSPs
-        ###############################
-        Pbeg, Pend = GLSP_kwargs.get("period_range", (0.1, 1000))
+        # # model_GLS, _, gp_pred_GLS, gp_pred_var_GLS = post_instance.compute_model(tsim=all_time, dataset_name=l_datasetname_RVrefglobal[0],
+        # #                                                                          param=df_fittedval["value"].values, l_param_name=list(df_fittedval.index),
+        # #                                                                          key_obj=key_whole, datasim_kwargs=datasim_kwargs, include_gp=True)
+        # # model_GLS *= RV_fact
+        # # if gp_pred_GLS is not None:
+        # #     gp_pred_GLS *= RV_fact
+        # #     gp_pred_var_GLS *= RV_fact**2
+        # # if model_wGP is not None:  # WARNING: This assumes that all datasets have (or don't have) GP
+        # #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
+        # #                   "model": {"data": model_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "model"},  # sqrt(gp_pred_var_GLS)
+        # #                   "GP": {"data": gp_pred_GLS, "err": sqrt(gp_pred_var_GLS), 'label': "GP"},
+        # #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
+        # #                   }
+        # #     l_gls_key = ["data", "model", "GP", "resi"]
+        # # else:
+        # #     gls_inputs = {"data": {"data": all_rv_data, "err": all_rv_data_err, 'label': "data"},
+        # #                   "model": {"data": model_GLS, "err": all_rv_data_err, 'label': "model"},  # sqrt(gp_pred_var_GLS)
+        # #                   "resi": {"data": all_resi, "err": all_rv_data_err, 'label': "residuals"},
+        # #                   }
+        # #     l_gls_key = ["data", "model", "resi"]
 
-        glsps = {}
-        for key in l_gls_key:
-            glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
+        # ###############################
+        # # Compute the GLSPs
+        # ###############################
+        # Pbeg, Pend = GLSP_kwargs.get("period_range", (0.1, 1000))
 
-        ###############################
-        # Create additional axe if zoom
-        ###############################
-        if GLSP_kwargs.get("freq_lims_zoom", None) is not None:
-            gs_gls = GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_gls, **TS_kwargs.get('gridspec_kwargs', {}))  # , wspace=0.2, width_ratios=(2, 1)
-            freq_lims = [GLSP_kwargs.get("freq_lims", None), GLSP_kwargs["freq_lims_zoom"]]
-            period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), GLSP_kwargs.get("period_no_ticklabels_zoom", [])]
-            nb_columns = 2
-        else:
-            gs_gls = [gs_gls, ]
-            freq_lims = [GLSP_kwargs.get("freq_lims", None), ]
-            period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), ]
-            nb_columns = 1
+        # glsps = {}
+        # for key in l_gls_key:
+        #     glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
 
-        ################################################
-        # Create additional axes for data, model, etc...
-        ################################################
-        show_WF = GLSP_kwargs.get("show_WF", True)
-        nb_axes = len(l_gls_key) + int(show_WF) * len(l_l_WF_key_model)
-        freq_fact = GLSP_kwargs.get("freq_fact", 1e6)
-        freq_unit = GLSP_kwargs.get("freq_unit", '$\mu$Hz')
-        logscale = GLSP_kwargs.get("logscale", False)
-        legend_param = GLSP_kwargs.get('legend_param', {})
+        # ###############################
+        # # Create additional axe if zoom
+        # ###############################
+        # if GLSP_kwargs.get("freq_lims_zoom", None) is not None:
+        #     gs_gls = GridSpecFromSubplotSpec(1, 2, subplot_spec=gs_gls, **TS_kwargs.get('gridspec_kwargs', {}))  # , wspace=0.2, width_ratios=(2, 1)
+        #     freq_lims = [GLSP_kwargs.get("freq_lims", None), GLSP_kwargs["freq_lims_zoom"]]
+        #     period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), GLSP_kwargs.get("period_no_ticklabels_zoom", [])]
+        #     nb_columns = 2
+        # else:
+        #     gs_gls = [gs_gls, ]
+        #     freq_lims = [GLSP_kwargs.get("freq_lims", None), ]
+        #     period_no_ticklabels = [GLSP_kwargs.get("period_no_ticklabels", []), ]
+        #     nb_columns = 1
 
-        for jj, (gs_gls_j, freq_lims_j, period_no_ticklabels_j) in enumerate(zip(gs_gls, freq_lims, period_no_ticklabels)):
-            ax_gls = et.add_axeswithsharex(gs_gls_j, fig, nb_axes=nb_axes, gs_from_sps_kw=GLSP_kwargs.get("axeswithsharex_kwargs", {}))  # {"wspace": 0.2})
-            if jj == 0:
-                ax_gls[0].set_title("GLS Periodograms", fontsize=fontsize)
-            if logscale:
-                ax_gls[-1].set_xscale("log")
-            # ax_gls[-1].set_xlabel("Period [days]", fontsize=fontsize)
-            ax_gls[-1].set_xlabel(f"Frequency [{freq_unit}]", fontsize=fontsize)
-            # create and set the twiny axis
-            ax_gls_twin = []
-            for ii, key in enumerate(l_gls_key):
-                ax_gls_twin.append(ax_gls[ii].twiny())
-                if logscale:
-                    ax_gls_twin[ii].set_xscale("log")
-                ax_gls[ii].set_zorder(ax_gls_twin[ii].get_zorder() + 1)  # To make sure that the orginal axis is above the new one
-                ax_gls[ii].patch.set_visible(False)
-                labeltop = True if ii == 0 else False
-                ax_gls_twin[ii].tick_params(axis="x", labeltop=labeltop, labelsize=fontsize, which="both", direction="in")
-                ax_gls_twin[ii].tick_params(axis="x", which="major", length=4, width=1)
-                ax_gls_twin[ii].tick_params(axis="x", which="minor", length=2, width=0.5)
-                ax_gls[ii].tick_params(axis="both", direction="in", which="both", bottom=True, top=False, left=True, right=True, labelsize=fontsize)
-                ax_gls[ii].tick_params(axis="both", which="major", length=4, width=1)
-                ax_gls[ii].tick_params(axis="both", which="minor", length=2, width=0.5)
-                # ax_gls[ii].yaxis.set_label_position("right")
-                # ax_gls[ii].yaxis.tick_right()
-                labelleft = True if jj == 0 else False
-                labelbottom = True if ii == (nb_axes - 1) else False
-                ax_gls[ii].tick_params(axis="x", labelleft=labelleft, labelbottom=labelbottom, labelsize=fontsize, which="both", direction="in")
-                ax_gls[ii].tick_params(axis="y", labelleft=labelleft, labelsize=fontsize, which="both", direction="in")
-                ax_gls[ii].yaxis.set_minor_locator(AutoMinorLocator())
-                ax_gls[ii].xaxis.set_minor_locator(AutoMinorLocator())
+        # ################################################
+        # # Create additional axes for data, model, etc...
+        # ################################################
+        # show_WF = GLSP_kwargs.get("show_WF", True)
+        # nb_axes = len(l_gls_key) + int(show_WF) * len(l_l_WF_key_model)
+        # freq_fact = GLSP_kwargs.get("freq_fact", 1e6)
+        # freq_unit = GLSP_kwargs.get("freq_unit", '$\mu$Hz')
+        # logscale = GLSP_kwargs.get("logscale", False)
+        # legend_param = GLSP_kwargs.get('legend_param', {})
 
-                # Plot the GLS in frequency (freq are in 1 / unit of the time vector provided)
-                ax_gls[ii].plot(glsps[key].freq / day2sec * freq_fact, glsps[key].power, '-', color="k", label=gls_inputs[key]["label"], linewidth=GLSP_kwargs.get("lw ", 1.))
-                # Set ticks and tick labels
-                if jj == 0:
-                    ax_gls[ii].set_ylabel(f"{glsps[key].label['ylabel']}", fontsize=fontsize)  # {gls_inputs[key]['label']}
+        # for jj, (gs_gls_j, freq_lims_j, period_no_ticklabels_j) in enumerate(zip(gs_gls, freq_lims, period_no_ticklabels)):
+        #     ax_gls = et.add_axeswithsharex(gs_gls_j, fig, nb_axes=nb_axes, gs_from_sps_kw=GLSP_kwargs.get("axeswithsharex_kwargs", {}))  # {"wspace": 0.2})
+        #     if jj == 0:
+        #         ax_gls[0].set_title("GLS Periodograms", fontsize=fontsize)
+        #     if logscale:
+        #         ax_gls[-1].set_xscale("log")
+        #     # ax_gls[-1].set_xlabel("Period [days]", fontsize=fontsize)
+        #     ax_gls[-1].set_xlabel(f"Frequency [{freq_unit}]", fontsize=fontsize)
+        #     # create and set the twiny axis
+        #     ax_gls_twin = []
+        #     for ii, key in enumerate(l_gls_key):
+        #         ax_gls_twin.append(ax_gls[ii].twiny())
+        #         if logscale:
+        #             ax_gls_twin[ii].set_xscale("log")
+        #         ax_gls[ii].set_zorder(ax_gls_twin[ii].get_zorder() + 1)  # To make sure that the orginal axis is above the new one
+        #         ax_gls[ii].patch.set_visible(False)
+        #         labeltop = True if ii == 0 else False
+        #         ax_gls_twin[ii].tick_params(axis="x", labeltop=labeltop, labelsize=fontsize, which="both", direction="in")
+        #         ax_gls_twin[ii].tick_params(axis="x", which="major", length=4, width=1)
+        #         ax_gls_twin[ii].tick_params(axis="x", which="minor", length=2, width=0.5)
+        #         ax_gls[ii].tick_params(axis="both", direction="in", which="both", bottom=True, top=False, left=True, right=True, labelsize=fontsize)
+        #         ax_gls[ii].tick_params(axis="both", which="major", length=4, width=1)
+        #         ax_gls[ii].tick_params(axis="both", which="minor", length=2, width=0.5)
+        #         # ax_gls[ii].yaxis.set_label_position("right")
+        #         # ax_gls[ii].yaxis.tick_right()
+        #         labelleft = True if jj == 0 else False
+        #         labelbottom = True if ii == (nb_axes - 1) else False
+        #         ax_gls[ii].tick_params(axis="x", labelleft=labelleft, labelbottom=labelbottom, labelsize=fontsize, which="both", direction="in")
+        #         ax_gls[ii].tick_params(axis="y", labelleft=labelleft, labelsize=fontsize, which="both", direction="in")
+        #         ax_gls[ii].yaxis.set_minor_locator(AutoMinorLocator())
+        #         ax_gls[ii].xaxis.set_minor_locator(AutoMinorLocator())
 
-                ylims = ax_gls[ii].get_ylim()
-                xlims = ax_gls[ii].get_xlim()
+        #         # Plot the GLS in frequency (freq are in 1 / unit of the time vector provided)
+        #         ax_gls[ii].plot(glsps[key].freq / day2sec * freq_fact, glsps[key].power, '-', color="k", label=gls_inputs[key]["label"], linewidth=GLSP_kwargs.get("lw ", 1.))
+        #         # Set ticks and tick labels
+        #         if jj == 0:
+        #             ax_gls[ii].set_ylabel(f"{glsps[key].label['ylabel']}", fontsize=fontsize)  # {gls_inputs[key]['label']}
 
-                # Print the period axis
-                per_min = min(1 / glsps[key].freq)
-                freq_min = min(glsps[key].freq)
-                per_max = max(1 / glsps[key].freq)
-                freq_max = max(glsps[key].freq)
-                per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims]
-                if per_xlims[0] < 0:  # Sometimes the inferior xlims is negative and it messes up with the rest
-                    per_xlims[0] = per_max
-                per_xlims = per_xlims[::-1]
-                if not(logscale):
-                    ax_gls_twin[ii].plot([freq_min / day2sec * freq_fact, freq_max / day2sec * freq_fact],
-                                         [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
-                else:
-                    ax_gls_twin[ii].plot([per_min, per_max], [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
-                    xlims_per = ax_gls_twin[ii].get_xlim()
-                    ax_gls_twin[ii].set_xlim(xlims_per[::-1])
-                if not(logscale):
-                    per_decades = [10**(exp) for exp in list(range(int(floor(log10(per_min))), int(ceil(log10(per_max))) + 1))]
-                    per_ticks_major = []
-                    per_ticklabels_major = []
-                    per_ticks_minor = []
-                    for dec in per_decades:
-                        for fact in range(1, 10):
-                            tick = dec * fact
-                            if (tick > per_xlims[0]) and (tick < per_xlims[1]):
-                                if fact == 1:
-                                    per_ticks_major.append(tick)
-                                    if tick in period_no_ticklabels_j:
-                                        per_ticklabels_major.append("")
-                                    else:
-                                        per_ticklabels_major.append(tick)
-                                else:
-                                    per_ticks_minor.append(tick)
-                    # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
-                    ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
-                    if GLSP_kwargs.get('scientific_notation_P_axis', True):
-                        ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) if tick != "" else "" for tick in per_ticklabels_major])
-                    else:
-                        ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
-                    # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
-                    ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
+        #         ylims = ax_gls[ii].get_ylim()
+        #         xlims = ax_gls[ii].get_xlim()
 
-                if freq_lims_j is None:
-                    ax_gls[ii].set_xlim(xlims)
-                    if logscale:
-                        ax_gls_twin[ii].set_xlim(xlims_per[::-1])
-                    else:
-                        ax_gls_twin[ii].set_xlim(xlims)
-                else:
-                    ax_gls[ii].set_xlim(freq_lims_j)
-                    if logscale:
-                        ax_gls_twin[ii].set_xlim([1 / (freq / freq_fact * day2sec) for freq in freq_lims_j])
-                    else:
-                        ax_gls_twin[ii].set_xlim(freq_lims_j)
+        #         # Print the period axis
+        #         per_min = min(1 / glsps[key].freq)
+        #         freq_min = min(glsps[key].freq)
+        #         per_max = max(1 / glsps[key].freq)
+        #         freq_max = max(glsps[key].freq)
+        #         per_xlims = [1 / (freq_lim / freq_fact * day2sec) for freq_lim in xlims]
+        #         if per_xlims[0] < 0:  # Sometimes the inferior xlims is negative and it messes up with the rest
+        #             per_xlims[0] = per_max
+        #         per_xlims = per_xlims[::-1]
+        #         if not(logscale):
+        #             ax_gls_twin[ii].plot([freq_min / day2sec * freq_fact, freq_max / day2sec * freq_fact],
+        #                                 [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
+        #         else:
+        #             ax_gls_twin[ii].plot([per_min, per_max], [mean(glsps[key].power), mean(glsps[key].power)], "k", alpha=0)
+        #             xlims_per = ax_gls_twin[ii].get_xlim()
+        #             ax_gls_twin[ii].set_xlim(xlims_per[::-1])
+        #         if not(logscale):
+        #             per_decades = [10**(exp) for exp in list(range(int(floor(log10(per_min))), int(ceil(log10(per_max))) + 1))]
+        #             per_ticks_major = []
+        #             per_ticklabels_major = []
+        #             per_ticks_minor = []
+        #             for dec in per_decades:
+        #                 for fact in range(1, 10):
+        #                     tick = dec * fact
+        #                     if (tick > per_xlims[0]) and (tick < per_xlims[1]):
+        #                         if fact == 1:
+        #                             per_ticks_major.append(tick)
+        #                             if tick in period_no_ticklabels_j:
+        #                                 per_ticklabels_major.append("")
+        #                             else:
+        #                                 per_ticklabels_major.append(tick)
+        #                         else:
+        #                             per_ticks_minor.append(tick)
+        #             # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
+        #             ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_major])
+        #             if GLSP_kwargs.get('scientific_notation_P_axis', True):
+        #                 ax_gls_twin[ii].set_xticklabels([fmt_sci_not(tick) if tick != "" else "" for tick in per_ticklabels_major])
+        #             else:
+        #                 ax_gls_twin[ii].set_xticklabels(per_ticklabels_major)
+        #             # ax_gls_twin[ii].set_xticks(per_ticks_minor, minor=True)
+        #             ax_gls_twin[ii].set_xticks([1 / tick / day2sec * freq_fact for tick in per_ticks_minor], minor=True)
 
-                ylims = ax_gls[ii].get_ylim()
-                xlims = ax_gls[ii].get_xlim()
+        #         if freq_lims_j is None:
+        #             ax_gls[ii].set_xlim(xlims)
+        #             if logscale:
+        #                 ax_gls_twin[ii].set_xlim(xlims_per[::-1])
+        #             else:
+        #                 ax_gls_twin[ii].set_xlim(xlims)
+        #         else:
+        #             ax_gls[ii].set_xlim(freq_lims_j)
+        #             if logscale:
+        #                 ax_gls_twin[ii].set_xlim([1 / (freq / freq_fact * day2sec) for freq in freq_lims_j])
+        #             else:
+        #                 ax_gls_twin[ii].set_xlim(freq_lims_j)
 
-                #####################################
-                # Vertical lines at specified periods
-                #####################################
-                for per, dico_per in GLSP_kwargs.get('periods', {}).items():
-                    vlines_kwargs = dico_per.get("vlines_kwargs", {})
-                    if 'label' not in vlines_kwargs:
-                        vlines_kwargs['label'] = str(format_float_positional(per, precision=3, unique=False, fractional=False, trim='k'))
-                    freq_4_per = 1 / per / day2sec * freq_fact
-                    lines_per = ax_gls[ii].vlines(freq_4_per, *ylims, **vlines_kwargs)
-                ax_gls[ii].set_ylim(ylims)
+        #         ylims = ax_gls[ii].get_ylim()
+        #         xlims = ax_gls[ii].get_xlim()
 
-                ##########################################
-                # Horizontal lines at specified FAP levels
-                ##########################################
-                ylims = ax_gls[ii].get_ylim()
-                xlims = ax_gls[ii].get_xlim()
+        #         #####################################
+        #         # Vertical lines at specified periods
+        #         #####################################
+        #         for per, dico_per in GLSP_kwargs.get('periods', {}).items():
+        #             vlines_kwargs = dico_per.get("vlines_kwargs", {})
+        #             if 'label' not in vlines_kwargs:
+        #                 vlines_kwargs['label'] = str(format_float_positional(per, precision=3, unique=False, fractional=False, trim='k'))
+        #             freq_4_per = 1 / per / day2sec * freq_fact
+        #             lines_per = ax_gls[ii].vlines(freq_4_per, *ylims, **vlines_kwargs)
+        #         ax_gls[ii].set_ylim(ylims)
 
-                default_fap_dict = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"}, },
-                                    1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"}, },
-                                    10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"}, }, }
-                for fap_lvl, dico_fap in GLSP_kwargs.get('fap', default_fap_dict).items():
-                    pow_ii = glsps[key].powerLevel(fap_lvl / 100)
-                    hlines_kwargs = dico_fap.get("hlines_kwargs", {})
-                    if pow_ii < ylims[1]:
-                        lines_fap = ax_gls[ii].hlines(pow_ii, *xlims, **hlines_kwargs)
-                        text_kwargs = dico_fap.get("text_kwargs", {}).copy()
-                        x_pos = text_kwargs.pop("x_pos", 1.05)
-                        y_shift = text_kwargs.pop("y_shift", 0)
-                        label = str(text_kwargs.pop("label", fr"{fap_lvl}\%"))
-                        color = text_kwargs.pop("color", None)
-                        if color is None:
-                            color = lines_fap.get_color()[0]
-                        if jj == (nb_columns - 1):
-                            ax_gls[ii].text(xlims[0] + x_pos * (xlims[1] - xlims[0]), pow_ii + y_shift * (ylims[1] - ylims[0]),
-                                            label, color=color, fontsize=fontsize, **text_kwargs)
+        #         ##########################################
+        #         # Horizontal lines at specified FAP levels
+        #         ##########################################
+        #         ylims = ax_gls[ii].get_ylim()
+        #         xlims = ax_gls[ii].get_xlim()
 
-                ax_gls[ii].set_xlim(xlims)
-                #
-                if jj == 0:
-                    ax_gls[ii].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get(key, {}))
+        #         default_fap_dict = {0.1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dotted"}, },
+        #                             1: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashdot"}, },
+        #                             10: {"hlines_kwargs": {"color": "k", "linewidth": 0.8, "linestyle": "dashed"}, }, }
+        #         for fap_lvl, dico_fap in GLSP_kwargs.get('fap', default_fap_dict).items():
+        #             pow_ii = glsps[key].powerLevel(fap_lvl / 100)
+        #             hlines_kwargs = dico_fap.get("hlines_kwargs", {})
+        #             if pow_ii < ylims[1]:
+        #                 lines_fap = ax_gls[ii].hlines(pow_ii, *xlims, **hlines_kwargs)
+        #                 text_kwargs = dico_fap.get("text_kwargs", {}).copy()
+        #                 x_pos = text_kwargs.pop("x_pos", 1.05)
+        #                 y_shift = text_kwargs.pop("y_shift", 0)
+        #                 label = str(text_kwargs.pop("label", fr"{fap_lvl}\%"))
+        #                 color = text_kwargs.pop("color", None)
+        #                 if color is None:
+        #                     color = lines_fap.get_color()[0]
+        #                 if jj == (nb_columns - 1):
+        #                     ax_gls[ii].text(xlims[0] + x_pos * (xlims[1] - xlims[0]), pow_ii + y_shift * (ylims[1] - ylims[0]),
+        #                                     label, color=color, fontsize=fontsize, **text_kwargs)
 
-            ax_gls_twin[0].set_xlabel("Period [days]", fontsize=fontsize)
+        #         ax_gls[ii].set_xlim(xlims)
+        #         #
+        #         if jj == 0:
+        #             ax_gls[ii].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get(key, {}))
 
-            if GLSP_kwargs.get("show_WF", True):
-                for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
-                    ax_gls[-i_WF - 1].plot(glsps[l_WF_key_model[0]].freq / day2sec * freq_fact, glsps[l_WF_key_model[0]].wf, '-', color="k", label=f"WF {l_WF_key_model}", linewidth=GLSP_kwargs.get("lw ", 1.))
-                    if jj == 0:
-                        ax_gls[-i_WF - 1].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get("WF", {}))
-                        ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
-                    labelleft = True if jj == 0 else False
-                    ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
+        #     ax_gls_twin[0].set_xlabel("Period [days]", fontsize=fontsize)
+
+        #     if GLSP_kwargs.get("show_WF", True):
+        #         for i_WF, l_WF_key_model in enumerate(l_l_WF_key_model):
+        #             ax_gls[-i_WF - 1].plot(glsps[l_WF_key_model[0]].freq / day2sec * freq_fact, glsps[l_WF_key_model[0]].wf, '-', color="k", label=f"WF {l_WF_key_model}", linewidth=GLSP_kwargs.get("lw ", 1.))
+        #             if jj == 0:
+        #                 ax_gls[-i_WF - 1].legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get("WF", {}))
+        #                 ax_gls[-i_WF - 1].set_ylabel("Relative Amplitude")
+        #             labelleft = True if jj == 0 else False
+        #             ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
         logger.debug("Done: GLSP plot")
 
     if TS_kwargs['do']:

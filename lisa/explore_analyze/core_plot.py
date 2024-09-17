@@ -330,7 +330,7 @@ class Data2plot(Model2plot):
         return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
     
 
-class MultiDataBin2plot(Data2plot):
+class MultiData2plot(Data2plot):
 
     def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
                  pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
@@ -348,6 +348,26 @@ class MultiDataBin2plot(Data2plot):
         self.__l_data2plot = [Data2plot(expression=expression_i, exptime=exptime, method=method, datasetname=datasetname_i, 
                                         pl_kwargs=None, pl_kwargs_error=None, show_error=False)
                               for expression_i, datasetname_i in l_expression_and_datasetname]
+
+
+class MultiModel2plot(Model2plot):
+
+    def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, supersampling:int|None=None,
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+        self._init_l_model2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, supersampling=supersampling)
+        self._init_ModelBinning(exptime=exptime, supersampling=supersampling)
+        self._init_pl_kwargs(pl_kwargs=pl_kwargs)
+        self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
+        self.show_error = show_error
+    
+    @property
+    def l_model2plot(self):
+        return self.__l_model2plot
+
+    def _init_l_model2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, supersampling:int|None=None):
+        self.__l_model2plot = [Model2plot(expression=expression_i, exptime=exptime, supersampling=supersampling, datasetname=datasetname_i, 
+                                          pl_kwargs=None, pl_kwargs_error=None, show_error=False)
+                               for expression_i, datasetname_i in l_expression_and_datasetname]
         
 
 class ComputedModel(object):
@@ -451,8 +471,7 @@ class ComputedModels_Database(object):
                 (computed_model.binning == binning) and
                 array_equal(computed_model.times, times)
                 ):
-                if model_found is not None:
-                    i_model_found.append(ii)
+                i_model_found.append(ii)
                 model_found = computed_model
         if len(i_model_found) > 1:
             print(f"Warning: The model has been found multiple times in the database at indexes {i_model_found}")
@@ -473,7 +492,7 @@ class ComputedModels_Database(object):
         """
         model_found, _, times_found = self.find_computed_model(expression=expression, datasetname=datasetname, binning=binning,
                                                                times=times)
-        if not((model_found is not None) and not(overwrite)):
+        if  (model_found is None) or overwrite:
             if (model_found is not None) and overwrite:
                 logger.info("Such model is already in the database, but it will be overwritten.")
             if times_found is not None:
@@ -608,7 +627,7 @@ class PlotsDefinition(object):
         # Init lims
         self.__lims:tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...] = tuple([tuple([{"x":(None, None),"y_data":(None, None), "y_resi":(None, None)} for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init models2plot_database
-        self.__things2plot: Dict[str, Model2plot|Data2plot|MultiDataBin2plot] = {}
+        self.__things2plot: Dict[str, Model2plot|Data2plot|MultiData2plot] = {}
 
     def __repr__(self):
         return f"{self.__grid}"
@@ -644,8 +663,8 @@ class PlotsDefinition(object):
         return deepcopy(self.__lims)
 
     @property
-    def things2plot(self) -> Dict[str, Model2plot|Data2plot|MultiDataBin2plot]:
-        """Dictionary providing the conversion from names to Model2plot, Data2plot or MultiDataBin2plot instances"""
+    def things2plot(self) -> Dict[str, Model2plot|Data2plot|MultiData2plot]:
+        """Dictionary providing the conversion from names to Model2plot, Data2plot or MultiData2plot instances"""
         return self.__things2plot.copy()
     
     def __get_l_i(self, idx:int|None, roworcol:str) -> list[int]:
@@ -680,15 +699,32 @@ class PlotsDefinition(object):
         """Remove a model from the grid"""
         self.__grid[i_row][i_col].remove(name)
         
-    def add_modelordata2plot(self, expression:str, name:str|None=None, overwrite:bool=False, **kwargs) -> str:
-        """Add a Model2plot or Data2plot to things2plot
-        """
-        # Check if name already exists
+    def _check_namealreadyexists(self, name:str|None=None, overwrite:bool=False):
         if (name is not None) and (name in self.things2plot) and not(overwrite):
             raise ValueError(f"There is already a model2plot with this name ({name}). Please choose another name")
         elif (name is not None) and (name in self.things2plot) and not(overwrite):
             logger.info(f"There is already a model2plot with this name ({name}). It will be overwritten")
-        elif name is None:
+
+    def _modelordata(self, expression:Expression) -> str:
+        if "data" in expression.components:
+            return "data"
+        else:
+            return "model"
+        
+    def _create_modelordata2plot(self, expression:str, **kwargs) -> Data2plot|Model2plot:
+        expression_instance = Expression(expression=expression)
+        dataormodel = self._modelordata(expression=expression_instance)
+        if dataormodel == 'data':
+            return Data2plot(expression=expression, **kwargs)
+        else:
+            return Model2plot(expression=expression, **kwargs)
+
+    def add_modelordata2plot(self, expression:str, name:str|None=None, overwrite:bool=False, **kwargs) -> str:
+        """Add a Model2plot or Data2plot to things2plot
+        """
+        self._check_namealreadyexists(name=name, overwrite=overwrite)
+        modelordata2plot = self._create_modelordata2plot(expression=expression, **kwargs)
+        if name is None:
             basename = expression
             if ('datasetname' in kwargs) and (kwargs['datasetname']):
                 basename += f"_{kwargs['datasetname']}" 
@@ -698,33 +734,41 @@ class PlotsDefinition(object):
                 ii += 1
                 name = f"{basename}_{ii}"
         # Add instance to models
-        expression_instance = Expression(expression=expression)
-        if "data" in expression_instance.components:
-            self.__things2plot[name] = Data2plot(expression=expression, **kwargs)
-        else:
-            self.__things2plot[name] = Model2plot(expression=expression, **kwargs)
+        self.__things2plot[name] = modelordata2plot
         return name
     
-    def add_multidatab2plot(self, l_expression_and_datasetname:list[tuple[str, str]], name:str|None=None, overwrite:bool=False, **kwargs) -> str:
-        """Add a MultiDataBin2plot to things2plot
+    def _create_multimodelordata2plot(self, l_expression_and_datasetname:list[tuple[str, str]], **kwargs) -> MultiData2plot|MultiModel2plot:
+        l_modelordata = []
+        for expression_i, _ in l_expression_and_datasetname:
+            expression_instance_i = Expression(expression=expression_i)
+            l_modelordata.append(self._modelordata(expression=expression_instance_i))
+        if all([[modelordata_i == 'data' for modelordata_i in l_modelordata]]):
+            return MultiData2plot(l_expression_and_datasetname=l_expression_and_datasetname, **kwargs)
+        elif all([[modelordata_i == 'model' for modelordata_i in l_modelordata]]):
+            return MultiModel2plot(l_expression_and_datasetname=l_expression_and_datasetname, **kwargs)
+        else:
+            raise ValueError("l_expression_and_datasetname contains both expression for data and for model. You need to provide only data or only model")
+        
+    def add_multimodelordata2plot(self, l_expression_and_datasetname:list[tuple[str, str]], name:str|None=None, overwrite:bool=False, **kwargs) -> str:
+        """Add a MultiData2plot to things2plot
         """
-        # Check if name already exists
-        if (name is not None) and (name in self.things2plot) and not(overwrite):
-            raise ValueError(f"There is already a model2plot with this name ({name}). Please choose another name")
-        elif (name is not None) and (name in self.things2plot) and not(overwrite):
-            logger.info(f"There is already a model2plot with this name ({name}). It will be overwritten")
-        elif name is None:
-            basename = "multidatabin"
+        self._check_namealreadyexists(name=name, overwrite=overwrite)
+        multidataormodel2plot = self._create_multimodelordata2plot(l_expression_and_datasetname=l_expression_and_datasetname, **kwargs)
+        if name is None:
+            if type(multidataormodel2plot) == MultiData2plot:
+                basename = "multidata"
+            else:
+                basename = "multimodel"
             ii = 0
             name = f"{basename}"
             while name in self.things2plot:
                 ii += 1
                 name = f"{basename}_{ii}"
         # Add instance to models
-        self.__things2plot[name] = MultiDataBin2plot(l_expression_and_datasetname=l_expression_and_datasetname, **kwargs)
+        self.__things2plot[name] = multidataormodel2plot
         return name
     
-    def getthing2plot(self, name:str) -> Model2plot|Data2plot|MultiDataBin2plot:
+    def getthing2plot(self, name:str) -> Model2plot|Data2plot|MultiData2plot:
         """Get a Model2plot from models"""
         # Check that name is in models
         if not(name in self.things2plot):
@@ -747,7 +791,7 @@ class PlotsDefinition(object):
             for i_col in l_i_cols:
                 self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
 
-    def add_multidatabin_to_grid(self, l_expression_and_datasetname:list[tuple[str, str]], i_row:int|None=None, i_col:int|None=None, name:str|None=None, overwrite:bool=False, **kwargs):
+    def add_multimodelordata_to_grid(self, l_expression_and_datasetname:list[tuple[str, str]], i_row:int|None=None, i_col:int|None=None, name:str|None=None, overwrite:bool=False, **kwargs):
         """Add a model that is already in the grid.
         
         This function is a wrapper around addtogrid and addtomodels for the user convenience.
@@ -757,7 +801,7 @@ class PlotsDefinition(object):
         # If you don't provide i_row it means that you want to add to all rows
         l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
         l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
-        name = self.add_multidatab2plot(l_expression_and_datasetname=l_expression_and_datasetname, name=name, overwrite=overwrite, **kwargs)
+        name = self.add_multimodelordata2plot(l_expression_and_datasetname=l_expression_and_datasetname, name=name, overwrite=overwrite, **kwargs)
         for i_row in l_i_rows:
             for i_col in l_i_cols:
                 self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
@@ -784,7 +828,7 @@ class PlotsDefinition(object):
                         logger.info(f"No model with name {name} in the grid at row {i_row} and col {i_col}")
                     else:
                         thing2plot = self.getthing2plot(name=name)
-                        if isinstance(thing2plot, MultiDataBin2plot):
+                        if isinstance(thing2plot, MultiData2plot):
                             pass
                         else:
                             if thing2plot.datasetname is None:
@@ -810,12 +854,21 @@ class PlotsDefinition(object):
                 res[name] = self.things2plot[name]
         return res
 
-    def get_multidatabins2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiDataBin2plot]:
+    def get_multidatas2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiData2plot]:
         """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
         """
         res = OrderedDict()
         for name in self.grid[i_row][i_col]:
-            if type(self.things2plot[name]) is MultiDataBin2plot:
+            if type(self.things2plot[name]) is MultiData2plot:
+                res[name] = self.things2plot[name]
+        return res
+    
+    def get_multimodels2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiData2plot]:
+        """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
+        """
+        res = OrderedDict()
+        for name in self.grid[i_row][i_col]:
+            if type(self.things2plot[name]) is MultiModel2plot:
                 res[name] = self.things2plot[name]
         return res
     
