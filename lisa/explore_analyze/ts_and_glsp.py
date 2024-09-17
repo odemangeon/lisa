@@ -48,17 +48,12 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                          plotdef_TS:PlotsDefinition,
                          plotdef_GLSP:PlotsDefinition|None=None,
                          computedmodels_db:ComputedModels_Database|None=None,
-                         compute_GP_model=True,
                          split_GP_computation=None,
-                        #  outputs_load_datasets_and_models=None,
-                        #  computed_models_4_TS=None,
                          datasim_kwargs=None,
-                        #  datasetnames=None,
                          amplitude_fact=1., unit=None,
                          create_axes_kwargs=None,
                          TS_kwargs=None,
                          GLSP_kwargs=None,
-                         suptitle_kwargs=None,
                          fontsize=AandA_fontsize,
                          get_key_compute_model_func=get_key_compute_model,
                          kwargs_get_key_compute_model=None
@@ -82,7 +77,6 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
     create_axes_kwargs     : dict
     remove_dict   : dict
     TS_kwargs     : None or dict
-            - 'do': boolean (Def: True)
             - 'npt_model': int (Def: 1000) giving the number of points to use for the model
             - 'extra_dt_model': float (Def: 0)
                 Specify the extra time that for which you want to compute the model before and after the
@@ -91,32 +85,12 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                 Factor to apply to the time
             - 'time_unit': str (Def: days)
                 String that is going to be used to give the unit (and reference system) of the time.
-            - 'pl_kwargs': dict
-                Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
-                and values a dictionary that will be passed as keyword arguments associated the plotting functions.
-                You can also add a 'jitter' key with value a dictionary that will contain the changes that you
-                want to make for the update error bars due to potential jitter.
-                Finally you can use the 'show_error' keyword with value True or False to specify if you want
-                the error bars of the dataset to be plotted.
-            - 'ylims_data': Define the limits on the data y axis. This override 'pad_data'
-            - 'pad_data': Iterable of 2 floats (Def: (0.1, 0.1))
+            - 'pad': Iterable of 2 floats (Def: (0.1, 0.1))
                 Define the bottom and top pad to apply for data axes.
                 Can also be a dictionary of Iterable of 2 floats with for keys the planet_name. This
                 allows to provide different pad_data for different planets.
-            - 'ylims_resi': Define the limits on the residuals y axis. This override 'pad_resi'
-            - 'pad_resi': Iterable of 2 floats which define the bottom and top pad to apply for residuals axes.
-            - 'indicate_y_outliers_data': boolean. If True, data outliers (outside of the plot) are indicated
+            - 'indicate_y_outliers': boolean. If True, data outliers (outside of the plot) are indicated
                 by arrows.
-            - 'indicate_y_outliers_resi': boolean. If True, residuals outliers (outside of the plot) are indicated
-                by arrows.
-            - 'exptime_bin' : float
-                Exposure time for the binning of data in the same unit that the time of the datasets.
-                If you don't want to bin put 0.
-            - 'binning_stat' : str
-                Statitical method used to compute the binned value. Can be "mean" or "median". This is passed to the
-                statistic argument of scipy.stats.binned_statistic
-            - 'one_binning_per_row' : bool
-                If true only one binning per row is performed
             - 'show_title'  : bool
                 If True, show the titles (of the main and the zoom)
             - 'legend_kwargs' : dict of dict
@@ -125,20 +99,6 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                     'do'    : bool
                         (Default: True) Whether or not to show the legend
                     other keys are passed to the pyplot.legend function
-            - 'rms_kwargs'  : dict
-                keys are:
-                    'do'            : bool
-                        (Default: True) Show the rms in between the data and residuals axes
-                    'rms_format'    :
-                        (Default: '.0f') Format that will be used to format the rms values
-            - 'gridspec_kwargs': dict
-                The content of this entry should be a dictionary which will be passed to
-                GridSpecFromSubplotSpec (GridSpecFromSubplotSpec(..., **TS_kwargs['gridspec_kwargs'])) which
-                create the gridspec separating the full and zoom GLSP columns
-            - 'axeswithsharex_kwargs': dict
-                The content of this entry should be a dictionary which will be passed to
-                et.add_twoaxeswithsharex(... gs_from_sps_kw=TS_kwargs['axeswithsharex_kwargs']) which
-                creates the data and residuals axes.
     GLSP_kwargs   : None or dict
             - 'do': boolean (Def: True)
             - 'use_jitter': boolen (Def: True)
@@ -224,11 +184,11 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
             raise ValueError(f"{key} is not a valid key for create_axes_kwargs, should be in ['main_gridspec', 'add_axeswithsharex']")
 
     # Make sure that the TS_kwargs and GLSP_kwargs are well defined
-    TS_kwargs_user = TS_kwargs if create_axes_kwargs is not None else {}
-    TS_kwargs.update(TS_kwargs_user)
+    if TS_kwargs is None:
+        TS_kwargs = {}
 
-    GLSP_kwargs_user = GLSP_kwargs if create_axes_kwargs is not None else {}
-    GLSP_kwargs.update(GLSP_kwargs_user)
+    if GLSP_kwargs is None:
+        GLSP_kwargs = {}
 
     # Create The GridSpec
     do_TS = plotdef_TS is not None
@@ -795,7 +755,6 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
                           create_axes_kwargs=None,
                           TS_kwargs=None,
                           GLSP_kwargs=None,
-                          suptitle_kwargs=None,
                           fontsize=AandA_fontsize,
                           get_key_compute_model_func=get_key_compute_model,
                           kwargs_get_key_compute_model=None
@@ -933,8 +892,6 @@ def create_iTSNGLSP_plots(fig, post_instance, df_fittedval,
             - 'legend_param': dict of dict
                 Dictionary with key in ('data', 'model', 'resi', 'GP', 'WF') and values dictionaries that
                 will be passed on to legend ( legend(.., **GLSP_kwargs['legend_param'][key]))
-    suptitle_kwargs : dict
-        Dictionary which defines the properties of the suptitle. See docstring of do_suptitle for details
     amplitude_fact       : float
         Factor to apply to the data
     unit        : str
