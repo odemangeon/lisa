@@ -83,19 +83,13 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
     remove_dict   : dict
     TS_kwargs     : None or dict
             - 'do': boolean (Def: True)
-            - 'row4datasetname'   : dict of int
-                Dictionary saying which dataset to plot on which row. The format is:
-                {"<dataset_name>": <int giving the row index starting at 0>, ...}
             - 'npt_model': int (Def: 1000) giving the number of points to use for the model
             - 'extra_dt_model': float (Def: 0)
                 Specify the extra time that for which you want to compute the model before and after the
                 data.
-            - 'tlims': None or Iterable of 2 float (Def: None)
-                Specificy the time limits for the plot
-            - 'tlims_zoom': None or Iterable of 2 float (Def: None)
-                If provided a zoom on the right of the main plot will be drawn.
-                This gives the beginning and end time for the zoom
-            - 't_unit': str (Def: days)
+            - 'time_fact': float (Def: 1)
+                Factor to apply to the time
+            - 'time_unit': str (Def: days)
                 String that is going to be used to give the unit (and reference system) of the time.
             - 'pl_kwargs': dict
                 Dictionary with keys a dataset name (ex: "RV_HD209458_ESPRESSO_0") or "model" or "GP"
@@ -231,58 +225,32 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
 
     # Make sure that the TS_kwargs and GLSP_kwargs are well defined
     TS_kwargs_user = TS_kwargs if create_axes_kwargs is not None else {}
-    TS_kwargs = {'do': True, }
     TS_kwargs.update(TS_kwargs_user)
 
     GLSP_kwargs_user = GLSP_kwargs if create_axes_kwargs is not None else {}
-    GLSP_kwargs = {'do': True, }
     GLSP_kwargs.update(GLSP_kwargs_user)
 
     # Create The GridSpec
-    gs = GridSpec(nrows=1, ncols=int(TS_kwargs['do']) + int(GLSP_kwargs['do']),
+    do_TS = plotdef_TS is not None
+    do_GLSP = plotdef_GLSP is not None
+    gs = GridSpec(nrows=1, ncols=int(do_TS) + int(do_GLSP),
                   figure=fig, **create_axes_kwargs['main_gridspec']
                   )
-    if TS_kwargs['do']:
+    if do_TS:
         gs_ts = gs[0]
-        if GLSP_kwargs['do']:
+        if do_GLSP:
             gs_gls = gs[1]
     else:
         gs_gls = gs[0]
-
-    # # # If no dataset name is provided get all the available datasets of the provided inst_cat
-    # datasetnames = plotdef_TS.get_all_datasetnames()
-    
-    # if datasetnames is None:
-    #     datasetnames = post_instance.dataset_db.get_datasetnames(inst_fullcat=inst_cat, sortby_instcat=False, sortby_instname=False)
 
     # If no ComputedModels_Database is provided create a new one
     if computedmodels_db is None:
         computedmodels_db = ComputedModels_Database()
 
-    # # Load the defined datasets and check how many dataset there is by instrument.
-    # (dico_load, kwargs_compute_model_4_key_model
-    #  ) = load_datasets_and_models(datasetnames=datasetnames, post_instance=post_instance, datasim_kwargs=datasim_kwargs,
-    #                               df_fittedval=df_fittedval, amplitude_fact=amplitude_fact,
-    #                               compute_raw_models_func=compute_raw_models_func,
-    #                               remove_add_model_components_func=remove_add_model_components_func,
-    #                               kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
-    #                               compute_GP_model=compute_GP_model, split_GP_computation=split_GP_computation,
-    #                               get_key_compute_model_func=get_key_compute_model_func,
-    #                               kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-    #                               )
-    # else:
-    #     dico_load, kwargs_compute_model_4_key_model = outputs_load_datasets_and_models
-
-    # # Do the suptitle
-    # do_suptitle(fig=fig, post_instance=post_instance, datasetnames=datasetnames, fontsize=fontsize,
-    #             dico_models=dico_load["models"], model_removed_or_add_dict=kwargs_compute_model_4_key_model["model"],
-    #             data_remove_or_add_dict=kwargs_compute_model_4_key_model["data"], suptitle_kwargs=suptitle_kwargs
-    #             )
-
     #############
     # TIME SERIES
     #############
-    if TS_kwargs['do']:
+    if do_TS:
         logger.debug("Doing TS plot")
 
         # Make sure that indicate_y_outliers is well defined
@@ -316,9 +284,6 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
         #  ) = get_pl_kwargs(pl_kwargs=TS_kwargs.get('pl_kwargs', None), dico_nb_dstperinsts=dico_load['dico_nb_dstperinsts'], datasetnames=datasetnames,
         #                    bin_size=exptime_bin, one_binning_per_row=one_binning_per_row, nb_rows=nb_rows)
 
-        # update_data_binned_label(pl_kwarg=pl_kwarg_final, key_data_binned="data_binned", datasetnames=datasetnames, bin_size=exptime_bin,
-        #                          bin_size_unit=time_unit, one_binning_per_row=one_binning_per_row,
-        #                          nb_rows=nb_rows)
 
         #######################################################################
         # Make the data, models and residuals plots (full and zoomed if needed)
@@ -331,18 +296,6 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                 logger.debug(f"Doing TS plot for row {i_row}/{plotdef_TS.nb_rows}, column {i_col}/{plotdef_TS.nb_cols}")
                 # gs_ts_i = gs_ts_row[i_col]
                 gs_ts_i = gs_ts[i_row, i_col]
-
-                # # Compute the time (including time_fact, x_values) corresponding to each point in each dataset and the minimum and maximum of all dataset for the row
-                # xlims_datas = OrderedDict()
-                # x_values = OrderedDict()
-
-                # for datasetname in datasetname_axis:
-                #     xlims_datas[datasetname] = [inf, -inf]
-                #     x_values[datasetname] = copy(post_instance.dataset_db[datasetname].get_datasetkwarg("time")) * time_fact
-                #     if min(x_values[datasetname]) < xlims_datas[datasetname][0]:
-                #         xlims_datas[datasetname][0] = min(x_values[datasetname])
-                #     if max(x_values[datasetname]) > xlims_datas[datasetname][1]:
-                #         xlims_datas[datasetname][1] = max(x_values[datasetname])
 
                 # Create the data and residuals axes and set properties ans style
                 (axe_data, axe_resi) = et.add_twoaxeswithsharex(gs_ts_i, fig, gs_from_sps_kw=create_axes_kwargs['add_twoaxeswithsharex_TS'])  # gs_from_sps_kw={"wspace": 0.1}
@@ -493,8 +446,11 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                         _ = axe_resi.errorbar(dico_times[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
                         pl_kwarg_to_use[name_data2plot_i]["alpha"] *= 3 
                     
-                for name_multidata2plot_i, mulitdata2plot_i in plotdef_TS.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
+                for name_multidata2plot_i, multidata2plot_i in plotdef_TS.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
                     raise NotImplementedError("Plotting of MultiData2Plot is not implemented yet")
+                
+                for name_multimodel2plot_i, multimodel2plot_i in plotdef_TS.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
+                    raise NotImplementedError("Plotting of MultiModel2Plot is not implemented yet")
 
                 ###################################
                 # Set ylims and indicate_y_outliers
@@ -547,7 +503,7 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
     ######################################
     # Generalized Lomb-Scargle Periodogram
     ######################################
-    if GLSP_kwargs.get("do", True):
+    if do_GLSP:
         logger.debug("Doing GLSP plot")
 
         for i_row in range(plotdef_GLSP.nb_rows):
@@ -815,7 +771,7 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
         #             ax_gls[-i_WF - 1].tick_params(axis="both", labelleft=labelleft, labelsize=fontsize, right=True, which="both", direction="in")
         logger.debug("Done: GLSP plot")
 
-    if TS_kwargs['do']:
+    if do_TS:
         return computedmodels_db, rms_values
     else:
         return computedmodels_db, None
