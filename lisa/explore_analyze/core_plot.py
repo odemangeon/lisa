@@ -167,14 +167,17 @@ class Model2plot(object):
     - its plot kwargs
     """
     
-    def __init__(self, expression:str, times:NDArray[float_]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
+    def __init__(self, expression:str, times:NDArray[float_]|None=None, time_limits:tuple[float,float]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
                  datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
         self._init_expression(expression=expression)
         self._check_expression_4_data(expression=self.expression)
         self.__times:NDArray[float_]|None = None
         if times is not None:
             self.set_times(times=times)
-        self.__npt:int|None = None  
+        self.__time_limits:tuple[float,float]|None=None
+        if time_limits is not None:
+            self.set_time_limits(time_limits=time_limits)
+        self.__npt:int|None = None
         if npt is not None:
             self.set_npt(npt=npt)
         self._init_ModelBinning(exptime=exptime, supersampling=supersampling)
@@ -209,16 +212,28 @@ class Model2plot(object):
         if self.times is not None:
             return self.times
         else:
-            if post_instance is None:
-                raise ValueError("You didn't specify times. To be able to compute a default time vector you need to provide post_instance !")
-            times_dataset = copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
+            if self.time_limits is None:
+                if post_instance is None:
+                    raise ValueError("You didn't specify times, nor time_limits. To be able to compute a default time vector you need to provide post_instance !")
+                times_dataset = copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
+                time_limits = (min(times_dataset), max(times_dataset))
+            else:
+                time_limits = self.time_limits
             if self.npt is None:
                 npt = npt_default
             else:
                 npt = self.npt
-            return linspace(min(times_dataset) - extra_dt, max(times_dataset) + extra_dt, 
-                            npt, endpoint=True)
-            
+            return linspace(time_limits[0] - extra_dt, time_limits[1] + extra_dt, npt, endpoint=True)
+
+    @property
+    def time_limits(self) -> tuple[float,float]|None:
+        return copy(self.__time_limits)
+    
+    def set_time_limits(self, time_limits:tuple[float,float]):
+        if not(isinstance(time_limits, tuple)) or not(all([isinstance(time_limits_i, Number) for time_limits_i in time_limits])):
+            raise TypeError(f"time_limits should be a tuple of floats, got {time_limits}.")
+        self.__time_limits = copy(time_limits)
+
     @property
     def npt(self) -> int|None:
         return self.__npt
@@ -905,7 +920,7 @@ class PlotsDefinition(object):
     
     def set_axis_xlims(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
         """Set the xlims for one axis of the grid designated by i_row and i_col."""
-        self.lims[i_row][i_col]['x'] = lims
+        self.__lims[i_row][i_col]['x'] = lims
     
     def get_axis_ylims_data(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
@@ -913,7 +928,7 @@ class PlotsDefinition(object):
     
     def set_axis_ylims_data(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
         """Set the ylims for the data plot of one axis of the grid designated by i_row and i_col."""
-        self.lims[i_row][i_col]['y_data'] = lims
+        self.__lims[i_row][i_col]['y_data'] = lims
     
     def get_axis_ylims_resi(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
@@ -921,7 +936,7 @@ class PlotsDefinition(object):
     
     def set_axis_ylims_resi(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
         """Set the ylims for the resi plot of one axis of the grid designated by i_row and i_col."""
-        self.lims[i_row][i_col]['y_resi'] = lims
+        self.__lims[i_row][i_col]['y_resi'] = lims
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""

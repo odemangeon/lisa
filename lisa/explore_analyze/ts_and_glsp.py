@@ -487,6 +487,8 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                         pl_kwarg_to_use[name_data2plot_i]["alpha"] = 1
                     if data_err_jitter_plot_i is not None:
                         pl_kwarg_to_use[name_data2plot_i]["alpha"] /= 3
+                        if 'label' in pl_kwarg_to_use[name_data2plot_i]:
+                            label = pl_kwarg_to_use[name_data2plot_i].pop('label')
                         _ = axe_data.errorbar(dico_times[name_data2plot_i], y=dico_data[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
                         _ = axe_resi.errorbar(dico_times[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
                         pl_kwarg_to_use[name_data2plot_i]["alpha"] *= 3 
@@ -512,7 +514,7 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
                         points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef_TS.get_datas2plot(i_row=i_row, i_col=i_col)])
                         et.auto_y_lims(points_pl_i, axe, pad=pad[data_or_resi])
                     else:
-                        axe.set_ylim(points_pl_i)
+                        axe.set_ylim(y_lims_i)
 
                     # Indicate outlier values that are off y-axis with an arrows for raw cadence
                     if indicate_y_outliers[data_or_resi]:
