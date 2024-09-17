@@ -479,6 +479,23 @@ class ComputedModels_Database(object):
             return model_found, i_model_found[-1], times_found
         else:
             return None, None, times_found
+        
+    def find_models(self, expression:str|None=None, datasetname:str|None=None, binning:DataBinning|ModelBinning|None=None,
+                    times:NDArray[float_]|None=None) -> dict[int, dict]:
+        res:dict[int, dict] = {}
+        for ii, computed_model in enumerate(self.stored_models):
+            good_model = True
+            if expression is not None:
+                good_model = computed_model.expression.expression == expression
+            if good_model and (datasetname is not None):
+                good_model = computed_model.datasetname == datasetname
+            if good_model and (binning is not None):
+                good_model = computed_model.binning == binning
+            if good_model and (times is not None):
+                good_model = array_equal(computed_model.times, times)
+            if good_model:
+                res[ii] = self._get_show_model_dict(idx=ii)
+        return res
     
     def store_computed_model(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning,
                              times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_],
@@ -502,17 +519,20 @@ class ComputedModels_Database(object):
         else:
            logger.warning("Such model is already in the database and overwrite is False. The store command will be ignored.")
 
+    def _get_show_model_dict(self, idx:int):
+        return {'expression': self.stored_models[idx].expression.expression,
+                'datasetname': self.stored_models[idx].datasetname,
+                'binning': self.stored_models[idx].binning,
+                'times': {'size': self.stored_models[idx].times.size, 
+                          'min': min(self.stored_models[idx].times),
+                          'max': max(self.stored_models[idx].times),
+                          },
+                }
+
     def show_stored_models(self):
         dico = OrderedDict()
-        for ii, stored_model_i in enumerate(self.stored_models):
-            dico[ii] = {'expression': stored_model_i.expression.expression,
-                        'datasetname': stored_model_i.datasetname,
-                        'binning': stored_model_i.binning,
-                        'times': {'size': stored_model_i.times.size, 
-                                  'min': min(stored_model_i.times),
-                                  'max': max(stored_model_i.times),
-                                  },
-                        }
+        for ii in range(len(self.stored_models)):
+            dico[ii] = self._get_show_model_dict(idx=ii)
         pprint(dico)
 
 
