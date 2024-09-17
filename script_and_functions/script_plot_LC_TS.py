@@ -133,7 +133,6 @@ indicate_y_outliers = {"data": False, "resi": False}
 legend_kwargs_TS = {"all": {"do": True}}
 pad_TS = None
 
-compute_GP_model = True
 split_GP_computation = 500
 
 # These were the most commonly changed parameters.
