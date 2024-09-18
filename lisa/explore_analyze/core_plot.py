@@ -207,6 +207,10 @@ class Model2plot(object):
             raise TypeError(f"times should be numpy.ndarray of float, got {type(times)}.")
         self.__times = copy(times)
 
+    def get_times_dataset(self, post_instance:Posterior) -> NDArray[float_]:
+        """Return the times vector of the dataset"""
+        return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
+
     def get_times(self, post_instance:Posterior|None=None, npt_default:int=1000, extra_dt:float=0.) -> NDArray[float_]:
         """Return the times vector define by the user or return a default one using the """
         if self.times is not None:
@@ -215,7 +219,7 @@ class Model2plot(object):
             if self.time_limits is None:
                 if post_instance is None:
                     raise ValueError("You didn't specify times, nor time_limits. To be able to compute a default time vector you need to provide post_instance !")
-                times_dataset = copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
+                times_dataset = self.get_times_dataset(post_instance=post_instance)
                 time_limits = (min(times_dataset), max(times_dataset))
             else:
                 time_limits = self.time_limits
@@ -224,6 +228,10 @@ class Model2plot(object):
             else:
                 npt = self.npt
             return linspace(time_limits[0] - extra_dt, time_limits[1] + extra_dt, npt, endpoint=True)
+
+    def get_errors_datasets(self, post_instance:Posterior) -> NDArray[float_]:
+        """Return the data errors vector of the dataset"""
+        return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("data_err"))
 
     @property
     def time_limits(self) -> tuple[float,float]|None:
@@ -339,10 +347,6 @@ class Data2plot(Model2plot):
     @property
     def method(self) -> str:
         return self.binning.method
-
-    def get_times_dataset(self, post_instance:Posterior) -> NDArray[float_]:
-        """Return the times vector of the dataset"""
-        return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
     
 
 class MultiData2plot(Data2plot):
@@ -898,7 +902,7 @@ class PlotsDefinition(object):
                 res[name] = self.things2plot[name]
         return res
     
-    def get_multimodels2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiData2plot]:
+    def get_multimodels2plot(self, i_row:int, i_col:int) -> OrderedDict[str, MultiModel2plot]:
         """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
         """
         res = OrderedDict()
