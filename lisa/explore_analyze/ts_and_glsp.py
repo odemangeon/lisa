@@ -322,6 +322,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
             ##########################
             set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
     logger.debug("Done: TS plot")
+    return computedmodels_db, rms_values
 
 
 def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataFrame,
