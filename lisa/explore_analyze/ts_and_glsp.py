@@ -441,6 +441,9 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
             
             for name_multidata2plot_i, multidata2plot_i in plotdef.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
                 gls_inputs[name_multidata2plot_i] = {}
+                times = []
+                values = []
+                errors = []
                 for data2plot_i in multidata2plot_i.l_data2plot:
                     # Compute values and errors
                     times_dataset_i = data2plot_i.get_times_dataset(post_instance=post_instance)
