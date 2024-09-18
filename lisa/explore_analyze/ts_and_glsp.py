@@ -406,14 +406,41 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
             subplotspec_i = gs[i_row, i_col]
             Pbeg, Pend = period_range
             gls_inputs = {}
-            ######################################
-            # Plot the models specified in plotdef
-            ######################################
+            
+            # Load the input for the glsp computation
+            for name_data2plot_i, data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).items():
+                gls_inputs[name_data2plot_i] = {}
+                times_dataset_i = data2plot_i.get_times_dataset(post_instance=post_instance)
+                data_i, data_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                    compute_raw_models_func=compute_raw_models_func, 
+                                                    expression=data2plot_i.expression, times=times_dataset_i, datasetname=data2plot_i.datasetname,
+                                                    exptime=None, supersampling=None,
+                                                    computedmodels_db=computedmodels_db, 
+                                                    get_key_compute_model_func=get_key_compute_model,
+                                                    kwargs_get_key_compute_model=None,
+                                                    split_GP_computation=split_GP_computation
+                                                    )
+                # Compute jittered_errors
+                data_err_jitter_i = compute_data_err_jittered(data_err=data_err_i, post_instance=post_instance, datasetname=data2plot_i.datasetname, df_fittedval=df_fittedval)  
+                # Bin the residuals if needed
+                if data2plot_i.exptime > 0:
+                    (bins_i, _, bindata_i, bindata_std_i, bindata_std_jitter_i
+                        ) = compute_binning(times_dataset=times_dataset_i, values=data_i, errors=data_err_i, errors_jitter=data_err_jitter_i, exptime=data2plot_i.exptime, method=data2plot_i.method)
+                    midbins_i = bins_i[:-1] + data2plot_i.exptime / 2
+                    gls_inputs[name_data2plot_i]["times"] = midbins_i
+                    gls_inputs[name_data2plot_i]["values"] = bindata_i
+                    gls_inputs[name_data2plot_i]["errors"] = bindata_std_i
+                else:
+                    gls_inputs[name_data2plot_i]["times"] = times_dataset_i
+                    gls_inputs[name_data2plot_i]["values"] = data_i
+                    gls_inputs[name_data2plot_i]["errors"] = data_err_i
+                idx_sort = argsort(gls_inputs[name_data2plot_i]["times"])
+                gls_inputs[name_data2plot_i]["times"] = gls_inputs[name_data2plot_i]["times"][idx_sort] * time_fact
+                gls_inputs[name_data2plot_i]["values"] = gls_inputs[name_data2plot_i]["values"][idx_sort] * amplitude_fact
+                gls_inputs[name_data2plot_i]["errors"] = gls_inputs[name_data2plot_i]["errors"][idx_sort] * amplitude_fact
+            
             for name_multidata2plot_i, multidata2plot_i in plotdef.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
                 gls_inputs[name_multidata2plot_i] = {}
-                times = []
-                values = []
-                errors = []
                 for data2plot_i in multidata2plot_i.l_data2plot:
                     # Compute values and errors
                     times_dataset_i = data2plot_i.get_times_dataset(post_instance=post_instance)
@@ -446,8 +473,30 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 gls_inputs[name_multidata2plot_i]["values"] = concatenate(values)[idx_sort] * amplitude_fact
                 gls_inputs[name_multidata2plot_i]["errors"] = concatenate(errors)[idx_sort] * amplitude_fact
 
+            for name_model2plot_i, model2plot_i in plotdef.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
+                gls_inputs[name_model2plot_i] = {}
+                # Compute values and errors
+                times_dataset_i = model2plot_i.get_times_dataset(post_instance=post_instance)
+                # Compute the model
+                model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                        compute_raw_models_func=compute_raw_models_func, 
+                                                        expression=model2plot_i.expression, times=times_dataset_i, datasetname=model2plot_i.datasetname,
+                                                        exptime=model2plot_i.exptime, supersampling=model2plot_i.supersampling,
+                                                        computedmodels_db=computedmodels_db, 
+                                                        get_key_compute_model_func=get_key_compute_model,
+                                                        kwargs_get_key_compute_model=None,
+                                                        split_GP_computation=split_GP_computation)
+                gls_inputs[name_model2plot_i]["times"] = times_dataset_i
+                gls_inputs[name_model2plot_i]["values"] = model_i
+                if model_err_i is None:
+                    gls_inputs[name_model2plot_i]["errors"] = model2plot_i.get_errors_datasets(post_instance=post_instance)
+                idx_sort = argsort(gls_inputs[name_model2plot_i]["times"])
+                gls_inputs[name_model2plot_i]["times"] = gls_inputs[name_model2plot_i]["times"][idx_sort] * time_fact
+                gls_inputs[name_model2plot_i]["values"] = gls_inputs[name_model2plot_i]["values"][idx_sort] * amplitude_fact
+                gls_inputs[name_model2plot_i]["errors"] = gls_inputs[name_model2plot_i]["errors"][idx_sort] * amplitude_fact
+
             for name_multimodel2plot_i, multimodel2plot_i in plotdef.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
-                gls_inputs[name_multidata2plot_i] = {}
+                gls_inputs[name_multimodel2plot_i] = {}
                 times = []
                 values = []
                 errors = []
@@ -467,11 +516,11 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     values.append(model_i)
                     if model_err_i is None:
                         errors.append(model2plot_i.get_errors_datasets(post_instance=post_instance))
-                gls_inputs[name_multidata2plot_i]["times"] = concatenate(times)
-                idx_sort = argsort(gls_inputs[name_multidata2plot_i]["times"])
-                gls_inputs[name_multidata2plot_i]["times"] = gls_inputs[name_multidata2plot_i]["times"][idx_sort] * time_fact
-                gls_inputs[name_multidata2plot_i]["values"] = concatenate(values)[idx_sort] * amplitude_fact
-                gls_inputs[name_multidata2plot_i]["errors"] = concatenate(errors)[idx_sort] * amplitude_fact
+                gls_inputs[name_multimodel2plot_i]["times"] = concatenate(times)
+                idx_sort = argsort(gls_inputs[name_multimodel2plot_i]["times"])
+                gls_inputs[name_multimodel2plot_i]["times"] = gls_inputs[name_multimodel2plot_i]["times"][idx_sort] * time_fact
+                gls_inputs[name_multimodel2plot_i]["values"] = concatenate(values)[idx_sort] * amplitude_fact
+                gls_inputs[name_multimodel2plot_i]["errors"] = concatenate(errors)[idx_sort] * amplitude_fact
 
             # Create the axis
             # show_WF = GLSP_kwargs.get("show_WF", True)
