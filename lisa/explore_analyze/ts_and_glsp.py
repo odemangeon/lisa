@@ -45,7 +45,7 @@ day2sec = 24 * 60 * 60
 def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataFrame,
                          y_name: str, inst_cat: str,
                          compute_raw_models_func: Callable,
-                         plotdef_TS:PlotsDefinition,
+                         plotdef_TS:PlotsDefinition|None=None,
                          plotdef_GLSP:PlotsDefinition|None=None,
                          computedmodels_db:ComputedModels_Database|None=None,
                          split_GP_computation=None,
@@ -467,7 +467,7 @@ def create_TSNGLSP_plots(fig:Figure, post_instance:Posterior, df_fittedval:DataF
         logger.debug("Doing GLSP plot")
 
         for i_row in range(plotdef_GLSP.nb_rows):
-            for i_col in range(plotdef_TS.nb_cols):
+            for i_col in range(plotdef_GLSP.nb_cols):
                 pass
         # # Variable that are always available
         # all_time = concatenate([dico_load['times'][dst] for dst in datasetnames])

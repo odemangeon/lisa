@@ -216,20 +216,12 @@ def create_LC_phasefolded_plots(post_instance, df_fittedval, datasim_kwargs=None
 
 
 def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval, 
-                            plotdef_TS:PlotsDefinition, plotdef_GLSP:PlotsDefinition|None=None, 
+                            plotdef_TS:PlotsDefinition|None=None, plotdef_GLSP:PlotsDefinition|None=None, 
                             datasim_kwargs=None,
-                            # datasetnames=None,
-                            # remove_dict=None,
-                            # kwargs_compute_model_4_key_model=None,
-                            # models2plot: Models2plot|None=None,
                             computedmodels_db:ComputedModels_Database|None=None,
-                            compute_GP_model:bool=True,
                             split_GP_computation:int|None=None,
-                            # outputs_load_datasets_and_models=None, 
-                            # computed_models_4_TS=None,
                             TS_kwargs=None, GLSP_kwargs=None,
                             create_axes_kwargs=None,
-                            suptitle_kwargs=None,
                             LC_fact=1e6, LC_unit="ppm", fontsize=AandA_fontsize
                             ):
     """Produce clean LC time series and generalized Lomb-Scargle plots of a system.
@@ -386,77 +378,20 @@ def create_LC_TSNGLSP_plots(fig, post_instance, df_fittedval,
     computed_models : dict
         Outputs of the compute_and_plot_model function calls
     """
-    # Define Y axis quantity name 
-    # y_name = "$\Delta$F / F" if remove_dict.get("1", True) else "(F + $\Delta$F) / F"
-    # # Define kwargs_compute_model_4_key_model
-    # remove_dict_model = OrderedDict()
-    # for key, default in zip(["decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-    #                         [False, False, False, False, True]
-    #                         ):
-    #     remove_dict_model[key] = remove_dict.get(key, default)
-    # remove_dict_data = OrderedDict()
-    # for key, default in zip(["GP", "decorrelation_likelihood", "decorrelation", "inst_var", "contamination", "stellar_var", "1"],
-    #                         [False, False, False, False, False, False, True]
-    #                         ):
-    #     remove_dict_data[key] = remove_dict.get(key, default)
-    # remove_dict_data_err = OrderedDict()
-    # for key in ["contamination", ]:
-    #     remove_dict_data_err[key] = remove_dict_data[key]
-    # kwargs_compute_model_4_key_model_user = kwargs_compute_model_4_key_model if kwargs_compute_model_4_key_model is not None else {}
-    # kwargs_compute_model_4_key_model = {"model": {"remove_dict": remove_dict_model,
-    #                                               'add_dict': dict_model_false
-    #                                               },
-    #                                     "model_wGP": {"remove_dict": remove_dict_model,
-    #                                                   'add_dict': dict_model_false
-    #                                                   },
-    #                                     "data": {"remove_dict": remove_dict_data,
-    #                                              'add_dict': dict_model_false
-    #                                              },
-    #                                     "data_err": {"remove_dict": remove_dict_data_err,
-    #                                                  'add_dict': dict_model_false
-    #                                                  },
-    #                                     }
-    # kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
-    # if "model_wGP" not in kwargs_compute_model_4_key_model_user:
-    #     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
-    # Define default values for pl_kwargs data in TS_kwargs
     if TS_kwargs is None:
         TS_kwargs = {}
-    # pl_kwargs_TS = TS_kwargs.get("pl_kwargs", {})
-    # if pl_kwargs_TS is None:
-    #     pl_kwargs_TS = {}
-    # TS_kwargs["pl_kwargs"] = pl_kwargs_TS
-    # pl_kwargs_TS_all = pl_kwargs_TS.get("all", {})
-    # pl_kwargs_TS["all"] = pl_kwargs_TS_all
-    # pl_kwargs_TS_all_data = pl_kwargs_TS_all.get("data", {})
-    # pl_kwargs_TS_all["data"] = pl_kwargs_TS_all_data
-    # if "color" not in pl_kwargs_TS_all_data:
-    #     pl_kwargs_TS_all_data["color"] = 'k'
-    # if "alpha" not in pl_kwargs_TS_all_data:
-    #     pl_kwargs_TS_all_data["alpha"] = 0.1
-    # Call the create_TSNGLSP_plots function
     return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
                                 plotdef_TS=plotdef_TS,
                                 plotdef_GLSP=plotdef_GLSP,
                                 y_name="(F + $\Delta$F) / F", inst_cat='LC',
                                 compute_raw_models_func=compute_raw_models,
-                                # remove_add_model_components_func=remove_add_model_components,
-                                # kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
                                 computedmodels_db=computedmodels_db,
-                                compute_GP_model=compute_GP_model,
                                 split_GP_computation=split_GP_computation,
-                                # outputs_load_datasets_and_models=outputs_load_datasets_and_models,
-                                # computed_models_4_TS=computed_models_4_TS,
-                                # d_name_component_removed_to_print=d_name_component_removed_to_print,
-                                # l_model_1_per_row=['model', 'stellar_var'],
-                                # models2plot=models2plot,
                                 datasim_kwargs=datasim_kwargs,
-                                # datasetnames=datasetnames,
                                 amplitude_fact=LC_fact, unit=LC_unit,
                                 create_axes_kwargs=create_axes_kwargs,
                                 TS_kwargs=TS_kwargs,
                                 GLSP_kwargs=GLSP_kwargs,
-                                suptitle_kwargs=suptitle_kwargs,
                                 fontsize=fontsize,
                                 get_key_compute_model_func=get_key_compute_model,
                                 )
