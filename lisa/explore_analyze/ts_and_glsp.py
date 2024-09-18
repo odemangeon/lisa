@@ -397,6 +397,8 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
         period_no_ticklabels = []
     if scientific_notation_P_axis is None:
         scientific_notation_P_axis = True
+    if periods is None:
+        periods = {}
 
     for i_row in range(plotdef.nb_rows):
         for i_col in range(plotdef.nb_cols):
@@ -498,7 +500,7 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
 
             glsps = {}
             for key in gls_inputs:
-                glsps[key] = Gls((gls_inputs[key]["time"], gls_inputs[key]["data"], gls_inputs[key]["err"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
+                glsps[key] = Gls((gls_inputs[key]["times"], gls_inputs[key]["values"], gls_inputs[key]["errors"]), Pbeg=Pbeg, Pend=Pend, verbose=False)
                             
                 # Plot the GLS in frequency (freq are in 1 / unit of the time vector provided)
                 pl_kwargs = copy(plotdef.things2plot[key].pl_kwargs)
