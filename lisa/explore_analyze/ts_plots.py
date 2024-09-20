@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from loguru import logger
 from copy import copy
 from pandas import DataFrame
-from typing import Callable
+from typing import Callable, Dict
 
 from .misc import AandA_fontsize, check_spec_data_or_resi, check_kwargs_by_column_and_row, set_legend
 # from .models2computenplot import Models2plotTS, check_Models2plot
@@ -40,9 +40,9 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     legend_kwargs:dict|None=None,
                     npt_model_default:int|None=None,
                     extra_dt_model:float|None=None,
-                    fontsize=AandA_fontsize,
-                    get_key_compute_model_func=get_key_compute_model,
-                    kwargs_get_key_compute_model=None,
+                    fontsize:int=AandA_fontsize,
+                    get_key_compute_model_func:Callable=get_key_compute_model,
+                    kwargs_get_key_compute_model:Dict|None=None,
                     fig:Figure|None=None,
                     subplotspec:SubplotSpec|None=None,
                     ):
@@ -78,7 +78,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                    kwargs_def={'do': False}, kwargs_init={0: {i_row: {'do': True} for i_row in range(plotdef.nb_rows)}}
                                                    )
 
-    # Set defautl values for parameters
+    # Set default values for parameters
     if time_fact is None:
         time_fact = 1.
     if time_unit is None:
@@ -90,13 +90,13 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
     if extra_dt_model is None:
         extra_dt_model = 0.
 
-    #######################################################################
-    # Make the data, models and residuals plots (full and zoomed if needed)
-    #######################################################################
+    ###########################################
+    # Make the data, models and residuals plots
+    ###########################################
     rms_values = OrderedDict()
     for i_row in range(plotdef.nb_rows):
         for i_col in range(plotdef.nb_cols):
-            logger.debug(f"Doing TS plot for row {i_row}/{plotdef.nb_rows}, column {i_col}/{plotdef.nb_cols}")
+            logger.debug(f"Doing TS plot for row {i_row}/{plotdef.nb_rows - 1}, column {i_col}/{plotdef.nb_cols - 1}")
             subplotspec_i = gs[i_row, i_col]
 
             # Create the data and residuals axes and set properties ans style

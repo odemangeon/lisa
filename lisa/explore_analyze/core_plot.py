@@ -1,6 +1,6 @@
 from __future__ import annotations
 from collections import Sequence, OrderedDict
-from typing import Dict
+from typing import Dict, Iterable
 from loguru import logger
 from numpy.typing import NDArray
 from numpy import float_, isfinite, ndarray, equal, linspace, array_equal, size
@@ -555,70 +555,71 @@ class ComputedModels_Database(object):
         pprint(dico)
 
 
-# class Database_Model2computeNplot(object):
-#     """Database to store the Model2computeNplot model and access them easily
-#     """
-
-#     def __init__(self, tuples_name_model2computenplot: Sequence[tuple[str|int|None, Model2computeNplot]]|None=None, overwrite=False):
-#         """"""
-#         # Init models2computenplot
-#         self.__models2computenplot: Dict[str|int, Model2computeNplot] = {}
-#         # Add models2computenplot to the database
-#         self.add_models2computenplot(tuples_name_model2computenplot=tuples_name_model2computenplot, overwrite=overwrite)
-
-#     @property
-#     def name2modelspec(self) -> Dict[str|int, ModelSpecification]:
-#         """Dictionary providing the conversion from names to model specifications (what the model is composed of in terms of model component added and removed and the dataset used)"""
-#         return {name: model2computenplot.modelspec for name, model2computenplot in self.__models2computenplot.items()}
+class Axis_Properties(object):
+    """Class to specify the properties of an axis to be used in plot definition 
+    """
+    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None):
+        self.__name:str|None = None
+        if name is not None:
+            self.name = name
+        self.__unit:str|None = None
+        if unit is not None:
+            self.unit = unit
+        self.__lims:tuple[None|float,None|float] = (None, None)
+        if lims is not None:
+            self.lims = lims
     
-#     def __find_modelspec(self, modelspec: ModelSpecification):
-#         name_found = None
-#         for name_i, modelspec_i in self.name2modelspec.items():
-#             if modelspec == modelspec_i:
-#                 name_found = name_i
-#                 break
-#         return name_found
-
-#     def add_model2computenplot(self, model2computenplot: Model2computeNplot, name: None|int|str=None, overwrite=False):
-#         """"""
-#         # Check the type of model2computenplot
-#         if not(isinstance(model2computenplot, Model2computeNplot)):
-#             raise TypeError(f"model2computenplot should be a Model2computeNplot instance, got a {type(model2computenplot)}")
-#         # Check the type of name
-#         if name is None:
-#             name = 0
-#             while name in self.__models2computenplot:
-#                 name += 1
-#         if not(isinstance(name, int)) and not(isinstance(name, str)):
-#             raise TypeError(f"name should be either an int, a str or None, got {name}")
-#         # Check if a model2computenplot with the same ModelSpecification already exists
-#         name_found = self.__find_modelspec(modelspec=model2computenplot.modelspec)
-#         if name_found:
-#             if overwrite:
-#                 logger.warning(f"A Model2computeNplot instance with the same ModelSpecification and name {name_found} was found in the Database_Model2computeNplot. It will be replaced by a the provided model2computenplot with name {name}")
-#                 if name_found != name:
-#                     self.__models2computenplot.pop(name_found)
-#         self.__models2computenplot[name] = model2computenplot
-
-#     def add_models2computenplot(self, tuples_name_model2computenplot: Sequence[tuple[str|int|None, Model2computeNplot]], overwrite=False):
-#         """"""
-#         for name, model2computenplot in tuples_name_model2computenplot:
-#             self.add_model2computenplot(name=name, model2computenplot=model2computenplot, overwrite=overwrite)
-
-#     def get_models2computenplot(self, modelspec: ModelSpecification|None, name: str|int|None) -> tuple[Model2computeNplot|None, str|int|None]:
-#         """"""
-#         if (name is None) == (modelspec is None):
-#             raise ValueError(f"You need to provide either name or modelspec (and not both), you provided name={name} and modelspec={modelspec}")
-#         if name is None:
-#             name_found = self.__find_modelspec(modelspec=modelspec)
-#         else:
-#             name_found = name
-#         if name_found:
-#             return self.__models2computenplot[name_found], name_found
-#         else:
-#             return None, name_found
+    @property
+    def name(self) -> str|None:
+        return self.__name
     
+    @name.setter
+    def name(self, new_name:str):
+        if isinstance(new_name, str):
+            self.__name = new_name
+        else:
+            TypeError(f"name should be a str, got {type(new_name)}")
+
+    @property
+    def unit(self) -> str|None:
+        return self.__unit
     
+    @unit.setter
+    def unit(self, new_unit:str):
+        if isinstance(new_unit, str):
+            self.__unit = new_unit
+        else:
+            TypeError(f"unit should be a str, got {type(new_unit)}")
+
+    @property
+    def lims(self) -> tuple[None|float,None|float]:
+        return self.__lims
+    
+    @lims.setter
+    def lims(self, new_lims:Iterable[None|float]):
+        if (not(isinstance(new_lims, tuple)) or not(len(new_lims) == 2) or 
+            not(all([isinstance(new_lim_i, float) or (new_lim_i is None) for new_lim_i in new_lims]))
+            ):
+            raise TypeError(f"lims should be an Iterable of two elements that are either None or float, got {new_lims}")
+        else:
+            self.__lims = (new_lims[0], new_lims[1])
+
+    @property
+    def label(self) -> str|None:
+        """Return the label for the axis constructed from name and unit"""
+        res = ""
+        if self.name is not None:
+            res += self.name
+        if self.unit is not None:
+            if len(res) > 0:
+                res += " "
+            res += f"[{self.unit}]"
+        if len(res) > 0:
+            return res
+        else:
+            return None
+
+
 class PlotsDefinition(object):
     """Class to specifiy which models to plot in which axis of a figure that contains of a subplots grid with N rows and M columns.
 
@@ -663,8 +664,8 @@ class PlotsDefinition(object):
             nb_cols = 1
         # Init grid
         self.__grid:tuple[tuple[list[str], ...], ...] = tuple([tuple([[] for _ in range(nb_cols)]) for _ in range(nb_rows)])
-        # Init lims
-        self.__lims:tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...] = tuple([tuple([{"x":(None, None),"y_data":(None, None), "y_resi":(None, None)} for _ in range(nb_cols)]) for _ in range(nb_rows)])
+        # Init axes_properties
+        self.__axes_properties:tuple[tuple[dict[str,Axis_Properties], ...], ...] = tuple([tuple([{"x": Axis_Properties(), "y_data":Axis_Properties(), "y_resi":Axis_Properties()} for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init models2plot_database
         self.__things2plot: Dict[str, Model2plot|Data2plot|MultiData2plot] = {}
 
@@ -697,16 +698,16 @@ class PlotsDefinition(object):
         return deepcopy(self.__grid)
     
     @property
-    def lims(self) -> tuple[tuple[dict[str,tuple[float|None,float|None]], ...], ...]:
+    def axes_properties(self) -> tuple[tuple[dict[str,Axis_Properties], ...], ...]:
         """Grid (in the form of a tuple of tuple) with a dict with three keys 'x', 'y_data', 'y_resi' whose values are tuples which give the x and y limits for the axis."""
-        return deepcopy(self.__lims)
+        return deepcopy(self.__axes_properties)
 
     @property
     def things2plot(self) -> Dict[str, Model2plot|Data2plot|MultiData2plot]:
         """Dictionary providing the conversion from names to Model2plot, Data2plot or MultiData2plot instances"""
         return self.__things2plot.copy()
     
-    def __get_l_i(self, idx:int|None, roworcol:str) -> list[int]:
+    def _get_l_i(self, idx:int|None, roworcol:str) -> list[int]:
         """Return a list of idx depending on idx and colorrow"""
         if roworcol == 'row':
             size = len(self.grid)
@@ -726,8 +727,8 @@ class PlotsDefinition(object):
         # Check that name is in models
         if not(name in self.things2plot):
             raise ValueError(f"There is no model2plot with name {name}.")
-        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
@@ -822,8 +823,8 @@ class PlotsDefinition(object):
         2. Adding a model to models and to grid in one function call
         """
         # If you don't provide i_row it means that you want to add to all rows
-        l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
+        l_i_rows = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_cols = self._get_l_i(idx=i_col, roworcol='col')
         # Add
         name = self.add_modelordata2plot(expression=expression, name=name, overwrite=overwrite, **kwargs)
         for i_row in l_i_rows:
@@ -838,8 +839,8 @@ class PlotsDefinition(object):
         2. Adding a model to models and to grid in one function call
         """
         # If you don't provide i_row it means that you want to add to all rows
-        l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
+        l_i_rows = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_cols = self._get_l_i(idx=i_col, roworcol='col')
         name = self.add_multimodelordata2plot(l_expression_and_datasetname=l_expression_and_datasetname, name=name, overwrite=overwrite, **kwargs)
         for i_row in l_i_rows:
             for i_col in l_i_cols:
@@ -848,8 +849,8 @@ class PlotsDefinition(object):
     def setdatasetname(self, datasetname:str, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
         """Set the datasetname for the models2plot that do not have a dataset"""
         # If you don't provide i_row it means that you want to add to all rows
-        l_i_rows = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_cols = self.__get_l_i(idx=i_col, roworcol='col')
+        l_i_rows = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_cols = self._get_l_i(idx=i_col, roworcol='col')
         # Set datasetname:
         for i_row in l_i_rows:
             for i_col in l_i_cols:
@@ -917,50 +918,107 @@ class PlotsDefinition(object):
         for data2plot_i in self.get_datas2plot(i_row=i_row, i_col=i_col).values():
             datasetnames.append(data2plot_i.datasetname)
         return list(set(datasetnames))
+
+    def get_axis_lims(self, which:str, i_row:int, i_col:int) -> tuple[float|None,float|None]:
+        """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        if which not in self.axes_properties[i_row][i_col]:
+            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+        return self.axes_properties[i_row][i_col][which].lims
     
-    def get_axis_xlims(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
-        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
-        return self.lims[i_row][i_col]['x']
-    
-    def set_axis_xlims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
-        """Set the xlims for one axis of the grid designated by i_row and i_col."""
-        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+    def set_axis_lims(self, lims:tuple[float|None, float|None], which:str, i_row:int|None=None, i_col:int|None=None):
+        """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        lims    : New axis limits
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                self.__lims[i_row][i_col]['x'] = lims
+                if which not in self.axes_properties[i_row][i_col]:
+                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+                self.__axes_properties[i_row][i_col][which].lims = lims
+
+    def get_axis_name(self, which:str, i_row:int, i_col:int) -> str|None:
+        """Return the name of the quantity to be displayed on one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        if which not in self.axes_properties[i_row][i_col]:
+            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+        return self.axes_properties[i_row][i_col][which].name
     
-    def get_axis_ylims_data(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
-        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
-        return self.lims[i_row][i_col]['y_data']
-    
-    def set_axis_ylims_data(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
-        """Set the ylims for the data plot of one axis of the grid designated by i_row and i_col."""
-        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+    def set_axis_name(self, name:str, which:str, i_row:int|None=None, i_col:int|None=None):
+        """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        name    : New name for the quantity to be displayed 
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                self.__lims[i_row][i_col]['y_data'] = lims
+                if which not in self.axes_properties[i_row][i_col]:
+                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+                self.__axes_properties[i_row][i_col][which].name = name
+
+    def get_axis_unit(self, which:str, i_row:int, i_col:int) -> str|None:
+        """Return the unit of the quantity to be displayed on one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        if which not in self.axes_properties[i_row][i_col]:
+            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+        return self.axes_properties[i_row][i_col][which].unit
     
-    def get_axis_ylims_resi(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
-        """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
-        return self.lims[i_row][i_col]['y_resi']
-    
-    def set_axis_ylims_resi(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
-        """Set the ylims for the resi plot of one axis of the grid designated by i_row and i_col."""
-        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+    def set_axis_unit(self, unit:str, which:str, i_row:int|None=None, i_col:int|None=None):
+        """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        unit    : New unit for the quantity to be displayed 
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        which   : Can be "x", "y_data", "y_resi"
+        """
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                self.__lims[i_row][i_col]['y_resi'] = lims
+                if which not in self.axes_properties[i_row][i_col]:
+                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
+                self.__axes_properties[i_row][i_col][which].unit = unit
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
-    #     l_i_rows = self.__get_l_i(roworcol='row')
-    #     l_i_cols = self.__get_l_i(roworcol='col')
+    #     l_i_rows = self._get_l_i(roworcol='row')
+    #     l_i_cols = self._get_l_i(roworcol='col')
     #     model_names = []
     #     for i_row in l_i_rows:
     #         for i_col in l_i_cols:
@@ -989,8 +1047,8 @@ class PlotsDefinition(object):
         #         name = get_default_model_name(seq_current_model_name=self.__modelspecs.keys())
         #         logger.info(f"name automatically assigned to {name}.")
         # # Add the model name to models2 plot
-        # for i_row in self.__get_l_idx(row_or_col='row', idx=row_idx):
-        #     for i_col in self.__get_l_idx(row_or_col='col', idx=col_idx):
+        # for i_row in self._get_l_idx(row_or_col='row', idx=row_idx):
+        #     for i_col in self._get_l_idx(row_or_col='col', idx=col_idx):
         #         self.__models2plot[i_row][i_col].append(name)
         # # Add the modelspecs to modelspecs
         # if name not in self.name2modelspec:
@@ -1145,14 +1203,87 @@ class PlotsDefinition(object):
 #                             models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
 #     return models2plot
 
+class PhaseFold(object):
+    """Class to specify the properties for Phase Folding 
+    """
+    def __init__(self, T0:float|None=None, period:float|None=None):
+        self.__T0:float|None = None
+        if T0 is not None:
+            self.T0 = T0
+        self.__period:float|None = None
+        if period is not None:
+            self.period = period
+    
+    @property
+    def T0(self) -> float|None:
+        return self.__T0
+    
+    @T0.setter
+    def T0(self, new_T0:float):
+        if isinstance(new_T0, float):
+            self.__T0 = new_T0
+        else:
+            raise TypeError(f"T0 should be a float, got {type(new_T0)}")
 
-# class PlotsDefinitionTS(PlotsDefinition):
-#     """Class to specifiy which model to plot in each row of the plot for the TS plots"""
+    @property
+    def period(self) -> float|None:
+        return self.__period
+    
+    @period.setter
+    def period(self, new_period:float):
+        if isinstance(new_period, float):
+            self.__period = new_period
+        else:
+            raise TypeError(f"period should be a float, got {type(new_period)}")
 
-#     def __init__(self, nb_rows: int):
-#         """"""
-#         super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=True, nb_cols=1, same4allcols=True)
 
+class PlotsDefinitionPF(PlotsDefinition):
+    """Class to specifiy which model to plot in each row of the plot for the phase folded plots"""
+
+    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
+        """"""
+        if nb_rows is None:
+            nb_rows = 1
+        if nb_cols is None:
+            nb_cols = 1
+        super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+        # Init phase_fold_properties
+        self.__phase_fold_properties:tuple[tuple[PhaseFold, ...], ...] = tuple([tuple([PhaseFold() for _ in range(nb_cols)]) for _ in range(nb_rows)])
+
+    @property
+    def phasefold_properties(self) -> tuple[tuple[PhaseFold, ...], ...]:
+        """Grid (in the form of a tuple of tuple) with a PhaseFold instance describing the phase folding properties for the axis"""
+        return deepcopy(self.__phase_fold_properties)
+        
+    def get_phasefold_properties(self, i_row:int, i_col:int) -> tuple[float|None, float|None]:
+        """Return the T0 and period to be used for one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        """
+        return self.phasefold_properties[i_row][i_col].T0, self.phasefold_properties[i_row][i_col].period
+    
+    def set_phasefold_properties(self, T0:float|None=None, period:float|None=None, i_row:int|None=None, i_col:int|None=None):
+        """Set the T0 and period to be used for one axis (or more) of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        T0      : New T0 for the phase folding
+        period  : New period for the phase folding
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        """
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                if T0 is not None:
+                    self.__phase_fold_properties[i_row][i_col].T0 = T0
+                if period is not None:
+                    self.__phase_fold_properties[i_row][i_col].period = period
 
 # class PlotsDefinitioniTS(PlotsDefinition):
 #     """Class to specifiy which model to plot in each row of the plot for the iTS plots"""

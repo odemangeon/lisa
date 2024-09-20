@@ -120,8 +120,8 @@ plotdef_TS.add_modelordata_to_grid(name="model+GP CH", expression="(model - inst
 plotdef_TS.add_modelordata_to_grid(name="model+GP T", expression="(model - inst_var) / contam + GP - 1 ", datasetname=f"LC_{obj_name}_TESS_{56}",
                                 pl_kwargs={'color': 'C1', 'label': 'star+planet model (TESS)'})
 
-plotdef_TS.set_axis_ylims_data(lims=(-1000,1000), i_row=0, i_col=0)
-plotdef_TS.set_axis_ylims_resi(lims=(-400,400), i_row=0, i_col=0)
+plotdef_TS.set_axis_lims(lims=(-1000,1000), i_row=0, i_col=0, which="y_data")
+plotdef_TS.set_axis_lims(lims=(-400,400), i_row=0, i_col=0, which="y_resi")
 
 t_unit = 'BJD - 2,457,000'
 time_fact = 1.
