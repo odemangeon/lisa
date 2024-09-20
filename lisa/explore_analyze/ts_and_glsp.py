@@ -290,8 +290,9 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 else:
                     y_lims_i = plotdef.get_axis_ylims_resi(i_row=i_row, i_col=i_col)
                 if all([y_lims_i[jj] is None for jj in range(2)]) and (pad[data_or_resi] is not None):
-                    points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
-                    et.auto_y_lims(points_pl_i, axe, pad=pad[data_or_resi])
+                    if len(plotdef.get_datas2plot(i_row=i_row, i_col=i_col)):
+                        points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
+                        et.auto_y_lims(points_pl_i, axe, pad=pad[data_or_resi])
                 else:
                     axe.set_ylim(y_lims_i)
 
@@ -476,7 +477,7 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 gls_inputs[name_multidata2plot_i]["values"] = concatenate(values)[idx_sort] * amplitude_fact
                 gls_inputs[name_multidata2plot_i]["errors"] = concatenate(errors)[idx_sort] * amplitude_fact
 
-            for name_model2plot_i, model2plot_i in plotdef.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
+            for name_model2plot_i, model2plot_i in plotdef.get_models2plot(i_row=i_row, i_col=i_col).items():
                 gls_inputs[name_model2plot_i] = {}
                 # Compute values and errors
                 times_dataset_i = model2plot_i.get_times_dataset(post_instance=post_instance)
@@ -493,6 +494,8 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 gls_inputs[name_model2plot_i]["values"] = model_i
                 if model_err_i is None:
                     gls_inputs[name_model2plot_i]["errors"] = model2plot_i.get_errors_datasets(post_instance=post_instance)
+                else:
+                    gls_inputs[name_model2plot_i]["errors"] = model_err_i
                 idx_sort = argsort(gls_inputs[name_model2plot_i]["times"])
                 gls_inputs[name_model2plot_i]["times"] = gls_inputs[name_model2plot_i]["times"][idx_sort] * time_fact
                 gls_inputs[name_model2plot_i]["values"] = gls_inputs[name_model2plot_i]["values"][idx_sort] * amplitude_fact
@@ -519,6 +522,8 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     values.append(model_i)
                     if model_err_i is None:
                         errors.append(model2plot_i.get_errors_datasets(post_instance=post_instance))
+                    else:
+                        errors.append(model_err_i)
                 gls_inputs[name_multimodel2plot_i]["times"] = concatenate(times)
                 idx_sort = argsort(gls_inputs[name_multimodel2plot_i]["times"])
                 gls_inputs[name_multimodel2plot_i]["times"] = gls_inputs[name_multimodel2plot_i]["times"][idx_sort] * time_fact
@@ -659,7 +664,7 @@ def create_GLSP_plots(post_instance:Posterior, df_fittedval:DataFrame,
 
                 ax_glsp.set_xlim(xlims)
                 #
-                ax_glsp.legend(handletextpad=-.1, handlelength=0, fontsize=fontsize, **legend_param.get(key, {}))
+                ax_glsp.legend(fontsize=fontsize, **legend_param)
 
                 ax_glsp_period.set_xlabel("Period [days]", fontsize=fontsize)
 

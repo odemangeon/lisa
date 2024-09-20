@@ -922,25 +922,40 @@ class PlotsDefinition(object):
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
         return self.lims[i_row][i_col]['x']
     
-    def set_axis_xlims(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+    def set_axis_xlims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
         """Set the xlims for one axis of the grid designated by i_row and i_col."""
-        self.__lims[i_row][i_col]['x'] = lims
+        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.__lims[i_row][i_col]['x'] = lims
     
     def get_axis_ylims_data(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
         return self.lims[i_row][i_col]['y_data']
     
-    def set_axis_ylims_data(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+    def set_axis_ylims_data(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
         """Set the ylims for the data plot of one axis of the grid designated by i_row and i_col."""
-        self.__lims[i_row][i_col]['y_data'] = lims
+        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.__lims[i_row][i_col]['y_data'] = lims
     
     def get_axis_ylims_resi(self, i_row:int, i_col:int) -> tuple[float|None,float|None]:
         """Return a tuple giving the xlims for one axis of the grid designated by i_row and i_col."""
         return self.lims[i_row][i_col]['y_resi']
     
-    def set_axis_ylims_resi(self, lims:tuple[float|None, float|None], i_row:int, i_col:int):
+    def set_axis_ylims_resi(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
         """Set the ylims for the resi plot of one axis of the grid designated by i_row and i_col."""
-        self.__lims[i_row][i_col]['y_resi'] = lims
+        l_i_row = self.__get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self.__get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.__lims[i_row][i_col]['y_resi'] = lims
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
