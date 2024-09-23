@@ -22,7 +22,7 @@ from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetnam
                    get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_data_binned_label,
                    print_rms, set_legend, AandA_full_width, default_figheight_factor
                    )
-from .core_plot import PlotsDefinitionPF, ComputedModels_Database, Expression
+from .core_plot import PlotsDefinition_PF, ComputedModels_Database, Expression
 from .binning import compute_binning
 from .core_compute_load import compute_model, get_key_compute_model, compute_data_err_jittered
 from ..emcee_tools import emcee_tools as et
@@ -32,15 +32,12 @@ from ..posterior.core.posterior import Posterior
 
 def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                              compute_raw_models_func: Callable,
-                             plotdef:PlotsDefinitionPF,
+                             plotdef:PlotsDefinition_PF,
                              computedmodels_db:ComputedModels_Database|None=None,
                              split_GP_computation:int|None=None,
                              datasim_kwargs=None,
                              create_axes_main_gridspec:dict|None=None,
                              create_axes_dataresi_gridspec:dict|None=None,
-                             indicate_y_outliers:dict|None=None,
-                             pad:dict|None=None,
-                             legend_kwargs:dict|None=None,
                              npt_model_default:int|None=None,
                              extra_dt_model:float|None=None,
                              fontsize:int=AandA_fontsize,
@@ -60,12 +57,6 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
     if computedmodels_db is None:
         computedmodels_db = ComputedModels_Database()
 
-    # Make sure that indicate_y_outliers is well defined
-    indicate_y_outliers = check_spec_data_or_resi(spec_user=indicate_y_outliers, l_type_spec=[bool], spec_def=True)
-
-    # Make sure that pad is well defined
-    pad = check_spec_data_or_resi(spec_user=pad, l_type_spec=[tuple, list], spec_def=(0.1, 0.1))
-
     # Create the updated grid space for TS according to the number of rows and cols specified in plotdef
     if create_axes_main_gridspec is None:
         create_axes_main_gridspec = {}
@@ -76,11 +67,6 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
         gs = GridSpecFromSubplotSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
     else:
         gs = GridSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, figure=fig, **create_axes_main_gridspec)
-
-    # Make sure that legend_kwargs is well defined
-    legend_kwargs = check_kwargs_by_column_and_row(kwargs_user=legend_kwargs, l_row_name=list(range(plotdef.nb_rows)), l_col_name=list(range(plotdef.nb_cols)),
-                                                   kwargs_def={'do': False}, kwargs_init={0: {i_row: {'do': True} for i_row in range(plotdef.nb_rows)}}
-                                                   )
     
     # Set default values for parameters
     if npt_model_default is None:
@@ -100,12 +86,12 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             # Create the data and residuals axes and set properties ans style
             (axe_data, axe_resi) = et.add_twoaxeswithsharex(subplotspec_i, fig, gs_from_sps_kw=create_axes_dataresi_gridspec)  # gs_from_sps_kw={"wspace": 0.1}
         
-            axe_resi.set_xlabel(plotdef.axes_properties[i_row][i_col]["x"].label, fontsize=fontsize)
-            ylabel_data = plotdef.axes_properties[i_row][i_col]["y_data"].label
-            ylabel_resi = plotdef.axes_properties[i_row][i_col]["y_resi"].label
-            if ylabel_data is not None:
+            axe_resi.set_xlabel(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.label, fontsize=fontsize)
+            ylabel_data = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.label
+            ylabel_resi = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.label
+            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.show_label and (len(ylabel_data) > 0):
                 axe_data.set_ylabel(ylabel_data, fontsize=fontsize)
-            if ylabel_resi is not None:
+            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.show_label and (len(ylabel_resi) > 0):
                 axe_resi.set_ylabel(ylabel_resi, fontsize=fontsize)
             
             axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
@@ -117,6 +103,12 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
             axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
             axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+
+            #########################
+            # Set the title if needed
+            #########################
+            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).show_title and (len(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).title) > 0):
+                axe_data.set_title(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).title, fontsize=fontsize)
 
             ##################################
             # Get the phase folding properties
@@ -232,7 +224,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     rms_values[name_data2plot_i] = std(binresi_i)
                 else:
                     rms_values[name_data2plot_i] = std(residuals_i)
-                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i] * amplitude_fact} {plotdef.axes_properties[i_row][i_col]['y_resi'].unit} (raw cadence)")
+                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i] * amplitude_fact} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
                 # Plot the data or binned data
                 if data2plot_i.exptime == 0.:
                     data_plot_i = data_i
@@ -256,7 +248,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 dico_data[name_data2plot_i] = data_plot_i * amplitude_fact
                 dico_resi[name_data2plot_i] = resi_plot_i * amplitude_fact
                 dico_phasefoldedtimes[name_data2plot_i] = time_plot_i * time_fact
-                if not(show_error) or (data_err_i is None):
+                if not(show_error) or (data_err_plot_i is None):
                     ebcont = axe_data.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_data[name_data2plot_i], **pl_kwarg_to_use[name_data2plot_i])
                     if "color" not in pl_kwarg_to_use[name_data2plot_i]:
                         pl_kwarg_to_use[name_data2plot_i]["color"] = ebcont[0].get_color()
@@ -288,21 +280,24 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             ###################################
             logger.debug(f"Setting ylims and indicating outliers for row {i_row}, column {i_col}")
             # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
-            for axe, data_or_resi, points, in zip((axe_data, axe_resi), ("data", "resi"), (dico_data, dico_resi)):
+            for axe, data_or_resi, points, pad, indicate_outliers in zip((axe_data, axe_resi), ("data", "resi"), (dico_data, dico_resi), 
+                                                                         (plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.pad, plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.pad),
+                                                                         (plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.indicate_outliers, plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.indicate_outliers),
+                                                                         ):
                 # Set the y axis limits
                 if data_or_resi == "data":
-                    y_lims_i = plotdef.get_axis_lims(which="y_data", i_row=i_row, i_col=i_col)
+                    y_lims_i = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.lims
                 else:
-                    y_lims_i = plotdef.get_axis_lims(which="y_resi", i_row=i_row, i_col=i_col)
-                if all([y_lims_i[jj] is None for jj in range(2)]) and (pad[data_or_resi] is not None):
+                    y_lims_i = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.lims
+                if all([y_lims_i[jj] is None for jj in range(2)]):
                     if len(plotdef.get_datas2plot(i_row=i_row, i_col=i_col)):
                         points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
-                        et.auto_y_lims(points_pl_i[isfinite(points_pl_i)], axe, pad=pad[data_or_resi])
+                        et.auto_y_lims(points_pl_i[isfinite(points_pl_i)], axe, pad=pad)
                 else:
                     axe.set_ylim(y_lims_i)
 
                 # Indicate outlier values that are off y-axis with an arrows for raw cadence
-                if indicate_y_outliers[data_or_resi]:
+                if indicate_outliers:
                     for name_data2plot_i, data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).items():
                         et.indicate_y_outliers(x=dico_phasefoldedtimes[name_data2plot_i], y=points[name_data2plot_i], ax=axe,
                                                color=pl_kwarg_to_use[name_data2plot_i]["color"],
@@ -318,7 +313,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
             # Set the x axis limits
             # if TS_kwargs.get('force_tlims', False):
-            axe_data.set_xlim(plotdef.get_axis_lims(which="x", i_row=i_row, i_col=i_col))
+            axe_data.set_xlim(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.lims)
             # else:
             #     x_row = concatenate([dico_times[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).keys()])
             #     axe_data.set_xlim((min(x_row), max(x_row)))
@@ -326,7 +321,8 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             ##########################
             # Set the legend if needed
             ##########################
-            set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
+            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).do_legend:
+                set_legend(ax=axe_data, legend_kwargs=plotdef.get_axes_properties(i_row=i_row, i_col=i_col).legend_kwargs, fontsize_def=fontsize)
     
     logger.debug("Done: create_PF_plots")
     return computedmodels_db, rms_values

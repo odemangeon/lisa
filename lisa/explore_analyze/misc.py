@@ -311,11 +311,9 @@ def set_legend(ax, legend_kwargs, fontsize_def=AandA_fontsize):
     """
     """
     legend_kwargs_copy = legend_kwargs.copy()
-    if legend_kwargs_copy['do']:
-        legend_kwargs_copy.pop('do')
-        if ('prop' not in legend_kwargs_copy) and ('fontsize' not in legend_kwargs_copy):
-            legend_kwargs_copy['fontsize']  = fontsize_def
-        ax.legend(**legend_kwargs_copy)
+    if ('prop' not in legend_kwargs_copy) and ('fontsize' not in legend_kwargs_copy):
+        legend_kwargs_copy['fontsize']  = fontsize_def
+    ax.legend(**legend_kwargs_copy)
 
 
 def define_x_or_y_lims(x_or_ylims, row_name, col_name):

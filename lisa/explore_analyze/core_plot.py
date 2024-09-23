@@ -464,7 +464,7 @@ class ComputedModel(object):
         self.__datasetname = datasetname
 
     @property
-    def binning(self) -> ModelBinning:
+    def binning(self) -> ModelBinning|DataBinning:
         return self.__binning
     
     @property
@@ -473,7 +473,10 @@ class ComputedModel(object):
     
     @property
     def supersampling(self) -> int:
-        return self.__binning.supersampling
+        if isinstance(self.binning, ModelBinning):
+            return self.binning.supersampling
+        else:
+            raise ValueError(f"binning is of type Databinning and thus doesn't have a supersampling attribute.")
 
     @property
     def times(self) -> NDArray[float_]:
@@ -606,9 +609,9 @@ class ComputedModels_Database(object):
 
 
 class Axis_Properties(object):
-    """Class to specify the properties of an axis to be used in plot definition 
+    """Class to specify the properties of an axis to be used in plot properties 
     """
-    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None):
+    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, show_label:bool|None=None, logscale:bool|None=None):
         self.__name:str|None = None
         if name is not None:
             self.name = name
@@ -618,6 +621,12 @@ class Axis_Properties(object):
         self.__lims:tuple[None|float,None|float] = (None, None)
         if lims is not None:
             self.lims = lims
+        self.__show_label = True
+        if show_label is not None:
+            self.show_label = show_label
+        self.__logscale = False
+        if logscale is not None:
+            self.logscale = logscale
     
     @property
     def name(self) -> str|None:
@@ -648,14 +657,14 @@ class Axis_Properties(object):
     @lims.setter
     def lims(self, new_lims:Iterable[None|float]):
         if (not(isinstance(new_lims, tuple)) or not(len(new_lims) == 2) or 
-            not(all([isinstance(new_lim_i, float) or (new_lim_i is None) for new_lim_i in new_lims]))
+            not(all([isinstance(new_lim_i, Number) or (new_lim_i is None) for new_lim_i in new_lims]))
             ):
             raise TypeError(f"lims should be an Iterable of two elements that are either None or float, got {new_lims}")
         else:
             self.__lims = (new_lims[0], new_lims[1])
 
     @property
-    def label(self) -> str|None:
+    def label(self) -> str:
         """Return the label for the axis constructed from name and unit"""
         res = ""
         if self.name is not None:
@@ -664,10 +673,184 @@ class Axis_Properties(object):
             if len(res) > 0:
                 res += " "
             res += f"[{self.unit}]"
-        if len(res) > 0:
-            return res
+        return res
+    
+    @property
+    def show_label(self) -> bool:
+        return self.__show_label
+    
+    @show_label.setter
+    def show_label(self, new:bool):
+        if isinstance(new, bool):
+            self.__show_label = new
         else:
-            return None
+            TypeError(f"show_label should be a bool, got {type(new)}")
+
+    @property
+    def logscale(self) -> bool:
+        return self.__logscale
+
+    @logscale.setter
+    def logscale(self, new:bool):
+        if isinstance(new, bool):
+            self.__logscale = new
+        else:
+            TypeError(f"logscale should be a bool, got {type(new)}")
+
+
+class YAxis_Properties(Axis_Properties):
+
+    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, pad:tuple[float|float]|None=None,
+                 indicate_outliers:bool|None=None):
+        super(self.__class__, self).__init__(name=name, unit=unit, lims=lims)
+        self.__indicate_outliers = False
+        if indicate_outliers is not None:
+            self.indicate_outliers = indicate_outliers
+        self.__pad:tuple[float, float] = (0.1, 0.1)
+        if pad is not None:
+            self.pad = pad
+
+    @property
+    def indicate_outliers(self) -> bool:
+        return self.__indicate_outliers
+    
+    @indicate_outliers.setter
+    def indicate_outliers(self, new:bool):
+        if isinstance(new, bool):
+            self.__indicate_outliers = new
+        else:
+            raise TypeError(f"indicate_outliers should be a bool. Got {type(new)}.")
+    
+    @property
+    def pad(self) -> tuple[float, float]:
+        return self.__pad
+            
+    @pad.setter
+    def pad(self, new:tuple[float, float]):
+        if isinstance(new, tuple) and (len(new) == 2) and all([ii > 0 for ii in new]):
+            self.__pad = (float(new[0]), float(new[1]))
+        else:
+            raise ValueError(f"pad should be a tuple of two strictly positive number. Got {new}.")
+
+
+class Axes_Properties(object):
+    """Class to specify the properties of a plot to be used in plot definition 
+    """
+
+    def __init__(self):
+        self.__title:str = ""
+        self.__show_title:bool = True
+        self.__legend_kwargs:Dict = {}
+        self.__do_legend:bool = True
+        self.__x = Axis_Properties()
+        self._init_axes()
+
+    @property
+    def title(self) -> str:
+        return self.__title
+    
+    @title.setter
+    def title(self, new):
+        if isinstance(new, str):
+            self.__title = new
+        else:
+            raise TypeError(f"title should be a str. Got {type(new)}")
+
+    @property
+    def show_title(self) -> bool:
+        return self.__show_title
+    
+    @property
+    def legend_kwargs(self) -> Dict:
+        return self.__legend_kwargs
+    
+    @property
+    def do_legend(self) -> bool:
+        return self.__do_legend
+    
+    def _init_axes(self):
+        self.__y = YAxis_Properties()
+
+    @property
+    def x(self) -> Axis_Properties:
+        return self.__x
+
+    @property
+    def y(self) -> YAxis_Properties:
+        if type(self) == Axes_Properties:
+            return self.__y
+        else:
+            raise TypeError(f"{type(self)} doesn't have attrive y")
+
+
+class Axes_Properties_TS(Axes_Properties):
+    """Class to specify the properties of a plot to be used in plot definition 
+    """
+
+    def __init__(self):
+        self.__residuals = True
+        super(Axes_Properties_TS, self).__init__()
+
+    @property
+    def residuals(self):
+        return self.__residuals
+    
+    @residuals.setter
+    def residuals(self, new:bool):
+        if not(isinstance(new, bool)):
+            raise TypeError(f"residuals should be a bool. Got {type(new)}")
+        self.__residuals = new
+    
+    def _init_axes(self):
+        self.__ydata = YAxis_Properties()
+        if self.residuals:
+            self.__yresi = YAxis_Properties()
+
+    @property
+    def ydata(self) -> YAxis_Properties:
+        return self.__ydata
+    
+    @property
+    def yresi(self) -> YAxis_Properties:
+        if self.residuals:
+            return self.__yresi
+        else:
+            raise ValueError(f"Axes_Properties_TS with residuals=False doesn't have a yresi attribute")
+    
+
+class Axes_Properties_GLSP(Axes_Properties):
+    """Class to specify the properties of a plot to be used in plot definition 
+    """
+
+    def __init__(self, WF:bool=False):
+        self.__WF = False
+        super(Axes_Properties_GLSP, self).__init__()
+
+    @property
+    def WF(self):
+        return self.__WF
+    
+    @WF.setter
+    def WF(self, new):
+        if not(isinstance(new, bool)):
+            raise TypeError(f"WF should be a bool. Got {type(new)}")
+        self.__WF = new
+    
+    def _init_axes(self):
+        self.__yglsp = YAxis_Properties()
+        if self.WF:
+            self.__ywf = YAxis_Properties()
+
+    @property
+    def yglsp(self) -> YAxis_Properties:
+        return self.__yglsp
+    
+    @property
+    def ywf(self) -> YAxis_Properties:
+        if self.WF:
+            return self.__ywf
+        else:
+            raise ValueError(f"Axes_Properties_GLSP with WF=False doesn't have a ywf attribute")
 
 
 class PlotsDefinition(object):
@@ -714,10 +897,10 @@ class PlotsDefinition(object):
             nb_cols = 1
         # Init grid
         self.__grid:tuple[tuple[list[str], ...], ...] = tuple([tuple([[] for _ in range(nb_cols)]) for _ in range(nb_rows)])
-        # Init axes_properties
-        self.__axes_properties:tuple[tuple[dict[str,Axis_Properties], ...], ...] = tuple([tuple([{"x": Axis_Properties(), "y_data":Axis_Properties(), "y_resi":Axis_Properties()} for _ in range(nb_cols)]) for _ in range(nb_rows)])
         # Init models2plot_database
         self.__things2plot: Dict[str, Model2plot|Data2plot|MultiData2plot] = {}
+        # Init Axes_Properties
+        self._init_axes_properties(nb_rows=nb_rows, nb_cols=nb_cols)
 
     def __repr__(self):
         return f"{self.__grid}"
@@ -747,11 +930,14 @@ class PlotsDefinition(object):
         """Grid (in the form of a tuple of tuple) with the list of what to plot in each element of the grid"""
         return deepcopy(self.__grid)
     
-    @property
-    def axes_properties(self) -> tuple[tuple[dict[str,Axis_Properties], ...], ...]:
-        """Grid (in the form of a tuple of tuple) with a dict with three keys 'x', 'y_data', 'y_resi' whose values are tuples which give the x and y limits for the axis."""
-        return deepcopy(self.__axes_properties)
+    # Init axes_properties
+    def _init_axes_properties(self, nb_rows:int, nb_cols:int):
+        self.__axes_properties:tuple[tuple[Axes_Properties, ...], ...] = tuple([tuple([Axes_Properties() for _ in range(nb_cols)]) for _ in range(nb_rows)])
 
+    def get_axes_properties(self, i_row:int|None=None, i_col:int|None=None) -> Axes_Properties:
+        """Grid (in the form of a tuple of tuple) of Axes_Properties instances"""
+        return self.__axes_properties[self._get_i(idx=i_row, roworcol="row")][self._get_i(idx=i_col, roworcol="col")]
+    
     @property
     def things2plot(self) -> Dict[str, Model2plot|Data2plot|MultiData2plot]:
         """Dictionary providing the conversion from names to Model2plot, Data2plot or MultiData2plot instances"""
@@ -771,6 +957,18 @@ class PlotsDefinition(object):
         else:
             l_idx = [idx, ]
         return l_idx
+    
+    def _get_i(self, idx:int|None, roworcol:str) -> int:
+        if roworcol == 'row':
+            size = len(self.grid)
+        elif roworcol == 'col':
+            size = len(self.grid[0])
+        if idx is None:
+            if size == 1:
+                idx = 0
+            else:
+                raise ValueError(f"There are multiple {roworcol}s, so you need to provide i_{roworcol}.")
+        return idx
 
     def add_existing_to_grid(self, name:str, i_row:int|None=None, i_col:int|None=None):
         """Add a model that is already in the models2plot in the grid."""
@@ -896,7 +1094,7 @@ class PlotsDefinition(object):
             for i_col in l_i_cols:
                 self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
 
-    def setdatasetname(self, datasetname:str, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
+    def set_datasetname(self, datasetname:str, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
         """Set the datasetname for the models2plot that do not have a dataset"""
         # If you don't provide i_row it means that you want to add to all rows
         l_i_rows = self._get_l_i(idx=i_row, roworcol='row')
@@ -968,102 +1166,116 @@ class PlotsDefinition(object):
         for data2plot_i in self.get_datas2plot(i_row=i_row, i_col=i_col).values():
             datasetnames.append(data2plot_i.datasetname)
         return list(set(datasetnames))
-
-    def get_axis_lims(self, which:str, i_row:int, i_col:int) -> tuple[float|None,float|None]:
-        """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
-        if which not in self.axes_properties[i_row][i_col]:
-            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-        return self.axes_properties[i_row][i_col][which].lims
     
-    def set_axis_lims(self, lims:tuple[float|None, float|None], which:str, i_row:int|None=None, i_col:int|None=None):
-        """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
+    # def set_x_lims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
+    #     """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
         
-        Arguments
-        ---------
-        lims    : New axis limits
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
+    #     Arguments
+    #     ---------
+    #     lims    : New axis limits
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.lims = lims
+
+    # def set_y_lims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
+    #     """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
+        
+    #     Arguments
+    #     ---------
+    #     lims    : New axis limits
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.lims = lims
+    
+    # def set_x_name(self, name:str, i_row:int|None=None, i_col:int|None=None):
+    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+    #     Arguments
+    #     ---------
+    #     name    : New name for the quantity to be displayed 
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.name = name
+    
+    # def set_x_unit(self, unit:str, i_row:int|None=None, i_col:int|None=None):
+    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+    #     Arguments
+    #     ---------
+    #     unit    : New unit for the quantity to be displayed 
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.unit = unit
+    
+    # def set_y_name(self, name:str, i_row:int|None=None, i_col:int|None=None):
+    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+    #     Arguments
+    #     ---------
+    #     name    : New name for the quantity to be displayed 
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.name = name
+
+    # def set_y_unit(self, unit:str, which:str, i_row:int|None=None, i_col:int|None=None):
+    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
+        
+    #     Arguments
+    #     ---------
+    #     unit    : New unit for the quantity to be displayed 
+    #     i_row   : Index of the row in the grid
+    #     i_col   : Index of the column in the grid
+    #     which   : Can be "x", "y_data", "y_resi"
+    #     """
+    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+    #     # Make sure that i_row and i_col are correct
+    #     for i_row in l_i_row:
+    #         for i_col in l_i_col:
+    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.unit = unit
+
+    def set_axis_property(self, value, property:str,  axis:str, i_row:int|None=None, i_col:int|None=None):
         l_i_row = self._get_l_i(idx=i_row, roworcol='row')
         l_i_col = self._get_l_i(idx=i_col, roworcol='col')
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                if which not in self.axes_properties[i_row][i_col]:
-                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-                self.__axes_properties[i_row][i_col][which].lims = lims
-
-    def get_axis_name(self, which:str, i_row:int, i_col:int) -> str|None:
-        """Return the name of the quantity to be displayed on one axis of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
-        if which not in self.axes_properties[i_row][i_col]:
-            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-        return self.axes_properties[i_row][i_col][which].name
-    
-    def set_axis_name(self, name:str, which:str, i_row:int|None=None, i_col:int|None=None):
-        """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        name    : New name for the quantity to be displayed 
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
-        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-        # Make sure that i_row and i_col are correct
-        for i_row in l_i_row:
-            for i_col in l_i_col:
-                if which not in self.axes_properties[i_row][i_col]:
-                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-                self.__axes_properties[i_row][i_col][which].name = name
-
-    def get_axis_unit(self, which:str, i_row:int, i_col:int) -> str|None:
-        """Return the unit of the quantity to be displayed on one axis of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
-        if which not in self.axes_properties[i_row][i_col]:
-            raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-        return self.axes_properties[i_row][i_col][which].unit
-    
-    def set_axis_unit(self, unit:str, which:str, i_row:int|None=None, i_col:int|None=None):
-        """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        unit    : New unit for the quantity to be displayed 
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        which   : Can be "x", "y_data", "y_resi"
-        """
-        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-        # Make sure that i_row and i_col are correct
-        for i_row in l_i_row:
-            for i_col in l_i_col:
-                if which not in self.axes_properties[i_row][i_col]:
-                    raise ValueError(f"which should be in {list(self.axes_properties[i_row][i_col].keys())}, got {which}.")
-                self.__axes_properties[i_row][i_col][which].unit = unit
+                setattr(getattr(self.get_axes_properties(i_row=i_row, i_col=i_col), axis), property, value)
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
@@ -1253,6 +1465,49 @@ class PlotsDefinition(object):
 #                             models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
 #     return models2plot
 
+class PlotsDefinition_TS(PlotsDefinition):
+
+    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
+        super(PlotsDefinition_TS, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+
+    # Init axes_properties
+    def _init_axes_properties(self, nb_rows:int, nb_cols:int):
+        self.__axes_properties:tuple[tuple[Axes_Properties_TS, ...], ...] = tuple([tuple([Axes_Properties_TS() for _ in range(nb_cols)]) for _ in range(nb_rows)])
+
+    def get_axes_properties(self, i_row:int|None=None, i_col:int|None=None) -> Axes_Properties_TS:
+        """Grid (in the form of a tuple of tuple) of Axes_Properties_TS instances"""
+        return self.__axes_properties[self._get_i(idx=i_row, roworcol="row")][self._get_i(idx=i_col, roworcol="col")]
+
+    def set_residuals(self, value, i_row:int|None=None, i_col:int|None=None):
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.get_axes_properties(i_row=i_row, i_col=i_col).residuals = value
+
+
+class PlotsDefinition_GLSP(PlotsDefinition):
+
+    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
+        super(PlotsDefinition_GLSP, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+
+    # Init axes_properties
+    def _init_axes_properties(self, nb_rows:int, nb_cols:int):
+        self.__axes_properties:tuple[tuple[Axes_Properties_GLSP, ...], ...] = tuple([tuple([Axes_Properties_GLSP() for _ in range(nb_cols)]) for _ in range(nb_rows)])
+
+    def get_axes_properties(self, i_row:int|None=None, i_col:int|None=None) -> Axes_Properties_GLSP:
+        """Grid (in the form of a tuple of tuple) of Axes_Properties_GLSP instances"""
+        return self.__axes_properties[self._get_i(idx=i_row, roworcol="row")][self._get_i(idx=i_col, roworcol="col")]
+
+    def set_WF(self, value, i_row:int|None=None, i_col:int|None=None):
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.get_axes_properties(i_row=i_row, i_col=i_col).WF = value
+
 class PhaseFold(object):
     """Class to specify the properties for Phase Folding 
     """
@@ -1315,7 +1570,7 @@ class PhaseFold(object):
             raise TypeError(f"show_time_from_T0 should be a bool, got {type(new_show_time_from_T0)}")
 
 
-class PlotsDefinitionPF(PlotsDefinition):
+class PlotsDefinition_PF(PlotsDefinition_TS):
     """Class to specifiy which model to plot in each row of the plot for the phase folded plots"""
 
     def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
@@ -1324,7 +1579,7 @@ class PlotsDefinitionPF(PlotsDefinition):
             nb_rows = 1
         if nb_cols is None:
             nb_cols = 1
-        super(self.__class__, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+        super(PlotsDefinition_PF, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
         # Init phase_fold_properties
         self.__phase_fold_properties:tuple[tuple[PhaseFold, ...], ...] = tuple([tuple([PhaseFold() for _ in range(nb_cols)]) for _ in range(nb_rows)])
 
