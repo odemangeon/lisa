@@ -194,7 +194,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                   kwargs_get_key_compute_model=None,
                                                   split_GP_computation=split_GP_computation
                                                   )
-                # Bin the residuals if needed
+                # Bin the data and residuals if needed
                 if data2plot_i.exptime > 0:
                     (bins_i, _, bindata_i, bindata_std_i, bindata_std_jitter_i
                         ) = compute_binning(times_dataset=times_dataset, values=data_i, errors=data_err_i, errors_jitter=data_err_jitter_i, exptime=data2plot_i.exptime, method=data2plot_i.method)
@@ -228,22 +228,24 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 dico_resi[name_data2plot_i] = resi_plot_i * amplitude_fact
                 dico_times[name_data2plot_i] = time_plot_i * time_fact
                 if not(show_error) or (data_err_i is None):
-                    ebcont = axe_data.errorbar(dico_times[name_data2plot_i], y=dico_data[name_data2plot_i] * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
+                    ebcont = axe_data.errorbar(dico_times[name_data2plot_i], y=dico_data[name_data2plot_i], **pl_kwarg_to_use[name_data2plot_i])
+                    if "color" not in pl_kwarg_to_use[name_data2plot_i]:
+                        pl_kwarg_to_use[name_data2plot_i]["color"] = ebcont[0].get_color()
                     ebcont = axe_resi.errorbar(dico_times[name_data2plot_i], y=dico_resi[name_data2plot_i], **pl_kwarg_to_use[name_data2plot_i])
-                    color = ebcont[0].get_color()
-                    alpha = ebcont[0].get_alpha()
                 else:
                     ebcont = axe_data.errorbar(dico_times[name_data2plot_i], y=dico_data[name_data2plot_i], yerr=data_err_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
+                    if "color" not in pl_kwarg_to_use[name_data2plot_i]:
+                        pl_kwarg_to_use[name_data2plot_i]["color"] = ebcont[0].get_color()
                     ebcont = axe_resi.errorbar(dico_times[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
-                    color = ebcont[0].get_color()
-                    alpha = ebcont[0].get_alpha()
+                color = ebcont[0].get_color()
+                alpha = ebcont[0].get_alpha()
                 if "color" not in pl_kwarg_to_use[name_data2plot_i]:
                     pl_kwarg_to_use[name_data2plot_i]["color"] = color
                 if "alpha" not in pl_kwarg_to_use[name_data2plot_i]:
                     pl_kwarg_to_use[name_data2plot_i]["alpha"] = alpha
                 if pl_kwarg_to_use[name_data2plot_i]["alpha"] is None:
                     pl_kwarg_to_use[name_data2plot_i]["alpha"] = 1
-                if data_err_jitter_plot_i is not None:
+                if not(not(show_error) or (data_err_jitter_plot_i is None)):
                     pl_kwarg_to_use[name_data2plot_i]["alpha"] /= 3
                     if 'label' in pl_kwarg_to_use[name_data2plot_i]:
                         label = pl_kwarg_to_use[name_data2plot_i].pop('label')

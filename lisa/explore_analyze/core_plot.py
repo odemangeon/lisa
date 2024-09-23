@@ -155,6 +155,37 @@ class Expression(object):
             return False
 
 
+class Pl_factors(object):
+
+    def __init__(self, time_factor:float|None=None, value_factor:float|None=None):
+        self.__time_factor:float = 1.
+        if time_factor is not None:
+            self.time_factor = time_factor
+        self.__value_factor:float = 1.
+        if value_factor is not None:
+            self.value_factor = value_factor
+
+    @property
+    def time_factor(self) -> float:
+        return self.__time_factor
+    
+    @time_factor.setter
+    def time_factor(self, new_time_factor:float):
+        if not(isinstance(new_time_factor, float)):
+            raise TypeError(f"new_time_factor should be a float. Got {type(new_time_factor)}")
+        self.__time_factor = new_time_factor
+
+    @property
+    def value_factor(self) -> float:
+        return self.__value_factor
+    
+    @value_factor.setter
+    def value_factor(self, new_value_factor:float):
+        if not(isinstance(new_value_factor, float)):
+            raise TypeError(f"new_value_factor should be a float. Got {type(new_value_factor)}")
+        self.__value_factor = new_value_factor
+        
+
 class Model2plot(object):
     """Class to specify a model to plot
 
@@ -168,7 +199,10 @@ class Model2plot(object):
     """
     
     def __init__(self, expression:str, times:NDArray[float_]|None=None, time_limits:tuple[float,float]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
-                 datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+                 datasetname:str|None=None,
+                 time_factor:float|None=None, value_factor:float|None=None,
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True
+                 ):
         self._init_expression(expression=expression)
         self._check_expression_4_data(expression=self.expression)
         self.__times:NDArray[float_]|None = None
@@ -182,6 +216,7 @@ class Model2plot(object):
             self.set_npt(npt=npt)
         self._init_ModelBinning(exptime=exptime, supersampling=supersampling)
         self._init_datasetname(datasetname=datasetname)
+        self._init_pl_factors(time_factor=time_factor, value_factor=value_factor)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
         self.show_error = show_error
@@ -211,23 +246,27 @@ class Model2plot(object):
         """Return the times vector of the dataset"""
         return copy(post_instance.dataset_db[self.datasetname].get_datasetkwarg("time"))
 
-    def get_times(self, post_instance:Posterior|None=None, npt_default:int=1000, extra_dt:float=0.) -> NDArray[float_]:
+    def get_times(self, post_instance:Posterior|None=None, time_limits:tuple[float, float]|None=None, npt:int|None=None, extra_dt:float|None=None) -> NDArray[float_]:
         """Return the times vector define by the user or return a default one using the """
         if self.times is not None:
             return self.times
         else:
-            if self.time_limits is None:
-                if post_instance is None:
-                    raise ValueError("You didn't specify times, nor time_limits. To be able to compute a default time vector you need to provide post_instance !")
-                times_dataset = self.get_times_dataset(post_instance=post_instance)
-                time_limits = (min(times_dataset), max(times_dataset))
-            else:
-                time_limits = self.time_limits
-            if self.npt is None:
-                npt = npt_default
-            else:
-                npt = self.npt
-            return linspace(time_limits[0] - extra_dt, time_limits[1] + extra_dt, npt, endpoint=True)
+            if time_limits is None:
+                if self.time_limits is None:
+                    if post_instance is None:
+                        raise ValueError("You didn't specify times, nor time_limits. To be able to compute a default time vector you need to provide post_instance !")
+                    times_dataset = self.get_times_dataset(post_instance=post_instance)
+                    time_limits = (min(times_dataset), max(times_dataset))
+                else:
+                    time_limits = self.time_limits
+            if npt is None:
+                if self.npt is None:
+                    raise ValueError("You didn't specify times, nor npt. You need to provide at least one.")
+                else:
+                    npt = self.npt
+            if extra_dt is None:
+                extra_dt = (0., 0.)
+            return linspace(time_limits[0] - extra_dt, time_limits[1] + extra_dt, npt, endpoint=False)
 
     def get_errors_datasets(self, post_instance:Posterior) -> NDArray[float_]:
         """Return the data errors vector of the dataset"""
@@ -283,6 +322,13 @@ class Model2plot(object):
         self.__datasetname = datasetname
 
     @property
+    def pl_factors(self) -> Pl_factors:
+        return self.__pl_factors
+
+    def _init_pl_factors(self, time_factor:float|None, value_factor:float|None):
+        self.__pl_factors = Pl_factors(time_factor=time_factor, value_factor=value_factor)
+
+    @property
     def pl_kwargs(self) -> Dict:
         return self.__pl_kwargs
 
@@ -316,15 +362,19 @@ class Model2plot(object):
             raise TypeError(f"show_error should be a bool, got {type(show_error)}")
         self.__show_error = show_error
     
-
+    
 class Data2plot(Model2plot):
 
     def __init__(self, expression:str, exptime:float|int|None=None, method:str|None=None,
-                 datasetname:str|None=None, pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+                 datasetname:str|None=None,
+                 time_factor:float|None=None, value_factor:float|None=None, 
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True
+                 ):
         self._init_expression(expression=expression)
         self._check_expression_4_data(expression=self.expression)
         self._init_DataBinning(exptime=exptime, method=method)
         self._init_datasetname(datasetname=datasetname)
+        self._init_pl_factors(time_factor=time_factor, value_factor=value_factor)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
         self.show_error = show_error
@@ -1206,13 +1256,19 @@ class PlotsDefinition(object):
 class PhaseFold(object):
     """Class to specify the properties for Phase Folding 
     """
-    def __init__(self, T0:float|None=None, period:float|None=None):
+    def __init__(self, T0:float|None=None, period:float|None=None, phasefold_centralphase:float|None=None, show_time_from_T0:bool|None=None):
         self.__T0:float|None = None
         if T0 is not None:
             self.T0 = T0
         self.__period:float|None = None
         if period is not None:
             self.period = period
+        self.__phasefold_centralphase:float = 0.
+        if phasefold_centralphase is not None:
+            self.phasefold_centralphase = phasefold_centralphase
+        self.__show_time_from_T0:bool = False
+        if show_time_from_T0 is not None:
+            self.show_time_from_T0 = show_time_from_T0
     
     @property
     def T0(self) -> float|None:
@@ -1236,6 +1292,28 @@ class PhaseFold(object):
         else:
             raise TypeError(f"period should be a float, got {type(new_period)}")
 
+    @property
+    def phasefold_centralphase(self) -> float:
+        return self.__phasefold_centralphase
+    
+    @phasefold_centralphase.setter
+    def phasefold_centralphase(self, new_phasefold_centralphase:float):
+        if isinstance(new_phasefold_centralphase, float):
+            self.__phasefold_centralphase = new_phasefold_centralphase
+        else:
+            raise TypeError(f"phasefold_centralphase should be a float, got {type(new_phasefold_centralphase)}")
+
+    @property
+    def show_time_from_T0(self) -> float:
+        return self.__show_time_from_T0
+    
+    @show_time_from_T0.setter
+    def show_time_from_T0(self, new_show_time_from_T0:bool):
+        if isinstance(new_show_time_from_T0, bool):
+            self.__show_time_from_T0 = new_show_time_from_T0
+        else:
+            raise TypeError(f"show_time_from_T0 should be a bool, got {type(new_show_time_from_T0)}")
+
 
 class PlotsDefinitionPF(PlotsDefinition):
     """Class to specifiy which model to plot in each row of the plot for the phase folded plots"""
@@ -1255,15 +1333,15 @@ class PlotsDefinitionPF(PlotsDefinition):
         """Grid (in the form of a tuple of tuple) with a PhaseFold instance describing the phase folding properties for the axis"""
         return deepcopy(self.__phase_fold_properties)
         
-    def get_phasefold_properties(self, i_row:int, i_col:int) -> tuple[float|None, float|None]:
-        """Return the T0 and period to be used for one axis of the grid designated by i_row and i_col.
+    def get_phasefold_properties(self, i_row:int, i_col:int) -> PhaseFold:
+        """Return a PhaseFold instance describing the phase folding properties to be used for one axis of the grid designated by i_row and i_col.
         
         Arguments
         ---------
         i_row   : Index of the row in the grid
         i_col   : Index of the column in the grid
         """
-        return self.phasefold_properties[i_row][i_col].T0, self.phasefold_properties[i_row][i_col].period
+        return self.phasefold_properties[i_row][i_col]
     
     def set_phasefold_properties(self, T0:float|None=None, period:float|None=None, i_row:int|None=None, i_col:int|None=None):
         """Set the T0 and period to be used for one axis (or more) of the grid designated by i_row and i_col.
