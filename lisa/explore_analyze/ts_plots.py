@@ -270,13 +270,13 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                     ):
                 # Set the y axis limits
                 if data_or_resi == "data":
-                    y_lims_i = plotdef.get_axis_ylims_data(i_row=i_row, i_col=i_col)
+                    y_lims_i = plotdef.get_axis_lims(which="y_data", i_row=i_row, i_col=i_col)
                 else:
-                    y_lims_i = plotdef.get_axis_ylims_resi(i_row=i_row, i_col=i_col)
+                    y_lims_i = plotdef.get_axis_lims(which="y_resi", i_row=i_row, i_col=i_col)
                 if all([y_lims_i[jj] is None for jj in range(2)]) and (pad[data_or_resi] is not None):
                     if len(plotdef.get_datas2plot(i_row=i_row, i_col=i_col)):
                         points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
-                        et.auto_y_lims(points_pl_i, axe, pad=pad[data_or_resi])
+                        et.auto_y_lims(points_pl_i[isfinite(points_pl_i)], axe, pad=pad[data_or_resi])
                 else:
                     axe.set_ylim(y_lims_i)
 
@@ -297,7 +297,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
             logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
             # Set the x axis limits
             # if TS_kwargs.get('force_tlims', False):
-            axe_data.set_xlim(plotdef.get_axis_xlims(i_row=i_row, i_col=i_col))
+            axe_data.set_xlim(plotdef.get_axis_lims(which="y_data", i_row=i_row, i_col=i_col))
             # else:
             #     x_row = concatenate([dico_times[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).keys()])
             #     axe_data.set_xlim((min(x_row), max(x_row)))

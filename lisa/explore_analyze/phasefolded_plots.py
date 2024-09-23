@@ -5,7 +5,7 @@ Module to create phase folded plots
 """
 from __future__ import annotations
 from matplotlib.pyplot import figure
-from numpy import argsort
+from numpy import std, argsort, concatenate, isfinite
 from copy import copy
 from collections import OrderedDict
 from matplotlib.ticker import AutoMinorLocator
@@ -174,6 +174,9 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                         pl_kwarg_to_use["alpha"] = alpha / 3
                         _ = axe_data.fill_between(phasefolded_times_i * time_fact, (model_i - model_err_i) * amplitude_fact, (model_i + model_err_i) * amplitude_fact,
                                                   **pl_kwarg_to_use)
+            
+            for name_multimodel2plot_i, multimodel2plot_i in plotdef.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
+                raise NotImplementedError("Plotting of MultiModel2Plot is not implemented yet")
 
             ####################################
             # Plot the data specified in plotdef
@@ -277,6 +280,53 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     _ = axe_resi.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
                     pl_kwarg_to_use[name_data2plot_i]["alpha"] *= 3
 
+                for name_multidata2plot_i, multidata2plot_i in plotdef.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
+                    raise NotImplementedError("Plotting of MultiData2Plot is not implemented yet")
+            
+            ###################################
+            # Set ylims and indicate_y_outliers
+            ###################################
+            logger.debug(f"Setting ylims and indicating outliers for row {i_row}, column {i_col}")
+            # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
+            for axe, data_or_resi, points, in zip((axe_data, axe_resi), ("data", "resi"), (dico_data, dico_resi)):
+                # Set the y axis limits
+                if data_or_resi == "data":
+                    y_lims_i = plotdef.get_axis_lims(which="y_data", i_row=i_row, i_col=i_col)
+                else:
+                    y_lims_i = plotdef.get_axis_lims(which="y_resi", i_row=i_row, i_col=i_col)
+                if all([y_lims_i[jj] is None for jj in range(2)]) and (pad[data_or_resi] is not None):
+                    if len(plotdef.get_datas2plot(i_row=i_row, i_col=i_col)):
+                        points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
+                        et.auto_y_lims(points_pl_i[isfinite(points_pl_i)], axe, pad=pad[data_or_resi])
+                else:
+                    axe.set_ylim(y_lims_i)
 
+                # Indicate outlier values that are off y-axis with an arrows for raw cadence
+                if indicate_y_outliers[data_or_resi]:
+                    for name_data2plot_i, data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).items():
+                        et.indicate_y_outliers(x=dico_phasefoldedtimes[name_data2plot_i], y=points[name_data2plot_i], ax=axe,
+                                               color=pl_kwarg_to_use[name_data2plot_i]["color"],
+                                               alpha=pl_kwarg_to_use[name_data2plot_i]["alpha"])
+
+            # # Draw a horizontal line at 0 in the residual plot
+            # axe_resi.hlines(0, *current_xlims, colors="k", linestyles="dashed")
+            logger.debug(f"Done: Set ylims and indicate outliers for row {i_row}, column {i_col}")
+
+            ############################
+            # Set the tlims if provided
+            ############################
+            logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
+            # Set the x axis limits
+            # if TS_kwargs.get('force_tlims', False):
+            axe_data.set_xlim(plotdef.get_axis_lims(which="x", i_row=i_row, i_col=i_col))
+            # else:
+            #     x_row = concatenate([dico_times[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).keys()])
+            #     axe_data.set_xlim((min(x_row), max(x_row)))
+            logger.debug(f"Done: Set xlims for row {i_row}, column {i_col}")
+            ##########################
+            # Set the legend if needed
+            ##########################
+            set_legend(ax=axe_data, legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
+    
     logger.debug("Done: create_PF_plots")
     return computedmodels_db, rms_values
