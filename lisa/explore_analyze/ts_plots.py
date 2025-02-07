@@ -84,20 +84,27 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 l_axe = [axe_data, ]
 
             l_axe[-1].set_xlabel(axes_properties_i.x.label, fontsize=fontsize)
-            l_yaxis_properties = [getattr(axes_properties_i, axe_name) for axe_y, axe_name in zip(l_axe, ["ydata", "yresi"])]
+            l_yaxis_properties = [getattr(axes_properties_i, axe_name) for _, axe_name in zip(l_axe, ["ydata", "yresi"])]
             l_ylabel = [yaxis_properties_i.label for yaxis_properties_i in l_yaxis_properties]
             l_yshowlabel = [yaxis_properties_i.show_label for yaxis_properties_i in l_yaxis_properties]
             for axe, ylabel, yshowlabel in zip(l_axe, l_ylabel, l_yshowlabel):
                 if yshowlabel and (len(ylabel) > 0):
                     axe.set_ylabel(ylabel, fontsize=fontsize)
-            for axe, yaxis_properties_i in zip(l_axe, l_yaxis_properties): 
-                axe.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+            for axe, yaxis_properties_i in zip(l_axe, l_yaxis_properties):
+                # Set the ticks direction and length, also set fontsize for tick labels for both x and y and by default do not show the tick labels on the x axes (this is changed later if needed)
+                axe.tick_params(axis="both", which="major", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+                axe.tick_params(axis="both", which="minor", direction="in", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+                # Set minor location ticks for both x and y
                 axe.xaxis.set_minor_locator(AutoMinorLocator())
                 axe.yaxis.set_minor_locator(AutoMinorLocator())
-                axe.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+                # Set grid in "y"
                 axe.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+                #
                 if yaxis_properties_i.logscale:
                     axe.set_xscale("log")
+            # remove the tick labels on the bottom x axis if needed
+            if axes_properties_i.x.show_ticklabels:
+                l_axe[-1].tick_params(axis="x", labelbottom=True)
 
             #########################
             # Set the title if needed
@@ -122,7 +129,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                         expression=model2plot_i.expression, times=times_model2plot_i, datasetname=model2plot_i.datasetname,
                                                         exptime=model2plot_i.exptime, supersampling=model2plot_i.supersampling,
                                                         computedmodels_db=computedmodels_db, 
-                                                        get_key_compute_model_func=get_key_compute_model,
+                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                         kwargs_get_key_compute_model=None,
                                                         split_GP_computation=split_GP_computation)
                 # Plot
@@ -164,7 +171,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                       expression=data2plot_i.expression, times=times_dataset, datasetname=data2plot_i.datasetname,
                                                       exptime=None, supersampling=None,
                                                       computedmodels_db=computedmodels_db, 
-                                                      get_key_compute_model_func=get_key_compute_model,
+                                                      get_key_compute_model_func=get_key_compute_model_func,
                                                       kwargs_get_key_compute_model=None,
                                                       split_GP_computation=split_GP_computation
                                                       )
@@ -179,7 +186,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                   datasetname=data2plot_i.datasetname,
                                                   exptime=None, supersampling=None,
                                                   computedmodels_db=computedmodels_db, 
-                                                  get_key_compute_model_func=get_key_compute_model,
+                                                  get_key_compute_model_func=get_key_compute_model_func,
                                                   kwargs_get_key_compute_model=None,
                                                   split_GP_computation=split_GP_computation
                                                   )
@@ -288,6 +295,7 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
             logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
             axe_data.set_xlim(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.lims)
             logger.debug(f"Done: Set xlims for row {i_row}, column {i_col}")
+
             ##########################
             # Set the legend if needed
             ##########################

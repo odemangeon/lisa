@@ -265,7 +265,7 @@ class Model2plot(object):
                 else:
                     npt = self.npt
             if extra_dt is None:
-                extra_dt = (0., 0.)
+                extra_dt = 0.
             return linspace(time_limits[0] - extra_dt, time_limits[1] + extra_dt, npt, endpoint=False)
 
     def get_errors_datasets(self, post_instance:Posterior) -> NDArray[float_]:
@@ -611,7 +611,8 @@ class ComputedModels_Database(object):
 class Axis_Properties(object):
     """Class to specify the properties of an axis to be used in plot properties 
     """
-    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, show_label:bool|None=None, logscale:bool|None=None):
+    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, 
+                 show_label:bool|None=None, show_ticklabels:bool|None=None, logscale:bool|None=None):
         self.__name:str|None = None
         if name is not None:
             self.name = name
@@ -624,6 +625,9 @@ class Axis_Properties(object):
         self.__show_label = True
         if show_label is not None:
             self.show_label = show_label
+        self.__show_ticklabels = True
+        if show_ticklabels is not None:
+            self.__show_ticklabels = show_ticklabels
         self.__logscale = False
         if logscale is not None:
             self.logscale = logscale
@@ -687,6 +691,17 @@ class Axis_Properties(object):
             TypeError(f"show_label should be a bool, got {type(new)}")
 
     @property
+    def show_ticklabels(self) -> bool:
+        return self.__show_ticklabels
+    
+    @show_ticklabels.setter
+    def show_ticklabels(self, new:bool):
+        if isinstance(new, bool):
+            self.__sshow_ticklabels= new
+        else:
+            TypeError(f"show_ticklabels should be a bool, got {type(new)}")
+
+    @property
     def logscale(self) -> bool:
         return self.__logscale
 
@@ -700,7 +715,7 @@ class Axis_Properties(object):
 
 class YAxis_Properties(Axis_Properties):
 
-    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, pad:tuple[float|float]|None=None,
+    def __init__(self, name:str|None=None, unit:str|None=None, lims:tuple[None|float,None|float]|None=None, pad:tuple[float,float]|None=None,
                  indicate_outliers:bool|None=None):
         super(self.__class__, self).__init__(name=name, unit=unit, lims=lims)
         self.__indicate_outliers = False
@@ -780,7 +795,7 @@ class Axes_Properties(object):
         if type(self) == Axes_Properties:
             return self.__y
         else:
-            raise TypeError(f"{type(self)} doesn't have attrive y")
+            raise TypeError(f"{type(self)} doesn't have attribute y")
 
 
 class Axes_Properties_TS(Axes_Properties):

@@ -6,12 +6,21 @@ Module to create plot specifically for light curve data
 from __future__ import annotations
 from loguru import logger
 from numpy import ones_like
+from pandas import DataFrame
+from typing import Callable, Dict
+from matplotlib.figure import Figure
+from matplotlib.gridspec import SubplotSpec
+
 
 from .core_compute_load import get_key_compute_model as get_key_compute_model_core
 from .core_compute_load import is_valid_model_available as is_valid_model_available_core
 from .core_compute_load import compute_raw_models as compute_raw_models_core
+from .ts_plots import create_TS_plots
+from .core_plot import PlotsDefinition_TS, ComputedModels_Database
+from .misc import AandA_fontsize
 
 from ..posterior.core.model.core_model import Core_Model
+from ..posterior.core.posterior import Posterior
 
 
 key_whole = Core_Model.key_whole
@@ -77,3 +86,30 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                        split_GP_computation=split_GP_computation
                                        )
+    
+
+def create_LC_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
+                       plotdef:PlotsDefinition_TS,
+                       computedmodels_db:ComputedModels_Database|None=None,
+                       split_GP_computation:int|None=None,
+                       datasim_kwargs:dict|None=None,
+                       create_axes_main_gridspec:dict|None=None,
+                       create_axes_dataresi_gridspec:dict|None=None,
+                       npt_model_default:int|None=None,
+                       extra_dt_model:float|None=None,
+                       fontsize:int=AandA_fontsize,
+                       fig:Figure|None=None,
+                       subplotspec:SubplotSpec|None=None,
+                       ):
+    
+    return create_TS_plots(post_instance=post_instance, df_fittedval=df_fittedval, compute_raw_models_func=compute_raw_models,
+                           plotdef=plotdef, computedmodels_db=computedmodels_db, split_GP_computation=split_GP_computation,
+                           datasim_kwargs=datasim_kwargs,
+                           create_axes_main_gridspec=create_axes_main_gridspec,
+                           create_axes_dataresi_gridspec=create_axes_dataresi_gridspec,
+                           npt_model_default=npt_model_default, extra_dt_model=extra_dt_model,
+                           fontsize=fontsize,
+                           get_key_compute_model_func=get_key_compute_model,
+                           kwargs_get_key_compute_model=None,
+                           fig=fig, subplotspec=subplotspec,
+                           )
