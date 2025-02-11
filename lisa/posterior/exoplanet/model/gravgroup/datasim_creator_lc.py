@@ -1375,9 +1375,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 else:
                                     pre_text = " + "
                                 if pc_component_model.flux_offset == "zero":
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi}){text_occ}"
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2) * {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi}){text_occ}"
                                 elif pc_component_model.flux_offset == "semi-amplitude":
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})){text_occ}"
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2) * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})){text_occ}"
                                 else:  # it has to be 'param'
                                     returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})) + {flux_offset}){text_occ}"
 

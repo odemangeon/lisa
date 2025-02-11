@@ -19,7 +19,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from loguru import logger
-from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff, ceil, concatenate
+from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff, ceil, concatenate, isnan
 from dill import dump, load
 from os.path import join
 from os import getcwd, chdir
@@ -759,7 +759,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                         if not isfinite(lnlike_val):
                             logger.error("lnlike: {}".format(lnlike_val))
                             logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
-                            if np.isnan(lnlike_val):
+                            if isnan(lnlike_val):
                                 lnlike_val = -inf
                         return lnlike_val + lnprior_val
                 return lnpost_withdataset
