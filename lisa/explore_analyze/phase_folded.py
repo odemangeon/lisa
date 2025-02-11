@@ -719,4 +719,4 @@ def create_phasefolded_plots(post_instance, df_fittedval,
             ##########################
             set_legend(ax=axes_data[i_row][i_col], legend_kwargs=legend_kwargs[i_col][i_row], fontsize_def=fontsize)
 
-    return dico_load, computed_models_4_PF
+    return (dico_load, kwargs_compute_model_4_key_model), computed_models_4_PF
