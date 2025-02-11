@@ -16,7 +16,7 @@ from typing import Callable, Dict
 
 from .misc import AandA_fontsize, set_legend
 # from .models2computenplot import Models2plotTS, check_Models2plot
-from .core_plot import PlotsDefinition_TS, ComputedModels_Database, Expression
+from .core_plot import Axes_Properties, YAxis_Properties, PlotsDefinition, ComputedModels_Database, Expression
 from .binning import compute_binning
 from .core_compute_load import compute_model, get_key_compute_model, compute_data_err_jittered
 from ..emcee_tools import emcee_tools as et
@@ -304,3 +304,60 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
 
     logger.debug("Done: TS plot")
     return computedmodels_db, rms_values
+
+
+class Axes_Properties_TS(Axes_Properties):
+    """Class to specify the properties of a plot to be used in plot definition 
+    """
+
+    def __init__(self):
+        self.__residuals = True
+        super(Axes_Properties_TS, self).__init__()
+
+    @property
+    def residuals(self):
+        return self.__residuals
+    
+    @residuals.setter
+    def residuals(self, new:bool):
+        if not(isinstance(new, bool)):
+            raise TypeError(f"residuals should be a bool. Got {type(new)}")
+        self.__residuals = new
+    
+    def _init_axes(self):
+        self.__ydata = YAxis_Properties()
+        if self.residuals:
+            self.__yresi = YAxis_Properties()
+
+    @property
+    def ydata(self) -> YAxis_Properties:
+        return self.__ydata
+    
+    @property
+    def yresi(self) -> YAxis_Properties:
+        if self.residuals:
+            return self.__yresi
+        else:
+            raise ValueError(f"Axes_Properties_TS with residuals=False doesn't have a yresi attribute")
+        
+
+class PlotsDefinition_TS(PlotsDefinition):
+
+    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
+        super(PlotsDefinition_TS, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+
+    # Init axes_properties
+    def _init_axes_properties(self, nb_rows:int, nb_cols:int):
+        self.__axes_properties:tuple[tuple[Axes_Properties_TS, ...], ...] = tuple([tuple([Axes_Properties_TS() for _ in range(nb_cols)]) for _ in range(nb_rows)])
+
+    def get_axes_properties(self, i_row:int|None=None, i_col:int|None=None) -> Axes_Properties_TS:
+        """Grid (in the form of a tuple of tuple) of Axes_Properties_TS instances"""
+        return self.__axes_properties[self._get_i(idx=i_row, roworcol="row")][self._get_i(idx=i_col, roworcol="col")]
+
+    def set_residuals(self, value, i_row:int|None=None, i_col:int|None=None):
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                self.get_axes_properties(i_row=i_row, i_col=i_col).residuals = value

@@ -783,6 +783,12 @@ class Axes_Properties(object):
     def do_legend(self) -> bool:
         return self.__do_legend
     
+    @do_legend.setter
+    def do_legend(self, new:bool) -> bool:
+        if not(isinstance(new, bool)):
+            raise TypeError(f"do_legend should be a bool. Got {type(new)}")
+        self.__do_legend = new
+    
     def _init_axes(self):
         self.__y = YAxis_Properties()
 
@@ -796,41 +802,6 @@ class Axes_Properties(object):
             return self.__y
         else:
             raise TypeError(f"{type(self)} doesn't have attribute y")
-
-
-class Axes_Properties_TS(Axes_Properties):
-    """Class to specify the properties of a plot to be used in plot definition 
-    """
-
-    def __init__(self):
-        self.__residuals = True
-        super(Axes_Properties_TS, self).__init__()
-
-    @property
-    def residuals(self):
-        return self.__residuals
-    
-    @residuals.setter
-    def residuals(self, new:bool):
-        if not(isinstance(new, bool)):
-            raise TypeError(f"residuals should be a bool. Got {type(new)}")
-        self.__residuals = new
-    
-    def _init_axes(self):
-        self.__ydata = YAxis_Properties()
-        if self.residuals:
-            self.__yresi = YAxis_Properties()
-
-    @property
-    def ydata(self) -> YAxis_Properties:
-        return self.__ydata
-    
-    @property
-    def yresi(self) -> YAxis_Properties:
-        if self.residuals:
-            return self.__yresi
-        else:
-            raise ValueError(f"Axes_Properties_TS with residuals=False doesn't have a yresi attribute")
     
 
 class Axes_Properties_GLSP(Axes_Properties):
@@ -1291,6 +1262,14 @@ class PlotsDefinition(object):
         for i_row in l_i_row:
             for i_col in l_i_col:
                 setattr(getattr(self.get_axes_properties(i_row=i_row, i_col=i_col), axis), property, value)
+
+    def set_axes_property(self, value, property:str, i_row:int|None=None, i_col:int|None=None):
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                setattr(self.get_axes_properties(i_row=i_row, i_col=i_col), property, value)
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
@@ -1480,27 +1459,6 @@ class PlotsDefinition(object):
 #                             models2plot.add_model_2_plot(model=model_i.model, row_idx=i_row, datasetname=datasetname_i)
 #     return models2plot
 
-class PlotsDefinition_TS(PlotsDefinition):
-
-    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
-        super(PlotsDefinition_TS, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
-
-    # Init axes_properties
-    def _init_axes_properties(self, nb_rows:int, nb_cols:int):
-        self.__axes_properties:tuple[tuple[Axes_Properties_TS, ...], ...] = tuple([tuple([Axes_Properties_TS() for _ in range(nb_cols)]) for _ in range(nb_rows)])
-
-    def get_axes_properties(self, i_row:int|None=None, i_col:int|None=None) -> Axes_Properties_TS:
-        """Grid (in the form of a tuple of tuple) of Axes_Properties_TS instances"""
-        return self.__axes_properties[self._get_i(idx=i_row, roworcol="row")][self._get_i(idx=i_col, roworcol="col")]
-
-    def set_residuals(self, value, i_row:int|None=None, i_col:int|None=None):
-        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-        # Make sure that i_row and i_col are correct
-        for i_row in l_i_row:
-            for i_col in l_i_col:
-                self.get_axes_properties(i_row=i_row, i_col=i_col).residuals = value
-
 
 class PlotsDefinition_GLSP(PlotsDefinition):
 
@@ -1523,115 +1481,6 @@ class PlotsDefinition_GLSP(PlotsDefinition):
             for i_col in l_i_col:
                 self.get_axes_properties(i_row=i_row, i_col=i_col).WF = value
 
-class PhaseFold(object):
-    """Class to specify the properties for Phase Folding 
-    """
-    def __init__(self, T0:float|None=None, period:float|None=None, phasefold_centralphase:float|None=None, show_time_from_T0:bool|None=None):
-        self.__T0:float|None = None
-        if T0 is not None:
-            self.T0 = T0
-        self.__period:float|None = None
-        if period is not None:
-            self.period = period
-        self.__phasefold_centralphase:float = 0.
-        if phasefold_centralphase is not None:
-            self.phasefold_centralphase = phasefold_centralphase
-        self.__show_time_from_T0:bool = False
-        if show_time_from_T0 is not None:
-            self.show_time_from_T0 = show_time_from_T0
-    
-    @property
-    def T0(self) -> float|None:
-        return self.__T0
-    
-    @T0.setter
-    def T0(self, new_T0:float):
-        if isinstance(new_T0, float):
-            self.__T0 = new_T0
-        else:
-            raise TypeError(f"T0 should be a float, got {type(new_T0)}")
-
-    @property
-    def period(self) -> float|None:
-        return self.__period
-    
-    @period.setter
-    def period(self, new_period:float):
-        if isinstance(new_period, float):
-            self.__period = new_period
-        else:
-            raise TypeError(f"period should be a float, got {type(new_period)}")
-
-    @property
-    def phasefold_centralphase(self) -> float:
-        return self.__phasefold_centralphase
-    
-    @phasefold_centralphase.setter
-    def phasefold_centralphase(self, new_phasefold_centralphase:float):
-        if isinstance(new_phasefold_centralphase, float):
-            self.__phasefold_centralphase = new_phasefold_centralphase
-        else:
-            raise TypeError(f"phasefold_centralphase should be a float, got {type(new_phasefold_centralphase)}")
-
-    @property
-    def show_time_from_T0(self) -> float:
-        return self.__show_time_from_T0
-    
-    @show_time_from_T0.setter
-    def show_time_from_T0(self, new_show_time_from_T0:bool):
-        if isinstance(new_show_time_from_T0, bool):
-            self.__show_time_from_T0 = new_show_time_from_T0
-        else:
-            raise TypeError(f"show_time_from_T0 should be a bool, got {type(new_show_time_from_T0)}")
-
-
-class PlotsDefinition_PF(PlotsDefinition_TS):
-    """Class to specifiy which model to plot in each row of the plot for the phase folded plots"""
-
-    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
-        """"""
-        if nb_rows is None:
-            nb_rows = 1
-        if nb_cols is None:
-            nb_cols = 1
-        super(PlotsDefinition_PF, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
-        # Init phase_fold_properties
-        self.__phase_fold_properties:tuple[tuple[PhaseFold, ...], ...] = tuple([tuple([PhaseFold() for _ in range(nb_cols)]) for _ in range(nb_rows)])
-
-    @property
-    def phasefold_properties(self) -> tuple[tuple[PhaseFold, ...], ...]:
-        """Grid (in the form of a tuple of tuple) with a PhaseFold instance describing the phase folding properties for the axis"""
-        return deepcopy(self.__phase_fold_properties)
-        
-    def get_phasefold_properties(self, i_row:int, i_col:int) -> PhaseFold:
-        """Return a PhaseFold instance describing the phase folding properties to be used for one axis of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        """
-        return self.phasefold_properties[i_row][i_col]
-    
-    def set_phasefold_properties(self, T0:float|None=None, period:float|None=None, i_row:int|None=None, i_col:int|None=None):
-        """Set the T0 and period to be used for one axis (or more) of the grid designated by i_row and i_col.
-        
-        Arguments
-        ---------
-        T0      : New T0 for the phase folding
-        period  : New period for the phase folding
-        i_row   : Index of the row in the grid
-        i_col   : Index of the column in the grid
-        """
-        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-        # Make sure that i_row and i_col are correct
-        for i_row in l_i_row:
-            for i_col in l_i_col:
-                if T0 is not None:
-                    self.__phase_fold_properties[i_row][i_col].T0 = T0
-                if period is not None:
-                    self.__phase_fold_properties[i_row][i_col].period = period
 
 # class PlotsDefinitioniTS(PlotsDefinition):
 #     """Class to specifiy which model to plot in each row of the plot for the iTS plots"""

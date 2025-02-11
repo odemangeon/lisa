@@ -6,7 +6,7 @@ Module to create phase folded plots
 from __future__ import annotations
 from matplotlib.pyplot import figure
 from numpy import std, argsort, concatenate, isfinite
-from copy import copy
+from copy import copy, deepcopy
 from collections import OrderedDict
 from matplotlib.ticker import AutoMinorLocator
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
@@ -22,32 +22,31 @@ from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetnam
                    get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_data_binned_label,
                    print_rms, set_legend, AandA_full_width, default_figheight_factor
                    )
-from .core_plot import PlotsDefinition_PF, ComputedModels_Database, Expression
+from .core_plot import ComputedModels_Database, Expression
+from .ts_plots import PlotsDefinition_TS
 from .binning import compute_binning
 from .core_compute_load import compute_model, get_key_compute_model, compute_data_err_jittered
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.posterior import Posterior
 
 
-
-def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
-                             compute_raw_models_func: Callable,
-                             plotdef:PlotsDefinition_PF,
-                             computedmodels_db:ComputedModels_Database|None=None,
-                             split_GP_computation:int|None=None,
-                             datasim_kwargs=None,
-                             create_axes_main_gridspec:dict|None=None,
-                             create_axes_dataresi_gridspec:dict|None=None,
-                             npt_model_default:int|None=None,
-                             extra_dt_model:float|None=None,
-                             fontsize:int=AandA_fontsize,
-                             get_key_compute_model_func:Callable=get_key_compute_model,
-                             kwargs_get_key_compute_model:Dict|None=None,
-                             fig:Figure|None=None,
-                             subplotspec:SubplotSpec|None=None,
-                             ):
+def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
+                    compute_raw_models_func: Callable,
+                    plotdef:PlotsDefinition_PF,
+                    computedmodels_db:ComputedModels_Database|None=None,
+                    split_GP_computation:int|None=None,
+                    datasim_kwargs:dict|None=None,
+                    create_axes_main_gridspec:dict|None=None,
+                    create_axes_dataresi_gridspec:dict|None=None,
+                    npt_model_default:int|None=None,
+                    extra_dt_model:float|None=None,
+                    fontsize:int=AandA_fontsize,
+                    get_key_compute_model_func:Callable=get_key_compute_model,
+                    kwargs_get_key_compute_model:Dict|None=None,
+                    fig:Figure|None=None,
+                    subplotspec:SubplotSpec|None=None,
+                    ):
     logger.debug("Start: create_PF_plots")
-
     ##############################################
     # Setup figure structure and common parameters
     ##############################################
@@ -63,10 +62,10 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
     if subplotspec is None:
         if fig is None:
             fig = Figure()
-    if subplotspec is not None:
-        gs = GridSpecFromSubplotSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
-    else:
+    if subplotspec is None:
         gs = GridSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, figure=fig, **create_axes_main_gridspec)
+    else:
+        gs = GridSpecFromSubplotSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
     
     # Set default values for parameters
     if npt_model_default is None:
@@ -124,7 +123,8 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
             ######################################
             for name_model2plot_i, model2plot_i in plotdef.get_models2plot(i_row=i_row, i_col=i_col).items():
                 logger.info(f"Start Plotting model {name_model2plot_i}")
-                times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, time_limits=(T0_i, T0_i + period_i), npt=npt_model_default, extra_dt=extra_dt_model)
+                time_limits_i = (T0_i, T0_i + period_i) if model2plot_i.time_limits is None else model2plot_i.time_limits
+                times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, time_limits=time_limits_i, npt=npt_model_default, extra_dt=extra_dt_model)
                 time_fact = model2plot_i.pl_factors.time_factor
                 amplitude_fact = model2plot_i.pl_factors.value_factor
                 # Compute the model
@@ -133,7 +133,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                         expression=model2plot_i.expression, times=times_model2plot_i, datasetname=model2plot_i.datasetname,
                                                         exptime=model2plot_i.exptime, supersampling=model2plot_i.supersampling,
                                                         computedmodels_db=computedmodels_db, 
-                                                        get_key_compute_model_func=get_key_compute_model,
+                                                        get_key_compute_model_func=get_key_compute_model_func,
                                                         kwargs_get_key_compute_model=None,
                                                         split_GP_computation=split_GP_computation)
                 # Compute the phasefolded times
@@ -189,7 +189,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                       expression=data2plot_i.expression, times=times_dataset, datasetname=data2plot_i.datasetname,
                                                       exptime=None, supersampling=None,
                                                       computedmodels_db=computedmodels_db, 
-                                                      get_key_compute_model_func=get_key_compute_model,
+                                                      get_key_compute_model_func=get_key_compute_model_func,
                                                       kwargs_get_key_compute_model=None,
                                                       split_GP_computation=split_GP_computation
                                                       )
@@ -204,7 +204,7 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                   datasetname=data2plot_i.datasetname,
                                                   exptime=None, supersampling=None,
                                                   computedmodels_db=computedmodels_db, 
-                                                  get_key_compute_model_func=get_key_compute_model,
+                                                  get_key_compute_model_func=get_key_compute_model_func,
                                                   kwargs_get_key_compute_model=None,
                                                   split_GP_computation=split_GP_computation
                                                   )
@@ -326,3 +326,118 @@ def create_phasefolded_plots(post_instance:Posterior, df_fittedval:DataFrame,
     
     logger.debug("Done: create_PF_plots")
     return computedmodels_db, rms_values
+
+
+class PhaseFold(object):
+    """Class to specify the properties for Phase Folding 
+    """
+    def __init__(self, T0:float|None=None, period:float|None=None, phasefold_centralphase:float|None=None, show_time_from_T0:bool|None=None):
+        self.__T0:float|None = None
+        if T0 is not None:
+            self.T0 = T0
+        self.__period:float|None = None
+        if period is not None:
+            self.period = period
+        self.__phasefold_centralphase:float = 0.
+        if phasefold_centralphase is not None:
+            self.phasefold_centralphase = phasefold_centralphase
+        self.__show_time_from_T0:bool = False
+        if show_time_from_T0 is not None:
+            self.show_time_from_T0 = show_time_from_T0
+    
+    @property
+    def T0(self) -> float|None:
+        return self.__T0
+    
+    @T0.setter
+    def T0(self, new_T0:float):
+        if isinstance(new_T0, float):
+            self.__T0 = new_T0
+        else:
+            raise TypeError(f"T0 should be a float, got {type(new_T0)}")
+
+    @property
+    def period(self) -> float|None:
+        return self.__period
+    
+    @period.setter
+    def period(self, new_period:float):
+        if isinstance(new_period, float):
+            self.__period = new_period
+        else:
+            raise TypeError(f"period should be a float, got {type(new_period)}")
+
+    @property
+    def phasefold_centralphase(self) -> float:
+        return self.__phasefold_centralphase
+    
+    @phasefold_centralphase.setter
+    def phasefold_centralphase(self, new_phasefold_centralphase:float):
+        if isinstance(new_phasefold_centralphase, float):
+            self.__phasefold_centralphase = new_phasefold_centralphase
+        else:
+            raise TypeError(f"phasefold_centralphase should be a float, got {type(new_phasefold_centralphase)}")
+
+    @property
+    def show_time_from_T0(self) -> float:
+        return self.__show_time_from_T0
+    
+    @show_time_from_T0.setter
+    def show_time_from_T0(self, new_show_time_from_T0:bool):
+        if isinstance(new_show_time_from_T0, bool):
+            self.__show_time_from_T0 = new_show_time_from_T0
+        else:
+            raise TypeError(f"show_time_from_T0 should be a bool, got {type(new_show_time_from_T0)}")
+
+
+class PlotsDefinition_PF(PlotsDefinition_TS):
+    """Class to specifiy which model to plot in each row of the plot for the phase folded plots"""
+
+    def __init__(self, nb_rows:int|None=None, same4allrows:bool=False, nb_cols:int|None=None, same4allcols:bool=False):
+        """"""
+        if nb_rows is None:
+            nb_rows = 1
+        if nb_cols is None:
+            nb_cols = 1
+        super(PlotsDefinition_PF, self).__init__(nb_rows=nb_rows, same4allrows=same4allrows, nb_cols=nb_cols, same4allcols=same4allcols)
+        # Init phase_fold_properties
+        self.__phase_fold_properties:tuple[tuple[PhaseFold, ...], ...] = tuple([tuple([PhaseFold() for _ in range(nb_cols)]) for _ in range(nb_rows)])
+
+    @property
+    def phasefold_properties(self) -> tuple[tuple[PhaseFold, ...], ...]:
+        """Grid (in the form of a tuple of tuple) with a PhaseFold instance describing the phase folding properties for the axis"""
+        return deepcopy(self.__phase_fold_properties)
+        
+    def get_phasefold_properties(self, i_row:int, i_col:int) -> PhaseFold:
+        """Return a PhaseFold instance describing the phase folding properties to be used for one axis of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        """
+        return self.phasefold_properties[i_row][i_col]
+    
+    def set_phasefold_properties(self, T0:float|None=None, period:float|None=None, phasefold_centralphase:float|None=None, show_time_from_T0:bool|None=None, i_row:int|None=None, i_col:int|None=None):
+        """Set the T0 and period to be used for one axis (or more) of the grid designated by i_row and i_col.
+        
+        Arguments
+        ---------
+        T0      : New T0 for the phase folding
+        period  : New period for the phase folding
+        i_row   : Index of the row in the grid
+        i_col   : Index of the column in the grid
+        """
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        # Make sure that i_row and i_col are correct
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+                if T0 is not None:
+                    self.__phase_fold_properties[i_row][i_col].T0 = T0
+                if period is not None:
+                    self.__phase_fold_properties[i_row][i_col].period = period
+                if phasefold_centralphase is not None:
+                    self.__phase_fold_properties[i_row][i_col].phasefold_centralphase = phasefold_centralphase
+                if show_time_from_T0 is not None:
+                    self.__phase_fold_properties[i_row][i_col].show_time_from_T0 = show_time_from_T0
