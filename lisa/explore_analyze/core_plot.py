@@ -402,8 +402,10 @@ class Data2plot(Model2plot):
 class MultiData2plot(Data2plot):
 
     def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
+                 time_factor:float|None=None, value_factor:float|None=None,
                  pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
-        self._init_l_data2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, method=method)
+        self._init_l_data2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, method=method,
+                               time_factor=time_factor, value_factor=value_factor)
         self._init_DataBinning(exptime=exptime, method=method)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
@@ -413,9 +415,10 @@ class MultiData2plot(Data2plot):
     def l_data2plot(self):
         return self.__l_data2plot
 
-    def _init_l_data2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None):
-        self.__l_data2plot = [Data2plot(expression=expression_i, exptime=exptime, method=method, datasetname=datasetname_i, 
-                                        pl_kwargs=None, pl_kwargs_error=None, show_error=False)
+    def _init_l_data2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
+                          time_factor:float|None=None, value_factor:float|None=None):
+        self.__l_data2plot = [Data2plot(expression=expression_i, datasetname=datasetname_i, 
+                                        time_factor=time_factor, value_factor=value_factor)
                               for expression_i, datasetname_i in l_expression_and_datasetname]
 
 
@@ -548,9 +551,9 @@ class ComputedModels_Database(object):
         if len(i_model_found) > 1:
             print(f"Warning: The model has been found multiple times in the database at indexes {i_model_found}")
         if len(i_model_found) > 0:
-            return model_found, i_model_found[-1], times_found
+            return deepcopy(model_found), i_model_found[-1], deepcopy(times_found)
         else:
-            return None, None, times_found
+            return None, None, deepcopy(times_found)
         
     def find_models(self, expression:str|None=None, datasetname:str|None=None, binning:DataBinning|ModelBinning|None=None,
                     times:NDArray[float_]|None=None) -> dict[int, dict]:
@@ -587,7 +590,7 @@ class ComputedModels_Database(object):
             if times_found is not None:
                 times = times_found
             self.stored_models.append(ComputedModel(expression=expression, datasetname=datasetname, binning=binning,
-                                                    times=times, values=values, errors=errors))
+                                                    times=deepcopy(times), values=deepcopy(values), errors=deepcopy(errors)))
         else:
            logger.warning("Such model is already in the database and overwrite is False. The store command will be ignored.")
 
@@ -1261,8 +1264,12 @@ class PlotsDefinition(object):
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                setattr(getattr(self.get_axes_properties(i_row=i_row, i_col=i_col), axis), property, value)
-
+                axe_properties = getattr(self.get_axes_properties(i_row=i_row, i_col=i_col), axis)
+                if hasattr(axe_properties, property):
+                    setattr(axe_properties, property, value)
+                else:
+                    raise AttributeError(f"{axe_properties} doesn't have attribute {property}")
+                
     def set_axes_property(self, value, property:str, i_row:int|None=None, i_col:int|None=None):
         l_i_row = self._get_l_i(idx=i_row, roworcol='row')
         l_i_col = self._get_l_i(idx=i_col, roworcol='col')

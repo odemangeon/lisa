@@ -207,7 +207,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                 else:
                     model_err = ones_like(times) * model_err
             computedmodels_db.store_computed_model(expression=expression.expression, datasetname=datasetname, binning=ModelBinning(exptime=exptime, supersampling=supersampling),
-                                                times=times, values=model, errors=model_err)
+                                                   times=times, values=model, errors=model_err)
     else:
         model = computedmodel.values
         model_err = computedmodel.errors
