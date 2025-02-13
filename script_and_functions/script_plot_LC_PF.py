@@ -40,7 +40,7 @@ AandA_fontsize = 8
 ##########################
 # Parameters of the script
 ##########################
-obj_name = "WASP-95"
+obj_name = "target_name"
 
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
@@ -95,6 +95,9 @@ plotdef_PF = PlotsDefinition_PF(nb_rows=1, nb_cols=1)
 
 l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
 
+orbit_CH = 98.7 # CHEOPS orbit in min
+
+
 l_planet = ["b", ] 
 
 d_plot = {}
@@ -105,24 +108,25 @@ for ii, planet in enumerate(l_planet):
 for planet in ["b", ]:
     l_expression_and_datasetname = []
     for nb_dst in d_plot[planet]["l_nb_dst"]:
-        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}"))
-        plotdef_PF.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="(data - inst_var) / contam - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
-                                           pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
-                                           time_factor=time_fact, value_factor=LC_fact,
-                                           i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
-    plotdef_PF.things2plot[f"data_CH{nb_dst}"].pl_kwargs['label'] = "CHEOPS"
+        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}"))    
+    plotdef_PF.set_phasefold_properties(T0=d_plot[planet]["T0"], period=d_plot[planet]["P"], phasefold_centralphase=0.5, show_time_from_T0=show_time_from_T0, i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
+    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
+                                            i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
+                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False, 'label':f"CHEOPS"},
+                                            time_factor=time_fact, value_factor=LC_fact,
+                                            )
+    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all_bin", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
+                                            i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
+                                            exptime=0.5,
+                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CH:.0f}min"},
+                                            time_factor=time_fact, value_factor=LC_fact,
+                                            )
     plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[planet]['i_row']}col{d_plot[planet]['i_col']}", expression="(model - inst_var) / contam - 1", 
                                        datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}", 
                                        time_limits=(d_plot[planet]["T0"] + (0.38 * d_plot[planet]["P"]), d_plot[planet]["T0"] + (0.62 * d_plot[planet]["P"])),
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
-    plotdef_PF.set_phasefold_properties(T0=d_plot[planet]["T0"], period=d_plot[planet]["P"], phasefold_centralphase=0.5, show_time_from_T0=show_time_from_T0, i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
-    # plotdef_PF.add_multimodelordata_to_grid(name="data_all_occultation", l_expression_and_datasetname=l_expression_and_datasetname, 
-    #                                         pl_kwargs={'color':"k", 'alpha': 1, 'fmt':'.','show_error': True},
-    #                                         # time_factor=time_fact, value_factor=LC_fact,
-    #                                         i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
 
 plotdef_PF.set_axis_property(value='Time from T0', property='name', axis='x')
 plotdef_PF.set_axis_property(value=time_unit, property='unit', axis='x')
@@ -130,6 +134,9 @@ plotdef_PF.set_axis_property(value='$\Delta$F / F', property='name', axis='ydata
 plotdef_PF.set_axis_property(value=LC_unit, property='unit', axis='ydata')
 plotdef_PF.set_axis_property(value='O-C', property='name', axis='yresi')
 plotdef_PF.set_axis_property(value=LC_unit, property='unit', axis='yresi')
+
+plotdef_PF.set_axis_property(value=(-150, 300), property='lims', axis='ydata')
+plotdef_PF.set_axis_property(value=(-250, 250), property='lims', axis='yresi')
 
 # periods = None  # e.g. [46., ]
 # periods_remove_or_add_dict = None # e.g. {46.: {'add_dict': {'GP_model': True}}}

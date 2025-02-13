@@ -37,3 +37,14 @@ def compute_binning(times_dataset:NDArray[float_], values:NDArray[float_], error
             if errors_jitter is not None:
                 binstd_jitter[i_bin] = nan
     return bins, binedges, bindata, binstd, binstd_jitter
+
+
+def bin_data_and_resi(times_dataset:NDArray, data:NDArray, data_err:NDArray, data_err_jitter:NDArray, residuals:NDArray, exptime:float|int, method:str):
+    (bins, _, bindata, bindata_std, bindata_std_jitter
+        ) = compute_binning(times_dataset=times_dataset, values=data, errors=data_err, errors_jitter=data_err_jitter, 
+                            exptime=exptime, method=method)
+    (_, _, binresi, _, _
+        ) = compute_binning(times_dataset=times_dataset, values=residuals, errors=data_err, errors_jitter=data_err_jitter, 
+                            exptime=exptime, method=method)
+    midbins = bins[:-1] + exptime / 2
+    return midbins, bindata, bindata_std, bindata_std_jitter, binresi

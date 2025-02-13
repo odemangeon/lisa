@@ -5,13 +5,19 @@ from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
 from collections.abc import Sequence
+from collections import OrderedDict
 from numbers import Number
 from typing import Dict, List
 from numpy import nan, float_, ndarray, isfinite
 from numpy.typing import NDArray
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
+from matplotlib.figure import Figure
+from matplotlib.ticker import AutoMinorLocator
 
+from .core_plot import Axes_Properties
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
+from ..emcee_tools.emcee_tools import add_twoaxeswithsharex
 
 
 ### for the A&A article class
@@ -627,3 +633,68 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
 
         if suptitle_text != "":
             fig.suptitle(suptitle_text, fontsize=fontsize)
+
+
+def create_gridspec(nb_rows: int, nb_cols: int, fig:Figure, subplotspec: SubplotSpec, create_axes_main_gridspec: dict|None=None):
+    if create_axes_main_gridspec is None:
+        create_axes_main_gridspec = {}
+    if subplotspec is None:
+        gs = GridSpec(nrows=nb_rows, ncols=nb_cols, figure=fig, **create_axes_main_gridspec)
+    else:
+        gs = GridSpecFromSubplotSpec(nrows=nb_rows, ncols=nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
+    return gs
+
+
+def create_data_and_residual_axes(do_residual_axis: bool, fig: Figure, subplotspec: SubplotSpec, create_axes_dataresi_gridspec: dict | None = None):
+    """
+    Create data and residual axes.
+
+    Parameters:
+    do_residual_axis (bool): If True both data and residual axes will be create. Otherwise just the data axis.
+    fig (Figure): The figure object to which the axes will be added.
+    subplotspec (SubplotSpec): The subplot specification for the axes.
+    create_axes_dataresi_gridspec (dict | None, optional): Additional keyword arguments for creating the gridspec. Defaults to None.
+
+    Returns:
+    OrderedDict: A dictionary containing the created axes. Keys are 'data' and optionally 'resi' if residuals are included.
+    """
+    dico_axes = OrderedDict()
+    if do_residual_axis:
+        (axe_data, axe_resi) = add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=create_axes_dataresi_gridspec)  # gs_from_sps_kw={"wspace": 0.1}
+        dico_axes['data'] = axe_data
+        dico_axes['resi'] = axe_resi
+    else:
+        axe_data = fig.add_subplot(subplotspec)
+        dico_axes['data'] = axe_data
+    return dico_axes
+
+
+def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axes_Properties, fontsize:int=AandA_fontsize):
+    next(reversed(od_axe.values())).set_xlabel(axes_properties.x.label, fontsize=fontsize)  # next(reversed(d_axe.values())) is the last axes in d_axe.
+    l_yaxis_properties = [getattr(axes_properties, axe_name) for _, axe_name in zip(od_axe.values(), ["ydata", "yresi"])]
+    l_ylabel = [yaxis_properties_i.label for yaxis_properties_i in l_yaxis_properties]
+    l_yshowlabel = [yaxis_properties_i.show_label for yaxis_properties_i in l_yaxis_properties]
+    for axe, ylabel, yshowlabel in zip(od_axe.values(), l_ylabel, l_yshowlabel):
+        if yshowlabel and (len(ylabel) > 0):
+            axe.set_ylabel(ylabel, fontsize=fontsize)
+    for axe, yaxis_properties_i in zip(od_axe.values(), l_yaxis_properties):
+        # Set the ticks direction and length, also set fontsize for tick labels for both x and y and by default do not show the tick labels on the x axes (this is changed later if needed)
+        axe.tick_params(axis="both", which="major", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+        axe.tick_params(axis="both", which="minor", direction="in", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        # Set minor location ticks for both x and y
+        axe.xaxis.set_minor_locator(AutoMinorLocator())
+        axe.yaxis.set_minor_locator(AutoMinorLocator())
+        # Set grid in "y"
+        axe.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+        #
+        if yaxis_properties_i.logscale:
+            axe.set_xscale("log")
+    # remove the tick labels on the bottom x axis if needed
+    if axes_properties.x.show_ticklabels:
+        next(reversed(od_axe.values())).tick_params(axis="x", labelbottom=True)
+
+    #########################
+    # Set the title if needed
+    #########################
+    if axes_properties.show_title and (len(axes_properties.title) > 0):
+        od_axe['data'].set_title(axes_properties.title, fontsize=fontsize)

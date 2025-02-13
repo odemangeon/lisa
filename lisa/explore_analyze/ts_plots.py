@@ -6,8 +6,7 @@ Module to create phase folded plots
 from __future__ import annotations
 from numpy import std, concatenate, isfinite
 from collections import OrderedDict
-from matplotlib.ticker import AutoMinorLocator
-from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
+from matplotlib.gridspec import SubplotSpec
 from matplotlib.figure import Figure
 from loguru import logger
 from copy import copy
@@ -15,11 +14,11 @@ from pandas import DataFrame
 from typing import Callable, Dict
 from numpy.typing import NDArray
 
-from .misc import AandA_fontsize, set_legend
+from .misc import AandA_fontsize, set_legend, create_gridspec, create_data_and_residual_axes, setup_data_and_residual_axes_style
 # from .models2computenplot import Models2plotTS, check_Models2plot
-from .core_plot import Axes_Properties, YAxis_Properties, PlotsDefinition, ComputedModels_Database, Expression
-from .binning import compute_binning
-from .core_compute_load import compute_model, get_key_compute_model, compute_data_err_jittered
+from .core_plot import Axes_Properties, YAxis_Properties, PlotsDefinition, ComputedModels_Database, Expression, plot_data_and_resi
+from .binning import bin_data_and_resi
+from .core_compute_load import compute_model, get_key_compute_model, compute_data_and_resi_for_data2plots
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.model.core_model import Core_Model
 from ..posterior.core.posterior import Posterior
@@ -55,9 +54,10 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
     if fig is None:
         fig = Figure()
 
-    # Create the updated gridspec for TS according to the number of rows and cols specified in plotdef
+    # Create the updated gridspec according to the number of rows and cols specified in plotdef
     gs = create_gridspec(nb_rows=plotdef.nb_rows, nb_cols=plotdef.nb_cols, fig=fig, subplotspec=subplotspec, create_axes_main_gridspec=create_axes_main_gridspec)
 
+    # Set default values for parameters npt_model_default and extra_dt_model
     if npt_model_default is None:
         npt_model_default = 1000
     if extra_dt_model is None:
@@ -136,6 +136,13 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                                                           kwargs_get_key_compute_model=kwargs_get_key_compute_model, 
                                                           split_GP_computation=split_GP_computation, 
                                                           name_data2plot=name_data2plot_i)
+                # Apply time factor
+                times_dataset_i *= time_fact
+                # Apply amplitude factor
+                data_i *= amplitude_fact
+                data_err_i *= amplitude_fact
+                data_err_jitter_i *= amplitude_fact
+                residuals_i *= amplitude_fact
                 # Compute the binned data, errors and residuals
                 if data2plot_i.exptime > 0:
                     (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
@@ -160,14 +167,9 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     data_err_plot_i = data_err_i
                     data_err_jitter_plot_i = data_err_jitter_i
                     time_plot_i = times_dataset_i
-                data_plot_i *= amplitude_fact
-                resi_plot_i *= amplitude_fact
-                time_plot_i *= time_fact
                 dico_data[name_data2plot_i] = data_plot_i
                 dico_resi[name_data2plot_i] = resi_plot_i 
-                dico_times[name_data2plot_i] = time_plot_i * time_fact
-                data_err_plot_i *= amplitude_fact 
-                data_err_jitter_plot_i *= amplitude_fact 
+                dico_times[name_data2plot_i] = time_plot_i
                 pl_kwarg_to_use[name_data2plot_i] = plot_data_and_resi(x=dico_times[name_data2plot_i], data=dico_data[name_data2plot_i], 
                                                                        data_err=data_err_plot_i, data_err_jitter=data_err_jitter_plot_i,
                                                                        residuals=dico_resi[name_data2plot_i],
@@ -207,6 +209,13 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 data_err_i = concatenate(data_err_i)
                 data_err_jitter_i = concatenate(data_err_jitter_i)
                 residuals_i = concatenate(residuals_i)
+                # Apply time factor
+                times_dataset_i *= time_fact
+                # Apply amplitude factor
+                data_i *= amplitude_fact
+                data_err_i *= amplitude_fact
+                data_err_jitter_i *= amplitude_fact
+                residuals_i *= amplitude_fact
                 # Compute the binned data, errors and residuals
                 if multidata2plot_i.exptime > 0:
                     (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
@@ -231,14 +240,9 @@ def create_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                     data_err_plot_i = data_err_i
                     data_err_jitter_plot_i = data_err_jitter_i
                     time_plot_i = times_dataset_i
-                data_plot_i *= amplitude_fact
-                resi_plot_i *= amplitude_fact
-                time_plot_i *= time_fact
                 dico_data[name_multidata2plot_i] = data_plot_i
                 dico_resi[name_multidata2plot_i] = resi_plot_i 
-                dico_times[name_multidata2plot_i] = time_plot_i * time_fact
-                data_err_plot_i *= amplitude_fact 
-                data_err_jitter_plot_i *= amplitude_fact
+                dico_times[name_multidata2plot_i] = time_plot_i
                 pl_kwarg_to_use[name_multidata2plot_i] = plot_data_and_resi(x=dico_times[name_multidata2plot_i], data=dico_data[name_multidata2plot_i], 
                                                                             data_err=data_err_plot_i, data_err_jitter=data_err_jitter_plot_i,
                                                                             residuals=dico_resi[name_multidata2plot_i],
@@ -330,154 +334,6 @@ class Axes_Properties_TS(Axes_Properties):
             return self.__yresi
         else:
             raise ValueError(f"Axes_Properties_TS with residuals=False doesn't have a yresi attribute")
-        
-
-def create_gridspec(nb_rows: int, nb_cols: int, fig:Figure, subplotspec: SubplotSpec, create_axes_main_gridspec: dict|None=None):
-    if create_axes_main_gridspec is None:
-        create_axes_main_gridspec = {}
-    if subplotspec is None:
-        gs = GridSpec(nrows=nb_rows, ncols=nb_cols, figure=fig, **create_axes_main_gridspec)
-    else:
-        gs = GridSpecFromSubplotSpec(nrows=nb_rows, ncols=nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
-    return gs
-
-
-def create_data_and_residual_axes(do_residual_axis: bool, fig: Figure, subplotspec: SubplotSpec, create_axes_dataresi_gridspec: dict | None = None):
-    """
-    Create data and residual axes.
-
-    Parameters:
-    do_residual_axis (bool): If True both data and residual axes will be create. Otherwise just the data axis.
-    fig (Figure): The figure object to which the axes will be added.
-    subplotspec (SubplotSpec): The subplot specification for the axes.
-    create_axes_dataresi_gridspec (dict | None, optional): Additional keyword arguments for creating the gridspec. Defaults to None.
-
-    Returns:
-    OrderedDict: A dictionary containing the created axes. Keys are 'data' and optionally 'resi' if residuals are included.
-    """
-    dico_axes = OrderedDict()
-    if do_residual_axis:
-        (axe_data, axe_resi) = et.add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=create_axes_dataresi_gridspec)  # gs_from_sps_kw={"wspace": 0.1}
-        dico_axes['data'] = axe_data
-        dico_axes['resi'] = axe_resi
-    else:
-        axe_data = fig.add_subplot(subplotspec)
-        dico_axes['data'] = axe_data
-    return dico_axes
-
-
-def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axes_Properties_TS, fontsize:int=AandA_fontsize):
-    next(reversed(od_axe.values())).set_xlabel(axes_properties.x.label, fontsize=fontsize)  # next(reversed(d_axe.values())) is the last axes in d_axe.
-    l_yaxis_properties = [getattr(axes_properties, axe_name) for _, axe_name in zip(od_axe.values(), ["ydata", "yresi"])]
-    l_ylabel = [yaxis_properties_i.label for yaxis_properties_i in l_yaxis_properties]
-    l_yshowlabel = [yaxis_properties_i.show_label for yaxis_properties_i in l_yaxis_properties]
-    for axe, ylabel, yshowlabel in zip(od_axe.values(), l_ylabel, l_yshowlabel):
-        if yshowlabel and (len(ylabel) > 0):
-            axe.set_ylabel(ylabel, fontsize=fontsize)
-    for axe, yaxis_properties_i in zip(od_axe.values(), l_yaxis_properties):
-        # Set the ticks direction and length, also set fontsize for tick labels for both x and y and by default do not show the tick labels on the x axes (this is changed later if needed)
-        axe.tick_params(axis="both", which="major", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
-        axe.tick_params(axis="both", which="minor", direction="in", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-        # Set minor location ticks for both x and y
-        axe.xaxis.set_minor_locator(AutoMinorLocator())
-        axe.yaxis.set_minor_locator(AutoMinorLocator())
-        # Set grid in "y"
-        axe.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-        #
-        if yaxis_properties_i.logscale:
-            axe.set_xscale("log")
-    # remove the tick labels on the bottom x axis if needed
-    if axes_properties.x.show_ticklabels:
-        next(reversed(od_axe.values())).tick_params(axis="x", labelbottom=True)
-
-    #########################
-    # Set the title if needed
-    #########################
-    if axes_properties.show_title and (len(axes_properties.title) > 0):
-        od_axe['data'].set_title(axes_properties.title, fontsize=fontsize)
-
-
-def compute_data_and_resi_for_data2plots(data2plot, post_instance: Posterior, df_fittedval:DataFrame, 
-                                         datasim_kwargs: dict, compute_raw_models_func: Callable,
-                                         computedmodels_db: ComputedModels_Database, 
-                                         get_key_compute_model_func: Callable, 
-                                         kwargs_get_key_compute_model: Dict|None=None, 
-                                         split_GP_computation: int|None=None, 
-                                         name_data2plot: str|None=None):
-    logger.info(f"Compute datas {'for ' + name_data2plot if name_data2plot is not None else ''}")
-    times_dataset = data2plot.get_times_dataset(post_instance=post_instance)
-    # Compute the data_model
-    data, data_err, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                      compute_raw_models_func=compute_raw_models_func, 
-                                      expression=data2plot.expression, times=times_dataset, datasetname=data2plot.datasetname,
-                                      exptime=None, supersampling=None,
-                                      computedmodels_db=computedmodels_db, 
-                                      get_key_compute_model_func=get_key_compute_model_func,
-                                      kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                      split_GP_computation=split_GP_computation
-                                      )
-    # Compute jittered_errors
-    data_err_jitter = compute_data_err_jittered(data_err=data_err, post_instance=post_instance, datasetname=data2plot.datasetname, df_fittedval=df_fittedval)                    
-    # Compute residuals 
-    logger.info(f"Compute residuals {'for ' + name_data2plot if name_data2plot is not None else ''}")
-    expression_resi = Expression(expression="data - model - GP - decorrelation_likelihood")
-    residuals, _, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                    compute_raw_models_func=compute_raw_models_func, 
-                                    expression=expression_resi, times=times_dataset,
-                                    datasetname=data2plot.datasetname,
-                                    exptime=None, supersampling=None,
-                                    computedmodels_db=computedmodels_db, 
-                                    get_key_compute_model_func=get_key_compute_model_func,
-                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
-                                    split_GP_computation=split_GP_computation
-                                    )
-    return times_dataset, data, data_err, data_err_jitter, residuals
-    
-
-def bin_data_and_resi(times_dataset:NDArray, data:NDArray, data_err:NDArray, data_err_jitter:NDArray, residuals:NDArray, exptime:float|int, method:str):
-    (bins, _, bindata, bindata_std, bindata_std_jitter
-        ) = compute_binning(times_dataset=times_dataset, values=data, errors=data_err, errors_jitter=data_err_jitter, 
-                            exptime=exptime, method=method)
-    (_, _, binresi, _, _
-        ) = compute_binning(times_dataset=times_dataset, values=residuals, errors=data_err, errors_jitter=data_err_jitter, 
-                            exptime=exptime, method=method)
-    midbins = bins[:-1] + exptime / 2
-    return midbins, bindata, bindata_std, bindata_std_jitter, binresi
-
-
-def plot_data_and_resi(x:NDArray, data:NDArray, data_err:NDArray, data_err_jitter:NDArray, residuals:NDArray,
-                       dataormulitdata2plot:Data2Plot|MultiData2Plot,
-                       axe_data:Axe, axe_resi:Axe|None):
-    pl_kwarg = copy(dataormulitdata2plot.pl_kwargs)
-    show_error = pl_kwarg.get('show_error', True)
-    if 'show_error' in pl_kwarg:
-        pl_kwarg.pop('show_error')
-    if not(show_error) or (data_err is None):
-        ebcont = axe_data.errorbar(x, y=data, **pl_kwarg)
-        if "color" not in pl_kwarg:
-            pl_kwarg["color"] = ebcont[0].get_color()
-        ebcont = axe_resi.errorbar(x, y=residuals, **pl_kwarg)
-    else:
-        ebcont = axe_data.errorbar(x, y=data, yerr=data_err, **pl_kwarg)
-        if "color" not in pl_kwarg:
-            pl_kwarg["color"] = ebcont[0].get_color()
-        ebcont = axe_resi.errorbar(x, y=residuals, yerr=data_err, **pl_kwarg)
-    color = ebcont[0].get_color()
-    alpha = ebcont[0].get_alpha()
-    if "color" not in pl_kwarg:
-        pl_kwarg["color"] = color
-    if "alpha" not in pl_kwarg:
-        pl_kwarg["alpha"] = alpha
-    if pl_kwarg["alpha"] is None:
-        pl_kwarg["alpha"] = 1
-    if not(not(show_error) or (data_err_jitter is None)):
-        pl_kwarg["alpha"] /= 3
-        if 'label' in pl_kwarg:
-            label = pl_kwarg.pop('label')
-        _ = axe_data.errorbar(x, y=data, yerr=data_err_jitter, **pl_kwarg)
-        _ = axe_resi.errorbar(x, y=residuals, yerr=data_err_jitter, **pl_kwarg)
-        pl_kwarg["alpha"] *= 3
-    return pl_kwarg 
 
 class PlotsDefinition_TS(PlotsDefinition):
 

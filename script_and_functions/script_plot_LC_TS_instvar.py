@@ -109,23 +109,31 @@ for ii, dico_ii in d_plot.items():
     i_row = 0  # ii // 5
     i_col = ii  # ii % 5
     for nb_dst in dico_ii['l_nb_dst']:
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="(data - inst_var) / contam - decorrelation_likelihood - 1", 
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data / contam - decorrelation_likelihood - 1", 
                                            datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="(data - inst_var) / contam - decorrelation_likelihood - 1", 
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data / contam - decorrelation_likelihood - 1", 
                                            datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
                                            exptime=orbit_CHEOPS/60/24,
                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CHEOPS:.1f}min"},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-    plotdef_TS.things2plot[f"data_CH{nb_dst}"].pl_kwargs['label'] = "CHEOPS"
-    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="(model - inst_var) / contam - 1", 
+        plotdef_TS.add_modelordata_to_grid(name=f"instvar{nb_dst}", expression="inst_var / contam", 
+                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}", time_limits=None,
+                                           pl_kwargs={'color': 'g', 'label': None},
+                                           time_factor=time_fact, value_factor=LC_fact, 
+                                           i_row=i_row, i_col=i_col)
+    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model / contam - 1", 
                                        datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
+    plotdef_TS.things2plot[f"data_CH{0}"].pl_kwargs['label'] = "CHEOPS"
+    plotdef_TS.things2plot[f"model_row{i_row}col{i_col}"].pl_kwargs['label'] = "Model"
+    plotdef_TS.things2plot[f"instvar{0}"].pl_kwargs['label'] = "Inst Var"
+
 
 plotdef_TS.set_axes_property(value=False, property="do_legend")
 plotdef_TS.set_axes_property(value=True, property="do_legend", i_row=0, i_col=0)
@@ -211,5 +219,4 @@ if save_plot:
     pl.close("all")
 else:
     pl.show()
-
 

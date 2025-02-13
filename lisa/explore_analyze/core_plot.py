@@ -19,6 +19,41 @@ def get_default_model_name(seq_current_model_name: Sequence[int|str]):
     return name
 
 
+def plot_data_and_resi(x:NDArray, data:NDArray, data_err:NDArray, data_err_jitter:NDArray, residuals:NDArray,
+                       dataormulitdata2plot:Data2Plot|MultiData2Plot,
+                       axe_data:Axe, axe_resi:Axe|None):
+    pl_kwarg = copy(dataormulitdata2plot.pl_kwargs)
+    show_error = pl_kwarg.get('show_error', True)
+    if 'show_error' in pl_kwarg:
+        pl_kwarg.pop('show_error')
+    if not(show_error) or (data_err is None):
+        ebcont = axe_data.errorbar(x, y=data, **pl_kwarg)
+        if "color" not in pl_kwarg:
+            pl_kwarg["color"] = ebcont[0].get_color()
+        ebcont = axe_resi.errorbar(x, y=residuals, **pl_kwarg)
+    else:
+        ebcont = axe_data.errorbar(x, y=data, yerr=data_err, **pl_kwarg)
+        if "color" not in pl_kwarg:
+            pl_kwarg["color"] = ebcont[0].get_color()
+        ebcont = axe_resi.errorbar(x, y=residuals, yerr=data_err, **pl_kwarg)
+    color = ebcont[0].get_color()
+    alpha = ebcont[0].get_alpha()
+    if "color" not in pl_kwarg:
+        pl_kwarg["color"] = color
+    if "alpha" not in pl_kwarg:
+        pl_kwarg["alpha"] = alpha
+    if pl_kwarg["alpha"] is None:
+        pl_kwarg["alpha"] = 1
+    if not(not(show_error) or (data_err_jitter is None)):
+        pl_kwarg["alpha"] /= 3
+        if 'label' in pl_kwarg:
+            label = pl_kwarg.pop('label')
+        _ = axe_data.errorbar(x, y=data, yerr=data_err_jitter, **pl_kwarg)
+        _ = axe_resi.errorbar(x, y=residuals, yerr=data_err_jitter, **pl_kwarg)
+        pl_kwarg["alpha"] *= 3
+    return pl_kwarg 
+
+
 class DataBinning(object):
     """Class to set the parameters for the binning
     

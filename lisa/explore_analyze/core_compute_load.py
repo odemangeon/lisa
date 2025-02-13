@@ -6,6 +6,7 @@ from numpy import zeros_like, sqrt, linspace, size, ones_like, float_
 from numpy.typing import NDArray
 from collections import defaultdict, OrderedDict
 from pandas import DataFrame
+from typing import Callable, Dict
 
 from .misc import update_model_binned_label
 from .core_plot import ComputedModels_Database, Expression, ComputedModel, ModelBinning
@@ -430,3 +431,40 @@ def compute_data_err_jittered(data_err:NDArray[float_], post_instance:Posterior,
     else:
         data_err_jitter = None
     return data_err_jitter
+
+
+def compute_data_and_resi_for_data2plots(data2plot:Data2Plot, post_instance: Posterior, df_fittedval:DataFrame, 
+                                         datasim_kwargs: dict, compute_raw_models_func: Callable,
+                                         computedmodels_db: ComputedModels_Database, 
+                                         get_key_compute_model_func: Callable, 
+                                         kwargs_get_key_compute_model: Dict|None=None, 
+                                         split_GP_computation: int|None=None, 
+                                         name_data2plot: str|None=None):
+    logger.info(f"Compute datas {'for ' + name_data2plot if name_data2plot is not None else ''}")
+    times_dataset = data2plot.get_times_dataset(post_instance=post_instance)
+    # Compute the data_model
+    data, data_err, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                      compute_raw_models_func=compute_raw_models_func, 
+                                      expression=data2plot.expression, times=times_dataset, datasetname=data2plot.datasetname,
+                                      exptime=None, supersampling=None,
+                                      computedmodels_db=computedmodels_db, 
+                                      get_key_compute_model_func=get_key_compute_model_func,
+                                      kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                      split_GP_computation=split_GP_computation
+                                      )
+    # Compute jittered_errors
+    data_err_jitter = compute_data_err_jittered(data_err=data_err, post_instance=post_instance, datasetname=data2plot.datasetname, df_fittedval=df_fittedval)                    
+    # Compute residuals 
+    logger.info(f"Compute residuals {'for ' + name_data2plot if name_data2plot is not None else ''}")
+    expression_resi = Expression(expression="data - model - GP - decorrelation_likelihood")
+    residuals, _, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                    compute_raw_models_func=compute_raw_models_func, 
+                                    expression=expression_resi, times=times_dataset,
+                                    datasetname=data2plot.datasetname,
+                                    exptime=None, supersampling=None,
+                                    computedmodels_db=computedmodels_db, 
+                                    get_key_compute_model_func=get_key_compute_model_func,
+                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
+                                    split_GP_computation=split_GP_computation
+                                    )
+    return times_dataset, data, data_err, data_err_jitter, residuals

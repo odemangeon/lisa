@@ -17,15 +17,11 @@ from scipy.stats import binned_statistic
 from pandas import DataFrame
 from typing import Callable, Dict
 
-from .misc import (AandA_fontsize, check_spec_data_or_resi, check_row4datasetname, check_datasetnameformodel4row,
-                   check_spec_by_column_or_row, check_spec_for_data_or_resi_by_column_or_row, do_suptitle,
-                   get_pl_kwargs, check_kwargs_by_column_and_row, define_x_or_y_lims, update_data_binned_label,
-                   print_rms, set_legend, AandA_full_width, default_figheight_factor
-                   )
-from .core_plot import ComputedModels_Database, Expression
+from .misc import AandA_fontsize, set_legend, create_gridspec, create_data_and_residual_axes, setup_data_and_residual_axes_style
+from .core_plot import ComputedModels_Database, Expression, plot_data_and_resi
 from .ts_plots import PlotsDefinition_TS
-from .binning import compute_binning
-from .core_compute_load import compute_model, get_key_compute_model, compute_data_err_jittered
+from .binning import bin_data_and_resi
+from .core_compute_load import compute_model, get_key_compute_model, compute_data_and_resi_for_data2plots
 from ..emcee_tools import emcee_tools as et
 from ..posterior.core.posterior import Posterior
 
@@ -56,18 +52,14 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
     if computedmodels_db is None:
         computedmodels_db = ComputedModels_Database()
 
-    # Create the updated grid space for TS according to the number of rows and cols specified in plotdef
-    if create_axes_main_gridspec is None:
-        create_axes_main_gridspec = {}
-    if subplotspec is None:
-        if fig is None:
-            fig = Figure()
-    if subplotspec is None:
-        gs = GridSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, figure=fig, **create_axes_main_gridspec)
-    else:
-        gs = GridSpecFromSubplotSpec(nrows=plotdef.nb_rows, ncols=plotdef.nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
+    # If no fig is provided create a new one
+    if fig is None:
+        fig = Figure()
+
+    # Create the updated gridspec according to the number of rows and cols specified in plotdef
+    gs = create_gridspec(nb_rows=plotdef.nb_rows, nb_cols=plotdef.nb_cols, fig=fig, subplotspec=subplotspec, create_axes_main_gridspec=create_axes_main_gridspec)
     
-    # Set default values for parameters
+    # Set default values for parameters npt_model_default and extra_dt_model
     if npt_model_default is None:
         npt_model_default = 1000
     if extra_dt_model is None:
@@ -82,32 +74,10 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
             logger.debug(f"Doing PF plot for row {i_row}/{plotdef.nb_rows - 1}, column {i_col}/{plotdef.nb_cols - 1}")
             subplotspec_i = gs[i_row, i_col]
 
-            # Create the data and residuals axes and set properties ans style
-            (axe_data, axe_resi) = et.add_twoaxeswithsharex(subplotspec_i, fig, gs_from_sps_kw=create_axes_dataresi_gridspec)  # gs_from_sps_kw={"wspace": 0.1}
-        
-            axe_resi.set_xlabel(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.label, fontsize=fontsize)
-            ylabel_data = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.label
-            ylabel_resi = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.label
-            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.show_label and (len(ylabel_data) > 0):
-                axe_data.set_ylabel(ylabel_data, fontsize=fontsize)
-            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.show_label and (len(ylabel_resi) > 0):
-                axe_resi.set_ylabel(ylabel_resi, fontsize=fontsize)
-            
-            axe_data.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
-            axe_data.xaxis.set_minor_locator(AutoMinorLocator())
-            axe_data.yaxis.set_minor_locator(AutoMinorLocator())
-            axe_data.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axe_data.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-            axe_resi.yaxis.set_minor_locator(AutoMinorLocator())
-            axe_resi.tick_params(axis="both", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelsize=fontsize)
-            axe_resi.tick_params(axis="both", direction="in", which="minor", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
-            axe_resi.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-
-            #########################
-            # Set the title if needed
-            #########################
-            if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).show_title and (len(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).title) > 0):
-                axe_data.set_title(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).title, fontsize=fontsize)
+            # Create the data and residuals axes and set properties and style
+            axes_properties_i = plotdef.get_axes_properties(i_row=i_row, i_col=i_col)
+            od_axe = create_data_and_residual_axes(do_residual_axis=axes_properties_i.residuals, fig=fig, subplotspec=subplotspec_i, create_axes_dataresi_gridspec=create_axes_dataresi_gridspec)
+            setup_data_and_residual_axes_style(od_axe=od_axe, axes_properties=axes_properties_i, fontsize=fontsize)
 
             ##################################
             # Get the phase folding properties
@@ -151,7 +121,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 # Plot the model values
                 pl_kwarg_to_use = copy(model2plot_i.pl_kwargs)
                 # You are plot data or a modified version of the data
-                ebcont = axe_data.errorbar(phasefolded_times_i * time_fact, y=model_i * amplitude_fact,
+                ebcont = od_axe['data'].errorbar(phasefolded_times_i * time_fact, y=model_i * amplitude_fact,
                                             **pl_kwarg_to_use)
                 color = ebcont[0].get_color()
                 alpha = ebcont[0].get_alpha()
@@ -164,7 +134,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                         if alpha is None:
                             alpha = 1.
                         pl_kwarg_to_use["alpha"] = alpha / 3
-                        _ = axe_data.fill_between(phasefolded_times_i * time_fact, (model_i - model_err_i) * amplitude_fact, (model_i + model_err_i) * amplitude_fact,
+                        _ = od_axe['data'].fill_between(phasefolded_times_i * time_fact, (model_i - model_err_i) * amplitude_fact, (model_i + model_err_i) * amplitude_fact,
                                                   **pl_kwarg_to_use)
             
             for name_multimodel2plot_i, multimodel2plot_i in plotdef.get_multimodels2plot(i_row=i_row, i_col=i_col).items():
@@ -175,112 +145,147 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
             ####################################
             dico_data = {}  # Will be used for ylims and y outliers indication 
             dico_resi = {}  # Will be used for ylims and y outliers indication
-            dico_phasefoldedtimes = {}  # Will be used for y outliers indication
+            dico_times = {}  # Will be used for y outliers indication
             pl_kwarg_to_use = {}  # Will be used for y outliers indication
 
             for name_data2plot_i, data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).items():
                 logger.info(f"Start Plotting data {name_data2plot_i}")
-                times_dataset = data2plot_i.get_times_dataset(post_instance=post_instance)
-                time_fact = data2plot_i.pl_factors.time_factor
-                amplitude_fact = data2plot_i.pl_factors.value_factor
+                # times_dataset = data2plot_i.get_times_dataset(post_instance=post_instance)
+                # time_fact = data2plot_i.pl_factors.time_factor
+                # amplitude_fact = data2plot_i.pl_factors.value_factor
                 # Compute the data_model
-                data_i, data_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                                      compute_raw_models_func=compute_raw_models_func, 
-                                                      expression=data2plot_i.expression, times=times_dataset, datasetname=data2plot_i.datasetname,
-                                                      exptime=None, supersampling=None,
-                                                      computedmodels_db=computedmodels_db, 
-                                                      get_key_compute_model_func=get_key_compute_model_func,
-                                                      kwargs_get_key_compute_model=None,
-                                                      split_GP_computation=split_GP_computation
-                                                      )
-                # Compute jittered_errors
-                data_err_jitter_i = compute_data_err_jittered(data_err=data_err_i, post_instance=post_instance, datasetname=data2plot_i.datasetname, df_fittedval=df_fittedval)                    
-                # Compute residuals 
-                logger.info(f"Compute residuals for {name_data2plot_i}")
-                expression_resi = Expression(expression="data - model - GP - decorrelation_likelihood")
-                residuals_i, _, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
-                                                  compute_raw_models_func=compute_raw_models_func, 
-                                                  expression=expression_resi, times=times_dataset,
-                                                  datasetname=data2plot_i.datasetname,
-                                                  exptime=None, supersampling=None,
-                                                  computedmodels_db=computedmodels_db, 
-                                                  get_key_compute_model_func=get_key_compute_model_func,
-                                                  kwargs_get_key_compute_model=None,
-                                                  split_GP_computation=split_GP_computation
-                                                  )
+                (times_dataset_i, data_i, data_err_i, data_err_jitter_i, residuals_i
+                 ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_i, post_instance=post_instance, df_fittedval=df_fittedval, 
+                                                          datasim_kwargs=datasim_kwargs, compute_raw_models_func=compute_raw_models_func,
+                                                          computedmodels_db=computedmodels_db, 
+                                                          get_key_compute_model_func=get_key_compute_model_func, 
+                                                          kwargs_get_key_compute_model=kwargs_get_key_compute_model, 
+                                                          split_GP_computation=split_GP_computation, 
+                                                          name_data2plot=name_data2plot_i)
                 # Compute the phasefolded times
-                phasefolded_times = foldAt(times_dataset, period_i, T0=(T0_i + period_i * (phasefold_centralphase_i - 0.5))) + (phasefold_centralphase_i - 0.5)
+                phasefolded_times_i = foldAt(times_dataset_i, period_i, T0=(T0_i + period_i * (phasefold_centralphase_i - 0.5))) + (phasefold_centralphase_i - 0.5)
+                # Convert time in times unit if needed and apply time factor
+                if show_time_from_T0_i:
+                    phasefolded_times_i = phasefolded_times_i * period_i * time_fact
+                # Apply amplitude factor
+                data_i *= amplitude_fact
+                data_err_i *= amplitude_fact
+                data_err_jitter_i *= amplitude_fact
+                residuals_i *= amplitude_fact
                 # Bin the data and residuals if needed
                 if data2plot_i.exptime > 0:
-                    (bins_i, _, bindata_i, bindata_std_i, bindata_std_jitter_i
-                        ) = compute_binning(times_dataset=phasefolded_times, values=data_i, errors=data_err_i, errors_jitter=data_err_jitter_i, 
-                                            exptime=data2plot_i.exptime / period_i, method=data2plot_i.method)
-                    (_, _, binresi_i, _, _
-                        ) = compute_binning(times_dataset=phasefolded_times, values=residuals_i, errors=data_err_i, errors_jitter=data_err_jitter_i, 
-                                            exptime=data2plot_i.exptime / period_i, method=data2plot_i.method)
-                    midbins_i = bins_i[:-1] + data2plot_i.exptime  / period_i / 2
+                    (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
+                     ) = bin_data_and_resi(times_dataset=phasefolded_times_i, data=data_i, data_err=data_err_i, data_err_jitter=data_err_jitter_i, 
+                                           residuals=residuals_i, exptime=data2plot_i.exptime, method=data2plot_i.method)
                 # Compute the rms of the residuals
                 if data2plot_i.exptime > 0:
                     rms_values[name_data2plot_i] = std(binresi_i)
                 else:
                     rms_values[name_data2plot_i] = std(residuals_i)
-                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i] * amplitude_fact} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
+                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i]} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
                 # Plot the data or binned data
-                if data2plot_i.exptime == 0.:
-                    data_plot_i = data_i
-                    resi_plot_i = residuals_i
-                    data_err_plot_i = data_err_i
-                    data_err_jitter_plot_i = data_err_jitter_i
-                    time_plot_i = phasefolded_times
-                else:
+                if data2plot_i.exptime > 0.:
                     data_plot_i = bindata_i
                     resi_plot_i = binresi_i
                     data_err_plot_i = bindata_std_i
                     data_err_jitter_plot_i = bindata_std_jitter_i
                     time_plot_i = midbins_i
-                # Convert phasefolded_times in times unit if needed
-                if show_time_from_T0_i:
-                    time_plot_i = time_plot_i * period_i
-                pl_kwarg_to_use[name_data2plot_i] = copy(data2plot_i.pl_kwargs)
-                show_error = pl_kwarg_to_use[name_data2plot_i].get('show_error', True)
-                if 'show_error' in pl_kwarg_to_use[name_data2plot_i]:
-                    pl_kwarg_to_use[name_data2plot_i].pop('show_error')
-                dico_data[name_data2plot_i] = data_plot_i * amplitude_fact
-                dico_resi[name_data2plot_i] = resi_plot_i * amplitude_fact
-                dico_phasefoldedtimes[name_data2plot_i] = time_plot_i * time_fact
-                if not(show_error) or (data_err_plot_i is None):
-                    ebcont = axe_data.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_data[name_data2plot_i], **pl_kwarg_to_use[name_data2plot_i])
-                    if "color" not in pl_kwarg_to_use[name_data2plot_i]:
-                        pl_kwarg_to_use[name_data2plot_i]["color"] = ebcont[0].get_color()
-                    ebcont = axe_resi.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_resi[name_data2plot_i], **pl_kwarg_to_use[name_data2plot_i])
                 else:
-                    ebcont = axe_data.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_data[name_data2plot_i], yerr=data_err_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
-                    if "color" not in pl_kwarg_to_use[name_data2plot_i]:
-                        pl_kwarg_to_use[name_data2plot_i]["color"] = ebcont[0].get_color()
-                    ebcont = axe_resi.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
-                color = ebcont[0].get_color()
-                alpha = ebcont[0].get_alpha()
-                if "alpha" not in pl_kwarg_to_use[name_data2plot_i]:
-                    pl_kwarg_to_use[name_data2plot_i]["alpha"] = alpha
-                if pl_kwarg_to_use[name_data2plot_i]["alpha"] is None:
-                    pl_kwarg_to_use[name_data2plot_i]["alpha"] = 1
-                if not(not(show_error) or (data_err_jitter_plot_i is None)):
-                    pl_kwarg_to_use[name_data2plot_i]["alpha"] /= 3
-                    if 'label' in pl_kwarg_to_use[name_data2plot_i]:
-                        label = pl_kwarg_to_use[name_data2plot_i].pop('label')
-                    _ = axe_data.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_data[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
-                    _ = axe_resi.errorbar(dico_phasefoldedtimes[name_data2plot_i], y=dico_resi[name_data2plot_i], yerr=data_err_jitter_plot_i * amplitude_fact, **pl_kwarg_to_use[name_data2plot_i])
-                    pl_kwarg_to_use[name_data2plot_i]["alpha"] *= 3
+                    data_plot_i = data_i
+                    resi_plot_i = residuals_i
+                    data_err_plot_i = data_err_i
+                    data_err_jitter_plot_i = data_err_jitter_i
+                    time_plot_i = phasefolded_times_i
+                dico_data[name_data2plot_i] = data_plot_i
+                dico_resi[name_data2plot_i] = resi_plot_i 
+                dico_times[name_data2plot_i] = time_plot_i
+                pl_kwarg_to_use[name_data2plot_i] = plot_data_and_resi(x=dico_times[name_data2plot_i], data=dico_data[name_data2plot_i], 
+                                                                       data_err=data_err_plot_i, data_err_jitter=data_err_jitter_plot_i,
+                                                                       residuals=dico_resi[name_data2plot_i],
+                                                                       dataormulitdata2plot=data2plot_i,
+                                                                       axe_data=od_axe["data"], axe_resi=od_axe.get("resi", None))
 
-                for name_multidata2plot_i, multidata2plot_i in plotdef.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
-                    raise NotImplementedError("Plotting of MultiData2Plot is not implemented yet")
-            
+            ##############################################################
+            # Plot the multi data and their residuals specified in plotdef
+            ##############################################################
+            for name_multidata2plot_i, multidata2plot_i in plotdef.get_multidatas2plot(i_row=i_row, i_col=i_col).items():
+                logger.info(f"Start processing multidata2plot {name_multidata2plot_i}")
+                # Compute the data, errors and residuals
+                l_data2plot = multidata2plot_i.l_data2plot
+                l_name_data2plot = [f"{name_multidata2plot_i}_{ii}" for ii in range(len(l_data2plot))]
+                times_dataset_i = []
+                data_i = []
+                data_err_i = []
+                data_err_jitter_i = []
+                residuals_i = []
+                for name_data2plot_j, data2plot_j in zip(l_name_data2plot, l_data2plot):
+                    (times_dataset_j, data_j, data_err_j, data_err_jitter_j, residuals_j
+                     ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_j, post_instance=post_instance, df_fittedval=df_fittedval, 
+                                                              datasim_kwargs=datasim_kwargs, compute_raw_models_func=compute_raw_models_func,
+                                                              computedmodels_db=computedmodels_db, 
+                                                              get_key_compute_model_func=get_key_compute_model_func, 
+                                                              kwargs_get_key_compute_model=kwargs_get_key_compute_model, 
+                                                              split_GP_computation=split_GP_computation, 
+                                                              name_data2plot=name_data2plot_j)
+                    times_dataset_i.append(times_dataset_j)
+                    data_i.append(data_j)
+                    data_err_i.append(data_err_j)
+                    data_err_jitter_i.append(data_err_jitter_j)
+                    residuals_i.append(residuals_j)
+                times_dataset_i = concatenate(times_dataset_i)
+                data_i = concatenate(data_i)
+                data_err_i = concatenate(data_err_i)
+                data_err_jitter_i = concatenate(data_err_jitter_i)
+                residuals_i = concatenate(residuals_i)
+                # Compute the phasefolded times
+                phasefolded_times_i = foldAt(times_dataset_i, period_i, T0=(T0_i + period_i * (phasefold_centralphase_i - 0.5))) + (phasefold_centralphase_i - 0.5)
+                # Convert time in times unit if needed
+                if show_time_from_T0_i:
+                    phasefolded_times_i = phasefolded_times_i * period_i * time_fact
+                # Apply amplitude factor
+                data_i *= amplitude_fact
+                data_err_i *= amplitude_fact
+                data_err_jitter_i *= amplitude_fact
+                residuals_i *= amplitude_fact
+                # Compute the binned data, errors and residuals
+                if multidata2plot_i.exptime > 0:
+                    (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
+                     ) = bin_data_and_resi(times_dataset=phasefolded_times_i, data=data_i, data_err=data_err_i, data_err_jitter=data_err_jitter_i, 
+                                           residuals=residuals_i, exptime=multidata2plot_i.exptime, method=multidata2plot_i.method)
+                # Compute the rms of the residuals
+                if multidata2plot_i.exptime > 0:
+                    rms_values[name_multidata2plot_i] = std(binresi_i)
+                else:
+                    rms_values[name_multidata2plot_i] = std(residuals_i)
+                logger.info(f"RMS {name_multidata2plot_i} = {rms_values[name_multidata2plot_i]} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
+                # Plot the data or binned data
+                if multidata2plot_i.exptime > 0:
+                    data_plot_i = bindata_i
+                    resi_plot_i = binresi_i
+                    data_err_plot_i = bindata_std_i
+                    data_err_jitter_plot_i = bindata_std_jitter_i
+                    time_plot_i = midbins_i
+                else:
+                    data_plot_i = data_i
+                    resi_plot_i = residuals_i
+                    data_err_plot_i = data_err_i
+                    data_err_jitter_plot_i = data_err_jitter_i
+                    time_plot_i = phasefolded_times_i
+                dico_data[name_multidata2plot_i] = data_plot_i
+                dico_resi[name_multidata2plot_i] = resi_plot_i 
+                dico_times[name_multidata2plot_i] = time_plot_i
+                pl_kwarg_to_use[name_multidata2plot_i] = plot_data_and_resi(x=dico_times[name_multidata2plot_i], data=dico_data[name_multidata2plot_i], 
+                                                                            data_err=data_err_plot_i, data_err_jitter=data_err_jitter_plot_i,
+                                                                            residuals=dico_resi[name_multidata2plot_i],
+                                                                            dataormulitdata2plot=multidata2plot_i,
+                                                                            axe_data=od_axe["data"], axe_resi=od_axe.get("resi", None))
+                
             ###################################
             # Set ylims and indicate_y_outliers
             ###################################
             logger.debug(f"Setting ylims and indicating outliers for row {i_row}, column {i_col}")
             # Set the y axis limits and indicate outliers for the data and the residuals for the raw cadence
-            for axe, data_or_resi, points, pad, indicate_outliers in zip((axe_data, axe_resi), ("data", "resi"), (dico_data, dico_resi), 
+            for axe, data_or_resi, points, pad, indicate_outliers in zip((od_axe['data'], od_axe['resi']), ("data", "resi"), (dico_data, dico_resi), 
                                                                          (plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.pad, plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.pad),
                                                                          (plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.indicate_outliers, plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.indicate_outliers),
                                                                          ):
@@ -299,7 +304,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 # Indicate outlier values that are off y-axis with an arrows for raw cadence
                 if indicate_outliers:
                     for name_data2plot_i, data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).items():
-                        et.indicate_y_outliers(x=dico_phasefoldedtimes[name_data2plot_i], y=points[name_data2plot_i], ax=axe,
+                        et.indicate_y_outliers(x=dico_times[name_data2plot_i], y=points[name_data2plot_i], ax=axe,
                                                color=pl_kwarg_to_use[name_data2plot_i]["color"],
                                                alpha=pl_kwarg_to_use[name_data2plot_i]["alpha"])
 
@@ -313,7 +318,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
             logger.debug(f"Setting xlims for row {i_row}, column {i_col}")
             # Set the x axis limits
             # if TS_kwargs.get('force_tlims', False):
-            axe_data.set_xlim(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.lims)
+            od_axe['data'].set_xlim(plotdef.get_axes_properties(i_row=i_row, i_col=i_col).x.lims)
             # else:
             #     x_row = concatenate([dico_times[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col).keys()])
             #     axe_data.set_xlim((min(x_row), max(x_row)))
@@ -322,7 +327,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
             # Set the legend if needed
             ##########################
             if plotdef.get_axes_properties(i_row=i_row, i_col=i_col).do_legend:
-                set_legend(ax=axe_data, legend_kwargs=plotdef.get_axes_properties(i_row=i_row, i_col=i_col).legend_kwargs, fontsize_def=fontsize)
+                set_legend(ax=od_axe['data'], legend_kwargs=plotdef.get_axes_properties(i_row=i_row, i_col=i_col).legend_kwargs, fontsize_def=fontsize)
     
     logger.debug("Done: create_PF_plots")
     return computedmodels_db, rms_values
