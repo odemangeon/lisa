@@ -7,6 +7,7 @@ from numpy import float_, isfinite, ndarray, equal, linspace, array_equal, size
 from numbers import Number
 from copy import deepcopy, copy
 from pprint import pprint
+from pandas import DataFrame
 import re
 
 from ..posterior.core.posterior import Posterior
@@ -236,7 +237,8 @@ class Model2plot(object):
     def __init__(self, expression:str, times:NDArray[float_]|None=None, time_limits:tuple[float,float]|None=None, npt:int|None=None, exptime:float|int|None=None, supersampling:int|None=None, 
                  datasetname:str|None=None,
                  time_factor:float|None=None, value_factor:float|None=None,
-                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True,
+                 df_param_value:DataFrame|None=None,
                  ):
         self._init_expression(expression=expression)
         self._check_expression_4_data(expression=self.expression)
@@ -254,6 +256,7 @@ class Model2plot(object):
         self._init_pl_factors(time_factor=time_factor, value_factor=value_factor)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
+        self._init_df_param_value(df_param_value=df_param_value)
         self.show_error = show_error
 
     @property
@@ -353,7 +356,7 @@ class Model2plot(object):
 
     def set_datasetname(self, datasetname:str):
         if not(isinstance(datasetname, str)):
-            raise TypeError(f"datasetname be a string, got {type(datasetname)}.")
+            raise TypeError(f"datasetname should be a string, got {type(datasetname)}.")
         self.__datasetname = datasetname
 
     @property
@@ -396,6 +399,23 @@ class Model2plot(object):
         if not(isinstance(show_error, bool)):
             raise TypeError(f"show_error should be a bool, got {type(show_error)}")
         self.__show_error = show_error
+
+    def _init_df_param_value(self, df_param_value:DataFrame|None):
+        self.__df_param_value:DataFrame|None = None
+        if df_param_value is not None:
+            self.df_param_value = df_param_value
+
+    @property
+    def df_param_value(self) -> DataFrame|None:
+        return self.__df_param_value
+    
+    @df_param_value.setter
+    def df_param_value(self, new:DataFrame):
+        if not(isinstance(new, DataFrame)):
+            raise TypeError(f"df_param_value should be a pandas.DataFrame, got {type(new)}")
+        if not('value' in new.columns):
+            raise ValueError("df_param_value should have a column called 'value' with the value of the parameters.")
+        self.__df_param_value = new
     
     
 class Data2plot(Model2plot):
@@ -403,7 +423,8 @@ class Data2plot(Model2plot):
     def __init__(self, expression:str, exptime:float|int|None=None, method:str|None=None,
                  datasetname:str|None=None,
                  time_factor:float|None=None, value_factor:float|None=None, 
-                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True,
+                 df_param_value:DataFrame|None=None,
                  ):
         self._init_expression(expression=expression)
         self._check_expression_4_data(expression=self.expression)
@@ -412,6 +433,7 @@ class Data2plot(Model2plot):
         self._init_pl_factors(time_factor=time_factor, value_factor=value_factor)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
+        self._init_df_param_value(df_param_value=df_param_value)
         self.show_error = show_error
 
     def _check_expression_4_data(self, expression:Expression):
@@ -438,9 +460,11 @@ class MultiData2plot(Data2plot):
 
     def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
                  time_factor:float|None=None, value_factor:float|None=None,
-                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True,
+                 df_param_value:DataFrame|None=None
+                 ):
         self._init_l_data2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, method=method,
-                               time_factor=time_factor, value_factor=value_factor)
+                               time_factor=time_factor, value_factor=value_factor, df_param_value=df_param_value)
         self._init_DataBinning(exptime=exptime, method=method)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
@@ -451,17 +475,34 @@ class MultiData2plot(Data2plot):
         return self.__l_data2plot
 
     def _init_l_data2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, method:str|None=None,
-                          time_factor:float|None=None, value_factor:float|None=None):
+                          time_factor:float|None=None, value_factor:float|None=None, df_param_value:DataFrame|None=None):
         self.__l_data2plot = [Data2plot(expression=expression_i, datasetname=datasetname_i, 
-                                        time_factor=time_factor, value_factor=value_factor)
+                                        time_factor=time_factor, value_factor=value_factor,
+                                        df_param_value=df_param_value)
                               for expression_i, datasetname_i in l_expression_and_datasetname]
+
+    @property
+    def df_param_value(self) -> DataFrame|None:
+        return self.l_data2plot[0].df_param_value
+
+    @df_param_value.setter
+    def df_param_value(self, new:DataFrame):
+        if not(isinstance(new, DataFrame)):
+            raise TypeError(f"df_param_value should be a pandas.DataFrame, got {type(new)}")
+        if not('value' in new.columns):
+            raise ValueError("df_param_value should have a column called 'value' with the value of the parameters.")
+        for data2plot_i in self.l_data2plot:
+            data2plot_i.df_param_value = new
 
 
 class MultiModel2plot(Model2plot):
 
     def __init__(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, supersampling:int|None=None,
-                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True):
-        self._init_l_model2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, supersampling=supersampling)
+                 pl_kwargs:Dict|None=None, pl_kwargs_error:Dict|None=None, show_error:bool=True, 
+                 df_param_value:DataFrame|None=None
+                 ):
+        self._init_l_model2plot(l_expression_and_datasetname=l_expression_and_datasetname, exptime=exptime, supersampling=supersampling,
+                                df_param_value=df_param_value)
         self._init_ModelBinning(exptime=exptime, supersampling=supersampling)
         self._init_pl_kwargs(pl_kwargs=pl_kwargs)
         self._init_pl_kwargs_err(pl_kwargs_error=pl_kwargs_error)
@@ -471,21 +512,36 @@ class MultiModel2plot(Model2plot):
     def l_model2plot(self):
         return self.__l_model2plot
 
-    def _init_l_model2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, supersampling:int|None=None):
+    def _init_l_model2plot(self, l_expression_and_datasetname:list[tuple[str, str]], exptime:float|int|None=None, supersampling:int|None=None,
+                           df_param_value:DataFrame|None=None):
         self.__l_model2plot = [Model2plot(expression=expression_i, exptime=exptime, supersampling=supersampling, datasetname=datasetname_i, 
-                                          pl_kwargs=None, pl_kwargs_error=None, show_error=False)
+                                          pl_kwargs=None, pl_kwargs_error=None, show_error=False, df_param_value=df_param_value)
                                for expression_i, datasetname_i in l_expression_and_datasetname]
-        
+    
+    @property
+    def df_param_value(self) -> DataFrame|None:
+        return self.l_model2plot[0].df_param_value
+
+    @df_param_value.setter
+    def df_param_value(self, new:DataFrame):
+        if not(isinstance(new, DataFrame)):
+            raise TypeError(f"df_param_value should be a pandas.DataFrame, got {type(new)}")
+        if not('value' in new.columns):
+            raise ValueError("df_param_value should have a column called 'value' with the value of the parameters.")
+        for model2plot_i in self.l_model2plot:
+            model2plot_i.df_param_value = new
 
 class ComputedModel(object):
     """Class to store computed models values: expression, binning, datasetname, times, values, errors
     """
-    def __init__(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning,
+    def __init__(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning, df_param_value:DataFrame,
                  times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_]):
         self.__expression:Expression = Expression(expression=expression)
         self.__set_datasetname(datasetname=datasetname)
         self.__binning:ModelBinning|DataBinning = binning
+        self.__df_param_value:DataFrame = df_param_value.copy()
         self.__set_computed_model(times=times, values=values, errors=errors)
+        
 
     @property
     def expression(self) -> Expression:
@@ -515,6 +571,10 @@ class ComputedModel(object):
             return self.binning.supersampling
         else:
             raise ValueError(f"binning is of type Databinning and thus doesn't have a supersampling attribute.")
+        
+    @property
+    def df_param_value(self) -> DataFrame:
+        return self.__df_param_value.copy()
 
     @property
     def times(self) -> NDArray[float_]:
@@ -567,9 +627,18 @@ class ComputedModels_Database(object):
     @property
     def stored_models(self) -> list[ComputedModel]:
         return self.__stored_models
+    
+    def __df_param_value_equal(self, df_param_value_1, df_param_value_2):    # Sample Series
+        # Align the Series to their common indexes
+        common_indexes = df_param_value_1['value'].index.intersection(df_param_value_2['value'].index)
+        aligned_series1 = df_param_value_1['value'][common_indexes]
+        aligned_series2 = df_param_value_2['value'][common_indexes]
+
+        # Check if the aligned Series are equal
+        return aligned_series1.equals(aligned_series2)
 
     def find_computed_model(self, expression:str, datasetname:str, binning:DataBinning|ModelBinning,
-                            times:NDArray[float_]) -> tuple[ComputedModel|None, int|None, NDArray[float_]|None]:
+                            times:NDArray[float_], df_param_value:DataFrame) -> tuple[ComputedModel|None, int|None, NDArray[float_]|None]:
         model_found:ComputedModel|None = None
         times_found:NDArray[float_]|None = None
         i_model_found:list[int] = []
@@ -579,7 +648,8 @@ class ComputedModels_Database(object):
             if ((computed_model.expression.expression == expression) and 
                 (computed_model.datasetname == datasetname) and 
                 (computed_model.binning == binning) and
-                array_equal(computed_model.times, times)
+                array_equal(computed_model.times, times) and
+                self.__df_param_value_equal(computed_model.df_param_value, df_param_value)
                 ):
                 i_model_found.append(ii)
                 model_found = computed_model
@@ -608,6 +678,7 @@ class ComputedModels_Database(object):
         return res
     
     def store_computed_model(self, expression:str, datasetname:str, binning:ModelBinning|DataBinning,
+                             df_param_value:DataFrame,
                              times:NDArray[float_], values:NDArray[float_], errors:NDArray[float_],
                              overwrite: bool=False):
         """Set the computed model (times and values).
@@ -618,13 +689,13 @@ class ComputedModels_Database(object):
         Once a computed model has been set it cannot be overwritten.
         """
         model_found, _, times_found = self.find_computed_model(expression=expression, datasetname=datasetname, binning=binning,
-                                                               times=times)
+                                                               times=times, df_param_value=df_param_value)
         if  (model_found is None) or overwrite:
             if (model_found is not None) and overwrite:
                 logger.info("Such model is already in the database, but it will be overwritten.")
             if times_found is not None:
                 times = times_found
-            self.stored_models.append(ComputedModel(expression=expression, datasetname=datasetname, binning=binning,
+            self.stored_models.append(ComputedModel(expression=expression, datasetname=datasetname, binning=binning, df_param_value=df_param_value,
                                                     times=deepcopy(times), values=deepcopy(values), errors=deepcopy(errors)))
         else:
            logger.warning("Such model is already in the database and overwrite is False. The store command will be ignored.")
@@ -1119,7 +1190,7 @@ class PlotsDefinition(object):
                 self.add_existing_to_grid(i_row=i_row, i_col=i_col, name=name)
 
     def set_datasetname(self, datasetname:str, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
-        """Set the datasetname for the models2plot that do not have a dataset"""
+        """Set the datasetname for the model2plot or data2plot that do not have it already defined."""
         # If you don't provide i_row it means that you want to add to all rows
         l_i_rows = self._get_l_i(idx=i_row, roworcol='row')
         l_i_cols = self._get_l_i(idx=i_col, roworcol='col')
@@ -1135,18 +1206,18 @@ class PlotsDefinition(object):
                     l_name = copy(name)
                 else:
                     raise TypeError(f"name should be either None, or a str or a list of str, got {name}")
-                for name in l_name:
-                    if name not in self.grid[i_row][i_col]:
-                        logger.info(f"No model with name {name} in the grid at row {i_row} and col {i_col}")
+                for name_i in l_name:
+                    if name_i not in self.grid[i_row][i_col]:
+                        logger.info(f"No model with name {name_i} in the grid at row {i_row} and col {i_col}")
                     else:
-                        thing2plot = self.getthing2plot(name=name)
-                        if isinstance(thing2plot, MultiData2plot):
-                            pass
-                        else:
+                        thing2plot = self.getthing2plot(name=name_i)
+                        if isinstance(thing2plot, Data2plot) or isinstance(thing2plot, Model2plot):
                             if thing2plot.datasetname is None:
                                 thing2plot.set_datasetname(datasetname=datasetname)
                             else:
-                                logger.info(f"{name} (found in the grid at row {i_row} and col {i_col}) already as a datasetname ({thing2plot.datasetname}) it will not be changed")
+                                logger.info(f"{name_i} (found in the grid at row {i_row} and col {i_col}) already as a datasetname ({thing2plot.datasetname}) it will not be changed")
+                        else:
+                            pass
         
     def get_models2plot(self, i_row:int, i_col:int) -> OrderedDict[str,Model2plot]:
         """For a given axis of the grid (designated by i_row and i_col), return an OrderedDict with the Model2plot instances for this axis
@@ -1190,108 +1261,6 @@ class PlotsDefinition(object):
         for data2plot_i in self.get_datas2plot(i_row=i_row, i_col=i_col).values():
             datasetnames.append(data2plot_i.datasetname)
         return list(set(datasetnames))
-    
-    # def set_x_lims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
-    #     """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     lims    : New axis limits
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.lims = lims
-
-    # def set_y_lims(self, lims:tuple[float|None, float|None], i_row:int|None=None, i_col:int|None=None):
-    #     """Return a tuple giving the limits for one axis of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     lims    : New axis limits
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.lims = lims
-    
-    # def set_x_name(self, name:str, i_row:int|None=None, i_col:int|None=None):
-    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     name    : New name for the quantity to be displayed 
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.name = name
-    
-    # def set_x_unit(self, unit:str, i_row:int|None=None, i_col:int|None=None):
-    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     unit    : New unit for the quantity to be displayed 
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).x.unit = unit
-    
-    # def set_y_name(self, name:str, i_row:int|None=None, i_col:int|None=None):
-    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     name    : New name for the quantity to be displayed 
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.name = name
-
-    # def set_y_unit(self, unit:str, which:str, i_row:int|None=None, i_col:int|None=None):
-    #     """Set the name of the quantity to be displayed on one axis (or more) of the grid designated by i_row and i_col.
-        
-    #     Arguments
-    #     ---------
-    #     unit    : New unit for the quantity to be displayed 
-    #     i_row   : Index of the row in the grid
-    #     i_col   : Index of the column in the grid
-    #     which   : Can be "x", "y_data", "y_resi"
-    #     """
-    #     l_i_row = self._get_l_i(idx=i_row, roworcol='row')
-    #     l_i_col = self._get_l_i(idx=i_col, roworcol='col')
-    #     # Make sure that i_row and i_col are correct
-    #     for i_row in l_i_row:
-    #         for i_col in l_i_col:
-    #             self.get_axes_properties(i_row=i_row, i_col=i_col).y.unit = unit
 
     def set_axis_property(self, value, property:str,  axis:str, i_row:int|None=None, i_col:int|None=None):
         l_i_row = self._get_l_i(idx=i_row, roworcol='row')
@@ -1312,6 +1281,33 @@ class PlotsDefinition(object):
         for i_row in l_i_row:
             for i_col in l_i_col:
                 setattr(self.get_axes_properties(i_row=i_row, i_col=i_col), property, value)
+
+    def set_df_param_value(self, df_param_value:DataFrame, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
+        """Set the value of the df_param_value attribute of the thing2plot instances that do not have it already defined."""
+        # If you don't provide i_row it means that you want to add to all rows
+        l_i_row = self._get_l_i(idx=i_row, roworcol='row')
+        l_i_col = self._get_l_i(idx=i_col, roworcol='col')
+        for i_row in l_i_row:
+            for i_col in l_i_col:
+            # If you don't provide name it is that you want to set all models in the current location of the grid
+                if name is None:
+                    l_name = self.grid[i_row][i_col]
+                elif isinstance(name, str):
+                    l_name = [name, ]
+                elif isinstance(name, list) and all([isinstance(name_i, str) for name_i in name]):
+                    l_name = copy(name)
+                else:
+                    raise TypeError(f"name should be either None, or a str or a list of str, got {name}")
+                for name_i in l_name:
+                    if name_i not in self.grid[i_row][i_col]:
+                        logger.info(f"No model with name {name_i} in the grid at row {i_row} and col {i_col}")
+                    else:
+                        thing2plot = self.getthing2plot(name=name_i)
+                        if thing2plot.df_param_value is None:
+                            thing2plot.df_param_value = df_param_value
+                        else:
+                            logger.info(f"{name_i} (found in the grid at row {i_row} and col {i_col}) already as a df_param_value it will not be changed")
+
         
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""

@@ -68,7 +68,7 @@ def is_valid_model_available(key_model, datasetname, post_instance):
 
 
 def compute_raw_models(tsim, key_model, datasetname, post_instance,
-                       df_fittedval, datasim_kwargs, exptime, supersamp,
+                       df_param_value, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
@@ -82,14 +82,14 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
     else:
         return compute_raw_models_core(tsim=tsim, key_model=key_model,
                                        datasetname=datasetname, post_instance=post_instance,
-                                       df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                       df_param_value=df_param_value, datasim_kwargs=datasim_kwargs,
                                        exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
                                        kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                        split_GP_computation=split_GP_computation
                                        )
     
 
-def create_LC_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
+def create_LC_TS_plots(post_instance:Posterior,
                        plotdef:PlotsDefinition_TS,
                        computedmodels_db:ComputedModels_Database|None=None,
                        split_GP_computation:int|None=None,
@@ -103,7 +103,7 @@ def create_LC_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                        subplotspec:SubplotSpec|None=None,
                        ):
     
-    return create_TS_plots(post_instance=post_instance, df_fittedval=df_fittedval, compute_raw_models_func=compute_raw_models,
+    return create_TS_plots(post_instance=post_instance, compute_raw_models_func=compute_raw_models,
                            plotdef=plotdef, computedmodels_db=computedmodels_db, split_GP_computation=split_GP_computation,
                            datasim_kwargs=datasim_kwargs,
                            create_axes_main_gridspec=create_axes_main_gridspec,
@@ -116,7 +116,7 @@ def create_LC_TS_plots(post_instance:Posterior, df_fittedval:DataFrame,
                            )
 
 
-def create_LC_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
+def create_LC_PF_plots(post_instance:Posterior,
                        plotdef:PlotsDefinition_PF,
                        computedmodels_db:ComputedModels_Database|None=None,
                        split_GP_computation:int|None=None,
@@ -130,7 +130,7 @@ def create_LC_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                        subplotspec:SubplotSpec|None=None,
                        ):
     
-    return create_PF_plots(post_instance=post_instance, df_fittedval=df_fittedval, compute_raw_models_func=compute_raw_models,
+    return create_PF_plots(post_instance=post_instance, compute_raw_models_func=compute_raw_models,
                            plotdef=plotdef, computedmodels_db=computedmodels_db, split_GP_computation=split_GP_computation,
                            datasim_kwargs=datasim_kwargs,
                            create_axes_main_gridspec=create_axes_main_gridspec,

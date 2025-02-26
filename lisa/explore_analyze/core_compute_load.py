@@ -73,7 +73,7 @@ def is_valid_model_available(key_model, datasetname, post_instance):
         return False
 
 
-def compute_model(post_instance, df_fittedval, datasim_kwargs,
+def compute_model(post_instance, df_param_value, datasim_kwargs,
                   compute_raw_models_func,
                   expression:Expression,
                   times, 
@@ -95,7 +95,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
         Key of the model to compute. This will be passed directly to compute_raw_models_func
     datasetname                         : str
     post_instance                       : Posterior
-    df_fittedval                        : DataFrame
+    df_param_value                        : DataFrame
         DataFrame containing the values of the parameters of the model to compute. 
         The indexes are the parameter names and there must be one column called 'value'
     datasim_kwargs                      : dict 
@@ -147,7 +147,8 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
     # Check if the model is already in computedmodels_db
     (computedmodel, _, times_found
      ) = computedmodels_db.find_computed_model(expression=expression.expression, datasetname=datasetname, 
-                                               binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
+                                               binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times,
+                                               df_param_value=df_param_value
                                                )
     if times_found is not None:
         times = times_found
@@ -159,7 +160,8 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
         for component_i in expression.components:
             (computedmodel_component_i, _, _
              ) = computedmodels_db.find_computed_model(expression=component_i, datasetname=datasetname, 
-                                                       binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
+                                                       binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times,
+                                                       df_param_value=df_param_value
                                                        )
             if computedmodel_component_i is None:
                 logger.info(f"Computing component {component_i} for dataset {datasetname}")
@@ -172,7 +174,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                 else:
                     model, model_err = compute_raw_models_func(tsim=times, key_model=component_i,
                                                                datasetname=datasetname, post_instance=post_instance,
-                                                               df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                                               df_param_value=df_param_value, datasim_kwargs=datasim_kwargs,
                                                                exptime=exptime, supersamp=supersampling,
                                                                get_key_compute_model_func=get_key_compute_model_func,
                                                                kwargs_get_key_compute_model=kwargs_get_key_compute_model,
@@ -183,6 +185,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                     components[component_i] = {"values": 0., "errors": model_err}
                 else:
                     computedmodels_db.store_computed_model(expression=component_i, datasetname=datasetname, binning=ModelBinning(exptime=exptime, supersampling=supersampling),
+                                                           df_param_value=df_param_value,
                                                            times=times, values=model, errors=model_err)
                     components[component_i] = {"values": model, "errors": model_err}
             else:
@@ -190,7 +193,8 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
         
         (computedmodel, _, _
          ) = computedmodels_db.find_computed_model(expression=expression.expression, datasetname=datasetname, 
-                                                   binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times
+                                                   binning=ModelBinning(exptime=exptime, supersampling=supersampling), times=times,
+                                                   df_param_value=df_param_value
                                                    )
         if computedmodel is None:
             d_globals = {component_i: components[component_i]["values"] for component_i in expression.components}
@@ -208,6 +212,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
                 else:
                     model_err = ones_like(times) * model_err
             computedmodels_db.store_computed_model(expression=expression.expression, datasetname=datasetname, binning=ModelBinning(exptime=exptime, supersampling=supersampling),
+                                                   df_param_value=df_param_value,
                                                    times=times, values=model, errors=model_err)
     else:
         model = computedmodel.values
@@ -217,7 +222,7 @@ def compute_model(post_instance, df_fittedval, datasim_kwargs,
     return model, model_err, computedmodels_db
 
 
-def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fittedval,
+def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_param_value,
                              amplitude_fact,
                              compute_raw_models_func, remove_add_model_components_func,
                              kwargs_compute_model_4_key_model,
@@ -233,7 +238,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
     datasetnames                        : str
     post_instance                       : Posterior
     datasim_kwargs                      : dict
-    df_fittedval                        : DataFrame
+    df_param_value                        : DataFrame
     amplitude_fact                      : float
     compute_raw_models_func             : function
     remove_add_model_components_func    : function
@@ -287,7 +292,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
         dico_outputs['has_jitters'][datasetname] = copy(noise_model.has_jitter)
         if dico_outputs['has_jitters'][datasetname]:
             if inst_mod.jitter.free:
-                dico_outputs['dico_jitters'][datasetname]["value"] = copy(df_fittedval.loc[inst_mod.jitter.full_name]["value"])
+                dico_outputs['dico_jitters'][datasetname]["value"] = copy(df_param_value.loc[inst_mod.jitter.full_name]["value"])
             else:
                 dico_outputs['dico_jitters'][datasetname]["value"] = copy(inst_mod.jitter.value)
             jitter_model = noise_model.get_jitter_model(inst_model_fullname=inst_mod_fullname)
@@ -331,7 +336,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
                 continue
             (dico_outputs['models'][datasetname], _
              ) = compute_and_plot_model(tsim=dico_outputs['times'][datasetname], key_model=key_model,
-                                        datasetname=datasetname, post_instance=post_instance, df_fittedval=df_fittedval,
+                                        datasetname=datasetname, post_instance=post_instance, df_param_value=df_param_value,
                                         datasim_kwargs=datasim_kwargs, amplitude_fact=amplitude_fact,
                                         compute_raw_models_func=compute_raw_models_func,
                                         remove_add_model_components_func=remove_add_model_components_func,
@@ -365,7 +370,7 @@ def load_datasets_and_models(datasetnames, post_instance, datasim_kwargs, df_fit
 
 
 def compute_raw_models(tsim, key_model, datasetname, post_instance,
-                       df_fittedval, datasim_kwargs, exptime, supersamp,
+                       df_param_value, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
@@ -377,7 +382,7 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
     key_model                           : str
     datasetname                         : str
     post_instance                       : Posterior
-    df_fittedval                        : DataFrame
+    df_param_value                        : DataFrame
     datasim_kwargs                      : dict
     exptime                             : float
     supersamp                           : int
@@ -397,7 +402,7 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
     if key_model == 'decorrelation_likelihood':
         if f"{datasetname}_decorr_like" in post_instance.datasimulators.dataset_db:
             datasim_docfunc_decorr_like = post_instance.datasimulators.dataset_db[f"{datasetname}_decorr_like"]
-            p_vect = df_fittedval["value"][datasim_docfunc_decorr_like.param_model_names_list].array
+            p_vect = df_param_value["value"][datasim_docfunc_decorr_like.param_model_names_list].array
             model = datasim_docfunc_decorr_like.function(p_vect)
             if not(len(model) == len(tsim)):
                 model = None
@@ -408,21 +413,21 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
         kwargs_get_key_compute_model = kwargs_get_key_compute_model if kwargs_get_key_compute_model is not None else {}
         key_compute_model = get_key_compute_model_func(key_model=key_model, **kwargs_get_key_compute_model)
         model, model_err = post_instance.compute_model(tsim=tsim, dataset_name=datasetname,
-                                                       param=df_fittedval["value"].values,
-                                                       l_param_name=list(df_fittedval.index),
+                                                       param=df_param_value["value"].values,
+                                                       l_param_name=list(df_param_value.index),
                                                        key_obj=key_compute_model, datasim_kwargs=datasim_kwargs,
                                                        supersamp=supersamp, exptime=exptime,
                                                        split_GP_computation=split_GP_computation,
                                                        )
     return model, model_err
 
-def compute_data_err_jittered(data_err:NDArray[float_], post_instance:Posterior, datasetname:str, df_fittedval:DataFrame) -> NDArray[float_]|None:
+def compute_data_err_jittered(data_err:NDArray[float_], post_instance:Posterior, datasetname:str, df_param_value:DataFrame) -> NDArray[float_]|None:
     inst_mod_fullname = post_instance.datasimulators.get_instmod_fullname(datasetname)
     inst_mod = post_instance.model.instruments[inst_mod_fullname]
     noise_model = post_instance.model.get_noise_model(inst_mod.noise_model_category)
     if noise_model.has_jitter:
         if inst_mod.jitter.free:
-            jitter_value = copy(df_fittedval.loc[inst_mod.jitter.full_name]["value"])
+            jitter_value = copy(df_param_value.loc[inst_mod.jitter.full_name]["value"])
         else:
             jitter_value = copy(inst_mod.jitter.value)
         jitter_model = noise_model.get_jitter_model(inst_model_fullname=inst_mod_fullname)
@@ -433,7 +438,7 @@ def compute_data_err_jittered(data_err:NDArray[float_], post_instance:Posterior,
     return data_err_jitter
 
 
-def compute_data_and_resi_for_data2plots(data2plot:Data2Plot, post_instance: Posterior, df_fittedval:DataFrame, 
+def compute_data_and_resi_for_data2plots(data2plot:Data2Plot, post_instance: Posterior,
                                          datasim_kwargs: dict, compute_raw_models_func: Callable,
                                          computedmodels_db: ComputedModels_Database, 
                                          get_key_compute_model_func: Callable, 
@@ -443,7 +448,7 @@ def compute_data_and_resi_for_data2plots(data2plot:Data2Plot, post_instance: Pos
     logger.info(f"Compute datas {'for ' + name_data2plot if name_data2plot is not None else ''}")
     times_dataset = data2plot.get_times_dataset(post_instance=post_instance)
     # Compute the data_model
-    data, data_err, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+    data, data_err, _ = compute_model(post_instance=post_instance, df_param_value=data2plot.df_param_value, datasim_kwargs=datasim_kwargs,
                                       compute_raw_models_func=compute_raw_models_func, 
                                       expression=data2plot.expression, times=times_dataset, datasetname=data2plot.datasetname,
                                       exptime=None, supersampling=None,
@@ -453,11 +458,11 @@ def compute_data_and_resi_for_data2plots(data2plot:Data2Plot, post_instance: Pos
                                       split_GP_computation=split_GP_computation
                                       )
     # Compute jittered_errors
-    data_err_jitter = compute_data_err_jittered(data_err=data_err, post_instance=post_instance, datasetname=data2plot.datasetname, df_fittedval=df_fittedval)                    
+    data_err_jitter = compute_data_err_jittered(data_err=data_err, post_instance=post_instance, datasetname=data2plot.datasetname, df_param_value=data2plot.df_param_value)                    
     # Compute residuals 
     logger.info(f"Compute residuals {'for ' + name_data2plot if name_data2plot is not None else ''}")
     expression_resi = Expression(expression="data - model - GP - decorrelation_likelihood")
-    residuals, _, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+    residuals, _, _ = compute_model(post_instance=post_instance, df_param_value=data2plot.df_param_value, datasim_kwargs=datasim_kwargs,
                                     compute_raw_models_func=compute_raw_models_func, 
                                     expression=expression_resi, times=times_dataset,
                                     datasetname=data2plot.datasetname,

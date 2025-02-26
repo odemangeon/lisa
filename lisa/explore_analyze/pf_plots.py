@@ -26,7 +26,7 @@ from ..emcee_tools import emcee_tools as et
 from ..posterior.core.posterior import Posterior
 
 
-def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
+def create_PF_plots(post_instance:Posterior,
                     compute_raw_models_func: Callable,
                     plotdef:PlotsDefinition_PF,
                     computedmodels_db:ComputedModels_Database|None=None,
@@ -98,7 +98,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 time_fact = model2plot_i.pl_factors.time_factor
                 amplitude_fact = model2plot_i.pl_factors.value_factor
                 # Compute the model
-                model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_param_value=model2plot_i.df_param_value, datasim_kwargs=datasim_kwargs,
                                                         compute_raw_models_func=compute_raw_models_func, 
                                                         expression=model2plot_i.expression, times=times_model2plot_i, datasetname=model2plot_i.datasetname,
                                                         exptime=model2plot_i.exptime, supersampling=model2plot_i.supersampling,
@@ -155,7 +155,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 # amplitude_fact = data2plot_i.pl_factors.value_factor
                 # Compute the data_model
                 (times_dataset_i, data_i, data_err_i, data_err_jitter_i, residuals_i
-                 ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_i, post_instance=post_instance, df_fittedval=df_fittedval, 
+                 ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_i, post_instance=post_instance,
                                                           datasim_kwargs=datasim_kwargs, compute_raw_models_func=compute_raw_models_func,
                                                           computedmodels_db=computedmodels_db, 
                                                           get_key_compute_model_func=get_key_compute_model_func, 
@@ -220,7 +220,7 @@ def create_PF_plots(post_instance:Posterior, df_fittedval:DataFrame,
                 residuals_i = []
                 for name_data2plot_j, data2plot_j in zip(l_name_data2plot, l_data2plot):
                     (times_dataset_j, data_j, data_err_j, data_err_jitter_j, residuals_j
-                     ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_j, post_instance=post_instance, df_fittedval=df_fittedval, 
+                     ) = compute_data_and_resi_for_data2plots(data2plot=data2plot_j, post_instance=post_instance, 
                                                               datasim_kwargs=datasim_kwargs, compute_raw_models_func=compute_raw_models_func,
                                                               computedmodels_db=computedmodels_db, 
                                                               get_key_compute_model_func=get_key_compute_model_func, 
