@@ -9,11 +9,16 @@ import os
 import matplotlib.pyplot as pl
 import dill
 import collections
+import gc
+import random
 
 # import matplotlib
 
 from os import getcwd
 from os.path import join
+from unittest import TestCase
+from numpy import dstack
+from pandas import DataFrame
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -21,6 +26,7 @@ import lisa.posterior.core.posterior as cpost
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_LC_TS_plots
 from lisa.explore_analyze.ts_plots import PlotsDefinition_TS
+from lisa.tools.chain_interpreter import ChainsInterpret
 
 ### for the A&A article class
 AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
@@ -45,6 +51,7 @@ obj_name = "target_name"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
+extension_exploration = "_initrun"
 extension_analysis = "_initrun"
 
 #########
@@ -75,13 +82,36 @@ if "df_fittedval" not in globals():
                                                                                     folder=output_folders["pickles_analyze"])
 ################################
 
+################################
+## Load chainI if required
+if "chainI" not in globals():
+    logger.info("Loading chainI")
+    if "chain" not in globals():
+        logger.info("Loading chain")
+        l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
+        chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
+                                                                                    folder=output_folders["pickles_explore"])
+        tc = TestCase()
+        tc.assertCountEqual(l_param_name_bis, l_param_name)
+    if "nstep" not in globals():
+        nstep = chain.shape[1]
+    if any([var not in globals() for var in [ "l_walker", "l_burnin"]]):
+        logger.info("Loading l_walker and l_burnin from pickle")
+        l_walker, l_burnin = et.load_walkers_and_burnin(obj_name, extension_analysis=extension_analysis, folder=output_folders["pickles_analyze"])
+    lnprobability_name = "lnposterior"
+    l_param_chainI = l_param_name + [lnprobability_name]
+    chainI = ChainsInterpret(dstack((chain, lnprobability)), l_param_chainI)
+    del chain
+    gc.collect()
+################################
+
 
 #####################################
 # Parameters of the script (continue)
 #####################################
 
 save_computedmodels_db = True
-load_computedmodels_db = False
+load_computedmodels_db = True
 overwrite_computedmodels_db = True
 save_rms_values_LC = True
 overwrite_rms_values_LC = True
@@ -114,6 +144,13 @@ d_plot = {}
 for ii, idx_dst in enumerate(l_idxdst_CHEOPS_all):
     d_plot[ii] = {"l_nb_dst": [l_idxdst_CHEOPS_all[idx_dst]], 'time_limits': None}
 
+nb_random = 10
+l_df_param_value = []
+for i in range(nb_random):
+    random_walker = random.randint(0, len(l_walker) - 1)
+    random_iteration = random.randint(l_burnin[random_walker], nstep - 1)
+    l_df_param_value.append(DataFrame({"value": chainI[random_walker, random_iteration, :]}, index=chainI.param_names))
+
 for ii, dico_ii in d_plot.items():
     i_row = 0  # ii // 5
     i_col = ii  # ii % 5
@@ -134,11 +171,25 @@ for ii, dico_ii in d_plot.items():
                                            pl_kwargs={'color': 'g', 'label': None},
                                            time_factor=time_fact, value_factor=LC_fact, 
                                            i_row=i_row, i_col=i_col)
+        for jj, df_param_value_j in enumerate(l_df_param_value):
+            plotdef_TS.add_modelordata_to_grid(name=f"instvar{nb_dst}_rand{jj}", expression="inst_var / contam", 
+                                               datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}", time_limits=None,
+                                               df_param_value=df_param_value_j,
+                                               pl_kwargs={'color': 'g', 'label': None, 'alpha': 0.2},
+                                               time_factor=time_fact, value_factor=LC_fact, 
+                                               i_row=i_row, i_col=i_col)
     plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model / contam - 1", 
                                        datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
+    for jj, df_param_value_j in enumerate(l_df_param_value):
+        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression="model / contam - 1", 
+                                           datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+                                           df_param_value=df_param_value_j,
+                                           pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
+                                           time_factor=time_fact, value_factor=LC_fact,
+                                           i_row=i_row, i_col=i_col)
     plotdef_TS.things2plot[f"data_CH{0}"].pl_kwargs['label'] = "CHEOPS"
     plotdef_TS.things2plot[f"model_row{i_row}col{i_col}"].pl_kwargs['label'] = "Model"
     plotdef_TS.things2plot[f"instvar{0}"].pl_kwargs['label'] = "Inst Var"

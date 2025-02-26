@@ -9,18 +9,23 @@ import os
 import matplotlib.pyplot as pl
 import dill
 import pandas as pd
-
+import gc
+import random
 # import matplotlib
 
 from os import getcwd
 from os.path import join
- 
+from unittest import TestCase
+from numpy import dstack
+from pandas import DataFrame
+
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
 
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_LC_PF_plots
 from lisa.explore_analyze.pf_plots import PlotsDefinition_PF
+from lisa.tools.chain_interpreter import ChainsInterpret
 
 ### for the A&A article class
 AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
@@ -75,6 +80,34 @@ if "df_fittedval" not in globals():
                                                                                     folder=output_folders["pickles_analyze"])
 ################################
 
+################################
+## Load chainI if required
+if "chainI" not in globals():
+    logger.info("Loading chainI")
+    if "chain" not in globals():
+        logger.info("Loading chain")
+        l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
+        chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
+                                                                                    folder=output_folders["pickles_explore"])
+        tc = TestCase()
+        tc.assertCountEqual(l_param_name_bis, l_param_name)
+    if "nstep" not in globals():
+        nstep = chain.shape[1]
+    if any([var not in globals() for var in [ "l_walker", "l_burnin"]]):
+        logger.info("Loading l_walker and l_burnin from pickle")
+        l_walker, l_burnin = et.load_walkers_and_burnin(obj_name, extension_analysis=extension_analysis, folder=output_folders["pickles_analyze"])
+    lnprobability_name = "lnposterior"
+    l_param_chainI = l_param_name + [lnprobability_name]
+    chainI = ChainsInterpret(dstack((chain, lnprobability)), l_param_chainI)
+    del chain
+    gc.collect()
+################################
+
+
+#####################################
+# Parameters of the script (continue)
+#####################################
+
 save_computedmodels_db = True
 load_computedmodels_db = True
 overwrite_computedmodels_db = True
@@ -114,6 +147,13 @@ d_plot = {}
 for ii, planet in enumerate(l_planet):
     d_plot[planet] = {"T0": df_fittedval.loc[f'{planet}_tic']['value'], "P": df_fittedval.loc[f'{planet}_P']['value'], "i_row": 0, "i_col": ii, "l_nb_dst": l_idxdst_CHEOPS_occ}
 
+nb_random = 10
+l_df_param_value = []
+for i in range(nb_random):
+    random_walker = random.randint(0, len(l_walker) - 1)
+    random_iteration = random.randint(l_burnin[random_walker], nstep - 1)
+    l_df_param_value.append(DataFrame({"value": chainI[random_walker, random_iteration, :]}, index=chainI.param_names))
+
 for planet in ["b", ]:
     l_expression_and_datasetname = []
     for nb_dst in d_plot[planet]["l_nb_dst"]:
@@ -136,6 +176,14 @@ for planet in ["b", ]:
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
+    for jj, df_param_value_j in enumerate(l_df_param_value):
+        plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[planet]['i_row']}col{d_plot[planet]['i_col']}_rand{jj}", expression="(model - inst_var) / contam - 1", 
+                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}", 
+                                           time_limits=(d_plot[planet]["T0"] + (0.38 * d_plot[planet]["P"]), d_plot[planet]["T0"] + (0.62 * d_plot[planet]["P"])),
+                                           df_param_value=df_param_value_j,
+                                           pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
+                                           time_factor=time_fact, value_factor=LC_fact,
+                                           i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
 
 plotdef_PF.set_df_param_value(df_param_value=df_fittedval)
 
@@ -160,6 +208,7 @@ plotdef_PF.set_axis_property(value=(-250, 250), property='lims', axis='yresi')
 # These were the most commonly changed parameters.
 # There are extra parameters which can be changed in the create_LC_phasefolded_plots below
 
+
 #########################
 # Execution of the script
 #########################
@@ -178,6 +227,7 @@ if 'computedmodels_db' not in globals():
             logger.info(f"computedmodels_db pickle file not found ({file_path_computedmodels_db}).")
     if not loaded_computedmodels_db:
         computedmodels_db = None
+
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=True)
 
 (computedmodels_db, rms_values_PF_LC

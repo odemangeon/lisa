@@ -59,6 +59,15 @@ if 'sinkid_file_plot' not in globals():
     sinkid_file_plot = logger.add(join(output_folders['log'], 'plot.log'), level='DEBUG')
 
 ################################
+## Load post_instance if required
+if "post_instance" not in globals():
+    logger.info("Loading post_instance from pickle")
+    # recreate post_instance object
+    post_instance = cpost.Posterior()
+    post_instance.configure_posterior(path_config_file="config_file.py")
+    post_instance.create_allfunctions()
+
+################################
 ## Load df_fittedval if required
 if "df_fittedval" not in globals():
     logger.info("Loading df_fittedval from pickle")
@@ -127,6 +136,8 @@ for ii, dico_ii in d_plot.items():
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
 
+plotdef_TS.set_df_param_value(df_param_value=df_fittedval)
+
 plotdef_TS.set_axes_property(value=False, property="do_legend")
 plotdef_TS.set_axes_property(value=True, property="do_legend", i_row=0, i_col=0)
 plotdef_TS.set_axis_property(value='Time', property='name', axis='x')
@@ -148,13 +159,6 @@ plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='yresi')
 # Execution of the script
 #########################
 
-if "post_instance" not in globals():
-    logger.info("Loading post_instance from pickle")
-    # recreate post_instance object
-    post_instance = cpost.Posterior()
-    post_instance.configure_posterior(path_config_file="config_file.py")
-    post_instance.create_allfunctions()
-
 file_path_computedmodels_db = os.path.join(output_folders['pickles_analyze'], f"{obj_name}_computedmodels_db{extension_analysis}.pk") 
 if 'computedmodels_db' not in globals():
     loaded_computedmodels_db = False
@@ -173,8 +177,7 @@ if 'computedmodels_db' not in globals():
 fig = pl.figure(figsize=(AandA_full_width, AandA_full_width * default_figheight_factor), constrained_layout=True)
 
 (computedmodels_db, rms_values_TS_LC
- ) = create_LC_TS_plots(fig=fig, post_instance=post_instance, 
-                        df_fittedval=df_fittedval,
+ ) = create_LC_TS_plots(fig=fig, post_instance=post_instance,
                         datasim_kwargs=kwargs_datasim,
                         plotdef=plotdef_TS,
                         npt_model_default=npt_model,
@@ -211,5 +214,4 @@ if save_plot:
     pl.close("all")
 else:
     pl.show()
-
 
