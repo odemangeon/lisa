@@ -71,6 +71,10 @@ def create_PF_plots(post_instance:Posterior,
     rms_values = OrderedDict()
     for i_row in range(plotdef.nb_rows):
         for i_col in range(plotdef.nb_cols):
+            # If there is nothing to plot, just continue
+            if not(plotdef.has_something2plot(i_row=i_row, i_col=i_col)):
+                continue
+            
             logger.debug(f"Doing PF plot for row {i_row}/{plotdef.nb_rows - 1}, column {i_col}/{plotdef.nb_cols - 1}")
             subplotspec_i = gs[i_row, i_col]
 

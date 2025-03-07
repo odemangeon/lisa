@@ -1308,7 +1308,9 @@ class PlotsDefinition(object):
                         else:
                             logger.info(f"{name_i} (found in the grid at row {i_row} and col {i_col}) already as a df_param_value it will not be changed")
 
-        
+    def has_something2plot(self, i_row:int, i_col:int):
+        return len(self.grid[i_row][i_col]) > 0
+    
     # def get_all_modelnames(self) -> list[str]:
     #     """Return the list of all the names of the Model2plot instances used in the grid."""
     #     l_i_rows = self._get_l_i(roworcol='row')
