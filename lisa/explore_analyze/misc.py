@@ -670,7 +670,8 @@ def create_data_and_residual_axes(do_residual_axis: bool, fig: Figure, subplotsp
 
 
 def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axes_Properties, fontsize:int=AandA_fontsize):
-    next(reversed(od_axe.values())).set_xlabel(axes_properties.x.label, fontsize=fontsize)  # next(reversed(d_axe.values())) is the last axes in d_axe.
+    if getattr(axes_properties, "x").show_label:
+        next(reversed(od_axe.values())).set_xlabel(axes_properties.x.label, fontsize=fontsize)  # next(reversed(d_axe.values())) is the last axes in d_axe.
     l_yaxis_properties = [getattr(axes_properties, axe_name) for _, axe_name in zip(od_axe.values(), ["ydata", "yresi"])]
     l_ylabel = [yaxis_properties_i.label for yaxis_properties_i in l_yaxis_properties]
     l_yshowlabel = [yaxis_properties_i.show_label for yaxis_properties_i in l_yaxis_properties]
