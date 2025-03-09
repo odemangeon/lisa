@@ -1280,7 +1280,10 @@ class PlotsDefinition(object):
         # Make sure that i_row and i_col are correct
         for i_row in l_i_row:
             for i_col in l_i_col:
-                setattr(self.get_axes_properties(i_row=i_row, i_col=i_col), property, value)
+                if hasattr(self.get_axes_properties(i_row=i_row, i_col=i_col), property):
+                    setattr(self.get_axes_properties(i_row=i_row, i_col=i_col), property, value)
+                else:
+                    raise ValueError(f"Property {property} doesn't exist.")
 
     def set_df_param_value(self, df_param_value:DataFrame, i_row:int|None=None, i_col:int|None=None, name:str|list[str]|None=None):
         """Set the value of the df_param_value attribute of the thing2plot instances that do not have it already defined."""
