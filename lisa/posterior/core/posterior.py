@@ -256,14 +256,29 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     def __load_config_var_content_instmoddef(self, dico_config_file, **kwargs):
         instmoddef_var = dico_config_file['d_inst_model_def']
         # Check that the content is valid
-        assert isinstance(instmoddef_var, dict)
-        assert set(instmoddef_var.keys()) == set(self.dataset_db.inst_fullcategories)
+        if not(isinstance(instmoddef_var, dict)):
+            raise TypeError(f"d_inst_model_def should be a dict, got {type(instmoddef_var)}")
+        if not(set(instmoddef_var.keys()) == set(self.dataset_db.inst_fullcategories)):
+            raise ValueError("The set of instrument full categories in d_inst_model_def should be equal to the set of instrument categories in the dataset_database. "
+                             f"Got set(d_inst_model_def.keys())={set(instmoddef_var.keys())} "
+                             f"while set(self.dataset_db.inst_fullcategories)={set(self.dataset_db.inst_fullcategories)}"
+                             )
         for inst_fullcat in instmoddef_var:
-            assert isinstance(instmoddef_var[inst_fullcat], dict)
-            assert set(instmoddef_var[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))
+            if not(isinstance(instmoddef_var[inst_fullcat], dict)):
+                raise TypeError(f"d_inst_model_def[{inst_fullcat}] should be a dict, got {type(instmoddef_var[inst_fullcat])}")
+            if not(set(instmoddef_var[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))):
+                raise ValueError(f"The set of instrument names in d_inst_model_def[{inst_fullcat}] should be equal to the set of instrument names in the dataset_database for {inst_fullcat}. "
+                                 f"Got set(instmoddef_var[inst_fullcat].keys())={set(instmoddef_var[inst_fullcat].keys())} "
+                                 f"while set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))={set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))}"
+                                 )
             for inst_name in instmoddef_var[inst_fullcat]:
-                assert isinstance(instmoddef_var[inst_fullcat][inst_name], dict)
-                assert set(instmoddef_var[inst_fullcat][inst_name].keys()) == set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))
+                if not(isinstance(instmoddef_var[inst_fullcat][inst_name], dict)):
+                    raise TypeError(f"d_inst_model_def[{inst_fullcat}][{inst_name}] should be a dict, got {type(instmoddef_var[inst_fullcat][inst_name])}")
+                if not(set(instmoddef_var[inst_fullcat][inst_name].keys()) == set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))):
+                    raise ValueError(f"The set of dataset numbers in d_inst_model_def[{inst_fullcat}][{inst_name}] should be equal to the set of dataset numbers in the dataset_database for {inst_fullcat} and {inst_name}. "
+                                     f"Got set(instmoddef_var[inst_fullcat][inst_name].keys()={set(instmoddef_var[inst_fullcat][inst_name].keys())} "
+                                     f"while set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))={set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))}"
+                                     )
                 for dst_nb in instmoddef_var[inst_fullcat][inst_name]:
                     assert isinstance(instmoddef_var[inst_fullcat][inst_name][dst_nb], str)
         # Load it
