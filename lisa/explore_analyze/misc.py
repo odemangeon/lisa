@@ -699,3 +699,10 @@ def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axe
     #########################
     if axes_properties.show_title and (len(axes_properties.title) > 0):
         od_axe['data'].set_title(axes_properties.title, fontsize=fontsize)
+
+    ########################
+    # Set the text if needed
+    ########################
+    if len(axes_properties.text_kwargs) > 0:
+        for text_kwargs_i in axes_properties.text_kwargs:
+            od_axe['data'].text(transform=od_axe['data'].transAxes, **text_kwargs_i)

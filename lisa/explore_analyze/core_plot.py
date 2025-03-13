@@ -867,6 +867,7 @@ class Axes_Properties(object):
         self.__legend_kwargs:Dict = {}
         self.__do_legend:bool = True
         self.__x = Axis_Properties()
+        self.__text_kwargs:list[dict] = []
         self._init_axes()
 
     @property
@@ -912,6 +913,9 @@ class Axes_Properties(object):
         else:
             raise TypeError(f"{type(self)} doesn't have attribute y")
     
+    @property
+    def text_kwargs(self) -> list[dict]:
+        return self.__text_kwargs
 
 class Axes_Properties_GLSP(Axes_Properties):
     """Class to specify the properties of a plot to be used in plot definition 
