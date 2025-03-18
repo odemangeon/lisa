@@ -1,5 +1,6 @@
 from __future__ import annotations
-from collections import Sequence, OrderedDict
+from collections.abc import Sequence
+from collections import OrderedDict
 from typing import Dict, Iterable
 from loguru import logger
 from numpy.typing import NDArray
