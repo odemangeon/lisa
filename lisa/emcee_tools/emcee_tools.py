@@ -218,7 +218,7 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
 def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
             save_to_file=False, filename="chain.h5", file_folder=None,
             check_convergence_every=100, ntau=100, tol=0.01,
-            l_param_name=None):
+            with_blobs:bool=False):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -230,15 +230,24 @@ def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
     :param bool overwrite: If True already existing .dat files with the same names are automatically overwritten
     :param list_of_str l_param_name: List of the parameter names
     """
+    blobs_dtype = [("log_likelihood", float), ("log_prior", float)]
     if save_to_file:
         # Set up the backend
         # Don't forget to clear it in case the file already exists
         backend = emcee.backends.HDFBackend(join(file_folder, filename))
         backend.reset(nwalkers, ndim)
-        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
-                                        backend=backend)
+        if with_blobs:
+            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
+                                            backend=backend, blobs_dtype=blobs_dtype)
+        else:
+            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
+                                            backend=backend)
     else:
-        sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn)
+        if with_blobs:
+            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
+                                            blobs_dtype=blobs_dtype)
+        else:
+            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn)
 
     if check_convergence_every > 0:
         # We'll track how the average autocorrelation time estimate changes
@@ -1751,6 +1760,11 @@ def save_emceesampler(sampler, l_param_name=None, obj_name="", extension_explora
         pickle_stuff(l_param_name, join(folder, "{}{}{}.pk".format(obj_name, extension_pickle["l_param_name"], extension_exploration)))
 
 
+def save_inference_data(inference_data, obj_name:str, extension_exploration:str, folder:str):
+    """Save the inference data."""
+    pickle_stuff(inference_data, join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)))
+
+
 def save_chain_analysis(obj_name, extension_analysis="", fitted_values=None, fitted_values_sec=None, df_fittedval=None, folder=None):
     """Save chain analysis results.
 
@@ -1871,6 +1885,12 @@ def load_emceesampler(obj_name, extension_exploration="", folder="."):
         l_param_name = load(flparam)
 
     return chain, lnprobability, acceptance_fraction, l_param_name
+
+
+def load_inference_data(obj_name:str, extension_exploration:str, folder:str):
+    # Save chain in a pickle
+    with open(join(folder, "{}{}{}.pk".format(obj_name, "_inferencedata", extension_exploration)), "rb") as finfdata:
+        return load(finfdata)
 
 
 def load_chain_analysis(obj_name, extension_analysis="", folder=None, kwargs_load=None, error_ok=False):
