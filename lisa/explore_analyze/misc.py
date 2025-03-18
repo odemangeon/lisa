@@ -8,11 +8,12 @@ from collections.abc import Sequence
 from collections import OrderedDict
 from numbers import Number
 from typing import Dict, List
-from numpy import nan, float_, ndarray, isfinite
+from numpy import nan, float_, ndarray, isfinite, random, asarray
 from numpy.typing import NDArray
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.figure import Figure
 from matplotlib.ticker import AutoMinorLocator
+from pandas import DataFrame
 
 from .core_plot import Axes_Properties
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
@@ -706,3 +707,54 @@ def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axe
     if len(axes_properties.text_kwargs) > 0:
         for text_kwargs_i in axes_properties.text_kwargs:
             od_axe['data'].text(transform=od_axe['data'].transAxes, **text_kwargs_i)
+
+
+def generate_param_vector_from_priors(post_instance, init_distrib=None):
+    """Generate parameter vector for the posterior function of all datasets drawn from the priors
+    or the gaussian provided in init_distrib
+
+    :param Posterior post_instance: Instance of the posterior class
+    :param dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma" of
+        the normal distribution to use for each parameter. First level keys are parameter full name.
+        Second is "sigma" and "mu".
+
+    :return np.ndarray param_vect: Ndarray containing the drawn parameter values
+    """
+    l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
+    if init_distrib is not None:
+        l_param_name_in_distrib = list(init_distrib.keys())
+    else:
+        l_param_name_in_distrib = []
+    l_param_name_notin_distrib = list(set(l_param_name) - set(l_param_name_in_distrib))
+    if len(l_param_name_notin_distrib) > 0:
+        param_vect_notin_distrib = post_instance.model.get_initial_values(list_paramnames=l_param_name_notin_distrib)
+    else:
+        param_vect_notin_distrib = []
+    param_vect_in_distrib = []
+    for param_name in l_param_name_in_distrib:
+        param_vect_in_distrib.append(random.normal(loc=init_distrib[param_name]["mu"],
+                                                   scale=init_distrib[param_name]["sigma"],
+                                                   )
+                                     )
+    param_vect = []
+    for param_name in l_param_name:
+        if param_name in l_param_name_in_distrib:
+            param_vect.append(param_vect_in_distrib[l_param_name_in_distrib.index(param_name)])
+        else:
+            param_vect.append(param_vect_notin_distrib[l_param_name_notin_distrib.index(param_name)])
+    return asarray(param_vect).transpose(), l_param_name
+
+
+def generate_param_dataframe_from_priors(post_instance, init_distrib=None):
+    """Generate parameter dataframe that can be used by the ploting function for the posterior function
+    of all datasets drawn from the priors or the gaussian provided in init_distrib
+
+    :param Posterior post_instance: Instance of the posterior class
+    :param dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma" of
+        the normal distribution to use for each parameter. First level keys are parameter full name.
+        Second is "sigma" and "mu".
+
+    :return pd.DataFrame df_param: DataFrame with index being the parameter name and one column "value" giving the drawn values for the parameters
+    """
+    param_vect, l_param_name = generate_param_vector_from_priors(post_instance, init_distrib)
+    return DataFrame(data=param_vect, index=l_param_name, columns=["value"])
