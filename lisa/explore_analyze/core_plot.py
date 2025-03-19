@@ -807,7 +807,7 @@ class Axis_Properties(object):
     @show_ticklabels.setter
     def show_ticklabels(self, new:bool):
         if isinstance(new, bool):
-            self.__sshow_ticklabels= new
+            self.__show_ticklabels= new
         else:
             TypeError(f"show_ticklabels should be a bool, got {type(new)}")
 
