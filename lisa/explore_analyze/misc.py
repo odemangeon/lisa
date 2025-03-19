@@ -688,10 +688,13 @@ def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axe
         axe.yaxis.set_minor_locator(AutoMinorLocator())
         # Set grid in "y"
         axe.grid(axis="y", color="black", alpha=.5, linewidth=.5)
-        #
+        # Set log scale
         if yaxis_properties_i.logscale:
             axe.set_xscale("log")
-    # remove the tick labels on the bottom x axis if needed
+        # Remove the tick labels on the left y axis if needed
+        if not(yaxis_properties_i.show_ticklabels):
+            axe.tick_params(axis="y", labelleft=False)
+    # Show the tick labels on the bottom x axis if needed
     if axes_properties.x.show_ticklabels:
         next(reversed(od_axe.values())).tick_params(axis="x", labelbottom=True)
 
