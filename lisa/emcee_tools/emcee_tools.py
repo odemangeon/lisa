@@ -121,7 +121,7 @@ def get_init_distrib_from_fitvalues(fitted_values):
     """
     init_distrib = {}
     for param, row in fitted_values.iterrows():
-        init_distrib[param] = {"mu": row["value"], "sigma": np.mean([row["sigma+"], row["sigma-"]])}
+        init_distrib[param] = {"mu": row["value"], "sigma": np.mean([abs(row["sigma+"]), abs(row["sigma-"])])}
     return init_distrib
 
 
