@@ -3,6 +3,9 @@ Script template to perform an MCMC exploration.
 
 @TODO:
 """
+import arviz as az
+import dill
+
 from loguru import logger
 from math import ceil
 from os import getcwd
@@ -29,6 +32,8 @@ extension_exploration = "_initrun"  # Change extension to add at the end (before
 
 output_folders = get_def_output_folders(run_folder=None)
 
+with_blobs = True
+
 # Pre-minimisation parameters
 do_preminimization = False
 N_maxiter_preminimization = 1000
@@ -37,7 +42,7 @@ xtol_preminimization = 1e-12
 # emcee parameters
 nwalker_fact = 4
 nsteps_MCMC = 50000
-check_convergence_every = 1000
+check_convergence_every = 0
 save_to_file = False
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
 
@@ -68,7 +73,7 @@ logger.info("2. Define the posterior.")
 post_instance.configure_posterior(path_config_file="config_file.py")  # Change if needed by the name you gave or want to give to your dataset file.
 
 logger.info("3.Create all functions")
-post_instance.create_allfunctions()
+post_instance.create_allfunctions(with_blobs=with_blobs)
 l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
 
 
@@ -100,8 +105,12 @@ if not load_from_pickle and do_preminimization:
     logger.info("6pre. AMOEBA minimization")
     p1 = zeros_like(p0)
 
-    def lnpostfnminus(p):
-        return -lnpostfn(p)
+    if with_blobs:
+        def lnpostfnminus(p):
+            return -lnpostfn(p)[0]
+    else:
+        def lnpostfnminus(p):
+            return -lnpostfn(p)
 
     for ii in range(nwalkers):
         res = minimize(lnpostfnminus, p0[ii, :], method='nelder-mead', options={'xatol': xtol_preminimization,
@@ -113,9 +122,16 @@ else:
 logger.info("6. Perform MCMC exploration")
 sampler = et.explore(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, p0=p1, nsteps=nsteps_MCMC,
                      save_to_file=save_to_file, filename=f"{obj_name}_chain.h5", file_folder=output_folders["dats"],
-                     check_convergence_every=check_convergence_every, ntau=100, tol=0.01, l_param_name=l_param_name)
+                     check_convergence_every=check_convergence_every, ntau=100, tol=0.01)
 et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
 
-chain = sampler.chain
-lnprobability = sampler.lnprobability
-acceptance_fraction = sampler.acceptance_fraction
+# chain = sampler.chain
+# lnprobability = sampler.lnprobability
+# acceptance_fraction = sampler.acceptance_fraction
+if with_blobs:
+    infdata = az.from_emcee(sampler=sampler, var_names=l_param_name, blob_names=["log_likelihood", "log_prior"], blob_groups=["log_likelihood", "log_prior"])
+else:
+    infdata = az.from_emcee(sampler=sampler, var_names=l_param_name)
+et.save_inference_data(inference_data=infdata, obj_name=obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
+
+del sampler
