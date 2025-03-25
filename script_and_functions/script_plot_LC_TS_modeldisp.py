@@ -8,16 +8,12 @@ from loguru import logger
 import os
 import matplotlib.pyplot as pl
 import dill
-import collections
-import gc
 import random
 
 # import matplotlib
 
 from os import getcwd
 from os.path import join
-from unittest import TestCase
-from numpy import dstack
 from pandas import DataFrame
 
 import lisa.emcee_tools.emcee_tools as et
@@ -26,7 +22,6 @@ import lisa.posterior.core.posterior as cpost
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_LC_TS_plots
 from lisa.explore_analyze.ts_plots import PlotsDefinition_TS
-from lisa.tools.chain_interpreter import ChainsInterpret
 
 ### for the A&A article class
 AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt

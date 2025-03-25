@@ -8,17 +8,11 @@ from loguru import logger
 import os
 import matplotlib.pyplot as pl
 import dill
-import collections
-import gc
-import random
 
 # import matplotlib
 
 from os import getcwd
 from os.path import join
-from unittest import TestCase
-from numpy import dstack
-from pandas import DataFrame
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost

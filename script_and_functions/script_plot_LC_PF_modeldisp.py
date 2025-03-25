@@ -9,14 +9,11 @@ import os
 import matplotlib.pyplot as pl
 import dill
 import pandas as pd
-import gc
 import random
 # import matplotlib
 
 from os import getcwd
 from os.path import join
-from unittest import TestCase
-from numpy import dstack
 from pandas import DataFrame
 
 import lisa.emcee_tools.emcee_tools as et
