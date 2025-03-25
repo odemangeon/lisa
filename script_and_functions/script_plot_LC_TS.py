@@ -8,7 +8,6 @@ from loguru import logger
 import os
 import matplotlib.pyplot as pl
 import dill
-import collections
 
 # import matplotlib
 
