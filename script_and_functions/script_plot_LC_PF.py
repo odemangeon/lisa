@@ -105,7 +105,7 @@ plotdef_PF = PlotsDefinition_PF(nb_rows=1, nb_cols=1)
 l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
 
 orbit_CH = 98.7 # CHEOPS orbit in min
-
+cheops = "CHEOPSPIPE"
 
 l_planet = ["b", ] 
 
@@ -117,21 +117,25 @@ for ii, planet in enumerate(l_planet):
 for planet in ["b", ]:
     l_expression_and_datasetname = []
     for nb_dst in d_plot[planet]["l_nb_dst"]:
-        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}"))    
+        # If you fixed the contamination to zero, you should remove contam from the expression
+        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}"))    
     plotdef_PF.set_phasefold_properties(T0=d_plot[planet]["T0"], period=d_plot[planet]["P"], phasefold_centralphase=0.5, show_time_from_T0=show_time_from_T0, i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
-    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
+    # If you fixed the contamination to zero, you should remove contam from the expression
+    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
                                             i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
                                             pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False, 'label':f"CHEOPS"},
                                             time_factor=time_fact, value_factor=LC_fact,
                                             )
-    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all_bin", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_CHEOPS_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
+    # If you fixed the contamination to zero, you should remove contam from the expression
+    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all_bin", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
                                             i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
                                             exptime=0.5,
                                             pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CH:.0f}min"},
                                             time_factor=time_fact, value_factor=LC_fact,
                                             )
+    # If you fixed the contamination to zero, you should remove contam from the expression
     plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[planet]['i_row']}col{d_plot[planet]['i_col']}", expression="(model - inst_var) / contam - 1", 
-                                       datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}", 
+                                       datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}", 
                                        time_limits=(d_plot[planet]["T0"] + (0.38 * d_plot[planet]["P"]), d_plot[planet]["T0"] + (0.62 * d_plot[planet]["P"])),
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,

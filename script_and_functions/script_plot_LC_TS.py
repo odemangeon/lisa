@@ -80,11 +80,11 @@ if "df_fittedval" not in globals():
 # Parameters of the script (continue)
 #####################################
 
-save_computedmodels_db = True
+save_computedmodels_db = False
 load_computedmodels_db = False
-overwrite_computedmodels_db = True
-save_rms_values_LC = True
-overwrite_rms_values_LC = True
+overwrite_computedmodels_db = False
+save_rms_values_LC = False
+overwrite_rms_values_LC = False
 save_plot = False
 
 kwargs_datasim:dict = {}  # Kwargs for the datasim functions
@@ -108,6 +108,7 @@ plotdef_TS = PlotsDefinition_TS(nb_rows=1, nb_cols=5)
 l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
 
 orbit_CHEOPS = 98.7  # CHEOPS orbit in min
+cheops = "CHEOPSPIPE"
 
 d_plot = {}
 
@@ -118,23 +119,29 @@ for ii, dico_ii in d_plot.items():
     i_row = 0  # ii // 5
     i_col = ii  # ii % 5
     for nb_dst in dico_ii['l_nb_dst']:
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="(data - inst_var) / contam - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data - decorrelation_likelihood - 1", 
+                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="(data - inst_var) / contam - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data - decorrelation_likelihood - 1", 
+                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
                                            exptime=orbit_CHEOPS/60/24,
                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CHEOPS:.1f}min"},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
     plotdef_TS.things2plot[f"data_CH{nb_dst}"].pl_kwargs['label'] = "CHEOPS"
-    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="(model - inst_var) / contam - 1", 
-                                       datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model - 1", 
+                                       datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
+    if i_col != 0:
+        axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
+        axes_properties_ii.ydata.show_label = False
+        # axes_properties_ii.ydata.show_ticklabels = False
+        axes_properties_ii.yresi.show_label = False
+        axes_properties_ii.yresi.show_ticklabels = False
 
 plotdef_TS.set_df_param_value(df_param_value=df_fittedval)
 
@@ -147,7 +154,6 @@ plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='ydata')
 plotdef_TS.set_axis_property(value='O-C', property='name', axis='yresi')
 plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='yresi')
 
-plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='ydata')
 plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='yresi')
 
 # show_title_TS = True

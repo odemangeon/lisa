@@ -83,28 +83,16 @@ if "df_fittedval" not in globals():
 ################################
 
 ################################
-## Load chainI if required
-if "chainI" not in globals():
-    logger.info("Loading chainI")
-    if "chain" not in globals():
-        logger.info("Loading chain")
-        l_param_name_bis = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
-        chain, lnprobability, acceptance_fraction, l_param_name = et.load_emceesampler(obj_name, extension_exploration=extension_exploration,
-                                                                                    folder=output_folders["pickles_explore"])
-        tc = TestCase()
-        tc.assertCountEqual(l_param_name_bis, l_param_name)
-    if "nstep" not in globals():
-        nstep = chain.shape[1]
-    if any([var not in globals() for var in [ "l_walker", "l_burnin"]]):
-        logger.info("Loading l_walker and l_burnin from pickle")
-        l_walker, l_burnin = et.load_walkers_and_burnin(obj_name, extension_analysis=extension_analysis, folder=output_folders["pickles_analyze"])
-    lnprobability_name = "lnposterior"
-    l_param_chainI = l_param_name + [lnprobability_name]
-    chainI = ChainsInterpret(dstack((chain, lnprobability)), l_param_chainI)
-    del chain
-    gc.collect()
+## Load infdata if required
+if "infdata" not in globals():
+    infdata = et.load_inference_data(obj_name=obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
 ################################
 
+################################
+## Load selected_walkers and burnin if required
+if any([var not in globals() for var in ["selected_walkers", "burnin"]]):
+    selected_walkers, burnin = et.load_walkers_and_burnin(obj_name, extension_analysis=extension_analysis, folder=output_folders["pickles_analyze"])
+################################
 
 #####################################
 # Parameters of the script (continue)
@@ -138,6 +126,7 @@ plotdef_TS = PlotsDefinition_TS(nb_rows=1, nb_cols=5)
 l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
 
 orbit_CHEOPS = 98.7  # CHEOPS orbit in min
+cheops = "CHEOPSPIPE"
 
 d_plot = {}
 
@@ -147,38 +136,44 @@ for ii, idx_dst in enumerate(l_idxdst_CHEOPS_all):
 nb_random = 10
 l_df_param_value = []
 for i in range(nb_random):
-    random_walker = random.randint(0, len(l_walker) - 1)
-    random_iteration = random.randint(l_burnin[random_walker], nstep - 1)
-    l_df_param_value.append(DataFrame({"value": chainI[random_walker, random_iteration, :]}, index=chainI.param_names))
+    random_walker = random.randint(0, len(selected_walkers) - 1)
+    random_iteration = random.randint(burnin, infdata.posterior.coords['draw'].values[-1])
+    l_df_param_value.append(DataFrame({"value": [infdata.posterior[var].sel(chain=random_walker, draw=random_iteration).values for var in infdata.posterior.keys()]}, index=list(infdata.posterior.keys())))
 
 for ii, dico_ii in d_plot.items():
     i_row = 0  # ii // 5
     i_col = ii  # ii % 5
     for nb_dst in dico_ii['l_nb_dst']:
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data - decorrelation_likelihood", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data - decorrelation_likelihood - 1", 
+                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data - decorrelation_likelihood", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{nb_dst}",
+        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data - decorrelation_likelihood - 1", 
+                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
                                            exptime=orbit_CHEOPS/60/24,
                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CHEOPS:.1f}min"},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
     plotdef_TS.things2plot[f"data_CH{nb_dst}"].pl_kwargs['label'] = "CHEOPS"
-    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model", 
-                                       datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model - 1", 
+                                       datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
     for jj, df_param_value_j in enumerate(l_df_param_value):
-        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression="model", 
-                                           datasetname=f"LC_{obj_name}_CHEOPS_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression="model - 1", 
+                                           datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                            df_param_value=df_param_value_j,
                                            pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
+    if i_col != 0:
+        axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
+        axes_properties_ii.ydata.show_label = False
+        # axes_properties_ii.ydata.show_ticklabels = False
+        axes_properties_ii.yresi.show_label = False
+        axes_properties_ii.yresi.show_ticklabels = False
 
 plotdef_TS.set_df_param_value(df_param_value=df_fittedval)
 
@@ -191,7 +186,6 @@ plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='ydata')
 plotdef_TS.set_axis_property(value='O-C', property='name', axis='yresi')
 plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='yresi')
 
-# plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='ydata')
 plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='yresi')
 
 # show_title_TS = True
