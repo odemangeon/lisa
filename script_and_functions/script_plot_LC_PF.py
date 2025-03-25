@@ -75,11 +75,11 @@ if "df_fittedval" not in globals():
                                                                                     folder=output_folders["pickles_analyze"])
 ################################
 
-save_computedmodels_db = True
-load_computedmodels_db = True
-overwrite_computedmodels_db = True
-save_rms_values_LC = True
-overwrite_rms_values_LC = True
+save_computedmodels_db = False
+load_computedmodels_db = False
+overwrite_computedmodels_db = False
+save_rms_values_LC = False
+overwrite_rms_values_LC = False
 save_plot = False
 save_binned_phasefolded_data = False
 

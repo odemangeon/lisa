@@ -98,11 +98,11 @@ if any([var not in globals() for var in ["selected_walkers", "burnin"]]):
 # Parameters of the script (continue)
 #####################################
 
-save_computedmodels_db = True
+save_computedmodels_db = False
 load_computedmodels_db = False
-overwrite_computedmodels_db = True
-save_rms_values_LC = True
-overwrite_rms_values_LC = True
+overwrite_computedmodels_db = False
+save_rms_values_LC = False
+overwrite_rms_values_LC = False
 save_plot = False
 
 kwargs_datasim:dict = {}  # Kwargs for the datasim functions
