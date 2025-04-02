@@ -31,7 +31,7 @@ from os import makedirs, getcwd
 from os.path import isfile, join
 from pandas import read_table, DataFrame
 from corner import corner as corner_dfm
-import emcee
+from emcee import EnsembleSampler
 
 # import pprint
 
@@ -52,62 +52,6 @@ from ..explore_analyze.plot import hist_lnprob
 mgr_inst_dst = Manager_Inst_Dataset()
 
 exptime_Kepler = 0.02043402778  # days
-
-
-# def get_centre_gaussian(xdata, ydata):
-#     """Return the centre of a guassian
-#     :param xdata and ydata are the x and y that define the guassian
-#         they can be the x and y of an histogram
-#     return double that is the centre of the guassian
-#     """
-#     from lmfit.models import GaussianModel
-#     gmodel = GaussianModel()
-#     params = gmodel.make_params(amplitude=ydata.max(), center=xdata.mean(), sigma=xdata.std())
-#     result = gmodel.fit(ydata, params, x=xdata)
-#     peak = result.values['center']
-#     return peak
-
-
-# def gauspeak(values, nbins):
-#     """Return the centre of a guassian fit to an histrogram of values
-#     :param values np.array with values for which we will calculate the histogram and the centre of a gaussianfit
-#         if np.array has more than one parameter it will do each one seperatly
-#     :param nbins int number of bins used in the histrogram
-#     return list of the guassian centre fit for each parameter
-#     """
-#     number_fitted = len(values[0, :])
-#     peak = []
-#     for i in range(0, number_fitted):
-#         ydata = np.histogram(values[:, i], nbins)[0]
-#         bin_edges = np.histogram(values[:, i], nbins)[1]
-#         delta = bin_edges[2] - bin_edges[1]
-#         xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
-#         centre_gaussian = get_centre_gaussian(xdata, ydata)
-#         centre_gaussian = max(centre_gaussian, xdata[0])
-#         centre_gaussian = min(centre_gaussian, xdata[nbins - 1])
-#         peak.append(centre_gaussian)
-
-#     return peak
-
-
-# def modepeak(values, nbins):
-#     """Return the mode a distribution by cumputing the histogram
-#     :param values np.array with values for which we will calculate the mode of the distribution
-#         if np.array has more than one parameter it will do each one seperatly
-#     :param nbins int number of bins used in the histrogram
-#     return list of the mode fit for each parameter
-#     """
-#     number_fitted = len(values[0, :])
-#     peak = []
-#     for i in range(0, number_fitted):
-#         ydata = np.histogram(values[:, i], nbins)[0]
-#         bin_edges = np.histogram(values[:, i], nbins)[1]
-#         delta = bin_edges[2] - bin_edges[1]
-#         xdata = bin_edges[0:len(bin_edges) - 1] + delta / 2.
-#         indice = np.argmax(ydata)
-#         peak.append(xdata[indice])
-
-#     return peak
 
 
 def get_init_distrib_from_fitvalues(fitted_values):
@@ -215,10 +159,9 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
         return result
 
 
-def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
-            save_to_file=False, filename="chain.h5", file_folder=None,
-            check_convergence_every=100, ntau=100, tol=0.01,
-            with_blobs:bool=False):
+default_blobs_dtype = [("log_likelihood", float), ("log_prior", float)]
+
+def explore(sampler:EnsembleSampler, initial_state, nsteps:int, check_convergence_every:None|int=None, ntau:None|float=None, tol:None|float=None):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -230,26 +173,7 @@ def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
     :param bool overwrite: If True already existing .dat files with the same names are automatically overwritten
     :param list_of_str l_param_name: List of the parameter names
     """
-    blobs_dtype = [("log_likelihood", float), ("log_prior", float)]
-    if save_to_file:
-        # Set up the backend
-        # Don't forget to clear it in case the file already exists
-        backend = emcee.backends.HDFBackend(join(file_folder, filename))
-        backend.reset(nwalkers, ndim)
-        if with_blobs:
-            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
-                                            backend=backend, blobs_dtype=blobs_dtype)
-        else:
-            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
-                                            backend=backend)
-    else:
-        if with_blobs:
-            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn,
-                                            blobs_dtype=blobs_dtype)
-        else:
-            sampler = emcee.EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=log_prob_fn, kwargs=kwargs_prob_fn)
-
-    if check_convergence_every > 0:
+    if (check_convergence_every is not None) and (check_convergence_every > 0):
         # We'll track how the average autocorrelation time estimate changes
         index = 0
         autocorr = np.empty(nsteps)
@@ -257,8 +181,13 @@ def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
         # This will be useful to testing convergence
         old_tau = np.inf
 
+        if ntau is None:
+            ntau = 100
+        if tol is None:
+            tol = 0.01
+
         # Now we'll sample for up to max_n steps
-        for sample in sampler.sample(p0, iterations=nsteps, progress=True):
+        for state in sampler.sample(initial_state, iterations=nsteps, progress=True):
             # Only check convergence every 100 steps
             if sampler.iteration % check_convergence_every:
                 continue
@@ -277,8 +206,8 @@ def explore(nwalkers, ndim, log_prob_fn, p0, nsteps, kwargs_prob_fn=None,
                 break
             old_tau = tau
     else:
-        sampler.run_mcmc(p0, nsteps, progress=True)
-    return sampler
+        state = sampler.run_mcmc(p0, nsteps, progress=True)
+    return state
 
 
 def read_chaindatfile(chaindatfile, walker_col="i_walker", lnpost_col="lnposterior"):
