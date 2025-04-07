@@ -55,6 +55,8 @@ check_convergence_every = None  # If different from None and > 0, emcee will che
 ntau = 100  # If the length of the chain is higher than ntau * autocorrelation step scale of the chains than the emcee exploration will be stopped (even if nsteps_MCMC is not yet reached)
 tol = 0.01  # Relative precision on the computation of the autocorrelation timescale required for the emcee exploration to stop
 
+sample_kwargs: dict= {} # Additional arguments to pass to the sample function of emcee: https://emcee.readthedocs.io/en/stable/user/sampler/#emcee.EnsembleSampler.sample
+
 backend_filename = f"{obj_name}_Emcee.h5"  # If backend is different than None than the emcee exploration will be saved to file
 
 cluster = False  # If you run this code on a cluster (not in ipython) change to True
@@ -66,7 +68,7 @@ cluster = False  # If you run this code on a cluster (not in ipython) change to 
 # Distribution for the choice of initial parameter values. For now you can only specify gaussian distributions
 # Format {"<param_name>": {"mu": <mu_value>, "sigma": <sigma_value>}}
 # This superseed the distribution inferred from a previous run (load_from_pickle = True below)
-init_distrib = {}
+init_distrib: dict = {}
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
@@ -173,22 +175,25 @@ else:
 sampler = EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, backend=backend, blobs_dtype=blobs_dtype)
 
 logger.info("Performing Emcee exploration")
-last_state = et.explore(sampler=sampler, initial_state=initial_state, nsteps=nsteps_MCMC, check_convergence_every=check_convergence_every, ntau=ntau, tol=tol)
+last_state = et.explore(sampler=sampler, initial_state=initial_state, nsteps=nsteps_MCMC, 
+                        check_convergence_every=check_convergence_every, ntau=ntau, tol=tol,
+                        **sample_kwargs
+                        )
 
-if save_sampler_in_custom_files:
-    logger.info("Saving sampler in custom pickles")
-    et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
+# if save_sampler_in_custom_files:
+#     logger.info("Saving sampler in custom pickles")
+#     et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
 
 # chain = sampler.chain
 # lnprobability = sampler.lnprobability
 # acceptance_fraction = sampler.acceptance_fraction
 
-if save_sampler_in_arviz_infdata:
-    logger.info("Saving sampler in arviz InferenceData pickles")
-    if with_blobs:
-        infdata = az.from_emcee(sampler=sampler, var_names=l_param_name, blob_names=["log_likelihood", "log_prior"], blob_groups=["log_likelihood", "log_prior"])
-    else:
-        infdata = az.from_emcee(sampler=sampler, var_names=l_param_name)
-    et.save_inference_data(inference_data=infdata, obj_name=obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
+# if save_sampler_in_arviz_infdata:
+#     logger.info("Saving sampler in arviz InferenceData pickles")
+#     if with_blobs:
+#         infdata = az.from_emcee(sampler=sampler, var_names=l_param_name, blob_names=["log_likelihood", "log_prior"], blob_groups=["log_likelihood", "log_prior"])
+#     else:
+#         infdata = az.from_emcee(sampler=sampler, var_names=l_param_name)
+#     et.save_inference_data(inference_data=infdata, obj_name=obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
 
-del sampler
+# del sampler
