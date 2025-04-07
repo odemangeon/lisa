@@ -161,7 +161,9 @@ def explore_v0(sampler, p0, nsteps, save_to_file=False, filename_chain="chain.da
 
 default_blobs_dtype = [("log_likelihood", float), ("log_prior", float)]
 
-def explore(sampler:EnsembleSampler, initial_state, nsteps:int, check_convergence_every:None|int=None, ntau:None|float=None, tol:None|float=None):
+def explore(sampler:EnsembleSampler, initial_state, nsteps:int, 
+            check_convergence_every:None|int=None, ntau:None|float=None, tol:None|float=None, 
+            sample_kwargs:None|dict=None):
     """Perform an emcee exploration.
 
     :param emcee.EnsembleSampler sampler: EnsembleSampler instance
@@ -186,8 +188,11 @@ def explore(sampler:EnsembleSampler, initial_state, nsteps:int, check_convergenc
         if tol is None:
             tol = 0.01
 
+        if sample_kwargs is None:
+            sample_kwargs = {}
+
         # Now we'll sample for up to max_n steps
-        for state in sampler.sample(initial_state, iterations=nsteps, progress=True):
+        for state in sampler.sample(initial_state, iterations=nsteps, progress=True, **sample_kwargs):
             # Only check convergence every 100 steps
             if sampler.iteration % check_convergence_every:
                 continue
@@ -206,7 +211,7 @@ def explore(sampler:EnsembleSampler, initial_state, nsteps:int, check_convergenc
                 break
             old_tau = tau
     else:
-        state = sampler.run_mcmc(p0, nsteps, progress=True)
+        state = sampler.run_mcmc(initial_state=initial_state, nsteps=nsteps, progress=True)
     return state
 
 
