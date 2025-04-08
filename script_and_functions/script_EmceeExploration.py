@@ -5,6 +5,7 @@ Script template to perform an MCMC exploration.
 """
 import arviz as az
 import dill
+import json
 
 from loguru import logger
 from math import ceil
@@ -17,6 +18,7 @@ from numpy import zeros_like
 
 from tqdm import tqdm
 
+import emcee
 from emcee import EnsembleSampler
 from emcee.backends import HDFBackend
 
@@ -50,6 +52,7 @@ xtol_preminimization = 1e-12
 ##################
 nwalker_fact = 4  # The number of walkers will be equal to nwalker_fact * nb of free parameters
 nsteps_MCMC = 50000  # Number of steps per walker
+moves = None # Default: None, ex: [(emcee.moves.DEMove(), 0.8), (emcee.moves.DESnookerMove(), 0.2)]. If you want to use a different move than the default one like. See https://emcee.readthedocs.io/en/stable/user/moves/ and https://emcee.readthedocs.io/en/stable/tutorials/moves/#moves
 
 check_convergence_every = None  # If different from None and > 0, emcee will check the autocorrelation step scale of the chain every 'check_convergence_every' steps
 ntau = 100  # If the length of the chain is higher than ntau * autocorrelation step scale of the chains than the emcee exploration will be stopped (even if nsteps_MCMC is not yet reached)
@@ -104,7 +107,9 @@ post_instance.configure_posterior(path_config_file="config_file.py")  # Change i
 logger.info("Creating all functions (priors, likelihoods, posteriors)")
 post_instance.create_allfunctions(with_blobs=with_blobs)
 l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
-
+# Save the list of parameter names in a json file
+with open(join(output_folders["pickles_explore"], f"{obj_name}_param_names.json"), "w") as file:
+    json.dump(l_param_name, file)
 
 logger.info("Getting Emcee sampler inputs")
 lnpostfn = post_instance.lnposteriors.dataset_db["all"].function
@@ -172,7 +177,7 @@ if with_blobs:
     blobs_dtype = et.default_blobs_dtype
 else:
     blobs_dtype = None
-sampler = EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, backend=backend, blobs_dtype=blobs_dtype)
+sampler = EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, moves=moves, backend=backend, blobs_dtype=blobs_dtype)
 
 logger.info("Performing Emcee exploration")
 last_state = et.explore(sampler=sampler, initial_state=initial_state, nsteps=nsteps_MCMC, 
