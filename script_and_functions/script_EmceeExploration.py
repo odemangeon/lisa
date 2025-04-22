@@ -182,7 +182,7 @@ sampler = EnsembleSampler(nwalkers=nwalkers, ndim=ndim, log_prob_fn=lnpostfn, mo
 logger.info("Performing Emcee exploration")
 last_state = et.explore(sampler=sampler, initial_state=initial_state, nsteps=nsteps_MCMC, 
                         check_convergence_every=check_convergence_every, ntau=ntau, tol=tol,
-                        **sample_kwargs
+                        sample_kwargs=sample_kwargs,
                         )
 
 # if save_sampler_in_custom_files:

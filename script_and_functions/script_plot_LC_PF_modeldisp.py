@@ -10,11 +10,14 @@ import matplotlib.pyplot as pl
 import dill
 import pandas as pd
 import random
+import json
+import emcee
 # import matplotlib
 
 from os import getcwd
 from os.path import join
 from pandas import DataFrame
+from collections import OrderedDict
 
 import lisa.emcee_tools.emcee_tools as et
 import lisa.posterior.core.posterior as cpost
@@ -47,7 +50,7 @@ obj_name = "target_name"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-extension_exploration = "_initrun"
+run_name = "initrun"
 extension_analysis = "_initrun"
 
 #########
@@ -79,15 +82,31 @@ if "df_fittedval" not in globals():
 ################################
 
 ################################
-## Load infdata if required
-if "infdata" not in globals():
-    infdata = et.load_inference_data(obj_name=obj_name, extension_exploration=extension_exploration, folder=output_folders["pickles_explore"])
+## Load emcee backend if required
+if "backend" not in globals():
+    backend_filename = f"{obj_name}_Emcee.h5"
+    backend_filepath = join(output_folders["pickles_explore"], backend_filename)
+    backend = emcee.backends.HDFBackend(backend_filepath, read_only=True, name=run_name)
+    nwalkers, nparams = backend.shape
+    print(f"The chain stored in {backend_filename} has {nwalkers} walkers and {nparams} parameters.")
 ################################
 
 ################################
-## Load selected_walkers and burnin if required
-if any([var not in globals() for var in ["selected_walkers", "burnin"]]):
-    selected_walkers, burnin = et.load_walkers_and_burnin(obj_name, extension_analysis=extension_analysis, folder=output_folders["pickles_analyze"])
+## Load thin and burnin if required
+if any([var not in globals() for var in ["thin", "burnin"]]):
+    # Open the file for reading
+    with open(join(output_folders["pickles_analyze"], f'analysis_params{extension_analysis}.json'), 'r') as json_file:
+        # Load the dictionary from the file
+        analysis_params = json.load(json_file)
+        thin = analysis_params["thin"]
+        burnin = analysis_params["burnin"]
+################################
+
+################################
+## Load parameter names if required
+if "l_param_name" not in globals():
+    with open(join(output_folders["pickles_explore"], f"{obj_name}_param_names.json"), "r") as file:
+        l_param_name = json.load(file)
 ################################
 
 
@@ -136,10 +155,11 @@ for ii, planet in enumerate(l_planet):
 
 nb_random = 10
 l_df_param_value = []
+chains = backend.get_chain(flat=True, thin=thin, discard=burnin)
 for i in range(nb_random):
-    random_walker = random.randint(0, len(selected_walkers) - 1)
-    random_iteration = random.randint(burnin, infdata.posterior.coords['draw'].values[-1])
-    l_df_param_value.append(DataFrame({"value": [infdata.posterior[var].sel(chain=random_walker, draw=random_iteration).values for var in infdata.posterior.keys()]}, index=list(infdata.posterior.keys())))
+    random_iteration = random.randint(a=0, b=chains.shape[0]-1)
+    l_df_param_value.append(DataFrame({"value": chains[random_iteration, :]}, index=l_param_name))
+del chains
 
 for planet in ["b", ]:
     l_expression_and_datasetname = []
