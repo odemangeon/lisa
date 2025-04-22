@@ -80,13 +80,8 @@ previous_run_name = None
 extension_analysis = None
 
 # Restart from previous backended run
-restart_run = False
-
-###############################
-# Parameters saving the outputs
-###############################
-save_sampler_in_custom_files = False
-save_sampler_in_arviz_infdata = True
+restart_run = True
+run_name_for_last_state = "burninrun"  # Name of the run to restart from
 
 ##########################
 ## Execution of the script
@@ -166,11 +161,14 @@ if not(restart_run):
     else:
         initial_state = p0
 else:
-    logger.info("Restarting from previous run: {run_name}")
+    logger.info(f"Restarting from previous run: {run_name_for_last_state}")
     if 'last_state' in globals():
         initial_state = last_state
     else:
-        initial_state = backend.get_last_sample()
+        if run_name_for_last_state != run_name:
+            initial_state = HDFBackend(filename=join(output_folders["pickles_explore"], backend_filename), name=run_name_for_last_state).get_last_sample()
+        else: 
+            initial_state = backend.get_last_sample()
 
 logger.info("Creating Emcee sampler")
 if with_blobs:
@@ -184,21 +182,3 @@ last_state = et.explore(sampler=sampler, initial_state=initial_state, nsteps=nst
                         check_convergence_every=check_convergence_every, ntau=ntau, tol=tol,
                         sample_kwargs=sample_kwargs,
                         )
-
-# if save_sampler_in_custom_files:
-#     logger.info("Saving sampler in custom pickles")
-#     et.save_emceesampler(sampler, l_param_name, obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
-
-# chain = sampler.chain
-# lnprobability = sampler.lnprobability
-# acceptance_fraction = sampler.acceptance_fraction
-
-# if save_sampler_in_arviz_infdata:
-#     logger.info("Saving sampler in arviz InferenceData pickles")
-#     if with_blobs:
-#         infdata = az.from_emcee(sampler=sampler, var_names=l_param_name, blob_names=["log_likelihood", "log_prior"], blob_groups=["log_likelihood", "log_prior"])
-#     else:
-#         infdata = az.from_emcee(sampler=sampler, var_names=l_param_name)
-#     et.save_inference_data(inference_data=infdata, obj_name=obj_name, extension_exploration=f"_{run_name}", folder=output_folders["pickles_explore"])
-
-# del sampler
