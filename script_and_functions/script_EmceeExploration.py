@@ -75,7 +75,7 @@ previous_run_name = None
 extension_analysis = None
 
 # Restart from previous backended run
-restart_run = True
+restart_run = False
 run_name_for_last_state = "burninrun"  # Name of the run to restart from
 
 ##########################
