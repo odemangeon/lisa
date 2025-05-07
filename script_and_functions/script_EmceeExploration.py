@@ -3,22 +3,17 @@ Script template to perform an MCMC exploration.
 
 @TODO:
 """
-import arviz as az
-import dill
 import json
 
 from loguru import logger
 from math import ceil
-from os import getcwd
 from os.path import join
-from copy import copy
 
 from scipy.optimize import minimize
 from numpy import zeros_like
 
 from tqdm import tqdm
 
-import emcee
 from emcee import EnsembleSampler
 from emcee.backends import HDFBackend
 
@@ -58,7 +53,7 @@ check_convergence_every = None  # If different from None and > 0, emcee will che
 ntau = 100  # If the length of the chain is higher than ntau * autocorrelation step scale of the chains than the emcee exploration will be stopped (even if nsteps_MCMC is not yet reached)
 tol = 0.01  # Relative precision on the computation of the autocorrelation timescale required for the emcee exploration to stop
 
-sample_kwargs: dict= {} # Additional arguments to pass to the sample function of emcee: https://emcee.readthedocs.io/en/stable/user/sampler/#emcee.EnsembleSampler.sample
+sample_kwargs: dict= {'tune': True} # Additional arguments to pass to the sample function of emcee: https://emcee.readthedocs.io/en/stable/user/sampler/#emcee.EnsembleSampler.sample
 
 backend_filename = f"{obj_name}_Emcee.h5"  # If backend is different than None than the emcee exploration will be saved to file
 
