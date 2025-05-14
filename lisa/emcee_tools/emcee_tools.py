@@ -1980,12 +1980,13 @@ def auto_y_lims(y, ax, pad=0.1):
             raise ValueError("pad should be a float of an Iterable of 2 floats.")
     else:
         pad_low = pad_bottom = pad
-    # Get y lims that bound 99.5% of the y values
-    N = int(0.995 * len(y))
-    hi, lo = y[np.argsort(y)][[N, -N]]
-    pad_low, pad_bottom = [(hi - lo) * pad for pad in [pad_low, pad_bottom]]
-    ylim = (lo - pad_low, hi + pad_bottom)
-    ax.set_ylim(ylim)
+    if len(y) >= 5:
+        # Get y lims that bound 99.5% of the y values
+        N = int(0.995 * len(y))
+        hi, lo = y[np.argsort(y)][[N, -N]]
+        pad_low, pad_bottom = [(hi - lo) * pad for pad in [pad_low, pad_bottom]]
+        ylim = (lo - pad_low, hi + pad_bottom)
+        ax.set_ylim(ylim)
 
 
 def indicate_y_outliers(x, y, ax, color=None, masksncolors=None, **kwargs):
