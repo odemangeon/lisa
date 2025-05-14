@@ -270,11 +270,7 @@ def create_TS_plots(post_instance:Posterior,
                     y_lims_i = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).ydata.lims
                 else:
                     y_lims_i = plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.lims
-                if all([y_lims_i[jj] is None for jj in range(2)]):
-                    if len(plotdef.get_datas2plot(i_row=i_row, i_col=i_col)):
-                        points_pl_i = concatenate([points[name_data2plot_i] for name_data2plot_i in plotdef.get_datas2plot(i_row=i_row, i_col=i_col)])
-                        et.auto_y_lims(points_pl_i[isfinite(points_pl_i)], axe, pad=pad)
-                else:
+                if y_lims_i is not None:
                     axe.set_ylim(y_lims_i)
 
                 # Indicate outlier values that are off y-axis with an arrows for raw cadence
