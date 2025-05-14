@@ -624,12 +624,13 @@ def get_condition(multi, l_inst_model, l_planet, tab, time_vec_name, l_time_vec_
                             add = True
                             for idx, orb_mod in enumerate(l_orbital_model):
                                 if orb_mod is orbital_model:
-                                    if parameters['planet']['Rrat'] is l_Rrat[idx]:
+                                    if ('Rrat' in parameters['planet']) and (parameters['planet']['Rrat'] is l_Rrat[idx]):
                                         add = False
                                         break
                         if add:
                             l_orbital_model.append(orbital_model)
-                            l_Rrat.append(parameters['planet']['Rrat'])
+                            if 'Rrat' in parameters['planet']:
+                                l_Rrat.append(parameters['planet']['Rrat'])
                             l_model_name.append(model_definition.model_name)
                             l_planet_name.append(planet_name)
     l_condition = []
