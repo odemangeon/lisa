@@ -509,7 +509,7 @@ class PhaseCurveModelEllipsoidal(PhaseCurveModelSinCos):
     def _set_args(self, args=None):
         """ """
         # Set default value for arg
-        default_args = {"sincos": "sin", "factor_period": 1. / 2., "flux_offset": 0., 'phase_offset': 0.,
+        default_args = {"sincos": "cos", "factor_period": 1. / 2., "flux_offset": 0., 'phase_offset': pi,
                         'occultation': False
                         }
         self.args.update(default_args)
@@ -552,7 +552,7 @@ class PhaseCurveModelBeaming(PhaseCurveModelSinCos):
     def _set_args(self, args=None):
         """ """
         # Set default value for arg
-        self.args.update({"sincos": "sin", "factor_period": 1., "flux_offset": 0., 'phase_offset': pi,
+        self.args.update({"sincos": "cos", "factor_period": 1., "flux_offset": 0., 'phase_offset': pi,
                           'occultation': False
                           }
                          )
