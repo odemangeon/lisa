@@ -52,7 +52,7 @@ run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
 run_name = "initrun"
-extension_analysis = "_initrun"
+extension_analysis = f"_{run_name}"
 
 #########
 ## logger
