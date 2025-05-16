@@ -14,6 +14,7 @@ from numpy import zeros_like
 
 from tqdm import tqdm
 
+import emcee
 from emcee import EnsembleSampler
 from emcee.backends import HDFBackend
 
@@ -117,7 +118,17 @@ if backend_filename is not None:
     backend = HDFBackend(filename=join(output_folders["pickles_explore"], backend_filename), name=run_name) 
 
 if not(restart_run):
-    backend.reset(nwalkers=nwalkers, ndim=ndim)
+    try:
+        n_iter = backend.get_log_prob().shape[0]
+    except AttributeError:
+        n_iter = 0
+        y_or_n = "y"
+    if n_iter > 0:
+        y_or_n = input(f"WARNING: the backend file {backend_filepath} already exists with a run called {run_name} containing {n_iter} iterations. Do you really want to reset the backend it? (y/n)")
+    if y_or_n == "y":
+        backend.reset(nwalkers=nwalkers, ndim=ndim)
+    else:
+        raise ValueError(f"Backend file {backend_filepath} already exists with a run called {run_name} containing {n_iter} iterations and you indicated that you didn't want to reset it. Use restart_run = True.")
     logger.info("Backend reset")
      
     logger.info("Creating initial value")
