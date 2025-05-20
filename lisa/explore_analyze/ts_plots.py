@@ -90,8 +90,6 @@ def create_TS_plots(post_instance:Posterior,
                 if npt is None:
                     npt = npt_model_default
                 times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, npt=npt, extra_dt=extra_dt_model)
-                time_fact = model2plot_i.pl_factors.time_factor
-                amplitude_fact = model2plot_i.pl_factors.value_factor
                 # Compute the model
                 model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_param_value=model2plot_i.df_param_value, datasim_kwargs=datasim_kwargs,
                                                         compute_raw_models_func=compute_raw_models_func, 
@@ -105,8 +103,8 @@ def create_TS_plots(post_instance:Posterior,
                 # Plot the model values
                 pl_kwarg_to_use = copy(model2plot_i.pl_kwargs)
                 # You are plot data or a modified version of the data
-                ebcont = od_axe['data'].errorbar(times_model2plot_i * time_fact, y=model_i * amplitude_fact,
-                                            **pl_kwarg_to_use)
+                ebcont = od_axe['data'].errorbar(times_model2plot_i * model2plot_i.pl_factors.time_factor, y=model_i * model2plot_i.pl_factors.value_factor,
+                                                 **pl_kwarg_to_use)
                 color = ebcont[0].get_color()
                 alpha = ebcont[0].get_alpha()
                 # Plot the model uncertainty region for models that do not involve data 
@@ -118,7 +116,7 @@ def create_TS_plots(post_instance:Posterior,
                         if alpha is None:
                             alpha = 1.
                         pl_kwarg_to_use["alpha"] = alpha / 3
-                        _ = od_axe['data'].fill_between(times_model2plot_i * time_fact, (model_i - model_err_i) * amplitude_fact, (model_i + model_err_i) * amplitude_fact,
+                        _ = od_axe['data'].fill_between(times_model2plot_i * model2plot_i.pl_factors.time_factor, (model_i - model_err_i) * model2plot_i.pl_factors.value_factor, (model_i + model_err_i) * model2plot_i.pl_factors.value_factor,
                                                     **pl_kwarg_to_use)
 
             ##################################################
@@ -141,12 +139,12 @@ def create_TS_plots(post_instance:Posterior,
                                                           split_GP_computation=split_GP_computation, 
                                                           name_data2plot=name_data2plot_i)
                 # Apply time factor
-                times_dataset_i *= time_fact
+                times_dataset_i *= data2plot_i.pl_factors.time_factor
                 # Apply amplitude factor
-                data_i *= amplitude_fact
-                data_err_i *= amplitude_fact
-                data_err_jitter_i *= amplitude_fact
-                residuals_i *= amplitude_fact
+                data_i *= data2plot_i.pl_factors.value_factor
+                data_err_i *= data2plot_i.pl_factors.value_factor
+                data_err_jitter_i *= data2plot_i.pl_factors.value_factor
+                residuals_i *= data2plot_i.pl_factors.value_factor
                 # Compute the binned data, errors and residuals
                 if data2plot_i.exptime > 0:
                     (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
@@ -157,7 +155,7 @@ def create_TS_plots(post_instance:Posterior,
                     rms_values[name_data2plot_i] = std(binresi_i)
                 else:
                     rms_values[name_data2plot_i] = std(residuals_i)
-                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i] * amplitude_fact} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
+                logger.info(f"RMS {name_data2plot_i} = {rms_values[name_data2plot_i]} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
                 # Plot the data or binned data
                 if data2plot_i.exptime > 0:
                     data_plot_i = bindata_i
@@ -203,23 +201,16 @@ def create_TS_plots(post_instance:Posterior,
                                                               kwargs_get_key_compute_model=kwargs_get_key_compute_model, 
                                                               split_GP_computation=split_GP_computation, 
                                                               name_data2plot=name_data2plot_j)
-                    times_dataset_i.append(times_dataset_j)
-                    data_i.append(data_j)
-                    data_err_i.append(data_err_j)
-                    data_err_jitter_i.append(data_err_jitter_j)
-                    residuals_i.append(residuals_j)
+                    times_dataset_i.append(times_dataset_j * data2plot_j.pl_factors.time_factor)
+                    data_i.append(data_j * data2plot_j.pl_factors.value_factor)
+                    data_err_i.append(data_err_j * data2plot_j.pl_factors.value_factor)
+                    data_err_jitter_i.append(data_err_jitter_j * data2plot_j.pl_factors.value_factor)
+                    residuals_i.append(residuals_j * data2plot_j.pl_factors.value_factor)
                 times_dataset_i = concatenate(times_dataset_i)
                 data_i = concatenate(data_i)
                 data_err_i = concatenate(data_err_i)
                 data_err_jitter_i = concatenate(data_err_jitter_i)
                 residuals_i = concatenate(residuals_i)
-                # Apply time factor
-                times_dataset_i *= time_fact
-                # Apply amplitude factor
-                data_i *= amplitude_fact
-                data_err_i *= amplitude_fact
-                data_err_jitter_i *= amplitude_fact
-                residuals_i *= amplitude_fact
                 # Compute the binned data, errors and residuals
                 if multidata2plot_i.exptime > 0:
                     (midbins_i, bindata_i, bindata_std_i, bindata_std_jitter_i, binresi_i
@@ -230,7 +221,7 @@ def create_TS_plots(post_instance:Posterior,
                     rms_values[name_multidata2plot_i] = std(binresi_i)
                 else:
                     rms_values[name_multidata2plot_i] = std(residuals_i)
-                logger.info(f"RMS {name_multidata2plot_i} = {rms_values[name_multidata2plot_i] * amplitude_fact} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
+                logger.info(f"RMS {name_multidata2plot_i} = {rms_values[name_multidata2plot_i]} {plotdef.get_axes_properties(i_row=i_row, i_col=i_col).yresi.unit} (raw cadence)")
                 # Plot the data or binned data
                 if multidata2plot_i.exptime > 0:
                     data_plot_i = bindata_i
