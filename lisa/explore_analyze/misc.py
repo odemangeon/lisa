@@ -1,11 +1,24 @@
+from __future__ import annotations
 from loguru import logger
 from os import getcwd, makedirs
 from os.path import join
 from copy import deepcopy, copy
 from matplotlib.ticker import ScalarFormatter, FuncFormatter
+from collections.abc import Sequence
+from collections import OrderedDict
+from numbers import Number
+from typing import Dict, List
+from numpy import nan, float_, ndarray, isfinite, random, asarray
+from numpy.typing import NDArray
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
+from matplotlib.figure import Figure
+from matplotlib.ticker import AutoMinorLocator
+from pandas import DataFrame
 
+from .core_plot import Axes_Properties
 from ..posterior.core.dataset_and_instrument.manager_dataset_instrument import Manager_Inst_Dataset
 from ..posterior.core.model.core_model import Core_Model
+from ..emcee_tools.emcee_tools import add_twoaxeswithsharex
 
 
 ### for the A&A article class
@@ -292,24 +305,6 @@ def check_kwargs_by_column_and_row(kwargs_user, l_row_name, l_col_name, kwargs_d
     return kwargs
 
 
-def check_datasetname4model4row(datasetname4model4row, datasetnames4rowidx, l_model_4_rowidx, l_model_1_per_row):
-    """
-    """
-    datasetname4model4row_user = datasetname4model4row if datasetname4model4row is not None else {}
-    datasetname4model4row = {}
-    for i_row, (datasetnames_i_row, l_model_i_row) in enumerate(zip(datasetnames4rowidx, l_model_4_rowidx)):
-        for model in l_model_i_row:
-            if model not in datasetname4model4row:
-                datasetname4model4row[model] = {}
-            if model in l_model_1_per_row:
-                datasetname4model4row[model][i_row] = datasetnames_i_row[0]
-            else:
-                datasetname4model4row[model][i_row] = 'all'
-    for model in datasetname4model4row_user:
-        datasetname4model4row[model].update(datasetname4model4row_user[model])
-    return datasetname4model4row
-
-
 def check_datasetnameformodel4row(datasetnameformodel4row, datasetnames4rowidx):
     """
     """
@@ -323,11 +318,9 @@ def set_legend(ax, legend_kwargs, fontsize_def=AandA_fontsize):
     """
     """
     legend_kwargs_copy = legend_kwargs.copy()
-    if legend_kwargs_copy['do']:
-        legend_kwargs_copy.pop('do')
-        if ('prop' not in legend_kwargs_copy) and ('fontsize' not in legend_kwargs_copy):
-            legend_kwargs_copy['fontsize']  = fontsize_def
-        ax.legend(**legend_kwargs_copy)
+    if ('prop' not in legend_kwargs_copy) and ('fontsize' not in legend_kwargs_copy):
+        legend_kwargs_copy['fontsize']  = fontsize_def
+    ax.legend(**legend_kwargs_copy)
 
 
 def define_x_or_y_lims(x_or_ylims, row_name, col_name):
@@ -380,8 +373,22 @@ def print_rms(ax, text_pos, row_name, start_with_rmsequal, add_rms_row, datasetn
     ax.text(*text_pos, text_rms_to_plot, fontsize=fontsize, transform=ax.transAxes)
 
 
-def check_row4datasetname(row4datasetname, datasetnames):
+def check_row4datasetname(row4datasetname: Dict[str, int]|None, datasetnames: Sequence[str]) -> tuple[Dict[str, int], List[List[str]]]:
     """Check the row4datasetname and return the checked row4datasetname and datasetnames4rowidx
+
+    TODO: Ultimately I would like to have one classe Datasets2plot (in th same spirit as Models2plot) that would specify which dataset to plot on which row
+
+    Arguments
+    ---------
+    row4datasetname : Dictionary specifying on which row a given dataset (specified by its name) should be plotted
+    datasetnames    : Sequence of all available dataset name
+
+    Returns
+    -------
+    row4datasetname : Dictionary specifying on which row a given dataset (specified by its name) should be plotted.
+        It differs from the argument only if the argument was None. In this case each dataset is to be plotted in a separate row
+    datasetnames4rowidx : List which as the same number of element than the rows mentioned in row4datasetname. 
+        Each element of this list is itself a list of the strings giving the datasetnames to be plot in each row.
     """
     if row4datasetname is None:
         row4datasetname = {datasetname: ii for ii, datasetname in enumerate(datasetnames)}
@@ -394,7 +401,7 @@ def check_row4datasetname(row4datasetname, datasetnames):
     assert min(set_row_idx) == 0
     assert max(set_row_idx) == (nb_rows - 1)
     # Create datasetnames_per_row from row4datasetname
-    datasetnames4rowidx = [[] for i_row in range(nb_rows)]
+    datasetnames4rowidx:list[list[str]] = [[] for i_row in range(nb_rows)]
     for datasetname in datasetnames:
         datasetnames4rowidx[row4datasetname[datasetname]].append(datasetname)
     return row4datasetname, datasetnames4rowidx
@@ -416,13 +423,13 @@ def get_pl_kwargs(pl_kwargs, dico_nb_dstperinsts, datasetnames, bin_size, one_bi
     pl_kwarg_modelraw_def = {"color": "k", "fmt": '', "alpha": 1., "linestyle": "-", "label": "model", "zorder": 10}
     pl_kwarg_modelbinned_def = {"color": "r", "fmt": '', "lw": 0.8, "alpha": 1., "zorder": 10}  # , "label": f"model: bin={bin_size}{bin_size_unit}"}
     pl_kwarg_GP_def = {"color": "C0", "linestyle": "-", "label": "GP", "zorder": 10}
-    pl_kwarg_GP_err_def = {"color": "C0", "linestyle": "-", "zorder": 0}
+    pl_kwarg_GP_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_wGP_def = {"color": "C4", "linestyle": "-", "label": "model + GP", "zorder": 10}
-    pl_kwarg_wGP_err_def = {"color": "C4", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGP_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_GPbinned_def = {"color": "C5", "linestyle": "-", "zorder": 10}
-    pl_kwarg_GPbinned_err_def = {"color": "C5", "linestyle": "-", "zorder": 0}
+    pl_kwarg_GPbinned_err_def = {"linestyle": "-", "zorder": 0}
     pl_kwarg_wGPbinned_def = {"color": "C6", "linestyle": "-", "label": "model + GP", "zorder": 10}
-    pl_kwarg_wGPbinned_err_def = {"color": "C6", "linestyle": "-", "zorder": 0}
+    pl_kwarg_wGPbinned_err_def = { "linestyle": "-", "zorder": 0}
     pl_kwarg_instvar_def = {"color": "C1", "linestyle": "-", "label": "inst.", "zorder": 10}
     pl_kwarg_stellarvar_def = {"color": "C2", "linestyle": "-", "label": "stellar", "zorder": 10}
     pl_kwarg_decorr_def = {"color": "C3", "linestyle": "-", "label": "decorr.", "zorder": 10}
@@ -566,7 +573,8 @@ def update_data_binned_label(pl_kwarg, key_data_binned, datasetnames, bin_size, 
                 pl_kwarg[f"row{i_row}"]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"
         else:
             for datasetname in datasetnames:
-                pl_kwarg[datasetname][key_data_binned]["label"] = f"bin={bin_size:.2g}{text_bin_size_unit}"            
+                if pl_kwarg[datasetname]['data']["label"] is not None:
+                    pl_kwarg[datasetname][key_data_binned]["label"] = f"{pl_kwarg[datasetname]['data']['label']}: bin={bin_size:.2g}{text_bin_size_unit}"            
 
 
 def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_removed_or_add_dict,
@@ -626,3 +634,130 @@ def do_suptitle(fig, post_instance, datasetnames, fontsize, dico_models, model_r
 
         if suptitle_text != "":
             fig.suptitle(suptitle_text, fontsize=fontsize)
+
+
+def create_gridspec(nb_rows: int, nb_cols: int, fig:Figure, subplotspec: SubplotSpec, create_axes_main_gridspec: dict|None=None):
+    if create_axes_main_gridspec is None:
+        create_axes_main_gridspec = {}
+    if subplotspec is None:
+        gs = GridSpec(nrows=nb_rows, ncols=nb_cols, figure=fig, **create_axes_main_gridspec)
+    else:
+        gs = GridSpecFromSubplotSpec(nrows=nb_rows, ncols=nb_cols, subplot_spec=subplotspec, **create_axes_main_gridspec)
+    return gs
+
+
+def create_data_and_residual_axes(do_residual_axis: bool, fig: Figure, subplotspec: SubplotSpec, create_axes_dataresi_gridspec: dict | None = None):
+    """
+    Create data and residual axes.
+
+    Parameters:
+    do_residual_axis (bool): If True both data and residual axes will be create. Otherwise just the data axis.
+    fig (Figure): The figure object to which the axes will be added.
+    subplotspec (SubplotSpec): The subplot specification for the axes.
+    create_axes_dataresi_gridspec (dict | None, optional): Additional keyword arguments for creating the gridspec. Defaults to None.
+
+    Returns:
+    OrderedDict: A dictionary containing the created axes. Keys are 'data' and optionally 'resi' if residuals are included.
+    """
+    dico_axes = OrderedDict()
+    if do_residual_axis:
+        (axe_data, axe_resi) = add_twoaxeswithsharex(subplotspec, fig, gs_from_sps_kw=create_axes_dataresi_gridspec)  # gs_from_sps_kw={"wspace": 0.1}
+        dico_axes['data'] = axe_data
+        dico_axes['resi'] = axe_resi
+    else:
+        axe_data = fig.add_subplot(subplotspec)
+        dico_axes['data'] = axe_data
+    return dico_axes
+
+
+def setup_data_and_residual_axes_style(od_axe: OrderedDict, axes_properties: Axes_Properties, fontsize:int=AandA_fontsize):
+    if getattr(axes_properties, "x").show_label:
+        next(reversed(od_axe.values())).set_xlabel(axes_properties.x.label, fontsize=fontsize)  # next(reversed(d_axe.values())) is the last axes in d_axe.
+    l_yaxis_properties = [getattr(axes_properties, axe_name) for _, axe_name in zip(od_axe.values(), ["ydata", "yresi"])]
+    l_ylabel = [yaxis_properties_i.label for yaxis_properties_i in l_yaxis_properties]
+    l_yshowlabel = [yaxis_properties_i.show_label for yaxis_properties_i in l_yaxis_properties]
+    for axe, ylabel, yshowlabel in zip(od_axe.values(), l_ylabel, l_yshowlabel):
+        if yshowlabel and (len(ylabel) > 0):
+            axe.set_ylabel(ylabel, fontsize=fontsize)
+    for axe, yaxis_properties_i in zip(od_axe.values(), l_yaxis_properties):
+        # Set the ticks direction and length, also set fontsize for tick labels for both x and y and by default do not show the tick labels on the x axes (this is changed later if needed)
+        axe.tick_params(axis="both", which="major", direction="in", length=4, width=1, bottom=True, top=True, left=True, right=True, labelbottom=False, labelsize=fontsize)
+        axe.tick_params(axis="both", which="minor", direction="in", length=2, width=0.5, left=True, right=True, bottom=True, top=True)
+        # Set minor location ticks for both x and y
+        axe.xaxis.set_minor_locator(AutoMinorLocator())
+        axe.yaxis.set_minor_locator(AutoMinorLocator())
+        # Set grid in "y"
+        axe.grid(axis="y", color="black", alpha=.5, linewidth=.5)
+        # Set log scale
+        if yaxis_properties_i.logscale:
+            axe.set_xscale("log")
+        # Remove the tick labels on the left y axis if needed
+        if not(yaxis_properties_i.show_ticklabels):
+            axe.tick_params(axis="y", labelleft=False)
+    # Show the tick labels on the bottom x axis if needed
+    if axes_properties.x.show_ticklabels:
+        next(reversed(od_axe.values())).tick_params(axis="x", labelbottom=True)
+
+    #########################
+    # Set the title if needed
+    #########################
+    if axes_properties.show_title and (len(axes_properties.title) > 0):
+        od_axe['data'].set_title(axes_properties.title, fontsize=fontsize)
+
+    ########################
+    # Set the text if needed
+    ########################
+    if len(axes_properties.text_kwargs) > 0:
+        for text_kwargs_i in axes_properties.text_kwargs:
+            od_axe['data'].text(transform=od_axe['data'].transAxes, **text_kwargs_i)
+
+
+def generate_param_vector_from_priors(post_instance, init_distrib=None):
+    """Generate parameter vector for the posterior function of all datasets drawn from the priors
+    or the gaussian provided in init_distrib
+
+    :param Posterior post_instance: Instance of the posterior class
+    :param dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma" of
+        the normal distribution to use for each parameter. First level keys are parameter full name.
+        Second is "sigma" and "mu".
+
+    :return np.ndarray param_vect: Ndarray containing the drawn parameter values
+    """
+    l_param_name = post_instance.lnposteriors.dataset_db["all"].param_model_names_list
+    if init_distrib is not None:
+        l_param_name_in_distrib = list(init_distrib.keys())
+    else:
+        l_param_name_in_distrib = []
+    l_param_name_notin_distrib = list(set(l_param_name) - set(l_param_name_in_distrib))
+    if len(l_param_name_notin_distrib) > 0:
+        param_vect_notin_distrib = post_instance.model.get_initial_values(list_paramnames=l_param_name_notin_distrib)
+    else:
+        param_vect_notin_distrib = []
+    param_vect_in_distrib = []
+    for param_name in l_param_name_in_distrib:
+        param_vect_in_distrib.append(random.normal(loc=init_distrib[param_name]["mu"],
+                                                   scale=init_distrib[param_name]["sigma"],
+                                                   )
+                                     )
+    param_vect = []
+    for param_name in l_param_name:
+        if param_name in l_param_name_in_distrib:
+            param_vect.append(param_vect_in_distrib[l_param_name_in_distrib.index(param_name)])
+        else:
+            param_vect.append(param_vect_notin_distrib[l_param_name_notin_distrib.index(param_name)])
+    return asarray(param_vect).transpose(), l_param_name
+
+
+def generate_param_dataframe_from_priors(post_instance, init_distrib=None):
+    """Generate parameter dataframe that can be used by the ploting function for the posterior function
+    of all datasets drawn from the priors or the gaussian provided in init_distrib
+
+    :param Posterior post_instance: Instance of the posterior class
+    :param dict init_distrib: dictionary of dictionary specifying the parameters "mu" and "sigma" of
+        the normal distribution to use for each parameter. First level keys are parameter full name.
+        Second is "sigma" and "mu".
+
+    :return pd.DataFrame df_param: DataFrame with index being the parameter name and one column "value" giving the drawn values for the parameters
+    """
+    param_vect, l_param_name = generate_param_vector_from_priors(post_instance, init_distrib)
+    return DataFrame(data=param_vect, index=l_param_name, columns=["value"])

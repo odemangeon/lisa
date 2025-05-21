@@ -268,7 +268,8 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
                 assert set(noisemoddef[inst_fullcat][inst_name].keys()) == set(self.get_instmodel_names(inst_name=inst_name, inst_fullcat=inst_fullcat))
                 for instmod_shortname in noisemoddef[inst_fullcat][inst_name]:
                     if not(info_inst_fullcat[0] == "IND" and noisemoddef[inst_fullcat][inst_name][instmod_shortname] is None):
-                        assert noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.possible_noise_model_categories
+                        if not(noisemoddef[inst_fullcat][inst_name][instmod_shortname] in self.possible_noise_model_categories):
+                            raise ValueError(f"noise model category {noisemoddef[inst_fullcat][inst_name][instmod_shortname]} is not an available noise model {self.possible_noise_model_categories}.")
         # Load it
         for inst_fullcat in noisemoddef:
             for inst_name in noisemoddef[inst_fullcat]:

@@ -27,7 +27,7 @@ d_name_component_removed_to_print = {'inst_var': "Inst Var", 'sys_var': "Sys var
                                      }
 
 
-def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasim_kwargs=None,
+def create_IND_phasefolded_plots(post_instance, df_param_value, IND_subcat, datasim_kwargs=None,
                                  planets=None, planets_remove_or_add_dict=None, periods=None, periods_remove_or_add_dict=None,
                                  datasetnames=None, row4datasetname=None,
                                  datasetname4model4row=None, npt_model=1000,
@@ -60,7 +60,7 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
     Arguments
     ---------
     post_instance       : Posterior instance
-    df_fittedval        : DataFrame
+    df_param_value        : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
     datasim_kwargs : dict
         Dictionary of keyword arguments for the datasimulator.
@@ -172,7 +172,7 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                                      'add_dict': dict_model_false
                                                      },
                                         }
-    return create_phasefolded_plots(post_instance=post_instance, df_fittedval=df_fittedval,
+    return create_phasefolded_plots(post_instance=post_instance, df_param_value=df_param_value,
                                     compute_raw_models_func=compute_raw_models,
                                     remove_add_model_components_func=remove_add_model_components,
                                     kwargs_compute_model_4_key_model=kwargs_compute_model_4_key_model,
@@ -202,7 +202,7 @@ def create_IND_phasefolded_plots(post_instance, df_fittedval, IND_subcat, datasi
                                     )
 
 
-def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datasim_kwargs=None,
+def create_IND_TSNGLSP_plots(fig, post_instance, df_param_value, IND_subcat, datasim_kwargs=None,
                              datasetnames=None,
                              remove_dict=None,
                              kwargs_compute_model_4_key_model=None,
@@ -223,7 +223,7 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
     fig           :
         Figure instance (provided by the styler)
     post_instance : Posterior instance
-    df_fittedval  : DataFrame
+    df_param_value  : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
     datasim_kwargs : dict
         Dictionary of keyword arguments for the datasimulator.
@@ -398,7 +398,7 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
     kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user)
     if "model_wGP" not in kwargs_compute_model_4_key_model_user:
         kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
-    return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+    return create_TSNGLSP_plots(fig=fig, post_instance=post_instance, df_param_value=df_param_value,
                                 y_name=IND_subcat, inst_cat=f'IND-{IND_subcat}',
                                 compute_raw_models_func=compute_raw_models,
                                 remove_add_model_components_func=remove_add_model_components,
@@ -423,7 +423,7 @@ def create_IND_TSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datas
                                 )
 
 
-def create_IND_iTSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, datasim_kwargs=None,
+def create_IND_iTSNGLSP_plots(fig, post_instance, df_param_value, IND_subcat, datasim_kwargs=None,
                              datasetnames=None,
                              remove_dict=None, show_dict=None,
                              show_removed_in_previousrow=True,
@@ -446,7 +446,7 @@ def create_IND_iTSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, data
     fig           :
         Figure instance (provided by the styler)
     post_instance : Posterior instance
-    df_fittedval  : DataFrame
+    df_param_value  : DataFrame
         Dataframe containing the parameter estimates (index=Parameter_fullname, columns=[value, sigma-, sigma+] )
     datasim_kwargs : dict
         Dictionary of keyword arguments for the datasimulator.
@@ -623,7 +623,7 @@ def create_IND_iTSNGLSP_plots(fig, post_instance, df_fittedval, IND_subcat, data
     if "model_wGP" not in kwargs_compute_model_4_key_model_user:
         kwargs_compute_model_4_key_model.update(kwargs_compute_model_4_key_model_user.get("model", {}))
     # Call the create_iTSNGLSP_plots function
-    return create_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_fittedval=df_fittedval,
+    return create_iTSNGLSP_plots(fig=fig, post_instance=post_instance, df_param_value=df_param_value,
                                  y_name=IND_subcat, inst_cat='IND-{IND_subcat}',
                                  l_iterative_removal=l_iterative_removal,
                                  compute_raw_models_func=compute_raw_models_core,
@@ -705,7 +705,7 @@ def is_valid_model_available(key_model, datasetname, post_instance, **kwargs):
     
     
 def compute_raw_models(tsim, key_model, datasetname, post_instance,
-                       df_fittedval, datasim_kwargs, exptime, supersamp,
+                       df_param_value, datasim_kwargs, exptime, supersamp,
                        get_key_compute_model_func=get_key_compute_model,
                        kwargs_get_key_compute_model=None,
                        split_GP_computation=None,
@@ -714,7 +714,7 @@ def compute_raw_models(tsim, key_model, datasetname, post_instance,
     """
     return compute_raw_models_core(tsim=tsim, key_model=key_model,
                                    datasetname=datasetname, post_instance=post_instance,
-                                   df_fittedval=df_fittedval, datasim_kwargs=datasim_kwargs,
+                                   df_param_value=df_param_value, datasim_kwargs=datasim_kwargs,
                                    exptime=exptime, supersamp=supersamp, get_key_compute_model_func=get_key_compute_model_func,
                                    kwargs_get_key_compute_model=kwargs_get_key_compute_model,
                                    split_GP_computation=split_GP_computation

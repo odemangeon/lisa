@@ -624,12 +624,13 @@ def get_condition(multi, l_inst_model, l_planet, tab, time_vec_name, l_time_vec_
                             add = True
                             for idx, orb_mod in enumerate(l_orbital_model):
                                 if orb_mod is orbital_model:
-                                    if parameters['planet']['Rrat'] is l_Rrat[idx]:
+                                    if ('Rrat' in parameters['planet']) and (parameters['planet']['Rrat'] is l_Rrat[idx]):
                                         add = False
                                         break
                         if add:
                             l_orbital_model.append(orbital_model)
-                            l_Rrat.append(parameters['planet']['Rrat'])
+                            if 'Rrat' in parameters['planet']:
+                                l_Rrat.append(parameters['planet']['Rrat'])
                             l_model_name.append(model_definition.model_name)
                             l_planet_name.append(planet_name)
     l_condition = []
@@ -1375,9 +1376,9 @@ def get_phasecurve(multi, l_inst_model, l_dataset, get_times_from_datasets, phas
                                 else:
                                     pre_text = " + "
                                 if pc_component_model.flux_offset == "zero":
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi}){text_occ}"
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2) * {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi}){text_occ}"
                                 elif pc_component_model.flux_offset == "semi-amplitude":
-                                    returns[func_shortname][i_inputoutput] += f"{pre_text}{amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})){text_occ}"
+                                    returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2) * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})){text_occ}"
                                 else:  # it has to be 'param'
                                     returns[func_shortname][i_inputoutput] += f"{pre_text}({amp} / 2 * (1 + {pc_component_model.sincos}(2 * pi / {period} / {pc_component_model.factor_period} * ({time_vect} - {tic}) + {phi})) + {flux_offset}){text_occ}"
 

@@ -19,7 +19,7 @@ The objective of this package is to provides the core Posterior class.
     - get_lnprior, get_lnlike, get_lnpost
 """
 from loguru import logger
-from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff, ceil, concatenate
+from numpy import inf, isfinite, ones_like, sqrt, array, argsort, any, diff, ceil, concatenate, isnan
 from dill import dump, load
 from os.path import join
 from os import getcwd, chdir
@@ -256,14 +256,29 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
     def __load_config_var_content_instmoddef(self, dico_config_file, **kwargs):
         instmoddef_var = dico_config_file['d_inst_model_def']
         # Check that the content is valid
-        assert isinstance(instmoddef_var, dict)
-        assert set(instmoddef_var.keys()) == set(self.dataset_db.inst_fullcategories)
+        if not(isinstance(instmoddef_var, dict)):
+            raise TypeError(f"d_inst_model_def should be a dict, got {type(instmoddef_var)}")
+        if not(set(instmoddef_var.keys()) == set(self.dataset_db.inst_fullcategories)):
+            raise ValueError("The set of instrument full categories in d_inst_model_def should be equal to the set of instrument categories in the dataset_database. "
+                             f"Got set(d_inst_model_def.keys())={set(instmoddef_var.keys())} "
+                             f"while set(self.dataset_db.inst_fullcategories)={set(self.dataset_db.inst_fullcategories)}"
+                             )
         for inst_fullcat in instmoddef_var:
-            assert isinstance(instmoddef_var[inst_fullcat], dict)
-            assert set(instmoddef_var[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))
+            if not(isinstance(instmoddef_var[inst_fullcat], dict)):
+                raise TypeError(f"d_inst_model_def[{inst_fullcat}] should be a dict, got {type(instmoddef_var[inst_fullcat])}")
+            if not(set(instmoddef_var[inst_fullcat].keys()) == set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))):
+                raise ValueError(f"The set of instrument names in d_inst_model_def[{inst_fullcat}] should be equal to the set of instrument names in the dataset_database for {inst_fullcat}. "
+                                 f"Got set(instmoddef_var[inst_fullcat].keys())={set(instmoddef_var[inst_fullcat].keys())} "
+                                 f"while set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))={set(self.dataset_db.get_instnames(inst_fullcat=inst_fullcat))}"
+                                 )
             for inst_name in instmoddef_var[inst_fullcat]:
-                assert isinstance(instmoddef_var[inst_fullcat][inst_name], dict)
-                assert set(instmoddef_var[inst_fullcat][inst_name].keys()) == set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))
+                if not(isinstance(instmoddef_var[inst_fullcat][inst_name], dict)):
+                    raise TypeError(f"d_inst_model_def[{inst_fullcat}][{inst_name}] should be a dict, got {type(instmoddef_var[inst_fullcat][inst_name])}")
+                if not(set(instmoddef_var[inst_fullcat][inst_name].keys()) == set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))):
+                    raise ValueError(f"The set of dataset numbers in d_inst_model_def[{inst_fullcat}][{inst_name}] should be equal to the set of dataset numbers in the dataset_database for {inst_fullcat} and {inst_name}. "
+                                     f"Got set(instmoddef_var[inst_fullcat][inst_name].keys()={set(instmoddef_var[inst_fullcat][inst_name].keys())} "
+                                     f"while set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))={set(self.dataset_db.get_datasetnbs(inst_fullcat=inst_fullcat, inst_name=inst_name))}"
+                                     )
                 for dst_nb in instmoddef_var[inst_fullcat][inst_name]:
                     assert isinstance(instmoddef_var[inst_fullcat][inst_name][dst_nb], str)
         # Load it
@@ -679,8 +694,14 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         """Return the current content lnprior database."""
         return self.__lnpost_db
 
-    def create_lnposteriors(self):
-        """Get lnposts from the model and store them into lnposteriors."""
+    def create_lnposteriors(self, with_blobs:bool=False):
+        """Get lnposts from the model and store them into lnposteriors.
+        
+        Arguments
+        ---------
+        with_blobs : Bool
+            If True, the lnposterior function will return the blobs (lnlike and lnprior values).
+        """
         if self.islocked_dataset_db:
             self.__lnpost_db = DatabaseFunc(object_stored="posterior", database_name=self.object_name,
                                         instmodel4dataset=self.model.instmodel4dataset,
@@ -689,29 +710,49 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                                         lock_database=self.get_database_Lock_instance())
             (self.lnposteriors.instrument_db.
              update(self._create_lnposteriors(lnlike_db=self.lnlikelihoods.instrument_db,
-                                             lnprior_db=self.lnpriors.instrument_db)))
+                                              lnprior_db=self.lnpriors.instrument_db, with_blobs=with_blobs)))
             (self.lnposteriors.dataset_db.
              update(self.
                     create_lnposteriors_perdataset(lnprior_db_dtset=self.lnpriors.dataset_db,
-                                                   lnlike_db_dtset=self.lnlikelihoods.dataset_db)))
+                                                   lnlike_db_dtset=self.lnlikelihoods.dataset_db, with_blobs=with_blobs)))
         else:
             raise AssertionError(self.msg_err_datasetdb_notlocked)
 
-    def _create_lnposterior(self, lnlike_func, lnprior_func):
-        """Return the log posterior function."""
+    def _create_lnposterior(self, lnlike_func, lnprior_func, with_blobs:bool=False):
+        """Return the log posterior function.
+        
+        Arguments
+        ---------
+        with_blobs : Bool
+            If True, the lnposterior function will return the blobs (lnlike and lnprior values).
+        """
         arg_list = lnlike_func.arg_list.copy()
 
-        def lnpost(p, data, data_err, **kwarg_data):
-            lnprior_val = lnprior_func.function(p)
-            if not isfinite(lnprior_val):
-                return -inf
-            return lnlike_func.function(p, data, data_err, **kwarg_data) + lnprior_val
+        if with_blobs:
+            def lnpost(p, data, data_err, **kwarg_data):
+                lnprior_val = lnprior_func.function(p)
+                if not isfinite(lnprior_val):
+                    return -inf, None, None
+                lnlike_val = lnlike_func.function(p, data, data_err, **kwarg_data)
+                return lnlike_val + lnprior_val, lnlike_val, lnprior_val
+        else:
+            def lnpost(p, data, data_err, **kwarg_data):
+                lnprior_val = lnprior_func.function(p)
+                if not isfinite(lnprior_val):
+                    return -inf
+                return lnlike_func.function(p, data, data_err, **kwarg_data) + lnprior_val
 
         return DocFunction(function=lnpost, arg_list=arg_list)
 
-    def _create_lnposteriors(self, lnlike_db, lnprior_db, affectinstmodel4dataset=False,
+    def _create_lnposteriors(self, lnlike_db, lnprior_db, affectinstmodel4dataset=False, with_blobs:bool=False,
                             lock_db=False):
-        """Return the posterior for each instrument model used."""
+        """Return the posterior for each instrument model used.
+        
+        Arguments
+        ---------
+        with_blobs : Bool
+            If True, the lnposterior function will return the blobs (lnlike and lnprior values).
+        """
         if affectinstmodel4dataset:
             instmodel4dataset = self.instmodel4dataset.copy()
         else:
@@ -729,13 +770,13 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                     for obj in lnlike_db[inst_cat][inst_name][inst_model]:
                         lnlike = lnlike_db[inst_cat][inst_name][inst_model][obj]
                         lnprior = lnprior_db[inst_cat][inst_name][inst_model][obj]
-                        lnpost = self._create_lnposterior(lnlike_func=lnlike, lnprior_func=lnprior)
+                        lnpost = self._create_lnposterior(lnlike_func=lnlike, lnprior_func=lnprior, with_blobs=with_blobs)
                         db[inst_cat][inst_name][inst_model][obj] = lnpost
         if lock_db:
             db.lock()
         return db
 
-    def create_lnposteriors_perdataset(self, lnprior_db_dtset, lnlike_db_dtset):
+    def create_lnposteriors_perdataset(self, lnprior_db_dtset, lnlike_db_dtset, with_blobs:bool=False):
         """Create the log likelihood function with the data hardcoded."""
         db = {}
         for dataset_name in lnprior_db_dtset:
@@ -748,26 +789,41 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
                 continue
             lnlike_docfunc = lnlike_db_dtset[dataset_name]
 
-            def lnpost_withdataset_creator(prior_func, like_func):
-                def lnpost_withdataset(p_vect, *args, **kwargs):
-                    lnprior_val = prior_func(p_vect)
-                    # logger.debug("lnprior: {}".format(lnprior_val))
-                    if not isfinite(lnprior_val):
-                        return -inf
-                    else:
-                        lnlike_val = like_func(p_vect, *args, **kwargs)
-                        if not isfinite(lnlike_val):
-                            logger.error("lnlike: {}".format(lnlike_val))
-                            logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
-                            if np.isnan(lnlike_val):
-                                lnlike_val = -inf
-                        return lnlike_val + lnprior_val
+            def lnpost_withdataset_creator(prior_func, like_func, with_blobs=False):
+                if with_blobs:
+                    def lnpost_withdataset(p_vect, *args, **kwargs):
+                        lnprior_val = prior_func(p_vect)
+                        # logger.debug("lnprior: {}".format(lnprior_val))
+                        if not isfinite(lnprior_val):
+                            return -inf, None, None
+                        else:
+                            lnlike_val = like_func(p_vect, *args, **kwargs)
+                            if not isfinite(lnlike_val):
+                                logger.error("lnlike: {}".format(lnlike_val))
+                                logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
+                                if isnan(lnlike_val):
+                                    lnlike_val = -inf
+                            return lnlike_val + lnprior_val, lnlike_val, lnprior_val
+                else:
+                    def lnpost_withdataset(p_vect, *args, **kwargs):
+                        lnprior_val = prior_func(p_vect)
+                        # logger.debug("lnprior: {}".format(lnprior_val))
+                        if not isfinite(lnprior_val):
+                            return -inf
+                        else:
+                            lnlike_val = like_func(p_vect, *args, **kwargs)
+                            if not isfinite(lnlike_val):
+                                logger.error("lnlike: {}".format(lnlike_val))
+                                logger.error(f"params lnpost ({len(p_vect)}): {p_vect}")
+                                if isnan(lnlike_val):
+                                    lnlike_val = -inf
+                            return lnlike_val + lnprior_val
                 return lnpost_withdataset
 
             mand_kwargs_list = copy(lnlike_docfunc.mand_kwargs_list)
             if par_vec_name in mand_kwargs_list:
                 mand_kwargs_list.remove(par_vec_name)
-            db[dataset_name] = LikelihoodPosteriorDocFunc(function=lnpost_withdataset_creator(prior_func=lnprior_func, like_func=lnlike_docfunc.function),
+            db[dataset_name] = LikelihoodPosteriorDocFunc(function=lnpost_withdataset_creator(prior_func=lnprior_func, like_func=lnlike_docfunc.function, with_blobs=with_blobs),
                                                           param_model_names_list=lnlike_docfunc.param_model_names_list,
                                                           params_model_vect_name=par_vec_name,
                                                           inst_cats_list=lnlike_docfunc.inst_cats_list,
@@ -781,8 +837,14 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
 
         return db
     
-    def create_allfunctions(self):
-        """Get the datasimulators, lnlikelihoods, lnpriors and lnposteriors"""
+    def create_allfunctions(self, with_blobs:bool=False):
+        """Get the datasimulators, lnlikelihoods, lnpriors and lnposteriors.
+
+        Arguments
+        ---------
+        with_blobs : Bool
+            If True, the lnposterior function will return the blobs (lnlike and lnprior values).
+        """
         logger.info("Create datasimulator functions")
         self.create_datasimulators()
 
@@ -793,7 +855,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         self.create_lnpriors()
 
         logger.info("Create posterior functions")
-        self.create_lnposteriors()
+        self.create_lnposteriors(with_blobs=with_blobs)
 
     _extension_postinstance = "_posterior_instance.pk"
 
