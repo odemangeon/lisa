@@ -93,37 +93,6 @@ class Core_DecorrelationLikelihood(object, metaclass=MandatoryReadOnlyAttrAndMet
 
         return d_required_datasetkwargkeys_4_dataset, d_required_datasetkwargkeys_4_inddataset
 
-    # @classmethod
-    # def get_likelihood_elements(cls, match_datasets, l_dataset_name):
-    #     """Return the elements required to build the likelihood decorrelation of a given decorrelation
-    #     model.
-    #
-    #     The only necessary input from this decorrelation model configuration is the 'match datasets'
-    #     info.
-    #
-    #     This function is called by
-    #
-    #     Arguments
-    #     ---------
-    #     match_datasets      : dict
-    #         Dictionary that match the simulated datasets names to the indicator datasets names used for
-    #         the likelihood decorrelation model
-    #     l_dataset_name      : list of str
-    #         list of datasets name in the final datasimulator used in the likelihood computation
-    #
-    #     Returns
-    #     -------
-    #     d_likelihood_element    : dict
-    #
-    #     """
-    #     d_likelihood_element = cls.defdic_decorr_func()
-    #     for dataset_name, ind_dataset_name in match_datasets.items():
-    #         d_likelihood_element["l_idx_simdata"].append(l_dataset_name.index(dataset_name))
-    #         d_likelihood_element["l_datasetkwargs_req"].append(cls.l_required_datasetkwarg_keys)
-    #         d_likelihood_element["l_inddataset_name"].append(ind_dataset_name)
-    #         d_likelihood_element["l_inddatasetkwargs_req"].append(cls.l_required_inddatasetkwarg_keys)
-    #     return d_likelihood_element
-
     @classmethod
     def defdic_decorr_func(cls):
         return {"l_idx_simdata": [],

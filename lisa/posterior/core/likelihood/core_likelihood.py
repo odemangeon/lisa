@@ -221,9 +221,9 @@ class LikelihoodCreator(object):
             func_builder.add_variable_to_ldict(variable_name=f"format_datasetkwargs_{noisemodel_cat}", variable_content=dico["f_format_datasetkwargs"],
                                                function_shortname=func_shortname_lnlike, exist_ok=False)
 
-        # Update the parameters required taking into account the parameter of the decorrelation model
-        # Also for each instrument category create the text of for the implementation of decorrelation
-        # modeled: Production of the spline function, modification of the sim data, plot function
+        # Update the parameters required taking into account the parameter of the decorrelation likelihood
+        # Also for each instrument category create the text of for the implementation of decorrelation:
+        # Production of the spline function, modification of the sim data, plot function
         d_decorr_elements_4_instcat_4_decorr_model = {inst_cat: {} for inst_cat in d_l_model_decorr_name_4_inst_cat.keys()}
         for inst_cat, l_decorr_model_name in d_l_model_decorr_name_4_inst_cat.items():
             instcat_mod_class = self.instcat_models[inst_cat]
