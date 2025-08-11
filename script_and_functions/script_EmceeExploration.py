@@ -32,7 +32,7 @@ from lisa.explore_analyze.misc import get_def_output_folders
 ###############################
 obj_name = "target_name"  # Change
 
-run_name = "initrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
+run_name = "burninrun"  # Change extension to add at the end (before .pk) of the name of the pickle files to save the exploration.
 
 output_folders = get_def_output_folders(run_folder=None)
 
