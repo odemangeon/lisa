@@ -184,20 +184,20 @@ for ii in range(len(d_plot)):
     l_expression_and_datasetname = []
     for idx_dst in d_plot[ii]["l_idx_dst"]:
         # If you fixed the contamination to zero, you should remove contam from the expression
-        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{instrument}_{idx_dst}"))
+        l_expression_and_datasetname.append((expression_data, f"LC_{obj_name}_{instrument}_{idx_dst}"))
     if d_plot[ii]["occultation"]:
         phasefold_centralphase = 0.5
     else:
         phasefold_centralphase = 0.
     plotdef_PF.set_phasefold_properties(T0=d_plot[ii]["T0"], period=d_plot[ii]["P"], phasefold_centralphase=phasefold_centralphase, show_time_from_T0=show_time_from_T0, i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"])
     # If you fixed the contamination to zero, you should remove contam from the expression
-    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_{ii}", l_expression_and_datasetname=[(expression_data, f"LC_{obj_name}_{instrument}_{nb_dst}") for nb_dst in d_plot[ii]["l_idx_dst"]], 
+    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_{ii}", l_expression_and_datasetname=l_expression_and_datasetname, 
                                             i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"],
                                             pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False, 'label':f"CHEOPS"},
                                             time_factor=time_fact, value_factor=LC_fact,
                                             )
     # If you fixed the contamination to zero, you should remove contam from the expression
-    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_bin_{ii}", l_expression_and_datasetname=[(expression_data, f"LC_{obj_name}_{instrument}_{nb_dst}") for nb_dst in d_plot[ii]["l_idx_dst"]], 
+    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_bin_{ii}", l_expression_and_datasetname=l_expression_and_datasetname, 
                                             i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"],
                                             exptime=0.5,
                                             pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {bin:.0f}min"},
