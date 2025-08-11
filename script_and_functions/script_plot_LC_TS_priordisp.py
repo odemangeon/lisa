@@ -89,56 +89,80 @@ time_unit = 'BJD - 2.457.000'
 LC_fact = 1e6
 LC_unit = "ppm"
 
-plotdef_TS = PlotsDefinition_TS(nb_rows=1, nb_cols=5)
+nb_rows = 1
+nb_cols = 1
+
+transits = False
+occultations = False
+
+bin = 98.7  # CHEOPS orbit in min
+instrument = "Spitzer"
+has_contam = False  # If the contamination is fixed to zero, you should remove contam from the expression
+has_decorrelation_likelihood = False  # If the decorrelation likelihood is fixed to zero, you should remove decorrelation_likelihood from the expression
+
+plotdef_TS = PlotsDefinition_TS(nb_rows=nb_rows, nb_cols=nb_cols)
 
 # This is an example of how to fill plotdef_TS and specify what you want to plot
 # Modify it to your needs
-
-l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
-cheops = "CHEOPS"
-orbit_CHEOPS = 98.7  # CHEOPS orbit in min
+from config_file import l_idxdst_all
 
 d_plot = {}
 
-for ii, idx_dst in enumerate(l_idxdst_CHEOPS_all):
-    d_plot[ii] = {"l_nb_dst": [l_idxdst_CHEOPS_all[idx_dst]], 'time_limits': None}
+for ii, idx_dst in enumerate(l_idxdst_all):
+    d_plot[ii] = {"l_nb_dst": [l_idxdst_all[ii]], 'time_limits': None}
 
 nb_random = 10
 l_df_param_value = []
 for i in range(nb_random):
     l_df_param_value.append(generate_param_dataframe_from_priors(post_instance=post_instance, init_distrib=None))
 
+props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+
 for ii, dico_ii in d_plot.items():
-    i_row = 0  # ii // 5
-    i_col = ii  # ii % 5
+    i_row = ii // nb_cols
+    i_col = ii % nb_cols
     for nb_dst in dico_ii['l_nb_dst']:
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
+        expression_data = "data"
+        expression_model = "model"
+        if has_contam:
+            expression_data += " / contam"
+            expression_model += " / contam"
+        if has_decorrelation_likelihood:
+            expression_data += " - decorrelation_likelihood"
+        expression_data += " - 1"
+        expression_model += " - 1"
+        plotdef_TS.add_modelordata_to_grid(name=f"data_{nb_dst}", expression=expression_data, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
-                                           exptime=orbit_CHEOPS/60/24,
-                                           pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CHEOPS:.1f}min"},
+        plotdef_TS.add_modelordata_to_grid(name=f"data_{nb_dst}_bin", expression=expression_data, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+                                           exptime=bin/60/24,
+                                           pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {bin:.1f}min"},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
     for jj, df_param_value_j in enumerate(l_df_param_value):
         alpha = 1. if jj == 0 else 0.2
-        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression="model - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression=expression_model, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                            df_param_value=df_param_value_j,
                                            pl_kwargs={'color': 'r', 'label': None, 'alpha': alpha}, 
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-    plotdef_TS.things2plot[f"data_CH{0}"].pl_kwargs['label'] = "CHEOPS"
-    plotdef_TS.things2plot[f"model_row{i_row}col{i_col}_rand{0}"].pl_kwargs['label'] = "Model"
+    plotdef_TS.things2plot[f"model_row{i_row}col{i_col}_rand{jj}"].pl_kwargs['label'] = "Model"
+    plotdef_TS.things2plot[f"instvar{dico_ii['l_nb_dst'][0]}"].pl_kwargs['label'] = "Inst Var"
+    plotdef_TS.things2plot[f"data_{dico_ii['l_nb_dst'][0]}"].pl_kwargs['label'] = instrument
+    axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
+    axes_properties_ii.text_kwargs.append({'x': 0.95, 'y': 0.95, 's': f"dst={dico_ii['l_nb_dst']}", 'bbox': props, 'ha': 'right', 'va': 'top'})
+
     if i_col != 0:
-        axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
         axes_properties_ii.ydata.show_label = False
         # axes_properties_ii.ydata.show_ticklabels = False
         axes_properties_ii.yresi.show_label = False
         axes_properties_ii.yresi.show_ticklabels = False
+    if i_row != (nb_rows - 1):
+        axes_properties_ii.x.show_label = False        
 
 plotdef_TS.set_df_param_value(df_param_value=l_df_param_value[0])
 
@@ -162,7 +186,7 @@ plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='yresi')
 # Execution of the script
 #########################
 
-file_path_computedmodels_db = os.path.join(output_folders['pickles_analyze'], f"{obj_name}_computedmodels_db{extension_analysis}.pk") 
+file_path_computedmodels_db = os.path.join(output_folders['pickles_analyze'], f"{obj_name}_computedmodels_db_prior.pk") 
 if 'computedmodels_db' not in globals():
     loaded_computedmodels_db = False
     if load_computedmodels_db:
@@ -200,7 +224,7 @@ if save_computedmodels_db:
                 dill.dump(computedmodels_db, ff)
 
 if save_rms_values_LC:
-    file_path_rms_values_TS_LC = os.path.join(output_folders['pickles_analyze'], f"{obj_name}_rms_values_TS_LC{extension_analysis}.pk") 
+    file_path_rms_values_TS_LC = os.path.join(output_folders['pickles_analyze'], f"{obj_name}_rms_values_TS_LC_prior.pk") 
     save = True
     if os.path.isfile(file_path_rms_values_TS_LC):
         logger.info(f"An rm_TS_LC file already exists: {file_path_rms_values_TS_LC}.")
@@ -213,7 +237,7 @@ if save_rms_values_LC:
 ############
 ## Save plot
 if save_plot:
-    pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_plot{extension_analysis}_paper.pdf"))
+    pl.savefig(os.path.join(output_folders["plots"], f"RV_TS_plot_prior_paper.pdf"))
     pl.close("all")
 else:
     pl.show()
