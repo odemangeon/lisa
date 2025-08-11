@@ -12,6 +12,7 @@ import pandas as pd
 import random
 import json
 import emcee
+import numpy as np
 # import matplotlib
 
 from os import getcwd
@@ -25,7 +26,6 @@ import lisa.posterior.core.posterior as cpost
 from lisa.explore_analyze.misc import get_def_output_folders
 from lisa.explore_analyze.lc_plots import create_LC_PF_plots
 from lisa.explore_analyze.pf_plots import PlotsDefinition_PF
-from lisa.tools.chain_interpreter import ChainsInterpret
 
 ### for the A&A article class
 AandA_width = 3.543311946  # in inches = \hsize = 256.0748pt
@@ -50,7 +50,7 @@ obj_name = "target_name"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-run_name = "initrun"
+run_name = "burninrun"
 extension_analysis = f"_{run_name}"
 
 #########
@@ -136,22 +136,32 @@ time_unit = 'h'
 LC_fact = 1e6
 LC_unit = 'ppm'
 
-plotdef_PF = PlotsDefinition_PF(nb_rows=1, nb_cols=1)
+transits = False
+occultations = True
+
+bin = 98.7  # CHEOPS orbit in min
+instrument = "CHEOPS"
+has_contam = True  # If the contamination is fixed to zero, you should remove contam from the expression
+has_decorrelation_likelihood = True  # If the decorrelation likelihood is fixed to zero, you should remove decorrelation_likelihood from the expression
+
+plotdef_PF = PlotsDefinition_PF(nb_rows=1, nb_cols=int(transits) + int(occultations))
 
 # This is an example of how to fill plotdef_PF and specify what you want to plot
 # Modify it to your needs
+from config_file import l_idxdst_CHEOPS_all
 
-l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
+if transits:
+    from config_file import l_idxdst_CHEOPS_tr
+if occultations:
+    from config_file import l_idxdst_CHEOPS_occ
 
-orbit_CH = 98.7 # CHEOPS orbit in min
-cheops = "CHEOPSPIPE"
-
-l_planet = ["b", ] 
-
-d_plot = {}
-
-for ii, planet in enumerate(l_planet):
-    d_plot[planet] = {"T0": df_fittedval.loc[f'{planet}_tic']['value'], "P": df_fittedval.loc[f'{planet}_P']['value'], "i_row": 0, "i_col": ii, "l_nb_dst": l_idxdst_CHEOPS_occ}
+planet = "b"
+d_plot = []
+if occultations:
+    d_plot.append({"T0": df_fittedval.loc[f'{planet}_tic']['value'], "P": df_fittedval.loc[f'{planet}_P']['value'], "i_row": 0, "i_col": 0, "l_idx_dst": l_idxdst_CHEOPS_occ, "occultation": True})
+if transits:
+    d_plot.append({"T0": df_fittedval.loc[f'{planet}_tic']['value'], "P": df_fittedval.loc[f'{planet}_P']['value'], "i_row": 0, "i_col": 1, "l_idx_dst": l_idxdst_CHEOPS_tr, "occultation": False})
+# d_plot.append({"T0": df_fittedval.loc[f'{planet}_tic']['value'], "P": df_fittedval.loc[f'{planet}_P']['value'], "i_row": 0, "i_col": 2, "l_idx_dst": l_idx_tr_planetb + l_idx_occ_planetb, "occultation": False})
 
 nb_random = 10
 l_df_param_value = []
@@ -161,41 +171,71 @@ for i in range(nb_random):
     l_df_param_value.append(DataFrame({"value": chains[random_iteration, :]}, index=l_param_name))
 del chains
 
-for planet in ["b", ]:
+for ii in range(len(d_plot)):
+    expression_data = "(data - inst_var)"
+    expression_model = "(model - inst_var)"
+    if has_contam:
+        expression_data += " / contam"
+        expression_model += " / contam"
+    if has_decorrelation_likelihood:
+        expression_data += " - decorrelation_likelihood"
+    expression_data += " - 1"
+    expression_model += " - 1"
     l_expression_and_datasetname = []
-    for nb_dst in d_plot[planet]["l_nb_dst"]:
+    for idx_dst in d_plot[ii]["l_idx_dst"]:
         # If you fixed the contamination to zero, you should remove contam from the expression
-        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}"))    
-    plotdef_PF.set_phasefold_properties(T0=d_plot[planet]["T0"], period=d_plot[planet]["P"], phasefold_centralphase=0.5, show_time_from_T0=show_time_from_T0, i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
+        l_expression_and_datasetname.append(("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{instrument}_{idx_dst}"))
+    if d_plot[ii]["occultation"]:
+        phasefold_centralphase = 0.5
+    else:
+        phasefold_centralphase = 0.
+    plotdef_PF.set_phasefold_properties(T0=d_plot[ii]["T0"], period=d_plot[ii]["P"], phasefold_centralphase=phasefold_centralphase, show_time_from_T0=show_time_from_T0, i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"])
     # If you fixed the contamination to zero, you should remove contam from the expression
-    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
-                                            i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
+    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_{ii}", l_expression_and_datasetname=[(expression_data, f"LC_{obj_name}_{instrument}_{nb_dst}") for nb_dst in d_plot[ii]["l_idx_dst"]], 
+                                            i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"],
                                             pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False, 'label':f"CHEOPS"},
                                             time_factor=time_fact, value_factor=LC_fact,
                                             )
     # If you fixed the contamination to zero, you should remove contam from the expression
-    plotdef_PF.add_multimodelordata_to_grid(name="data_CH_all_bin", l_expression_and_datasetname=[("(data - inst_var) / contam - decorrelation_likelihood - 1", f"LC_{obj_name}_{cheops}_{nb_dst}") for nb_dst in l_idxdst_CHEOPS_all], 
-                                            i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"],
+    plotdef_PF.add_multimodelordata_to_grid(name=f"data_all_bin_{ii}", l_expression_and_datasetname=[(expression_data, f"LC_{obj_name}_{instrument}_{nb_dst}") for nb_dst in d_plot[ii]["l_idx_dst"]], 
+                                            i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"],
                                             exptime=0.5,
-                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CH:.0f}min"},
+                                            pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {bin:.0f}min"},
                                             time_factor=time_fact, value_factor=LC_fact,
                                             )
+    if d_plot[ii]["occultation"]:
+        time_limits = (d_plot[ii]["T0"] + (0.38 * d_plot[ii]["P"]), d_plot[ii]["T0"] + (0.62 * d_plot[ii]["P"]))
+    else:
+        time_limits = (d_plot[ii]["T0"] + (-0.12 * d_plot[ii]["P"]), d_plot[ii]["T0"] + (0.12 * d_plot[ii]["P"]))
     # If you fixed the contamination to zero, you should remove contam from the expression
-    plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[planet]['i_row']}col{d_plot[planet]['i_col']}", expression="(model - inst_var) / contam - 1", 
-                                       datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}", 
-                                       time_limits=(d_plot[planet]["T0"] + (0.38 * d_plot[planet]["P"]), d_plot[planet]["T0"] + (0.62 * d_plot[planet]["P"])),
+    plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[ii]['i_row']}col{d_plot[ii]['i_col']}", expression=expression_model, 
+                                       datasetname=f"LC_{obj_name}_{instrument}_{idx_dst}", 
+                                       time_limits=time_limits,
+                                       df_param_value=df_fittedval,
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
-                                       i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
+                                       i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"])
     for jj, df_param_value_j in enumerate(l_df_param_value):
         # If you fixed the contamination to zero, you should remove contam from the expression
-        plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[planet]['i_row']}col{d_plot[planet]['i_col']}_rand{jj}", expression="(model - inst_var) / contam - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}", 
-                                           time_limits=(d_plot[planet]["T0"] + (0.38 * d_plot[planet]["P"]), d_plot[planet]["T0"] + (0.62 * d_plot[planet]["P"])),
-                                           df_param_value=df_param_value_j,
-                                           pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
-                                           time_factor=time_fact, value_factor=LC_fact,
-                                           i_row=d_plot[planet]["i_row"], i_col=d_plot[planet]["i_col"])
+        plotdef_PF.add_modelordata_to_grid(name=f"model_row{d_plot[ii]['i_row']}col{d_plot[ii]['i_col']}_rand{jj}", expression=expression_model, 
+                                            datasetname=f"LC_{obj_name}_{instrument}_{idx_dst}", 
+                                            time_limits=time_limits,
+                                            df_param_value=df_param_value_j,
+                                            pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
+                                            time_factor=time_fact, value_factor=LC_fact,
+                                            i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"])
+    if d_plot[ii]["occultation"]:
+        ylims = None  #(-300, 300)
+        xlims = None  # (21, 33)
+    else:
+        ylims = None  # (-15000, 3000)
+        xlims = None  # (-2, 3.5)
+    axes_properties_ii = plotdef_PF.get_axes_properties(i_row=d_plot[ii]["i_row"], i_col=d_plot[ii]["i_col"])
+    axes_properties_ii.yresi.lims = (-250, 250)
+    if ylims is not None:
+        axes_properties_ii.ydata.lims = ylims
+    if xlims is not None:
+        axes_properties_ii.x.lims = xlims
 
 plotdef_PF.set_df_param_value(df_param_value=df_fittedval)
 
@@ -206,8 +246,7 @@ plotdef_PF.set_axis_property(value=LC_unit, property='unit', axis='ydata')
 plotdef_PF.set_axis_property(value='O-C', property='name', axis='yresi')
 plotdef_PF.set_axis_property(value=LC_unit, property='unit', axis='yresi')
 
-plotdef_PF.set_axis_property(value=(-150, 300), property='lims', axis='ydata')
-plotdef_PF.set_axis_property(value=(-250, 250), property='lims', axis='yresi')
+
 
 # periods = None  # e.g. [46., ]
 # periods_remove_or_add_dict = None # e.g. {46.: {'add_dict': {'GP_model': True}}}
@@ -284,9 +323,9 @@ else:
 
 #################################
 ## Save binned phase folded curve
-if save_binned_phasefolded_data:
-    df = pd.DataFrame(data={"time for tic [h]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_times_0"], "binned data [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_datas_0"], "binned data err [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_data_errs_0"], "binned data err with jitter [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_data_err_jitters_0"]},
-                      )
-    df.to_csv(path_or_buf=os.path.join(output_folders["tables"], f"binned_LC{extension_analysis}.csv"), index=False)
-    pl.errorbar(x=df["time for tic [h]"], y=df["binned data [ppm]"], yerr=df["binned data err with jitter [ppm]"])
-    pl.show()
+# if save_binned_phasefolded_data:
+#     df = pd.DataFrame(data={"time for tic [h]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_times_0"], "binned data [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_datas_0"], "binned data err [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_data_errs_0"], "binned data err with jitter [ppm]": outputs_load_datasets_and_models_LC[0]["phase_folded_binned_data_err_jitters_0"]},
+#                       )
+#     df.to_csv(path_or_buf=os.path.join(output_folders["tables"], f"binned_LC{extension_analysis}.csv"), index=False)
+#     pl.errorbar(x=df["time for tic [h]"], y=df["binned data [ppm]"], yerr=df["binned data err with jitter [ppm]"])
+#     pl.show()
