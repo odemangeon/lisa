@@ -51,7 +51,7 @@ obj_name = "target_name"
 run_folder = getcwd()
 output_folders = get_def_output_folders(run_folder=run_folder)
 
-run_name = "initrun"
+run_name = "burninrun"
 extension_analysis = f"_{run_name}"
 
 #########
@@ -135,20 +135,32 @@ time_unit = 'BJD - 2.457.000'
 LC_fact = 1e6
 LC_unit = "ppm"
 
-plotdef_TS = PlotsDefinition_TS(nb_rows=1, nb_cols=5)
+nb_rows = 3
+nb_cols = 2
+
+transits = False
+occultations = True
+
+bin = 98.7  # CHEOPS orbit in min
+instrument = "CHEOPS"
+has_contam = True  # If the contamination is fixed to zero, you should remove contam from the expression
+has_decorrelation_likelihood = True  # If the decorrelation likelihood is fixed to zero, you should remove decorrelation_likelihood from the expression
+
+plotdef_TS = PlotsDefinition_TS(nb_rows=nb_rows, nb_cols=nb_cols)
 
 # This is an example of how to fill plotdef_TS and specify what you want to plot
 # Modify it to your needs
+from config_file import l_idxdst_CHEOPS_all
 
-l_idxdst_CHEOPS_occ = l_idxdst_CHEOPS_all = list(range(5))
-
-orbit_CHEOPS = 98.7  # CHEOPS orbit in min
-cheops = "CHEOPSPIPE"
+if transits:
+    from config_file import l_idxdst_CHEOPS_tr
+if occultations:
+    from config_file import l_idxdst_CHEOPS_occ
 
 d_plot = {}
 
 for ii, idx_dst in enumerate(l_idxdst_CHEOPS_all):
-    d_plot[ii] = {"l_nb_dst": [l_idxdst_CHEOPS_all[idx_dst]], 'time_limits': None}
+    d_plot[ii] = {"l_nb_dst": [l_idxdst_CHEOPS_all[ii]], 'time_limits': None, 'occultation': idx_dst in l_idxdst_CHEOPS_occ}
 
 nb_random = 10
 l_df_param_value = []
@@ -158,54 +170,70 @@ for i in range(nb_random):
     l_df_param_value.append(DataFrame({"value": chains[random_iteration, :]}, index=l_param_name))
 del chains
 
+props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+
 for ii, dico_ii in d_plot.items():
-    i_row = 0  # ii // 5
-    i_col = ii  # ii % 5
+    i_row = ii // nb_cols
+    i_col = ii % nb_cols
     for nb_dst in dico_ii['l_nb_dst']:
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}", expression="data - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
+        expression_data = "data"
+        expression_model = "model"
+        if has_contam:
+            expression_data += " / contam"
+            expression_model += " / contam"
+        if has_decorrelation_likelihood:
+            expression_data += " - decorrelation_likelihood"
+        expression_data += " - 1"
+        expression_model += " - 1"
+        plotdef_TS.add_modelordata_to_grid(name=f"data_{nb_dst}", expression=expression_data, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
                                            pl_kwargs={'color':"k", 'alpha':0.1, 'fmt':'.','show_error': False},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-        plotdef_TS.add_modelordata_to_grid(name=f"data_CH{nb_dst}_bin", expression="data - decorrelation_likelihood - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}",
-                                           exptime=orbit_CHEOPS/60/24,
-                                           pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {orbit_CHEOPS:.1f}min"},
+        plotdef_TS.add_modelordata_to_grid(name=f"data_{nb_dst}_bin", expression=expression_data, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}",
+                                           exptime=bin/60/24,
+                                           pl_kwargs={'color':"k", 'alpha':1, 'fmt':'o','show_error': True, 'label':f"bin: {bin:.1f}min"},
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
         plotdef_TS.add_modelordata_to_grid(name=f"instvar{nb_dst}", expression="inst_var", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}", time_limits=None,
+                                           datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}", time_limits=None,
                                            pl_kwargs={'color': 'g', 'label': None},
                                            time_factor=time_fact, value_factor=LC_fact, 
                                            i_row=i_row, i_col=i_col)
         for jj, df_param_value_j in enumerate(l_df_param_value):
             plotdef_TS.add_modelordata_to_grid(name=f"instvar{nb_dst}_rand{jj}", expression="inst_var", 
-                                               datasetname=f"LC_{obj_name}_{cheops}_{nb_dst}", time_limits=None,
+                                               datasetname=f"LC_{obj_name}_{instrument}_{nb_dst}", time_limits=None,
                                                df_param_value=df_param_value_j,
                                                pl_kwargs={'color': 'g', 'label': None, 'alpha': 0.2},
                                                time_factor=time_fact, value_factor=LC_fact, 
                                                i_row=i_row, i_col=i_col)
-    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression="model - 1", 
-                                       datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+    plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}", expression=expression_model, 
+                                       datasetname=f"LC_{obj_name}_{instrument}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                        pl_kwargs={'color': 'r', 'label': 'planet model'}, 
                                        time_factor=time_fact, value_factor=LC_fact,
                                        i_row=i_row, i_col=i_col)
     for jj, df_param_value_j in enumerate(l_df_param_value):
-        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression="model - 1", 
-                                           datasetname=f"LC_{obj_name}_{cheops}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
+        plotdef_TS.add_modelordata_to_grid(name=f"model_row{i_row}col{i_col}_rand{jj}", expression=expression_model, 
+                                           datasetname=f"LC_{obj_name}_{instrument}_{dico_ii['l_nb_dst'][0]}", time_limits=dico_ii['time_limits'],
                                            df_param_value=df_param_value_j,
                                            pl_kwargs={'color': 'r', 'label': None, 'alpha': 0.2}, 
                                            time_factor=time_fact, value_factor=LC_fact,
                                            i_row=i_row, i_col=i_col)
-    plotdef_TS.things2plot[f"data_CH{0}"].pl_kwargs['label'] = "CHEOPS"
     plotdef_TS.things2plot[f"model_row{i_row}col{i_col}"].pl_kwargs['label'] = "Model"
-    plotdef_TS.things2plot[f"instvar{0}"].pl_kwargs['label'] = "Inst Var"
+    plotdef_TS.things2plot[f"instvar{dico_ii['l_nb_dst'][0]}"].pl_kwargs['label'] = "Inst Var"
+    plotdef_TS.things2plot[f"data_{dico_ii['l_nb_dst'][0]}"].pl_kwargs['label'] = instrument
+    axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
+    axes_properties_ii.text_kwargs.append({'x': 0.95, 'y': 0.95, 's': f"dst={dico_ii['l_nb_dst']}", 'bbox': props, 'ha': 'right', 'va': 'top'})
+    # if dico_ii['l_nb_dst'][0] in l_idxdst_CHEOPS_occ:
+    #     axes_properties_ii.ydata.lims = (500, 1000)
     if i_col != 0:
-        axes_properties_ii = plotdef_TS.get_axes_properties(i_row=i_row, i_col=i_col)
         axes_properties_ii.ydata.show_label = False
         # axes_properties_ii.ydata.show_ticklabels = False
         axes_properties_ii.yresi.show_label = False
         axes_properties_ii.yresi.show_ticklabels = False
+    if i_row != (nb_rows - 1):
+        axes_properties_ii.x.show_label = False        
 
 plotdef_TS.set_df_param_value(df_param_value=df_fittedval)
 
@@ -218,7 +246,7 @@ plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='ydata')
 plotdef_TS.set_axis_property(value='O-C', property='name', axis='yresi')
 plotdef_TS.set_axis_property(value=LC_unit, property='unit', axis='yresi')
 
-plotdef_TS.set_axis_property(value=(-1000, 1000), property='lims', axis='yresi')
+plotdef_TS.set_axis_property(value=(-500, 500), property='lims', axis='yresi')
 
 # show_title_TS = True
 # indicate_y_outliers = {"data": False, "resi": False}
