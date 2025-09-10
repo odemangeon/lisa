@@ -834,13 +834,13 @@ def gettsc_Winn2010(P, tic, ecosw):
     This is a fisrt order in ecc approximation.
 
     :param numpy.ndarray P: period in [time unit]
-    :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
+    :param numpy.ndarray tc: time of conjonction of the planet in [time unit, same as P]
     :param np.array/float ecosw: eccentricity.cos(omega)
     """
     return tic + P /2 * (1 + 4 / pi * ecosw)
 
 
-def getdeltatc_Winn2010(P, tic, ecosw):
+def getdeltatc_Winn2010(P, ecosw, deltatc_fact=1):
     """Returns time difference between time of superior and inferior conjunction.
 
     Source: Winn 2010 Eq. 33, Exoplanet Transits and Occultations, arXiv:1001.2010v1 [astro-ph.EP] https://arxiv.org/pdf/1001.2010
@@ -849,19 +849,19 @@ def getdeltatc_Winn2010(P, tic, ecosw):
     :param numpy.ndarray P: period in [time unit]
     :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
     :param np.array/float ecosw: eccentricity.cos(omega)
+    :param flaot deltatc_fact: multiplicative factor to apply to the result to convert it from the unit of P to any unit you might want
     """
-    return P /2 * (1 + 4 / pi * ecosw)
+    return P /2 * (1 + 4 / pi * ecosw) * deltatc_fact
 
 
-def getecosw_Winn2010(P, deltatc, ecosw):
+def getecosw_Winn2010(P, deltatc):
     """Returns ecosw from (time of mid secondary eclipse).
 
     Source: From Winn 2010 Eq. 33, Exoplanet Transits and Occultations, arXiv:1001.2010v1 [astro-ph.EP] https://arxiv.org/pdf/1001.2010
     This is a fisrt order in ecc approximation.
 
     :param numpy.ndarray P: period in [time unit]
-    :param numpy.ndarray tc: time of conjonction of the planet in [time unit]
-    :param np.array/float ecosw: eccentricity.cos(omega)
+    :param numpy.ndarray deltatc: time difference between time of superior and inferior conjunction in [time unit, same as P]
     """
     return (deltatc / (P/2) - 1) / (4/pi)
 
