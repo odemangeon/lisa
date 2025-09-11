@@ -120,7 +120,7 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
         # Initialize the configuration file attribute
         ConfigFileAttr.__init__(self)        
         
-    def configure_posterior(self, path_config_file=None, ask_before_adding=False, cluster=False):
+    def configure_posterior(self, path_config_file=None, ask_before_adding=False, config_logger=None, cluster=False):
         """Configure the whole posterior using the configuration file.
 
         The configuration file contains all the configuration for the analysis
@@ -147,17 +147,17 @@ class Posterior(Named, RunFolderAttr, DstDbLockAttr, ConfigFileAttr):
             self.config_file.path = ask4CreationDefaultFile(path_file=path_config_file, default_file_content=default_file_content, default_folder=None)
 
         logger.info(f"Load object name and folders.")
-        self._load_config(config2load='objectnameNfolders', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='objectnameNfolders', ask_before_adding=ask_before_adding, config_logger=config_logger)
 
         logger.info(f"Load datasets.")
-        self._load_config(config2load='datasets', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='datasets', ask_before_adding=ask_before_adding, config_logger=config_logger)
 
         logger.info(f"Load instrument models definition.")
-        instmodel4dataset = self._load_config(config2load='instmoddef', ask_before_adding=ask_before_adding)
+        instmodel4dataset = self._load_config(config2load='instmoddef', ask_before_adding=ask_before_adding, config_logger=config_logger)
         self.dataset_db.lock()
 
         logger.info("Load model category definition.")
-        self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset, ask_before_adding=ask_before_adding)
+        self._load_config(config2load='modelcatdef', instmodel4dataset=instmodel4dataset, ask_before_adding=ask_before_adding, config_logger=config_logger)
 
         self.model._configure_model(ask_before_adding=ask_before_adding)
 

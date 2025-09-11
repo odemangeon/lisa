@@ -157,11 +157,11 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Methods related to the noise model categories
     ###############################################
 
-    def _configure_noisemodel(self, ask_before_adding=False):
+    def _configure_noisemodel(self, ask_before_adding=False, config_logger=None):
         """Configure the noise models
         """
         logger.info("Load noise model definition.")
-        self._load_config(config2load='noisemoddef', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='noisemoddef', ask_before_adding=ask_before_adding, config_logger=config_logger)
 
         logger.info("Load noise model categories configuration.")
         self._init_noisemodels()
@@ -280,18 +280,18 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
     # Methods related to the configuration of the parameters
     ########################################################
 
-    def _configure_parameters(self, ask_before_adding=False):
+    def _configure_parameters(self, ask_before_adding=False, config_logger=None):
         """Add the priors configuration to the configuration file."""
         logger.info("Load duplicate parameters definition")
-        self._load_config(config2load='duplicates', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='duplicates', ask_before_adding=ask_before_adding, config_logger=config_logger)
         logger.info("Load frozen parameters definition")
-        self._load_config(config2load='frozens', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='frozens', ask_before_adding=ask_before_adding, config_logger=config_logger)
         logger.info("Load frozen parameters values definition")
-        self._load_config(config2load='frozen_values', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='frozen_values', ask_before_adding=ask_before_adding, config_logger=config_logger)
         logger.info("Load parameters joint priors definition")
-        self._load_config(config2load='jointpriors', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='jointpriors', ask_before_adding=ask_before_adding, config_logger=config_logger)
         logger.info("Load parameters priors definition")
-        self._load_config(config2load='individualpriors', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='individualpriors', ask_before_adding=ask_before_adding, config_logger=config_logger)
 
     # Methods related to the configuration of the duplicate parameters
     ##################################################################

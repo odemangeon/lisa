@@ -74,13 +74,13 @@ class RV_InstCat_Model(Core_InstCat_Model):
     ## Dealing with the configuration file
     ######################################
 
-    def _configure_instcat_model(self, ask_before_adding=False):
+    def _configure_instcat_model(self, ask_before_adding=False, config_logger=None):
         """Configure the inst cat model
         """
-        super(RV_InstCat_Model, self)._configure_instcat_model(ask_before_adding=ask_before_adding)
+        super(RV_InstCat_Model, self)._configure_instcat_model(ask_before_adding=ask_before_adding, config_logger=config_logger)
 
         logger.info("Load keplerian rv model and instrument model configuration")
-        self._load_config(config2load='rvinstcatmod', ask_before_adding=ask_before_adding)
+        self._load_config(config2load='rvinstcatmod', ask_before_adding=ask_before_adding, config_logger=config_logger)
 
     # Function that get the function required by ConfigFileAttr._load_config
     ########################################################################
