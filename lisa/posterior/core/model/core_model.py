@@ -132,7 +132,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
 
     # Methods related to the instrument model categories
     ####################################################
-    def _configure_model(self, ask_before_adding=False):
+    def _configure_model(self, ask_before_adding=False, config_logger=None):
         """Configure the model
         """
         self._init_instcat_models_and_datasimcreator()
@@ -140,7 +140,7 @@ class Core_Model(Core_ParamContainer, Model_Prior, InstrumentContainerInterface,
         logger.info("Load instrument category configuration.")
         for inst_cat in self.inst_categories: 
             instcat_model = self.get_instcat_model(inst_cat)
-            instcat_model._configure_instcat_model(ask_before_adding=ask_before_adding)
+            instcat_model._configure_instcat_model(ask_before_adding=ask_before_adding, config_logger=config_logger)
 
     def _init_instcat_models_and_datasimcreator(self):
         """Finish the initialisation of the instrument category models required by the model and the associated datasimulators.
