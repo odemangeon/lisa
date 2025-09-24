@@ -2,46 +2,30 @@
 
 ## Installation
 
-1. Dependancies:
+1. Clone the lisa repository
 
-The dependencies are specified in the environment.yml file except for PyGLS and batman that I modified and so cannot be installed using conda/pip and need to be installed from source.
-Also not that jax is currenlty only required by kelp.
+git clone https://github.com/odemangeon/lisa.git
 
-2. Clone the repository
+2. Install the dependancies in a new anaconda environment:
 
-3. Create the software parameters file:
+The dependencies are specified in the environment.yml file.
 
-In lisa/lisa/ create a file called software_parameters.py which contains the following lines:
+conda env create -f environment.yml 
 
-```python3
-#!/usr/bin/python
-# -*- coding:  utf-8 -*-
-from os.path import join
+This will create a new lisa environment with all the dependencies except for 
+for PyGLS that I modified and so cannot be installed using conda/pip and need to be installed from source. So you need to clone PyGLS in a different folder:
 
-# Define the lisa main folder
-lisa_main_folder = "/Users/olivier/Softwares/lisa-dev"  # Replace by the location where you clone the lisa repo.
+git clone https://github.com/LucaMalavolta/PyGLS.git
 
-# Define run and data main folder
-input_run_folder = join(lisa_main_folder, "run")
-input_data_folder = join(lisa_main_folder, "data")
+and then install it from the source in the lisa environment
 
-# Define the relative path of the setup files folder
-setup_files_folder = "setup_files"
+conda activate lisa
+conda develop <path_to_the_directory_where_you_cloned_PyGLS>
 
-# Datasets and instruments setup file
-setupfile_dataset_inst = join(lisa_main_folder, setup_files_folder, "dataset_inst_setup_file.py")
+3. Install lisa in the anaconda environment
 
-# Models setup file
-setupfile_model = join(lisa_main_folder, setup_files_folder, "model_setup_file.py")
-
-# Priors setup file
-setupfile_prior = join(lisa_main_folder, setup_files_folder, "prior_setup_file.py")
-
-# Noise models setup file
-setupfile_noise_model = join(lisa_main_folder, setup_files_folder, "noise_model_setup_file.py")
-```
-
-4. Insert the path to the lisa folder in your python path.
+conda activate lisa
+conda develop <path_to_the_directory_where_you_cloned_lisa>
 
 ## Quick start
 
