@@ -24,6 +24,9 @@ dependencies:
   - ipympl
   - mkdocs
   - mkdocs-material
+  - ruff 
+  - mypy 
+  - pytest
   - pip
   - pip:
       - -e .
