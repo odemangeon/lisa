@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from collections import OrderedDict
 from numbers import Number
 from typing import Dict, List
-from numpy import nan, float_, ndarray, isfinite, random, asarray
+from numpy import nan, ndarray, isfinite, random, asarray
 from numpy.typing import NDArray
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec, SubplotSpec
 from matplotlib.figure import Figure
