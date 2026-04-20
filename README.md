@@ -6,6 +6,16 @@ velocity and photometric time series.
 The codebase contains the core `lisa` package, example analyses, plotting and
 chain-analysis scripts, and tests used during development.
 
+## Documentation
+
+The online documentation is available at:
+
+https://odemangeon.github.io/lisa/
+
+It includes installation instructions, a quick start, and worked example pages.
+The documentation source lives in the `docs/` directory and is built with
+MkDocs.
+
 ## Installation
 
 The recommended installation uses Conda for the scientific Python environment
@@ -52,6 +62,9 @@ conda env update -f environment.yml --prune
 python -m pip install -e .
 ```
 
+For more details, see the online
+[installation guide](https://odemangeon.github.io/lisa/installation/).
+
 ## Quick Start
 
 The `examples/` directory contains complete example analyses with input data and
@@ -79,6 +92,9 @@ Other examples are available in:
 The `script_and_functions/` directory contains reusable analysis and plotting
 scripts that can be copied into a working directory and adapted for a specific
 target.
+
+For a fuller walkthrough, see the online
+[quick-start guide](https://odemangeon.github.io/lisa/quickstart/).
 
 ## Repository Layout
 
@@ -123,31 +139,17 @@ ruff check lisa tests
 ruff format lisa tests
 ```
 
-## Documentation
+## Building the Documentation Locally
 
-This README is the entry point for installation and first use. The next step is
-to add online documentation with a structure such as:
+To preview the documentation locally:
 
-- Installation
-- Quick-start tutorial
-- Worked examples
-- User guide
-- API reference
-- Development guide
-
-A good documentation layout for this repository would be:
-
-```text
-docs/
-  index.md
-  installation.md
-  quickstart.md
-  examples.md
-  user-guide/
-  api-reference/
-  development.md
+```bash
+conda activate lisa
+mkdocs serve
 ```
 
-The examples already in this repository are a strong base for future tutorials:
-each one can become a short documentation page explaining the input files, model
-configuration, exploration step, and chain-analysis step.
+If port `8000` is already in use, choose another port:
+
+```bash
+mkdocs serve -a 127.0.0.1:8001
+```
