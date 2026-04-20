@@ -22,6 +22,8 @@ dependencies:
   - uncertainties
   - ipython
   - ipympl
+  - mkdocs
+  - mkdocs-material
   - pip
   - pip:
       - -e .
@@ -32,4 +34,3 @@ dependencies:
       - batman-package
       - pytransit
       - ldtk
-      - git+https://github.com/LucaMalavolta/PyGLS.git

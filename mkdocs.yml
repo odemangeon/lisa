@@ -1,0 +1,25 @@
+site_name: lisa
+site_description: Exoplanet RV and photometry joint modelling
+repo_url: https://github.com/odemangeon/lisa
+repo_name: odemangeon/lisa
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick Start: quickstart.md
+  - Examples:
+      - WASP-151: examples/wasp-151.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
