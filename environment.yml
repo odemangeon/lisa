@@ -1,10 +1,10 @@
 name: lisa
 channels:
-  - defaults
   - conda-forge
+  - defaults
+
 dependencies:
   - python=3.11
-  - ipython
   - numpy
   - scipy
   - matplotlib
@@ -20,16 +20,16 @@ dependencies:
   - arviz
   - jax
   - uncertainties
-  - ipympl  # For jupyter notebook backend
+  - ipython
+  - ipympl
   - pip
   - pip:
-    - radvel
-    - celerite2
-    - git+https://github.com/bmorris3/kelp.git
-    - PyAstronomy
-    - batman-package
-    - pytransit
-    - ldtk
-
-variables:
-  LISAPATH: /Users/olivier/Softwares/lisa
+      - -e .
+      - radvel
+      - celerite2
+      - git+https://github.com/bmorris3/kelp.git
+      - PyAstronomy
+      - batman-package
+      - pytransit
+      - ldtk
+      - git+https://github.com/LucaMalavolta/PyGLS.git

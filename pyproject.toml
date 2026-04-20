@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lisa"
+version = "0.1.0"
+description = "Exoplanet RV + photometry joint modelling"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+include = ["lisa*"]
+
+# --- Ruff (lint + format) ---
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+  "E",  # pycodestyle
+  "F",  # pyflakes
+  "W",
+  "I",  # imports
+  "B",  # bugbear (very useful)
+  "UP", # modern Python upgrades
+]
+ignore = [
+  "E501",  # line length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# --- mypy (type checking) ---
+[tool.mypy]
+python_version = "3.11"
+
+# Keep these ON — they catch real bugs
+strict_optional = true
+no_implicit_optional = true
+
+# Sensible defaults for scientific code
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+# Don't go full strict everywhere (yet)
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+
+# Nice output
+pretty = true
+show_error_codes = true
+
+# External libs (adjust to your stack)
+[[tool.mypy.overrides]]
+module = [
+  "matplotlib.*",
+  "scipy.*",
+  "astropy.*",
+]
+ignore_missing_imports = true
