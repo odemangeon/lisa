@@ -89,7 +89,10 @@ def create_TS_plots(post_instance:Posterior,
                 npt = model2plot_i.npt
                 if npt is None:
                     npt = npt_model_default
-                times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, npt=npt, extra_dt=extra_dt_model)
+                if model2plot_i.expression == Expression(expression="decorrelation_likelihood"):
+                    times_model2plot_i = model2plot_i.get_times_dataset(post_instance=post_instance)
+                else:
+                    times_model2plot_i = model2plot_i.get_times(post_instance=post_instance, npt=npt, extra_dt=extra_dt_model)
                 # Compute the model
                 model_i, model_err_i, _ = compute_model(post_instance=post_instance, df_param_value=model2plot_i.df_param_value, datasim_kwargs=datasim_kwargs,
                                                         compute_raw_models_func=compute_raw_models_func, 
