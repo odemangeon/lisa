@@ -257,7 +257,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         """
         return self.__dataset_content is not None
 
-    def load_dataset_content(self, store=False, delim_whitespace=True, skip_rows=0, comment="#",
+    def load_dataset_content(self, store=False, sep='\s+', skip_rows=0, comment="#",
                              index_col=None, skip_blank_lines=True, header=0, **kargs):
         """
         Read the light curve into a pandas database using the pandas.read_table function.
@@ -310,7 +310,7 @@ class Core_Dataset(object, metaclass=MandatoryReadOnlyAttr):
         # we can also read the header from the file with
         # lc = pd.read_table('cuttransits.txt', delim_whitespace=True, header=0, index_col=0)
         pandas_df = read_table(self.filepath,
-                               delim_whitespace=delim_whitespace,
+                               sep=sep,
                                names=names,
                                index_col=index_col,
                                skiprows=skip_rows,
