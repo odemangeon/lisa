@@ -5,7 +5,6 @@ __pycache__/
 
 # Temp/auto saved files
 #*#
-.gitignore
 
 # Common stuff
 lisa/software_parameters.py
@@ -16,19 +15,12 @@ list_imported_modules.txt
 *_backup.txt
 *_backup.py
 
-# Olivier's stuff
-setenv_lisa.bash
+# Developper's stuff
 *~
-run/
-uml/
-test
 tests/dev_tests/TTV/outputs
 tests/dev_tests/EdepthV/outputs
 tests/dev_tests/splinedec/outputs
 tests/unit_tests/run_folder_tmp
-
-# Susana's stuff
-
 
 # C extensions
 *.so
@@ -117,3 +109,10 @@ ENV/
 
 # Mac stuff
 .DS_Store
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+
+# Editors
+.vscode/
