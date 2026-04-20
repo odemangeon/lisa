@@ -1,69 +1,153 @@
 # lisa
 
+`lisa` is a Python package for joint modelling and analysis of exoplanet radial
+velocity and photometric time series.
+
+The codebase contains the core `lisa` package, example analyses, plotting and
+chain-analysis scripts, and tests used during development.
+
 ## Installation
 
-1. Clone the lisa repository
+The recommended installation uses Conda for the scientific Python environment
+and `pip` for installing the local `lisa` package.
 
+Clone the repository:
+
+```bash
 git clone https://github.com/odemangeon/lisa.git
+cd lisa
+```
 
-2. Install the dependancies in a new anaconda environment:
+Create the Conda environment from the repository root:
 
-The dependencies are specified in the environment.yml file.
-
-conda env create -f environment.yml 
-
-This will create a new lisa environment with all the dependencies except for 
-for PyGLS that I modified and so cannot be installed using conda/pip and need to be installed from source. So you need to clone PyGLS in a different folder:
-
-git clone https://github.com/LucaMalavolta/PyGLS.git
-
-and then install it from the source in the lisa environment
-
+```bash
+conda env create -f environment.yml
 conda activate lisa
-conda develop <path_to_the_directory_where_you_cloned_PyGLS>
+```
 
-3. Install lisa in the anaconda environment
+The environment file installs the scientific dependencies and then installs this
+repository in editable mode with:
 
+```yaml
+- pip:
+    - -e .
+```
+
+Editable mode is useful while developing `lisa`: changes made inside the `lisa/`
+package are immediately available in the active environment.
+
+To check that the installation worked:
+
+```bash
+python -c "import lisa; print(lisa.__file__)"
+```
+
+### Updating an existing environment
+
+After changing `environment.yml`, update the existing environment with:
+
+```bash
 conda activate lisa
-conda develop <path_to_the_directory_where_you_cloned_lisa>
+conda env update -f environment.yml --prune
+python -m pip install -e .
+```
 
-## Quick start
+## Quick Start
 
-Copy/paste the python file: script_analysis/script_mcmcexploration.py in another folder where you are going to work. Modify it to suit your needs.
-When the exploration is performed, you can Copy/paste the python file script_analysis/script_chainanalysis.py in the same directory and modify it to suit your needs and interpret the results.
+The `examples/` directory contains complete example analyses with input data and
+analysis scripts. A typical workflow is:
 
-## Description of the different folders in the repository
+```bash
+conda activate lisa
+cd examples/WASP-151
+ipython
+```
 
-### source
+Then, from IPython:
 
-Folder which contains the source/code of the lisa software:
+```python
+%run script_mcmcexploration.py
+%run script_chainanalysis.py
+```
 
-### ocode and olivier
+Other examples are available in:
 
-Olivier's personal codes: The ocode folder contains the code developed with the Kunal. I put the all content of the folder he made so there is text file and png file not only python codes (I will try to clean it later).
-The main last version of the python codes are in the directory final_commentedcodes_from_kunal. All the rest is all the older version of codes that he developed before.
-*Final fight.py* was the version of the main code when he left. Yes Kunal is a funny guy.
+- `examples/K2-19/`
+- `examples/WASP-151/`
+- `examples/helios/`
 
-### scode and susana
+The `script_and_functions/` directory contains reusable analysis and plotting
+scripts that can be copied into a working directory and adapted for a specific
+target.
 
-Susana's personal codes.
+## Repository Layout
 
-### data
+- `lisa/`: main Python package.
+- `examples/`: example analyses and input data.
+- `script_and_functions/`: reusable scripts for exploration, chain analysis, and plotting.
+- `tests/`: unit tests and development tests.
+- `environment.yml`: Conda environment used for installation and development.
+- `pyproject.toml`: Python packaging and tool configuration.
 
-Some datasets used to test and performs some examples
+## Running Tests
 
-### examples
+After activating the environment, install the test runner if needed:
 
-Examples on how to use lisa
+```bash
+conda install pytest
+```
 
-### script_analysis
+Then run the unit tests with:
 
-Template of scripts to use lisa and interpret the results.
+```bash
+pytest tests/unit_tests
+```
 
-### setup_files
+Some tests and example scripts may require local data products or optional
+dependencies, depending on the workflow being exercised.
 
-Folder which contains the files defining the setup of lisa.
+## Development Notes
 
-### tests
+For day-to-day development, install with the Conda workflow above and keep the
+package editable. The project metadata lives in `pyproject.toml`, while the full
+scientific environment is described in `environment.yml`.
 
-Folder with the tests of the code.
+Useful development commands:
+
+```bash
+conda activate lisa
+conda install pytest ruff mypy
+python -m pip install -e .
+pytest tests/unit_tests
+ruff check lisa tests
+ruff format lisa tests
+```
+
+## Documentation
+
+This README is the entry point for installation and first use. The next step is
+to add online documentation with a structure such as:
+
+- Installation
+- Quick-start tutorial
+- Worked examples
+- User guide
+- API reference
+- Development guide
+
+A good documentation layout for this repository would be:
+
+```text
+docs/
+  index.md
+  installation.md
+  quickstart.md
+  examples.md
+  user-guide/
+  api-reference/
+  development.md
+```
+
+The examples already in this repository are a strong base for future tutorials:
+each one can become a short documentation page explaining the input files, model
+configuration, exploration step, and chain-analysis step.
