@@ -37,3 +37,4 @@ dependencies:
       - batman-package
       - pytransit
       - ldtk
+      - types-tqdm

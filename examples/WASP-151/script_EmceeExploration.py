@@ -65,9 +65,11 @@ init_distrib: dict = {}
 
 # If you already run a first MCMC and extracted fitted values, you can use them to draw the initial
 # values for a new MCMC run
-load_fitted_values_from_previous_run_analysis = False
-previous_run_name = None
-extension_analysis = None
+load_fitted_values_from_previous_run_analysis: bool = False
+previous_run_name: str = (
+    "name_of_previous_run"  # Name of the previous run to load fitted values from
+)
+extension_analysis: str = "extension_of_analysis"  # Extension of the analysis to load fitted values from (extension is the one you add at the end of the name of the pickle file when you save the analysis results)
 
 # Restart from previous backended run
 restart_run = False
@@ -139,7 +141,7 @@ if not (restart_run):
             f"Loading fitted parameter values from analysis {extension_analysis} of previous run {previous_run_name}"
         )
         fitted_values_dic, fitted_values_sec_dic, df_fittedval = et.load_chain_analysis(
-            obj_name,
+            obj_name=obj_name,
             extension_analysis=extension_analysis,
             folder=output_folders["pickles_analyze"],
         )
@@ -206,7 +208,7 @@ else:
 
 logger.info("Creating Emcee sampler")
 if with_blobs:
-    blobs_dtype = et.default_blobs_dtype
+    blobs_dtype: list[tuple[str, type[float]]] | None = et.default_blobs_dtype
 else:
     blobs_dtype = None
 sampler = EnsembleSampler(

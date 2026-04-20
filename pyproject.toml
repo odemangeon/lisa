@@ -62,5 +62,7 @@ module = [
   "matplotlib.*",
   "scipy.*",
   "astropy.*",
+  "emcee",
+  "emcee.*",
 ]
 ignore_missing_imports = true
