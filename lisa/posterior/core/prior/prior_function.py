@@ -28,20 +28,26 @@ Additions to this modules:
 
 @TODO:
 """
-from __future__ import division
-from loguru import logger
 
-from textwrap import dedent
 import math as mt
+from textwrap import dedent
 
 import numpy as np
-from numpy import pi, where, nan
+from loguru import logger
 from numpy import inf as infnt
-from scipy.stats import reciprocal, beta
+from numpy import nan, pi, where
+from scipy.stats import beta, reciprocal
 
-from .core_prior import Core_Prior_Function, Core_JointPrior_Function
-from ....tools.function_from_text_toolbox import init_arglist_paramnb_arguments_ldict, add_param_argument, par_vec_name, key_param, get_function_arglist
+from ....tools.function_from_text_toolbox import (
+    add_param_argument,
+    get_function_arglist,
+    init_arglist_paramnb_arguments_ldict,
+    key_param,
+    par_vec_name,
+)
 from ....tools.function_w_doc import DocFunction
+from .core_prior import Core_JointPrior_Function, Core_Prior_Function
+
 # from .core.prior.manager_prior import Manager_Prior
 
 
@@ -53,6 +59,7 @@ from ....tools.function_w_doc import DocFunction
 #################
 # Marginal priors
 #################
+
 
 class UniformPrior(Core_Prior_Function):
     """Unifor Prior
@@ -67,15 +74,15 @@ class UniformPrior(Core_Prior_Function):
     __default_extra_args__ = {}
 
     def __init__(self, *args, **kwargs):
-        super(UniformPrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
-        self.C = 1. / (self.vmax - self.vmin)
+        self.C = 1.0 / (self.vmax - self.vmin)
         self.lnC = mt.log(self.C)
         self.lims = [self.vmin, self.vmax]
 
     def create_logpdf(self):
-        lnC = mt.log(1. / (self.vmax - self.vmin))
+        lnC = mt.log(1.0 / (self.vmax - self.vmin))
         vmin = self.vmin
         vmax = self.vmax
 
@@ -84,13 +91,12 @@ class UniformPrior(Core_Prior_Function):
                 return lnC
             else:
                 return -infnt
+
         return logpdf
 
     def logpdf(self, x):
         if isinstance(x, np.ndarray):
-            return np.where((self.vmin < x) & (x < self.vmax),
-                            self.lnC,
-                            -infnt)
+            return np.where((self.vmin < x) & (x < self.vmax), self.lnC, -infnt)
         else:
             if x >= self.vmin and x <= self.vmax:
                 return self.lnC
@@ -121,24 +127,29 @@ class NormalPrior(Core_Prior_Function):
     __default_extra_args__ = {"lims": [-infnt, infnt], "sigma_lims": [None, None]}
 
     def __init__(self, *args, **kwargs):
-        super(NormalPrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.mu = float(self.mu)
         self.sigma = float(self.sigma)
-        self._f1 = 1. / mt.sqrt(2. * pi * self.sigma * self.sigma)
+        self._f1 = 1.0 / mt.sqrt(2.0 * pi * self.sigma * self.sigma)
         self._lf1 = mt.log(self._f1)
-        self._f2 = 1. / (2. * self.sigma * self.sigma)
+        self._f2 = 1.0 / (2.0 * self.sigma * self.sigma)
         if ("lims" in kwargs) and ("sigma_lims" in kwargs):
             raise ValueError("You cannot set both lims and sigma_lims")
         if "sigma_lims" in kwargs:
-            self.lims = [self.mu - self.sigma_lims[0] * self.sigma, self.mu + self.sigma_lims[1] * self.sigma]
+            self.lims = [
+                self.mu - self.sigma_lims[0] * self.sigma,
+                self.mu + self.sigma_lims[1] * self.sigma,
+            ]
         self.vmin, self.vmax = self.lims
         if self.vmin >= self.vmax:
-            raise ValueError("lims should be a 2 element iterable where the first element is "
-                             "strictly inferior to the second")
+            raise ValueError(
+                "lims should be a 2 element iterable where the first element is "
+                "strictly inferior to the second"
+            )
 
     def create_logpdf(self):
-        lf1 = mt.log(1. / mt.sqrt(2. * pi * self.sigma * self.sigma))
-        f2 = 1. / (2. * self.sigma * self.sigma)
+        lf1 = mt.log(1.0 / mt.sqrt(2.0 * pi * self.sigma * self.sigma))
+        f2 = 1.0 / (2.0 * self.sigma * self.sigma)
         vmin = self.vmin
         vmax = self.vmax
         mu = self.mu
@@ -148,20 +159,23 @@ class NormalPrior(Core_Prior_Function):
                 return lf1 - (x - mu) * (x - mu) * f2
             else:
                 return -infnt
+
         return logpdf
 
     def logpdf(self, x):
         if isinstance(x, np.ndarray):
-            return np.where((self.vmin < x) & (x < self.vmax),
-                            self._lf1 - (x - self.mu)**2 * self._f2,
-                            -infnt)
+            return np.where(
+                (self.vmin < x) & (x < self.vmax), self._lf1 - (x - self.mu) ** 2 * self._f2, -infnt
+            )
         else:
-            return self._lf1 - (x - self.mu)**2 * self._f2 if self.vmin < x < self.vmax else -infnt
+            return (
+                self._lf1 - (x - self.mu) ** 2 * self._f2 if self.vmin < x < self.vmax else -infnt
+            )
 
     def ravs(self, nb_values=1):
         val = np.random.normal(self.mu, self.sigma, size=nb_values)
         for idx in np.where((val < self.vmin) | (val > self.vmax))[0]:
-            while not((self.vmin < val[idx]) and (self.vmax > val[idx])):
+            while not ((self.vmin < val[idx]) and (self.vmax > val[idx])):
                 val[idx] = np.random.normal(self.mu, self.sigma)
         if val.size == 1:
             return val[0]
@@ -183,11 +197,13 @@ class LogNormPrior(Core_Prior_Function):
     __default_extra_args__ = {"lims": [0, infnt]}
 
     def __init__(self, *args, **kwargs):
-        super(LogNormPrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.vmin, self.vmax = self.lims
         if self.vmin >= self.vmax:
-            raise ValueError("lims should be a 2 element iterable where the first element is "
-                             "strictly inferior to the second")
+            raise ValueError(
+                "lims should be a 2 element iterable where the first element is "
+                "strictly inferior to the second"
+            )
         self.C = -mt.log(self.sigma * mt.sqrt(2 * pi))
         self.B = 2 * self.sigma**2
 
@@ -204,6 +220,7 @@ class LogNormPrior(Core_Prior_Function):
                 return -lnx + C - ((lnx * lnx - mu * lnx + mu * mu) / B)
             else:
                 return -infnt
+
         return logpdf
 
     def __logpdf_wcustargs(self, x, mu, C, B):
@@ -212,9 +229,11 @@ class LogNormPrior(Core_Prior_Function):
 
     def logpdf(self, x):
         if isinstance(x, np.ndarray):
-            return np.where((self.vmin < x) & (x < self.vmax),
-                            self.__logpdf_wcustargs(self, x, self.mu, self.C, self.B),
-                            -infnt)
+            return np.where(
+                (self.vmin < x) & (x < self.vmax),
+                self.__logpdf_wcustargs(self, x, self.mu, self.C, self.B),
+                -infnt,
+            )
         else:
             if (x <= self.vmin) or (x > self.vmax):
                 return -infnt
@@ -223,7 +242,7 @@ class LogNormPrior(Core_Prior_Function):
     def ravs(self, nb_values=1):
         val = np.random.lognormal(self.mu, self.sigma, size=nb_values)
         for idx in np.where((val < self.vmin) | (val > self.vmax))[0]:
-            while not((self.vmin < val[idx]) and (self.vmax > val[idx])):
+            while not ((self.vmin < val[idx]) and (self.vmax > val[idx])):
                 val[idx] = np.random.lognormal(self.mu, self.sigma)
         if val.size == 1:
             return val[0]
@@ -237,13 +256,14 @@ class JeffreysPrior(Core_Prior_Function):
     :param float vmin: Inferior boundary of the prior
     :param float vmax: Superior boundary of the prior
     """
+
     __category__ = "jeffreys"
     __mandatory_args__ = ["vmin", "vmax"]
     __extra_args__ = []
     __default_extra_args__ = {}
 
     def __init__(self, *args, **kwargs):
-        super(JeffreysPrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
         self.C = self.vmax / self.vmin
@@ -260,6 +280,7 @@ class JeffreysPrior(Core_Prior_Function):
                 return -mt.log(x * lnC)
             else:
                 return -infnt
+
         return logpdf
 
     def __logpdf_wcustargs(self, x, lnC):
@@ -267,9 +288,9 @@ class JeffreysPrior(Core_Prior_Function):
 
     def logpdf(self, x):
         if isinstance(x, np.ndarray):
-            return np.where((self.vmin < x) & (x < self.vmax),
-                            self.__logpdf_wcustargs(x, self.lnC),
-                            -infnt)
+            return np.where(
+                (self.vmin < x) & (x < self.vmax), self.__logpdf_wcustargs(x, self.lnC), -infnt
+            )
         if x >= self.vmin and x <= self.vmax:
             return self.__logpdf_wcustargs(x, self.lnC)
         else:
@@ -298,22 +319,25 @@ class SinePrior(Core_Prior_Function):
     __default_extra_args__ = {"rad": True}
 
     def __init__(self, *args, **kwargs):
-        super(SinePrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.vmin >= self.vmax:
             raise ValueError("vmin should be strictly inferior to vmax")
         self.degtorad = pi / 180.0
         if self.rad:
-            if self.vmin < 0. or self.vmin > 180.:
+            if self.vmin < 0.0 or self.vmin > 180.0:
                 raise ValueError("vmin should between 0. and 180")
-            if self.vmax < 0. or self.vmax > 180.:
+            if self.vmax < 0.0 or self.vmax > 180.0:
                 raise ValueError("vmax should between 0. and 180")
-            self.C = 1. / (np.cos(self.vmin) - np.cos(self.vmax))
+            self.C = 1.0 / (np.cos(self.vmin) - np.cos(self.vmax))
         else:
-            if self.vmin < 0. or self.vmin > pi:
+            if self.vmin < 0.0 or self.vmin > pi:
                 raise ValueError("vmin should between 0. and pi")
-            if self.vmax < 0. or self.vmax > pi:
+            if self.vmax < 0.0 or self.vmax > pi:
                 raise ValueError("vmax should between 0. and pi")
-            self.C = 1. / ((np.cos(self.vmin * self.degtorad) - np.cos(self.vmax * self.degtorad)) / self.degtorad)
+            self.C = 1.0 / (
+                (np.cos(self.vmin * self.degtorad) - np.cos(self.vmax * self.degtorad))
+                / self.degtorad
+            )
         self.lnC = mt.log(self.C)
         self.lims = [self.vmin, self.vmax]
 
@@ -324,18 +348,22 @@ class SinePrior(Core_Prior_Function):
         degtorad = self.degtorad
 
         if self.rad:
+
             def logpdf(x):
                 if x >= vmin and x <= vmax:
                     return mt.log(np.sin(x)) + lnC
                 else:
                     return -infnt
+
             return logpdf
         else:
+
             def logpdf(x):
                 if x >= vmin and x <= vmax:
                     return mt.log(np.sin(x * degtorad)) + lnC
                 else:
                     return -infnt
+
             return logpdf
 
     def __logpdf_wcustargs(self, x, lnC, angleconv):
@@ -347,9 +375,11 @@ class SinePrior(Core_Prior_Function):
         else:
             conv = self.degtorad
         if isinstance(x, np.ndarray):
-            return np.where((self.vmin < x) & (x < self.vmax),
-                            self.__logpdf_wcustargs(x, self.lnC, conv),
-                            -infnt)
+            return np.where(
+                (self.vmin < x) & (x < self.vmax),
+                self.__logpdf_wcustargs(x, self.lnC, conv),
+                -infnt,
+            )
         if x >= self.vmin and x <= self.vmax:
             return self.__logpdf_wcustargs(x, self.lnC, conv)
         else:
@@ -379,7 +409,7 @@ class BetaPrior(Core_Prior_Function):
     __default_extra_args__ = {}
 
     def __init__(self, *args, **kwargs):
-        super(BetaPrior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if (self.a <= 0) or (self.b <= 0):
             raise ValueError("a and b should be strictly positive")
         self.rv = beta(self.a, self.b)  # rv stands for random variable
@@ -397,6 +427,7 @@ class BetaPrior(Core_Prior_Function):
 ##############
 # Joint priors
 ##############
+
 
 class PolarPrior(Core_JointPrior_Function):
     """Polar Prior
@@ -421,10 +452,11 @@ class PolarPrior(Core_JointPrior_Function):
     __default_extra_args__ = {}
     __hidden_param_refs__ = ["r", "theta"]
     __multiple_hidden_params__ = [False, False]
-    __default_hidden_priors__ = {"r": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
-                                 "theta": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}}
-                                 }
-    __param_refs__ = ['x', 'y']
+    __default_hidden_priors__ = {
+        "r": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "theta": {"category": "uniform", "args": {"vmin": -pi, "vmax": pi}},
+    }
+    __param_refs__ = ["x", "y"]
     __multiple_params__ = [False, False]
 
     def create_logpdf(self, params):
@@ -436,19 +468,26 @@ class PolarPrior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["atan2"] = mt.atan2
         ldict["sqrt"] = mt.sqrt
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             r = sqrt({x} * {x} + {y} * {y})
@@ -456,14 +495,28 @@ class PolarPrior(Core_JointPrior_Function):
             return dico_logpdf["r"](r) + dico_logpdf["theta"](theta)
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             x=dico_text_params["x"], y=dico_text_params["y"])
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            x=dico_text_params["x"],
+            y=dico_text_params["y"],
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, x, y):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -506,16 +559,17 @@ class SupInfprior(Core_JointPrior_Function):
     __mandatory_args__ = []
     __extra_args__ = ["k"]
     __default_extra_args__ = {"k": 1}
-    __hidden_param_refs__ = ['sup', 'inf']
+    __hidden_param_refs__ = ["sup", "inf"]
     __multiple_hidden_params__ = [False, False]
-    __default_hidden_priors__ = {"sup": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
-                                 "inf": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
-                                 }
-    __param_refs__ = ['sup', 'inf']
+    __default_hidden_priors__ = {
+        "sup": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "inf": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+    }
+    __param_refs__ = ["sup", "inf"]
     __multiple_params__ = [False, False]
 
     def __init__(self, *args, **kwargs):
-        super(SupInfprior, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.k <= 0:
             raise ValueError("k should be strictly positive")
 
@@ -528,18 +582,25 @@ class SupInfprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys='prior', key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["infnt"] = infnt
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)['prior']
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             if {sup} >= ({k} * {inf}):
@@ -548,14 +609,29 @@ class SupInfprior(Core_JointPrior_Function):
                 return - infnt
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             sup=dico_text_params["sup"], inf=dico_text_params["inf"], k=self.k)
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist='prior')[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            sup=dico_text_params["sup"],
+            inf=dico_text_params["inf"],
+            k=self.k,
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist='prior'))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, sup, inf):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -583,10 +659,12 @@ class SupInfprior(Core_JointPrior_Function):
         while len(indexes) > 0:
             for hiddenparam_ref, dico in self.hiddenparam_defs.items():
                 if dico.get("value", None) is None:
-                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                        hiddenparam_ref
+                    ].ravs(nb_values=len(indexes))
             indexes = where(dico_ravs["sup"] < (dico_ravs["inf"] * self.k))[0]
         return dico_ravs["sup"], dico_ravs["inf"]
-    
+
 
 class Sumprior(Core_JointPrior_Function):
     """Joint prior where the sum you put a prior on the sum of the two variables
@@ -597,18 +675,19 @@ class Sumprior(Core_JointPrior_Function):
 
     __category__ = "sum"
     __mandatory_args__ = []
-    __extra_args__ = ['ymin', 'ymax']
-    __default_extra_args__ = {'ymin': -np.inf, 'ymax': np.inf}
-    __hidden_param_refs__ = ['x', 'sum']
+    __extra_args__ = ["ymin", "ymax"]
+    __default_extra_args__ = {"ymin": -np.inf, "ymax": np.inf}
+    __hidden_param_refs__ = ["x", "sum"]
     __multiple_hidden_params__ = [False, False]
-    __default_hidden_priors__ = {"x": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}},
-                                 "sum": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.}}
-                                 }
-    __param_refs__ = ['x', 'y']
+    __default_hidden_priors__ = {
+        "x": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+        "sum": {"category": "uniform", "args": {"vmin": 0.0, "vmax": 1.0}},
+    }
+    __param_refs__ = ["x", "y"]
     __multiple_params__ = [False, False]
 
     def __init__(self, params, *args, **kwargs):
-        super(Sumprior, self).__init__(params, *args, **kwargs)
+        super().__init__(params, *args, **kwargs)
 
     def create_logpdf(self, params):
         """Return the logarithmic probability density function for the joint prior.
@@ -619,18 +698,25 @@ class Sumprior(Core_JointPrior_Function):
         :return function logpdf: log pdf the order in which the parameter should be provided is
             provided by self.param_refs
         """
-        (param_nb,
-         arg_list,
-         param_vector_name,
-         ldict) = init_arglist_paramnb_arguments_ldict(keys="prior", key_param=key_param, param_vector_name=par_vec_name)
-        dico_logpdf = {param: priorfunc.create_logpdf() for param, priorfunc in self.priorinstance_hiddenparams.items()}
+        (param_nb, arg_list, param_vector_name, ldict) = init_arglist_paramnb_arguments_ldict(
+            keys="prior", key_param=key_param, param_vector_name=par_vec_name
+        )
+        dico_logpdf = {
+            param: priorfunc.create_logpdf()
+            for param, priorfunc in self.priorinstance_hiddenparams.items()
+        }
         ldict["dico_logpdf"] = dico_logpdf
         ldict["infnt"] = np.inf
         dico_text_params = {}
         for param_key in self.param_refs:
-            dico_text_params[param_key] = add_param_argument(param=params[param_key], arg_list=arg_list, key_param=key_param,
-                                                             param_nb=param_nb, param_vector_name=par_vec_name)["prior"]
-        function_name = "logpdf_{}".format(self.category)
+            dico_text_params[param_key] = add_param_argument(
+                param=params[param_key],
+                arg_list=arg_list,
+                key_param=key_param,
+                param_nb=param_nb,
+                param_vector_name=par_vec_name,
+            )["prior"]
+        function_name = f"logpdf_{self.category}"
         text_function = """
         def {function_name}({param_vector_name}):
             sum = {x} + {y}
@@ -640,16 +726,30 @@ class Sumprior(Core_JointPrior_Function):
                 return -infnt
         """
         text_function = dedent(text_function)
-        text_function = text_function.format(function_name=function_name, param_vector_name=par_vec_name,
-                                             x=dico_text_params["x"], y=dico_text_params["y"],
-                                             ymin=self.ymin, ymax=self.ymax
-                                             )
-        logger.debug("text of joint prior {category}:\n{text_func}"
-                     "".format(category=self.category, text_func=text_function))
-        logger.debug("Parameters for joint prior {category}:\n{dico_param}"
-                     "".format(category=self.category, dico_param={nb: param for nb, param in enumerate(get_function_arglist(arg_list, key_arglist="prior")[key_param])}))
+        text_function = text_function.format(
+            function_name=function_name,
+            param_vector_name=par_vec_name,
+            x=dico_text_params["x"],
+            y=dico_text_params["y"],
+            ymin=self.ymin,
+            ymax=self.ymax,
+        )
+        logger.debug(f"text of joint prior {self.category}:\n{text_function}")
+        logger.debug(
+            "Parameters for joint prior {category}:\n{dico_param}".format(
+                category=self.category,
+                dico_param={
+                    nb: param
+                    for nb, param in enumerate(
+                        get_function_arglist(arg_list, key_arglist="prior")[key_param]
+                    )
+                },
+            )
+        )
         exec(text_function, ldict)
-        return DocFunction(ldict[function_name], get_function_arglist(arg_list, key_arglist="prior"))
+        return DocFunction(
+            ldict[function_name], get_function_arglist(arg_list, key_arglist="prior")
+        )
 
     def logpdf(self, x, y):
         dico_logpdf = self.priorinstance_hiddenparams
@@ -678,7 +778,11 @@ class Sumprior(Core_JointPrior_Function):
         while len(indexes) > 0:
             for hiddenparam_ref, dico in self.hiddenparam_defs.items():
                 if dico.get("value", None) is None:
-                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[hiddenparam_ref].ravs(nb_values=len(indexes))
+                    dico_ravs[hiddenparam_ref][indexes] = self.priorinstance_hiddenparams[
+                        hiddenparam_ref
+                    ].ravs(nb_values=len(indexes))
             dico_ravs["y"] = dico_ravs["sum"] - dico_ravs["x"]
-            indexes = where(np.logical_or(dico_ravs["y"] < self.ymin, dico_ravs["y"] > self.ymax))[0]
+            indexes = where(np.logical_or(dico_ravs["y"] < self.ymin, dico_ravs["y"] > self.ymax))[
+                0
+            ]
         return dico_ravs["x"], dico_ravs["y"]
