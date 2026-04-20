@@ -140,7 +140,7 @@ class ConfigFileAttr(object):
                     self._get_function_config(function_type='add_default_config', config2load=config2load)(file=ff) # _get_function_config is a method of both Posterior and Core_Model
                 input(f"{config2load}: Default configuration variable(s) was/were added to the configuration file ({self.config_file.path}).\n"
                       "Modify it/them to your needs and then press ENTER.\n")
-                dico_config_file = self._read_configfile(config_logger=config_logger, log_full_config=False)
+                dico_config_file = self.config_file._read_configfile(config_logger=config_logger, log_full_config=False)
         # Check the content of the configuration variable and load it
         return self._get_function_config(function_type='load_config_content', config2load=config2load)(dico_config_file=dico_config_file, **kwargs) # _get_function_config is a method of both Posterior and Core_Model    
 
