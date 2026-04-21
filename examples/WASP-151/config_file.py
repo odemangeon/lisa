@@ -1,5 +1,9 @@
 # Configuration file for LISA analysis.
+import json
+import os
+
 import numpy as np
+import pandas as pd
 
 ##############
 ## Object name
@@ -483,9 +487,6 @@ gaussian_models = {
 # Format: keys are the full name of main parameters that you want to be duplicated.
 # Values are the list of main parameters full names that you want to be duplicates of the parameter named by the corresponding key.
 duplicates = {
-    "LC_EulerCam_inst0_DeltaF": [
-        "LC_EulerCam_inst1_DeltaF",
-    ],
     "LC_EulerCam_inst0_jitter": [
         "LC_EulerCam_inst1_jitter",
     ],
@@ -527,6 +528,20 @@ frozen_values = {
 # These priors convert a given set of jumping parameter into a different set of parameters that
 # can be better suited to define priors.
 # The list of available joint priors is:
+
+# Compute rhostar prior from M and R
+filepath_stellar_parameters = "stellar_parameters_WASP151.json"
+with open(filepath_stellar_parameters) as f:
+    stellar_parameters = json.load(f)
+
+M_A_mean = stellar_parameters["mass"]
+M_A_err = stellar_parameters["e_mass"]
+M_A_samples = np.random.normal(loc=M_A_mean, scale=M_A_err, size=10000)
+R_A_mean = stellar_parameters["radius"]
+R_A_err = stellar_parameters["e_radius"]
+R_A_samples = np.random.normal(loc=R_A_mean, scale=R_A_err, size=10000)
+rho_A_samples = M_A_samples / R_A_samples**3
+
 joint_priors = {
     "polar_ew": {
         "category": "polar",
@@ -542,6 +557,53 @@ joint_priors = {
         },
         "params": {"x": "b_ecosw", "y": "b_esinw"},
     },
+    "transiting": {
+        "category": "transiting_rho",
+        "args": {
+            "rhostar_prior": {
+                "category": "normal",
+                "args": {
+                    "mu": np.median(rho_A_samples),
+                    "sigma": np.std(rho_A_samples),
+                    "lims": [0, 2],
+                },
+            },
+            "P_prior": [
+                {
+                    "category": "normal",
+                    "args": {"mu": 4.5334, "sigma": 0.003},
+                }
+            ],
+            "Phi_prior": [
+                {
+                    "category": "normal",
+                    "args": {"mu": 0, "sigma": 0.005 / 4.5334},
+                }
+            ],
+            "b_prior": [
+                {
+                    "category": "uniform",
+                    "args": {"vmin": 0, "vmax": 1},
+                }
+            ],
+            "Rrat_prior": [
+                {
+                    "category": "normal",
+                    "args": {"mu": 0.097, "sigma": 0.01},
+                }
+            ],
+            "t_ref": [57741.00885442065],
+            "transiting": [True],
+            "allow_grazing": [True],
+        },
+        "params": {
+            "rhostar": "A_rho",
+            "P": ["b_P"],
+            "tic": ["b_tic"],
+            "cosinc": ["b_cosinc"],
+            "Rrat": ["b_Rrat"],
+        },
+    },
 }
 
 # Individual Priors
@@ -549,6 +611,36 @@ joint_priors = {
 # The units are provided as information and you should not change it. Any change will be ignored.
 #
 # The list of available individual priors is:
+
+
+df_fluxs: dict[str, dict[str, pd.DataFrame]] = {}
+for instrument, ii in [
+    ("K2", "0"),
+    ("EulerCam", "0"),
+    ("EulerCam", "1"),
+    ("IAC80", "0"),
+    ("IAC80", "1"),
+    ("TRAPPIST", "0"),
+]:
+    if instrument not in df_fluxs:
+        df_fluxs[instrument] = {}
+    if ii == "0":
+        file_name = f"LC_{object_name}_{instrument}.txt"
+    else:
+        file_name = f"LC_{object_name}_{instrument}_{ii}.txt"
+    df_fluxs[instrument][ii] = pd.read_table(
+        os.path.join(data_folder, file_name),
+        sep=r"\s+",
+        comment="#",
+    )
+
+
+df_RVs: dict[str, pd.DataFrame] = {}
+for instrument in ["SOPHIE", "CORALIE"]:
+    df_RVs[instrument] = pd.read_table(
+        os.path.join(data_folder, f"RV_{object_name}_{instrument}.txt"), sep=r"\s+", comment="#"
+    )
+
 individual_priors = {
     "GP1D": {
         "LC": {
@@ -585,39 +677,66 @@ individual_priors = {
             "EulerCam": {
                 "inst0": {
                     "DeltaF": {
-                        "args": {"sigma": 0.05, "mu": 0.0},
+                        "args": {
+                            "mu": df_fluxs["EulerCam"]["0"]["flux"].median() - 1,
+                            "sigma": df_fluxs["EulerCam"]["0"]["flux"].std(),
+                        },
                         "category": "normal",
                         "unit": "wo unit",
                     },
                     "jitter": {
-                        "args": {"vmax": 0.05, "vmin": 0.0},
-                        "category": "uniform",
-                        "unit": None,
-                    },
-                },
-                "inst1": {},
-            },
-            "IAC80": {
-                "inst0": {
-                    "DeltaF": {
-                        "args": {"sigma": 0.01, "mu": 0.0},
-                        "category": "normal",
-                        "unit": "wo unit",
-                    },
-                    "jitter": {
-                        "args": {"vmax": 0.05, "vmin": 0.0},
+                        "args": {
+                            "vmax": df_fluxs["EulerCam"]["0"]["flux_err"].median() * 5,
+                            "vmin": 0.0,
+                        },
                         "category": "uniform",
                         "unit": None,
                     },
                 },
                 "inst1": {
                     "DeltaF": {
-                        "args": {"sigma": 0.01, "mu": 0.0},
+                        "args": {
+                            "mu": df_fluxs["EulerCam"]["1"]["flux"].median() - 1,
+                            "sigma": df_fluxs["EulerCam"]["1"]["flux"].std(),
+                        },
+                        "category": "normal",
+                        "unit": "wo unit",
+                    },
+                },
+            },
+            "IAC80": {
+                "inst0": {
+                    "DeltaF": {
+                        "args": {
+                            "mu": df_fluxs["IAC80"]["0"]["flux"].median() - 1,
+                            "sigma": df_fluxs["IAC80"]["0"]["flux"].std(),
+                        },
                         "category": "normal",
                         "unit": "wo unit",
                     },
                     "jitter": {
-                        "args": {"vmax": 0.05, "vmin": 0.0},
+                        "args": {
+                            "vmax": df_fluxs["IAC80"]["0"]["flux_err"].median() * 5,
+                            "vmin": 0.0,
+                        },
+                        "category": "uniform",
+                        "unit": None,
+                    },
+                },
+                "inst1": {
+                    "DeltaF": {
+                        "args": {
+                            "mu": df_fluxs["IAC80"]["1"]["flux"].median() - 1,
+                            "sigma": df_fluxs["IAC80"]["1"]["flux"].std(),
+                        },
+                        "category": "normal",
+                        "unit": "wo unit",
+                    },
+                    "jitter": {
+                        "args": {
+                            "vmax": df_fluxs["IAC80"]["1"]["flux_err"].median() * 5,
+                            "vmin": 0.0,
+                        },
                         "category": "uniform",
                         "unit": None,
                     },
@@ -626,12 +745,15 @@ individual_priors = {
             "K2": {
                 "inst": {
                     "DeltaF": {
-                        "args": {"sigma": 0.01, "mu": 0.0},
+                        "args": {
+                            "mu": df_fluxs["K2"]["0"]["flux"].median() - 1,
+                            "sigma": df_fluxs["K2"]["0"]["flux"].std(),
+                        },
                         "category": "normal",
                         "unit": "wo unit",
                     },
                     "jitter": {
-                        "args": {"vmax": 0.001, "vmin": 0.0},
+                        "args": {"vmax": df_fluxs["K2"]["0"]["flux_err"].median() * 5, "vmin": 0.0},
                         "category": "uniform",
                         "unit": None,
                     },
@@ -640,12 +762,18 @@ individual_priors = {
             "TRAPPIST": {
                 "inst": {
                     "DeltaF": {
-                        "args": {"mu": 0.0, "sigma": 0.001},
+                        "args": {
+                            "mu": df_fluxs["TRAPPIST"]["0"]["flux"].median() - 1,
+                            "sigma": df_fluxs["TRAPPIST"]["0"]["flux"].std(),
+                        },
                         "category": "normal",
                         "unit": "wo unit",
                     },
                     "jitter": {
-                        "args": {"vmax": 0.05, "vmin": 0.0},
+                        "args": {
+                            "vmax": df_fluxs["TRAPPIST"]["0"]["flux_err"].median() * 5,
+                            "vmin": 0.0,
+                        },
                         "category": "uniform",
                         "unit": None,
                     },
@@ -656,12 +784,18 @@ individual_priors = {
             "CORALIE": {
                 "inst": {
                     "DeltaRV": {
-                        "args": {"mu": 0.05, "sigma": 0.01},
+                        "args": {
+                            "mu": np.median(df_RVs["CORALIE"]["RV"])
+                            - np.median(df_RVs["SOPHIE"]["RV"]),
+                            "sigma": np.sqrt(
+                                np.var(df_RVs["CORALIE"]["RV"]) + np.var(df_RVs["SOPHIE"]["RV"])
+                            ),
+                        },
                         "category": "normal",
                         "unit": "[RV data unit]",
                     },
                     "jitter": {
-                        "args": {"vmax": 0.005, "vmin": 0.0},
+                        "args": {"vmax": 5 * np.std(df_RVs["CORALIE"]["RV_err"]), "vmin": 0.0},
                         "category": "uniform",
                         "unit": None,
                     },
@@ -670,7 +804,7 @@ individual_priors = {
             "SOPHIE": {
                 "inst": {
                     "jitter": {
-                        "args": {"vmax": 0.005, "vmin": 0.0},
+                        "args": {"vmax": 5 * np.std(df_RVs["SOPHIE"]["RV_err"]), "vmin": 0.0},
                         "category": "uniform",
                         "unit": None,
                     }
@@ -681,17 +815,6 @@ individual_priors = {
     "planets": {
         "b": {
             "K": {"args": {"vmax": 0.1, "vmin": 0.0}, "category": "uniform", "unit": None},
-            "P": {"args": {"mu": 4.5334, "sigma": 0.003}, "category": "normal", "unit": None},
-            "Rrat": {
-                "args": {"mu": 0.097, "sigma": 0.01, "lims": [0.0, 1.0]},
-                "category": "normal",
-                "unit": None,
-            },
-            "cosinc": {
-                "args": {"mu": 0.0, "sigma": 0.1, "lims": [0.0, 1.0]},
-                "category": "normal",
-                "unit": "w/o unit",
-            },
             "tic": {
                 "args": {"mu": 57741.00885442065, "sigma": 0.1},
                 "category": "normal",
@@ -701,13 +824,11 @@ individual_priors = {
     },
     "stars": {
         "A": {
-            "rho": {
-                "args": {"mu": 0.7, "sigma": 0.05, "lims": [0, 2]},
-                "category": "normal",
-                "unit": None,
-            },
             "v0": {
-                "args": {"mu": 0.7, "sigma": 0.05, "lims": [0, 2]},
+                "args": {
+                    "mu": df_RVs["SOPHIE"]["RV"].median(),
+                    "sigma": df_RVs["SOPHIE"]["RV"].std(),
+                },
                 "category": "normal",
                 "unit": None,
             },
